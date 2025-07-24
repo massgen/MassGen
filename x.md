@@ -1,4 +1,4 @@
-🚀 Announcing **MassGen**!
+🚀 Check **MassGen**!
 
 An open-source, streaming-first Python framework for multi-agent orchestration.
 
