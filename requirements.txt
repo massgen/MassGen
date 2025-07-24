@@ -4,4 +4,5 @@ xai-sdk==1.0.0
 anthropic==0.49.0
 wcwidth>=0.2.5
 python-dotenv
-google-generativeai>=0.5.2
+google-genai==1.27.0
+
