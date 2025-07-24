@@ -9,7 +9,7 @@
   </a>
 </div>
 
-> 🧠 **Next-gen multi-agent scaling through intelligent collaboration in Grok Heavy style**
+> 🧠 **Next-gen multi-agent scaling system through intelligent collaboration in Grok Heavy style**
 
 MASS is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine to converge to the best solution to deliver a comprehensive and high-quality result. This project is inspired by the "threads of thoughts" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/#the-myth-of-reasoning), the power of "parallel study group" demonstrated in premium commercial prodcuts like [Grok Heavy](https://x.ai/news/grok-4#grok-4-heavy), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2).
 
@@ -109,11 +109,12 @@ GEMINI_API_KEY=your-gemini-key-here
 #### Simple Usage
 ```bash
 # Run with specific models
-python cli.py --models gpt-4o gemini-2.5-flash "What is 2+2?"
+python cli.py --models gpt-4o gemini-2.5-flash 
 
-# Mathematical calculation
-python cli.py --models gpt-4o gemini-2.5-flash "2312312 * (142342 + 222552) = ?"
+# After running the above command, MASS will start in interactive mode and prompt you to enter your question or task.
+> User: 2312312 * (142342 + 222552) = ?
 ```
+
 
 #### Configuration File Usage
 ```bash
@@ -171,7 +172,8 @@ python cli.py --config examples/production.yaml "Write a short story about a rob
 ##  Roadmap
 
 
-MASS is currently in its foundational stage, with a focus on core multi-agent collaboration and orchestration. Our roadmap is centered on enhancing this framework to build a more robust, intelligent, and user-friendly system.
+MASS is in its early stages, with a strong focus on multi-agent collaboration and orchestration. Our roadmap is dedicated to transforming this foundation into a highly robust, intelligent, and user-friendly system.
+
 
 ### Key Future Enhancements:
 
