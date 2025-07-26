@@ -45,15 +45,13 @@ class TokenUsage:
 class AgentBackend(ABC):
     """Abstract base class for agent LLM providers."""
     
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialize the AgentBackend.
         
         Args:
-            api_key: API key for the provider (if None, uses environment variable)
-            **kwargs: Additional configuration parameters
+            **kwargs: Configuration parameters including api_key, model, etc.
         """
-        self.api_key = api_key
         self.config = kwargs
         self.token_usage = TokenUsage()
     
@@ -81,7 +79,7 @@ class AgentBackend(ABC):
         Get provider name.
         
         Returns:
-            str: Name of the provider (e.g., "openai", "anthropic", "grok")
+            str: Name of the provider (e.g., "anthropic", "google", "openai", "xai")
         """
         pass
     
@@ -135,23 +133,14 @@ class AgentBackend(ABC):
 class ChatCompletionsBackend(AgentBackend):
     """Base class for standard chat completions APIs (OpenAI-compatible)."""
     
-    def __init__(self, 
-                 model: str, 
-                 api_key: Optional[str] = None, 
-                 base_url: Optional[str] = None,
-                 **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialize ChatCompletionsBackend.
         
         Args:
-            model: Model name to use
-            api_key: API key for the provider
-            base_url: Base URL for the API
-            **kwargs: Additional configuration
+            **kwargs: Configuration including model, api_key, base_url, etc.
         """
-        super().__init__(api_key, **kwargs)
-        self.model = model
-        self.base_url = base_url
+        super().__init__(**kwargs)
     
     def format_tools_for_api(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -169,7 +158,7 @@ class ChatCompletionsBackend(AgentBackend):
             if isinstance(tool, dict):
                 formatted_tools.append(tool)
             else:
-                # Handle other tool formats as needed
+                # TODO: Handle other tool formats as needed
                 formatted_tools.append(tool)
         return formatted_tools
     
@@ -184,40 +173,30 @@ class ChatCompletionsBackend(AgentBackend):
             int: Estimated token count
         """
         # Simple estimation: ~4 characters per token
+        # TODO: Use a more accurate tokenizer if available
         return len(text) // 4
 
 
 class OpenAIResponseBackend(AgentBackend):
     """OpenAI Response API backend implementation."""
     
-    def __init__(self, 
-                 model: str = "gpt-4o", 
-                 api_key: Optional[str] = None,
-                 temperature: Optional[float] = None,
-                 max_tokens: Optional[int] = None,
-                 **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialize OpenAI Response API backend.
         
         Args:
-            model: OpenAI model to use
-            api_key: OpenAI API key
-            temperature: Temperature for generation
-            max_tokens: Maximum tokens in response
-            **kwargs: Additional configuration
+            **kwargs: Configuration including model, api_key, temperature, max_tokens, etc.
         """
-        super().__init__(api_key, **kwargs)
-        self.model = model
-        self.temperature = temperature
-        self.max_tokens = max_tokens
+        super().__init__(**kwargs)
+        self.model = self.config.get("model", "gpt-4o")
         
         # Import OpenAI client here to avoid import issues
         try:
             from openai import AsyncOpenAI
             import os
             
-            # Get API key from environment if not provided
-            api_key_val = api_key or os.getenv("OPENAI_API_KEY")
+            # Get API key from config or environment
+            api_key_val = self.config.get("api_key") or os.getenv("OPENAI_API_KEY")
             if not api_key_val:
                 raise ValueError("OpenAI API key not found")
             
@@ -268,11 +247,14 @@ class OpenAIResponseBackend(AgentBackend):
                 if formatted_tools:
                     params["tools"] = formatted_tools
             
-            # Add optional parameters
-            if self.temperature is not None and not self.model.startswith("o"):
-                params["temperature"] = self.temperature
-            if self.max_tokens is not None:
-                params["max_output_tokens"] = self.max_tokens
+            # Add optional parameters from config
+            temperature = self.config.get("temperature")
+            max_tokens = self.config.get("max_tokens")
+            
+            if temperature is not None and not self.model.startswith("o"):
+                params["temperature"] = temperature
+            if max_tokens is not None:
+                params["max_output_tokens"] = max_tokens
             
             # Handle reasoning effort for o-series models
             if self.model.startswith("o"):
@@ -375,6 +357,7 @@ class OpenAIResponseBackend(AgentBackend):
             float: Estimated cost in USD
         """
         # OpenAI pricing (approximate, as of 2024)
+        # TODO: Update with actual pricing from OpenAI API documentation
         pricing = {
             "gpt-4o": {"input": 0.005, "output": 0.015},  # per 1K tokens
             "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
@@ -407,7 +390,7 @@ def create_backend(provider: str, model: str, **kwargs) -> AgentBackend:
     Create an agent backend based on provider.
     
     Args:
-        provider: Provider name ("openai", "anthropic", "grok", etc.)
+        provider: Provider name ("anthropic", "google", "openai", "xai", etc.)
         model: Model name
         **kwargs: Additional configuration
         
@@ -433,14 +416,14 @@ def get_provider_from_model(model: str) -> str:
     """
     model_lower = model.lower()
     
-    if any(prefix in model_lower for prefix in ["gpt", "o1", "o3"]):
-        return "openai"
-    elif any(prefix in model_lower for prefix in ["claude"]):
+    if any(prefix in model_lower for prefix in ["claude"]):
         return "anthropic"
-    elif any(prefix in model_lower for prefix in ["grok"]):
-        return "grok"
     elif any(prefix in model_lower for prefix in ["gemini"]):
         return "google"
+    elif any(prefix in model_lower for prefix in ["gpt", "o1", "o3"]):
+        return "openai"
+    elif any(prefix in model_lower for prefix in ["grok"]):
+        return "xai"
     else:
         # Default to OpenAI for unknown models
         return "openai"
