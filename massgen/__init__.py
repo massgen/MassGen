@@ -27,25 +27,48 @@ Command-Line Usage:
     python cli.py "What is 2+2?" --models gpt-4o gemini-2.5-flash
     python cli.py "Complex question" --config examples/production.yaml
 
-Programmatic Usage:
+Programmatic Usage (v0.0.1 Legacy):
     # Using YAML configuration
-    from mass import run_mass_with_config, load_config_from_yaml
+    from massgen import run_mass_with_config, load_config_from_yaml
     config = load_config_from_yaml("config.yaml")
     result = run_mass_with_config("Your question here", config)
     
     # Using simple model list (single agent)
-    from mass import run_mass_agents
+    from massgen import run_mass_agents
     result = run_mass_agents("What is 2+2?", ["gpt-4o"])
     
     # Using simple model list (multi-agent)
-    from mass import run_mass_agents
+    from massgen import run_mass_agents
     result = run_mass_agents("What is 2+2?", ["gpt-4o", "gemini-2.5-flash"])
+
+New Architecture Usage (v0.0.2):
+    # Create a simple agent
+    from massgen import create_simple_agent
+    import asyncio
     
-    # Using configuration objects
-    from mass import MassSystem, create_config_from_models
-    config = create_config_from_models(["gpt-4o", "grok-3"])
-    system = MassSystem(config)
-    result = system.run("Complex question here")
+    agent = create_simple_agent(
+        agent_id="helpful_assistant",
+        model="gpt-4o-mini",
+        system_message="You are a helpful AI assistant."
+    )
+    
+    # Chat with streaming responses
+    async def chat_example():
+        messages = [{"role": "user", "content": "Hello!"}]
+        async for chunk in agent.chat(messages):
+            if chunk.type == "content":
+                print(chunk.content, end="")
+    
+    asyncio.run(chat_example())
+    
+    # Create a team of agents
+    from massgen import create_agent_team
+    
+    team_configs = [
+        {"agent_id": "researcher", "model": "gpt-4o", "system_message": "Research specialist"},
+        {"agent_id": "writer", "model": "gpt-4o-mini", "system_message": "Technical writer"}
+    ]
+    team = create_agent_team(team_configs)
 """
 
 # Core system components
@@ -78,7 +101,12 @@ from .orchestrator import MassOrchestrator
 from .streaming_display import create_streaming_display
 from .logging import MassLogManager
 
-__version__ = "1.0.0"
+# v0.0.2 New Architecture Components
+from .chat_agent import ChatAgent, StreamChunk
+from .agent_backend import AgentBackend, TokenUsage, OpenAIResponseBackend, create_backend
+from .simple_agent import SimpleAgent, create_simple_agent, create_agent_team
+
+__version__ = "0.0.2"
 
 __all__ = [
     # Main interfaces
@@ -104,4 +132,15 @@ __all__ = [
     "MassOrchestrator",
     "create_streaming_display",
     "MassLogManager",
+    
+    # v0.0.2 New Architecture
+    "ChatAgent",
+    "StreamChunk", 
+    "AgentBackend",
+    "TokenUsage",
+    "OpenAIResponseBackend",
+    "create_backend",
+    "SimpleAgent",
+    "create_simple_agent",
+    "create_agent_team",
 ] 
