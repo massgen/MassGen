@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "massgen"
-version = "0.0.2"
+dynamic = ["version"]
 description = "Multi-Agent Scaling System - A powerful framework for collaborative AI"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -73,6 +73,9 @@ Documentation = "https://github.com/Leezekun/MassGen/blob/main/README.md"
 [tool.setuptools]
 include-package-data = true
 zip-safe = false
+
+[tool.setuptools.dynamic]
+version = {attr = "massgen.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]
