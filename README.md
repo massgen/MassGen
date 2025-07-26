@@ -15,6 +15,11 @@
   <img src="assets/MassGen-v1.gif" alt="MassGen Demo" width="800">
 </div> -->
 
+<div align="center">
+  <a href="https://discord.gg/VVrT2rQaz5">
+    <img src="https://img.shields.io/badge/Discord-Join%20our%20community-7289DA?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Community">
+  </a>
+</div>
 > 🧠 **Multi-agent scaling through intelligent collaboration in Grok Heavy style**
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
@@ -90,6 +95,8 @@ This collaborative approach ensures that the final output leverages collective i
 ## 🚀 Quick Start
 
 ### 1. 📥 Installation
+**<a id="-installation-and-setup"></a>**
+### ⚙️ Installation and Setup
 
 ```bash
 git clone https://github.com/Leezekun/MassGen.git
