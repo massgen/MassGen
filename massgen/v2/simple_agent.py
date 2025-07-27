@@ -262,13 +262,15 @@ class SimpleAgent(ChatAgent):
         Returns:
             Dict containing comprehensive agent status
         """
+        token_usage = self.backend.get_token_usage()
         return {
             "agent_id": self.agent_id,
             "session_id": self.session_id,
             "status": self.status,
             "backend": self.backend.get_provider_name(),
             "conversation_length": len(self.conversation_history),
-            "token_usage": self.backend.get_token_usage().__dict__,
+            "token_usage": token_usage.__dict__,
+            "total_tokens": token_usage.get_total_tokens(),
             "current_task": self.current_task,
             "error_message": self.error_message,
             "created_at": self.created_at,
