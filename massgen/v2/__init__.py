@@ -68,6 +68,17 @@ from .simple_agent import (
     create_agent_team
 )
 
+# Orchestrator implementation
+from .orchestrator import (
+    Orchestrator,
+    AgentState,
+    VoteRecord,
+    create_orchestrator
+)
+
+# Message templates
+from .message_templates import MessageTemplates
+
 __version__ = "0.0.2"
 
 __all__ = [
@@ -87,4 +98,13 @@ __all__ = [
     "SimpleAgent",
     "create_simple_agent",
     "create_agent_team",
+    
+    # Orchestrator implementation
+    "Orchestrator",
+    "AgentState",
+    "VoteRecord", 
+    "create_orchestrator",
+    
+    # Message templates
+    "MessageTemplates",
 ]
