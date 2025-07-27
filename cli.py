@@ -223,6 +223,12 @@ Examples:
     parser.add_argument("--no-logs", action="store_true",
                        help="Disable file logging")
     
+    # File context options
+    parser.add_argument("--files", nargs="+", default=None,
+                       help="Files to load as context (supports .py, .txt, .csv, .pdf, .md, .json)")
+    parser.add_argument("--chunk-size", type=int, default=2000,
+                       help="Maximum characters per file chunk (default: 2000)")
+    
     args = parser.parse_args()
             
     # Load configuration
@@ -231,6 +237,26 @@ Examples:
             config = load_config_from_yaml(args.config)
         else:  # args.models
             config = create_config_from_models(args.models)
+        
+        # Handle file context configuration from CLI
+        files_to_load = []
+        if args.files:
+            files_to_load.extend(args.files)
+        
+        if files_to_load:
+            # Import FileContextConfig here to avoid circular imports
+            from massgen.types import FileContextConfig
+            
+            file_context_config = FileContextConfig(
+                files=files_to_load,
+                chunk_size=args.chunk_size,
+                default_role="user"
+            )
+            file_context_config.validate()
+            
+            # Apply file context to all agents
+            for agent in config.agents:
+                agent.model_config.file_context = file_context_config
         
         # Apply command-line overrides
         if args.max_duration is not None:
