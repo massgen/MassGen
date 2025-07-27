@@ -53,6 +53,31 @@ class ModelConfig:
     top_p: Optional[float] = None
     inference_timeout: Optional[float] = 180 # seconds
     stream: bool = True # whether to stream the response
+    
+    # File context configuration
+    file_context: Optional[Dict[str, Any]] = None  # File context configuration
+
+
+@dataclass 
+class FileContextConfig:
+    """Configuration for file context loading and processing."""
+    
+    files: Optional[List[str]] = None  # List of file paths to load
+    chunk_size: int = 2000  # Max characters per chunk
+    default_role: str = "system"  # Role for file context messages
+    
+    def validate(self):
+        """Validate file context configuration."""
+        if self.files:
+            for file_path in self.files:
+                if not isinstance(file_path, str):
+                    raise ValueError(f"File path must be string, got {type(file_path)}")
+        
+        if self.chunk_size <= 0:
+            raise ValueError("chunk_size must be positive")
+            
+        if self.default_role not in ["system", "user", "assistant"]:
+            raise ValueError("default_role must be 'system', 'user', or 'assistant'")
 
 
 @dataclass

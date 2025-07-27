@@ -13,7 +13,7 @@ from dataclasses import asdict
 
 from .types import (
     MassConfig, OrchestratorConfig, AgentConfig, ModelConfig, 
-    StreamingDisplayConfig, LoggingConfig
+    StreamingDisplayConfig, LoggingConfig, FileContextConfig
 )
 
 
@@ -126,6 +126,14 @@ def _dict_to_config(data: Dict[str, Any]) -> MassConfig:
         for agent_data in agents_data:
             # Parse model configuration
             model_data = agent_data.get('model_config', {})
+            
+            # Handle file context configuration if present
+            file_context_data = model_data.pop('file_context', None)
+            if file_context_data:
+                file_context_config = FileContextConfig(**file_context_data)
+                file_context_config.validate()
+                model_data['file_context'] = file_context_config
+                
             model_config = ModelConfig(**model_data)
             
             # Create agent configuration

@@ -100,6 +100,9 @@ class MassAgent(ABC):
         if model_config is None:
             model_config = ModelConfig()
         
+        # Store the entire model configuration object
+        self.model_config = model_config
+        
         # Store configuration parameters
         self.model = model_config.model
         self.agent_type = get_agent_type_from_model(self.model)
@@ -143,6 +146,23 @@ class MassAgent(ABC):
         Returns:
             AgentResponse containing the agent's response text, code, citations, etc.
         """
+        
+        # Automatically inject file context if configured
+        if (hasattr(self, 'model_config') and 
+            self.model_config and 
+            hasattr(self.model_config, 'file_context') and 
+            self.model_config.file_context):
+            
+            file_context_messages = self._load_file_context()
+            
+            # Append file context to the existing system message instead of creating separate messages
+            if file_context_messages and messages and messages[0].get('role') == 'system':
+                file_content = "\n\n".join([msg['content'] for msg in file_context_messages])
+                messages[0]['content'] += f"\n\n{file_content}"
+            elif file_context_messages:
+                # If no system message exists, create one with file context
+                file_content = "\n\n".join([msg['content'] for msg in file_context_messages])
+                messages.insert(0, {"role": "system", "content": file_content})
         
         # Create configuration dictionary using model configuration parameters
         config = {
@@ -436,6 +456,30 @@ class MassAgent(ABC):
             {"role": "system", "content": SYSTEM_INSTRUCTION},
             {"role": "user", "content": user_input}
         ]
+    
+    def _load_file_context(self) -> List[Dict[str, str]]:
+        """Load file context messages based on configuration."""
+        try:
+            from .tools.file_context_manager import FileContextManager
+            from .types import FileContextConfig
+            
+            file_context = self.model_config.file_context
+            if not isinstance(file_context, FileContextConfig):
+                return []
+            
+            if not file_context.files:
+                return []
+            
+            manager = FileContextManager(
+                default_role=file_context.default_role,
+                chunk_size=file_context.chunk_size
+            )
+            
+            return manager.load_files(file_context.files)
+            
+        except Exception as e:
+            # Return error message as system message if file loading fails
+            return [{"role": "system", "content": f"File context loading error: {str(e)}"}]
     
     def _get_curr_messages_and_tools(self, task: TaskInput):
         """Get the current messages and tools for the agent."""
