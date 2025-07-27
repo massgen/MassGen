@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="MassGen Logo" width="360" />
+  <img src="assets/logo.png" alt="MassGen Logo" width="360" />
 </p>
 
 <p align="center">
