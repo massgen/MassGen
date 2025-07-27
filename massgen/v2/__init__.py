@@ -76,6 +76,27 @@ from .orchestrator import (
     create_orchestrator
 )
 
+# Configuration management
+from .agent_config import (
+    AgentConfig,
+    OrchestratorConfig,
+    ConfigManager,
+    validate_agent_id,
+    validate_config_file
+)
+
+# Team factories
+from .team_factories import (
+    create_research_team,
+    create_development_team,
+    create_analysis_team,
+    create_creative_team,
+    create_custom_team,
+    get_available_teams,
+    create_team,
+    TEAM_FACTORIES
+)
+
 # Message templates
 from .message_templates import MessageTemplates
 
@@ -104,6 +125,23 @@ __all__ = [
     "AgentState",
     "VoteRecord", 
     "create_orchestrator",
+    
+    # Configuration management
+    "AgentConfig",
+    "OrchestratorConfig",
+    "ConfigManager",
+    "validate_agent_id",
+    "validate_config_file",
+    
+    # Team factories
+    "create_research_team",
+    "create_development_team", 
+    "create_analysis_team",
+    "create_creative_team",
+    "create_custom_team",
+    "get_available_teams",
+    "create_team",
+    "TEAM_FACTORIES",
     
     # Message templates
     "MessageTemplates",
