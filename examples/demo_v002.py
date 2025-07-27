@@ -13,7 +13,7 @@ import sys
 # Add parent directory to path for massgen imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from massgen import (
+from massgen.v2 import (
     ChatAgent, StreamChunk, TokenUsage, create_backend,
     SimpleAgent, create_simple_agent, create_agent_team
 )

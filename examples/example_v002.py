@@ -12,7 +12,7 @@ import os
 
 async def basic_usage_example():
     """Basic usage example with SimpleAgent."""
-    from massgen import create_simple_agent, StreamChunk
+    from massgen.v2 import create_simple_agent, StreamChunk
     
     print("🚀 MassGen v0.0.2 - Basic Usage Example\n")
     
@@ -76,7 +76,7 @@ async def basic_usage_example():
 
 async def team_collaboration_example():
     """Example showing multiple agents working together."""
-    from massgen import create_agent_team
+    from massgen.v2 import create_agent_team
     
     print("\n\n🤝 Team Collaboration Example")
     print("=" * 50)
@@ -129,7 +129,7 @@ async def team_collaboration_example():
 
 async def streaming_features_example():
     """Example showing streaming features and real-time updates."""
-    from massgen import create_simple_agent
+    from massgen.v2 import create_simple_agent
     
     print("\n\n🌊 Streaming Features Example")
     print("=" * 50)

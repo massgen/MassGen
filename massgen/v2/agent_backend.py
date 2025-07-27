@@ -10,10 +10,7 @@ from typing import Dict, List, Optional, Any, AsyncGenerator, Callable
 from dataclasses import dataclass
 import asyncio
 import time
-try:
-    from .chat_agent import StreamChunk
-except ImportError:
-    from chat_agent import StreamChunk
+from .chat_agent import StreamChunk
 
 
 @dataclass
@@ -356,15 +353,15 @@ class OpenAIResponseBackend(AgentBackend):
         Returns:
             float: Estimated cost in USD
         """
-        # OpenAI pricing (approximate, as of 2024)
-        # TODO: Update with actual pricing from OpenAI API documentation
+        # OpenAI pricing (as of 2025)
         pricing = {
-            "gpt-4o": {"input": 0.005, "output": 0.015},  # per 1K tokens
+            "gpt-4o": {"input": 0.0025, "output": 0.01},  # per 1K tokens  
             "gpt-4o-mini": {"input": 0.00015, "output": 0.0006},
             "gpt-4": {"input": 0.03, "output": 0.06},
             "gpt-3.5-turbo": {"input": 0.001, "output": 0.002},
             "o1": {"input": 0.015, "output": 0.06},
             "o1-mini": {"input": 0.003, "output": 0.012},
+            "o3-mini": {"input": 0.003, "output": 0.012},  # 2025 model
         }
         
         # Get base model name (remove suffixes like -low, -medium, -high)
@@ -380,8 +377,22 @@ class OpenAIResponseBackend(AgentBackend):
             output_cost = (output_tokens / 1000) * rates["output"]
             return input_cost + output_cost
         else:
-            # Default pricing for unknown models
-            return (input_tokens / 1000) * 0.005 + (output_tokens / 1000) * 0.015
+            # Configurable fallback pricing for unknown models
+            import os
+            import warnings
+            
+            fallback_input_rate = float(os.getenv("FALLBACK_INPUT_RATE", "0.0025"))
+            fallback_output_rate = float(os.getenv("FALLBACK_OUTPUT_RATE", "0.01"))
+            
+            warnings.warn(
+                f"Using fallback pricing for unknown model '{model}'. "
+                f"Rates may be outdated. Input: ${fallback_input_rate}/1K tokens, "
+                f"Output: ${fallback_output_rate}/1K tokens. "
+                f"Set FALLBACK_INPUT_RATE and FALLBACK_OUTPUT_RATE env vars to override.",
+                UserWarning
+            )
+            
+            return (input_tokens / 1000) * fallback_input_rate + (output_tokens / 1000) * fallback_output_rate
 
 
 # Factory function for creating backends

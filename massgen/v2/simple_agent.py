@@ -8,12 +8,8 @@ with full LLM backend integration and workflow support.
 from typing import Dict, List, Optional, Any, AsyncGenerator
 import time
 import json
-try:
-    from .chat_agent import ChatAgent, StreamChunk
-    from .agent_backend import AgentBackend, create_backend, get_provider_from_model
-except ImportError:
-    from chat_agent import ChatAgent, StreamChunk
-    from agent_backend import AgentBackend, create_backend, get_provider_from_model
+from .chat_agent import ChatAgent, StreamChunk
+from .agent_backend import AgentBackend, create_backend, get_provider_from_model
 
 
 class SimpleAgent(ChatAgent):
@@ -91,19 +87,16 @@ class SimpleAgent(ChatAgent):
             
             while retry_count <= self.max_retries:
                 try:
-                    async for chunk in self.backend.stream_with_tools(full_messages, active_tools):
+                    # Process stream using the same approach as the reference implementation
+                    async for chunk in self._process_stream(
+                        self.backend.stream_with_tools(full_messages, active_tools),
+                        active_tools
+                    ):
                         # Add agent source attribution
                         chunk.source = self.agent_id
                         yield chunk
                         
-                        # Handle different chunk types for conversation history
-                        if chunk.type == "content" and chunk.content:
-                            # We'll accumulate content and add to history at the end
-                            pass
-                        elif chunk.type == "complete_message" and chunk.complete_message:
-                            # Add complete message to history
-                            self._update_conversation_history([chunk.complete_message])
-                        elif chunk.type == "done":
+                        if chunk.type == "done":
                             self.status = "completed"
                             break
                         elif chunk.type == "error":
@@ -132,6 +125,7 @@ class SimpleAgent(ChatAgent):
                         # Max retries exceeded
                         self.status = "error"
                         self.error_message = str(last_error)
+                        
                         yield StreamChunk(
                             type="error",
                             error=f"Max retries ({self.max_retries}) exceeded. Last error: {str(last_error)}",
@@ -142,11 +136,88 @@ class SimpleAgent(ChatAgent):
         except Exception as e:
             self.status = "error"
             self.error_message = str(e)
+            
             yield StreamChunk(
                 type="error",
                 error=str(e),
                 source=self.agent_id
             )
+    
+    async def _process_stream(self, backend_stream, tools: List[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
+        """Common streaming logic for processing backend responses, based on ../mass reference."""
+        assistant_response = ""
+        tool_calls = []
+        complete_message = None
+        
+        try:
+            async for chunk in backend_stream:
+                if chunk.type == "content":
+                    assistant_response += chunk.content
+                    yield chunk
+                elif chunk.type == "tool_calls":
+                    # Reference implementation always uses chunk.content for tool calls
+                    tool_calls.extend(chunk.content)
+                    yield chunk
+                elif chunk.type == "complete_message":
+                    # Backend provided the complete message structure
+                    complete_message = chunk.complete_message
+                    # Don't yield this - it's for internal use
+                elif chunk.type == "complete_response":
+                    # Backend provided the raw Responses API response
+                    if hasattr(chunk, 'complete_message') and chunk.complete_message:
+                        complete_message = chunk.complete_message
+                        
+                        # Extract and yield tool calls for orchestrator processing
+                        if isinstance(chunk.complete_message, dict) and 'output' in chunk.complete_message:
+                            response_tool_calls = []
+                            for output_item in chunk.complete_message['output']:
+                                if output_item.get('type') == 'function_call':
+                                    response_tool_calls.append(output_item)
+                                    tool_calls.append(output_item)  # Also store for fallback
+                            
+                            # Yield tool calls so orchestrator can process them
+                            if response_tool_calls:
+                                yield StreamChunk(type="tool_calls", content=response_tool_calls)
+                    elif hasattr(chunk, 'response') and chunk.response:
+                        # Alternative attribute name from reference implementation
+                        complete_message = chunk.response
+                        
+                        # Extract and yield tool calls for orchestrator processing
+                        if isinstance(chunk.response, dict) and 'output' in chunk.response:
+                            response_tool_calls = []
+                            for output_item in chunk.response['output']:
+                                if output_item.get('type') == 'function_call':
+                                    response_tool_calls.append(output_item)
+                                    tool_calls.append(output_item)  # Also store for fallback
+                            
+                            # Yield tool calls so orchestrator can process them
+                            if response_tool_calls:
+                                yield StreamChunk(type="tool_calls", content=response_tool_calls)
+                    # Complete response is for internal use - don't yield it
+                elif chunk.type == "done":
+                    # Add complete response to history
+                    if complete_message:
+                        # For Responses API: complete_message is the response object with 'output' array
+                        if isinstance(complete_message, dict) and 'output' in complete_message:
+                            self.conversation_history.extend(complete_message['output'])
+                        else:
+                            # Fallback if it's already in message format
+                            self.conversation_history.append(complete_message)
+                    elif assistant_response.strip() or tool_calls:
+                        # Fallback for legacy backends
+                        message_data = {"role": "assistant", "content": assistant_response.strip()}
+                        if tool_calls:
+                            message_data["tool_calls"] = tool_calls
+                        self.conversation_history.append(message_data)
+                    yield chunk
+                else:
+                    yield chunk
+                    
+        except Exception as e:
+            error_msg = f"Error: {str(e)}"
+            self.add_to_history("assistant", error_msg)
+            yield StreamChunk(type="content", content=error_msg)
+            yield StreamChunk(type="error", error=str(e))
     
     def _prepare_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -180,9 +251,9 @@ class SimpleAgent(ChatAgent):
         Args:
             messages: Messages to add to history
         """
-        for message in messages:
-            if message not in self.conversation_history:
-                self.conversation_history.append(message)
+        # Simply append messages - caller is responsible for avoiding duplicates
+        # This prevents false duplicate detection based on content matching
+        self.conversation_history.extend(messages)
     
     def get_status(self) -> Dict[str, Any]:
         """
