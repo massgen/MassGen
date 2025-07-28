@@ -39,6 +39,8 @@ class AgentState:
     has_voted: bool = False
     votes: Dict[str, Any] = field(default_factory=dict)
     restart_pending: bool = False
+
+    voting_weight: float = 1.0  # Default weight for voting: 1.0 (can be adjusted per agent)
     
     # Enhanced tracking
     status: str = "working"  # working, voted, failed, completed
@@ -46,6 +48,11 @@ class AgentState:
     execution_end_time: Optional[float] = None
     answer_history: List[str] = field(default_factory=list)
     update_count: int = 0
+
+    def __post_init__(self):
+        """Validate voting weight after initialization."""
+        if self.voting_weight <= 0:
+            raise ValueError(f"voting_weight must be positive, got {self.voting_weight}")
     
     @property
     def execution_time(self) -> Optional[float]:
@@ -68,6 +75,7 @@ class Orchestrator(ChatAgent):
     
     def __init__(self, 
                  agents: Dict[str, ChatAgent], 
+                 agent_weights: Optional[Dict[str, float]] = None, # Weights for agent voting
                  orchestrator_id: str = "orchestrator", 
                  session_id: Optional[str] = None,
                  config: Optional[Dict[str, Any]] = None,
@@ -78,6 +86,7 @@ class Orchestrator(ChatAgent):
         
         Args:
             agents: Dictionary of {agent_id: ChatAgent} instances
+            agent_weights: Optional dictionary of {agent_id: weight} for weighted voting
             orchestrator_id: Unique identifier for this orchestrator
             session_id: Optional session identifier
             config: Optional configuration dictionary
@@ -87,7 +96,22 @@ class Orchestrator(ChatAgent):
         super().__init__(session_id)
         self.orchestrator_id = orchestrator_id
         self.agents = agents
-        self.agent_states = {aid: AgentState() for aid in agents.keys()}
+
+        # Validate agent weight
+        self.agent_weights = agent_weights or {}
+        self._validate_agent_weights(self.agent_weights)
+
+        # Initialize agent states with weights
+        self.agent_states = {}
+        for agent_id in agents.keys():
+            weight = self.agent_weights.get(agent_id, 1.0)
+            try:
+                state = AgentState(voting_weight=weight)
+                self.agent_states[agent_id] = state
+            except ValueError as e:
+                raise ValueError(f"Invalid weight for agent {agent_id}: {e}")
+
+        # self.agent_states = {aid: AgentState() for aid in agents.keys()}
         self.config = config or {}
         
         # Enhanced configuration
@@ -99,9 +123,11 @@ class Orchestrator(ChatAgent):
             "include_vote_counts": False,  # Whether to show current vote counts to agents
             "include_vote_reasons": False,  # Whether to show vote reasons to agents
             "anonymous_voting": True,      # Use anonymous agent IDs in voting
-            "voting_strategy": "simple_majority",  # simple_majority, ranked_choice, etc.
+            "voting_strategy": "weighted_vote" if agent_weights else "simple_majority", # Select voting strategy automatically
             "tie_breaking": "registration_order"   # registration_order, random, oldest_answer, etc.
         })
+
+        self._validate_voting_configuration()
         
         # Session and tracking
         self.session_id = session_id or f"session_{int(time.time())}"
@@ -126,7 +152,34 @@ class Orchestrator(ChatAgent):
         # Initialize agent states with execution tracking
         for agent_id in self.agents.keys():
             self.agent_states[agent_id].execution_start_time = None
-    
+
+    def _validate_agent_weights(self, agent_weights: Dict[str, float]) -> None:
+        """Validate agent weights for proper numeric values and existence in agents."""
+        for agent_id, weight in agent_weights.items():
+            if agent_id not in self.agents:
+                raise ValueError(f"Agent weight specified for unknown agent: {agent_id}")
+            if not isinstance(weight, (int, float)):
+                raise ValueError(f"Agent weight must be numeric, got {type(weight)} for {agent_id}")
+            if weight <= 0:
+                raise ValueError(f"Agent weight must be positive, got {weight} for {agent_id}")
+
+    def _validate_voting_configuration(self) -> None:
+        """validate voting configuration for supported strategies."""
+        strategy = self.voting_config["voting_strategy"]
+
+        if strategy == "weighted_vote":
+            if not self.agent_weights:
+                self.logger.warning("weighted_vote strategy selected but no agent_weights provided, all agents will have equal weight (1.0)")
+
+            # Check weight distribution
+            total_weight = sum(state.voting_weight for state in self.agent_states.values())
+            if total_weight == 0:
+                raise ValueError("Total voting weight cannot be zero")
+        elif strategy == "simple_majority":
+            pass
+        else:
+            raise ValueError(f"Unsupported voting strategy: {strategy}")
+
     async def chat(self, 
                    messages: List[Dict[str, Any]], 
                    tools: Optional[List[Dict[str, Any]]] = None,
@@ -809,45 +862,86 @@ class Orchestrator(ChatAgent):
         yield StreamChunk(type="done")
     
     def _determine_final_agent_from_votes(self, votes: Dict[str, Dict], agent_answers: Dict[str, str]) -> str:
-        """Determine which agent should present the final answer based on votes (simple majority)."""
+        """Determine which agent should present the final answer based on votes (simple majority & weighted vote)."""
         if not votes:
             # No votes yet, return first agent with an answer (earliest by generation time)
             return next(iter(agent_answers)) if agent_answers else None
         
-        # Count votes for each agent
-        vote_counts = {}
-        for vote_data in votes.values():
-            voted_for = vote_data.get("agent_id")
-            if voted_for:
-                vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
-        
-        if not vote_counts:
-            return next(iter(agent_answers)) if agent_answers else None
-        
-        # Simple majority: select agent with most votes
-        max_votes = max(vote_counts.values())
-        tied_agents = [agent_id for agent_id, count in vote_counts.items() if count == max_votes]
-        
-        # Handle ties according to configuration
-        if len(tied_agents) > 1:
-            selected_agent = self._break_tie(tied_agents, agent_answers)
-            tie_broken = True
+        voting_strategy = self.voting_config.get("voting_strategy", "simple_majority")
+
+        if voting_strategy == "weighted_vote":
+            vote_weights = {}
+            for voter_id, vote_data in votes.items():
+                voted_for = vote_data.get("agent_id")
+                if voted_for and voter_id in self.agent_states:
+                    voter_weight = self.agent_states[voter_id].voting_weight
+                    vote_weights[voted_for] = vote_weights.get(voted_for, 0) + voter_weight
+
+            if not vote_weights:
+              return next(iter(agent_answers)) if agent_answers else None
+            
+            # Select agent with maximum weighted votes
+            max_weight = max(vote_weights.values())
+            tied_agents = [agent_id for agent_id, weight in vote_weights.items() if weight == max_weight]
+
+            # Handle ties according to configuration
+            if len(tied_agents) > 1:
+                selected_agent = self._break_tie(tied_agents, agent_answers)
+                tie_broken = True
+            else:
+                selected_agent = tied_agents[0]
+                tie_broken = False
+
+            # Log the selected agent and voting details
+            if selected_agent:
+                total_weight = sum(vote_weights.values())
+                self.logger.info(f"Selected {selected_agent} with weight {vote_weights[selected_agent]:.2f}/{total_weight:.2f}{' (tie-broken)' if tie_broken else ''}")
+                self._log_event("agent_selected", {
+                    "selected_agent": selected_agent,
+                    "weighted_score": vote_weights[selected_agent],
+                    "total_weighted_votes": total_weight,
+                    "weight_distribution": vote_weights,
+                    "voting_strategy": "weighted_vote",
+                    "tie_broken": tie_broken,
+                    "tie_breaking_method": self.voting_config["tie_breaking"] if tie_broken else None
+                })
+
+            return selected_agent
         else:
-            selected_agent = tied_agents[0]
-            tie_broken = False
+            # Count votes for each agent
+            vote_counts = {}
+            for vote_data in votes.values():
+                voted_for = vote_data.get("agent_id")
+                if voted_for:
+                    vote_counts[voted_for] = vote_counts.get(voted_for, 0) + 1
+            
+            if not vote_counts:
+                return next(iter(agent_answers)) if agent_answers else None
+            
+            # Simple majority: select agent with most votes
+            max_votes = max(vote_counts.values())
+            tied_agents = [agent_id for agent_id, count in vote_counts.items() if count == max_votes]
+            
+            # Handle ties according to configuration
+            if len(tied_agents) > 1:
+                selected_agent = self._break_tie(tied_agents, agent_answers)
+                tie_broken = True
+            else:
+                selected_agent = tied_agents[0]
+                tie_broken = False
         
-        if selected_agent:
-            self.logger.info(f"Selected {selected_agent} with {vote_counts[selected_agent]}/{len(votes)} votes{' (tie-broken)' if tie_broken else ''}")
-            self._log_event("agent_selected", {
-                "selected_agent": selected_agent,
-                "votes_received": vote_counts[selected_agent],
-                "total_voters": len(votes),
-                "vote_distribution": vote_counts,
-                "tie_broken": tie_broken,
-                "tie_breaking_method": self.voting_config["tie_breaking"] if tie_broken else None
-            })
-        
-        return selected_agent
+            if selected_agent:
+                self.logger.info(f"Selected {selected_agent} with {vote_counts[selected_agent]}/{len(votes)} votes{' (tie-broken)' if tie_broken else ''}")
+                self._log_event("agent_selected", {
+                    "selected_agent": selected_agent,
+                    "votes_received": vote_counts[selected_agent],
+                    "total_voters": len(votes),
+                    "vote_distribution": vote_counts,
+                    "tie_broken": tie_broken,
+                    "tie_breaking_method": self.voting_config["tie_breaking"] if tie_broken else None
+                })
+            
+            return selected_agent
     
     def _determine_final_agent_from_states(self) -> Optional[str]:
         """Determine final agent based on current agent states."""
@@ -1035,6 +1129,7 @@ class Orchestrator(ChatAgent):
             "agent_details": {
                 agent_id: {
                     "status": state.status,
+                    "voting_weight": state.voting_weight, # Weight used in weighted voting
                     "has_answer": state.answer is not None,
                     "has_voted": state.has_voted,
                     "answer_length": len(state.answer) if state.answer else 0,
@@ -1048,6 +1143,7 @@ class Orchestrator(ChatAgent):
                 for agent_id, state in self.agent_states.items()
             },
             "voting_analysis": {
+                "voting_strategy": self.voting_config.get("voting_strategy", "simple_majority"), # add voting strategy
                 "total_votes": len(self.votes),
                 "vote_records": [
                     {
@@ -1071,13 +1167,25 @@ class Orchestrator(ChatAgent):
         
         return session_log
     
-    def _get_vote_distribution(self) -> Dict[str, int]:
-        """Get current vote distribution."""
-        vote_counts = {}
-        for vote in self.votes:
-            target = vote.target_id
-            vote_counts[target] = vote_counts.get(target, 0) + 1
-        return vote_counts
+    def _get_vote_distribution(self) -> Dict[str, Any]:
+      """Get current vote distribution (supports both simple and weighted voting)."""
+      voting_strategy = self.voting_config.get("voting_strategy", "simple_majority")
+
+      if voting_strategy == "weighted_vote":
+          # Return weighted distribution
+          vote_weights = {}
+          for vote in self.votes:
+              target = vote.target_id
+              voter_weight = self.agent_states[vote.voter_id].voting_weight
+              vote_weights[target] = vote_weights.get(target, 0) + voter_weight
+          return vote_weights
+      else:
+          # Return simple count distribution
+          vote_counts = {}
+          for vote in self.votes:
+              target = vote.target_id
+              vote_counts[target] = vote_counts.get(target, 0) + 1
+          return vote_counts
     
     def get_status(self) -> Dict[str, Any]:
         """Get current orchestrator status with enhanced tracking."""
@@ -1099,6 +1207,7 @@ class Orchestrator(ChatAgent):
             "agent_states": {
                 agent_id: {
                     "status": state.status,
+                    "voting_weight": state.voting_weight, # Weight used in weighted voting
                     "has_answer": state.answer is not None,
                     "has_voted": state.has_voted,
                     "restart_pending": state.restart_pending,
@@ -1123,10 +1232,11 @@ class Orchestrator(ChatAgent):
         self.votes.clear()
         self.communication_log.clear()
         
-        # Reset agent states
+        # Reset agent states (preserve voting weights)
         for agent_id in self.agents.keys():
-            self.agent_states[agent_id] = AgentState()
-        
+            original_weight = self.agent_states[agent_id].voting_weight
+            self.agent_states[agent_id] = AgentState(voting_weight=original_weight)
+                
         # Reset sub-agents
         for agent in self.agents.values():
             if hasattr(agent, 'reset'):
@@ -1137,6 +1247,7 @@ class Orchestrator(ChatAgent):
 
 # Factory function for creating orchestrators
 def create_orchestrator(agents: Dict[str, ChatAgent], 
+                        agent_weights: Optional[Dict[str, float]] = None,
                        orchestrator_id: str = "orchestrator",
                        config: Optional[Dict[str, Any]] = None,
                        session_id: Optional[str] = None,
@@ -1147,6 +1258,7 @@ def create_orchestrator(agents: Dict[str, ChatAgent],
     
     Args:
         agents: Dictionary of agent_id -> ChatAgent instances
+        agent_weights: Optional dictionary of {agent_id: weight} for weighted voting
         orchestrator_id: Unique identifier for the orchestrator
         config: Optional configuration dictionary
         session_id: Optional session ID
@@ -1159,6 +1271,7 @@ def create_orchestrator(agents: Dict[str, ChatAgent],
     """
     return Orchestrator(
         agents=agents,
+        agent_weights=agent_weights,
         orchestrator_id=orchestrator_id,
         config=config,
         session_id=session_id,
