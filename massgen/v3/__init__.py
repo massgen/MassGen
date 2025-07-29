@@ -11,8 +11,11 @@ Key Features:
 - Real-time frontend displays with multi-region terminal UI
 
 TODO - Missing Features (to be added in future releases):
-- Grok backend testing and fixes
-- Gemini backend support  
+- ✅ Grok backend testing and fixes (COMPLETED)
+- Claude backend support (HIGH PRIORITY - production-ready multi-tool API)
+- CLI interface for MassGen v3 (HIGH PRIORITY - user interface)
+- Chat interface with orchestrator (HIGH PRIORITY - core multi-agent functionality)
+- Gemini backend support (DEFERRED - waiting for API multi-tool support)
 - Configuration options for voting info in user messages
 - Enhanced frontend features from v0.0.1
 - Advanced logging and monitoring capabilities
