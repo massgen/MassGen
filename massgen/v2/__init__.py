@@ -52,7 +52,7 @@ Direct Imports:
 from .chat_agent import ChatAgent, StreamChunk
 
 # Backend architecture  
-from .agent_backend import (
+from .backends import (
     AgentBackend, 
     TokenUsage, 
     ChatCompletionsBackend,
