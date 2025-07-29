@@ -1,15 +1,31 @@
-# 🚀 MassGen: Multi-Agent Scaling System for GenAI
+<p align="center">
+  <img src="assets/logo.png" alt="MassGen Logo" width="360" />
+</p>
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-
-![logo](assets/logo.svg)
-
-<div align="center">
-  <a href="https://youtu.be/eMBdoAYeujw">
-    <img src="assets/thumbnail.png" alt="MassGen Demo Video">
+<p align="center">
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+" style="margin-right: 5px;">
   </a>
-</div>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
+  </a>
+  <a href="https://discord.gg/VVrT2rQaz5">
+    <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
+  </a>
+</p>
+
+<h1 align="center">🚀 MassGen: Multi-Agent Scaling System for GenAI</h1>
+
+<p align="center">
+  <i>MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks.</i>
+</p>
+
+<p align="center">
+  <a href="https://youtu.be/eMBdoAYeujw">
+    <img src="assets/thumbnail.png" alt="MassGen Demo Video" width="600">
+  </a>
+</p>
+
 
 <!-- <div align="center">
   <img src="assets/MassGen-v1.gif" alt="MassGen Demo" width="800">

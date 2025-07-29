@@ -73,7 +73,6 @@ from .orchestrator import MassOrchestrator
 from .streaming_display import create_streaming_display
 from .logging import MassLogManager
 
-
 __version__ = "0.0.1"
 
 __all__ = [
