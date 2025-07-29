@@ -111,7 +111,7 @@ class Orchestrator(ChatAgent):
             except ValueError as e:
                 raise ValueError(f"Invalid weight for agent {agent_id}: {e}")
 
-        # self.agent_states = {aid: AgentState() for aid in agents.keys()}
+        
         self.config = config or {}
         
         # Enhanced configuration
