@@ -878,7 +878,7 @@ class Orchestrator(ChatAgent):
                     vote_weights[voted_for] = vote_weights.get(voted_for, 0) + voter_weight
 
             if not vote_weights:
-              return next(iter(agent_answers)) if agent_answers else None
+                return next(iter(agent_answers)) if agent_answers else None
             
             # Select agent with maximum weighted votes
             max_weight = max(vote_weights.values())
