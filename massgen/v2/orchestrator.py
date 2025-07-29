@@ -18,8 +18,8 @@ import time
 import logging
 from datetime import datetime
 
-from .chat_agent import ChatAgent, StreamChunk
-from .message_templates import MessageTemplates
+from massgen.v2.chat_agent import ChatAgent, StreamChunk
+from massgen.v2.message_templates import MessageTemplates
 
 
 @dataclass 
@@ -72,7 +72,8 @@ class Orchestrator(ChatAgent):
                  session_id: Optional[str] = None,
                  config: Optional[Dict[str, Any]] = None,
                  max_duration: int = 600,
-                 log_manager=None):
+                 log_manager=None,
+                 display=None):
         """
         Initialize enhanced orchestrator.
         
@@ -83,6 +84,7 @@ class Orchestrator(ChatAgent):
             config: Optional configuration dictionary
             max_duration: Maximum duration for coordination in seconds
             log_manager: Optional logging manager instance
+            display: Optional display instance for real-time UI updates
         """
         super().__init__(session_id)
         self.orchestrator_id = orchestrator_id
@@ -110,9 +112,10 @@ class Orchestrator(ChatAgent):
         self.votes: List[VoteRecord] = []
         self.communication_log: List[Dict[str, Any]] = []
         
-        # Logging
+        # Logging and Display
         self.log_manager = log_manager
         self.logger = logging.getLogger(f"{__name__}.{orchestrator_id}")
+        self.display = display
         
         # Initialize message templates and workflow tools
         self.message_templates = MessageTemplates()
@@ -126,6 +129,10 @@ class Orchestrator(ChatAgent):
         # Initialize agent states with execution tracking
         for agent_id in self.agents.keys():
             self.agent_states[agent_id].execution_start_time = None
+        
+        # Initialize display if provided
+        if self.display:
+            self._initialize_display()
     
     async def chat(self, 
                    messages: List[Dict[str, Any]], 
@@ -161,6 +168,10 @@ class Orchestrator(ChatAgent):
             self.workflow_phase = "coordinating"
             self.start_time = time.time()
             
+            # Initialize display if available
+            if self.display and hasattr(self.display, 'initialize'):
+                self.display.initialize(user_message, list(self.agents.keys()))
+            
             # Log task start
             self._log_event("task_started", {
                 "task": user_message,
@@ -168,12 +179,14 @@ class Orchestrator(ChatAgent):
                 "agent_count": len(self.agents)
             })
             
-            # Initialize agent execution times
+            # Initialize agent execution times and update display
             for agent_id in self.agents.keys():
                 self.agent_states[agent_id].execution_start_time = time.time()
                 self.agent_states[agent_id].status = "working"
+                self._update_agent_status(agent_id, "working")
             
             self.logger.info(f"Starting coordination for task: {user_message[:100]}...")
+            self._display_system_message(f"🚀 Starting coordination for: {user_message[:100]}...")
             
             async for chunk in self._coordinate_agents():
                 yield chunk
@@ -187,6 +200,7 @@ class Orchestrator(ChatAgent):
             content="🚀 Starting multi-agent coordination...\n\n",
             source=self.orchestrator_id
         )
+        self._display_content(self.orchestrator_id, "🚀 Starting multi-agent coordination...")
         
         votes = {}  # Track votes: voter_id -> {"agent_id": voted_for, "reason": reason}
         
@@ -196,6 +210,7 @@ class Orchestrator(ChatAgent):
             self.agent_states[agent_id].restart_pending = True
         
         yield StreamChunk(type="content", content="## 📋 Agents Coordinating\n", source=self.orchestrator_id)
+        self._display_content(self.orchestrator_id, "📋 Agents Coordinating")
         
         try:
             # Create timeout task
@@ -301,6 +316,8 @@ class Orchestrator(ChatAgent):
                     if chunk_type == "content":
                         # Stream agent content in real-time with source info
                         yield StreamChunk(type="content", content=chunk_data, source=agent_id)
+                        # Forward to display
+                        self._display_content(agent_id, chunk_data)
                         
                     elif chunk_type == "result":
                         # Agent completed with result
@@ -316,19 +333,26 @@ class Orchestrator(ChatAgent):
                             answered_agents[agent_id] = result_data
                             reset_signal = True
                             yield StreamChunk(type="content", content="✅ Answer provided", source=agent_id)
+                            self._display_content(agent_id, "✅ Answer provided")
+                            self._update_agent_status(agent_id, "answered")
                             
                         elif result_type == "vote":
                             # Agent voted for existing answer
                             # Ignore votes from agents with restart pending (votes are about current state)
                             if self.agent_states[agent_id].restart_pending:
                                 yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
+                                self._display_content(agent_id, "🔄 Vote ignored - restarting due to new answers")
                             else:
                                 voted_agents[agent_id] = result_data
                                 yield StreamChunk(type="content", content=f"✅ Vote recorded for {result_data['agent_id']}", source=agent_id)
+                                self._display_content(agent_id, f"✅ Vote recorded for {result_data['agent_id']}")
+                                self._update_agent_status(agent_id, "voted")
                     
                     elif chunk_type == "error":
                         # Agent error
                         yield StreamChunk(type="content", content=f"❌ {chunk_data}", source=agent_id)
+                        self._display_content(agent_id, f"❌ {chunk_data}")
+                        self._update_agent_status(agent_id, "failed")
                         # Emit agent completion status for errors too
                         yield StreamChunk(type="agent_status", source=agent_id, status="completed", content="")
                         await self._close_agent_stream(agent_id, active_streams)
@@ -340,6 +364,8 @@ class Orchestrator(ChatAgent):
                 
                 except Exception as e:
                     yield StreamChunk(type="content", content=f"❌ Stream error - {e}", source=agent_id)
+                    self._display_content(agent_id, f"❌ Stream error - {e}")
+                    self._update_agent_status(agent_id, "failed")
                     await self._close_agent_stream(agent_id, active_streams)
             
             # Apply all state changes atomically after processing all results
@@ -784,12 +810,14 @@ class Orchestrator(ChatAgent):
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
         """Present the final coordinated answer."""
         yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
+        self._display_content(self.orchestrator_id, "🎯 Final Coordinated Answer")
         
         # Select the best agent based on current state
         if not self._selected_agent:
             self._selected_agent = self._determine_final_agent_from_states()
             if self._selected_agent:
                 yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
+                self._display_system_message(f"🏆 Selected Agent: {self._selected_agent}")
         
         if (self._selected_agent and 
             self._selected_agent in self.agent_states and 
@@ -800,13 +828,16 @@ class Orchestrator(ChatAgent):
             self.add_to_history("assistant", final_answer)
             
             yield StreamChunk(type="content", content=final_answer)
+            self._display_content(self.orchestrator_id, final_answer)
         else:
             error_msg = "❌ Unable to provide coordinated answer - no successful agents"
             self.add_to_history("assistant", error_msg)
             yield StreamChunk(type="content", content=error_msg)
+            self._display_content(self.orchestrator_id, error_msg)
         
-        # Update workflow phase
+        # Update workflow phase and show final summary
         self.workflow_phase = "presenting"
+        self._display_final_summary()
         yield StreamChunk(type="done")
     
     def _determine_final_agent_from_votes(self, votes: Dict[str, Dict], agent_answers: Dict[str, str]) -> str:
@@ -1134,6 +1165,73 @@ class Orchestrator(ChatAgent):
                 agent.reset()
         
         self._log_event("session_reset", {"session_id": self.session_id})
+    
+    # =============================================================================
+    # DISPLAY INTEGRATION METHODS
+    # =============================================================================
+    
+    def _initialize_display(self) -> None:
+        """Initialize the display with current session information."""
+        try:
+            if hasattr(self.display, 'initialize'):
+                # Set agent models if available
+                for agent_id, agent in self.agents.items():
+                    if hasattr(agent, 'backend') and hasattr(agent.backend, 'model'):
+                        if hasattr(self.display, 'set_agent_model'):
+                            self.display.set_agent_model(agent_id, agent.backend.model)
+                    # Initial status
+                    if hasattr(self.display, 'update_agent_status'):
+                        self.display.update_agent_status(agent_id, "ready")
+        except Exception as e:
+            self.logger.warning(f"Display initialization failed: {e}")
+    
+    def _update_agent_status(self, agent_id: str, status: str) -> None:
+        """Update agent status in display."""
+        try:
+            if self.display:
+                # Use async-safe version if available, otherwise fall back to sync version
+                if hasattr(self.display, 'update_agent_status_async_safe'):
+                    self.display.update_agent_status_async_safe(agent_id, status)
+                elif hasattr(self.display, 'update_agent_status'):
+                    self.display.update_agent_status(agent_id, status)
+        except Exception as e:
+            self.logger.debug(f"Display status update failed for {agent_id}: {e}")
+    
+    def _display_content(self, source: Optional[str], content: str, chunk_type: str = "content") -> None:
+        """Send content to display."""
+        try:
+            if self.display:
+                # Use async-safe version if available, otherwise fall back to sync version
+                if hasattr(self.display, 'display_content_async_safe'):
+                    self.display.display_content_async_safe(source, content, chunk_type)
+                elif hasattr(self.display, 'display_content'):
+                    self.display.display_content(source, content, chunk_type)
+        except Exception as e:
+            self.logger.debug(f"Display content failed for {source}: {e}")
+    
+    def _display_system_message(self, message: str) -> None:
+        """Send system message to display."""
+        try:
+            if self.display:
+                # Use async-safe version if available, otherwise fall back to sync version
+                if hasattr(self.display, 'add_system_message_async_safe'):
+                    self.display.add_system_message_async_safe(message)
+                elif hasattr(self.display, 'add_system_message'):
+                    self.display.add_system_message(message)
+        except Exception as e:
+            self.logger.debug(f"Display system message failed: {e}")
+    
+    def _display_final_summary(self) -> None:
+        """Show final coordination summary in display."""
+        try:
+            if self.display:
+                # Use async-safe version if available, otherwise fall back to sync version
+                if hasattr(self.display, 'show_final_summary_async_safe'):
+                    self.display.show_final_summary_async_safe()
+                elif hasattr(self.display, 'show_final_summary'):
+                    self.display.show_final_summary()
+        except Exception as e:
+            self.logger.debug(f"Display final summary failed: {e}")
 
 
 # Factory function for creating orchestrators
@@ -1142,7 +1240,8 @@ def create_orchestrator(agents: Dict[str, ChatAgent],
                        config: Optional[Dict[str, Any]] = None,
                        session_id: Optional[str] = None,
                        max_duration: int = 600,
-                       log_manager=None) -> Orchestrator:
+                       log_manager=None,
+                       display=None) -> Orchestrator:
     """
     Create an enhanced orchestrator with sub-agents.
     
@@ -1153,6 +1252,7 @@ def create_orchestrator(agents: Dict[str, ChatAgent],
         session_id: Optional session ID
         max_duration: Maximum duration for coordination in seconds
         log_manager: Optional logging manager instance
+        display: Optional display instance for real-time UI updates
         
     Returns:
         Orchestrator: Enhanced orchestrator instance with full MASS features,
@@ -1164,5 +1264,6 @@ def create_orchestrator(agents: Dict[str, ChatAgent],
         config=config,
         session_id=session_id,
         max_duration=max_duration,
-        log_manager=log_manager
+        log_manager=log_manager,
+        display=display
     )
