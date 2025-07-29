@@ -1,0 +1,19 @@
+{
+  "agent_id": "simple_assistant",
+  "model": "gpt-4o",
+  "provider": "openai",
+  "system_message": "You are a helpful AI assistant. Provide clear, accurate, and helpful responses to user queries.",
+  "max_retries": 3,
+  "temperature": 0.7,
+  "max_tokens": 2000,
+  "timeout": 300,
+  "tools": [],
+  "allowed_actions": ["chat", "analyze", "explain"],
+  "log_level": "INFO",
+  "enable_logging": true,
+  "tags": ["general", "assistant", "helpful"],
+  "custom_config": {
+    "response_style": "conversational",
+    "expertise_areas": ["general knowledge", "problem solving"]
+  }
+}
