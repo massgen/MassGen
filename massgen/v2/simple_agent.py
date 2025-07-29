@@ -94,14 +94,16 @@ class SimpleAgent(ChatAgent):
                     ):
                         # Add agent source attribution
                         chunk.source = self.agent_id
-                        yield chunk
-                        
+
                         if chunk.type == "done":
                             self.status = "completed"
+                            yield chunk
                             break
                         elif chunk.type == "error":
+                            self.status = "error"
+                            self.error_message = chunk.error
+                            yield chunk
                             raise Exception(f"Backend error: {chunk.error}")
-                    
                     # If we get here without errors, break the retry loop
                     break
                     
