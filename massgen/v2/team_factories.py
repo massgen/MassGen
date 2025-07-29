@@ -10,7 +10,7 @@ from .chat_agent import ChatAgent
 from .simple_agent import SimpleAgent, create_simple_agent
 from .orchestrator import Orchestrator, create_orchestrator
 from .agent_config import AgentConfig, OrchestratorConfig
-from .backends import get_provider_from_model
+from .backend import get_provider_from_model
 
 
 def create_research_team(

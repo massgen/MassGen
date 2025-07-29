@@ -52,11 +52,11 @@ Direct Imports:
 from .chat_agent import ChatAgent, StreamChunk
 
 # Backend architecture  
-from .backends import (
+from .backend import (
     AgentBackend, 
     TokenUsage, 
-    ChatCompletionsBackend,
     OpenAIResponseBackend,
+    OpenAIChatCompletionsBackend,
     create_backend,
     get_provider_from_model
 )
@@ -104,6 +104,7 @@ from .message_templates import MessageTemplates
 from .frontend import (
     StreamingFrontend,
     SimpleStreamingDisplay,
+    ColoredStreamingDisplay,
     stream_coordination
 )
 
@@ -117,8 +118,8 @@ __all__ = [
     # Backend architecture
     "AgentBackend",
     "TokenUsage", 
-    "ChatCompletionsBackend",
-    "OpenAIResponseBackend", 
+    "OpenAIResponseBackend",
+    "OpenAIChatCompletionsBackend", 
     "create_backend",
     "get_provider_from_model",
     
@@ -155,6 +156,7 @@ __all__ = [
     
     # Frontend
     "StreamingFrontend",
-    "SimpleStreamingDisplay", 
+    "SimpleStreamingDisplay",
+    "ColoredStreamingDisplay", 
     "stream_coordination",
 ]

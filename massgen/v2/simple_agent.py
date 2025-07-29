@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Any, AsyncGenerator
 import time
 import json
 from .chat_agent import ChatAgent, StreamChunk
-from .backends import AgentBackend, create_backend, get_provider_from_model
+from .backend import AgentBackend, create_backend, get_provider_from_model
 
 
 class SimpleAgent(ChatAgent):

@@ -11,7 +11,7 @@ import re
 import json
 import os
 from pathlib import Path
-from .backends import get_provider_from_model
+from .backend import get_provider_from_model
 
 
 @dataclass
