@@ -104,6 +104,9 @@ class SimpleAgent(ChatAgent):
                             self.error_message = chunk.error
                             yield chunk
                             raise Exception(f"Backend error: {chunk.error}")
+                        else:
+                            # Yield all other chunks (content, tool_calls, etc.)
+                            yield chunk
                     # If we get here without errors, break the retry loop
                     break
                     
@@ -166,22 +169,7 @@ class SimpleAgent(ChatAgent):
                     # Don't yield this - it's for internal use
                 elif chunk.type == "complete_response":
                     # Backend provided the raw Responses API response
-                    if hasattr(chunk, 'complete_message') and chunk.complete_message:
-                        complete_message = chunk.complete_message
-                        
-                        # Extract and yield tool calls for orchestrator processing
-                        if isinstance(chunk.complete_message, dict) and 'output' in chunk.complete_message:
-                            response_tool_calls = []
-                            for output_item in chunk.complete_message['output']:
-                                if output_item.get('type') == 'function_call':
-                                    response_tool_calls.append(output_item)
-                                    tool_calls.append(output_item)  # Also store for fallback
-                            
-                            # Yield tool calls so orchestrator can process them
-                            if response_tool_calls:
-                                yield StreamChunk(type="tool_calls", content=response_tool_calls)
-                    elif hasattr(chunk, 'response') and chunk.response:
-                        # Alternative attribute name from reference implementation
+                    if chunk.response:
                         complete_message = chunk.response
                         
                         # Extract and yield tool calls for orchestrator processing
@@ -200,6 +188,7 @@ class SimpleAgent(ChatAgent):
                     # Add complete response to history
                     if complete_message:
                         # For Responses API: complete_message is the response object with 'output' array
+                        # Each item in output should be added to conversation history individually
                         if isinstance(complete_message, dict) and 'output' in complete_message:
                             self.conversation_history.extend(complete_message['output'])
                         else:

@@ -193,7 +193,6 @@ class OrchestratorConfig:
     
     orchestrator_id: str = "orchestrator"
     max_duration: int = 600
-    max_rounds: int = 10
     
     # Voting configuration
     voting_config: Dict[str, Any] = field(default_factory=lambda: {
@@ -222,7 +221,6 @@ class OrchestratorConfig:
         return {
             "orchestrator_id": self.orchestrator_id,
             "max_duration": self.max_duration,
-            "max_rounds": self.max_rounds,
             "voting_config": self.voting_config,
             "enable_streaming": self.enable_streaming,
             "stream_coordination": self.stream_coordination,

@@ -444,11 +444,13 @@ class Orchestrator(ChatAgent):
         self.agent_states[agent_id].restart_pending = False
         
         try:
-            # Use proper conversation building
+            # Use proper conversation building with agent's original system message
+            agent_system_message = getattr(agent, 'system_message', None)
             conversation = self.message_templates.build_initial_conversation(
                 task=task, 
                 agent_summaries=answers,
-                valid_agent_ids=list(answers.keys()) if answers else None
+                valid_agent_ids=list(answers.keys()) if answers else None,
+                original_system_message=agent_system_message
             )
             
             # Build proper conversation messages with system + user messages
@@ -798,7 +800,6 @@ class Orchestrator(ChatAgent):
             self.add_to_history("assistant", final_answer)
             
             yield StreamChunk(type="content", content=final_answer)
-            yield StreamChunk(type="content", content=f"\n\n---\n*Coordinated by {len(self.agents)} agents via MASS framework*")
         else:
             error_msg = "❌ Unable to provide coordinated answer - no successful agents"
             self.add_to_history("assistant", error_msg)

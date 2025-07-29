@@ -72,11 +72,12 @@ class OpenAIResponseBackend(AgentBackend):
             
             params["input"] = input_messages
             
-            # Add tools if provided
+            # Add tools if provided (following v1 pattern)
+            formatted_tools = []
             if tools:
                 formatted_tools = self._format_tools_for_response_api(tools)
-                if formatted_tools:
-                    params["tools"] = formatted_tools
+                
+            params["tools"] = formatted_tools if formatted_tools else None
             
             # Add optional parameters from config
             temperature = self.config.get("temperature")
@@ -110,6 +111,10 @@ class OpenAIResponseBackend(AgentBackend):
             input_tokens = 0
             output_tokens = 0
             
+            # Buffer for function calls
+            current_function_call = None
+            current_function_args = ""
+            
             async for chunk in response:
                 if hasattr(chunk, "type"):
                     if chunk.type == "response.output_text.delta":
@@ -121,12 +126,37 @@ class OpenAIResponseBackend(AgentBackend):
                                 source="openai"
                             )
                     
-                    elif chunk.type == "response.function_call_output.delta":
-                        yield StreamChunk(
-                            type="tool_calls",
-                            content=chunk.delta if hasattr(chunk, "delta") else None,
-                            source="openai"
-                        )
+                    elif chunk.type == "response.function_call_arguments.delta":
+                        # Buffer function call arguments
+                        if hasattr(chunk, "delta") and chunk.delta:
+                            current_function_args += chunk.delta
+                    
+                    elif chunk.type == "response.output_item.added":
+                        # Start of a new function call
+                        if hasattr(chunk, "item") and hasattr(chunk.item, "type"):
+                            if chunk.item.type == "function_call":
+                                current_function_call = {
+                                    "id": getattr(chunk.item, "call_id", ""),
+                                    "type": "function",
+                                    "function": {
+                                        "name": getattr(chunk.item, "name", ""),
+                                        "arguments": ""
+                                    }
+                                }
+                                current_function_args = ""
+                    
+                    elif chunk.type == "response.output_item.done":
+                        # Function call completed - send the buffered tool call
+                        if current_function_call:
+                            current_function_call["function"]["arguments"] = current_function_args
+                            yield StreamChunk(
+                                type="tool_calls",
+                                content=[current_function_call],
+                                source="openai"
+                            )
+                            # Reset buffers
+                            current_function_call = None
+                            current_function_args = ""
                     
                     elif chunk.type == "response.completed":
                         # Final chunk - update token usage
@@ -152,13 +182,23 @@ class OpenAIResponseBackend(AgentBackend):
             )
     
     def _format_tools_for_response_api(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format tools for OpenAI Response API."""
+        """Format tools for OpenAI Response API - uses flattened structure."""
         formatted_tools = []
         
         for tool in tools:
             if isinstance(tool, dict):
-                if tool.get("type") == "function":
-                    # Standard function tool
+                if tool.get("type") == "function" and "function" in tool:
+                    # Response API expects flattened structure (from MASS reference)
+                    function_def = tool["function"]
+                    formatted_tool = {
+                        "type": "function",
+                        "name": function_def["name"],
+                        "description": function_def.get("description", ""),
+                        "parameters": function_def.get("parameters", {})
+                    }
+                    formatted_tools.append(formatted_tool)
+                elif tool.get("type") == "function" and "name" in tool:
+                    # Already in Response API format
                     formatted_tools.append(tool)
                 elif tool == {"type": "web_search_preview"}:
                     # Built-in web search
@@ -168,6 +208,14 @@ class OpenAIResponseBackend(AgentBackend):
                     formatted_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
                 else:
                     formatted_tools.append(tool)
+            elif callable(tool):
+                # Convert function to JSON format (from v1 implementation)
+                from massgen.utils import function_to_json
+                formatted_tools.append(function_to_json(tool))
+            elif tool == "live_search":
+                formatted_tools.append({"type": "web_search_preview"})
+            elif tool == "code_execution":
+                formatted_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
         
         return formatted_tools
     

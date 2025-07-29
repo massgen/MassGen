@@ -100,6 +100,13 @@ from .team_factories import (
 # Message templates
 from .message_templates import MessageTemplates
 
+# Frontend
+from .frontend import (
+    StreamingFrontend,
+    SimpleStreamingDisplay,
+    stream_coordination
+)
+
 __version__ = "0.0.2"
 
 __all__ = [
@@ -145,4 +152,9 @@ __all__ = [
     
     # Message templates
     "MessageTemplates",
+    
+    # Frontend
+    "StreamingFrontend",
+    "SimpleStreamingDisplay", 
+    "stream_coordination",
 ]

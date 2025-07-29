@@ -19,15 +19,28 @@ class MessageTemplates:
     # SYSTEM MESSAGE TEMPLATES
     # =============================================================================
     
-    def evaluation_system_message(self) -> str:
-        """Standard evaluation system message for all cases."""
+    def evaluation_system_message(self, original_system_message: Optional[str] = None) -> str:
+        """Standard evaluation system message for all cases.
+        
+        Args:
+            original_system_message: The agent's original system message to preserve
+        """
         if "evaluation_system_message" in self._template_overrides:
             return str(self._template_overrides["evaluation_system_message"])
         
-        return """You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
+        evaluation_instructions = """You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
 
 If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
 Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call one of the two tools."""
+        
+        # Combine with original system message if provided
+        if original_system_message:
+            return f"""{original_system_message}
+
+COORDINATION CONTEXT:
+{evaluation_instructions}"""
+        else:
+            return evaluation_instructions
     
     # =============================================================================
     # USER MESSAGE TEMPLATES
@@ -147,9 +160,10 @@ Otherwise, do additional work first, then use the `new_answer` tool to record a 
     # =============================================================================
     
     def build_initial_conversation(self, task: str, agent_summaries: Optional[Dict[str, str]] = None, 
-                                  valid_agent_ids: Optional[List[str]] = None) -> Dict[str, str]:
+                                  valid_agent_ids: Optional[List[str]] = None,
+                                  original_system_message: Optional[str] = None) -> Dict[str, str]:
         """Build complete conversation for agent coordination."""
-        system_message = self.evaluation_system_message()
+        system_message = self.evaluation_system_message(original_system_message)
         
         if agent_summaries:
             # Case 2: Existing answers available

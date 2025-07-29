@@ -4,6 +4,7 @@ Factory functions for creating backend instances.
 
 from .base import AgentBackend
 from .openai import OpenAIResponseBackend
+from .chat_completions_openai import OpenAIChatCompletionsBackend
 
 
 def create_backend(provider: str, model: str, **kwargs) -> AgentBackend:

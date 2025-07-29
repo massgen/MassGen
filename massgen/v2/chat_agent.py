@@ -15,10 +15,11 @@ import time
 @dataclass
 class StreamChunk:
     """Standardized chunk format for streaming responses."""
-    type: str  # "content", "tool_calls", "complete_message", "done", "error", "agent_status"
+    type: str  # "content", "tool_calls", "complete_message", "complete_response", "done", "error", "agent_status"
     content: Optional[str] = None
     tool_calls: Optional[List[Dict[str, Any]]] = None
-    complete_message: Optional[Dict[str, Any]] = None
+    complete_message: Optional[Dict[str, Any]] = None  # Complete assistant message
+    response: Optional[Dict[str, Any]] = None  # Raw Responses API response
     error: Optional[str] = None
     source: Optional[str] = None  # agent_id or "orchestrator"
     status: Optional[str] = None

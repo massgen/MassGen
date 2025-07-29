@@ -126,7 +126,6 @@ Write clearly, structure logically, and make complex information accessible.""",
     orchestrator_config = OrchestratorConfig(
         orchestrator_id=team_id,
         max_duration=900,  # 15 minutes for research tasks
-        max_rounds=8,
         voting_config={
             "include_vote_counts": True,
             "include_vote_reasons": True,
@@ -261,7 +260,6 @@ Focus on comprehensive testing coverage and quality assurance processes.""",
     orchestrator_config = OrchestratorConfig(
         orchestrator_id=team_id,
         max_duration=1200,  # 20 minutes for development tasks
-        max_rounds=10,
         voting_config={
             "include_vote_counts": False,
             "include_vote_reasons": True,
@@ -396,7 +394,6 @@ Focus on clarity, accuracy, and effective communication of insights.""",
     orchestrator_config = OrchestratorConfig(
         orchestrator_id=team_id,
         max_duration=1800,  # 30 minutes for analysis tasks
-        max_rounds=12,
         voting_config={
             "include_vote_counts": True,
             "include_vote_reasons": True,
@@ -531,7 +528,6 @@ Focus on data-driven strategic insights that maximize marketing effectiveness an
     orchestrator_config = OrchestratorConfig(
         orchestrator_id=team_id,
         max_duration=1200,  # 20 minutes for creative tasks
-        max_rounds=8,
         voting_config={
             "include_vote_counts": False,
             "include_vote_reasons": True,
