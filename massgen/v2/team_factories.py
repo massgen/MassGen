@@ -120,13 +120,7 @@ Write clearly, structure logically, and make complex information accessible.""",
     
     # Create agents
     for config in [researcher_config, fact_checker_config, analyst_config, reporter_config]:
-        agents[config.agent_id] = create_simple_agent(
-            agent_id=config.agent_id,
-            model=config.model,
-            api_key=config.api_key,
-            system_message=config.system_message,
-            session_id=config.session_id
-        )
+        agents[config.agent_id] = create_simple_agent(**config.to_dict())
     
     # Create orchestrator
     orchestrator_config = OrchestratorConfig(
@@ -261,13 +255,7 @@ Focus on comprehensive testing coverage and quality assurance processes.""",
     
     # Create agents
     for config in [backend_config, frontend_config, devops_config, qa_config]:
-        agents[config.agent_id] = create_simple_agent(
-            agent_id=config.agent_id,
-            model=config.model,
-            api_key=config.api_key,
-            system_message=config.system_message,
-            session_id=config.session_id
-        )
+        agents[config.agent_id] = create_simple_agent(**config.to_dict())
     
     # Create orchestrator
     orchestrator_config = OrchestratorConfig(
@@ -402,13 +390,7 @@ Focus on clarity, accuracy, and effective communication of insights.""",
     
     # Create agents
     for config in [data_scientist_config, business_analyst_config, statistician_config, visualizer_config]:
-        agents[config.agent_id] = create_simple_agent(
-            agent_id=config.agent_id,
-            model=config.model,
-            api_key=config.api_key,
-            system_message=config.system_message,
-            session_id=config.session_id
-        )
+        agents[config.agent_id] = create_simple_agent(**config.to_dict())
     
     # Create orchestrator
     orchestrator_config = OrchestratorConfig(
@@ -543,13 +525,7 @@ Focus on data-driven strategic insights that maximize marketing effectiveness an
     
     # Create agents
     for config in [creative_director_config, copywriter_config, designer_config, strategist_config]:
-        agents[config.agent_id] = create_simple_agent(
-            agent_id=config.agent_id,
-            model=config.model,
-            api_key=config.api_key,
-            system_message=config.system_message,
-            session_id=config.session_id
-        )
+        agents[config.agent_id] = create_simple_agent(**config.to_dict())
     
     # Create orchestrator
     orchestrator_config = OrchestratorConfig(
@@ -618,13 +594,7 @@ def create_custom_team(
     agents = {}
     for agent_data in agent_configs:
         config = AgentConfig.from_dict({**agent_data, "session_id": session_id})
-        agents[config.agent_id] = create_simple_agent(
-            agent_id=config.agent_id,
-            model=config.model,
-            api_key=config.api_key,
-            system_message=config.system_message,
-            session_id=config.session_id
-        )
+        agents[config.agent_id] = create_simple_agent(**config.to_dict())
     
     # Create orchestrator
     return create_orchestrator(
