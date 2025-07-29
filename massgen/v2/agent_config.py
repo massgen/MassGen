@@ -11,6 +11,7 @@ import re
 import json
 import os
 from pathlib import Path
+from .backends import get_provider_from_model
 
 
 @dataclass
@@ -75,7 +76,7 @@ class AgentConfig:
         
         # Auto-detect provider if not specified
         if not self.provider:
-            self.provider = self._detect_provider_from_model(self.model)
+            self.provider = get_provider_from_model(self.model)
     
     def _is_valid_agent_id(self, agent_id: str) -> bool:
         """
@@ -112,22 +113,6 @@ class AgentConfig:
         
         return True
     
-    def _detect_provider_from_model(self, model: str) -> str:
-        """Auto-detect provider from model name."""
-        model_lower = model.lower()
-        
-        if any(prefix in model_lower for prefix in ['gpt', 'o1', 'davinci', 'ada', 'babbage', 'curie']):
-            return "openai"
-        elif any(prefix in model_lower for prefix in ['claude', 'anthropic']):
-            return "anthropic"
-        elif any(prefix in model_lower for prefix in ['gemini', 'palm', 'bard']):
-            return "google"
-        elif any(prefix in model_lower for prefix in ['grok']):
-            return "xai"
-        elif any(prefix in model_lower for prefix in ['llama', 'mistral', 'codellama']):
-            return "huggingface"
-        else:
-            return "openai"  # Default fallback
     
     def get_hierarchy_level(self) -> int:
         """Get the hierarchy level of the agent ID."""

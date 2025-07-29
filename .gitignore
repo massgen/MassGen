@@ -176,7 +176,6 @@ secrets.yaml
 sync.sh
 
 # Testing
-test*.py
 .coverage
 .pytest_cache/
 .tox/
