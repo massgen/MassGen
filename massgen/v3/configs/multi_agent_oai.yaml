@@ -34,14 +34,3 @@ agents:
 ui:
   display_type: "terminal"  # Multi-region coordination display
   logging_enabled: true
-
-# Optional: Orchestrator settings
-# orchestrator:
-#   voting_timeout: 30
-#   max_coordination_rounds: 3
-#   require_consensus: false
-
-# Optional: Global backend parameters
-# backend_params:
-#   temperature: 0.7
-#   max_tokens: 2000
