@@ -1,0 +1,37 @@
+# MassGen v3 Two Agent Configuration
+# Simple two-agent setup for focused collaboration
+
+agents:
+  - id: "primary_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      temperature: 0.5
+      max_tokens: 2500
+    system_message: |
+      You are a knowledgeable primary agent who provides comprehensive, 
+      well-researched responses. Focus on:
+      - Thorough analysis and research
+      - Accurate and detailed information
+      - Clear reasoning and explanation
+      - Comprehensive coverage of the topic
+
+  - id: "secondary_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      temperature: 0.5
+      max_tokens: 2500
+    system_message: |
+      You are a secondary agent who reviews, refines, and enhances responses. 
+      Focus on:
+      - Critical evaluation and review
+      - Identifying gaps or areas for improvement
+      - Adding complementary perspectives
+      - Ensuring clarity and completeness
+
+ui:
+  display_type: "terminal"
+  logging_enabled: true
+
+# Simple two-agent settings

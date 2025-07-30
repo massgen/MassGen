@@ -46,10 +46,6 @@ ui:
   logging_enabled: true
 
 # Research-optimized settings
-orchestrator:
-  voting_timeout: 45  # More time for research tasks
-  max_coordination_rounds: 4  # Allow more rounds for complex research
-
 backend_params:
   temperature: 0.3  # Lower temperature for more focused research
   max_tokens: 3000  # Longer responses for detailed research

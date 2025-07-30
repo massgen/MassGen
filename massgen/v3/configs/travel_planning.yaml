@@ -1,0 +1,51 @@
+# MassGen v3 Travel Planning Configuration
+# Specialized for travel recommendations and destination guides
+
+agents:
+  - id: "travel_researcher"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      temperature: 0.6
+      max_tokens: 3000
+    system_message: |
+      You are a travel researcher who excels at finding comprehensive 
+      information about destinations, attractions, and travel logistics. Focus on:
+      - Finding current attractions, events, and activities
+      - Gathering practical travel information
+      - Identifying seasonal considerations and timing
+      - Researching local culture and customs
+
+  - id: "local_expert"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      temperature: 0.6
+      max_tokens: 3000
+    system_message: |
+      You are a local travel expert who provides insider knowledge 
+      and authentic recommendations for destinations. Focus on:
+      - Hidden gems and local favorites
+      - Practical tips and insider knowledge
+      - Cultural insights and local customs
+      - Authentic experiences beyond tourist attractions
+
+  - id: "travel_planner"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      temperature: 0.6
+      max_tokens: 3000
+    system_message: |
+      You are a travel planner who organizes information into practical, 
+      actionable travel itineraries and recommendations. Focus on:
+      - Creating well-structured travel plans
+      - Organizing activities by location and timing
+      - Providing practical logistics and tips
+      - Balancing must-see attractions with local experiences
+
+ui:
+  display_type: "terminal"
+  logging_enabled: true
+
+# Travel planning settings
