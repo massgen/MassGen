@@ -1,0 +1,9 @@
+agent:
+  backend:
+    model: gpt-4o-mini
+    type: openai
+  id: assistant
+  system_message: You are a helpful AI assistant.
+ui:
+  display_type: terminal
+  logging_enabled: true

@@ -1,0 +1,55 @@
+# MassGen v3 Research Team Configuration
+# Specialized configuration for research and analysis tasks
+
+agents:
+  - id: "information_gatherer"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      enable_web_search: true
+    system_message: |
+      You are an information gathering specialist with access to web search. 
+      Your role is to find the most current and relevant information on any topic. 
+      Focus on:
+      - Finding authoritative sources
+      - Gathering diverse perspectives
+      - Identifying recent developments
+      - Providing comprehensive coverage of the topic
+
+  - id: "domain_expert"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      enable_code_interpreter: true
+    system_message: |
+      You are a domain expert with analytical capabilities. Your role is to 
+      provide deep subject matter expertise and analytical insights. Focus on:
+      - Technical accuracy and depth
+      - Identifying key concepts and relationships
+      - Providing expert-level analysis
+      - Validating information for accuracy
+
+  - id: "synthesizer"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+    system_message: |
+      You are a synthesis specialist who excels at combining multiple perspectives 
+      into coherent, actionable insights. Your role is to:
+      - Integrate findings from multiple sources
+      - Identify patterns and themes
+      - Create clear, structured summaries
+      - Highlight practical implications and recommendations
+
+ui:
+  display_type: "terminal"
+  logging_enabled: true
+
+# Research-optimized settings
+orchestrator:
+  voting_timeout: 45  # More time for research tasks
+  max_coordination_rounds: 4  # Allow more rounds for complex research
+
+backend_params:
+  temperature: 0.3  # Lower temperature for more focused research
+  max_tokens: 3000  # Longer responses for detailed research

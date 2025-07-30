@@ -12,12 +12,13 @@ Key Features:
 
 TODO - Missing Features (to be added in future releases):
 - ✅ Grok backend testing and fixes (COMPLETED)
+- ✅ CLI interface for MassGen v3 (COMPLETED - file-based config, interactive mode)
 - Claude backend support (HIGH PRIORITY - production-ready multi-tool API)
-- CLI interface for MassGen v3 (HIGH PRIORITY - user interface)
 - Chat interface with orchestrator (HIGH PRIORITY - core multi-agent functionality)
-- Gemini backend support (DEFERRED - waiting for API multi-tool support)
-- Configuration options for voting info in user messages
-- Enhanced frontend features from v0.0.1
+- Fix CLI multi-turn conversation display in multi-agent mode (MEDIUM PRIORITY)
+- Gemini backend support (LOW PRIORITY - waiting for API multi-tool support)
+- Configuration options for voting info in user messages (MEDIUM PRIORITY)
+- Enhanced frontend features from v0.0.1 (MEDIUM PRIORITY)
 - Advanced logging and monitoring capabilities
 - Tool execution with custom functions
 - Web search and code interpreter integration
