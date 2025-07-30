@@ -12,10 +12,3 @@ agent:
 ui:
   display_type: "terminal"  # Options: terminal, simple
   logging_enabled: true
-
-# Optional: Backend-specific parameters
-# backend_params:
-#   temperature: 0.7
-#   max_tokens: 2000
-#   enable_web_search: false
-#   enable_code_interpreter: false
