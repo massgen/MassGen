@@ -41,6 +41,49 @@ Otherwise, do additional work first, then use the `new_answer` tool to record a 
         
         return f"<ORIGINAL MESSAGE> {task} <END OF ORIGINAL MESSAGE>"
     
+    def format_conversation_history(self, conversation_history: List[Dict[str, str]]) -> str:
+        """Format conversation history for agent context."""
+        if "format_conversation_history" in self._template_overrides:
+            override = self._template_overrides["format_conversation_history"]
+            if callable(override):
+                return override(conversation_history)
+            return str(override)
+        
+        if not conversation_history:
+            return ""
+        
+        lines = ["<CONVERSATION_HISTORY>"]
+        for message in conversation_history:
+            role = message.get("role", "unknown")
+            content = message.get("content", "")
+            if role == "user":
+                lines.append(f"User: {content}")
+            elif role == "assistant":
+                lines.append(f"Assistant: {content}")
+            elif role == "system":
+                # Skip system messages in history display
+                continue
+        lines.append("<END OF CONVERSATION_HISTORY>")
+        return "\n".join(lines)
+    
+    def system_message_with_context(self, conversation_history: Optional[List[Dict[str, str]]] = None) -> str:
+        """Evaluation system message with conversation context awareness."""
+        if "system_message_with_context" in self._template_overrides:
+            override = self._template_overrides["system_message_with_context"]
+            if callable(override):
+                return override(conversation_history)
+            return str(override)
+        
+        base_message = self.evaluation_system_message()
+        
+        if conversation_history and len(conversation_history) > 0:
+            context_note = """
+            
+IMPORTANT: You are responding to the latest message in an ongoing conversation. Consider the full conversation context when evaluating answers and providing your response."""
+            return base_message + context_note
+        
+        return base_message
+    
     def format_current_answers_empty(self) -> str:
         """Format current answers section when no answers exist (Case 1)."""
         if "format_current_answers_empty" in self._template_overrides:
@@ -205,6 +248,37 @@ COORDINATION CONTEXT:
         else:
             return self.build_case1_user_message(task)
     
+    def build_coordination_context(self, current_task: str, 
+                                  conversation_history: Optional[List[Dict[str, str]]] = None,
+                                  agent_answers: Optional[Dict[str, str]] = None) -> str:
+        """Build coordination context including conversation history and current state."""
+        if "build_coordination_context" in self._template_overrides:
+            override = self._template_overrides["build_coordination_context"]
+            if callable(override):
+                return override(current_task, conversation_history, agent_answers)
+            return str(override)
+        
+        context_parts = []
+        
+        # Add conversation history if present
+        if conversation_history and len(conversation_history) > 0:
+            history_formatted = self.format_conversation_history(conversation_history)
+            if history_formatted:
+                context_parts.append(history_formatted)
+                context_parts.append("")  # Empty line for spacing
+        
+        # Add current task
+        context_parts.append(self.format_original_message(current_task))
+        context_parts.append("")  # Empty line for spacing
+        
+        # Add agent answers
+        if agent_answers:
+            context_parts.append(self.format_current_answers_with_summaries(agent_answers))
+        else:
+            context_parts.append(self.format_current_answers_empty())
+        
+        return "\n".join(context_parts)
+    
     # =============================================================================
     # CONVERSATION BUILDERS
     # =============================================================================
@@ -215,6 +289,17 @@ COORDINATION CONTEXT:
         return {
             "system_message": self.evaluation_system_message(),
             "user_message": self.build_evaluation_message(task, agent_summaries),
+            "tools": self.get_standard_tools(valid_agent_ids)
+        }
+    
+    def build_conversation_with_context(self, current_task: str,
+                                       conversation_history: Optional[List[Dict[str, str]]] = None,
+                                       agent_summaries: Optional[Dict[str, str]] = None,
+                                       valid_agent_ids: Optional[List[str]] = None) -> Dict[str, Any]:
+        """Build complete conversation with conversation history context for MassGen evaluation."""
+        return {
+            "system_message": self.system_message_with_context(conversation_history),
+            "user_message": self.build_coordination_context(current_task, conversation_history, agent_summaries),
             "tools": self.get_standard_tools(valid_agent_ids)
         }
     

@@ -192,13 +192,19 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
         print(f"Question: {BRIGHT_WHITE}{question}{RESET}")
         print("\n" + "="*60)
         
-        # Use orchestrator chat method directly with full message history
-        response_content = ""
-        async for chunk in orchestrator.chat(messages):
-            if chunk.type == "content" and chunk.content:
-                response_content += chunk.content
-            elif chunk.type == "done":
-                break
+        # For multi-agent with history, we need to use a different approach
+        # that maintains coordination UI display while supporting conversation context
+        
+        if history and len(history) > 0:
+            # Use coordination UI with conversation context
+            # Extract current question from messages
+            current_question = messages[-1].get("content", question) if messages else question
+            
+            # Pass the full message context to the UI coordination
+            response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
+        else:
+            # Standard coordination for new conversations
+            response_content = await ui.coordinate(orchestrator, question)
         
         return response_content
 

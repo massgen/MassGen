@@ -99,42 +99,48 @@ class MassOrchestrator(ChatAgent):
         Args:
             messages: List of conversation messages
             tools: Ignored by orchestrator (uses internal workflow tools)
-            reset_chat: Ignored by orchestrator (manages its own coordination)
-            clear_history: Ignored by orchestrator (manages its own coordination)
+            reset_chat: If True, reset conversation and start fresh
+            clear_history: If True, clear history before processing
             
         Yields:
             StreamChunk: Streaming response chunks
         """
-        _ = tools, reset_chat, clear_history  # Unused parameters
+        _ = tools  # Unused parameter
         
-        # Extract user message from messages (assuming last message is from user)
-        user_message = None
-        for message in messages:
-            if message.get("role") == "user":
-                user_message = message.get("content", "")
-                self.add_to_history("user", user_message)
+        # Handle conversation management
+        if clear_history:
+            self.conversation_history.clear()
+        if reset_chat:
+            self.reset()
+        
+        # Process all messages to build conversation context
+        conversation_context = self._build_conversation_context(messages)
+        user_message = conversation_context.get("current_message")
         
         if not user_message:
             yield StreamChunk(type="error", error="No user message found in conversation")
             return
         
-        # Determine what to do with this message
+        # Add user message to history
+        self.add_to_history("user", user_message)
+        
+        # Determine what to do based on current state and conversation context
         if self.workflow_phase == "idle":
-            # New task - start MassGen coordination
+            # New task - start MassGen coordination with full context
             self.current_task = user_message
             self.workflow_phase = "coordinating"
             
-            async for chunk in self._coordinate_agents():
+            async for chunk in self._coordinate_agents(conversation_context):
                 yield chunk
                 
         elif self.workflow_phase == "presenting":
-            # Follow-up question during presentation
-            async for chunk in self._handle_followup(user_message):
+            # Handle follow-up question with full conversation context
+            async for chunk in self._handle_followup(user_message, conversation_context):
                 yield chunk
         else:
             # Already coordinating - provide status update
             yield StreamChunk(type="content", content="🔄 Coordinating agents, please wait...")
-            # Future: handle follow-up messages during coordination
+            # Note: In production, you might want to queue follow-up questions
     
     async def chat_simple(self, user_message: str) -> AsyncGenerator[StreamChunk, None]:
         """
@@ -150,7 +156,38 @@ class MassOrchestrator(ChatAgent):
         async for chunk in self.chat(messages):
             yield chunk
     
-    async def _coordinate_agents(self) -> AsyncGenerator[StreamChunk, None]:
+    def _build_conversation_context(self, messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Build conversation context from message list."""
+        conversation_history = []
+        current_message = None
+        
+        # Process messages to extract conversation history and current message
+        for message in messages:
+            role = message.get("role")
+            content = message.get("content", "")
+            
+            if role == "user":
+                current_message = content
+                # Add to history (excluding the current message)
+                if len(conversation_history) > 0 or len(messages) > 1:
+                    conversation_history.append(message.copy())
+            elif role == "assistant":
+                conversation_history.append(message.copy())
+            elif role == "system":
+                # System messages are typically not part of conversation history
+                pass
+        
+        # Remove the last user message from history since that's the current message
+        if conversation_history and conversation_history[-1].get("role") == "user":
+            conversation_history.pop()
+        
+        return {
+            "current_message": current_message,
+            "conversation_history": conversation_history,
+            "full_messages": messages
+        }
+    
+    async def _coordinate_agents(self, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
         yield StreamChunk(type="content", content="🚀 Starting multi-agent coordination...\n\n", source=self.orchestrator_id)
         
@@ -164,7 +201,7 @@ class MassOrchestrator(ChatAgent):
         yield StreamChunk(type="content", content="## 📋 Agents Coordinating\n", source=self.orchestrator_id)
         
         # Start streaming coordination with real-time agent output
-        async for chunk in self._stream_coordination_with_agents(votes):
+        async for chunk in self._stream_coordination_with_agents(votes, conversation_context):
             yield chunk
         
         # Determine final agent based on votes
@@ -175,7 +212,7 @@ class MassOrchestrator(ChatAgent):
         async for chunk in self._present_final_answer():
             yield chunk
     
-    async def _stream_coordination_with_agents(self, votes: Dict[str, Dict]) -> AsyncGenerator[StreamChunk, None]:
+    async def _stream_coordination_with_agents(self, votes: Dict[str, Dict], conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """
         Coordinate agents with real-time streaming of their outputs.
         
@@ -199,7 +236,7 @@ class MassOrchestrator(ChatAgent):
             for agent_id in self.agents.keys():
                 if (agent_id not in active_streams and 
                     not self.agent_states[agent_id].has_voted):
-                    active_streams[agent_id] = self._stream_agent_execution(agent_id, self.current_task, current_answers)
+                    active_streams[agent_id] = self._stream_agent_execution(agent_id, self.current_task, current_answers, conversation_context)
             
             if not active_streams:
                 break
@@ -347,7 +384,7 @@ class MassOrchestrator(ChatAgent):
         
         return enforcement_msgs
     
-    async def _stream_agent_execution(self, agent_id: str, task: str, answers: Dict[str, str]) -> AsyncGenerator[tuple, None]:
+    async def _stream_agent_execution(self, agent_id: str, task: str, answers: Dict[str, str], conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[tuple, None]:
         """
         Stream agent execution with real-time content and final result.
         
@@ -367,12 +404,22 @@ class MassOrchestrator(ChatAgent):
         self.agent_states[agent_id].restart_pending = False
         
         try:
-            # Use proper AgentConfig conversation building
-            conversation = self.message_templates.build_initial_conversation(
-                task=task, 
-                agent_summaries=answers,
-                valid_agent_ids=list(answers.keys()) if answers else None
-            )
+            # Build conversation with context support
+            if conversation_context and conversation_context.get("conversation_history"):
+                # Use conversation context-aware building
+                conversation = self.message_templates.build_conversation_with_context(
+                    current_task=task,
+                    conversation_history=conversation_context.get("conversation_history", []),
+                    agent_summaries=answers,
+                    valid_agent_ids=list(answers.keys()) if answers else None
+                )
+            else:
+                # Fallback to standard conversation building
+                conversation = self.message_templates.build_initial_conversation(
+                    task=task, 
+                    agent_summaries=answers,
+                    valid_agent_ids=list(answers.keys()) if answers else None
+                )
             
             # Clean startup without redundant messages
             
@@ -787,12 +834,18 @@ class MassOrchestrator(ChatAgent):
         # Return the first agent with an answer (by order in agent_states)
         return next(iter(agents_with_answers))
     
-    async def _handle_followup(self, user_message: str) -> AsyncGenerator[StreamChunk, None]:
-        """Handle follow-up questions after presenting final answer."""
-        # For now, just acknowledge - could extend to re-run coordination
-        # Future: implement context-aware follow-up handling
-        yield StreamChunk(type="content", 
-                         content=f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.")
+    async def _handle_followup(self, user_message: str, conversation_context: Optional[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
+        """Handle follow-up questions after presenting final answer with conversation context."""
+        # For now, acknowledge with context awareness
+        # Future: implement full re-coordination with follow-up context
+        
+        if conversation_context and len(conversation_context.get("conversation_history", [])) > 0:
+            yield StreamChunk(type="content", 
+                             content=f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or coordinate a new task that takes our conversation history into account.")
+        else:
+            yield StreamChunk(type="content", 
+                             content=f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.")
+        
         yield StreamChunk(type="done")
     
     # =============================================================================

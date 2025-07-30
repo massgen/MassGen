@@ -201,6 +201,167 @@ class CoordinationUI:
             if self.display:
                 self.display.cleanup()
     
+    async def coordinate_with_context(self, orchestrator, question: str, messages: List[Dict[str, Any]], agent_ids: Optional[List[str]] = None) -> str:
+        """Coordinate agents with conversation context and visual display.
+        
+        Args:
+            orchestrator: MassGen orchestrator instance
+            question: Current question for coordination
+            messages: Full conversation message history
+            agent_ids: Optional list of agent IDs (auto-detected if not provided)
+            
+        Returns:
+            Final coordinated response
+        """
+        self.orchestrator = orchestrator
+        
+        # Auto-detect agent IDs if not provided
+        if agent_ids is None:
+            self.agent_ids = list(orchestrator.agents.keys())
+        else:
+            self.agent_ids = agent_ids
+        
+        # Initialize display if not provided
+        if self.display is None:
+            if self.display_type == "terminal":
+                self.display = TerminalDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "simple":
+                self.display = SimpleDisplay(self.agent_ids, **self.config)
+            else:
+                raise ValueError(f"Unknown display type: {self.display_type}")
+        
+        # Pass orchestrator reference to display for backend info
+        self.display.orchestrator = orchestrator
+        
+        # Initialize logger and display with context info
+        log_filename = None
+        if self.logger:
+            # Add context info to session initialization
+            context_info = f"(with {len(messages)//2} previous exchanges)" if len(messages) > 1 else ""
+            session_question = f"{question} {context_info}"
+            log_filename = self.logger.initialize_session(session_question, self.agent_ids)
+            monitoring = self.logger.get_monitoring_commands()
+            print(f"📁 Real-time log: {log_filename}")
+            print(f"💡 Monitor with: {monitoring['tail']}")
+            print()
+        
+        self.display.initialize(question, log_filename)
+        
+        try:
+            # Process coordination stream with conversation context
+            full_response = ""
+            final_answer = ""
+            
+            # Use the orchestrator's chat method with full message context
+            async for chunk in orchestrator.chat(messages):
+                content = getattr(chunk, 'content', '') or ''
+                source = getattr(chunk, 'source', None)
+                chunk_type = getattr(chunk, 'type', '')
+                
+                # Handle agent status updates
+                if chunk_type == "agent_status":
+                    status = getattr(chunk, 'status', None)
+                    if source and status:
+                        self.display.update_agent_status(source, status)
+                    continue
+                
+                if content:
+                    full_response += content
+                    
+                    # Log chunk
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk.type)
+                    
+                    # Process content by source
+                    await self._process_content(source, content)
+            
+            # Display vote results and get final presentation
+            status = orchestrator.get_status()
+            vote_results = status.get('vote_results', {})
+            selected_agent = status.get('selected_agent')
+            
+            if vote_results.get('vote_counts'):
+                self._display_vote_results(vote_results)
+            
+            # Get final presentation from winning agent
+            if self.enable_final_presentation and selected_agent and vote_results.get('vote_counts'):
+                print(f"\n🎤 Final Presentation from {selected_agent}:")
+                print("=" * 60)
+                
+                presentation_content = ""
+                try:
+                    async for chunk in orchestrator.get_final_presentation(selected_agent, vote_results):
+                        content = getattr(chunk, 'content', '') or ''
+                        if content:
+                            # Ensure content is a string
+                            if isinstance(content, list):
+                                content = ' '.join(str(item) for item in content)
+                            elif not isinstance(content, str):
+                                content = str(content)
+                            
+                            # Simple content accumulation - let the display handle formatting
+                            presentation_content += content
+                            
+                            # Log presentation chunk
+                            if self.logger:
+                                self.logger.log_chunk(selected_agent, content, getattr(chunk, 'type', 'presentation'))
+                            
+                            # Stream presentation to console
+                            print(content, end='', flush=True)
+                            
+                            # Update display
+                            await self._process_content(selected_agent, content)
+                            
+                            if getattr(chunk, 'type', '') == 'done':
+                                break
+                                
+                except Exception as e:
+                    print(f"\n❌ Error during final presentation: {e}")
+                    presentation_content = full_response  # Fallback
+                
+                final_answer = presentation_content
+                print("\n" + "=" * 60)
+            
+            # Get the clean final answer from orchestrator's stored state
+            orchestrator_final_answer = None
+            if selected_agent and hasattr(orchestrator, 'agent_states') and selected_agent in orchestrator.agent_states:
+                stored_answer = orchestrator.agent_states[selected_agent].answer
+                if stored_answer:
+                    # Clean up the stored answer
+                    orchestrator_final_answer = stored_answer.replace('\\', '\n').replace('**', '').strip()
+            
+            # Use orchestrator's clean answer if available, otherwise fall back to presentation
+            final_result = orchestrator_final_answer if orchestrator_final_answer else (final_answer if final_answer else full_response)
+            if final_result:
+                print(f"\n🎯 FINAL COORDINATED ANSWER")
+                print("=" * 80)
+                print(f"{final_result.strip()}")
+                print("=" * 80)
+                
+                # Show which agent was selected
+                if selected_agent:
+                    print(f"✅ Selected by: {selected_agent}")
+                    if vote_results.get('vote_counts'):
+                        vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results['vote_counts'].items()])
+                        print(f"🗳️ Vote results: {vote_summary}")
+                print()
+            
+            # Finalize session
+            if self.logger:
+                session_info = self.logger.finalize_session(final_answer, success=True)
+                print(f"💾 Session log: {session_info['filename']}")
+                print(f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}")
+            
+            return final_result
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.finalize_session("", success=False)
+            raise
+        finally:
+            if self.display:
+                self.display.cleanup()
+    
     def _display_vote_results(self, vote_results: Dict[str, Any]):
         """Display voting results in a formatted table."""
         print(f"\n🗳️  VOTING RESULTS")
