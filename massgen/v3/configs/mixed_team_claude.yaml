@@ -1,0 +1,35 @@
+name: "Mixed AI Team with Claude Leadership"
+description: "Multi-provider team with Claude as lead coordinator, demonstrating cross-backend collaboration"
+
+agents:
+  - id: "claude_lead"
+    name: "Claude Team Lead"
+    system_message: "You are the team lead responsible for coordinating the analysis and ensuring comprehensive coverage. You synthesize inputs from team members and provide final strategic recommendations. Use your analytical capabilities to guide the team's direction."
+    backend:
+      type: "claude"
+      model: "claude-3-5-haiku-20241022"
+      temperature: 0.4
+      max_tokens: 6144
+      enable_web_search: true
+
+  - id: "gpt_researcher"
+    name: "GPT Research Specialist"
+    system_message: "You are a research specialist focused on gathering detailed information and providing thorough analysis. You work with the team to ensure all aspects are covered comprehensively."
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      temperature: 0.3
+      max_tokens: 4096
+
+  - id: "grok_innovator"
+    name: "Grok Innovation Advisor"
+    system_message: "You are an innovation advisor who brings creative perspectives and out-of-the-box thinking. You challenge assumptions and suggest novel approaches to problems."
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      temperature: 0.7
+      max_tokens: 3072
+
+orchestrator:
+  coordination_rounds: 3
+  final_answer_agent: "claude_lead"

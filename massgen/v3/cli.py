@@ -28,12 +28,30 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+# Load environment variables from .env file
+def load_env_file():
+    """Load environment variables from .env file if it exists."""
+    env_file = Path('.env')
+    if env_file.exists():
+        with open(env_file, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    # Remove quotes if present
+                    value = value.strip('"\'')
+                    os.environ[key] = value
+
+# Load .env file at module import
+load_env_file()
+
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from massgen.v3.backend.openai_backend import OpenAIBackend
 from massgen.v3.backend.grok_backend import GrokBackend
+from massgen.v3.backend.claude_backend import ClaudeBackend
 from massgen.v3.chat_agent import SingleAgent
 from massgen.v3.orchestrator import MassOrchestrator
 from massgen.v3.frontend.coordination_ui import CoordinationUI
@@ -89,6 +107,12 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         if not api_key:
             raise ConfigurationError("Grok API key not found. Set XAI_API_KEY or provide in config.")
         return GrokBackend(api_key=api_key)
+    
+    elif backend_type == 'claude':
+        api_key = kwargs.get('api_key') or os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            raise ConfigurationError("Claude API key not found. Set ANTHROPIC_API_KEY or provide in config.")
+        return ClaudeBackend(api_key=api_key)
     
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -389,12 +413,18 @@ Examples:
   
   # Quick single agent setup
   python -m massgen.v3.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
+  python -m massgen.v3.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
   
   # Interactive mode
   python -m massgen.v3.cli --config config.yaml
   
   # Create sample configurations
   python -m massgen.v3.cli --create-samples
+
+Environment Variables:
+  OPENAI_API_KEY      - Required for OpenAI backend
+  XAI_API_KEY         - Required for Grok backend  
+  ANTHROPIC_API_KEY   - Required for Claude backend
         """
     )
     
@@ -406,7 +436,7 @@ Examples:
     config_group = parser.add_mutually_exclusive_group()
     config_group.add_argument("--config", type=str,
                              help="Path to YAML/JSON configuration file")
-    config_group.add_argument("--backend", type=str, choices=['openai', 'grok'],
+    config_group.add_argument("--backend", type=str, choices=['openai', 'grok', 'claude'],
                              help="Backend type for quick setup")
     
     # Quick setup options

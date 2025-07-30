@@ -142,7 +142,8 @@ class SingleAgent(ChatAgent):
                     assistant_response += chunk.content
                     yield chunk
                 elif chunk.type == "tool_calls":
-                    tool_calls.extend(chunk.content)
+                    chunk_tool_calls = getattr(chunk, 'tool_calls', []) or []
+                    tool_calls.extend(chunk_tool_calls)
                     yield chunk
                 elif chunk.type == "complete_message":
                     # Backend provided the complete message structure
@@ -163,7 +164,7 @@ class SingleAgent(ChatAgent):
                             
                             # Yield tool calls so orchestrator can process them
                             if response_tool_calls:
-                                yield StreamChunk(type="tool_calls", content=response_tool_calls)
+                                yield StreamChunk(type="tool_calls", tool_calls=response_tool_calls)
                     # Complete response is for internal use - don't yield it
                 elif chunk.type == "done":
                     # Add complete response to history

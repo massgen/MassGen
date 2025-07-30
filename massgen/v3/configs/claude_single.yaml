@@ -1,0 +1,19 @@
+name: "Claude Single Agent"
+description: "Single Claude agent for general queries with optional tools"
+
+agents:
+  - id: "claude_assistant"
+    name: "Claude Assistant"
+    system_message: "You are Claude, a helpful, harmless, and honest AI assistant created by Anthropic. You provide thoughtful, nuanced responses while being direct and concise when appropriate."
+    backend:
+      type: "claude"
+      model: "claude-3-5-haiku-latest"
+      temperature: 0.7
+      max_tokens: 4096
+      # Optional: Enable Claude's builtin tools
+      enable_web_search: false
+      enable_code_execution: true
+
+orchestrator:
+  coordination_rounds: 1
+  final_answer_agent: "claude_assistant"

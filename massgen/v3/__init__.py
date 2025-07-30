@@ -18,7 +18,7 @@ TODO - Missing Features (to be added in future releases):
 - ✅ Chat interface with orchestrator (COMPLETED - async streaming with context)
 - ✅ Fix CLI multi-turn conversation display (COMPLETED - coordination UI integration)
 - ✅ Case study configurations and test commands (COMPLETED - specialized YAML configs)
-- Claude backend support (HIGH PRIORITY - production-ready multi-tool API)
+- ✅ Claude backend support (COMPLETED - production-ready multi-tool API)
 - Gemini backend support (LOW PRIORITY - waiting for API multi-tool support)
 - Configuration options for voting info in user messages (MEDIUM PRIORITY)
 - Enhanced frontend features from v0.0.1 (MEDIUM PRIORITY)
@@ -41,6 +41,7 @@ Usage:
 
 # Import main classes for convenience
 from .backend.openai_backend import OpenAIBackend
+from .backend.claude_backend import ClaudeBackend
 from .chat_agent import (
     ChatAgent, 
     SingleAgent, 
@@ -60,6 +61,7 @@ __author__ = "MassGen Contributors"
 __all__ = [
     # Backends
     "OpenAIBackend",
+    "ClaudeBackend",
     
     # Agents
     "ChatAgent",
