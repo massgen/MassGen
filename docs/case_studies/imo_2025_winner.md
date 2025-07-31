@@ -13,10 +13,6 @@ python cli.py "Which AI won IMO 2025?" --models gemini-2.5-flash gpt-4.1
 *   Agent 1: `gemini-2.5-flash`
 *   Agent 2: `gpt-4.1`
 
-**Watch the recorded demo:**
-
-[![MassGen Case Study](https://img.youtube.com/vi/9BPrK0apNuI/0.jpg)](https://www.youtube.com/watch?v=9BPrK0apNuI)
-
 ## The Collaborative Process
 
 ### Initial Answers
