@@ -201,10 +201,10 @@ class TerminalDisplay(BaseDisplay):
         # Add working indicator if transitioning to working
         if old_status != "working" and status == "working":
             agent_prefix = f"[{agent_id}] " if self.num_agents > 1 else ""
-            print(f"\n{agent_prefix}⚡ Working...")
+            print(f"\n{agent_prefix}⚡  Working...")
             if (not self.agent_outputs[agent_id] or 
                 not self.agent_outputs[agent_id][-1].startswith("⚡")):
-                self.agent_outputs[agent_id].append("⚡ Working...")
+                self.agent_outputs[agent_id].append("⚡  Working...")
         
         # Show status update in footer
         self._refresh_display()
@@ -228,10 +228,9 @@ class TerminalDisplay(BaseDisplay):
     
     def _refresh_display(self):
         """Refresh the entire display with proper columns."""
-        # Throttle refreshes to prevent visual artifacts
         import time
         current_time = time.time()
-        if current_time - self._last_refresh_time < 0.1:  # Min 100ms between refreshes
+        if current_time - self._last_refresh_time < 0.005:  # 5ms between refreshes
             return
         self._last_refresh_time = current_time
         
