@@ -65,9 +65,19 @@ class GrokBackend(ChatCompletionsBackend):
             # Add Live Search parameters if enabled (Grok-specific)
             if enable_web_search:
                 search_params_kwargs = {"mode": "auto", "return_citations": True}
+                
+                # Allow override of search parameters from backend params
                 max_results = kwargs.get("max_search_results")
                 if max_results is not None:
                     search_params_kwargs["max_search_results"] = max_results
+                
+                search_mode = kwargs.get("search_mode")
+                if search_mode is not None:
+                    search_params_kwargs["mode"] = search_mode
+                
+                return_citations = kwargs.get("return_citations")
+                if return_citations is not None:
+                    search_params_kwargs["return_citations"] = return_citations
                 
                 # Use extra_body to pass search_parameters to xAI API
                 api_params["extra_body"] = {

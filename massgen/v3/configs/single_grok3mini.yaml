@@ -7,6 +7,7 @@ agent:
     type: "grok"
     model: "grok-3-mini"
     enable_web_search: true
+    return_citations: true
 
 ui:
   display_type: "terminal"  # Options: terminal, simple

@@ -59,6 +59,7 @@ class ChatCompletionsBackend(LLMBackend):
         
         async for chunk in stream:
             try:
+                
                 if hasattr(chunk, 'choices') and chunk.choices:
                     choice = chunk.choices[0]
                     
@@ -128,6 +129,14 @@ class ChatCompletionsBackend(LLMBackend):
                             if search_sources_used > 0:
                                 yield StreamChunk(type="content", content=f"\n✅ [Live Search Complete] Used {search_sources_used} sources\n")
                             
+                            # Check for citations before building complete message
+                            if hasattr(chunk, 'citations') and chunk.citations and len(chunk.citations) > 0:
+                                if enable_web_search:
+                                    citation_text = "\n📚 **Citations:**\n"
+                                    for i, citation in enumerate(chunk.citations, 1):
+                                        citation_text += f"{i}. {citation}\n"
+                                    yield StreamChunk(type="content", content=citation_text)
+                            
                             # Build and yield complete message (no tool calls)
                             complete_message = {"role": "assistant", "content": content.strip()}
                             yield StreamChunk(type="complete_message", complete_message=complete_message)
@@ -142,14 +151,6 @@ class ChatCompletionsBackend(LLMBackend):
                         if enable_web_search and search_sources_used > 0:
                             yield StreamChunk(type="content", content=f"\n📊 [Live Search] Using {search_sources_used} sources for real-time data\n")
                 
-                # Check for citations (typically in final chunk)
-                if hasattr(chunk, 'citations') and chunk.citations:
-                    citations = chunk.citations
-                    if enable_web_search and citations:
-                        citation_text = "\n📚 **Citations:**\n"
-                        for i, citation in enumerate(citations, 1):
-                            citation_text += f"{i}. {citation}\n"
-                        yield StreamChunk(type="content", content=citation_text)
             
             except Exception as chunk_error:
                 yield StreamChunk(type="error", error=f"Chunk processing error: {chunk_error}")
