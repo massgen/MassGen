@@ -102,6 +102,31 @@ class CoordinationUI:
                         self.display.update_agent_status(source, status)
                     continue
                 
+                # Handle builtin tool results
+                elif chunk_type == "builtin_tool_results":
+                    builtin_results = getattr(chunk, 'builtin_tool_results', [])
+                    if builtin_results and source:
+                        for result in builtin_results:
+                            tool_type = result.get('tool_type', 'unknown')
+                            status_result = result.get('status', 'unknown')
+                            tool_msg = f"🔧 [{tool_type.title()}] {status_result.title()}"
+                            
+                            if tool_type in ['code_interpreter', 'code_execution']:
+                                code = result.get('code', '') or result.get('input', {}).get('code', '')
+                                outputs = result.get('outputs')
+                                if code:
+                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
+                                if outputs:
+                                    tool_msg += f" - Result: {outputs}"
+                            elif tool_type == 'web_search':
+                                query = result.get('query', '') or result.get('input', {}).get('query', '')
+                                if query:
+                                    tool_msg += f" - Query: '{query}'"
+                            
+                            # Display as tool content for the specific agent
+                            await self._process_agent_content(source, tool_msg)
+                    continue
+                
                 if content:
                     full_response += content
                     
@@ -263,6 +288,31 @@ class CoordinationUI:
                     status = getattr(chunk, 'status', None)
                     if source and status:
                         self.display.update_agent_status(source, status)
+                    continue
+                
+                # Handle builtin tool results  
+                elif chunk_type == "builtin_tool_results":
+                    builtin_results = getattr(chunk, 'builtin_tool_results', [])
+                    if builtin_results and source:
+                        for result in builtin_results:
+                            tool_type = result.get('tool_type', 'unknown')
+                            status_result = result.get('status', 'unknown')
+                            tool_msg = f"🔧 [{tool_type.title()}] {status_result.title()}"
+                            
+                            if tool_type in ['code_interpreter', 'code_execution']:
+                                code = result.get('code', '') or result.get('input', {}).get('code', '')
+                                outputs = result.get('outputs')
+                                if code:
+                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
+                                if outputs:
+                                    tool_msg += f" - Result: {outputs}"
+                            elif tool_type == 'web_search':
+                                query = result.get('query', '') or result.get('input', {}).get('query', '')
+                                if query:
+                                    tool_msg += f" - Query: '{query}'"
+                            
+                            # Display as tool content for the specific agent
+                            await self._process_agent_content(source, tool_msg)
                     continue
                 
                 if content:
