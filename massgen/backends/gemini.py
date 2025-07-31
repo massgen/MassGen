@@ -3,8 +3,20 @@ import threading
 import time
 import json
 
-from google import genai
-from google.genai import types
+try:
+    from google import genai
+    from google.genai import types
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+    # Create dummy classes to prevent import errors
+    class genai:
+        @staticmethod
+        def configure(**kwargs):
+            raise ImportError("Google genai package not installed. Install with: pip install google-genai")
+    
+    class types:
+        pass
 from dotenv import load_dotenv
 import copy
 

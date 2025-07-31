@@ -29,23 +29,18 @@ Command-Line Usage:
 
 Programmatic Usage:
     # Using YAML configuration
-    from mass import run_mass_with_config, load_config_from_yaml
+    from massgen import run_mass_with_config, load_config_from_yaml
     config = load_config_from_yaml("config.yaml")
     result = run_mass_with_config("Your question here", config)
     
     # Using simple model list (single agent)
-    from mass import run_mass_agents
+    from massgen import run_mass_agents
     result = run_mass_agents("What is 2+2?", ["gpt-4o"])
     
     # Using simple model list (multi-agent)
-    from mass import run_mass_agents
+    from massgen import run_mass_agents
     result = run_mass_agents("What is 2+2?", ["gpt-4o", "gemini-2.5-flash"])
-    
-    # Using configuration objects
-    from mass import MassSystem, create_config_from_models
-    config = create_config_from_models(["gpt-4o", "grok-3"])
-    system = MassSystem(config)
-    result = system.run("Complex question here")
+
 """
 
 # Core system components
@@ -104,4 +99,5 @@ __all__ = [
     "MassOrchestrator",
     "create_streaming_display",
     "MassLogManager",
+    
 ] 
