@@ -147,7 +147,7 @@ class OpenAIBackend(LLMBackend):
                     elif chunk.type == 'response.code_interpreter_call.completed':
                         yield StreamChunk(type="content", content=f"✅ [Provider Tool: Code Interpreter] Execution completed\n")
                     elif chunk.type == 'response.output_item.done':
-                        # Get search query or executed code details
+                        # Get search query or executed code details - show them right after completion
                         if hasattr(chunk, 'item') and chunk.item:
                             if hasattr(chunk.item, 'type') and chunk.item.type == 'web_search_call':
                                 if hasattr(chunk.item, 'action') and hasattr(chunk.item.action, 'query'):
@@ -156,8 +156,32 @@ class OpenAIBackend(LLMBackend):
                                         yield StreamChunk(type="content", content=f"🔍 [Search Query] '{search_query}'\n")
                             elif hasattr(chunk.item, 'type') and chunk.item.type == 'code_interpreter_call':
                                 if hasattr(chunk.item, 'code') and chunk.item.code:
-                                    code_snippet = chunk.item.code[:100] + "..." if len(chunk.item.code) > 100 else chunk.item.code
-                                    yield StreamChunk(type="content", content=f"💻 [Code Executed] {code_snippet}\n")
+                                    # Format code as a proper code block - don't assume language
+                                    yield StreamChunk(type="content", content=f"💻 [Code Executed]\n```\n{chunk.item.code}\n```\n")
+                                
+                                # Also show the execution output if available
+                                if hasattr(chunk.item, 'outputs') and chunk.item.outputs:
+                                    for output in chunk.item.outputs:
+                                        output_text = None
+                                        if hasattr(output, 'text') and output.text:
+                                            output_text = output.text
+                                        elif hasattr(output, 'content') and output.content:
+                                            output_text = output.content
+                                        elif hasattr(output, 'data') and output.data:
+                                            output_text = str(output.data)
+                                        elif isinstance(output, str):
+                                            output_text = output
+                                        elif isinstance(output, dict):
+                                            # Handle dict format outputs
+                                            if 'text' in output:
+                                                output_text = output['text']
+                                            elif 'content' in output:
+                                                output_text = output['content']
+                                            elif 'data' in output:
+                                                output_text = str(output['data'])
+                                        
+                                        if output_text and output_text.strip():
+                                            yield StreamChunk(type="content", content=f"📊 [Result] {output_text.strip()}\n")
                     elif chunk.type == 'response.completed':
                         # Extract and yield tool calls from the complete response
                         if hasattr(chunk, 'response'):

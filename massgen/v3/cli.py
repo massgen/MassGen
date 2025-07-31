@@ -238,30 +238,9 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
                 response_content += chunk.content
                 print(chunk.content, end="", flush=True)
             elif chunk.type == "builtin_tool_results":
-                # Display builtin tool execution results
-                builtin_results = getattr(chunk, 'builtin_tool_results', [])
-                for result in builtin_results:
-                    tool_type = result.get('tool_type', 'unknown')
-                    status = result.get('status', 'unknown')
-                    print(f"\n🔧 [{tool_type.title()}] {status.title()}")
-                    
-                    if tool_type in ['code_interpreter', 'code_execution']:
-                        code = result.get('code', '')
-                        outputs = result.get('outputs')
-                        input_data = result.get('input', {})
-                        if code:
-                            print(f"   Code: {code}")
-                        elif input_data.get('code'):
-                            print(f"   Code: {input_data['code']}")
-                        if outputs:
-                            print(f"   Result: {outputs}")
-                    elif tool_type == 'web_search':
-                        query = result.get('query', '')
-                        input_data = result.get('input', {})
-                        if query:
-                            print(f"   Query: {query}")
-                        elif input_data.get('query'):
-                            print(f"   Query: {input_data['query']}")
+                # Skip builtin_tool_results to avoid duplication with real-time streaming
+                # The backends already show tool status during execution
+                continue
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}")
                 return ""
@@ -304,8 +283,9 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
 async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]) -> str:
     """Run MassGen with a single question."""
     if len(agents) == 1:
-        # Single agent mode
+        # Single agent mode with existing SimpleDisplay frontend
         agent = next(iter(agents.values()))
+        
         print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}")
         print(f"Agent: {agent.agent_id}")
         print(f"Question: {BRIGHT_WHITE}{question}{RESET}")
@@ -319,30 +299,8 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 response_content += chunk.content
                 print(chunk.content, end="", flush=True)
             elif chunk.type == "builtin_tool_results":
-                # Display builtin tool execution results
-                builtin_results = getattr(chunk, 'builtin_tool_results', [])
-                for result in builtin_results:
-                    tool_type = result.get('tool_type', 'unknown')
-                    status = result.get('status', 'unknown')
-                    print(f"\n🔧 [{tool_type.title()}] {status.title()}")
-                    
-                    if tool_type in ['code_interpreter', 'code_execution']:
-                        code = result.get('code', '')
-                        outputs = result.get('outputs')
-                        input_data = result.get('input', {})
-                        if code:
-                            print(f"   Code: {code}")
-                        elif input_data.get('code'):
-                            print(f"   Code: {input_data['code']}")
-                        if outputs:
-                            print(f"   Result: {outputs}")
-                    elif tool_type == 'web_search':
-                        query = result.get('query', '')
-                        input_data = result.get('input', {})
-                        if query:
-                            print(f"   Query: {query}")
-                        elif input_data.get('query'):
-                            print(f"   Query: {input_data['query']}")
+                # Skip builtin_tool_results to avoid duplication with real-time streaming
+                continue
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}")
                 return ""
