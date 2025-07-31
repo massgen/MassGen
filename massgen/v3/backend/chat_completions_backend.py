@@ -118,7 +118,7 @@ class ChatCompletionsBackend(LLMBackend):
                                     }
                                 })
                             
-                            yield StreamChunk(type="tool_calls", content=final_tool_calls)
+                            yield StreamChunk(type="tool_calls", tool_calls=final_tool_calls)
                             
                             # Build and yield complete message
                             complete_message = {"role": "assistant", "content": content.strip()}

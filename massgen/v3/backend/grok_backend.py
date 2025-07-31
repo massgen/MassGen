@@ -34,6 +34,10 @@ class GrokBackend(ChatCompletionsBackend):
     async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], 
                               **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using xAI's OpenAI-compatible API."""
+        
+        # Convert messages for Grok API compatibility
+        grok_messages = self._convert_messages_for_grok(messages)
+        
         try:
             import openai
             
@@ -55,7 +59,7 @@ class GrokBackend(ChatCompletionsBackend):
             # Chat Completions API parameters
             api_params = {
                 "model": model,
-                "messages": messages,
+                "messages": grok_messages,
                 "tools": converted_tools,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
@@ -138,3 +142,41 @@ class GrokBackend(ChatCompletionsBackend):
             output_cost = (output_tokens / 1_000_000) * 15.0
         
         return input_cost + output_cost
+    
+    def _convert_messages_for_grok(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Convert messages for Grok API compatibility.
+        
+        Grok expects tool call arguments as JSON strings in conversation history,
+        but returns them as objects in responses.
+        """
+        import json
+        converted_messages = []
+        
+        for message in messages:
+            # Create a copy to avoid modifying the original
+            converted_msg = dict(message)
+            
+            # Convert tool_calls arguments from objects to JSON strings
+            if message.get("role") == "assistant" and "tool_calls" in message:
+                converted_tool_calls = []
+                for tool_call in message["tool_calls"]:
+                    converted_call = dict(tool_call)
+                    if "function" in converted_call:
+                        converted_function = dict(converted_call["function"])
+                        arguments = converted_function.get("arguments")
+                        
+                        # Convert arguments to JSON string if it's an object
+                        if isinstance(arguments, dict):
+                            converted_function["arguments"] = json.dumps(arguments)
+                        elif arguments is None:
+                            converted_function["arguments"] = "{}"
+                        # If it's already a string, keep it as-is
+                        
+                        converted_call["function"] = converted_function
+                    converted_tool_calls.append(converted_call)
+                converted_msg["tool_calls"] = converted_tool_calls
+            
+            converted_messages.append(converted_msg)
+        
+        return converted_messages

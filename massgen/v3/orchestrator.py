@@ -470,8 +470,8 @@ class MassOrchestrator(ChatAgent):
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
                     elif chunk.type == "tool_calls":
-                        # Handle both formats: chunk.tool_calls or chunk.content
-                        chunk_tool_calls = getattr(chunk, 'tool_calls', None) or getattr(chunk, 'content', []) or []
+                        # Use the correct tool_calls field
+                        chunk_tool_calls = getattr(chunk, 'tool_calls', []) or []
                         tool_calls.extend(chunk_tool_calls)
                         # Stream tool calls to show agent actions
                         for tool_call in chunk_tool_calls:
