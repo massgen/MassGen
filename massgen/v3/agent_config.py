@@ -68,14 +68,27 @@ class AgentConfig:
         return cls(backend_params=backend_params)
     
     @classmethod
-    def create_claude_config(cls, model: str = "claude-3-sonnet-20240229", **kwargs) -> 'AgentConfig':
+    def create_claude_config(cls, model: str = "claude-3-sonnet-20240229",
+                           enable_web_search: bool = False,
+                           enable_code_execution: bool = False,
+                           **kwargs) -> 'AgentConfig':
         """Create Anthropic Claude configuration.
         
         Args:
             model: Claude model name
+            enable_web_search: Enable builtin web search tool
+            enable_code_execution: Enable builtin code execution tool  
             **kwargs: Additional backend parameters
         """
-        return cls(backend_params={"model": model, **kwargs})
+        backend_params = {"model": model, **kwargs}
+        
+        if enable_web_search:
+            backend_params["enable_web_search"] = True
+            
+        if enable_code_execution:
+            backend_params["enable_code_execution"] = True
+            
+        return cls(backend_params=backend_params)
     
     @classmethod
     def create_grok_config(cls, model: str = "grok-2-1212", 
@@ -130,6 +143,8 @@ class AgentConfig:
             return cls.create_openai_config(model, enable_web_search=True)
         elif backend == "grok":
             return cls.create_grok_config(model, enable_web_search=True)
+        elif backend == "claude":
+            return cls.create_claude_config(model, enable_web_search=True)
         else:
             raise ValueError(f"Research configuration not available for backend: {backend}")
     
@@ -143,6 +158,8 @@ class AgentConfig:
         """
         if backend == "openai":
             return cls.create_openai_config(model, enable_code_interpreter=True)
+        elif backend == "claude":
+            return cls.create_claude_config(model, enable_code_execution=True)
         else:
             raise ValueError(f"Computational configuration not available for backend: {backend}")
     
