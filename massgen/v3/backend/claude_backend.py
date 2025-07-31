@@ -239,7 +239,7 @@ class ClaudeBackend(LLMBackend):
                                     "index": getattr(event, 'index', None)
                                 }
                             elif event.content_block.type == "server_tool_use":
-                                # Server-side tool use (code execution, web search)
+                                # Server-side tool use (code execution, web search) - show status immediately
                                 tool_id = event.content_block.id
                                 tool_name = event.content_block.name
                                 current_tool_uses[tool_id] = {
@@ -249,10 +249,27 @@ class ClaudeBackend(LLMBackend):
                                     "index": getattr(event, 'index', None),
                                     "server_side": True
                                 }
+                                
+                                # Show tool execution starting
+                                if tool_name == "code_execution":
+                                    yield StreamChunk(type="content", content=f"\n💻 [Code Execution] Starting...\n")
+                                elif tool_name == "web_search":
+                                    yield StreamChunk(type="content", content=f"\n🔍 [Web Search] Starting search...\n")
                             elif event.content_block.type == "code_execution_tool_result":
-                                # Code execution result - stream as content
-                                if hasattr(event.content_block, 'content'):
-                                    result_text = f"\n[Code Execution Result]\n{event.content_block.content}\n"
+                                # Code execution result - format properly
+                                result_block = event.content_block
+                                
+                                # Format execution result nicely
+                                result_parts = []
+                                if hasattr(result_block, 'stdout') and result_block.stdout:
+                                    result_parts.append(f"Output: {result_block.stdout.strip()}")
+                                if hasattr(result_block, 'stderr') and result_block.stderr:
+                                    result_parts.append(f"Error: {result_block.stderr.strip()}")
+                                if hasattr(result_block, 'return_code') and result_block.return_code != 0:
+                                    result_parts.append(f"Exit code: {result_block.return_code}")
+                                
+                                if result_parts:
+                                    result_text = f"\n💻 [Code Execution Result]\n{chr(10).join(result_parts)}\n"
                                     yield StreamChunk(type="content", content=result_text)
                     
                     elif event.type == "content_block_delta":
@@ -276,8 +293,58 @@ class ClaudeBackend(LLMBackend):
                                             break
                     
                     elif event.type == "content_block_stop":
-                        # Content block completed
-                        continue
+                        # Content block completed - check if it was a server-side tool
+                        if hasattr(event, 'index'):
+                            # Find the tool that just completed
+                            for tool_id, tool_data in current_tool_uses.items():
+                                if tool_data.get("index") == event.index and tool_data.get("server_side"):
+                                    tool_name = tool_data.get("name", "")
+                                    
+                                    # Parse the accumulated input to show what was executed
+                                    tool_input = tool_data.get("input", "")
+                                    try:
+                                        if tool_input:
+                                            parsed_input = json.loads(tool_input)
+                                        else:
+                                            parsed_input = {}
+                                    except json.JSONDecodeError:
+                                        parsed_input = {"raw_input": tool_input}
+                                    
+                                    if tool_name == "code_execution":
+                                        code = parsed_input.get("code", "")
+                                        if code:
+                                            yield StreamChunk(type="content", content=f"💻 [Code] {code}\n")
+                                        yield StreamChunk(type="content", content=f"✅ [Code Execution] Completed\n")
+                                        
+                                        # Yield builtin tool result immediately
+                                        builtin_result = {
+                                            "id": tool_id,
+                                            "tool_type": "code_execution",
+                                            "status": "completed",
+                                            "code": code,
+                                            "input": parsed_input
+                                        }
+                                        yield StreamChunk(type="builtin_tool_results", builtin_tool_results=[builtin_result])
+                                        
+                                    elif tool_name == "web_search":
+                                        query = parsed_input.get("query", "")
+                                        if query:
+                                            yield StreamChunk(type="content", content=f"🔍 [Query] '{query}'\n")
+                                        yield StreamChunk(type="content", content=f"✅ [Web Search] Completed\n")
+                                        
+                                        # Yield builtin tool result immediately
+                                        builtin_result = {
+                                            "id": tool_id,
+                                            "tool_type": "web_search",
+                                            "status": "completed",
+                                            "query": query,
+                                            "input": parsed_input
+                                        }
+                                        yield StreamChunk(type="builtin_tool_results", builtin_tool_results=[builtin_result])
+                                    
+                                    # Mark this tool as processed so we don't duplicate it later
+                                    tool_data["processed"] = True
+                                    break
                     
                     elif event.type == "message_delta":
                         # Message metadata updates (usage, etc.)
@@ -290,9 +357,14 @@ class ClaudeBackend(LLMBackend):
                         
                         # Handle any completed tool uses
                         if current_tool_uses:
-                            # Convert to standard tool calls format
-                            final_tool_calls = []
+                            # Separate server-side tools from user-defined tools
+                            builtin_tool_results = []
+                            user_tool_calls = []
+                            
                             for tool_use in current_tool_uses.values():
+                                tool_name = tool_use.get("name", "")
+                                is_server_side = tool_use.get("server_side", False)
+                                
                                 # Parse accumulated JSON input
                                 tool_input = tool_use.get("input", "")
                                 try:
@@ -303,23 +375,58 @@ class ClaudeBackend(LLMBackend):
                                 except json.JSONDecodeError:
                                     parsed_input = {"raw_input": tool_input}
                                 
-                                final_tool_calls.append({
-                                    "id": tool_use["id"],
-                                    "type": "function",
-                                    "function": {
-                                        "name": tool_use["name"],
-                                        "arguments": parsed_input
+                                if is_server_side or tool_name in ["web_search", "code_execution"]:
+                                    # Convert server-side tools to builtin_tool_results
+                                    builtin_result = {
+                                        "id": tool_use["id"],
+                                        "tool_type": tool_name,
+                                        "status": "completed",
+                                        "input": parsed_input
                                     }
-                                })
+                                    
+                                    # Add tool-specific data
+                                    if tool_name == "code_execution":
+                                        builtin_result["code"] = parsed_input.get("code", "")
+                                        # Note: actual execution results come via content_block events
+                                    elif tool_name == "web_search":
+                                        builtin_result["query"] = parsed_input.get("query", "")
+                                        # Note: search results come via content_block events
+                                    
+                                    builtin_tool_results.append(builtin_result)
+                                else:
+                                    # User-defined tools that need external execution
+                                    user_tool_calls.append({
+                                        "id": tool_use["id"],
+                                        "type": "function",
+                                        "function": {
+                                            "name": tool_name,
+                                            "arguments": parsed_input
+                                        }
+                                    })
                             
-                            yield StreamChunk(type="tool_calls", tool_calls=final_tool_calls)
+                            # Only yield builtin tool results that weren't already processed during content_block_stop
+                            unprocessed_builtin_results = []
+                            for result in builtin_tool_results:
+                                tool_id = result.get("id")
+                                # Check if this tool was already processed during streaming
+                                tool_data = current_tool_uses.get(tool_id, {})
+                                if not tool_data.get("processed"):
+                                    unprocessed_builtin_results.append(result)
                             
-                            # Build complete message with tool calls
+                            if unprocessed_builtin_results:
+                                yield StreamChunk(type="builtin_tool_results", builtin_tool_results=unprocessed_builtin_results)
+                            
+                            # Yield user tool calls if any
+                            if user_tool_calls:
+                                yield StreamChunk(type="tool_calls", tool_calls=user_tool_calls)
+                            
+                            # Build complete message with only user tool calls (builtin tools are handled separately)
                             complete_message = {
                                 "role": "assistant",
-                                "content": content.strip(),
-                                "tool_calls": final_tool_calls
+                                "content": content.strip()
                             }
+                            if user_tool_calls:
+                                complete_message["tool_calls"] = user_tool_calls
                             yield StreamChunk(type="complete_message", complete_message=complete_message)
                         else:
                             # Regular text response

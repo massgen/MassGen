@@ -245,17 +245,23 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
                     status = result.get('status', 'unknown')
                     print(f"\n🔧 [{tool_type.title()}] {status.title()}")
                     
-                    if tool_type == 'code_interpreter':
+                    if tool_type in ['code_interpreter', 'code_execution']:
                         code = result.get('code', '')
                         outputs = result.get('outputs')
+                        input_data = result.get('input', {})
                         if code:
                             print(f"   Code: {code}")
+                        elif input_data.get('code'):
+                            print(f"   Code: {input_data['code']}")
                         if outputs:
                             print(f"   Result: {outputs}")
                     elif tool_type == 'web_search':
                         query = result.get('query', '')
+                        input_data = result.get('input', {})
                         if query:
                             print(f"   Query: {query}")
+                        elif input_data.get('query'):
+                            print(f"   Query: {input_data['query']}")
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}")
                 return ""
@@ -320,17 +326,23 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                     status = result.get('status', 'unknown')
                     print(f"\n🔧 [{tool_type.title()}] {status.title()}")
                     
-                    if tool_type == 'code_interpreter':
+                    if tool_type in ['code_interpreter', 'code_execution']:
                         code = result.get('code', '')
                         outputs = result.get('outputs')
+                        input_data = result.get('input', {})
                         if code:
                             print(f"   Code: {code}")
+                        elif input_data.get('code'):
+                            print(f"   Code: {input_data['code']}")
                         if outputs:
                             print(f"   Result: {outputs}")
                     elif tool_type == 'web_search':
                         query = result.get('query', '')
+                        input_data = result.get('input', {})
                         if query:
                             print(f"   Query: {query}")
+                        elif input_data.get('query'):
+                            print(f"   Query: {input_data['query']}")
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}")
                 return ""
