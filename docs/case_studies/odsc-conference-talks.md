@@ -5,8 +5,6 @@ This case study demonstrates **MassGen's** ability to handle complex research qu
 **Command:**  
 ```python cli.py --config examples/fast_config.yaml "give me all the talks on agent frameworks in ODSC Agentic AI Summit 2025"```
 
-**Prompt:** give me all the talks on agent frameworks in **ODSC Agentic AI Summit 2025**
-
 **Agents:**
 
 - **Agent 1:** gpt-4o
