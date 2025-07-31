@@ -230,7 +230,7 @@ class TerminalDisplay(BaseDisplay):
         """Refresh the entire display with proper columns."""
         import time
         current_time = time.time()
-        if current_time - self._last_refresh_time < 0.005:  # 从100ms减少到50ms between refreshes
+        if current_time - self._last_refresh_time < 0.005:  # 5ms between refreshes
             return
         self._last_refresh_time = current_time
         
