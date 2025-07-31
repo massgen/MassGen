@@ -237,7 +237,7 @@ class MassOrchestrator(ChatAgent):
                 if (agent_id not in active_streams and 
                     not self.agent_states[agent_id].has_voted):
                     active_streams[agent_id] = self._stream_agent_execution(agent_id, self.current_task, current_answers, conversation_context)
-            
+
             if not active_streams:
                 break
                 
@@ -285,16 +285,23 @@ class MassOrchestrator(ChatAgent):
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             answered_agents[agent_id] = result_data
                             reset_signal = True
-                            yield StreamChunk(type="content", content="✅ Answer provided", source=agent_id)
+                            yield StreamChunk(type="content", content=f"[{agent_id}] ✅ Answer provided", source=agent_id)
                             
                         elif result_type == "vote":
                             # Agent voted for existing answer
                             # Ignore votes from agents with restart pending (votes are about current state)
                             if self.agent_states[agent_id].restart_pending:
-                                yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
+                                voted_for = result_data.get("agent_id", "<unknown>")
+                                reason = result_data.get("reason", "No reason provided")
+                                yield StreamChunk(
+                                    type="content",
+                                    content=f"🔄 Vote by [{agent_id}] for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
+                                    source=agent_id
+                                )
+                                #yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
                                 voted_agents[agent_id] = result_data
-                                yield StreamChunk(type="content", content=f"✅ Vote recorded for {result_data['agent_id']}", source=agent_id)
+                                yield StreamChunk(type="content", content=f"[{agent_id}] ✅ Vote recorded for {result_data['agent_id']}\n", source=agent_id)
                     
                     elif chunk_type == "error":
                         # Agent error
@@ -433,7 +440,8 @@ class MassOrchestrator(ChatAgent):
             
             for attempt in range(max_attempts):
                 if self._check_restart_pending(agent_id):
-                    yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                    #yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                    yield ("content", f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected")
                     yield ("done", None)
                     return
                 
@@ -462,20 +470,19 @@ class MassOrchestrator(ChatAgent):
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
                     elif chunk.type == "tool_calls":
-                        chunk_tool_calls = getattr(chunk, 'tool_calls', []) or []
-                        tool_calls.extend(chunk_tool_calls)
+                        tool_calls.extend(chunk.content)
                         # Stream tool calls to show agent actions
-                        for tool_call in chunk_tool_calls:
+                        for tool_call in chunk.content:
                             tool_name = agent.backend.extract_tool_name(tool_call)
                             tool_args = agent.backend.extract_tool_arguments(tool_call)
                             
                             if tool_name == "new_answer":
                                 content = tool_args.get("content", "")
-                                yield ("content", f"💡 Providing answer: \"{content[:100]}{'...' if len(content) > 100 else ''}\"")
+                                yield ("content", f"[{agent.agent_id}] 💡 Providing answer: \"{content[:100]}{'...' if len(content) > 100 else ''}\"")
                             elif tool_name == "vote":
                                 agent_voted_for = tool_args.get("agent_id", "")
                                 reason = tool_args.get("reason", "")
-                                yield ("content", f"🗳️ Voting for {agent_voted_for}: {reason}")
+                                yield ("content", f"[{agent.agent_id}] 🗳️ Voting for {agent_voted_for}: {reason}")
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
                     elif chunk.type == "error":
@@ -488,7 +495,7 @@ class MassOrchestrator(ChatAgent):
                 if len(vote_calls) > 1:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
-                            yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                            yield ("content", f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected")
                             yield ("done", None)
                             return
                         error_msg = f"Multiple vote calls not allowed. Made {len(vote_calls)} calls but must make exactly 1. Call vote tool once with chosen agent."
@@ -509,7 +516,7 @@ class MassOrchestrator(ChatAgent):
                 if len(vote_calls) > 0 and len(new_answer_calls) > 0:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
-                            yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                            yield ("content", f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected")
                             yield ("done", None)
                             return
                         error_msg = "Cannot use both 'vote' and 'new_answer' in same response. Choose one: vote for existing answer OR provide new answer."
@@ -532,7 +539,7 @@ class MassOrchestrator(ChatAgent):
                         if tool_name == "vote":                            
                             # Check if agent should restart - votes invalid during restart
                             if self.agent_states[agent_id].restart_pending:
-                                yield ("content", "🔄 Vote invalid - restarting due to new answers")
+                                yield ("content", f"🔄 Agent [{agent_id}] Vote invalid - restarting due to new answers")
                                 yield ("done", None)
                                 return
 
@@ -542,7 +549,7 @@ class MassOrchestrator(ChatAgent):
                                 # Invalid - can't vote when no answers exist
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
-                                        yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                                        yield ("content", f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected")
                                         yield ("done", None)
                                         return
                                     error_msg = "Cannot vote when no answers exist. Use new_answer tool."
@@ -569,7 +576,7 @@ class MassOrchestrator(ChatAgent):
                             if voted_agent not in answers:
                                 if attempt < max_attempts - 1:                                    
                                     if self._check_restart_pending(agent_id):
-                                        yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                                        yield ("content", f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected")
                                         yield ("done", None)
                                         return
                                     # Create reverse mapping for error message
@@ -604,10 +611,9 @@ class MassOrchestrator(ChatAgent):
                                 if content.strip() == existing_content.strip():
                                     if attempt < max_attempts - 1:
                                         if self._check_restart_pending(agent_id):
-                                            yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                                            yield ("content", f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected")
                                             yield ("done", None)
                                             return
-                                        
                                         error_msg = f"Answer already provided by {existing_agent_id}. Provide different answer or vote for existing one."
                                         yield ("content", f"❌ {error_msg}")
                                         # Create proper tool error message for retry
@@ -630,7 +636,7 @@ class MassOrchestrator(ChatAgent):
                 # Case 3: Non-workflow response, need enforcement (only if no workflow tool was found)
                 if not workflow_tool_found:
                     if self._check_restart_pending(agent_id):
-                        yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
+                        yield ("content", f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected")
                         yield ("done", None)
                         return
                     if attempt < max_attempts - 1:
@@ -675,6 +681,7 @@ class MassOrchestrator(ChatAgent):
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
             
+            yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
             yield StreamChunk(type="content", content=final_answer)
             yield StreamChunk(type="content", content=f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*")
         else:
@@ -760,7 +767,7 @@ class MassOrchestrator(ChatAgent):
                 "content": presentation_content
             }
         ]
-        yield StreamChunk(type="status", content=f"🎤 {selected_agent_id} presenting final answer...")
+        yield StreamChunk(type="status", content=f"🎤  [{selected_agent_id}] presenting final answer")
         
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         async for chunk in agent.chat(presentation_messages, reset_chat=True):

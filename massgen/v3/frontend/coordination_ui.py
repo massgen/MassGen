@@ -8,6 +8,7 @@ from typing import Optional, List, Dict, Any, AsyncGenerator
 from .displays.base_display import BaseDisplay
 from .displays.terminal_display import TerminalDisplay
 from .displays.simple_display import SimpleDisplay
+from .displays.rich_terminal_display import RichTerminalDisplay, is_rich_available
 from .logging.realtime_logger import RealtimeLogger
 
 
@@ -26,7 +27,7 @@ class CoordinationUI:
         Args:
             display: Custom display instance (overrides display_type)
             logger: Custom logger instance  
-            display_type: Type of display ("terminal", "simple")
+            display_type: Type of display ("terminal", "simple", "rich_terminal", "textual_terminal")
             logging_enabled: Whether to enable real-time logging
             enable_final_presentation: Whether to ask winning agent to present final answer
             **kwargs: Additional configuration passed to display/logger
@@ -68,6 +69,13 @@ class CoordinationUI:
                 self.display = TerminalDisplay(self.agent_ids, **self.config)
             elif self.display_type == "simple":
                 self.display = SimpleDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "rich_terminal":
+                if not is_rich_available():
+                    print("⚠️  Rich library not available. Falling back to terminal display.")
+                    print("   Install with: pip install rich")
+                    self.display = TerminalDisplay(self.agent_ids, **self.config)
+                else:
+                    self.display = RichTerminalDisplay(self.agent_ids, **self.config)
             else:
                 raise ValueError(f"Unknown display type: {self.display_type}")
         
@@ -102,31 +110,6 @@ class CoordinationUI:
                         self.display.update_agent_status(source, status)
                     continue
                 
-                # Handle builtin tool results
-                elif chunk_type == "builtin_tool_results":
-                    builtin_results = getattr(chunk, 'builtin_tool_results', [])
-                    if builtin_results and source:
-                        for result in builtin_results:
-                            tool_type = result.get('tool_type', 'unknown')
-                            status_result = result.get('status', 'unknown')
-                            tool_msg = f"🔧 [{tool_type.title()}] {status_result.title()}"
-                            
-                            if tool_type in ['code_interpreter', 'code_execution']:
-                                code = result.get('code', '') or result.get('input', {}).get('code', '')
-                                outputs = result.get('outputs')
-                                if code:
-                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
-                                if outputs:
-                                    tool_msg += f" - Result: {outputs}"
-                            elif tool_type == 'web_search':
-                                query = result.get('query', '') or result.get('input', {}).get('query', '')
-                                if query:
-                                    tool_msg += f" - Query: '{query}'"
-                            
-                            # Display as tool content for the specific agent
-                            await self._process_agent_content(source, tool_msg)
-                    continue
-                
                 if content:
                     full_response += content
                     
@@ -147,7 +130,7 @@ class CoordinationUI:
             
             # Get final presentation from winning agent
             if self.enable_final_presentation and selected_agent and vote_results.get('vote_counts'):
-                print(f"\n🎤 Final Presentation from {selected_agent}:")
+                print(f"\n🎤  Final Presentation from {selected_agent}:")
                 print("=" * 60)
                 
                 presentation_content = ""
@@ -252,6 +235,13 @@ class CoordinationUI:
                 self.display = TerminalDisplay(self.agent_ids, **self.config)
             elif self.display_type == "simple":
                 self.display = SimpleDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "rich_terminal":
+                if not is_rich_available():
+                    print("⚠️  Rich library not available. Falling back to terminal display.")
+                    print("   Install with: pip install rich")
+                    self.display = TerminalDisplay(self.agent_ids, **self.config)
+                else:
+                    self.display = RichTerminalDisplay(self.agent_ids, **self.config)
             else:
                 raise ValueError(f"Unknown display type: {self.display_type}")
         
@@ -288,31 +278,6 @@ class CoordinationUI:
                     status = getattr(chunk, 'status', None)
                     if source and status:
                         self.display.update_agent_status(source, status)
-                    continue
-                
-                # Handle builtin tool results  
-                elif chunk_type == "builtin_tool_results":
-                    builtin_results = getattr(chunk, 'builtin_tool_results', [])
-                    if builtin_results and source:
-                        for result in builtin_results:
-                            tool_type = result.get('tool_type', 'unknown')
-                            status_result = result.get('status', 'unknown')
-                            tool_msg = f"🔧 [{tool_type.title()}] {status_result.title()}"
-                            
-                            if tool_type in ['code_interpreter', 'code_execution']:
-                                code = result.get('code', '') or result.get('input', {}).get('code', '')
-                                outputs = result.get('outputs')
-                                if code:
-                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
-                                if outputs:
-                                    tool_msg += f" - Result: {outputs}"
-                            elif tool_type == 'web_search':
-                                query = result.get('query', '') or result.get('input', {}).get('query', '')
-                                if query:
-                                    tool_msg += f" - Query: '{query}'"
-                            
-                            # Display as tool content for the specific agent
-                            await self._process_agent_content(source, tool_msg)
                     continue
                 
                 if content:
@@ -538,6 +503,13 @@ class CoordinationUI:
                 if self.logger:
                     self.logger.log_orchestrator_event(event)
                 
+                import asyncio
+                await asyncio.sleep(1.5) 
+                
+                if hasattr(self.display, '_update_display'):
+                    self.display._update_display(force=True)
+                    await asyncio.sleep(0.3) 
+                
                 self.display.show_final_answer(clean_content)
 
 
@@ -570,4 +542,20 @@ async def coordinate_with_simple_ui(orchestrator, question: str, enable_final_pr
         Final coordinated response
     """
     ui = CoordinationUI(display_type="simple", enable_final_presentation=enable_final_presentation, **kwargs)
+    return await ui.coordinate(orchestrator, question)
+
+
+async def coordinate_with_rich_ui(orchestrator, question: str, enable_final_presentation: bool = True, **kwargs) -> str:
+    """Quick coordination with rich terminal UI and logging.
+    
+    Args:
+        orchestrator: MassGen orchestrator instance
+        question: Question for coordination
+        enable_final_presentation: Whether to ask winning agent to present final answer
+        **kwargs: Additional configuration (theme, refresh_rate, etc.)
+        
+    Returns:
+        Final coordinated response
+    """
+    ui = CoordinationUI(display_type="rich_terminal", enable_final_presentation=enable_final_presentation, **kwargs)
     return await ui.coordinate(orchestrator, question)
