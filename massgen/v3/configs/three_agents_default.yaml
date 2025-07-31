@@ -1,0 +1,30 @@
+# MassGen v3 Three Agent Configuration
+# Claude Haiku, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
+
+agents:
+  - id: "claude_agent"
+    backend:
+      type: "claude"
+      model: "claude-3-5-haiku-latest"
+      enable_web_search: true
+      enable_code_execution: true
+    system_message: "You are a helpful AI assistant with web search and code execution capabilities."
+
+  - id: "openai_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      enable_web_search: true
+      enable_code_interpreter: true
+    system_message: "You are a helpful AI assistant with web search and code execution capabilities."
+
+  - id: "grok_agent"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      enable_web_search: true
+    system_message: "You are a helpful AI assistant with web search capabilities."
+
+ui:
+  display_type: "terminal"
+  logging_enabled: true

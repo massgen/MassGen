@@ -17,7 +17,7 @@ agents:
     system_message: "You are a research specialist focused on gathering detailed information and providing thorough analysis. You work with the team to ensure all aspects are covered comprehensively."
     backend:
       type: "openai"
-      model: "gpt-4o"
+      model: "gpt-4o-mini"
       temperature: 0.3
       max_tokens: 4096
 
@@ -31,5 +31,4 @@ agents:
       max_tokens: 3072
 
 orchestrator:
-  coordination_rounds: 3
   final_answer_agent: "claude_lead"

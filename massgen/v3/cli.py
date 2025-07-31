@@ -52,7 +52,8 @@ sys.path.insert(0, str(project_root))
 from massgen.v3.backend.openai_backend import OpenAIBackend
 from massgen.v3.backend.grok_backend import GrokBackend
 from massgen.v3.backend.claude_backend import ClaudeBackend
-from massgen.v3.chat_agent import SingleAgent
+from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
+from massgen.v3.agent_config import AgentConfig
 from massgen.v3.orchestrator import MassOrchestrator
 from massgen.v3.frontend.coordination_ui import CoordinationUI
 
@@ -118,33 +119,75 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, SingleAgent]:
+def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration."""
     agents = {}
     
     # Handle single agent configuration
     if 'agent' in config:
-        agent_config = config['agent']
-        backend_config = agent_config.get('backend', {})
-        backend = create_backend(backend_config['type'], **backend_config)
+        agent_config_data = config['agent']
+        backend_config = agent_config_data.get('backend', {})
+        backend_type = backend_config['type']
+        backend = create_backend(backend_type, **backend_config)
         
-        agent = SingleAgent(
-            backend=backend,
-            agent_id=agent_config.get('id', 'agent1'),
-            system_message=agent_config.get('system_message')
+        # Create proper AgentConfig with backend_params
+        if backend_type.lower() == 'openai':
+            agent_config = AgentConfig.create_openai_config(
+                **{k: v for k, v in backend_config.items() if k != 'type'}
+            )
+        elif backend_type.lower() == 'claude':
+            agent_config = AgentConfig.create_claude_config(
+                **{k: v for k, v in backend_config.items() if k != 'type'}
+            )
+        elif backend_type.lower() == 'grok':
+            agent_config = AgentConfig.create_grok_config(
+                **{k: v for k, v in backend_config.items() if k != 'type'}
+            )
+        else:
+            # Fallback to basic config
+            agent_config = AgentConfig(backend_params=backend_config)
+        
+        # Set agent ID and system message
+        agent_config.agent_id = agent_config_data.get('id', 'agent1')
+        agent_config.custom_system_instruction = agent_config_data.get('system_message')
+        
+        agent = ConfigurableAgent(
+            config=agent_config,
+            backend=backend
         )
         agents[agent.agent_id] = agent
     
     # Handle multiple agents configuration
     elif 'agents' in config:
-        for agent_config in config['agents']:
-            backend_config = agent_config.get('backend', {})
-            backend = create_backend(backend_config['type'], **backend_config)
+        for agent_config_data in config['agents']:
+            backend_config = agent_config_data.get('backend', {})
+            backend_type = backend_config['type']
+            backend = create_backend(backend_type, **backend_config)
             
-            agent = SingleAgent(
-                backend=backend,
-                agent_id=agent_config.get('id', f'agent{len(agents)+1}'),
-                system_message=agent_config.get('system_message')
+            # Create proper AgentConfig with backend_params
+            if backend_type.lower() == 'openai':
+                agent_config = AgentConfig.create_openai_config(
+                    **{k: v for k, v in backend_config.items() if k != 'type'}
+                )
+            elif backend_type.lower() == 'claude':
+                agent_config = AgentConfig.create_claude_config(
+                    **{k: v for k, v in backend_config.items() if k != 'type'}
+                )
+            elif backend_type.lower() == 'grok':
+                agent_config = AgentConfig.create_grok_config(
+                    **{k: v for k, v in backend_config.items() if k != 'type'}
+                )
+            else:
+                # Fallback to basic config
+                agent_config = AgentConfig(backend_params=backend_config)
+            
+            # Set agent ID and system message
+            agent_config.agent_id = agent_config_data.get('id', f'agent{len(agents)+1}')
+            agent_config.custom_system_instruction = agent_config_data.get('system_message')
+            
+            agent = ConfigurableAgent(
+                config=agent_config,
+                backend=backend
             )
             agents[agent.agent_id] = agent
     
@@ -194,6 +237,25 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
             if chunk.type == "content" and chunk.content:
                 response_content += chunk.content
                 print(chunk.content, end="", flush=True)
+            elif chunk.type == "builtin_tool_results":
+                # Display builtin tool execution results
+                builtin_results = getattr(chunk, 'builtin_tool_results', [])
+                for result in builtin_results:
+                    tool_type = result.get('tool_type', 'unknown')
+                    status = result.get('status', 'unknown')
+                    print(f"\n🔧 [{tool_type.title()}] {status.title()}")
+                    
+                    if tool_type == 'code_interpreter':
+                        code = result.get('code', '')
+                        outputs = result.get('outputs')
+                        if code:
+                            print(f"   Code: {code}")
+                        if outputs:
+                            print(f"   Result: {outputs}")
+                    elif tool_type == 'web_search':
+                        query = result.get('query', '')
+                        if query:
+                            print(f"   Query: {query}")
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}")
                 return ""
@@ -250,6 +312,25 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             if chunk.type == "content" and chunk.content:
                 response_content += chunk.content
                 print(chunk.content, end="", flush=True)
+            elif chunk.type == "builtin_tool_results":
+                # Display builtin tool execution results
+                builtin_results = getattr(chunk, 'builtin_tool_results', [])
+                for result in builtin_results:
+                    tool_type = result.get('tool_type', 'unknown')
+                    status = result.get('status', 'unknown')
+                    print(f"\n🔧 [{tool_type.title()}] {status.title()}")
+                    
+                    if tool_type == 'code_interpreter':
+                        code = result.get('code', '')
+                        outputs = result.get('outputs')
+                        if code:
+                            print(f"   Code: {code}")
+                        if outputs:
+                            print(f"   Result: {outputs}")
+                    elif tool_type == 'web_search':
+                        query = result.get('query', '')
+                        if query:
+                            print(f"   Query: {query}")
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}")
                 return ""
@@ -290,8 +371,8 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
     print(f"   Mode: {mode}")
     print(f"   UI: {ui_config.get('display_type', 'terminal')}")
     
-    print("\n💬 Type your questions below. Type 'quit', 'exit', 'reset', or press Ctrl+C to stop.")
-    print("💡 Use 'reset' to clear conversation history.")
+    print("\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.")
+    print("💡 Commands: /quit, /exit, /reset, /help")
     print("="*60)
     
     # Maintain conversation history
@@ -302,20 +383,52 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
             try:
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
                 
+                # Handle slash commands
+                if question.startswith('/'):
+                    command = question.lower()
+                    
+                    if command in ['/quit', '/exit', '/q']:
+                        print("👋 Goodbye!")
+                        break
+                    elif command in ['/reset', '/clear']:
+                        conversation_history = []
+                        # Reset all agents
+                        for agent in agents.values():
+                            agent.reset()
+                        print(f"{BRIGHT_YELLOW}🔄 Conversation history cleared!{RESET}")
+                        continue
+                    elif command in ['/help', '/h']:
+                        print(f"\n{BRIGHT_CYAN}📚 Available Commands:{RESET}")
+                        print("   /quit, /exit, /q     - Exit the program")
+                        print("   /reset, /clear       - Clear conversation history")
+                        print("   /help, /h            - Show this help message")
+                        print("   /status              - Show current status")
+                        continue
+                    elif command == '/status':
+                        print(f"\n{BRIGHT_CYAN}📊 Current Status:{RESET}")
+                        print(f"   Agents: {len(agents)} ({', '.join(agents.keys())})")
+                        print(f"   Mode: {'Single Agent' if len(agents) == 1 else 'Multi-Agent'}")
+                        print(f"   History: {len(conversation_history)//2} exchanges")
+                        continue
+                    else:
+                        print(f"❓ Unknown command: {command}")
+                        print("💡 Type /help for available commands")
+                        continue
+                
+                # Handle legacy plain text commands for backwards compatibility
                 if question.lower() in ['quit', 'exit', 'q']:
                     print("👋 Goodbye!")
                     break
                 
                 if question.lower() in ['reset', 'clear']:
                     conversation_history = []
-                    # Reset all agents
                     for agent in agents.values():
                         agent.reset()
                     print(f"{BRIGHT_YELLOW}🔄 Conversation history cleared!{RESET}")
                     continue
                 
                 if not question:
-                    print("Please enter a question or type 'quit' to exit.")
+                    print("Please enter a question or type /help for commands.")
                     continue
                 
                 print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}")
@@ -336,7 +449,7 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                 break
             except Exception as e:
                 print(f"❌ Error: {e}")
-                print("Please try again or type 'quit' to exit.")
+                print("Please try again or type /quit to exit.")
                 
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")

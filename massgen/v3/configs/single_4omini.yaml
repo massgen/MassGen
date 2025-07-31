@@ -7,7 +7,7 @@ agent:
     type: "openai"
     model: "gpt-4o-mini"
     enable_web_search: true
-    enable_code_execution: true
+    enable_code_interpreter: true
     # api_key: "your-api-key-here"  # Optional, uses OPENAI_API_KEY env var
   system_message: "You are a helpful AI assistant providing accurate and concise responses."
 

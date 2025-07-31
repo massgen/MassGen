@@ -17,7 +17,7 @@ agents:
     backend:
       type: "openai"
       model: "gpt-4o-mini"
-      enable_code_execution: true
+      enable_code_interpreter: true
     system_message: |
       You are a critical analyst who specializes in evaluating information, 
       identifying patterns, and drawing insights. Focus on analysis, 

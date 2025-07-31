@@ -5,26 +5,33 @@ Built on the proven MassGen framework with working tool message handling,
 async generator patterns, and reliable multi-agent coordination.
 
 Key Features:
-- Working OpenAI Response API integration with proper tool message conversion
-- Async streaming with proper chat agent interfaces
-- Multi-agent orchestration with voting and consensus
+- Multi-backend support: OpenAI (Responses API), Claude (Messages API), Grok (Chat API)
+- Builtin tools: Code execution and web search with streaming results
+- Async streaming with proper chat agent interfaces and tool result handling
+- Multi-agent orchestration with voting and consensus mechanisms
 - Real-time frontend displays with multi-region terminal UI
+- CLI with file-based YAML configuration and interactive mode
+- Proper StreamChunk architecture separating tool_calls from builtin_tool_results
 
 TODO - Missing Features (to be added in future releases):
 - ✅ Grok backend testing and fixes (COMPLETED)
-- ✅ CLI interface for MassGen v3 (COMPLETED - file-based config, interactive mode)
+- ✅ CLI interface for MassGen v3 (COMPLETED - file-based config, interactive mode, slash commands)
 - ✅ Missing v3 test files recovery (COMPLETED - two agents, three agents)
 - ✅ Multi-turn conversation support (COMPLETED - dynamic context reconstruction)
 - ✅ Chat interface with orchestrator (COMPLETED - async streaming with context)
 - ✅ Fix CLI multi-turn conversation display (COMPLETED - coordination UI integration)
 - ✅ Case study configurations and test commands (COMPLETED - specialized YAML configs)
-- ✅ Claude backend support (COMPLETED - production-ready multi-tool API)
+- ✅ Claude backend support (COMPLETED - production-ready multi-tool API with streaming)
+- ✅ Claude streaming handler fixes (COMPLETED - proper tool argument capture)
+- ✅ OpenAI builtin tools support (COMPLETED - code execution and web search streaming)
+- ✅ CLI backend parameter passing (COMPLETED - proper ConfigurableAgent integration)
+- ✅ StreamChunk builtin_tool_results support (COMPLETED - separate from regular tool_calls)
+- Orchestrator final_answer_agent configuration support (MEDIUM PRIORITY)
 - Gemini backend support (LOW PRIORITY - waiting for API multi-tool support)
 - Configuration options for voting info in user messages (MEDIUM PRIORITY)
 - Enhanced frontend features from v0.0.1 (MEDIUM PRIORITY)
 - Advanced logging and monitoring capabilities
 - Tool execution with custom functions
-- Web search and code interpreter integration
 - Performance optimizations
 
 Usage:
