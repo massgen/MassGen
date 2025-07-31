@@ -1,0 +1,13 @@
+# MassGen v3 Single Agent Configuration
+# Simple configuration for single agent operation
+
+agent:
+  id: "assistant"
+  backend:
+    type: "grok"
+    model: "grok-3-mini"
+    enable_web_search: true
+
+ui:
+  display_type: "terminal"  # Options: terminal, simple
+  logging_enabled: true
