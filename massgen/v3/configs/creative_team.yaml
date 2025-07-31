@@ -47,7 +47,7 @@ agents:
       - Overall artistic impact
 
 ui:
-  display_type: "terminal"
+  display_type: "rich_terminal"
   logging_enabled: true
 
 # Creative-optimized settings

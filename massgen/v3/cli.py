@@ -209,7 +209,7 @@ def create_simple_config(backend_type: str, model: str, system_message: Optional
             'system_message': system_message or "You are a helpful AI assistant."
         },
         'ui': {
-            'display_type': 'terminal',
+            'display_type': 'rich_terminal',
             'logging_enabled': True
         }
     }
@@ -252,7 +252,7 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
         # Multi-agent mode with history
         orchestrator = MassOrchestrator(agents=agents)
         ui = CoordinationUI(
-            display_type=ui_config.get('display_type', 'terminal'),
+            display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
         )
         
@@ -312,7 +312,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         # Multi-agent mode
         orchestrator = MassOrchestrator(agents=agents)
         ui = CoordinationUI(
-            display_type=ui_config.get('display_type', 'terminal'),
+            display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
         )
         
@@ -339,7 +339,7 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
     
     mode = "Single Agent" if len(agents) == 1 else "Multi-Agent Coordination"
     print(f"   Mode: {mode}")
-    print(f"   UI: {ui_config.get('display_type', 'terminal')}")
+    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}")
     
     print("\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.")
     print("💡 Commands: /quit, /exit, /reset, /help")
@@ -441,7 +441,7 @@ def create_sample_configs():
             "system_message": "You are a helpful AI assistant."
         },
         "ui": {
-            "display_type": "terminal",
+            "display_type": "rich_terminal",
             "logging_enabled": True
         }
     }
@@ -467,7 +467,7 @@ def create_sample_configs():
             }
         ],
         "ui": {
-            "display_type": "terminal",
+            "display_type": "rich_terminal",
             "logging_enabled": True
         }
     }

@@ -42,7 +42,7 @@ agents:
       - Highlight practical implications and recommendations
 
 ui:
-  display_type: "terminal"
+  display_type: "rich_terminal"
   logging_enabled: true
 
 # Research-optimized settings

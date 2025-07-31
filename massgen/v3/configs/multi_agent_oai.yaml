@@ -33,5 +33,5 @@ agents:
       accessibility, and effective communication.
 
 ui:
-  display_type: "terminal"  # Multi-region coordination display
+  display_type: "rich_terminal"  # Multi-region coordination display
   logging_enabled: true

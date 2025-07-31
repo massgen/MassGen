@@ -22,10 +22,22 @@ class MessageTemplates:
         if "evaluation_system_message" in self._template_overrides:
             return str(self._template_overrides["evaluation_system_message"])
         
-        return """You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
+        import time
+        
+        return f"""You are evaluating answers from multiple agents for final response to a message. 
 
-If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
-Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call one of the two tools."""
+For every aspect, claim, reasoning steps in the CURRENT ANSWERS, verify correctness, factual accuracy, and completeness using your expertise, reasoning, and available tools.
+
+If the CURRENT ANSWERS fully address the ORIGINAL MESSAGE, use the `vote` tool to record your vote and skip the `new_answer` tool.
+
+If the CURRENT ANSWERS are incomplete, incorrect, or not fully address the ORIGINAL MESSAGE, conduct any necessary reasoning or research. Then, use the `new_answer` tool to submit a new response.
+
+Your new answer must be self-contained, process-complete, well-sourced, and compelling—ready to serve as the final reply.
+
+**Important**: Be sure to actually call the `new_answer` tool to submit your new answer.
+
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
+For any time-sensitive requests, use the search tool (if available) rather than relying on prior knowledge."""
     
     # =============================================================================
     # USER MESSAGE TEMPLATES

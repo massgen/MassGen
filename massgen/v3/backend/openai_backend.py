@@ -135,17 +135,17 @@ class OpenAIBackend(LLMBackend):
                         content += chunk.delta
                         yield StreamChunk(type="content", content=chunk.delta)
                     elif chunk.type == 'response.web_search_call.in_progress':
-                        yield StreamChunk(type="content", content=f"\n🔍 [Provider Tool: Web Search] Starting search...\n")
+                        yield StreamChunk(type="content", content=f"\n🔍 [Provider Tool: Web Search] Starting search...")
                     elif chunk.type == 'response.web_search_call.searching':
-                        yield StreamChunk(type="content", content=f"🔍 [Provider Tool: Web Search] Searching...\n")
+                        yield StreamChunk(type="content", content=f"🔍 [Provider Tool: Web Search] Searching...")
                     elif chunk.type == 'response.web_search_call.completed':
-                        yield StreamChunk(type="content", content=f"✅ [Provider Tool: Web Search] Search completed\n")
+                        yield StreamChunk(type="content", content=f"✅ [Provider Tool: Web Search] Search completed")
                     elif chunk.type == 'response.code_interpreter_call.in_progress':
-                        yield StreamChunk(type="content", content=f"\n💻 [Provider Tool: Code Interpreter] Starting execution...\n")
+                        yield StreamChunk(type="content", content=f"\n💻 [Provider Tool: Code Interpreter] Starting execution...")
                     elif chunk.type == 'response.code_interpreter_call.executing':
-                        yield StreamChunk(type="content", content=f"💻 [Provider Tool: Code Interpreter] Executing...\n")
+                        yield StreamChunk(type="content", content=f"💻 [Provider Tool: Code Interpreter] Executing...")
                     elif chunk.type == 'response.code_interpreter_call.completed':
-                        yield StreamChunk(type="content", content=f"✅ [Provider Tool: Code Interpreter] Execution completed\n")
+                        yield StreamChunk(type="content", content=f"✅ [Provider Tool: Code Interpreter] Execution completed")
                     elif chunk.type == 'response.output_item.done':
                         # Get search query or executed code details - show them right after completion
                         if hasattr(chunk, 'item') and chunk.item:
@@ -153,7 +153,7 @@ class OpenAIBackend(LLMBackend):
                                 if hasattr(chunk.item, 'action') and hasattr(chunk.item.action, 'query'):
                                     search_query = chunk.item.action.query
                                     if search_query:
-                                        yield StreamChunk(type="content", content=f"🔍 [Search Query] '{search_query}'\n")
+                                        yield StreamChunk(type="content", content=f"🔍 [Search Query] '{search_query}'")
                             elif hasattr(chunk.item, 'type') and chunk.item.type == 'code_interpreter_call':
                                 if hasattr(chunk.item, 'code') and chunk.item.code:
                                     # Format code as a proper code block - don't assume language

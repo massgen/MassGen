@@ -12,5 +12,5 @@ agent:
   system_message: "You are a helpful AI assistant providing accurate and concise responses."
 
 ui:
-  display_type: "terminal"  # Options: terminal, simple
+  display_type: "rich_terminal"  # Options: terminal, simple
   logging_enabled: true

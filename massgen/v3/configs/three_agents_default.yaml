@@ -27,5 +27,5 @@ agents:
     system_message: "You are a helpful AI assistant with web search capabilities."
 
 ui:
-  display_type: "terminal"
+  display_type: "rich_terminal"
   logging_enabled: true

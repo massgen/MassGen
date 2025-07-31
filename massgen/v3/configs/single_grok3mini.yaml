@@ -10,5 +10,5 @@ agent:
     return_citations: true
 
 ui:
-  display_type: "terminal"  # Options: terminal, simple
+  display_type: "rich_terminal"  # Options: terminal, simple
   logging_enabled: true

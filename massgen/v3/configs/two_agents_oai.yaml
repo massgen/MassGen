@@ -15,7 +15,7 @@ agents:
       enable_code_interpreter: true
 
 ui:
-  display_type: "terminal"
+  display_type: "rich_terminal"
   logging_enabled: true
 
 # Simple two-agent settings

@@ -45,7 +45,7 @@ agents:
       - Highlighting important caveats and limitations
 
 ui:
-  display_type: "terminal"
+  display_type: "rich_terminal"
   logging_enabled: true
 
 # Technical analysis settings

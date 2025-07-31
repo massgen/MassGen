@@ -45,7 +45,7 @@ agents:
       - Providing clear, accessible summaries
 
 ui:
-  display_type: "terminal"
+  display_type: "rich_terminal"
   logging_enabled: true
 
 # News-optimized settings

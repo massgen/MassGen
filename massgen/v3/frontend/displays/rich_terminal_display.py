@@ -84,10 +84,10 @@ class RichTerminalDisplay(TerminalDisplay):
         
         # Rich-specific configuration
         self.theme = kwargs.get('theme', 'dark')
-        self.refresh_rate = kwargs.get('refresh_rate', 8)  # Optimized refresh rate
+        self.refresh_rate = kwargs.get('refresh_rate', 50)  # Ultra-high refresh rate for real-time updates
         self.enable_syntax_highlighting = kwargs.get('enable_syntax_highlighting', True)
         self.max_content_lines = kwargs.get('max_content_lines', 8)
-        self.max_line_length = kwargs.get('max_line_length', 60)
+        self.max_line_length = kwargs.get('max_line_length', 100)
         self.show_timestamps = kwargs.get('show_timestamps', True)
         
         # Initialize Rich console and detect terminal dimensions
@@ -101,12 +101,12 @@ class RichTerminalDisplay(TerminalDisplay):
         self.live = None
         self._lock = threading.RLock()
         self._last_update = 0
-        self._update_interval = 1.0 / self.refresh_rate
+        self._update_interval = 0  # Remove throttling for immediate updates
         self._last_full_refresh = 0
-        self._full_refresh_interval = 0.5  # Full refresh every 5 seconds
+        self._full_refresh_interval = 0.05  # Even faster full refresh for tool use
         
-        # Async refresh components
-        self._refresh_executor = ThreadPoolExecutor(max_workers=len(agent_ids) + 2)
+        # Async refresh components - more workers for faster updates
+        self._refresh_executor = ThreadPoolExecutor(max_workers=min(len(agent_ids) * 2 + 4, 16))
         self._agent_panels_cache = {}
         self._header_cache = None
         self._footer_cache = None
@@ -135,10 +135,10 @@ class RichTerminalDisplay(TerminalDisplay):
         self._last_agent_activity = {agent_id: "waiting" for agent_id in agent_ids}
         self._last_content_hash = {agent_id: "" for agent_id in agent_ids}
         
-        # Message filtering settings
+        # Message filtering settings - tool content always important
         self._important_content_types = {"presentation", "status", "tool", "error"}
-        self._status_change_keywords = {"completed", "failed", "waiting", "error", "voted", "voting"}
-        self._important_event_keywords = {"completed", "failed", "voting", "voted", "final", "error", "started", "coordination"}
+        self._status_change_keywords = {"completed", "failed", "waiting", "error", "voted", "voting", "tool"}
+        self._important_event_keywords = {"completed", "failed", "voting", "voted", "final", "error", "started", "coordination", "tool"}
     
     def _setup_theme(self):
         """Setup color theme configuration."""
@@ -194,12 +194,13 @@ class RichTerminalDisplay(TerminalDisplay):
         # Create initial layout
         self._create_initial_display()
         
-        # Start live display
+        # Start live display with optimized settings
         self.live = Live(
             self._create_layout(),
             console=self.console,
             refresh_per_second=self.refresh_rate,
-            vertical_overflow="ellipsis"  # Enable scrolling when content overflows
+            vertical_overflow="ellipsis",  # Enable scrolling when content overflows
+            transient=False  # Keep content persistent for better performance
         )
         self.live.start()
     
@@ -493,7 +494,8 @@ class RichTerminalDisplay(TerminalDisplay):
     def update_agent_content(self, agent_id: str, content: str, content_type: str = "thinking"):
         """Update content for a specific agent with rich formatting."""
 
-        if len(content) < 30:
+        # Allow shorter content for tool use to provide immediate feedback
+        if content_type != "tool" and len(content) < 30:
             return
         
         # if "presenting final answer" in content:
@@ -511,9 +513,14 @@ class RichTerminalDisplay(TerminalDisplay):
             content_hash = hash(content + content_type)
             last_hash = self._last_content_hash.get(agent_id, "")
             
-            # Add new content only if different
-            if content_hash != last_hash or content_type in ["presentation", "status"]:
-                self.agent_outputs[agent_id].append(content)
+            # Tool use content always gets added for immediate feedback
+            # Other content types checked for duplicates
+            if content_type == "tool" or content_hash != last_hash or content_type in ["presentation", "status"]:
+                #self.agent_outputs[agent_id].append(content)
+                for line in content.splitlines():
+                    if not line.strip():
+                         continue
+                    self.agent_outputs.setdefault(agent_id, []).append(line)
                 self._last_content_hash[agent_id] = content_hash
             else:
                 # Skip duplicate or unimportant content
@@ -539,7 +546,13 @@ class RichTerminalDisplay(TerminalDisplay):
                 self.agent_activity[agent_id] = new_activity
                 self._last_agent_activity[agent_id] = new_activity
             
-            # Apply message filtering - only update for important changes
+            # Tool use content always triggers immediate update for real-time feedback
+            if content_type == "tool":
+                self._pending_updates.add(agent_id)
+                self._schedule_async_update(force_update=True)
+                return
+            
+            # Apply message filtering for other content types
             important_content = content_type in self._important_content_types
             status_change = any(keyword in content.lower() for keyword in self._status_change_keywords)
             is_vote_content = "voted" in content.lower()
@@ -555,18 +568,9 @@ class RichTerminalDisplay(TerminalDisplay):
                 )
             )
             
-            # if should_update:
-            #     # Mark agent panel for async update
-            #     self._pending_updates.add(agent_id)
-                
-            #     # Force update for critical content types
-            #     force_update = (content_type in {"presentation", "error"} or 
-            #                   status_change or is_vote_content)
-            #     self._schedule_async_update(force_update=force_update)
-
-            # if should_update:
-            self._pending_updates.add(agent_id)
-            self._schedule_async_update(force_update=True)
+            if should_update:
+                self._pending_updates.add(agent_id)
+                self._schedule_async_update(force_update=True)
     
     def update_agent_status(self, agent_id: str, status: str):
         """Update status for a specific agent with rich indicators."""
@@ -635,7 +639,7 @@ class RichTerminalDisplay(TerminalDisplay):
             except Exception:
                 pass
 
-        time.sleep(0.5)
+        time.sleep(0.1)  # Reduced delay for faster response
 
         if self.live:
             self.live.stop()
@@ -667,9 +671,9 @@ class RichTerminalDisplay(TerminalDisplay):
             # Force immediate update with final status display
             self._schedule_async_update(force_update=True)
             
-            # Wait a moment to ensure update completes
+            # Minimal wait to ensure update completes
             import time
-            time.sleep(0.1)
+            time.sleep(0.02)  # Reduced from 0.1 for faster response
     
     def cleanup(self):
         """Clean up display resources."""
@@ -686,18 +690,16 @@ class RichTerminalDisplay(TerminalDisplay):
         """Schedule asynchronous update of pending components."""
         current_time = time.time()
         
-        # Check if we need a full refresh
+        # Check if we need a full refresh - less frequent for performance
         if (current_time - self._last_full_refresh) > self._full_refresh_interval:
             with self._lock:
                 self._pending_updates.add('header')
                 self._pending_updates.add('footer')
                 self._pending_updates.update(self.agent_ids)
             self._last_full_refresh = current_time
-            force_update = True
         
-        # Rate limiting - skip update if too recent (unless forced)
-        if not force_update and (current_time - self._last_update) < self._update_interval:
-            return
+        # No rate limiting for real-time updates - always update immediately
+        # Removed throttling to ensure immediate responsiveness
         
         self._last_update = current_time
         
