@@ -227,12 +227,12 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
     if len(agents) == 1 and not use_orchestrator_for_single:
         # Single agent mode with history
         agent = next(iter(agents.values()))
-        print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}")
-        print(f"Agent: {agent.agent_id}")
+        print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}", flush=True)
+        print(f"Agent: {agent.agent_id}", flush=True)
         if history:
-            print(f"History: {len(history)//2} previous exchanges")
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}")
-        print("\n" + "="*60)
+            print(f"History: {len(history)//2} previous exchanges", flush=True)
+        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print("\n" + "="*60, flush=True)
         
         response_content = ""
         
@@ -245,10 +245,10 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
                 # The backends already show tool status during execution
                 continue
             elif chunk.type == "error":
-                print(f"\n❌ Error: {chunk.error}")
+                print(f"\n❌ Error: {chunk.error}", flush=True)
                 return ""
         
-        print("\n" + "="*60)
+        print("\n" + "="*60, flush=True)
         return response_content
     
     else:
@@ -259,12 +259,12 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
             logging_enabled=ui_config.get('logging_enabled', True)
         )
         
-        print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}")
-        print(f"Agents: {', '.join(agents.keys())}")
+        print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
+        print(f"Agents: {', '.join(agents.keys())}", flush=True)
         if history:
-            print(f"History: {len(history)//2} previous exchanges")
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}")
-        print("\n" + "="*60)
+            print(f"History: {len(history)//2} previous exchanges", flush=True)
+        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print("\n" + "="*60, flush=True)
         
         # For multi-agent with history, we need to use a different approach
         # that maintains coordination UI display while supporting conversation context
@@ -292,10 +292,10 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         # Single agent mode with existing SimpleDisplay frontend
         agent = next(iter(agents.values()))
         
-        print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}")
-        print(f"Agent: {agent.agent_id}")
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}")
-        print("\n" + "="*60)
+        print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}", flush=True)
+        print(f"Agent: {agent.agent_id}", flush=True)
+        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print("\n" + "="*60, flush=True)
         
         messages = [{"role": "user", "content": question}]
         response_content = ""
@@ -308,10 +308,10 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
                 # Skip builtin_tool_results to avoid duplication with real-time streaming
                 continue
             elif chunk.type == "error":
-                print(f"\n❌ Error: {chunk.error}")
+                print(f"\n❌ Error: {chunk.error}", flush=True)
                 return ""
         
-        print("\n" + "="*60)
+        print("\n" + "="*60, flush=True)
         return response_content
     
     else:
@@ -322,10 +322,10 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
             logging_enabled=ui_config.get('logging_enabled', True)
         )
         
-        print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}")
-        print(f"Agents: {', '.join(agents.keys())}")
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}")
-        print("\n" + "="*60)
+        print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
+        print(f"Agents: {', '.join(agents.keys())}", flush=True)
+        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print("\n" + "="*60, flush=True)
         
         final_response = await ui.coordinate(orchestrator, question)
         return final_response
@@ -333,27 +333,27 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
 
 async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]):
     """Run MassGen in interactive mode with conversation history."""
-    print(f"\n{BRIGHT_CYAN}🤖 MassGen v3 Interactive Mode{RESET}")
-    print("="*60)
+    print(f"\n{BRIGHT_CYAN}🤖 MassGen v3 Interactive Mode{RESET}", flush=True)
+    print("="*60, flush=True)
     
     # Display configuration
-    print(f"📋 {BRIGHT_YELLOW}Configuration:{RESET}")
-    print(f"   Agents: {len(agents)}")
+    print(f"📋 {BRIGHT_YELLOW}Configuration:{RESET}", flush=True)
+    print(f"   Agents: {len(agents)}", flush=True)
     for agent_id, agent in agents.items():
         backend_name = agent.backend.__class__.__name__.replace('Backend', '')
-        print(f"   • {agent_id}: {backend_name}")
+        print(f"   • {agent_id}: {backend_name}", flush=True)
     
     use_orchestrator_for_single = ui_config.get('use_orchestrator_for_single_agent', True)
     if len(agents) == 1:
         mode = "Single Agent (Orchestrator)" if use_orchestrator_for_single else "Single Agent (Direct)"
     else:
         mode = "Multi-Agent Coordination"
-    print(f"   Mode: {mode}")
-    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}")
+    print(f"   Mode: {mode}", flush=True)
+    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
     
-    print("\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.")
-    print("💡 Commands: /quit, /exit, /reset, /help")
-    print("="*60)
+    print("\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.", flush=True)
+    print("💡 Commands: /quit, /exit, /reset, /help", flush=True)
+    print("="*60, flush=True)
     
     # Maintain conversation history
     conversation_history = []
@@ -368,36 +368,36 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                     command = question.lower()
                     
                     if command in ['/quit', '/exit', '/q']:
-                        print("👋 Goodbye!")
+                        print("👋 Goodbye!", flush=True)
                         break
                     elif command in ['/reset', '/clear']:
                         conversation_history = []
                         # Reset all agents
                         for agent in agents.values():
                             agent.reset()
-                        print(f"{BRIGHT_YELLOW}🔄 Conversation history cleared!{RESET}")
+                        print(f"{BRIGHT_YELLOW}🔄 Conversation history cleared!{RESET}", flush=True)
                         continue
                     elif command in ['/help', '/h']:
-                        print(f"\n{BRIGHT_CYAN}📚 Available Commands:{RESET}")
-                        print("   /quit, /exit, /q     - Exit the program")
-                        print("   /reset, /clear       - Clear conversation history")
-                        print("   /help, /h            - Show this help message")
-                        print("   /status              - Show current status")
+                        print(f"\n{BRIGHT_CYAN}📚 Available Commands:{RESET}", flush=True)
+                        print("   /quit, /exit, /q     - Exit the program", flush=True)
+                        print("   /reset, /clear       - Clear conversation history", flush=True)
+                        print("   /help, /h            - Show this help message", flush=True)
+                        print("   /status              - Show current status", flush=True)
                         continue
                     elif command == '/status':
-                        print(f"\n{BRIGHT_CYAN}📊 Current Status:{RESET}")
-                        print(f"   Agents: {len(agents)} ({', '.join(agents.keys())})")
+                        print(f"\n{BRIGHT_CYAN}📊 Current Status:{RESET}", flush=True)
+                        print(f"   Agents: {len(agents)} ({', '.join(agents.keys())})", flush=True)
                         use_orch_single = ui_config.get('use_orchestrator_for_single_agent', True)
                         if len(agents) == 1:
                             mode_display = "Single Agent (Orchestrator)" if use_orch_single else "Single Agent (Direct)"
                         else:
                             mode_display = "Multi-Agent"
-                        print(f"   Mode: {mode_display}")
-                        print(f"   History: {len(conversation_history)//2} exchanges")
+                        print(f"   Mode: {mode_display}", flush=True)
+                        print(f"   History: {len(conversation_history)//2} exchanges", flush=True)
                         continue
                     else:
-                        print(f"❓ Unknown command: {command}")
-                        print("💡 Type /help for available commands")
+                        print(f"❓ Unknown command: {command}", flush=True)
+                        print("💡 Type /help for available commands", flush=True)
                         continue
                 
                 # Handle legacy plain text commands for backwards compatibility
@@ -413,10 +413,10 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                     continue
                 
                 if not question:
-                    print("Please enter a question or type /help for commands.")
+                    print("Please enter a question or type /help for commands.", flush=True)
                     continue
                 
-                print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}")
+                print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}", flush=True)
                 
                 response = await run_question_with_history(question, agents, ui_config, conversation_history)
                 
@@ -424,17 +424,17 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                     # Add to conversation history
                     conversation_history.append({"role": "user", "content": question})
                     conversation_history.append({"role": "assistant", "content": response})
-                    print(f"\n{BRIGHT_GREEN}✅ Complete!{RESET}")
-                    print(f"{BRIGHT_CYAN}💭 History: {len(conversation_history)//2} exchanges{RESET}")
+                    print(f"\n{BRIGHT_GREEN}✅ Complete!{RESET}", flush=True)
+                    print(f"{BRIGHT_CYAN}💭 History: {len(conversation_history)//2} exchanges{RESET}", flush=True)
                 else:
-                    print(f"\n{BRIGHT_RED}❌ No response generated{RESET}")
+                    print(f"\n{BRIGHT_RED}❌ No response generated{RESET}", flush=True)
                 
             except KeyboardInterrupt:
                 print("\n👋 Goodbye!")
                 break
             except Exception as e:
-                print(f"❌ Error: {e}")
-                print("Please try again or type /quit to exit.")
+                print(f"❌ Error: {e}", flush=True)
+                print("Please try again or type /quit to exit.", flush=True)
                 
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")
@@ -494,9 +494,9 @@ def create_sample_configs():
     with open(configs_dir / "multi_agent.yaml", 'w') as f:
         yaml.dump(multi_agent_config, f, default_flow_style=False)
     
-    print(f"✅ Sample configurations created in {configs_dir}/")
-    print("   • single_agent.yaml - Single agent setup")
-    print("   • multi_agent.yaml - Multi-agent coordination")
+    print(f"✅ Sample configurations created in {configs_dir}/", flush=True)
+    print("   • single_agent.yaml - Single agent setup", flush=True)
+    print("   • multi_agent.yaml - Multi-agent coordination", flush=True)
 
 
 async def main():
@@ -588,18 +588,18 @@ Environment Variables:
         if args.question:
             response = await run_single_question(args.question, agents, ui_config)
             if response:
-                print(f"\n{BRIGHT_GREEN}Final Response:{RESET}")
-                print(f"{response}")
+                print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
+                print(f"{response}", flush=True)
         else:
             await run_interactive_mode(agents, ui_config)
         
     except ConfigurationError as e:
-        print(f"❌ Configuration error: {e}")
+        print(f"❌ Configuration error: {e}", flush=True)
         sys.exit(1)
     except KeyboardInterrupt:
-        print("\n👋 Goodbye!")
+        print("\n👋 Goodbye!", flush=True)
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error: {e}", flush=True)
         sys.exit(1)
 
 

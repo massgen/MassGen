@@ -44,6 +44,10 @@ class CoordinationUI:
         # Will be set during coordination
         self.agent_ids = []
         self.orchestrator = None
+        
+        # Flush output configuration (matches rich_terminal_display)
+        self._flush_char_delay = 0.03  # 30ms between characters
+        self._flush_word_delay = 0.08  # 80ms after punctuation
     
     async def coordinate(self, orchestrator, question: str, agent_ids: Optional[List[str]] = None) -> str:
         """Coordinate agents with visual display and logging.
@@ -187,8 +191,8 @@ class CoordinationUI:
                                 except Exception as e:
                                     # Error processing presentation content - continue gracefully
                                     pass
-                                # Also print to console with flush for real-time output
-                                print(content, end='', flush=True)
+                                # Also print to console with flush using consistent timing with rich display
+                                self._print_with_flush(content)
                             else:
                                 # Simple print for non-display mode
                                 print(content, end='', flush=True)
@@ -382,8 +386,8 @@ class CoordinationUI:
                             if self.logger:
                                 self.logger.log_chunk(selected_agent, content, getattr(chunk, 'type', 'presentation'))
                             
-                            # Stream presentation to console
-                            print(content, end='', flush=True)
+                            # Stream presentation to console with consistent flush timing
+                            self._print_with_flush(content)
                             
                             # Update display
                             await self._process_content(selected_agent, content)
@@ -574,6 +578,31 @@ class CoordinationUI:
                     await asyncio.sleep(0.3) 
                 
                 self.display.show_final_answer(clean_content)
+    
+    def _print_with_flush(self, content: str):
+        """Print content with flush timing that matches rich_terminal_display."""
+        import sys
+        
+        try:
+            # Display character by character with timing matching rich display
+            for i, char in enumerate(content):
+                # Print character
+                print(char, end="", flush=True)
+                
+                # Add delays for natural reading rhythm (same as rich display)
+                if char in [' ', ',', ';']:
+                    time.sleep(self._flush_word_delay)
+                elif char in ['.', '!', '?', ':']:
+                    time.sleep(self._flush_word_delay * 2)
+                else:
+                    time.sleep(self._flush_char_delay)
+                    
+        except KeyboardInterrupt:
+            # If user interrupts, show the complete content immediately
+            print(f"\n{content}")
+        except Exception:
+            # On any error, fallback to immediate display
+            print(content, end='', flush=True)
 
 
 # Convenience functions for common use cases
