@@ -96,9 +96,12 @@ class RichTerminalDisplay(TerminalDisplay):
         
         super().__init__(agent_ids, **kwargs)
         
+        # Terminal performance detection and adaptive refresh rate
+        self._terminal_performance = self._detect_terminal_performance()
+        self.refresh_rate = self._get_adaptive_refresh_rate(kwargs.get('refresh_rate'))
+        
         # Rich-specific configuration
         self.theme = kwargs.get('theme', 'dark')
-        self.refresh_rate = kwargs.get('refresh_rate', 30)  # Further increased refresh rate for near real-time updates
         self.enable_syntax_highlighting = kwargs.get('enable_syntax_highlighting', True)
         self.max_content_lines = kwargs.get('max_content_lines', 8)
         self.max_line_length = kwargs.get('max_line_length', 100)
@@ -118,10 +121,16 @@ class RichTerminalDisplay(TerminalDisplay):
         
         self.live = None
         self._lock = threading.RLock()
+        # Adaptive refresh intervals based on terminal performance
         self._last_update = 0
-        self._update_interval = 0  # No throttling for immediate updates
+        self._update_interval = self._get_adaptive_update_interval()
         self._last_full_refresh = 0
-        self._full_refresh_interval = 0.05  # Much faster full refresh for real-time consistency
+        self._full_refresh_interval = self._get_adaptive_full_refresh_interval()
+        
+        # Performance monitoring
+        self._refresh_times = []
+        self._dropped_frames = 0
+        self._performance_check_interval = 5.0  # Check performance every 5 seconds
         
         # Async refresh components - more workers for faster updates
         self._refresh_executor = ThreadPoolExecutor(max_workers=min(len(agent_ids) * 2 + 8, 20))
@@ -166,9 +175,14 @@ class RichTerminalDisplay(TerminalDisplay):
         self._last_agent_activity = {agent_id: "waiting" for agent_id in agent_ids}
         self._last_content_hash = {agent_id: "" for agent_id in agent_ids}
         
-        # Debounce mechanism for updates - reduced for faster response
+        # Adaptive debounce mechanism for updates
         self._debounce_timers = {}
-        self._debounce_delay = 0.01  # 10ms debounce delay for near-instant updates
+        self._debounce_delay = self._get_adaptive_debounce_delay()
+        
+        # Layered refresh strategy
+        self._critical_updates = set()  # Status changes, errors, tool results
+        self._normal_updates = set()    # Text content, thinking updates
+        self._decorative_updates = set()  # Progress bars, timestamps
         
         # Message filtering settings - tool content always important
         self._important_content_types = {"presentation", "status", "tool", "error"}
@@ -192,11 +206,16 @@ class RichTerminalDisplay(TerminalDisplay):
         self._selected_agent = None
         self._setup_agent_files()
         
-        # Text buffering system to accumulate chunks
+        # Adaptive text buffering system to accumulate chunks
         self._text_buffers = {agent_id: "" for agent_id in agent_ids}
-        self._max_buffer_length = 500  # Maximum buffer size before forcing flush
-        self._buffer_timeout = 1.0  # Timeout in seconds before forcing buffer flush
+        self._max_buffer_length = self._get_adaptive_buffer_length()
+        self._buffer_timeout = self._get_adaptive_buffer_timeout()
         self._buffer_timers = {agent_id: None for agent_id in agent_ids}
+        
+        # Adaptive batching for updates
+        self._update_batch = set()
+        self._batch_timer = None
+        self._batch_timeout = self._get_adaptive_batch_timeout()
     
     def _setup_resize_handler(self):
         """Setup SIGWINCH signal handler for terminal resize detection."""
@@ -285,6 +304,397 @@ class RichTerminalDisplay(TerminalDisplay):
         with open(self.system_status_file, 'w', encoding='utf-8') as f:
             f.write("=== SYSTEM STATUS LOG ===\n\n")
     
+    def _detect_terminal_performance(self):
+        """Detect terminal performance characteristics for adaptive refresh rates."""
+        terminal_info = {
+            'type': 'unknown',
+            'performance_tier': 'medium',  # low, medium, high
+            'supports_unicode': True,
+            'supports_color': True,
+            'buffer_size': 'normal'
+        }
+        
+        try:
+            # Get terminal type from environment
+            term = os.environ.get('TERM', '').lower()
+            term_program = os.environ.get('TERM_PROGRAM', '').lower()
+            
+            # Classify terminal types by performance
+            if 'iterm.app' in term_program or 'iterm' in term_program.lower():
+                terminal_info['performance_tier'] = 'high'
+                terminal_info['type'] = 'iterm'
+                terminal_info['supports_unicode'] = True
+            elif 'apple_terminal' in term_program or term_program == 'terminal':
+                terminal_info['performance_tier'] = 'high'
+                terminal_info['type'] = 'macos_terminal'
+                terminal_info['supports_unicode'] = True
+            elif 'xterm-256color' in term or 'alacritty' in term_program:
+                terminal_info['performance_tier'] = 'high'
+                terminal_info['type'] = 'modern'
+            elif 'screen' in term or 'tmux' in term:
+                terminal_info['performance_tier'] = 'low'  # Multiplexers are slower
+                terminal_info['type'] = 'multiplexer'
+            elif 'xterm' in term:
+                terminal_info['performance_tier'] = 'medium'
+                terminal_info['type'] = 'xterm'
+            elif term in ['dumb', 'vt100', 'vt220']:
+                terminal_info['performance_tier'] = 'low'
+                terminal_info['type'] = 'legacy'
+                terminal_info['supports_unicode'] = False
+            
+            # Check for SSH (typically slower)
+            if os.environ.get('SSH_CONNECTION') or os.environ.get('SSH_CLIENT'):
+                if terminal_info['performance_tier'] == 'high':
+                    terminal_info['performance_tier'] = 'medium'
+                elif terminal_info['performance_tier'] == 'medium':
+                    terminal_info['performance_tier'] = 'low'
+            
+            # Detect color support
+            colorterm = os.environ.get('COLORTERM', '').lower()
+            if colorterm in ['truecolor', '24bit']:
+                terminal_info['supports_color'] = True
+            elif not self.console.is_terminal or term == 'dumb':
+                terminal_info['supports_color'] = False
+                
+        except Exception:
+            # Fallback to safe defaults
+            terminal_info['performance_tier'] = 'low'
+            
+        return terminal_info
+    
+    def _get_adaptive_refresh_rate(self, user_override=None):
+        """Get adaptive refresh rate based on terminal performance."""
+        if user_override is not None:
+            return user_override
+            
+        perf_tier = self._terminal_performance['performance_tier']
+        
+        refresh_rates = {
+            'high': 20,     # Modern terminals
+            'medium': 10,   # Standard terminals  
+            'low': 5        # Multiplexers, SSH, legacy
+        }
+        
+        return refresh_rates.get(perf_tier, 8)
+    
+    def _get_adaptive_update_interval(self):
+        """Get adaptive update interval based on terminal performance."""
+        perf_tier = self._terminal_performance['performance_tier']
+        
+        intervals = {
+            'high': 0.02,   # 20ms - very responsive
+            'medium': 0.05, # 50ms - balanced
+            'low': 0.1      # 100ms - conservative
+        }
+        
+        return intervals.get(perf_tier, 0.05)
+    
+    def _get_adaptive_full_refresh_interval(self):
+        """Get adaptive full refresh interval based on terminal performance."""
+        perf_tier = self._terminal_performance['performance_tier']
+        
+        intervals = {
+            'high': 0.1,    # 100ms
+            'medium': 0.2,  # 200ms
+            'low': 0.5      # 500ms
+        }
+        
+        return intervals.get(perf_tier, 0.2)
+    
+    def _get_adaptive_debounce_delay(self):
+        """Get adaptive debounce delay based on terminal performance."""
+        perf_tier = self._terminal_performance['performance_tier']
+        term_type = self._terminal_performance['type']
+        
+        delays = {
+            'high': 0.01,   # 10ms
+            'medium': 0.03, # 30ms  
+            'low': 0.05     # 50ms
+        }
+        
+        base_delay = delays.get(perf_tier, 0.03)
+        
+        # Increase debounce delay for macOS terminals to reduce flakiness  
+        if term_type in ['iterm', 'macos_terminal']:
+            base_delay *= 2.0  # Double the debounce delay for stability
+            
+        return base_delay
+    
+    def _get_adaptive_buffer_length(self):
+        """Get adaptive buffer length based on terminal performance."""
+        perf_tier = self._terminal_performance['performance_tier']
+        term_type = self._terminal_performance['type']
+        
+        lengths = {
+            'high': 800,    # Longer buffers for fast terminals
+            'medium': 500,  # Standard buffer length
+            'low': 200      # Shorter buffers for slow terminals
+        }
+        
+        base_length = lengths.get(perf_tier, 500)
+        
+        # Reduce buffer size for macOS terminals to improve responsiveness
+        if term_type in ['iterm', 'macos_terminal']:
+            base_length = min(base_length, 400)
+            
+        return base_length
+    
+    def _get_adaptive_buffer_timeout(self):
+        """Get adaptive buffer timeout based on terminal performance."""
+        perf_tier = self._terminal_performance['performance_tier']
+        term_type = self._terminal_performance['type']
+        
+        timeouts = {
+            'high': 0.5,    # Fast flush for responsive terminals
+            'medium': 1.0,  # Standard timeout
+            'low': 2.0      # Longer timeout for slow terminals
+        }
+        
+        base_timeout = timeouts.get(perf_tier, 1.0)
+        
+        # Increase buffer timeout for macOS terminals for smoother text flow
+        if term_type in ['iterm', 'macos_terminal']:
+            base_timeout *= 1.5  # 50% longer timeout for stability
+            
+        return base_timeout
+    
+    def _get_adaptive_batch_timeout(self):
+        """Get adaptive batch timeout for update batching."""
+        perf_tier = self._terminal_performance['performance_tier']
+        
+        timeouts = {
+            'high': 0.05,   # 50ms batching for fast terminals
+            'medium': 0.1,  # 100ms batching for medium terminals
+            'low': 0.2      # 200ms batching for slow terminals
+        }
+        
+        return timeouts.get(perf_tier, 0.1)
+    
+    def _monitor_performance(self):
+        """Monitor refresh performance and adjust if needed."""
+        current_time = time.time()
+        
+        # Clean old refresh time records (keep last 20)
+        if len(self._refresh_times) > 20:
+            self._refresh_times = self._refresh_times[-20:]
+        
+        # Calculate average refresh time
+        if len(self._refresh_times) >= 5:
+            avg_refresh_time = sum(self._refresh_times) / len(self._refresh_times)
+            expected_refresh_time = 1.0 / self.refresh_rate
+            
+            # If refresh takes too long, downgrade performance
+            if avg_refresh_time > expected_refresh_time * 2:
+                self._dropped_frames += 1
+                
+                # After 3 dropped frames, reduce refresh rate
+                if self._dropped_frames >= 3:
+                    old_rate = self.refresh_rate
+                    self.refresh_rate = max(2, int(self.refresh_rate * 0.7))
+                    self._dropped_frames = 0
+                    
+                    # Update intervals accordingly
+                    self._update_interval = 1.0 / self.refresh_rate
+                    self._full_refresh_interval *= 1.5
+                    
+                    # Restart live display with new rate if active
+                    if self.live and self.live.is_started:
+                        try:
+                            self.live.refresh_per_second = self.refresh_rate
+                        except:
+                            # If live display fails, fallback to simple mode
+                            self._fallback_to_simple_display()
+
+    def _create_live_display_with_fallback(self):
+        """Create Live display with terminal compatibility checks and fallback."""
+        try:
+            # Test terminal capabilities
+            if not self._test_terminal_capabilities():
+                return self._fallback_to_simple_display()
+            
+            # Create Live display with adaptive settings
+            live_settings = self._get_adaptive_live_settings()
+            
+            live = Live(
+                self._create_layout(),
+                console=self.console,
+                **live_settings
+            )
+            
+            # Test if Live display works
+            try:
+                # Quick test start/stop to verify functionality
+                live.start()
+                live.stop()
+                return live
+            except Exception:
+                # Live display failed, try fallback
+                return self._fallback_to_simple_display()
+                
+        except Exception:
+            # Any error in setup, use fallback
+            return self._fallback_to_simple_display()
+    
+    def _test_terminal_capabilities(self):
+        """Test if terminal supports rich Live display features."""
+        try:
+            # Check if we're in a proper terminal
+            if not self.console.is_terminal:
+                return False
+            
+            # Check terminal type compatibility
+            perf_tier = self._terminal_performance['performance_tier']
+            term_type = self._terminal_performance['type']
+            
+            # Disable Live for very limited terminals
+            if term_type == 'legacy' or perf_tier == 'low':
+                # Allow basic terminals if not too limited
+                term = os.environ.get('TERM', '').lower()
+                if term in ['dumb', 'vt100']:
+                    return False
+            
+            # Enable Live for macOS terminals with optimizations
+            if term_type in ['iterm', 'macos_terminal']:
+                return True
+            
+            # Test basic console functionality
+            test_size = self.console.size
+            if test_size.width < 20 or test_size.height < 10:
+                return False
+                
+            return True
+            
+        except Exception:
+            return False
+    
+    def _get_adaptive_live_settings(self):
+        """Get Live display settings adapted to terminal performance."""
+        perf_tier = self._terminal_performance['performance_tier']
+        
+        settings = {
+            'refresh_per_second': self.refresh_rate,
+            'vertical_overflow': "ellipsis",
+            'transient': False
+        }
+        
+        # Adjust settings based on performance tier
+        if perf_tier == 'low':
+            settings['refresh_per_second'] = min(settings['refresh_per_second'], 3)
+            settings['transient'] = True  # Reduce memory usage
+        elif perf_tier == 'medium':
+            settings['refresh_per_second'] = min(settings['refresh_per_second'], 8)
+        
+        # Disable auto_refresh for multiplexers to prevent conflicts
+        if self._terminal_performance['type'] == 'multiplexer':
+            settings['auto_refresh'] = False
+            
+        # macOS terminal-specific optimizations
+        if self._terminal_performance['type'] in ['iterm', 'macos_terminal']:
+            # Use more conservative refresh rates for macOS terminals to reduce flakiness
+            settings['refresh_per_second'] = min(settings['refresh_per_second'], 5)
+            # Enable transient mode to reduce flicker
+            settings['transient'] = False
+            # Ensure vertical overflow is handled gracefully
+            settings['vertical_overflow'] = "ellipsis"
+            
+        return settings
+    
+    def _fallback_to_simple_display(self):
+        """Fallback to simple console output when Live display is not supported."""
+        self._simple_display_mode = True
+        
+        # Print a simple status message
+        try:
+            self.console.print(
+                "\n[yellow]Terminal compatibility: Using simple display mode[/yellow]"
+            )
+            self.console.print(
+                f"[dim]Monitoring {len(self.agent_ids)} agents...[/dim]\n"
+            )
+        except:
+            # If even basic console fails, use plain print
+            print("\nUsing simple display mode...")
+            print(f"Monitoring {len(self.agent_ids)} agents...\n")
+        
+        return None  # No Live display
+    
+    def _update_display_safe(self):
+        """Safely update display with fallback support and macOS-specific synchronization."""
+        # Add extra synchronization for macOS terminals to prevent race conditions
+        term_type = self._terminal_performance['type']
+        use_safe_mode = term_type in ['iterm', 'macos_terminal']
+        
+        try:
+            if use_safe_mode:
+                # For macOS terminals, use more conservative locking
+                with self._layout_update_lock:
+                    with self._lock:  # Double locking for extra safety
+                        if hasattr(self, '_simple_display_mode') and self._simple_display_mode:
+                            self._update_simple_display()
+                        else:
+                            self._update_live_display_safe()
+            else:
+                with self._layout_update_lock:
+                    if hasattr(self, '_simple_display_mode') and self._simple_display_mode:
+                        self._update_simple_display()
+                    else:
+                        self._update_live_display()
+        except Exception:
+            # Fallback to simple display on any error
+            self._fallback_to_simple_display()
+    
+    def _update_simple_display(self):
+        """Update display in simple mode without Live."""
+        try:
+            # Simple status update every few seconds
+            current_time = time.time()
+            if not hasattr(self, '_last_simple_update'):
+                self._last_simple_update = 0
+            
+            if current_time - self._last_simple_update > 2.0:  # Update every 2 seconds
+                status_line = f"[{time.strftime('%H:%M:%S')}] Agents: "
+                for agent_id in self.agent_ids:
+                    status = self.agent_status.get(agent_id, 'waiting')
+                    status_line += f"{agent_id}:{status} "
+                
+                try:
+                    self.console.print(f"\r{status_line[:80]}", end="")
+                except:
+                    print(f"\r{status_line[:80]}", end="")
+                
+                self._last_simple_update = current_time
+                
+        except Exception:
+            pass
+    
+    def _update_live_display(self):
+        """Update Live display mode."""
+        try:
+            if self.live:
+                self.live.update(self._create_layout())
+        except Exception:
+            # If Live display fails, switch to simple mode
+            self._fallback_to_simple_display()
+    
+    def _update_live_display_safe(self):
+        """Update Live display mode with extra safety for macOS terminals."""
+        try:
+            if self.live and self.live.is_started:
+                # For macOS terminals, add a small delay to prevent flickering
+                import time
+                time.sleep(0.001)  # 1ms delay for terminal synchronization
+                self.live.update(self._create_layout())
+            elif self.live:
+                # If live display exists but isn't started, try to restart it
+                try:
+                    self.live.start()
+                    self.live.update(self._create_layout())
+                except Exception:
+                    self._fallback_to_simple_display()
+        except Exception:
+            # If Live display fails, switch to simple mode
+            self._fallback_to_simple_display()
+
     def _setup_theme(self):
         """Setup color theme configuration."""
         themes = {
@@ -343,15 +753,10 @@ class RichTerminalDisplay(TerminalDisplay):
         if self._interactive_mode:
             self._setup_keyboard_handler()
         
-        # Start live display with optimized settings
-        self.live = Live(
-            self._create_layout(),
-            console=self.console,
-            refresh_per_second=self.refresh_rate,
-            vertical_overflow="ellipsis",  # Enable scrolling when content overflows
-            transient=False  # Keep content persistent for better performance
-        )
-        self.live.start()
+        # Start live display with adaptive settings and fallback support
+        self.live = self._create_live_display_with_fallback()
+        if self.live:
+            self.live.start()
         
         # Write initial system status
         self._write_system_status()
@@ -464,9 +869,11 @@ class RichTerminalDisplay(TerminalDisplay):
         
         self._stop_input_thread = False
         
-        # Choose input method based on safety requirements
-        if self._safe_keyboard_mode:
-            # Use completely safe method that doesn't change terminal settings
+        # Choose input method based on safety requirements and terminal type
+        term_type = self._terminal_performance['type']
+        
+        if self._safe_keyboard_mode or term_type in ['iterm', 'macos_terminal']:
+            # Use completely safe method for macOS terminals to avoid conflicts
             self._input_thread = threading.Thread(target=self._input_thread_worker_safe, daemon=True)
             self._input_thread.start()
         else:
@@ -1277,7 +1684,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 footer_content.append(f"Output files saved in: {self.output_dir}/", style=self.colors['info'])
             else:
                 footer_content.append("🎮 Live Mode Hotkeys: Press 1-", style=self.colors['primary'])
-                footer_content.append(f"{len(self.agent_ids)} to open agent files in editor, 's' for system status, 'q' to quit", style=self.colors['text'])
+                footer_content.append(f"{len(self.agent_ids)} to open agent files in editor, 's' for system status", style=self.colors['text'])
                 footer_content.append(f"\n📂 Output files saved in: {self.output_dir}/", style=self.colors['info'])
         
         return Panel(
@@ -1322,13 +1729,14 @@ class RichTerminalDisplay(TerminalDisplay):
             # Process content with buffering for smoother text display
             self._process_content_with_buffering(agent_id, content, content_type)
             
-            # Always schedule update for new content with immediate refresh for status-related content
-            self._pending_updates.add(agent_id)
-            # Force immediate updates for status changes, tool usage, and important content
-            force_immediate = content_type in ["tool", "status", "presentation"] or any(
+            # Categorize updates by priority for layered refresh strategy
+            self._categorize_update(agent_id, content_type, content)
+            
+            # Schedule update based on priority
+            is_critical = content_type in ["tool", "status", "presentation", "error"] or any(
                 keyword in content.lower() for keyword in self._status_change_keywords
             )
-            self._schedule_async_update(force_update=force_immediate)
+            self._schedule_layered_update(agent_id, is_critical)
     
     def _process_content_with_buffering(self, agent_id: str, content: str, content_type: str):
         """Process content with buffering to accumulate text chunks."""
@@ -2124,6 +2532,11 @@ class RichTerminalDisplay(TerminalDisplay):
                     timer.cancel()
             self._buffer_timers.clear()
             
+            # Cancel batch timer
+            if self._batch_timer:
+                self._batch_timer.cancel()
+                self._batch_timer = None
+            
             # Shutdown executors
             if hasattr(self, '_refresh_executor'):
                 self._refresh_executor.shutdown(wait=True)
@@ -2155,9 +2568,97 @@ class RichTerminalDisplay(TerminalDisplay):
         
         self._status_update_executor.submit(priority_update)
     
+    def _categorize_update(self, agent_id: str, content_type: str, content: str):
+        """Categorize update by priority for layered refresh strategy."""
+        if content_type in ["status", "error", "tool"] or any(
+            keyword in content.lower() for keyword in ["error", "failed", "completed", "voted"]
+        ):
+            self._critical_updates.add(agent_id)
+            # Remove from other categories to avoid duplicate processing
+            self._normal_updates.discard(agent_id)
+            self._decorative_updates.discard(agent_id)
+        elif content_type in ["thinking", "presentation"]:
+            if agent_id not in self._critical_updates:
+                self._normal_updates.add(agent_id)
+                self._decorative_updates.discard(agent_id)
+        else:
+            # Decorative updates (progress, timestamps, etc.)
+            if agent_id not in self._critical_updates and agent_id not in self._normal_updates:
+                self._decorative_updates.add(agent_id)
+    
+    def _schedule_layered_update(self, agent_id: str, is_critical: bool = False):
+        """Schedule update using layered refresh strategy with intelligent batching."""
+        if is_critical:
+            # Critical updates: immediate processing, flush any pending batch
+            self._flush_update_batch()
+            self._pending_updates.add(agent_id)
+            self._schedule_async_update(force_update=True)
+        else:
+            # Normal updates: intelligent batching based on terminal performance
+            perf_tier = self._terminal_performance['performance_tier']
+            
+            if perf_tier == 'high':
+                # High performance: process immediately
+                self._pending_updates.add(agent_id)
+                self._schedule_async_update(force_update=False)
+            else:
+                # Lower performance: use batching
+                self._add_to_update_batch(agent_id)
+    
+    def _schedule_delayed_update(self):
+        """Schedule delayed update for non-critical content."""
+        delay = self._debounce_delay * 2  # Double delay for non-critical updates
+        
+        def delayed_update():
+            if self._pending_updates:
+                self._schedule_async_update(force_update=False)
+        
+        # Cancel existing delayed timer
+        if 'delayed' in self._debounce_timers:
+            self._debounce_timers['delayed'].cancel()
+            
+        self._debounce_timers['delayed'] = threading.Timer(delay, delayed_update)
+        self._debounce_timers['delayed'].start()
+    
+    def _add_to_update_batch(self, agent_id: str):
+        """Add update to batch for efficient processing."""
+        self._update_batch.add(agent_id)
+        
+        # Cancel existing batch timer
+        if self._batch_timer:
+            self._batch_timer.cancel()
+        
+        # Set new batch timer
+        self._batch_timer = threading.Timer(self._batch_timeout, self._process_update_batch)
+        self._batch_timer.start()
+    
+    def _process_update_batch(self):
+        """Process accumulated batch of updates."""
+        if self._update_batch:
+            # Move batch to pending updates
+            self._pending_updates.update(self._update_batch)
+            self._update_batch.clear()
+            
+            # Process batch
+            self._schedule_async_update(force_update=False)
+    
+    def _flush_update_batch(self):
+        """Immediately flush any pending batch updates."""
+        if self._batch_timer:
+            self._batch_timer.cancel()
+            self._batch_timer = None
+        
+        if self._update_batch:
+            self._pending_updates.update(self._update_batch)
+            self._update_batch.clear()
+
     def _schedule_async_update(self, force_update: bool = False):
         """Schedule asynchronous update with debouncing to prevent jitter."""
         current_time = time.time()
+        
+        # Frame skipping: if the terminal is struggling, skip updates more aggressively
+        if not force_update and self._should_skip_frame():
+            return
         
         # Check if we need a full refresh - less frequent for performance
         if (current_time - self._last_full_refresh) > self._full_refresh_interval:
@@ -2190,8 +2691,24 @@ class RichTerminalDisplay(TerminalDisplay):
         self._debounce_timers['main'] = threading.Timer(self._debounce_delay, debounced_update)
         self._debounce_timers['main'].start()
     
+    def _should_skip_frame(self):
+        """Determine if we should skip this frame update to maintain stability."""
+        # Skip frames more aggressively for macOS terminals
+        term_type = self._terminal_performance['type']
+        if term_type in ['iterm', 'macos_terminal']:
+            # Skip if we have too many dropped frames
+            if self._dropped_frames > 1:
+                return True
+            # Skip if refresh executor is overloaded
+            if hasattr(self._refresh_executor, '_work_queue') and self._refresh_executor._work_queue.qsize() > 2:
+                return True
+        
+        return False
+    
     def _async_update_components(self):
         """Asynchronously update only the components that have changed."""
+        start_time = time.time()
+        
         try:
             updates_to_process = None
             
@@ -2227,6 +2744,11 @@ class RichTerminalDisplay(TerminalDisplay):
         except Exception:
             # Silently handle errors to avoid disrupting display
             pass
+        finally:
+            # Performance monitoring
+            refresh_time = time.time() - start_time
+            self._refresh_times.append(refresh_time)
+            self._monitor_performance()
     
     def _update_header_cache(self):
         """Update the cached header panel."""
@@ -2249,15 +2771,6 @@ class RichTerminalDisplay(TerminalDisplay):
         except:
             pass
     
-    def _update_display_safe(self):
-        """Safely update the live display with the current layout."""
-        with self._layout_update_lock:
-            if self.live:
-                try:
-                    self.live.update(self._create_layout())
-                except Exception:
-                    # Silently handle update failures
-                    pass
     
     def _refresh_display(self):
         """Override parent's refresh method to use async updates."""
