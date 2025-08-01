@@ -152,6 +152,9 @@ class CoordinationUI:
             
             if vote_results.get('vote_counts'):
                 self._display_vote_results(vote_results)
+                # Allow time for voting results to be visible
+                import time
+                time.sleep(1.0)
             
             # Get final presentation from winning agent
             if self.enable_final_presentation and selected_agent and vote_results.get('vote_counts'):
@@ -193,6 +196,8 @@ class CoordinationUI:
                 
                 final_answer = presentation_content
                 print("\n" + "=" * 60)
+                # Allow time for final presentation to be fully visible
+                time.sleep(1.5)
             
             # Get the clean final answer from orchestrator's stored state (avoids token spacing issues)
             orchestrator_final_answer = None
@@ -347,6 +352,9 @@ class CoordinationUI:
             
             if vote_results.get('vote_counts'):
                 self._display_vote_results(vote_results)
+                # Allow time for voting results to be visible
+                import time
+                time.sleep(1.0)
             
             # Get final presentation from winning agent
             if self.enable_final_presentation and selected_agent and vote_results.get('vote_counts'):
@@ -386,6 +394,8 @@ class CoordinationUI:
                 
                 final_answer = presentation_content
                 print("\n" + "=" * 60)
+                # Allow time for final presentation to be fully visible
+                time.sleep(1.5)
             
             # Get the clean final answer from orchestrator's stored state
             orchestrator_final_answer = None

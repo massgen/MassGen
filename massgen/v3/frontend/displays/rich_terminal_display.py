@@ -166,11 +166,20 @@ class RichTerminalDisplay(TerminalDisplay):
         # File-based output system
         self.output_dir = kwargs.get('output_dir', 'agent_outputs')
         self.agent_files = {}
+        self.system_status_file = None
         self._selected_agent = None
         self._setup_agent_files()
+        
+        # Text buffering system to accumulate chunks into complete sentences
+        self._text_buffers = {agent_id: "" for agent_id in agent_ids}
+        self._sentence_terminators = {'.', '!', '?', '\n', ':', ';'}
+        self._min_buffer_length = 200  # Increased minimum characters before forcing output
+        self._max_buffer_length = 500  # Maximum buffer size before forcing flush
+        self._buffer_timeout = 1.0  # Timeout in seconds before forcing buffer flush
+        self._buffer_timers = {agent_id: None for agent_id in agent_ids}
     
     def _setup_agent_files(self):
-        """Setup individual txt files for each agent."""
+        """Setup individual txt files for each agent and system status file."""
         # Create output directory if it doesn't exist
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         
@@ -181,6 +190,11 @@ class RichTerminalDisplay(TerminalDisplay):
             # Clear existing file content
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(f"=== {agent_id.upper()} OUTPUT LOG ===\n\n")
+        
+        # Initialize system status file
+        self.system_status_file = Path(self.output_dir) / "system_status.txt"
+        with open(self.system_status_file, 'w', encoding='utf-8') as f:
+            f.write("=== SYSTEM STATUS LOG ===\n\n")
     
     def _setup_theme(self):
         """Setup color theme configuration."""
@@ -249,6 +263,9 @@ class RichTerminalDisplay(TerminalDisplay):
             transient=False  # Keep content persistent for better performance
         )
         self.live.start()
+        
+        # Write initial system status
+        self._write_system_status()
         
         # Interactive mode is handled through input prompts
     
@@ -394,12 +411,10 @@ class RichTerminalDisplay(TerminalDisplay):
                 self.console.print(content_panel)
                 
                 # Wait for key press to return
-                input("Press Enter to return to main view...")
+                input("Press Enter to return to agent selector...")
                 
-                # Return to main display
+                # Clear screen before returning to agent selector
                 self.console.clear()
-                if self.live:
-                    self.live.update(self._create_layout())
                     
         except Exception as e:
             # Handle errors gracefully
@@ -410,34 +425,82 @@ class RichTerminalDisplay(TerminalDisplay):
         if not self._interactive_mode or not hasattr(self, '_agent_keys'):
             return
         
-        # Display available options
-        options_text = Text()
-        options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
-        
-        for key, agent_id in self._agent_keys.items():
-            options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
-        
-        options_text.append("  q: Return to main view\n", style=self.colors['info'])
-        
-        self.console.print(Panel(
-            options_text,
-            title="[bold]Agent Selector[/bold]",
-            border_style=self.colors['border']
-        ))
-        
-        # Get user input
-        try:
-            choice = input("Enter your choice: ").strip().lower()
+        while True:
+            # Display available options
+            options_text = Text()
+            options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
             
-            if choice in self._agent_keys:
-                self._show_agent_full_content(self._agent_keys[choice])
-            elif choice == 'q':
-                self.console.clear()
-                if self.live:
-                    self.live.update(self._create_layout())
-        except KeyboardInterrupt:
-            # Handle Ctrl+C gracefully
-            pass
+            for key, agent_id in self._agent_keys.items():
+                options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
+            
+            options_text.append("  s: System Status\n", style=self.colors['warning'])
+            options_text.append("  q: Quit\n", style=self.colors['info'])
+            
+            self.console.print(Panel(
+                options_text,
+                title="[bold]Agent Selector[/bold]",
+                border_style=self.colors['border']
+            ))
+            
+            # Get user input
+            try:
+                choice = input("Enter your choice: ").strip().lower()
+                
+                if choice in self._agent_keys:
+                    self._show_agent_full_content(self._agent_keys[choice])
+                elif choice == 's':
+                    self._show_system_status()
+                elif choice == 'q':
+                    break
+                else:
+                    self.console.print(f"[{self.colors['error']}]Invalid choice. Please try again.[/{self.colors['error']}]")
+            except KeyboardInterrupt:
+                # Handle Ctrl+C gracefully
+                break
+    
+    def _show_system_status(self):
+        """Display system status from txt file."""
+        if not self.system_status_file or not self.system_status_file.exists():
+            self.console.print(f"[{self.colors['error']}]System status file not found.[/{self.colors['error']}]")
+            return
+        
+        try:
+            with open(self.system_status_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Clear screen and show content
+            self.console.clear()
+            
+            # Create header
+            header_text = Text()
+            header_text.append("📊 SYSTEM STATUS - Full Log", style=self.colors['header_style'])
+            header_text.append("\nPress any key to return to agent selector", style=self.colors['info'])
+            
+            header_panel = Panel(
+                header_text,
+                box=DOUBLE,
+                border_style=self.colors['border']
+            )
+            
+            # Create content panel
+            content_panel = Panel(
+                content,
+                title="[bold]System Status Log[/bold]",
+                border_style=self.colors['border'],
+                box=ROUNDED
+            )
+            
+            self.console.print(header_panel)
+            self.console.print(content_panel)
+            
+            # Wait for key press to return
+            input("Press Enter to return to agent selector...")
+            
+            # Clear screen before returning to agent selector
+            self.console.clear()
+                
+        except Exception as e:
+            self.console.print(f"[{self.colors['error']}]Error reading system status file: {e}[/{self.colors['error']}]")
     
     def _create_agent_panel(self, agent_id: str) -> Panel:
         """Create a panel for a specific agent."""
@@ -544,6 +607,51 @@ class RichTerminalDisplay(TerminalDisplay):
         
         return formatted
     
+    def _format_presentation_content(self, content: str) -> Text:
+        """Format presentation content with enhanced styling for orchestrator queries."""
+        formatted = Text()
+        
+        # Split content into lines for better formatting
+        lines = content.split('\n') if '\n' in content else [content]
+        
+        for line in lines:
+            if not line.strip():
+                formatted.append('\n')
+                continue
+                
+            # Special formatting for orchestrator query responses
+            if line.startswith('**') and line.endswith('**'):
+                # Bold emphasis for important points
+                clean_line = line.strip('*').strip()
+                formatted.append(clean_line, style=f"bold {self.colors['success']}")
+            elif line.startswith('- ') or line.startswith('• '):
+                # Bullet points with enhanced styling
+                formatted.append(line[:2], style=self.colors['primary'])
+                formatted.append(line[2:], style=self.colors['text'])
+            elif line.startswith('#'):
+                # Headers with different styling
+                header_level = len(line) - len(line.lstrip('#'))
+                clean_header = line.lstrip('# ').strip()
+                if header_level <= 2:
+                    formatted.append(clean_header, style=f"bold {self.colors['header_style']}")
+                else:
+                    formatted.append(clean_header, style=f"bold {self.colors['primary']}")
+            elif self._is_code_content(line):
+                # Code blocks in presentations
+                if self.enable_syntax_highlighting:
+                    formatted.append(self._apply_syntax_highlighting(line))
+                else:
+                    formatted.append(line, style=f"bold {self.colors['info']}")
+            else:
+                # Regular presentation text with enhanced readability
+                formatted.append(line, style=self.colors['text'])
+            
+            # Add newline except for the last line
+            if line != lines[-1]:
+                formatted.append('\n')
+        
+        return formatted
+    
     def _is_web_search_content(self, line: str) -> bool:
         """Check if content is from web search and needs special formatting."""
         web_search_indicators = [
@@ -568,16 +676,31 @@ class RichTerminalDisplay(TerminalDisplay):
         elif "[Provider Tool: Web Search] Search completed" in line:
             formatted.append("✅ ", style=self.colors['success'])
             formatted.append("Search completed", style=self.colors['text'])
-        elif "🔍 [Search Query]" in line:
-            # Extract and display search query
-            query_part = line.split("🔍 [Search Query]", 1)
-            if len(query_part) > 1:
-                query = query_part[1].strip().strip("'\"")
-                # Limit query display length
-                if len(query) > 50:
-                    query = query[:47] + "..."
-                formatted.append("🔍 Query: ", style=self.colors['info'])
-                formatted.append(query, style=f"italic {self.colors['text']}")
+        elif any(pattern in line for pattern in ["🔍 [Search Query]", "Search Query:", "[Search Query]"]):
+            # Extract and display search query with better formatting
+            # Try different patterns to extract the query
+            query = None
+            patterns = [
+                ("🔍 [Search Query]", ""),
+                ("[Search Query]", ""),
+                ("Search Query:", ""),
+                ("Query:", ""),
+            ]
+            
+            for pattern, _ in patterns:
+                if pattern in line:
+                    parts = line.split(pattern, 1)
+                    if len(parts) > 1:
+                        query = parts[1].strip().strip("'\"").strip()
+                        break
+            
+            if query:
+                # Format the search query nicely
+                if len(query) > 80:
+                    # For long queries, show beginning and end
+                    query = query[:60] + "..." + query[-17:]
+                formatted.append("🔍 Search: ", style=self.colors['info'])
+                formatted.append(f'"{query}"', style=f"italic {self.colors['text']}")
             else:
                 formatted.append("🔍 Search query", style=self.colors['info'])
         else:
@@ -773,7 +896,7 @@ class RichTerminalDisplay(TerminalDisplay):
         # Interactive mode instructions
         if self._interactive_mode and hasattr(self, '_agent_keys'):
             footer_content.append("🎮 Interactive: Press 1-", style=self.colors['primary'])
-            footer_content.append(f"{len(self.agent_ids)} to view agent details, 'q' to return", style=self.colors['text'])
+            footer_content.append(f"{len(self.agent_ids)} to view agent details, 's' for system status, 'q' to return", style=self.colors['text'])
             footer_content.append(f"\n📂 Output files saved in: {self.output_dir}/", style=self.colors['info'])
         
         return Panel(
@@ -815,20 +938,8 @@ class RichTerminalDisplay(TerminalDisplay):
             if self._should_filter_content(content, content_type):
                 return
             
-            # If content contains newlines, split and add as separate lines
-            if '\n' in content:
-                for line in content.splitlines():
-                    if line.strip() and not self._should_filter_line(line):
-                        self.agent_outputs[agent_id].append(line)
-            else:
-                # For short content (streaming words), append to last line or create new line
-                if (self.agent_outputs[agent_id] and 
-                    len(self.agent_outputs[agent_id][-1]) < self.max_line_length - len(content) - 1):
-                    # Append to last line if it won't exceed max length
-                    self.agent_outputs[agent_id][-1] += content
-                else:
-                    # Create new line
-                    self.agent_outputs[agent_id].append(content.strip())
+            # Process content with buffering for smoother text display
+            self._process_content_with_buffering(agent_id, content, content_type)
             
             # Always schedule update for new content with immediate refresh for status-related content
             self._pending_updates.add(agent_id)
@@ -837,6 +948,189 @@ class RichTerminalDisplay(TerminalDisplay):
                 keyword in content.lower() for keyword in self._status_change_keywords
             )
             self._schedule_async_update(force_update=force_immediate)
+    
+    def _process_content_with_buffering(self, agent_id: str, content: str, content_type: str):
+        """Process content with buffering to accumulate text into complete sentences."""
+        # Cancel any existing buffer timer
+        if self._buffer_timers.get(agent_id):
+            self._buffer_timers[agent_id].cancel()
+            self._buffer_timers[agent_id] = None
+        
+        # Special handling for content that should be displayed immediately
+        if content_type in ["tool", "status", "presentation", "error"] or '\n' in content:
+            # Flush any existing buffer first
+            self._flush_buffer(agent_id)
+            
+            # Process multi-line content line by line
+            if '\n' in content:
+                for line in content.splitlines():
+                    if line.strip() and not self._should_filter_line(line):
+                        self.agent_outputs[agent_id].append(line)
+            else:
+                # Add single-line important content directly
+                if content.strip():
+                    self.agent_outputs[agent_id].append(content.strip())
+            return
+        
+        
+        # Add content to buffer
+        self._text_buffers[agent_id] += content
+        buffer = self._text_buffers[agent_id]
+        
+        # Check if buffer exceeds maximum length
+        if len(buffer) >= self._max_buffer_length:
+            self._flush_buffer_intelligently(agent_id)
+            return
+        
+        # Check for sentence terminators
+        has_complete_sentence = False
+        for terminator in self._sentence_terminators:
+            if terminator in buffer:
+                # Find the last occurrence of the terminator
+                last_index = buffer.rfind(terminator)
+                if last_index != -1 and last_index < len(buffer) - 1:
+                    has_complete_sentence = True
+                    break
+        
+        # If we have complete sentences, extract them
+        if has_complete_sentence:
+            # Look for the best break point
+            best_break = -1
+            for terminator in self._sentence_terminators:
+                idx = buffer.rfind(terminator)
+                if idx > best_break:
+                    best_break = idx
+            
+            if best_break != -1:
+                # Extract complete sentences
+                complete_text = buffer[:best_break + 1].strip()
+                remaining_text = buffer[best_break + 1:].strip()
+                
+                if complete_text:
+                    # Add the complete sentences to output
+                    self.agent_outputs[agent_id].append(complete_text)
+                    # Keep the remaining text in buffer
+                    self._text_buffers[agent_id] = remaining_text
+                    
+                    # Set a timer for the remaining content
+                    if remaining_text:
+                        self._set_buffer_timer(agent_id)
+                return
+        
+        # Check if buffer is getting long enough to warrant a break at word boundary
+        if len(buffer) >= self._min_buffer_length:
+            # Special handling for search queries and similar patterns
+            search_patterns = ["Search Query:", "Searching for:", "Looking for:", "Query:", "[Search Query]"]
+            is_search_query = any(pattern in buffer for pattern in search_patterns)
+            
+            if is_search_query:
+                # For search queries, check if we have a complete query
+                # Look for quotes or other delimiters that might indicate end of query
+                if buffer.count('"') >= 2 or buffer.endswith("'") or len(buffer) >= self._max_buffer_length:
+                    # We likely have a complete search query
+                    self._flush_buffer_intelligently(agent_id)
+                else:
+                    # Wait for more content or timeout
+                    self._set_buffer_timer(agent_id)
+                return
+            
+            # Try to find a natural break point
+            self._flush_buffer_intelligently(agent_id)
+        else:
+            # Set a timer to flush the buffer if no more content arrives
+            self._set_buffer_timer(agent_id)
+    
+    def _flush_buffer(self, agent_id: str):
+        """Flush the buffer for a specific agent."""
+        if agent_id in self._text_buffers and self._text_buffers[agent_id]:
+            buffer_content = self._text_buffers[agent_id].strip()
+            if buffer_content:
+                self.agent_outputs[agent_id].append(buffer_content)
+            self._text_buffers[agent_id] = ""
+            
+        # Cancel any existing timer
+        if self._buffer_timers.get(agent_id):
+            self._buffer_timers[agent_id].cancel()
+            self._buffer_timers[agent_id] = None
+    
+    def _flush_buffer_intelligently(self, agent_id: str):
+        """Flush buffer at a natural break point (word boundary)."""
+        buffer = self._text_buffers[agent_id]
+        if not buffer:
+            return
+
+        # Normalize buffer to avoid awkward line breaks
+        buffer = self._normalize_buffer(buffer)
+
+        # Avoid flushing if buffer breaks numbers or short tokens
+        if self._is_bad_split(buffer):
+            self._set_buffer_timer(agent_id)
+            return
+
+        # Try to find a good break point
+        break_points = [
+            (buffer.rfind('. '), 2),
+            (buffer.rfind('! '), 2),
+            (buffer.rfind('? '), 2),
+            (buffer.rfind(', '), 2),
+            (buffer.rfind(': '), 2),
+            (buffer.rfind('; '), 2),
+            (buffer.rfind(' '), 1),
+        ]
+
+        best_break = -1
+        best_offset = 0
+        midpoint = len(buffer) // 2
+
+        for break_idx, offset in break_points:
+            if break_idx > midpoint and break_idx > best_break:
+                best_break = break_idx
+                best_offset = offset
+
+        if best_break > 0:
+            complete_text = buffer[:best_break + best_offset].strip()
+            remaining_text = buffer[best_break + best_offset:].strip()
+        else:
+            complete_text = buffer.strip()
+            remaining_text = ""
+
+        if complete_text:
+            self.agent_outputs[agent_id].append(complete_text)
+
+        self._text_buffers[agent_id] = remaining_text
+
+        if remaining_text:
+            self._set_buffer_timer(agent_id)
+
+    def _normalize_buffer(self, buffer: str) -> str:
+        """Remove unnecessary line breaks that split sentences unnaturally."""
+        # Replace single newlines with space, but preserve paragraph breaks (double newlines)
+        return re.sub(r'(?<!\n)\n(?!\n)', ' ', buffer)
+
+    def _is_bad_split(self, buffer: str) -> bool:
+        """Avoid flushing buffer if it likely splits numbers or named entities."""
+        # Avoid breaking between digits like '2025\n2' or 'August\n2'
+        return bool(re.search(r'\d+\n+\d+', buffer)) or bool(re.search(r'\w+\n+\d{1,2}', buffer))
+    
+    def _set_buffer_timer(self, agent_id: str):
+        """Set a timer to flush the buffer after a timeout."""
+        if self._shutdown_flag:
+            return
+            
+        # Cancel existing timer if any
+        if self._buffer_timers.get(agent_id):
+            self._buffer_timers[agent_id].cancel()
+        
+        def timeout_flush():
+            with self._lock:
+                if agent_id in self._text_buffers and self._text_buffers[agent_id]:
+                    self._flush_buffer(agent_id)
+                    # Trigger display update
+                    self._pending_updates.add(agent_id)
+                    self._schedule_async_update(force_update=True)
+        
+        self._buffer_timers[agent_id] = threading.Timer(self._buffer_timeout, timeout_flush)
+        self._buffer_timers[agent_id].start()
     
     def _write_to_agent_file(self, agent_id: str, content: str, content_type: str):
         """Write content to agent's individual txt file."""
@@ -853,6 +1147,29 @@ class RichTerminalDisplay(TerminalDisplay):
             # Append to file
             with open(file_path, 'a', encoding='utf-8') as f:
                 f.write(formatted_content)
+                
+        except Exception as e:
+            # Handle file write errors gracefully
+            pass
+    
+    def _write_system_status(self):
+        """Write current system status to system status file - shows orchestrator events chronologically by time."""
+        if not self.system_status_file:
+            return
+        
+        try:
+            # Clear file and write all orchestrator events chronologically
+            with open(self.system_status_file, 'w', encoding='utf-8') as f:
+                f.write("=== SYSTEM STATUS LOG ===\n\n")
+                
+                # Show all orchestrator events in chronological order by time
+                if self.orchestrator_events:
+                    for event in self.orchestrator_events:
+                        f.write(f"  • {event}\n")
+                else:
+                    f.write("  • No orchestrator events yet\n")
+                
+                f.write("\n")
                 
         except Exception as e:
             # Handle file write errors gracefully
@@ -893,6 +1210,9 @@ class RichTerminalDisplay(TerminalDisplay):
                 self._pending_updates.add('footer')
                 self._schedule_priority_update(agent_id)
                 self._schedule_async_update(force_update=True)
+                
+                # Write system status update
+                self._write_system_status()
             elif old_status != status:
                 # Update the internal status but don't refresh display if already tracked
                 super().update_agent_status(agent_id, status)
@@ -919,48 +1239,407 @@ class RichTerminalDisplay(TerminalDisplay):
                 # Mark footer for async update
                 self._pending_updates.add('footer')
                 self._schedule_async_update(force_update=True)
+                # Write system status update for important events
+                self._write_system_status()
     
-    def show_final_answer(self, answer: str):
-        """Display the final coordinated answer prominently."""
-        # 强制更新所有agent的最终状态
+    def display_vote_results(self, vote_results: Dict[str, Any]):
+        """Display voting results in a formatted rich panel."""
+        if not vote_results or not vote_results.get('vote_counts'):
+            return
+        
+        # Stop live display temporarily for clean voting results output
+        was_live = self.live is not None
+        if self.live:
+            self.live.stop()
+            self.live = None
+        
+        vote_counts = vote_results.get('vote_counts', {})
+        voter_details = vote_results.get('voter_details', {})
+        winner = vote_results.get('winner')
+        is_tie = vote_results.get('is_tie', False)
+        
+        # Create voting results content
+        vote_content = Text()
+        
+        # Vote count section
+        vote_content.append("📊 Vote Count:\n", style=self.colors['primary'])
+        for agent_id, count in sorted(vote_counts.items(), key=lambda x: x[1], reverse=True):
+            winner_mark = "🏆" if agent_id == winner else "  "
+            tie_mark = " (tie-broken)" if is_tie and agent_id == winner else ""
+            vote_content.append(f"   {winner_mark} {agent_id}: {count} vote{'s' if count != 1 else ''}{tie_mark}\n", 
+                               style=self.colors['success'] if agent_id == winner else self.colors['text'])
+        
+        # Vote details section
+        if voter_details:
+            vote_content.append("\n🔍 Vote Details:\n", style=self.colors['primary'])
+            for voted_for, voters in voter_details.items():
+                vote_content.append(f"   → {voted_for}:\n", style=self.colors['info'])
+                for voter_info in voters:
+                    voter = voter_info['voter']
+                    reason = voter_info['reason']
+                    vote_content.append(f"     • {voter}: \"{reason}\"\n", style=self.colors['text'])
+        
+        # Tie-breaking info
+        if is_tie:
+            vote_content.append("\n⚖️  Tie broken by agent registration order\n", style=self.colors['warning'])
+        
+        # Summary stats
+        total_votes = vote_results.get('total_votes', 0)
+        agents_voted = vote_results.get('agents_voted', 0)
+        vote_content.append(f"\n📈 Summary: {agents_voted}/{total_votes} agents voted", style=self.colors['info'])
+        
+        # Create and display the voting panel
+        voting_panel = Panel(
+            vote_content,
+            title="[bold bright_cyan]🗳️  VOTING RESULTS[/bold bright_cyan]",
+            border_style=self.colors['primary'],
+            box=DOUBLE,
+            expand=False
+        )
+        
+        self.console.print(voting_panel)
+        self.console.print()
+        
+        # Restart live display if it was active
+        if was_live:
+            self.live = Live(
+                self._create_layout(),
+                console=self.console,
+                refresh_per_second=self.refresh_rate,
+                vertical_overflow="ellipsis",
+                transient=False
+            )
+            self.live.start()
+
+    async def display_final_presentation(self, selected_agent: str, presentation_stream, vote_results: Dict[str, Any] = None):
+        """Display final presentation from winning agent with enhanced orchestrator query support."""
+        if not selected_agent:
+            return ""
+        
+        # Stop live display for clean presentation output
+        was_live = self.live is not None
+        if self.live:
+            self.live.stop()
+            self.live = None
+        
+        # Create presentation header with orchestrator context
+        header_text = Text()
+        header_text.append(f"🎤 Final Presentation from {selected_agent}", style=self.colors['header_style'])
+        if vote_results and vote_results.get('vote_counts'):
+            vote_count = vote_results['vote_counts'].get(selected_agent, 0)
+            header_text.append(f" (Selected with {vote_count} votes)", style=self.colors['info'])
+        
+        header_panel = Panel(
+            Align.center(header_text),
+            border_style=self.colors['success'],
+            box=DOUBLE,
+            title="[bold]Final Presentation[/bold]"
+        )
+        
+        self.console.print(header_panel)
+        self.console.print("=" * 60)
+        
+        presentation_content = ""
+        chunk_count = 0
+        
+        try:
+            # Enhanced streaming with orchestrator query awareness
+            async for chunk in presentation_stream:
+                chunk_count += 1
+                content = getattr(chunk, 'content', '') or ''
+                chunk_type = getattr(chunk, 'type', '')
+                source = getattr(chunk, 'source', selected_agent)
+                
+                if content:
+                    # Ensure content is a string
+                    if isinstance(content, list):
+                        content = ' '.join(str(item) for item in content)
+                    elif not isinstance(content, str):
+                        content = str(content)
+                    
+                    # Accumulate content
+                    presentation_content += content
+                    
+                    # Enhanced formatting for orchestrator query responses
+                    if chunk_type == "status":
+                        # Status updates from orchestrator query
+                        status_text = Text(f"🔄 {content}", style=self.colors['info'])
+                        self.console.print(status_text)
+                    elif "error" in chunk_type:
+                        # Error handling in orchestrator query
+                        error_text = Text(f"❌ {content}", style=self.colors['error'])
+                        self.console.print(error_text)
+                    else:
+                        # Main presentation content with rich formatting
+                        formatted_content = self._format_presentation_content(content)
+                        self.console.print(formatted_content, end='', highlight=False)
+                
+                # Handle orchestrator query completion signals
+                if chunk_type == "done":
+                    completion_text = Text(f"\n✅ Presentation completed by {source}", style=self.colors['success'])
+                    self.console.print(completion_text)
+                    break
+                    
+        except Exception as e:
+            # Enhanced error handling for orchestrator queries
+            error_text = Text(f"❌ Error during final presentation: {e}", style=self.colors['error'])
+            self.console.print(error_text)
+            
+            # Fallback: try to get content from agent's stored answer
+            if hasattr(self, 'orchestrator') and self.orchestrator:
+                try:
+                    status = self.orchestrator.get_status()
+                    if selected_agent in status.get('agent_states', {}):
+                        stored_answer = status['agent_states'][selected_agent].get('answer', '')
+                        if stored_answer:
+                            fallback_text = Text(f"\n📋 Fallback to stored answer:\n{stored_answer}", 
+                                               style=self.colors['text'])
+                            self.console.print(fallback_text)
+                            presentation_content = stored_answer
+                except Exception:
+                    pass
+        
+        self.console.print("\n" + "=" * 60)
+        
+        # Show presentation statistics
+        if chunk_count > 0:
+            stats_text = Text(f"📊 Presentation processed {chunk_count} chunks", 
+                            style=self.colors['info'])
+            self.console.print(stats_text)
+        
+        # Restart live display if needed
+        if was_live:
+            time.sleep(0.5)  # Brief pause before restarting live display
+        
+        return presentation_content
+
+    def show_final_answer(self, answer: str, vote_results: Dict[str, Any] = None, selected_agent: str = None):
+        """Display the final coordinated answer prominently with voting results, final presentation, and agent selector."""
+        # Flush all buffers before showing final answer
+        with self._lock:
+            self._flush_all_buffers()
+        
+        # Stop live display first to ensure clean output
+        if self.live:
+            self.live.stop()
+            self.live = None
+        
+        # Auto-get vote results and selected agent from orchestrator if not provided
+        if vote_results is None or selected_agent is None:
+            try:
+                if hasattr(self, 'orchestrator') and self.orchestrator:
+                    status = self.orchestrator.get_status()
+                    vote_results = vote_results or status.get('vote_results', {})
+                    selected_agent = selected_agent or status.get('selected_agent')
+            except:
+                pass
+        
+        # Force update all agent final statuses first (show voting results in agent panels)
         with self._lock:
             for agent_id in self.agent_ids:
                 self._pending_updates.add(agent_id)
             self._pending_updates.add('footer')
             self._schedule_async_update(force_update=True)
         
-        # 等待更新完成 - increased delay to ensure all vote statuses are displayed
+        # Wait for agent status updates to complete
+        time.sleep(0.5)
+        self._force_display_final_vote_statuses()
         time.sleep(0.5)
         
-        self._force_display_final_vote_statuses()
+        # Display voting results first if available
+        if vote_results and vote_results.get('vote_counts'):
+            self.display_vote_results(vote_results)
+            time.sleep(1.0)  # Allow time for voting results to be visible
         
-        if self.live:
-            try:
-                self.live.update(self._create_layout())
-            except Exception:
-                pass
-
-        # Wait longer to ensure all agent vote statuses are fully displayed
-        time.sleep(1.0)
-
-        if self.live:
-            self.live.stop()
-
-        # Create final answer display
-        final_text = Text()
-        final_text.append("🎯 FINAL COORDINATED ANSWER", style=f"bold {self.colors['success']}")
-        
+        # Now display the final answer prominently
         final_panel = Panel(
             Align.center(Text(answer, style=self.colors['text'])),
-            title="[bold bright_green]🎯 FINAL ANSWER[/bold bright_green]",
+            title="[bold bright_green]🎯 FINAL COORDINATED ANSWER[/bold bright_green]",
             border_style=self.colors['success'],
             box=DOUBLE,
-             expand=False
+            expand=False
         )
-            
+        
         self.console.print("\n")
         self.console.print(final_panel)
+        
+        # Show which agent was selected
+        if selected_agent:
+            selection_text = Text()
+            selection_text.append(f"✅ Selected by: {selected_agent}", style=self.colors['success'])
+            if vote_results and vote_results.get('vote_counts'):
+                vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results['vote_counts'].items()])
+                selection_text.append(f"\n🗳️ Vote results: {vote_summary}", style=self.colors['info'])
+            
+            selection_panel = Panel(
+                selection_text,
+                border_style=self.colors['info'],
+                box=ROUNDED
+            )
+            self.console.print(selection_panel)
+        
         self.console.print("\n")
+
+        # Display final presentation immediately after voting results
+        self._show_orchestrator_final_presentation(selected_agent, vote_results)
+        # if selected_agent and hasattr(self, 'orchestrator') and self.orchestrator:
+        #     try:
+        #         self._show_orchestrator_final_presentation(selected_agent, vote_results)
+        #     except Exception as e:
+        #         # Handle errors gracefully
+        #         error_text = Text(f"❌ Error getting final presentation: {e}", style=self.colors['error'])
+        #         self.console.print(error_text)
+        
+        # Show interactive options for viewing agent details
+        if self._interactive_mode and hasattr(self, '_agent_keys'):
+            self.show_agent_selector()
+    
+    
+    def _extract_presentation_content(self, selected_agent: str) -> str:
+        """Extract presentation content from the selected agent's output."""
+        if selected_agent not in self.agent_outputs:
+            return ""
+        
+        agent_output = self.agent_outputs[selected_agent]
+        presentation_lines = []
+        
+        # Look for presentation content - typically comes after voting/status completion
+        # and may be marked with 🎤 or similar presentation indicators
+        collecting_presentation = False
+        
+        for line in agent_output:
+            # Start collecting when we see presentation indicators
+            if "🎤" in line or "presentation" in line.lower():
+                collecting_presentation = True
+                continue
+            
+            # Skip empty lines and status updates
+            if not line.strip() or line.startswith("⚡") or line.startswith("🔄"):
+                continue
+                
+            # Collect meaningful content that appears to be presentation material
+            if collecting_presentation and line.strip():
+                # Stop if we hit another status indicator or coordination marker
+                if any(marker in line for marker in ["✅", "🗳️", "🔄", "❌", "voted", "Final", "coordination"]):
+                    break
+                presentation_lines.append(line.strip())
+        
+        # If no specific presentation content found, get the most recent meaningful content
+        if not presentation_lines and agent_output:
+            # Get the last few non-status lines as potential presentation content
+            for line in reversed(agent_output[-10:]):  # Look at last 10 lines
+                if (line.strip() and 
+                    not line.startswith("⚡") and 
+                    not line.startswith("🔄") and
+                    not any(marker in line for marker in ["voted", "🗳️", "✅", "status"])):
+                    presentation_lines.insert(0, line.strip())
+                    if len(presentation_lines) >= 5:  # Limit to reasonable amount
+                        break
+        
+        return "\n".join(presentation_lines) if presentation_lines else ""
+    
+    def _display_final_presentation_content(self, selected_agent: str, presentation_content: str):
+        """Display the final presentation content in a formatted panel with orchestrator query enhancements."""
+        if not presentation_content.strip():
+            return
+        
+        # Create presentation header with orchestrator context
+        header_text = Text()
+        header_text.append(f"🎤 Final Presentation from {selected_agent}", style=self.colors['header_style'])
+        
+        header_panel = Panel(
+            Align.center(header_text),
+            border_style=self.colors['success'],
+            box=DOUBLE,
+            title="[bold]Final Presentation[/bold]"
+        )
+        
+        self.console.print(header_panel)
+        self.console.print("=" * 60)
+        
+        # Enhanced content formatting for orchestrator responses
+        content_text = Text()
+        
+        # Use the enhanced presentation content formatter
+        formatted_content = self._format_presentation_content(presentation_content)
+        content_text.append(formatted_content)
+        
+        # Create content panel with orchestrator-specific styling
+        content_panel = Panel(
+            content_text,
+            title=f"[bold]{selected_agent.upper()} Final Presentation[/bold]",
+            border_style=self.colors['primary'],
+            box=ROUNDED,
+            subtitle=f"[italic]Final presentation content[/italic]"
+        )
+        
+        self.console.print(content_panel)
+        self.console.print("=" * 60)
+        
+        # Add presentation completion indicator
+        completion_text = Text()
+        completion_text.append("✅ Final presentation completed successfully", 
+                              style=self.colors['success'])
+        completion_panel = Panel(
+            Align.center(completion_text),
+            border_style=self.colors['success'],
+            box=ROUNDED
+        )
+        self.console.print(completion_panel)
+    
+    def _show_orchestrator_final_presentation(self, selected_agent: str, vote_results: Dict[str, Any] = None):
+        """Show the final presentation from the orchestrator for the selected agent."""
+        try:
+            if not hasattr(self, 'orchestrator') or not self.orchestrator:
+                return
+            
+            # Get the final presentation from the orchestrator
+            if hasattr(self.orchestrator, 'get_final_presentation'):
+                presentation_stream = self.orchestrator.get_final_presentation(selected_agent, vote_results or {})
+                
+                # If we get a stream, display it
+                if presentation_stream:
+                    import asyncio
+                    # Check if we're in an async context
+                    try:
+                        loop = asyncio.get_running_loop()
+                        # We're in an async context, create task and wait for it
+                        task = asyncio.create_task(self.display_final_presentation(selected_agent, presentation_stream, vote_results))
+                        # Use concurrent.futures to wait for completion from non-async context
+                        import concurrent.futures
+                        
+                        # Create a future to track completion
+                        completion_future = concurrent.futures.Future()
+                        
+                        def on_task_done(task_future):
+                            try:
+                                result = task_future.result()
+                                completion_future.set_result(result)
+                            except asyncio.CancelledError:
+                                # Task was cancelled, set a specific result indicating cancellation
+                                completion_future.set_result(None)
+                            except Exception as e:
+                                completion_future.set_exception(e)
+                        
+                        task.add_done_callback(on_task_done)
+                        
+                        # Wait for the task to complete
+                        completion_future.result(timeout=30)  # 30 second timeout
+                    except RuntimeError:
+                        # We're not in an async context, run it synchronously
+                        asyncio.run(self.display_final_presentation(selected_agent, presentation_stream, vote_results))
+            else:
+                # Fallback: try to get stored presentation content
+                status = self.orchestrator.get_status()
+                if selected_agent in status.get('agent_states', {}):
+                    stored_answer = status['agent_states'][selected_agent].get('answer', '')
+                    if stored_answer:
+                        self._display_final_presentation_content(selected_agent, stored_answer)
+                        
+        except Exception as e:
+            # Handle errors gracefully - show a simple message
+            error_text = Text(f"Unable to retrieve final presentation: {str(e)}", style=self.colors['warning'])
+            self.console.print(error_text)
     
     def _force_display_final_vote_statuses(self):
         """Force display update to show all agents' final vote statuses."""
@@ -977,9 +1656,22 @@ class RichTerminalDisplay(TerminalDisplay):
         import time
         time.sleep(0.3)  # Increased wait to ensure all vote statuses are displayed
     
+    
+    def _flush_all_buffers(self):
+        """Flush all text buffers to ensure no content is lost."""
+        for agent_id in self.agent_ids:
+            if agent_id in self._text_buffers and self._text_buffers[agent_id]:
+                buffer_content = self._text_buffers[agent_id].strip()
+                if buffer_content:
+                    self.agent_outputs[agent_id].append(buffer_content)
+                self._text_buffers[agent_id] = ""
+    
     def cleanup(self):
         """Clean up display resources."""
         with self._lock:
+            # Flush any remaining buffered content
+            self._flush_all_buffers()
+            
             if self.live:
                 self.live.stop()
                 self.live = None
@@ -998,6 +1690,12 @@ class RichTerminalDisplay(TerminalDisplay):
             for timer in self._debounce_timers.values():
                 timer.cancel()
             self._debounce_timers.clear()
+            
+            # Cancel all buffer timers
+            for timer in self._buffer_timers.values():
+                if timer:
+                    timer.cancel()
+            self._buffer_timers.clear()
             
             # Shutdown executors
             if hasattr(self, '_refresh_executor'):
