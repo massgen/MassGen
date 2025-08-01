@@ -1,5 +1,5 @@
-# MassGen v3 Two Agent Configuration
-# Simple two-agent setup for focused collaboration
+# MassGen v3 Three Agent Configuration
+# Simple three-agent setup for focused collaboration
 
 agents:
   - id: "search_agent"
@@ -22,5 +22,3 @@ agents:
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
-
-# Simple two-agent settings

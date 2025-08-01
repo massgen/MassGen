@@ -21,26 +21,29 @@ class MessageTemplates:
         if "evaluation_system_message" in self._template_overrides:
             return str(self._template_overrides["evaluation_system_message"])
         
-        from datetime import datetime
-        now = datetime.now()
-        current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        import time
+#         return f"""You are evaluating answers from multiple agents for final response to a message. 
 
-        base_prompt = f"""You are evaluating answers from multiple agents for final response to a message. 
+# For every aspect, claim, reasoning steps in the CURRENT ANSWERS, verify correctness, factual accuracy, and completeness using your expertise, reasoning, and available tools.
 
-For every aspect, claim, reasoning steps in the CURRENT ANSWERS, verify correctness, factual accuracy, and completeness using your expertise, reasoning, and available tools.
+# If the CURRENT ANSWERS fully address the ORIGINAL MESSAGE, use the `vote` tool to record your vote and skip the `new_answer` tool.
 
-If the CURRENT ANSWERS fully address the ORIGINAL MESSAGE, use the `vote` tool to record your vote and skip the `new_answer` tool.
+# If the CURRENT ANSWERS are incomplete, incorrect, or not fully address the ORIGINAL MESSAGE, conduct any necessary reasoning or research. Then, use the `new_answer` tool to submit a new response.
 
-If the CURRENT ANSWERS are incomplete, incorrect, or not fully address the ORIGINAL MESSAGE, conduct any necessary reasoning or research. Then, use the `new_answer` tool to submit a new response.
+# Your new answer must be self-contained, process-complete, well-sourced, and compelling—ready to serve as the final reply.
 
-Your new answer must be self-contained, process-complete, well-sourced, and compelling—ready to serve as the final reply.
+# **Important**: Be sure to actually call the `new_answer` tool to submit your new answer (use native tool call format).
 
-**Important**: Be sure to actually call the `new_answer` tool to submit your new answer.
+# *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
+# For any time-sensitive requests, use the search tool (if available) rather than relying on prior knowledge."""
+    
+        return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
 
-**IMPORTANT**: The CURRENT TIME is **{current_time}**.
-For ANY query that may involve current events, recent information, real-time data, or time-sensitive content (including but not limited to: news, stock prices, weather, recent developments, current status of anything), YOU MUST use the web search tool first before providing any answer. Do not rely on your training data for current information."""
-        
-        return base_prompt
+If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
+Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
+
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
+"""
     
     # =============================================================================
     # USER MESSAGE TEMPLATES
@@ -167,7 +170,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "content": {"type": "string", "description": "Your improved answer."}
+                        "content": {"type": "string", "description": "Your improved answer. If any builtin tools like search or code execution were used, include how they are used here."}
                     },
                     "required": ["content"]
                 }

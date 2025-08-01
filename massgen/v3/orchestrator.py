@@ -480,7 +480,7 @@ class MassOrchestrator(ChatAgent):
                             
                             if tool_name == "new_answer":
                                 content = tool_args.get("content", "")
-                                yield ("content", f"💡 Providing answer: \"{content[:100]}{'...' if len(content) > 100 else ''}\"")
+                                yield ("content", f"💡 Providing answer: \"{content}\"")
                             elif tool_name == "vote":
                                 agent_voted_for = tool_args.get("agent_id", "")
                                 reason = tool_args.get("reason", "")
