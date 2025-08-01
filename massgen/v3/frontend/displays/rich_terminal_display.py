@@ -9,6 +9,8 @@ import re
 import time
 import threading
 import asyncio
+import os
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
 from .terminal_display import TerminalDisplay
@@ -73,6 +75,9 @@ class RichTerminalDisplay(TerminalDisplay):
                 - enable_syntax_highlighting: Enable code syntax highlighting (default: True)
                 - max_content_lines: Base lines per agent column before scrolling (default: 8)
                 - show_timestamps: Show timestamps for events (default: True)
+                - enable_status_jump: Enable jumping to latest status when agent status changes (default: True)
+                - truncate_web_search_on_status_change: Truncate web search content when status changes (default: True)
+                - max_web_search_lines_on_status_change: Max web search lines to keep on status changes (default: 3)
         """
         if not RICH_AVAILABLE:
             raise ImportError(
@@ -84,7 +89,7 @@ class RichTerminalDisplay(TerminalDisplay):
         
         # Rich-specific configuration
         self.theme = kwargs.get('theme', 'dark')
-        self.refresh_rate = kwargs.get('refresh_rate', 50)  # Ultra-high refresh rate for real-time updates
+        self.refresh_rate = kwargs.get('refresh_rate', 30)  # Further increased refresh rate for near real-time updates
         self.enable_syntax_highlighting = kwargs.get('enable_syntax_highlighting', True)
         self.max_content_lines = kwargs.get('max_content_lines', 8)
         self.max_line_length = kwargs.get('max_line_length', 100)
@@ -101,20 +106,29 @@ class RichTerminalDisplay(TerminalDisplay):
         self.live = None
         self._lock = threading.RLock()
         self._last_update = 0
-        self._update_interval = 0  # Remove throttling for immediate updates
+        self._update_interval = 0  # No throttling for immediate updates
         self._last_full_refresh = 0
-        self._full_refresh_interval = 0.05  # Even faster full refresh for tool use
+        self._full_refresh_interval = 0.05  # Much faster full refresh for real-time consistency
         
         # Async refresh components - more workers for faster updates
-        self._refresh_executor = ThreadPoolExecutor(max_workers=min(len(agent_ids) * 2 + 4, 16))
+        self._refresh_executor = ThreadPoolExecutor(max_workers=min(len(agent_ids) * 2 + 8, 20))
         self._agent_panels_cache = {}
         self._header_cache = None
         self._footer_cache = None
         self._layout_update_lock = threading.Lock()
         self._pending_updates = set()
+        self._shutdown_flag = False
+        
+        # Priority update queue for critical status changes
+        self._priority_updates = set()
+        self._status_update_executor = ThreadPoolExecutor(max_workers=4)
         
         # Theme configuration
         self._setup_theme()
+        
+        # Interactive mode variables
+        self._interactive_mode = kwargs.get('interactive_mode', True)
+        self._key_handler = None
         
         # Code detection patterns
         self.code_patterns = [
@@ -135,10 +149,38 @@ class RichTerminalDisplay(TerminalDisplay):
         self._last_agent_activity = {agent_id: "waiting" for agent_id in agent_ids}
         self._last_content_hash = {agent_id: "" for agent_id in agent_ids}
         
+        # Debounce mechanism for updates - reduced for faster response
+        self._debounce_timers = {}
+        self._debounce_delay = 0.01  # 10ms debounce delay for near-instant updates
+        
         # Message filtering settings - tool content always important
         self._important_content_types = {"presentation", "status", "tool", "error"}
         self._status_change_keywords = {"completed", "failed", "waiting", "error", "voted", "voting", "tool"}
         self._important_event_keywords = {"completed", "failed", "voting", "voted", "final", "error", "started", "coordination", "tool"}
+        
+        # Status jump mechanism for web search interruption
+        self._status_jump_enabled = kwargs.get('enable_status_jump', True)  # Enable jumping to latest status
+        self._web_search_truncate_on_status_change = kwargs.get('truncate_web_search_on_status_change', True)  # Truncate web search content on status changes
+        self._max_web_search_lines = kwargs.get('max_web_search_lines_on_status_change', 3)  # Maximum lines to keep from web search when status changes
+        
+        # File-based output system
+        self.output_dir = kwargs.get('output_dir', 'agent_outputs')
+        self.agent_files = {}
+        self._selected_agent = None
+        self._setup_agent_files()
+    
+    def _setup_agent_files(self):
+        """Setup individual txt files for each agent."""
+        # Create output directory if it doesn't exist
+        Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Initialize file paths for each agent
+        for agent_id in self.agent_ids:
+            file_path = Path(self.output_dir) / f"{agent_id}.txt"
+            self.agent_files[agent_id] = file_path
+            # Clear existing file content
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(f"=== {agent_id.upper()} OUTPUT LOG ===\n\n")
     
     def _setup_theme(self):
         """Setup color theme configuration."""
@@ -194,6 +236,10 @@ class RichTerminalDisplay(TerminalDisplay):
         # Create initial layout
         self._create_initial_display()
         
+        # Setup keyboard handling if in interactive mode
+        if self._interactive_mode:
+            self._setup_keyboard_handler()
+        
         # Start live display with optimized settings
         self.live = Live(
             self._create_layout(),
@@ -203,6 +249,8 @@ class RichTerminalDisplay(TerminalDisplay):
             transient=False  # Keep content persistent for better performance
         )
         self.live.start()
+        
+        # Interactive mode is handled through input prompts
     
     def _create_initial_display(self):
         """Create the initial welcome display."""
@@ -286,6 +334,111 @@ class RichTerminalDisplay(TerminalDisplay):
         # Use fixed column widths with equal=False to enforce exact sizing
         return Columns(agent_panels, equal=False, expand=False, width=self.fixed_column_width)
     
+    def _setup_keyboard_handler(self):
+        """Setup keyboard handler for interactive agent selection."""
+        try:
+            # Simple key mapping for agent selection
+            self._agent_keys = {}
+            for i, agent_id in enumerate(self.agent_ids):
+                key = str(i + 1)
+                self._agent_keys[key] = agent_id
+                
+        except ImportError:
+            # Fall back to non-interactive mode if keyboard library not available
+            self._interactive_mode = False
+    
+    def _handle_key_press(self, key):
+        """Handle key press events for agent selection."""
+        if key in self._agent_keys:
+            agent_id = self._agent_keys[key]
+            self._show_agent_full_content(agent_id)
+        elif key == 'q':
+            # Quit/return to main view
+            self._selected_agent = None
+            self._refresh_display()
+    
+    def _show_agent_full_content(self, agent_id: str):
+        """Display full content of selected agent from txt file."""
+        if agent_id not in self.agent_files:
+            return
+        
+        try:
+            file_path = self.agent_files[agent_id]
+            if file_path.exists():
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                
+                # Clear screen and show content
+                self.console.clear()
+                
+                # Create header
+                header_text = Text()
+                header_text.append(f"📄 {agent_id.upper()} - Full Content", style=self.colors['header_style'])
+                header_text.append("\nPress any key to return to main view", style=self.colors['info'])
+                
+                header_panel = Panel(
+                    header_text,
+                    box=DOUBLE,
+                    border_style=self.colors['border']
+                )
+                
+                # Create content panel
+                content_panel = Panel(
+                    content,
+                    title=f"[bold]{agent_id.upper()} Output[/bold]",
+                    border_style=self.colors['border'],
+                    box=ROUNDED
+                )
+                
+                self.console.print(header_panel)
+                self.console.print(content_panel)
+                
+                # Wait for key press to return
+                input("Press Enter to return to main view...")
+                
+                # Return to main display
+                self.console.clear()
+                if self.live:
+                    self.live.update(self._create_layout())
+                    
+        except Exception as e:
+            # Handle errors gracefully
+            pass
+    
+    def show_agent_selector(self):
+        """Show agent selector and handle user input."""
+        if not self._interactive_mode or not hasattr(self, '_agent_keys'):
+            return
+        
+        # Display available options
+        options_text = Text()
+        options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
+        
+        for key, agent_id in self._agent_keys.items():
+            options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
+        
+        options_text.append("  q: Return to main view\n", style=self.colors['info'])
+        
+        self.console.print(Panel(
+            options_text,
+            title="[bold]Agent Selector[/bold]",
+            border_style=self.colors['border']
+        ))
+        
+        # Get user input
+        try:
+            choice = input("Enter your choice: ").strip().lower()
+            
+            if choice in self._agent_keys:
+                self._show_agent_full_content(self._agent_keys[choice])
+            elif choice == 'q':
+                self.console.clear()
+                if self.live:
+                    self.live.update(self._create_layout())
+        except KeyboardInterrupt:
+            # Handle Ctrl+C gracefully
+            pass
+    
     def _create_agent_panel(self, agent_id: str) -> Panel:
         """Create a panel for a specific agent."""
         # Get agent content
@@ -326,10 +479,16 @@ class RichTerminalDisplay(TerminalDisplay):
         # Get backend info if available
         backend_name = self._get_backend_name(agent_id)
         
-        # Panel title
+        # Panel title with click indicator
         title = f"{status_emoji} {agent_id.upper()}"
         if backend_name != "Unknown":
             title += f" ({backend_name})"
+        
+        # Add interactive indicator if enabled
+        if self._interactive_mode and hasattr(self, '_agent_keys'):
+            agent_key = next((k for k, v in self._agent_keys.items() if v == agent_id), None)
+            if agent_key:
+                title += f" [Press {agent_key}]"
         
         # Create panel with scrollable content
         return Panel(
@@ -349,6 +508,10 @@ class RichTerminalDisplay(TerminalDisplay):
         if not line.strip():
             return formatted
         
+        # Enhanced handling for web search content
+        if self._is_web_search_content(line):
+            return self._format_web_search_line(line)
+        
         # Truncate line if too long
         if len(line) > self.max_line_length:
             line = line[:self.max_line_length - 3] + "..."
@@ -363,9 +526,12 @@ class RichTerminalDisplay(TerminalDisplay):
             formatted.append("🎤 ", style=self.colors['success'])
             formatted.append(line[3:], style=f"bold {self.colors['success']}")
         elif line.startswith("⚡"):
-            # Working indicator
+            # Working indicator or status jump indicator
             formatted.append("⚡ ", style=self.colors['warning'])
-            formatted.append(line[3:], style=f"italic {self.colors['warning']}")
+            if "jumped to latest" in line:
+                formatted.append(line[3:], style=f"bold {self.colors['info']}")
+            else:
+                formatted.append(line[3:], style=f"italic {self.colors['warning']}")
         elif self._is_code_content(line):
             # Code content - apply syntax highlighting
             if self.enable_syntax_highlighting:
@@ -377,6 +543,129 @@ class RichTerminalDisplay(TerminalDisplay):
             formatted.append(line, style=self.colors['text'])
         
         return formatted
+    
+    def _is_web_search_content(self, line: str) -> bool:
+        """Check if content is from web search and needs special formatting."""
+        web_search_indicators = [
+            "[Provider Tool: Web Search]",
+            "🔍 [Search Query]",
+            "✅ [Provider Tool: Web Search]",
+            "🔍 [Provider Tool: Web Search]"
+        ]
+        return any(indicator in line for indicator in web_search_indicators)
+    
+    def _format_web_search_line(self, line: str) -> Text:
+        """Format web search content with better truncation and styling."""
+        formatted = Text()
+        
+        # Handle different types of web search lines
+        if "[Provider Tool: Web Search] Starting search" in line:
+            formatted.append("🔍 ", style=self.colors['info'])
+            formatted.append("Web search starting...", style=self.colors['text'])
+        elif "[Provider Tool: Web Search] Searching" in line:
+            formatted.append("🔍 ", style=self.colors['warning'])
+            formatted.append("Searching...", style=self.colors['text'])
+        elif "[Provider Tool: Web Search] Search completed" in line:
+            formatted.append("✅ ", style=self.colors['success'])
+            formatted.append("Search completed", style=self.colors['text'])
+        elif "🔍 [Search Query]" in line:
+            # Extract and display search query
+            query_part = line.split("🔍 [Search Query]", 1)
+            if len(query_part) > 1:
+                query = query_part[1].strip().strip("'\"")
+                # Limit query display length
+                if len(query) > 50:
+                    query = query[:47] + "..."
+                formatted.append("🔍 Query: ", style=self.colors['info'])
+                formatted.append(query, style=f"italic {self.colors['text']}")
+            else:
+                formatted.append("🔍 Search query", style=self.colors['info'])
+        else:
+            # For long web search results, truncate more aggressively
+            max_web_length = min(self.max_line_length // 2, 60)  # Much shorter for web content
+            if len(line) > max_web_length:
+                # Try to find a natural break point
+                truncated = line[:max_web_length]
+                # Look for sentence or phrase endings
+                for break_char in ['. ', '! ', '? ', ', ', ': ']:
+                    last_break = truncated.rfind(break_char)
+                    if last_break > max_web_length // 2:
+                        truncated = truncated[:last_break + 1]
+                        break
+                line = truncated + "..."
+            
+            formatted.append(line, style=self.colors['text'])
+        
+        return formatted
+    
+    def _should_filter_content(self, content: str, content_type: str) -> bool:
+        """Determine if content should be filtered out to reduce noise."""
+        # Never filter important content types
+        if content_type in ["status", "presentation", "error"]:
+            return False
+        
+        # Filter out very long web search results that are mostly noise
+        if len(content) > 1000 and self._is_web_search_content(content):
+            # Check if it contains mostly URLs and technical details
+            url_count = content.count('http')
+            technical_indicators = content.count('[') + content.count(']') + content.count('(') + content.count(')')
+            
+            # If more than 50% seems to be technical metadata, filter it
+            if (url_count > 5 or technical_indicators > len(content) * 0.1):
+                return True
+        
+        return False
+    
+    def _should_filter_line(self, line: str) -> bool:
+        """Determine if a specific line should be filtered out."""
+        # Filter lines that are pure metadata or formatting
+        filter_patterns = [
+            r'^\s*\([^)]+\)\s*$',  # Lines with just parenthetical citations
+            r'^\s*\[[^\]]+\]\s*$',  # Lines with just bracketed metadata
+            r'^\s*https?://\S+\s*$',  # Lines with just URLs
+            r'^\s*\.\.\.\s*$',  # Lines with just ellipsis
+        ]
+        
+        for pattern in filter_patterns:
+            if re.match(pattern, line):
+                return True
+        
+        return False
+    
+    def _truncate_web_search_content(self, agent_id: str):
+        """Truncate web search content when important status updates occur."""
+        if agent_id not in self.agent_outputs or not self.agent_outputs[agent_id]:
+            return
+        
+        # Find web search content and truncate to keep only recent important lines
+        content_lines = self.agent_outputs[agent_id]
+        web_search_lines = []
+        non_web_search_lines = []
+        
+        # Separate web search content from other content
+        for line in content_lines:
+            if self._is_web_search_content(line):
+                web_search_lines.append(line)
+            else:
+                non_web_search_lines.append(line)
+        
+        # If there's a lot of web search content, truncate it
+        if len(web_search_lines) > self._max_web_search_lines:
+            # Keep only the first line (search start) and last few lines (search end/results)
+            truncated_web_search = (
+                web_search_lines[:1] +  # First line (search start)
+                ["🔍 ... (web search content truncated due to status update) ..."] +
+                web_search_lines[-(self._max_web_search_lines-2):]  # Last few lines
+            )
+            
+            # Reconstruct the content with truncated web search
+            # Keep recent non-web-search content and add truncated web search
+            recent_non_web = non_web_search_lines[-(max(5, self.max_content_lines-len(truncated_web_search))):]
+            self.agent_outputs[agent_id] = recent_non_web + truncated_web_search
+        
+        # Add a status jump indicator only if content was actually truncated
+        if len(web_search_lines) > self._max_web_search_lines:
+            self.agent_outputs[agent_id].append("⚡ Status updated - jumped to latest")
     
     def _is_code_content(self, content: str) -> bool:
         """Check if content appears to be code."""
@@ -392,9 +681,7 @@ class RichTerminalDisplay(TerminalDisplay):
             language = self._detect_language(content)
             
             if language:
-                # Use Rich Syntax for highlighting
-                syntax = Syntax(content, language, theme="monokai", line_numbers=False)
-                # Convert to Text (simplified)
+                # Use Rich Syntax for highlighting (simplified for now)
                 return Text(content, style=f"bold {self.colors['info']}")
             else:
                 return Text(content, style=f"bold {self.colors['info']}")
@@ -466,7 +753,6 @@ class RichTerminalDisplay(TerminalDisplay):
         
         status_parts = []
         for status, count in status_counts.items():
-            color = self._get_status_color(status)
             emoji = self._get_status_emoji(status, status)
             status_parts.append(f"{emoji} {status.title()}: {count}")
         
@@ -482,7 +768,13 @@ class RichTerminalDisplay(TerminalDisplay):
         
         # Log file info
         if self.log_filename:
-            footer_content.append(f"📁 Log: {self.log_filename}", style=self.colors['info'])
+            footer_content.append(f"📁 Log: {self.log_filename}\n", style=self.colors['info'])
+        
+        # Interactive mode instructions
+        if self._interactive_mode and hasattr(self, '_agent_keys'):
+            footer_content.append("🎮 Interactive: Press 1-", style=self.colors['primary'])
+            footer_content.append(f"{len(self.agent_ids)} to view agent details, 'q' to return", style=self.colors['text'])
+            footer_content.append(f"\n📂 Output files saved in: {self.output_dir}/", style=self.colors['info'])
         
         return Panel(
             footer_content,
@@ -492,14 +784,7 @@ class RichTerminalDisplay(TerminalDisplay):
         )
     
     def update_agent_content(self, agent_id: str, content: str, content_type: str = "thinking"):
-        """Update content for a specific agent with rich formatting."""
-
-        # Allow shorter content for tool use to provide immediate feedback
-        if content_type != "tool" and len(content) < 30:
-            return
-        
-        # if "presenting final answer" in content:
-        #     return
+        """Update content for a specific agent with rich formatting and file output."""
         
         if agent_id not in self.agent_ids:
             return
@@ -509,68 +794,69 @@ class RichTerminalDisplay(TerminalDisplay):
             if agent_id not in self.agent_outputs:
                 self.agent_outputs[agent_id] = []
             
-            # Check if this is actually new content worth displaying
-            content_hash = hash(content + content_type)
-            last_hash = self._last_content_hash.get(agent_id, "")
+            # Write content to agent's txt file
+            self._write_to_agent_file(agent_id, content, content_type)
             
-            # Tool use content always gets added for immediate feedback
-            # Other content types checked for duplicates
-            if content_type == "tool" or content_hash != last_hash or content_type in ["presentation", "status"]:
-                #self.agent_outputs[agent_id].append(content)
-                for line in content.splitlines():
-                    if not line.strip():
-                         continue
-                    self.agent_outputs.setdefault(agent_id, []).append(line)
-                self._last_content_hash[agent_id] = content_hash
-            else:
-                # Skip duplicate or unimportant content
-                return
-            
-            # Update activity tracking
-            old_activity = self.agent_activity.get(agent_id, "waiting")
-            new_activity = old_activity
-            
-            if content_type == "tool":
-                new_activity = "using_tool"
-            elif content_type == "presentation":
-                new_activity = "presenting"
-            elif content_type == "status":
-                new_activity = content.lower()
-                # Force display update for vote-related status
-                if "voted" in content.lower():
-                    new_activity = f"voted: {content.lower()}"
-            
-            # Only update if activity actually changed
-            activity_changed = old_activity != new_activity
-            if activity_changed:
-                self.agent_activity[agent_id] = new_activity
-                self._last_agent_activity[agent_id] = new_activity
-            
-            # Tool use content always triggers immediate update for real-time feedback
-            if content_type == "tool":
-                self._pending_updates.add(agent_id)
-                self._schedule_async_update(force_update=True)
-                return
-            
-            # Apply message filtering for other content types
-            important_content = content_type in self._important_content_types
-            status_change = any(keyword in content.lower() for keyword in self._status_change_keywords)
-            is_vote_content = "voted" in content.lower()
-            
-            # Determine if this update warrants a display refresh
-            should_update = (
-                important_content and (
-                    activity_changed or 
-                    status_change or 
-                    content_type == "presentation" or
-                    content_type == "error" or
-                    is_vote_content  # Force update for any vote-related content
-                )
+            # Check if this is a status-changing content that should trigger web search truncation
+            is_status_change = (
+                content_type in ["status", "presentation", "tool"] or
+                any(keyword in content.lower() for keyword in self._status_change_keywords)
             )
             
-            if should_update:
-                self._pending_updates.add(agent_id)
-                self._schedule_async_update(force_update=True)
+            # If status jump is enabled and this is a status change, truncate web search content
+            if (self._status_jump_enabled and 
+                is_status_change and 
+                self._web_search_truncate_on_status_change and
+                self.agent_outputs[agent_id]):
+                
+                self._truncate_web_search_content(agent_id)
+            
+            # Enhanced filtering for web search content
+            if self._should_filter_content(content, content_type):
+                return
+            
+            # If content contains newlines, split and add as separate lines
+            if '\n' in content:
+                for line in content.splitlines():
+                    if line.strip() and not self._should_filter_line(line):
+                        self.agent_outputs[agent_id].append(line)
+            else:
+                # For short content (streaming words), append to last line or create new line
+                if (self.agent_outputs[agent_id] and 
+                    len(self.agent_outputs[agent_id][-1]) < self.max_line_length - len(content) - 1):
+                    # Append to last line if it won't exceed max length
+                    self.agent_outputs[agent_id][-1] += content
+                else:
+                    # Create new line
+                    self.agent_outputs[agent_id].append(content.strip())
+            
+            # Always schedule update for new content with immediate refresh for status-related content
+            self._pending_updates.add(agent_id)
+            # Force immediate updates for status changes, tool usage, and important content
+            force_immediate = content_type in ["tool", "status", "presentation"] or any(
+                keyword in content.lower() for keyword in self._status_change_keywords
+            )
+            self._schedule_async_update(force_update=force_immediate)
+    
+    def _write_to_agent_file(self, agent_id: str, content: str, content_type: str):
+        """Write content to agent's individual txt file."""
+        if agent_id not in self.agent_files:
+            return
+        
+        try:
+            file_path = self.agent_files[agent_id]
+            timestamp = time.strftime("%H:%M:%S")
+            
+            # Format content with timestamp and type
+            formatted_content = f"[{timestamp}] [{content_type.upper()}] {content}\n"
+            
+            # Append to file
+            with open(file_path, 'a', encoding='utf-8') as f:
+                f.write(formatted_content)
+                
+        except Exception as e:
+            # Handle file write errors gracefully
+            pass
     
     def update_agent_status(self, agent_id: str, status: str):
         """Update status for a specific agent with rich indicators."""
@@ -589,12 +875,23 @@ class RichTerminalDisplay(TerminalDisplay):
             should_update = (old_status != status and last_tracked_status != status) or is_vote_status
             
             if should_update:
+                # Truncate web search content when status changes for immediate focus on new status
+                if (self._status_jump_enabled and 
+                    self._web_search_truncate_on_status_change and
+                    old_status != status and
+                    agent_id in self.agent_outputs and
+                    self.agent_outputs[agent_id]):
+                    
+                    self._truncate_web_search_content(agent_id)
+                
                 super().update_agent_status(agent_id, status)
                 self._last_agent_status[agent_id] = status
                 
-                # Mark for async update - force update for vote statuses
+                # Mark for priority update - status changes get highest priority
+                self._priority_updates.add(agent_id)
                 self._pending_updates.add(agent_id)
                 self._pending_updates.add('footer')
+                self._schedule_priority_update(agent_id)
                 self._schedule_async_update(force_update=True)
             elif old_status != status:
                 # Update the internal status but don't refresh display if already tracked
@@ -625,12 +922,16 @@ class RichTerminalDisplay(TerminalDisplay):
     
     def show_final_answer(self, answer: str):
         """Display the final coordinated answer prominently."""
-        # Force display of all agents' final vote statuses before showing answer
-        # self._force_display_final_vote_statuses()
+        # 强制更新所有agent的最终状态
+        with self._lock:
+            for agent_id in self.agent_ids:
+                self._pending_updates.add(agent_id)
+            self._pending_updates.add('footer')
+            self._schedule_async_update(force_update=True)
         
-        # if self.live:
-        #     self.live.stop()
-
+        # 等待更新完成 - increased delay to ensure all vote statuses are displayed
+        time.sleep(0.5)
+        
         self._force_display_final_vote_statuses()
         
         if self.live:
@@ -639,7 +940,8 @@ class RichTerminalDisplay(TerminalDisplay):
             except Exception:
                 pass
 
-        time.sleep(0.1)  # Reduced delay for faster response
+        # Wait longer to ensure all agent vote statuses are fully displayed
+        time.sleep(1.0)
 
         if self.live:
             self.live.stop()
@@ -671,9 +973,9 @@ class RichTerminalDisplay(TerminalDisplay):
             # Force immediate update with final status display
             self._schedule_async_update(force_update=True)
             
-            # Minimal wait to ensure update completes
-            import time
-            time.sleep(0.02)  # Reduced from 0.1 for faster response
+        # Wait longer to ensure all updates are processed and displayed
+        import time
+        time.sleep(0.3)  # Increased wait to ensure all vote statuses are displayed
     
     def cleanup(self):
         """Clean up display resources."""
@@ -682,12 +984,54 @@ class RichTerminalDisplay(TerminalDisplay):
                 self.live.stop()
                 self.live = None
             
-            # Shutdown executor
+            # Stop keyboard handler if active
+            if self._key_handler:
+                try:
+                    self._key_handler.stop()
+                except:
+                    pass
+            
+            # Set shutdown flag to prevent new timers
+            self._shutdown_flag = True
+            
+            # Cancel all debounce timers
+            for timer in self._debounce_timers.values():
+                timer.cancel()
+            self._debounce_timers.clear()
+            
+            # Shutdown executors
             if hasattr(self, '_refresh_executor'):
-                self._refresh_executor.shutdown(wait=False)
+                self._refresh_executor.shutdown(wait=True)
+            if hasattr(self, '_status_update_executor'):
+                self._status_update_executor.shutdown(wait=True)
+            
+            # Close agent files gracefully
+            try:
+                for agent_id, file_path in self.agent_files.items():
+                    if file_path.exists():
+                        with open(file_path, 'a', encoding='utf-8') as f:
+                            f.write(f"\n=== SESSION ENDED at {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+            except:
+                pass
+    
+    def _schedule_priority_update(self, agent_id: str):
+        """Schedule immediate priority update for critical agent status changes."""
+        if self._shutdown_flag:
+            return
+        
+        def priority_update():
+            try:
+                # Update the specific agent panel immediately
+                self._update_agent_panel_cache(agent_id)
+                # Trigger immediate display update
+                self._update_display_safe()
+            except Exception:
+                pass
+        
+        self._status_update_executor.submit(priority_update)
     
     def _schedule_async_update(self, force_update: bool = False):
-        """Schedule asynchronous update of pending components."""
+        """Schedule asynchronous update with debouncing to prevent jitter."""
         current_time = time.time()
         
         # Check if we need a full refresh - less frequent for performance
@@ -698,13 +1042,28 @@ class RichTerminalDisplay(TerminalDisplay):
                 self._pending_updates.update(self.agent_ids)
             self._last_full_refresh = current_time
         
-        # No rate limiting for real-time updates - always update immediately
-        # Removed throttling to ensure immediate responsiveness
+        # For force updates (status changes, tool content), bypass debouncing completely
+        if force_update:
+            self._last_update = current_time
+            # Submit multiple update tasks for even faster processing
+            self._refresh_executor.submit(self._async_update_components)
+            return
         
-        self._last_update = current_time
+        # Cancel existing debounce timer if any
+        if 'main' in self._debounce_timers:
+            self._debounce_timers['main'].cancel()
         
-        # Submit async update task
-        self._refresh_executor.submit(self._async_update_components)
+        # Create new debounce timer
+        def debounced_update():
+            current_time = time.time()
+            time_since_last_update = current_time - self._last_update
+            
+            if time_since_last_update >= self._update_interval:
+                self._last_update = current_time
+                self._refresh_executor.submit(self._async_update_components)
+            
+        self._debounce_timers['main'] = threading.Timer(self._debounce_delay, debounced_update)
+        self._debounce_timers['main'].start()
     
     def _async_update_components(self):
         """Asynchronously update only the components that have changed."""
@@ -797,6 +1156,26 @@ class RichTerminalDisplay(TerminalDisplay):
             return True
             
         return False
+    
+    def set_status_jump_enabled(self, enabled: bool):
+        """Enable or disable status jumping functionality.
+        
+        Args:
+            enabled: Whether to enable status jumping
+        """
+        with self._lock:
+            self._status_jump_enabled = enabled
+    
+    def set_web_search_truncation(self, enabled: bool, max_lines: int = 3):
+        """Configure web search content truncation on status changes.
+        
+        Args:
+            enabled: Whether to enable web search truncation
+            max_lines: Maximum web search lines to keep when truncating
+        """
+        with self._lock:
+            self._web_search_truncate_on_status_change = enabled
+            self._max_web_search_lines = max_lines
 
 
 # Convenience function to check Rich availability

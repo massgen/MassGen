@@ -6,19 +6,14 @@ echo "🚀 MassGen v3 Case Study Test Suite"
 echo "===================================="
 echo ""
 
-# Check if we're in the right directory - support both root and tests dir
-if [ -f "../cli.py" ]; then
-    # Running from tests directory
-    CLI_PATH="../cli.py"
-    CONFIG_PATH="../configs"
-elif [ -f "massgen/v3/cli.py" ]; then
-    # Running from project root
-    CLI_PATH="massgen/v3/cli.py"
-    CONFIG_PATH="massgen/v3/configs"
-else
-    echo "❌ Please run this script from either:"
-    echo "   - MassGen project root: ./massgen/v3/tests/test_case_studies.sh"
-    echo "   - Tests directory: ./test_case_studies.sh"
+# Set absolute paths for configs
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
+CONFIG_PATH="$PROJECT_ROOT/massgen/v3/configs"
+
+# Verify we have the right directory structure
+if [ ! -d "$CONFIG_PATH" ]; then
+    echo "❌ Cannot find configs directory at: $CONFIG_PATH"
     exit 1
 fi
 
@@ -50,7 +45,8 @@ run_test() {
     echo "❓ Prompt: $prompt"
     echo "---"
     
-    python "$CLI_PATH" --config "$config" "$prompt"
+    # Run with proper Python path setup
+    PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH" python -m massgen.v3.cli --config "$config" "$prompt"
     
     echo ""
     echo "✅ Completed: $test_name"
@@ -92,7 +88,7 @@ echo "Adapted: Using two_agents.yaml (primary_agent, secondary_agent)"
 read -p "Press Enter to run or Ctrl+C to skip..."
 run_test "IMO Winner" \
     "$CONFIG_PATH/two_agents.yaml" \
-    "Which AI won IMO 2025?"
+    "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025"
 
 # Case Study 5: Stockholm Travel Guide
 echo "✈️ Case Study 5: Stockholm Travel Guide"
@@ -112,5 +108,5 @@ echo "• $CONFIG_PATH/research_team.yaml - Research-optimized (3 agents)"
 echo "• $CONFIG_PATH/single_agent.yaml - Single agent mode"
 echo ""
 echo "💡 Example alternative commands:"
-echo "python $CLI_PATH --config $CONFIG_PATH/research_team.yaml \"your question\""
-echo "python $CLI_PATH --config $CONFIG_PATH/multi_agent.yaml \"your question\""
+echo "PYTHONPATH=$PROJECT_ROOT python -m massgen.v3.cli --config $CONFIG_PATH/research_team.yaml \"your question\""
+echo "PYTHONPATH=$PROJECT_ROOT python -m massgen.v3.cli --config $CONFIG_PATH/multi_agent.yaml \"your question\""

@@ -301,7 +301,7 @@ class MassOrchestrator(ChatAgent):
                                 #yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
                                 voted_agents[agent_id] = result_data
-                                yield StreamChunk(type="content", content=f"[{agent_id}] ✅ Vote recorded for {result_data['agent_id']}\n", source=agent_id)
+                                yield StreamChunk(type="content", content=f"[{agent_id}] ✅ Vote recorded for {result_data['agent_id']}", source=agent_id)
                     
                     elif chunk_type == "error":
                         # Agent error

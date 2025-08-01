@@ -2,7 +2,6 @@
 Message templates for MassGen framework following input_cases_reference.md
 Implements proven binary decision framework that eliminates perfectionism loops.
 """
-
 from typing import Dict, Any, Optional, List
 
 
@@ -22,9 +21,11 @@ class MessageTemplates:
         if "evaluation_system_message" in self._template_overrides:
             return str(self._template_overrides["evaluation_system_message"])
         
-        import time
-        
-        return f"""You are evaluating answers from multiple agents for final response to a message. 
+        from datetime import datetime
+        now = datetime.now()
+        current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        base_prompt = f"""You are evaluating answers from multiple agents for final response to a message. 
 
 For every aspect, claim, reasoning steps in the CURRENT ANSWERS, verify correctness, factual accuracy, and completeness using your expertise, reasoning, and available tools.
 
@@ -36,8 +37,10 @@ Your new answer must be self-contained, process-complete, well-sourced, and comp
 
 **Important**: Be sure to actually call the `new_answer` tool to submit your new answer.
 
-*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
-For any time-sensitive requests, use the search tool (if available) rather than relying on prior knowledge."""
+**IMPORTANT**: The CURRENT TIME is **{current_time}**.
+For ANY query that may involve current events, recent information, real-time data, or time-sensitive content (including but not limited to: news, stock prices, weather, recent developments, current status of anything), YOU MUST use the web search tool first before providing any answer. Do not rely on your training data for current information."""
+        
+        return base_prompt
     
     # =============================================================================
     # USER MESSAGE TEMPLATES

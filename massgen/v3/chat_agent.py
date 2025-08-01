@@ -347,7 +347,14 @@ def create_simple_agent(backend: LLMBackend,
         from .message_templates import MessageTemplates
         templates = MessageTemplates()
         system_message = templates.evaluation_system_message()
+
+        import pdb
+        pdb.set_trace()
+        print(system_message)
     
+    import pdb
+    pdb.set_trace()
+    print(system_message)
     return SingleAgent(
         backend=backend,
         agent_id=agent_id,
