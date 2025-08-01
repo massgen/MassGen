@@ -155,6 +155,7 @@ class RichTerminalDisplay(TerminalDisplay):
         self._input_thread = None
         self._stop_input_thread = False
         self._original_settings = None
+        self._agent_selector_active = False  # Flag to prevent duplicate agent selector calls
         
         # Code detection patterns
         self.code_patterns = [
@@ -238,6 +239,12 @@ class RichTerminalDisplay(TerminalDisplay):
         """Handle terminal resize by recalculating layout and refreshing display."""
         with self._resize_lock:
             try:
+                # VSCode-specific resize stabilization
+                if self._terminal_performance['type'] == 'vscode':
+                    # VSCode terminal sometimes sends multiple resize events
+                    # Add delay to let resize settle
+                    time.sleep(0.05)
+                
                 # Get new terminal size
                 new_size = self.console.size
                 
@@ -248,6 +255,11 @@ class RichTerminalDisplay(TerminalDisplay):
                     # Update stored terminal size
                     old_size = self.terminal_size
                     self.terminal_size = new_size
+                    
+                    # VSCode-specific post-resize delay
+                    if self._terminal_performance['type'] == 'vscode':
+                        # Give VSCode terminal extra time to stabilize after resize
+                        time.sleep(0.02)
                     
                     # Recalculate layout dimensions
                     self._recalculate_layout()
@@ -324,6 +336,14 @@ class RichTerminalDisplay(TerminalDisplay):
                 terminal_info['performance_tier'] = 'high'
                 terminal_info['type'] = 'iterm'
                 terminal_info['supports_unicode'] = True
+            elif 'vscode' in term_program or 'code' in term_program or self._detect_vscode_terminal():
+                # VSCode integrated terminal - needs special handling for flaky behavior
+                terminal_info['performance_tier'] = 'medium'
+                terminal_info['type'] = 'vscode'
+                terminal_info['supports_unicode'] = True
+                terminal_info['buffer_size'] = 'large'  # VSCode has good buffering
+                terminal_info['needs_flush_delay'] = True  # Reduce flicker
+                terminal_info['refresh_stabilization'] = True  # Add stability delays
             elif 'apple_terminal' in term_program or term_program == 'terminal':
                 terminal_info['performance_tier'] = 'high'
                 terminal_info['type'] = 'macos_terminal'
@@ -362,17 +382,60 @@ class RichTerminalDisplay(TerminalDisplay):
             
         return terminal_info
     
+    def _detect_vscode_terminal(self):
+        """Additional VSCode terminal detection using multiple indicators."""
+        try:
+            # Check for VSCode-specific environment variables
+            vscode_indicators = [
+                'VSCODE_INJECTION',
+                'VSCODE_PID',
+                'VSCODE_IPC_HOOK',
+                'VSCODE_IPC_HOOK_CLI',
+                'TERM_PROGRAM_VERSION'
+            ]
+            
+            # Check if any VSCode-specific env vars are present
+            for indicator in vscode_indicators:
+                if os.environ.get(indicator):
+                    return True
+            
+            # Check if parent process is code or VSCode
+            try:
+                import psutil
+                current_process = psutil.Process()
+                parent = current_process.parent()
+                if parent and ('code' in parent.name().lower() or 'vscode' in parent.name().lower()):
+                    return True
+            except (ImportError, psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+            
+            # Check for common VSCode terminal patterns in environment
+            term_program = os.environ.get('TERM_PROGRAM', '').lower()
+            if term_program and any(pattern in term_program for pattern in ['code', 'vscode']):
+                return True
+                
+            return False
+        except Exception:
+            return False
+    
     def _get_adaptive_refresh_rate(self, user_override=None):
         """Get adaptive refresh rate based on terminal performance."""
         if user_override is not None:
             return user_override
             
         perf_tier = self._terminal_performance['performance_tier']
+        term_type = self._terminal_performance['type']
+        
+        # VSCode-specific optimization
+        if term_type == 'vscode':
+            # Lower refresh rate for VSCode to prevent flaky behavior
+            # VSCode terminal sometimes has rendering delays
+            return 2
         
         refresh_rates = {
-            'high': 20,     # Modern terminals
-            'medium': 10,   # Standard terminals  
-            'low': 5        # Multiplexers, SSH, legacy
+            'high': 10,     # Modern terminals
+            'medium': 5,   # Standard terminals  
+            'low': 2        # Multiplexers, SSH, legacy
         }
         
         return refresh_rates.get(perf_tier, 8)
@@ -597,6 +660,17 @@ class RichTerminalDisplay(TerminalDisplay):
             # Ensure vertical overflow is handled gracefully
             settings['vertical_overflow'] = "ellipsis"
             
+        # VSCode terminal-specific optimizations
+        if self._terminal_performance['type'] == 'vscode':
+            # VSCode terminal needs very conservative refresh to prevent flaky behavior
+            settings['refresh_per_second'] = min(settings['refresh_per_second'], 6)
+            # Use transient mode to reduce rendering artifacts
+            settings['transient'] = False
+            # Handle overflow gracefully to prevent layout issues
+            settings['vertical_overflow'] = "ellipsis"
+            # Reduce auto-refresh frequency for stability
+            settings['auto_refresh'] = True
+            
         return settings
     
     def _fallback_to_simple_display(self):
@@ -619,14 +693,19 @@ class RichTerminalDisplay(TerminalDisplay):
         return None  # No Live display
     
     def _update_display_safe(self):
-        """Safely update display with fallback support and macOS-specific synchronization."""
-        # Add extra synchronization for macOS terminals to prevent race conditions
+        """Safely update display with fallback support and terminal-specific synchronization."""
+        # Add extra synchronization for macOS terminals and VSCode to prevent race conditions
         term_type = self._terminal_performance['type']
-        use_safe_mode = term_type in ['iterm', 'macos_terminal']
+        use_safe_mode = term_type in ['iterm', 'macos_terminal', 'vscode']
+        
+        # VSCode-specific stabilization
+        if term_type == 'vscode' and self._terminal_performance.get('refresh_stabilization'):
+            # Add small delay before refresh to let VSCode terminal stabilize
+            time.sleep(0.01)
         
         try:
             if use_safe_mode:
-                # For macOS terminals, use more conservative locking
+                # For macOS terminals and VSCode, use more conservative locking
                 with self._layout_update_lock:
                     with self._lock:  # Double locking for extra safety
                         if hasattr(self, '_simple_display_mode') and self._simple_display_mode:
@@ -642,6 +721,11 @@ class RichTerminalDisplay(TerminalDisplay):
         except Exception:
             # Fallback to simple display on any error
             self._fallback_to_simple_display()
+            
+        # VSCode-specific post-refresh stabilization
+        if term_type == 'vscode' and self._terminal_performance.get('needs_flush_delay'):
+            # Small delay after refresh to prevent flicker
+            time.sleep(0.005)
     
     def _update_simple_display(self):
         """Update display in simple mode without Live."""
@@ -737,6 +821,54 @@ class RichTerminalDisplay(TerminalDisplay):
         }
         
         self.colors = themes.get(self.theme, themes['dark'])
+        
+        # VSCode terminal-specific color adjustments
+        if self._terminal_performance['type'] == 'vscode':
+            # VSCode terminal sometimes has issues with certain bright colors
+            # Use more stable color palette
+            vscode_adjustments = {
+                'primary': 'cyan',  # Less bright than bright_cyan
+                'secondary': 'blue',
+                'border': 'cyan',
+                'panel_style': 'cyan'
+            }
+            self.colors.update(vscode_adjustments)
+            
+            # Set up VSCode-safe emoji mapping for better compatibility
+            self._setup_vscode_emoji_fallbacks()
+    
+    def _setup_vscode_emoji_fallbacks(self):
+        """Setup emoji fallbacks for VSCode terminal compatibility."""
+        # VSCode terminal sometimes has issues with certain Unicode characters
+        # Provide ASCII fallbacks for better stability
+        self._emoji_fallbacks = {
+            '🚀': '>>',    # Launch/rocket
+            '🎯': '>',     # Target
+            '💭': '...',   # Thinking
+            '⚡': '!',     # Status update
+            '🎨': '*',     # Theme
+            '📝': '=',     # Writing
+            '✅': '[OK]',  # Success
+            '❌': '[X]',   # Error
+            '⭐': '*',     # Important
+            '🔍': '?',     # Search
+            '📊': '|',     # Status/data
+        }
+        
+        # Only use fallbacks if VSCode terminal has Unicode issues
+        # This can be detected at runtime if needed
+        if not self._terminal_performance.get('supports_unicode', True):
+            self._use_emoji_fallbacks = True
+        else:
+            self._use_emoji_fallbacks = False
+    
+    def _safe_emoji(self, emoji: str) -> str:
+        """Get safe emoji for current terminal, with VSCode fallbacks."""
+        if (self._terminal_performance['type'] == 'vscode' and 
+            self._use_emoji_fallbacks and 
+            emoji in self._emoji_fallbacks):
+            return self._emoji_fallbacks[emoji]
+        return emoji
     
     def initialize(self, question: str, log_filename: Optional[str] = None):
         """Initialize the rich display with question and optional log file."""
@@ -1206,41 +1338,51 @@ class RichTerminalDisplay(TerminalDisplay):
         if not self._interactive_mode or not hasattr(self, '_agent_keys'):
             return
         
+        # Prevent duplicate agent selector calls
+        if self._agent_selector_active:
+            return
+        
+        self._agent_selector_active = True
+        
         # Ensure clean keyboard state before starting agent selector
         self._ensure_clean_keyboard_state()
         
-        while True:
-            # Display available options
-            options_text = Text()
-            options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
-            
-            for key, agent_id in self._agent_keys.items():
-                options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
-            
-            options_text.append("  s: System Status\n", style=self.colors['warning'])
-            options_text.append("  q: Quit\n", style=self.colors['info'])
-            
-            self.console.print(Panel(
-                options_text,
-                title="[bold]Agent Selector[/bold]",
-                border_style=self.colors['border']
-            ))
-            
-            # Get user input
-            try:
-                choice = input("Enter your choice: ").strip().lower()
+        try:
+            while True:
+                # Display available options
+                options_text = Text()
+                options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
                 
-                if choice in self._agent_keys:
-                    self._show_agent_full_content(self._agent_keys[choice])
-                elif choice == 's':
-                    self._show_system_status()
-                elif choice == 'q':
+                for key, agent_id in self._agent_keys.items():
+                    options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
+                
+                options_text.append("  s: System Status\n", style=self.colors['warning'])
+                options_text.append("  q: Quit\n", style=self.colors['info'])
+                
+                self.console.print(Panel(
+                    options_text,
+                    title="[bold]Agent Selector[/bold]",
+                    border_style=self.colors['border']
+                ))
+                
+                # Get user input
+                try:
+                    choice = input("Enter your choice: ").strip().lower()
+                    
+                    if choice in self._agent_keys:
+                        self._show_agent_full_content(self._agent_keys[choice])
+                    elif choice == 's':
+                        self._show_system_status()
+                    elif choice == 'q':
+                        break
+                    else:
+                        self.console.print(f"[{self.colors['error']}]Invalid choice. Please try again.[/{self.colors['error']}]")
+                except KeyboardInterrupt:
+                    # Handle Ctrl+C gracefully
                     break
-                else:
-                    self.console.print(f"[{self.colors['error']}]Invalid choice. Please try again.[/{self.colors['error']}]")
-            except KeyboardInterrupt:
-                # Handle Ctrl+C gracefully
-                break
+        finally:
+            # Always reset the flag when exiting
+            self._agent_selector_active = False
     
     def _show_system_status(self):
         """Display system status from txt file."""
