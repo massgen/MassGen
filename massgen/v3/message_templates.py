@@ -27,8 +27,10 @@ class MessageTemplates:
         return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
 
 If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
-Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call one of the two tools.
-"""
+Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call one of the two tools (in tool recall format, don't return XML).
+
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
+For any time-sensitive requests, use builtin search tool (if available) rather than relying on prior knowledge."""
     
     # =============================================================================
     # USER MESSAGE TEMPLATES
@@ -155,7 +157,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
                 "parameters": {
                     "type": "object",
                     "properties": {
-                        "content": {"type": "string", "description": "Your improved answer."}
+                        "content": {"type": "string", "description": "Your improved answer. If any builtin tools like search or code execution were used, include how they are used here."}
                     },
                     "required": ["content"]
                 }
