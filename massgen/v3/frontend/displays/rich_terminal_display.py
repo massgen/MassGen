@@ -1816,8 +1816,19 @@ class RichTerminalDisplay(TerminalDisplay):
             file_path = self.agent_files[agent_id]
             timestamp = time.strftime("%H:%M:%S")
             
-            # Format content with timestamp and type
-            formatted_content = f"[{timestamp}] [{content_type.upper()}] {content}\n"
+            # Check if content contains emojis
+            has_emoji = any(ord(char) > 127 and ord(char) in range(0x1F600, 0x1F64F) or 
+                           ord(char) in range(0x1F300, 0x1F5FF) or 
+                           ord(char) in range(0x1F680, 0x1F6FF) or 
+                           ord(char) in range(0x2600, 0x26FF) or 
+                           ord(char) in range(0x2700, 0x27BF) for char in content)
+            
+            if has_emoji:
+                # Format with newline and timestamp when emojis are present
+                formatted_content = f"\n[{timestamp}] [{content_type.upper()}] {content}\n"
+            else:
+                # Regular format without extra newline
+                formatted_content = f"{content}"
             
             # Append to file
             with open(file_path, 'a', encoding='utf-8') as f:
