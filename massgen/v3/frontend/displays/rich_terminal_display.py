@@ -10,6 +10,11 @@ import time
 import threading
 import asyncio
 import os
+import sys
+import select
+import tty
+import termios
+import subprocess
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
@@ -131,7 +136,11 @@ class RichTerminalDisplay(TerminalDisplay):
         
         # Interactive mode variables
         self._interactive_mode = kwargs.get('interactive_mode', True)
+        self._safe_keyboard_mode = kwargs.get('safe_keyboard_mode', False)  # Non-interfering keyboard mode
         self._key_handler = None
+        self._input_thread = None
+        self._stop_input_thread = False
+        self._original_settings = None
         
         # Code detection patterns
         self.code_patterns = [
@@ -365,20 +374,305 @@ class RichTerminalDisplay(TerminalDisplay):
             for i, agent_id in enumerate(self.agent_ids):
                 key = str(i + 1)
                 self._agent_keys[key] = agent_id
+            
+            # Start background input thread for Live mode
+            if self._interactive_mode:
+                self._start_input_thread()
                 
         except ImportError:
             # Fall back to non-interactive mode if keyboard library not available
             self._interactive_mode = False
     
+    def _start_input_thread(self):
+        """Start background thread for keyboard input during Live mode."""
+        if not sys.stdin.isatty():
+            return  # Can't handle input if not a TTY
+        
+        self._stop_input_thread = False
+        
+        # Choose input method based on safety requirements
+        if self._safe_keyboard_mode:
+            # Use completely safe method that doesn't change terminal settings
+            self._input_thread = threading.Thread(target=self._input_thread_worker_safe, daemon=True)
+            self._input_thread.start()
+        else:
+            # Try improved method first, fallback to polling method if needed
+            try:
+                self._input_thread = threading.Thread(target=self._input_thread_worker_improved, daemon=True)
+                self._input_thread.start()
+            except Exception:
+                # Fallback to simpler polling method
+                self._input_thread = threading.Thread(target=self._input_thread_worker_fallback, daemon=True)
+                self._input_thread.start()
+    
+    def _input_thread_worker_improved(self):
+        """Improved background thread worker that doesn't interfere with Rich rendering."""
+        try:
+            # Save original terminal settings but don't change to raw mode
+            if sys.stdin.isatty():
+                self._original_settings = termios.tcgetattr(sys.stdin.fileno())
+                # Use canonical mode with minimal changes
+                new_settings = termios.tcgetattr(sys.stdin.fileno())
+                # Enable non-blocking input without full raw mode
+                new_settings[3] = new_settings[3] & ~(termios.ICANON | termios.ECHO)
+                new_settings[6][termios.VMIN] = 0  # Non-blocking
+                new_settings[6][termios.VTIME] = 1  # 100ms timeout
+                termios.tcsetattr(sys.stdin.fileno(), termios.TCSANOW, new_settings)
+            
+            while not self._stop_input_thread:
+                try:
+                    # Use select with shorter timeout to be more responsive
+                    if select.select([sys.stdin], [], [], 0.05)[0]:
+                        char = sys.stdin.read(1)
+                        if char:
+                            self._handle_key_press(char)
+                except (BlockingIOError, OSError):
+                    # Expected in non-blocking mode, continue
+                    continue
+                        
+        except (KeyboardInterrupt, EOFError):
+            pass
+        except Exception as e:
+            # Handle errors gracefully
+            pass
+        finally:
+            # Restore terminal settings
+            self._restore_terminal_settings()
+    
+    def _input_thread_worker_fallback(self):
+        """Fallback keyboard input method using simple polling without terminal mode changes."""
+        import time
+        
+        # Show instructions to user
+        self.console.print("\n[dim]Keyboard support active. Press keys during Live display:[/dim]")
+        self.console.print("[dim]1-{} to open agent files, 's' for system status, 'q' to quit[/dim]\n".format(len(self.agent_ids)))
+        
+        try:
+            while not self._stop_input_thread:
+                # Use a much simpler approach - just sleep and check flag
+                time.sleep(0.1)
+                
+                # In this fallback mode, we rely on the user using Ctrl+C or 
+                # external interruption rather than single-key detection
+                # This prevents any terminal mode conflicts
+                
+        except (KeyboardInterrupt, EOFError):
+            # Handle graceful shutdown
+            pass
+        except Exception:
+            # Handle any other errors gracefully
+            pass
+    
+    def _input_thread_worker_safe(self):
+        """Completely safe keyboard input that never changes terminal settings."""
+        # This method does nothing to avoid any interference with Rich rendering
+        # Keyboard functionality is disabled in safe mode to prevent rendering issues
+        try:
+            while not self._stop_input_thread:
+                time.sleep(0.5)  # Just wait without doing anything
+        except:
+            pass
+    
+    def _restore_terminal_settings(self):
+        """Restore original terminal settings."""
+        try:
+            if self._original_settings and sys.stdin.isatty():
+                termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, self._original_settings)
+                self._original_settings = None
+        except:
+            pass
+    
+    def _ensure_clean_keyboard_state(self):
+        """Ensure clean keyboard state before starting agent selector."""
+        # Stop input thread completely
+        self._stop_input_thread = True
+        if self._input_thread and self._input_thread.is_alive():
+            try:
+                self._input_thread.join(timeout=0.5)
+            except:
+                pass
+        
+        # Restore terminal settings to normal mode
+        self._restore_terminal_settings()
+        
+        # Clear any pending keyboard input from stdin buffer
+        try:
+            if sys.stdin.isatty():
+                import termios
+                # Flush input buffer to remove any pending keystrokes
+                termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
+        except:
+            pass
+        
+        # Small delay to ensure all cleanup is complete
+        import time
+        time.sleep(0.1)
+    
     def _handle_key_press(self, key):
         """Handle key press events for agent selection."""
         if key in self._agent_keys:
             agent_id = self._agent_keys[key]
-            self._show_agent_full_content(agent_id)
+            self._open_agent_in_default_text_editor(agent_id)
+        elif key == 's':
+            self._open_system_status_in_default_text_editor()
         elif key == 'q':
-            # Quit/return to main view
-            self._selected_agent = None
-            self._refresh_display()
+            # Quit the application - restore terminal and stop
+            self._stop_input_thread = True
+            self._restore_terminal_settings()
+    
+    def _open_agent_in_default_text_editor(self, agent_id: str):
+        """Open agent's txt file in default text editor."""
+        if agent_id not in self.agent_files:
+            return
+        
+        file_path = self.agent_files[agent_id]
+        if not file_path.exists():
+            return
+        
+        try:
+            # Use system default application to open text files
+            if sys.platform == "darwin":  # macOS
+                subprocess.run(["open", str(file_path)], check=False)
+            elif sys.platform.startswith("linux"):  # Linux
+                subprocess.run(["xdg-open", str(file_path)], check=False)
+            elif sys.platform == "win32":  # Windows
+                subprocess.run(["start", str(file_path)], check=False, shell=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to external app method
+            self._open_agent_in_external_app(agent_id)
+
+    def _open_agent_in_vscode_new_window(self, agent_id: str):
+        """Open agent's txt file in a new VS Code window."""
+        if agent_id not in self.agent_files:
+            return
+        
+        file_path = self.agent_files[agent_id]
+        if not file_path.exists():
+            return
+        
+        try:
+            # Force open in new VS Code window
+            subprocess.run(["code", "--new-window", str(file_path)], check=False)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to existing method if VS Code is not available
+            self._open_agent_in_external_app(agent_id)
+    
+    def _open_system_status_in_default_text_editor(self):
+        """Open system status file in default text editor."""
+        if not self.system_status_file or not self.system_status_file.exists():
+            return
+        
+        try:
+            # Use system default application to open text files
+            if sys.platform == "darwin":  # macOS
+                subprocess.run(["open", str(self.system_status_file)], check=False)
+            elif sys.platform.startswith("linux"):  # Linux
+                subprocess.run(["xdg-open", str(self.system_status_file)], check=False)
+            elif sys.platform == "win32":  # Windows
+                subprocess.run(["start", str(self.system_status_file)], check=False, shell=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to external app method
+            self._open_system_status_in_external_app()
+
+    def _open_system_status_in_vscode_new_window(self):
+        """Open system status file in a new VS Code window."""
+        if not self.system_status_file or not self.system_status_file.exists():
+            return
+        
+        try:
+            # Force open in new VS Code window
+            subprocess.run(["code", "--new-window", str(self.system_status_file)], check=False)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to existing method if VS Code is not available
+            self._open_system_status_in_external_app()
+    
+    def _open_agent_in_external_app(self, agent_id: str):
+        """Open agent's txt file in external editor or terminal viewer."""
+        if agent_id not in self.agent_files:
+            return
+        
+        file_path = self.agent_files[agent_id]
+        if not file_path.exists():
+            return
+        
+        try:
+            # Try different methods to open the file
+            if sys.platform == "darwin":  # macOS
+                # Try VS Code first, then other editors, then default text editor
+                editors = ["code", "subl", "atom", "nano", "vim", "open"]
+                for editor in editors:
+                    try:
+                        if editor == "open":
+                            subprocess.run(["open", "-a", "TextEdit", str(file_path)], check=False)
+                        else:
+                            subprocess.run([editor, str(file_path)], check=False)
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        continue
+            elif sys.platform.startswith("linux"):  # Linux
+                # Try common Linux editors
+                editors = ["code", "gedit", "kate", "nano", "vim", "xdg-open"]
+                for editor in editors:
+                    try:
+                        subprocess.run([editor, str(file_path)], check=False)
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        continue
+            elif sys.platform == "win32":  # Windows
+                # Try Windows editors
+                editors = ["code", "notepad++", "notepad"]
+                for editor in editors:
+                    try:
+                        subprocess.run([editor, str(file_path)], check=False, shell=True)
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        continue
+                        
+        except Exception:
+            # If all else fails, show a message that the file exists
+            pass
+    
+    def _open_system_status_in_external_app(self):
+        """Open system status file in external editor or terminal viewer."""
+        if not self.system_status_file or not self.system_status_file.exists():
+            return
+        
+        try:
+            # Try different methods to open the file
+            if sys.platform == "darwin":  # macOS
+                # Try VS Code first, then other editors, then default text editor
+                editors = ["code", "subl", "atom", "nano", "vim", "open"]
+                for editor in editors:
+                    try:
+                        if editor == "open":
+                            subprocess.run(["open", "-a", "TextEdit", str(self.system_status_file)], check=False)
+                        else:
+                            subprocess.run([editor, str(self.system_status_file)], check=False)
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        continue
+            elif sys.platform.startswith("linux"):  # Linux
+                # Try common Linux editors
+                editors = ["code", "gedit", "kate", "nano", "vim", "xdg-open"]
+                for editor in editors:
+                    try:
+                        subprocess.run([editor, str(self.system_status_file)], check=False)
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        continue
+            elif sys.platform == "win32":  # Windows
+                # Try Windows editors
+                editors = ["code", "notepad++", "notepad"]
+                for editor in editors:
+                    try:
+                        subprocess.run([editor, str(self.system_status_file)], check=False, shell=True)
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError):
+                        continue
+                        
+        except Exception:
+            # If all else fails, show a message that the file exists
+            pass
     
     def _show_agent_full_content(self, agent_id: str):
         """Display full content of selected agent from txt file."""
@@ -430,6 +724,9 @@ class RichTerminalDisplay(TerminalDisplay):
         """Show agent selector and handle user input."""
         if not self._interactive_mode or not hasattr(self, '_agent_keys'):
             return
+        
+        # Ensure clean keyboard state before starting agent selector
+        self._ensure_clean_keyboard_state()
         
         while True:
             # Display available options
@@ -536,10 +833,10 @@ class RichTerminalDisplay(TerminalDisplay):
         if not agent_content:
             content_text.append("No activity yet...", style=self.colors['text'])
         else:
-             for line in agent_content[-max_lines:]:
-                  formatted_line = self._format_content_line(line)
-                  content_text.append(formatted_line)
-                  content_text.append("\n")
+            for line in agent_content[-max_lines:]:
+                formatted_line = self._format_content_line(line)
+                content_text.append(formatted_line)
+                content_text.append("\n")
         
         # Status indicator
         status_emoji = self._get_status_emoji(status, activity)
@@ -901,9 +1198,13 @@ class RichTerminalDisplay(TerminalDisplay):
         
         # Interactive mode instructions
         if self._interactive_mode and hasattr(self, '_agent_keys'):
-            footer_content.append("🎮 Interactive: Press 1-", style=self.colors['primary'])
-            footer_content.append(f"{len(self.agent_ids)} to view agent details, 's' for system status, 'q' to return", style=self.colors['text'])
-            footer_content.append(f"\n📂 Output files saved in: {self.output_dir}/", style=self.colors['info'])
+            if self._safe_keyboard_mode:
+                footer_content.append("📂 Safe Mode: Keyboard disabled to prevent rendering issues\n", style=self.colors['warning'])
+                footer_content.append(f"Output files saved in: {self.output_dir}/", style=self.colors['info'])
+            else:
+                footer_content.append("🎮 Live Mode Hotkeys: Press 1-", style=self.colors['primary'])
+                footer_content.append(f"{len(self.agent_ids)} to open agent files in editor, 's' for system status, 'q' to quit", style=self.colors['text'])
+                footer_content.append(f"\n📂 Output files saved in: {self.output_dir}/", style=self.colors['info'])
         
         return Panel(
             footer_content,
@@ -1372,7 +1673,7 @@ class RichTerminalDisplay(TerminalDisplay):
         
         self.console.print("\n")
 
-        # Display selected agent's final provided answer with flush output
+        # Display selected agent's final provided answer directly without flush
         if selected_agent:
             selected_agent_answer = self._get_selected_agent_final_answer(selected_agent)
             if selected_agent_answer:
@@ -1388,13 +1689,13 @@ class RichTerminalDisplay(TerminalDisplay):
                 )
                 self.console.print(header_panel)
                 
-                # Stream the answer with flush output (if enabled)
-                if self._enable_flush_output:
-                    self._display_answer_with_flush(selected_agent_answer)
-                else:
-                    # Display immediately without flush effect
-                    answer_text = Text(selected_agent_answer, style=self.colors['text'])
-                    self.console.print(answer_text)
+                # Display immediately without any flush effect
+                answer_panel = Panel(
+                    Text(selected_agent_answer, style=self.colors['text']),
+                    border_style=self.colors['border'],
+                    box=ROUNDED
+                )
+                self.console.print(answer_panel)
                 self.console.print("\n")
 
         # Display final presentation immediately after voting results
@@ -1407,8 +1708,8 @@ class RichTerminalDisplay(TerminalDisplay):
         #         error_text = Text(f"❌ Error getting final presentation: {e}", style=self.colors['error'])
         #         self.console.print(error_text)
         
-        # Show interactive options for viewing agent details
-        if self._interactive_mode and hasattr(self, '_agent_keys'):
+        # Show interactive options for viewing agent details (only if not in safe mode)
+        if self._interactive_mode and hasattr(self, '_agent_keys') and not self._safe_keyboard_mode:
             self.show_agent_selector()
     
     
@@ -1710,6 +2011,17 @@ class RichTerminalDisplay(TerminalDisplay):
             if self.live:
                 self.live.stop()
                 self.live = None
+            
+            # Stop input thread if active
+            self._stop_input_thread = True
+            if self._input_thread and self._input_thread.is_alive():
+                try:
+                    self._input_thread.join(timeout=1.0)
+                except:
+                    pass
+            
+            # Restore terminal settings
+            self._restore_terminal_settings()
             
             # Stop keyboard handler if active
             if self._key_handler:

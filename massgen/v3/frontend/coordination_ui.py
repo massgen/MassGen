@@ -21,7 +21,7 @@ class CoordinationUI:
                  logger: Optional[RealtimeLogger] = None,
                  display_type: str = "terminal",
                  logging_enabled: bool = True,
-                 enable_final_presentation: bool = True,
+                 enable_final_presentation: bool = False,
                  **kwargs):
         """Initialize coordination UI.
         
