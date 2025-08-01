@@ -21,7 +21,7 @@ class CoordinationUI:
                  logger: Optional[RealtimeLogger] = None,
                  display_type: str = "terminal",
                  logging_enabled: bool = True,
-                 enable_final_presentation: bool = False,
+                 enable_final_presentation: bool = True,
                  **kwargs):
         """Initialize coordination UI.
         
@@ -217,10 +217,10 @@ class CoordinationUI:
             # Use orchestrator's clean answer if available, otherwise fall back to presentation
             final_result = orchestrator_final_answer if orchestrator_final_answer else (final_answer if final_answer else full_response)
             if final_result:
-                print(f"\n🎯 FINAL COORDINATED ANSWER")
-                print("=" * 80)
-                print(f"{final_result.strip()}")
-                print("=" * 80)
+                # print(f"\n🎯 FINAL COORDINATED ANSWER")
+                # print("=" * 80)
+                # print(f"{final_result.strip()}")
+                # print("=" * 80)
                 
                 # Show which agent was selected
                 if selected_agent:

@@ -15,6 +15,7 @@ import select
 import tty
 import termios
 import subprocess
+import signal
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
@@ -106,10 +107,14 @@ class RichTerminalDisplay(TerminalDisplay):
         # Initialize Rich console and detect terminal dimensions
         self.console = Console(force_terminal=True, legacy_windows=False)
         self.terminal_size = self.console.size
-        # Fixed column width calculation - divide terminal width evenly among agents
+        # Dynamic column width calculation - will be updated on resize
         self.num_agents = len(agent_ids)
         self.fixed_column_width = max(20, self.terminal_size.width // self.num_agents - 1)
         self.agent_panel_height = max(10, self.terminal_size.height - 13)  # Reserve space for header(5) + footer(8)
+        
+        # Terminal resize handling
+        self._resize_lock = threading.Lock()
+        self._setup_resize_handler()
         
         self.live = None
         self._lock = threading.RLock()
@@ -167,8 +172,8 @@ class RichTerminalDisplay(TerminalDisplay):
         
         # Message filtering settings - tool content always important
         self._important_content_types = {"presentation", "status", "tool", "error"}
-        self._status_change_keywords = {"completed", "failed", "waiting", "error", "voted", "voting", "tool"}
-        self._important_event_keywords = {"completed", "failed", "voting", "voted", "final", "error", "started", "coordination", "tool"}
+        self._status_change_keywords = {"completed", "failed", "waiting", "error", "voted", "voting", "tool", "vote recorded"}
+        self._important_event_keywords = {"completed", "failed", "voting", "voted", "final", "error", "started", "coordination", "tool", "vote recorded"}
         
         # Status jump mechanism for web search interruption
         self._status_jump_enabled = kwargs.get('enable_status_jump', True)  # Enable jumping to latest status
@@ -192,6 +197,75 @@ class RichTerminalDisplay(TerminalDisplay):
         self._max_buffer_length = 500  # Maximum buffer size before forcing flush
         self._buffer_timeout = 1.0  # Timeout in seconds before forcing buffer flush
         self._buffer_timers = {agent_id: None for agent_id in agent_ids}
+    
+    def _setup_resize_handler(self):
+        """Setup SIGWINCH signal handler for terminal resize detection."""
+        if not sys.stdin.isatty():
+            return  # Skip if not running in a terminal
+        
+        try:
+            # Set up signal handler for SIGWINCH (window change)
+            signal.signal(signal.SIGWINCH, self._handle_resize_signal)
+        except (AttributeError, OSError):
+            # SIGWINCH might not be available on all platforms
+            pass
+    
+    def _handle_resize_signal(self, signum, frame):
+        """Handle SIGWINCH signal when terminal is resized."""
+        # Use a separate thread to handle resize to avoid signal handler restrictions
+        threading.Thread(target=self._handle_terminal_resize, daemon=True).start()
+    
+    def _handle_terminal_resize(self):
+        """Handle terminal resize by recalculating layout and refreshing display."""
+        with self._resize_lock:
+            try:
+                # Get new terminal size
+                new_size = self.console.size
+                
+                # Check if size actually changed
+                if (new_size.width != self.terminal_size.width or 
+                    new_size.height != self.terminal_size.height):
+                    
+                    # Update stored terminal size
+                    old_size = self.terminal_size
+                    self.terminal_size = new_size
+                    
+                    # Recalculate layout dimensions
+                    self._recalculate_layout()
+                    
+                    # Clear all caches to force refresh
+                    self._invalidate_display_cache()
+                    
+                    # Force a complete display update
+                    with self._lock:
+                        # Mark all components for update
+                        self._pending_updates.add('header')
+                        self._pending_updates.add('footer')
+                        self._pending_updates.update(self.agent_ids)
+                        
+                        # Schedule immediate update
+                        self._schedule_async_update(force_update=True)
+                    
+                    # Small delay to allow display to stabilize
+                    time.sleep(0.1)
+                    
+            except Exception:
+                # Silently handle errors to avoid disrupting the application
+                pass
+    
+    def _recalculate_layout(self):
+        """Recalculate layout dimensions based on current terminal size."""
+        # Recalculate column width
+        self.fixed_column_width = max(20, self.terminal_size.width // self.num_agents - 1)
+        
+        # Recalculate panel height (reserve space for header and footer)
+        self.agent_panel_height = max(10, self.terminal_size.height - 13)
+    
+    def _invalidate_display_cache(self):
+        """Invalidate all cached display components to force refresh."""
+        self._agent_panels_cache.clear()
+        self._header_cache = None
+        self._footer_cache = None
     
     def _setup_agent_files(self):
         """Setup individual txt files for each agent and system status file."""
@@ -2023,6 +2097,12 @@ class RichTerminalDisplay(TerminalDisplay):
             # Restore terminal settings
             self._restore_terminal_settings()
             
+            # Remove resize signal handler
+            try:
+                signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            except (AttributeError, OSError):
+                pass
+            
             # Stop keyboard handler if active
             if self._key_handler:
                 try:
@@ -2144,7 +2224,7 @@ class RichTerminalDisplay(TerminalDisplay):
             # Update display with new layout
             self._update_display_safe()
             
-        except Exception as e:
+        except Exception:
             # Silently handle errors to avoid disrupting display
             pass
     
