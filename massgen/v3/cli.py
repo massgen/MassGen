@@ -221,7 +221,10 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
     messages = history.copy()
     messages.append({"role": "user", "content": question})
     
-    if len(agents) == 1:
+    # Check if we should use orchestrator for single agents (default: False for backward compatibility)
+    use_orchestrator_for_single = ui_config.get('use_orchestrator_for_single_agent', True)
+    
+    if len(agents) == 1 and not use_orchestrator_for_single:
         # Single agent mode with history
         agent = next(iter(agents.values()))
         print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}")
@@ -282,7 +285,10 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
 
 async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]) -> str:
     """Run MassGen with a single question."""
-    if len(agents) == 1:
+    # Check if we should use orchestrator for single agents (default: False for backward compatibility)
+    use_orchestrator_for_single = ui_config.get('use_orchestrator_for_single_agent', True)
+    
+    if len(agents) == 1 and not use_orchestrator_for_single:
         # Single agent mode with existing SimpleDisplay frontend
         agent = next(iter(agents.values()))
         
@@ -337,7 +343,11 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
         backend_name = agent.backend.__class__.__name__.replace('Backend', '')
         print(f"   • {agent_id}: {backend_name}")
     
-    mode = "Single Agent" if len(agents) == 1 else "Multi-Agent Coordination"
+    use_orchestrator_for_single = ui_config.get('use_orchestrator_for_single_agent', True)
+    if len(agents) == 1:
+        mode = "Single Agent (Orchestrator)" if use_orchestrator_for_single else "Single Agent (Direct)"
+    else:
+        mode = "Multi-Agent Coordination"
     print(f"   Mode: {mode}")
     print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}")
     
@@ -377,7 +387,12 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                     elif command == '/status':
                         print(f"\n{BRIGHT_CYAN}📊 Current Status:{RESET}")
                         print(f"   Agents: {len(agents)} ({', '.join(agents.keys())})")
-                        print(f"   Mode: {'Single Agent' if len(agents) == 1 else 'Multi-Agent'}")
+                        use_orch_single = ui_config.get('use_orchestrator_for_single_agent', True)
+                        if len(agents) == 1:
+                            mode_display = "Single Agent (Orchestrator)" if use_orch_single else "Single Agent (Direct)"
+                        else:
+                            mode_display = "Multi-Agent"
+                        print(f"   Mode: {mode_display}")
                         print(f"   History: {len(conversation_history)//2} exchanges")
                         continue
                     else:

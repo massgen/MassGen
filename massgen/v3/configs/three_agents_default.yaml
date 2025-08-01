@@ -2,15 +2,15 @@
 # Claude Haiku, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
 
 agents:
-  - id: "claude_agent"
+  - id: "4o"
     backend:
-      type: "claude"
-      model: "claude-3-5-haiku-latest"
+      type: "openai"
+      model: "gpt-4o"
       enable_web_search: true
       enable_code_execution: true
     system_message: "You are a helpful AI assistant with web search and code execution capabilities."
 
-  - id: "openai_agent"
+  - id: "4omini"
     backend:
       type: "openai"
       model: "gpt-4o-mini"
@@ -18,7 +18,7 @@ agents:
       enable_code_interpreter: true
     system_message: "You are a helpful AI assistant with web search and code execution capabilities."
 
-  - id: "grok_agent"
+  - id: "grok3mini"
     backend:
       type: "grok"
       model: "grok-3-mini"

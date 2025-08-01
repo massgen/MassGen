@@ -33,7 +33,7 @@ If the CURRENT ANSWERS are incomplete, incorrect, or not fully address the ORIGI
 
 Your new answer must be self-contained, process-complete, well-sourced, and compelling—ready to serve as the final reply.
 
-**Important**: Be sure to actually call the `new_answer` tool to submit your new answer (use native tool recall format, don't return XML).
+**Important**: Be sure to actually call the `new_answer` tool to submit your new answer (use native tool call format).
 
 *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
 For any time-sensitive requests, use the search tool (if available) rather than relying on prior knowledge."""
@@ -41,7 +41,9 @@ For any time-sensitive requests, use the search tool (if available) rather than 
         return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
 
 If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
-Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call one of the two tools (in tool recall format, don't return XML).
+Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
+
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
 """
     
     # =============================================================================
