@@ -1572,7 +1572,7 @@ class RichTerminalDisplay(TerminalDisplay):
         
         # Add a status jump indicator only if content was actually truncated
         if len(web_search_lines) > self._max_web_search_lines:
-            self.agent_outputs[agent_id].append("⚡ Status updated - jumped to latest")
+            self.agent_outputs[agent_id].append("⚡  Status updated - jumped to latest")
     
     def _is_code_content(self, content: str) -> bool:
         """Check if content appears to be code."""

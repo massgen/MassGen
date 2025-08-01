@@ -580,26 +580,10 @@ class CoordinationUI:
                 self.display.show_final_answer(clean_content)
     
     def _print_with_flush(self, content: str):
-        """Print content with flush timing that matches rich_terminal_display."""
-        import sys
-        
+        """Print content chunks directly without character-by-character flushing."""
         try:
-            # Display character by character with timing matching rich display
-            for i, char in enumerate(content):
-                # Print character
-                print(char, end="", flush=True)
-                
-                # Add delays for natural reading rhythm (same as rich display)
-                if char in [' ', ',', ';']:
-                    time.sleep(self._flush_word_delay)
-                elif char in ['.', '!', '?', ':']:
-                    time.sleep(self._flush_word_delay * 2)
-                else:
-                    time.sleep(self._flush_char_delay)
-                    
-        except KeyboardInterrupt:
-            # If user interrupts, show the complete content immediately
-            print(f"\n{content}")
+            # Display the entire chunk immediately
+            print(content, end='', flush=True)
         except Exception:
             # On any error, fallback to immediate display
             print(content, end='', flush=True)
