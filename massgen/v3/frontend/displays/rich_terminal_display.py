@@ -1282,7 +1282,7 @@ class RichTerminalDisplay(TerminalDisplay):
         
         return Panel(
             footer_content,
-            title="[bold]System Status[/bold]",
+            title="[bold]System Status [Press s][/bold]",
             border_style=self.colors['border'],
             box=ROUNDED
         )
