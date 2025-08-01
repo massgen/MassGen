@@ -78,6 +78,9 @@ class RichTerminalDisplay(TerminalDisplay):
                 - enable_status_jump: Enable jumping to latest status when agent status changes (default: True)
                 - truncate_web_search_on_status_change: Truncate web search content when status changes (default: True)
                 - max_web_search_lines_on_status_change: Max web search lines to keep on status changes (default: 3)
+                - enable_flush_output: Enable flush output for final answer display (default: True)
+                - flush_char_delay: Delay between characters in flush output (default: 0.03)
+                - flush_word_delay: Extra delay after punctuation in flush output (default: 0.08)
         """
         if not RICH_AVAILABLE:
             raise ImportError(
@@ -163,6 +166,11 @@ class RichTerminalDisplay(TerminalDisplay):
         self._web_search_truncate_on_status_change = kwargs.get('truncate_web_search_on_status_change', True)  # Truncate web search content on status changes
         self._max_web_search_lines = kwargs.get('max_web_search_lines_on_status_change', 3)  # Maximum lines to keep from web search when status changes
         
+        # Flush output configuration for final answer display
+        self._enable_flush_output = kwargs.get('enable_flush_output', True)  # Enable flush output for final answer
+        self._flush_char_delay = kwargs.get('flush_char_delay', 0.03)  # Delay between characters
+        self._flush_word_delay = kwargs.get('flush_word_delay', 0.08)  # Extra delay after punctuation
+        
         # File-based output system
         self.output_dir = kwargs.get('output_dir', 'agent_outputs')
         self.agent_files = {}
@@ -170,10 +178,8 @@ class RichTerminalDisplay(TerminalDisplay):
         self._selected_agent = None
         self._setup_agent_files()
         
-        # Text buffering system to accumulate chunks into complete sentences
+        # Text buffering system to accumulate chunks
         self._text_buffers = {agent_id: "" for agent_id in agent_ids}
-        self._sentence_terminators = {'.', '!', '?', '\n', ':', ';'}
-        self._min_buffer_length = 200  # Increased minimum characters before forcing output
         self._max_buffer_length = 500  # Maximum buffer size before forcing flush
         self._buffer_timeout = 1.0  # Timeout in seconds before forcing buffer flush
         self._buffer_timers = {agent_id: None for agent_id in agent_ids}
@@ -950,7 +956,7 @@ class RichTerminalDisplay(TerminalDisplay):
             self._schedule_async_update(force_update=force_immediate)
     
     def _process_content_with_buffering(self, agent_id: str, content: str, content_type: str):
-        """Process content with buffering to accumulate text into complete sentences."""
+        """Process content with buffering to accumulate text chunks."""
         # Cancel any existing buffer timer
         if self._buffer_timers.get(agent_id):
             self._buffer_timers[agent_id].cancel()
@@ -972,73 +978,17 @@ class RichTerminalDisplay(TerminalDisplay):
                     self.agent_outputs[agent_id].append(content.strip())
             return
         
-        
         # Add content to buffer
         self._text_buffers[agent_id] += content
         buffer = self._text_buffers[agent_id]
         
-        # Check if buffer exceeds maximum length
+        # Simple buffer management - flush when buffer gets too long or after timeout
         if len(buffer) >= self._max_buffer_length:
-            self._flush_buffer_intelligently(agent_id)
+            self._flush_buffer(agent_id)
             return
         
-        # Check for sentence terminators
-        has_complete_sentence = False
-        for terminator in self._sentence_terminators:
-            if terminator in buffer:
-                # Find the last occurrence of the terminator
-                last_index = buffer.rfind(terminator)
-                if last_index != -1 and last_index < len(buffer) - 1:
-                    has_complete_sentence = True
-                    break
-        
-        # If we have complete sentences, extract them
-        if has_complete_sentence:
-            # Look for the best break point
-            best_break = -1
-            for terminator in self._sentence_terminators:
-                idx = buffer.rfind(terminator)
-                if idx > best_break:
-                    best_break = idx
-            
-            if best_break != -1:
-                # Extract complete sentences
-                complete_text = buffer[:best_break + 1].strip()
-                remaining_text = buffer[best_break + 1:].strip()
-                
-                if complete_text:
-                    # Add the complete sentences to output
-                    self.agent_outputs[agent_id].append(complete_text)
-                    # Keep the remaining text in buffer
-                    self._text_buffers[agent_id] = remaining_text
-                    
-                    # Set a timer for the remaining content
-                    if remaining_text:
-                        self._set_buffer_timer(agent_id)
-                return
-        
-        # Check if buffer is getting long enough to warrant a break at word boundary
-        if len(buffer) >= self._min_buffer_length:
-            # Special handling for search queries and similar patterns
-            search_patterns = ["Search Query:", "Searching for:", "Looking for:", "Query:", "[Search Query]"]
-            is_search_query = any(pattern in buffer for pattern in search_patterns)
-            
-            if is_search_query:
-                # For search queries, check if we have a complete query
-                # Look for quotes or other delimiters that might indicate end of query
-                if buffer.count('"') >= 2 or buffer.endswith("'") or len(buffer) >= self._max_buffer_length:
-                    # We likely have a complete search query
-                    self._flush_buffer_intelligently(agent_id)
-                else:
-                    # Wait for more content or timeout
-                    self._set_buffer_timer(agent_id)
-                return
-            
-            # Try to find a natural break point
-            self._flush_buffer_intelligently(agent_id)
-        else:
-            # Set a timer to flush the buffer if no more content arrives
-            self._set_buffer_timer(agent_id)
+        # Set a timer to flush the buffer if no more content arrives
+        self._set_buffer_timer(agent_id)
     
     def _flush_buffer(self, agent_id: str):
         """Flush the buffer for a specific agent."""
@@ -1053,64 +1003,6 @@ class RichTerminalDisplay(TerminalDisplay):
             self._buffer_timers[agent_id].cancel()
             self._buffer_timers[agent_id] = None
     
-    def _flush_buffer_intelligently(self, agent_id: str):
-        """Flush buffer at a natural break point (word boundary)."""
-        buffer = self._text_buffers[agent_id]
-        if not buffer:
-            return
-
-        # Normalize buffer to avoid awkward line breaks
-        buffer = self._normalize_buffer(buffer)
-
-        # Avoid flushing if buffer breaks numbers or short tokens
-        if self._is_bad_split(buffer):
-            self._set_buffer_timer(agent_id)
-            return
-
-        # Try to find a good break point
-        break_points = [
-            (buffer.rfind('. '), 2),
-            (buffer.rfind('! '), 2),
-            (buffer.rfind('? '), 2),
-            (buffer.rfind(', '), 2),
-            (buffer.rfind(': '), 2),
-            (buffer.rfind('; '), 2),
-            (buffer.rfind(' '), 1),
-        ]
-
-        best_break = -1
-        best_offset = 0
-        midpoint = len(buffer) // 2
-
-        for break_idx, offset in break_points:
-            if break_idx > midpoint and break_idx > best_break:
-                best_break = break_idx
-                best_offset = offset
-
-        if best_break > 0:
-            complete_text = buffer[:best_break + best_offset].strip()
-            remaining_text = buffer[best_break + best_offset:].strip()
-        else:
-            complete_text = buffer.strip()
-            remaining_text = ""
-
-        if complete_text:
-            self.agent_outputs[agent_id].append(complete_text)
-
-        self._text_buffers[agent_id] = remaining_text
-
-        if remaining_text:
-            self._set_buffer_timer(agent_id)
-
-    def _normalize_buffer(self, buffer: str) -> str:
-        """Remove unnecessary line breaks that split sentences unnaturally."""
-        # Replace single newlines with space, but preserve paragraph breaks (double newlines)
-        return re.sub(r'(?<!\n)\n(?!\n)', ' ', buffer)
-
-    def _is_bad_split(self, buffer: str) -> bool:
-        """Avoid flushing buffer if it likely splits numbers or named entities."""
-        # Avoid breaking between digits like '2025\n2' or 'August\n2'
-        return bool(re.search(r'\d+\n+\d+', buffer)) or bool(re.search(r'\w+\n+\d{1,2}', buffer))
     
     def _set_buffer_timer(self, agent_id: str):
         """Set a timer to flush the buffer after a timeout."""
@@ -1480,8 +1372,33 @@ class RichTerminalDisplay(TerminalDisplay):
         
         self.console.print("\n")
 
+        # Display selected agent's final provided answer with flush output
+        if selected_agent:
+            selected_agent_answer = self._get_selected_agent_final_answer(selected_agent)
+            if selected_agent_answer:
+                # Create header for the final answer
+                header_text = Text()
+                header_text.append(f"📝 {selected_agent}'s Final Provided Answer:", style=self.colors['primary'])
+                
+                header_panel = Panel(
+                    header_text,
+                    title=f"[bold]{selected_agent.upper()} Final Answer[/bold]",
+                    border_style=self.colors['primary'],
+                    box=ROUNDED
+                )
+                self.console.print(header_panel)
+                
+                # Stream the answer with flush output (if enabled)
+                if self._enable_flush_output:
+                    self._display_answer_with_flush(selected_agent_answer)
+                else:
+                    # Display immediately without flush effect
+                    answer_text = Text(selected_agent_answer, style=self.colors['text'])
+                    self.console.print(answer_text)
+                self.console.print("\n")
+
         # Display final presentation immediately after voting results
-        self._show_orchestrator_final_presentation(selected_agent, vote_results)
+        # self._show_orchestrator_final_presentation(selected_agent, vote_results)
         # if selected_agent and hasattr(self, 'orchestrator') and self.orchestrator:
         #     try:
         #         self._show_orchestrator_final_presentation(selected_agent, vote_results)
@@ -1494,6 +1411,124 @@ class RichTerminalDisplay(TerminalDisplay):
         if self._interactive_mode and hasattr(self, '_agent_keys'):
             self.show_agent_selector()
     
+    
+    def _display_answer_with_flush(self, answer: str):
+        """Display answer with flush output effect - streaming character by character."""
+        import time
+        import sys
+        
+        # Use configurable delays
+        char_delay = self._flush_char_delay
+        word_delay = self._flush_word_delay
+        line_delay = 0.2   # Delay at line breaks
+        
+        try:
+            # Split answer into lines to handle multi-line text properly
+            lines = answer.split('\n')
+            
+            for line_idx, line in enumerate(lines):
+                if not line.strip():
+                    # Empty line - just print newline and continue
+                    self.console.print()
+                    continue
+                
+                # Display this line character by character
+                for i, char in enumerate(line):
+                    # Print character with style, using end='' to stay on same line
+                    styled_char = Text(char, style=self.colors['text'])
+                    self.console.print(styled_char, end="", highlight=False)
+                    
+                    # Flush immediately for real-time effect
+                    sys.stdout.flush()
+                    
+                    # Add delays for natural reading rhythm
+                    if char in [' ', ',', ';']:
+                        time.sleep(word_delay)
+                    elif char in ['.', '!', '?', ':']:
+                        time.sleep(word_delay * 2)
+                    else:
+                        time.sleep(char_delay)
+                
+                # Add newline at end of line (except for last line which might not need it)
+                if line_idx < len(lines) - 1:
+                    self.console.print()  # Newline
+                    time.sleep(line_delay)
+            
+            # Final newline
+            self.console.print()
+            
+        except KeyboardInterrupt:
+            # If user interrupts, show the complete answer immediately
+            self.console.print(f"\n{Text(answer, style=self.colors['text'])}")
+        except Exception:
+            # On any error, fallback to immediate display
+            self.console.print(Text(answer, style=self.colors['text']))
+    
+    def _get_selected_agent_final_answer(self, selected_agent: str) -> str:
+        """Get the final provided answer from the selected agent."""
+        if not selected_agent:
+            return ""
+        
+        # First, try to get the answer from orchestrator's stored state
+        try:
+            if hasattr(self, 'orchestrator') and self.orchestrator:
+                status = self.orchestrator.get_status()
+                if hasattr(self.orchestrator, 'agent_states') and selected_agent in self.orchestrator.agent_states:
+                    stored_answer = self.orchestrator.agent_states[selected_agent].answer
+                    if stored_answer:
+                        # Clean up the stored answer
+                        return stored_answer.replace('\\', '\n').replace('**', '').strip()
+                
+                # Alternative: try getting from status
+                if 'agent_states' in status and selected_agent in status['agent_states']:
+                    agent_state = status['agent_states'][selected_agent]
+                    if hasattr(agent_state, 'answer') and agent_state.answer:
+                        return agent_state.answer.replace('\\', '\n').replace('**', '').strip()
+                    elif isinstance(agent_state, dict) and 'answer' in agent_state:
+                        return agent_state['answer'].replace('\\', '\n').replace('**', '').strip()
+        except:
+            pass
+        
+        # Fallback: extract from agent outputs
+        if selected_agent not in self.agent_outputs:
+            return ""
+        
+        agent_output = self.agent_outputs[selected_agent]
+        if not agent_output:
+            return ""
+        
+        # Look for the most recent meaningful answer content
+        answer_lines = []
+        
+        # Scan backwards through the output to find the most recent answer
+        for line in reversed(agent_output):
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Skip status indicators and tool outputs
+            if any(marker in line for marker in ["⚡", "🔄", "✅", "🗳️", "❌", "voted", "🔧", "status"]):
+                continue
+            
+            # Stop at voting/coordination markers - we want the answer before voting
+            if any(marker in line.lower() for marker in ["final coordinated", "coordination", "voting"]):
+                break
+            
+            # Collect meaningful content
+            answer_lines.insert(0, line)
+            
+            # Stop when we have enough content or hit a natural break
+            if len(answer_lines) >= 10 or len('\n'.join(answer_lines)) > 500:
+                break
+        
+        # Clean and return the answer
+        if answer_lines:
+            answer = '\n'.join(answer_lines).strip()
+            # Remove common formatting artifacts
+            answer = answer.replace('**', '').replace('##', '').strip()
+            return answer
+        
+        return ""
     
     def _extract_presentation_content(self, selected_agent: str) -> str:
         """Extract presentation content from the selected agent's output."""
@@ -1874,6 +1909,19 @@ class RichTerminalDisplay(TerminalDisplay):
         with self._lock:
             self._web_search_truncate_on_status_change = enabled
             self._max_web_search_lines = max_lines
+    
+    def set_flush_output(self, enabled: bool, char_delay: float = 0.03, word_delay: float = 0.08):
+        """Configure flush output settings for final answer display.
+        
+        Args:
+            enabled: Whether to enable flush output effect
+            char_delay: Delay between characters in seconds
+            word_delay: Extra delay after punctuation in seconds
+        """
+        with self._lock:
+            self._enable_flush_output = enabled
+            self._flush_char_delay = char_delay
+            self._flush_word_delay = word_delay
 
 
 # Convenience function to check Rich availability

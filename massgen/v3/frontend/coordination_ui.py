@@ -4,6 +4,7 @@ MassGen Coordination UI
 Main interface for coordinating agents with visual display and logging.
 """
 
+import time
 from typing import Optional, List, Dict, Any, AsyncGenerator
 from .displays.base_display import BaseDisplay
 from .displays.terminal_display import TerminalDisplay
@@ -150,11 +151,11 @@ class CoordinationUI:
             vote_results = status.get('vote_results', {})
             selected_agent = status.get('selected_agent')
             
-            if vote_results.get('vote_counts'):
-                self._display_vote_results(vote_results)
-                # Allow time for voting results to be visible
-                import time
-                time.sleep(1.0)
+            # if vote_results.get('vote_counts'):
+            #     self._display_vote_results(vote_results)
+            #     # Allow time for voting results to be visible
+            #     import time
+            #     time.sleep(1.0)
             
             # Get final presentation from winning agent
             if self.enable_final_presentation and selected_agent and vote_results.get('vote_counts'):
@@ -186,6 +187,8 @@ class CoordinationUI:
                                 except Exception as e:
                                     # Error processing presentation content - continue gracefully
                                     pass
+                                # Also print to console with flush for real-time output
+                                print(content, end='', flush=True)
                             else:
                                 # Simple print for non-display mode
                                 print(content, end='', flush=True)
@@ -350,11 +353,11 @@ class CoordinationUI:
             vote_results = status.get('vote_results', {})
             selected_agent = status.get('selected_agent')
             
-            if vote_results.get('vote_counts'):
-                self._display_vote_results(vote_results)
-                # Allow time for voting results to be visible
-                import time
-                time.sleep(1.0)
+            # if vote_results.get('vote_counts'):
+            #     self._display_vote_results(vote_results)
+            #     # Allow time for voting results to be visible
+            #     import time
+            #     time.sleep(1.0)
             
             # Get final presentation from winning agent
             if self.enable_final_presentation and selected_agent and vote_results.get('vote_counts'):
