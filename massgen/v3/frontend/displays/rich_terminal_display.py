@@ -114,6 +114,8 @@ class RichTerminalDisplay(TerminalDisplay):
         self.num_agents = len(agent_ids)
         self.fixed_column_width = max(20, self.terminal_size.width // self.num_agents - 1)
         self.agent_panel_height = max(10, self.terminal_size.height - 13)  # Reserve space for header(5) + footer(8)
+
+        self.orchestrator = kwargs.get("orchestrator", None)
         
         # Terminal resize handling
         self._resize_lock = threading.Lock()
@@ -155,6 +157,7 @@ class RichTerminalDisplay(TerminalDisplay):
         self._input_thread = None
         self._stop_input_thread = False
         self._original_settings = None
+        self._agent_selector_active = False  # Flag to prevent duplicate agent selector calls
         
         # Code detection patterns
         self.code_patterns = [
@@ -238,6 +241,12 @@ class RichTerminalDisplay(TerminalDisplay):
         """Handle terminal resize by recalculating layout and refreshing display."""
         with self._resize_lock:
             try:
+                # VSCode-specific resize stabilization
+                if self._terminal_performance['type'] == 'vscode':
+                    # VSCode terminal sometimes sends multiple resize events
+                    # Add delay to let resize settle
+                    time.sleep(0.05)
+                
                 # Get new terminal size
                 new_size = self.console.size
                 
@@ -248,6 +257,11 @@ class RichTerminalDisplay(TerminalDisplay):
                     # Update stored terminal size
                     old_size = self.terminal_size
                     self.terminal_size = new_size
+                    
+                    # VSCode-specific post-resize delay
+                    if self._terminal_performance['type'] == 'vscode':
+                        # Give VSCode terminal extra time to stabilize after resize
+                        time.sleep(0.02)
                     
                     # Recalculate layout dimensions
                     self._recalculate_layout()
@@ -324,6 +338,14 @@ class RichTerminalDisplay(TerminalDisplay):
                 terminal_info['performance_tier'] = 'high'
                 terminal_info['type'] = 'iterm'
                 terminal_info['supports_unicode'] = True
+            elif 'vscode' in term_program or 'code' in term_program or self._detect_vscode_terminal():
+                # VSCode integrated terminal - needs special handling for flaky behavior
+                terminal_info['performance_tier'] = 'medium'
+                terminal_info['type'] = 'vscode'
+                terminal_info['supports_unicode'] = True
+                terminal_info['buffer_size'] = 'large'  # VSCode has good buffering
+                terminal_info['needs_flush_delay'] = True  # Reduce flicker
+                terminal_info['refresh_stabilization'] = True  # Add stability delays
             elif 'apple_terminal' in term_program or term_program == 'terminal':
                 terminal_info['performance_tier'] = 'high'
                 terminal_info['type'] = 'macos_terminal'
@@ -362,17 +384,60 @@ class RichTerminalDisplay(TerminalDisplay):
             
         return terminal_info
     
+    def _detect_vscode_terminal(self):
+        """Additional VSCode terminal detection using multiple indicators."""
+        try:
+            # Check for VSCode-specific environment variables
+            vscode_indicators = [
+                'VSCODE_INJECTION',
+                'VSCODE_PID',
+                'VSCODE_IPC_HOOK',
+                'VSCODE_IPC_HOOK_CLI',
+                'TERM_PROGRAM_VERSION'
+            ]
+            
+            # Check if any VSCode-specific env vars are present
+            for indicator in vscode_indicators:
+                if os.environ.get(indicator):
+                    return True
+            
+            # Check if parent process is code or VSCode
+            try:
+                import psutil
+                current_process = psutil.Process()
+                parent = current_process.parent()
+                if parent and ('code' in parent.name().lower() or 'vscode' in parent.name().lower()):
+                    return True
+            except (ImportError, psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+            
+            # Check for common VSCode terminal patterns in environment
+            term_program = os.environ.get('TERM_PROGRAM', '').lower()
+            if term_program and any(pattern in term_program for pattern in ['code', 'vscode']):
+                return True
+                
+            return False
+        except Exception:
+            return False
+    
     def _get_adaptive_refresh_rate(self, user_override=None):
         """Get adaptive refresh rate based on terminal performance."""
         if user_override is not None:
             return user_override
             
         perf_tier = self._terminal_performance['performance_tier']
+        term_type = self._terminal_performance['type']
+        
+        # VSCode-specific optimization
+        if term_type == 'vscode':
+            # Lower refresh rate for VSCode to prevent flaky behavior
+            # VSCode terminal sometimes has rendering delays
+            return 2
         
         refresh_rates = {
-            'high': 20,     # Modern terminals
-            'medium': 10,   # Standard terminals  
-            'low': 5        # Multiplexers, SSH, legacy
+            'high': 10,     # Modern terminals
+            'medium': 5,   # Standard terminals  
+            'low': 2        # Multiplexers, SSH, legacy
         }
         
         return refresh_rates.get(perf_tier, 8)
@@ -597,6 +662,17 @@ class RichTerminalDisplay(TerminalDisplay):
             # Ensure vertical overflow is handled gracefully
             settings['vertical_overflow'] = "ellipsis"
             
+        # VSCode terminal-specific optimizations
+        if self._terminal_performance['type'] == 'vscode':
+            # VSCode terminal needs very conservative refresh to prevent flaky behavior
+            settings['refresh_per_second'] = min(settings['refresh_per_second'], 6)
+            # Use transient mode to reduce rendering artifacts
+            settings['transient'] = False
+            # Handle overflow gracefully to prevent layout issues
+            settings['vertical_overflow'] = "ellipsis"
+            # Reduce auto-refresh frequency for stability
+            settings['auto_refresh'] = True
+            
         return settings
     
     def _fallback_to_simple_display(self):
@@ -619,14 +695,19 @@ class RichTerminalDisplay(TerminalDisplay):
         return None  # No Live display
     
     def _update_display_safe(self):
-        """Safely update display with fallback support and macOS-specific synchronization."""
-        # Add extra synchronization for macOS terminals to prevent race conditions
+        """Safely update display with fallback support and terminal-specific synchronization."""
+        # Add extra synchronization for macOS terminals and VSCode to prevent race conditions
         term_type = self._terminal_performance['type']
-        use_safe_mode = term_type in ['iterm', 'macos_terminal']
+        use_safe_mode = term_type in ['iterm', 'macos_terminal', 'vscode']
+        
+        # VSCode-specific stabilization
+        if term_type == 'vscode' and self._terminal_performance.get('refresh_stabilization'):
+            # Add small delay before refresh to let VSCode terminal stabilize
+            time.sleep(0.01)
         
         try:
             if use_safe_mode:
-                # For macOS terminals, use more conservative locking
+                # For macOS terminals and VSCode, use more conservative locking
                 with self._layout_update_lock:
                     with self._lock:  # Double locking for extra safety
                         if hasattr(self, '_simple_display_mode') and self._simple_display_mode:
@@ -642,6 +723,11 @@ class RichTerminalDisplay(TerminalDisplay):
         except Exception:
             # Fallback to simple display on any error
             self._fallback_to_simple_display()
+            
+        # VSCode-specific post-refresh stabilization
+        if term_type == 'vscode' and self._terminal_performance.get('needs_flush_delay'):
+            # Small delay after refresh to prevent flicker
+            time.sleep(0.005)
     
     def _update_simple_display(self):
         """Update display in simple mode without Live."""
@@ -737,6 +823,54 @@ class RichTerminalDisplay(TerminalDisplay):
         }
         
         self.colors = themes.get(self.theme, themes['dark'])
+        
+        # VSCode terminal-specific color adjustments
+        if self._terminal_performance['type'] == 'vscode':
+            # VSCode terminal sometimes has issues with certain bright colors
+            # Use more stable color palette
+            vscode_adjustments = {
+                'primary': 'cyan',  # Less bright than bright_cyan
+                'secondary': 'blue',
+                'border': 'cyan',
+                'panel_style': 'cyan'
+            }
+            self.colors.update(vscode_adjustments)
+            
+            # Set up VSCode-safe emoji mapping for better compatibility
+            self._setup_vscode_emoji_fallbacks()
+    
+    def _setup_vscode_emoji_fallbacks(self):
+        """Setup emoji fallbacks for VSCode terminal compatibility."""
+        # VSCode terminal sometimes has issues with certain Unicode characters
+        # Provide ASCII fallbacks for better stability
+        self._emoji_fallbacks = {
+            '🚀': '>>',    # Launch/rocket
+            '🎯': '>',     # Target
+            '💭': '...',   # Thinking
+            '⚡': '!',     # Status update
+            '🎨': '*',     # Theme
+            '📝': '=',     # Writing
+            '✅': '[OK]',  # Success
+            '❌': '[X]',   # Error
+            '⭐': '*',     # Important
+            '🔍': '?',     # Search
+            '📊': '|',     # Status/data
+        }
+        
+        # Only use fallbacks if VSCode terminal has Unicode issues
+        # This can be detected at runtime if needed
+        if not self._terminal_performance.get('supports_unicode', True):
+            self._use_emoji_fallbacks = True
+        else:
+            self._use_emoji_fallbacks = False
+    
+    def _safe_emoji(self, emoji: str) -> str:
+        """Get safe emoji for current terminal, with VSCode fallbacks."""
+        if (self._terminal_performance['type'] == 'vscode' and 
+            self._use_emoji_fallbacks and 
+            emoji in self._emoji_fallbacks):
+            return self._emoji_fallbacks[emoji]
+        return emoji
     
     def initialize(self, question: str, log_filename: Optional[str] = None):
         """Initialize the rich display with question and optional log file."""
@@ -1206,41 +1340,51 @@ class RichTerminalDisplay(TerminalDisplay):
         if not self._interactive_mode or not hasattr(self, '_agent_keys'):
             return
         
+        # Prevent duplicate agent selector calls
+        if self._agent_selector_active:
+            return
+        
+        self._agent_selector_active = True
+        
         # Ensure clean keyboard state before starting agent selector
         self._ensure_clean_keyboard_state()
         
-        while True:
-            # Display available options
-            options_text = Text()
-            options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
-            
-            for key, agent_id in self._agent_keys.items():
-                options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
-            
-            options_text.append("  s: System Status\n", style=self.colors['warning'])
-            options_text.append("  q: Quit\n", style=self.colors['info'])
-            
-            self.console.print(Panel(
-                options_text,
-                title="[bold]Agent Selector[/bold]",
-                border_style=self.colors['border']
-            ))
-            
-            # Get user input
-            try:
-                choice = input("Enter your choice: ").strip().lower()
+        try:
+            while True:
+                # Display available options
+                options_text = Text()
+                options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
                 
-                if choice in self._agent_keys:
-                    self._show_agent_full_content(self._agent_keys[choice])
-                elif choice == 's':
-                    self._show_system_status()
-                elif choice == 'q':
+                for key, agent_id in self._agent_keys.items():
+                    options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
+                
+                options_text.append("  s: System Status\n", style=self.colors['warning'])
+                options_text.append("  q: Quit\n", style=self.colors['info'])
+                
+                self.console.print(Panel(
+                    options_text,
+                    title="[bold]Agent Selector[/bold]",
+                    border_style=self.colors['border']
+                ))
+                
+                # Get user input
+                try:
+                    choice = input("Enter your choice: ").strip().lower()
+                    
+                    if choice in self._agent_keys:
+                        self._show_agent_full_content(self._agent_keys[choice])
+                    elif choice == 's':
+                        self._show_system_status()
+                    elif choice == 'q':
+                        break
+                    else:
+                        self.console.print(f"[{self.colors['error']}]Invalid choice. Please try again.[/{self.colors['error']}]")
+                except KeyboardInterrupt:
+                    # Handle Ctrl+C gracefully
                     break
-                else:
-                    self.console.print(f"[{self.colors['error']}]Invalid choice. Please try again.[/{self.colors['error']}]")
-            except KeyboardInterrupt:
-                # Handle Ctrl+C gracefully
-                break
+        finally:
+            # Always reset the flag when exiting
+            self._agent_selector_active = False
     
     def _show_system_status(self):
         """Display system status from txt file."""
@@ -2056,9 +2200,8 @@ class RichTerminalDisplay(TerminalDisplay):
                         error_text = Text(f"❌ {content}", style=self.colors['error'])
                         self.console.print(error_text)
                     else:
-                        # Main presentation content with rich formatting
-                        formatted_content = self._format_presentation_content(content)
-                        self.console.print(formatted_content, end='', highlight=False)
+                        # Main presentation content with simple output
+                        self.console.print(content, end='', highlight=False)
                 
                 # Handle orchestrator query completion signals
                 if chunk_type == "done":
@@ -2167,39 +2310,40 @@ class RichTerminalDisplay(TerminalDisplay):
         self.console.print("\n")
 
         # Display selected agent's final provided answer directly without flush
-        if selected_agent:
-            selected_agent_answer = self._get_selected_agent_final_answer(selected_agent)
-            if selected_agent_answer:
-                # Create header for the final answer
-                header_text = Text()
-                header_text.append(f"📝 {selected_agent}'s Final Provided Answer:", style=self.colors['primary'])
+        # if selected_agent:
+        #     selected_agent_answer = self._get_selected_agent_final_answer(selected_agent)
+        #     if selected_agent_answer:
+        #         # Create header for the final answer
+        #         header_text = Text()
+        #         header_text.append(f"📝 {selected_agent}'s Final Provided Answer:", style=self.colors['primary'])
                 
-                header_panel = Panel(
-                    header_text,
-                    title=f"[bold]{selected_agent.upper()} Final Answer[/bold]",
-                    border_style=self.colors['primary'],
-                    box=ROUNDED
-                )
-                self.console.print(header_panel)
+        #         header_panel = Panel(
+        #             header_text,
+        #             title=f"[bold]{selected_agent.upper()} Final Answer[/bold]",
+        #             border_style=self.colors['primary'],
+        #             box=ROUNDED
+        #         )
+        #         self.console.print(header_panel)
                 
-                # Display immediately without any flush effect
-                answer_panel = Panel(
-                    Text(selected_agent_answer, style=self.colors['text']),
-                    border_style=self.colors['border'],
-                    box=ROUNDED
-                )
-                self.console.print(answer_panel)
-                self.console.print("\n")
+        #         # Display immediately without any flush effect
+        #         answer_panel = Panel(
+        #             Text(selected_agent_answer, style=self.colors['text']),
+        #             border_style=self.colors['border'],
+        #             box=ROUNDED
+        #         )
+        #         self.console.print(answer_panel)
+        #         self.console.print("\n")
 
         # Display final presentation immediately after voting results
-        # self._show_orchestrator_final_presentation(selected_agent, vote_results)
-        # if selected_agent and hasattr(self, 'orchestrator') and self.orchestrator:
-        #     try:
-        #         self._show_orchestrator_final_presentation(selected_agent, vote_results)
-        #     except Exception as e:
-        #         # Handle errors gracefully
-        #         error_text = Text(f"❌ Error getting final presentation: {e}", style=self.colors['error'])
-        #         self.console.print(error_text)
+        if selected_agent and hasattr(self, 'orchestrator') and self.orchestrator:
+            try:
+                self._show_orchestrator_final_presentation(selected_agent, vote_results)
+                # Add a small delay to ensure presentation completes before agent selector
+                time.sleep(1.0)
+            except Exception as e:
+                # Handle errors gracefully
+                error_text = Text(f"❌ Error getting final presentation: {e}", style=self.colors['error'])
+                self.console.print(error_text)
         
         # Show interactive options for viewing agent details (only if not in safe mode)
         if self._interactive_mode and hasattr(self, '_agent_keys') and not self._safe_keyboard_mode:
@@ -2418,45 +2562,53 @@ class RichTerminalDisplay(TerminalDisplay):
     
     def _show_orchestrator_final_presentation(self, selected_agent: str, vote_results: Dict[str, Any] = None):
         """Show the final presentation from the orchestrator for the selected agent."""
+        import time
+        import traceback
+        
         try:
+            
             if not hasattr(self, 'orchestrator') or not self.orchestrator:
                 return
-            
+                
             # Get the final presentation from the orchestrator
             if hasattr(self.orchestrator, 'get_final_presentation'):
-                presentation_stream = self.orchestrator.get_final_presentation(selected_agent, vote_results or {})
+                import asyncio
                 
-                # If we get a stream, display it
-                if presentation_stream:
-                    import asyncio
-                    # Check if we're in an async context
+                async def _get_and_display_presentation():
+                    """Helper to get and display presentation asynchronously."""
+                    try:
+                        presentation_stream = self.orchestrator.get_final_presentation(selected_agent, vote_results)
+                        
+                        # Display the presentation
+                        await self.display_final_presentation(selected_agent, presentation_stream, vote_results)
+                    except Exception as e:
+                        raise
+                
+                # Run the async function
+                import nest_asyncio
+                nest_asyncio.apply()
+                
+                try:
+                    # Create new event loop if needed
                     try:
                         loop = asyncio.get_running_loop()
-                        # We're in an async context, create task and wait for it
-                        task = asyncio.create_task(self.display_final_presentation(selected_agent, presentation_stream, vote_results))
-                        # Use concurrent.futures to wait for completion from non-async context
-                        import concurrent.futures
-                        
-                        # Create a future to track completion
-                        completion_future = concurrent.futures.Future()
-                        
-                        def on_task_done(task_future):
-                            try:
-                                result = task_future.result()
-                                completion_future.set_result(result)
-                            except asyncio.CancelledError:
-                                # Task was cancelled, set a specific result indicating cancellation
-                                completion_future.set_result(None)
-                            except Exception as e:
-                                completion_future.set_exception(e)
-                        
-                        task.add_done_callback(on_task_done)
-                        
-                        # Wait for the task to complete
-                        completion_future.result(timeout=30)  # 30 second timeout
                     except RuntimeError:
-                        # We're not in an async context, run it synchronously
-                        asyncio.run(self.display_final_presentation(selected_agent, presentation_stream, vote_results))
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                    
+                    # Run the coroutine and ensure it completes
+                    loop.run_until_complete(_get_and_display_presentation())
+                    # Add explicit wait to ensure presentation is fully displayed
+                    time.sleep(0.5)
+                except Exception as e:
+                    # If all else fails, try asyncio.run
+                    try:
+                        asyncio.run(_get_and_display_presentation())
+                        # Add explicit wait to ensure presentation is fully displayed
+                        time.sleep(0.5)
+                    except Exception as e2:
+                        # Last resort: show stored content
+                        self._display_final_presentation_content(selected_agent, "Unable to retrieve live presentation.")
             else:
                 # Fallback: try to get stored presentation content
                 status = self.orchestrator.get_status()
@@ -2464,11 +2616,19 @@ class RichTerminalDisplay(TerminalDisplay):
                     stored_answer = status['agent_states'][selected_agent].get('answer', '')
                     if stored_answer:
                         self._display_final_presentation_content(selected_agent, stored_answer)
-                        
+                    else:
+                        print("DEBUG: No stored answer found")
+                else:
+                    print(f"DEBUG: Agent {selected_agent} not found in agent_states")
         except Exception as e:
-            # Handle errors gracefully - show a simple message
-            error_text = Text(f"Unable to retrieve final presentation: {str(e)}", style=self.colors['warning'])
+            # Handle errors gracefully
+            error_text = Text(f"❌ Error in final presentation: {e}", style=self.colors['error'])
             self.console.print(error_text)
+                        
+        # except Exception as e:
+        #     # Handle errors gracefully - show a simple message
+        #     error_text = Text(f"Unable to retrieve final presentation: {str(e)}", style=self.colors['warning'])
+        #     self.console.print(error_text)
     
     def _force_display_final_vote_statuses(self):
         """Force display update to show all agents' final vote statuses."""

@@ -21,7 +21,7 @@ class CoordinationUI:
                  logger: Optional[RealtimeLogger] = None,
                  display_type: str = "terminal",
                  logging_enabled: bool = True,
-                 enable_final_presentation: bool = True,
+                 enable_final_presentation: bool = False,
                  **kwargs):
         """Initialize coordination UI.
         
@@ -577,7 +577,7 @@ class CoordinationUI:
                     self.display._update_display(force=True)
                     await asyncio.sleep(0.3) 
                 
-                self.display.show_final_answer(clean_content)
+                self.display.show_final_answer(clean_content, vote_results=vote_results, selected_agent=selected_agent)
     
     def _print_with_flush(self, content: str):
         """Print content chunks directly without character-by-character flushing."""

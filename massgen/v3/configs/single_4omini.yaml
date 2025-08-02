@@ -9,7 +9,7 @@ agent:
     enable_web_search: true
     enable_code_interpreter: true
     # api_key: "your-api-key-here"  # Optional, uses OPENAI_API_KEY env var
-  system_message: "You are a helpful AI assistant providing accurate and concise responses."
+    #system_message: "You are a helpful AI assistant providing accurate and concise responses."
 
 ui:
   display_type: "rich_terminal"  # Options: terminal, simple

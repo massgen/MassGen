@@ -587,9 +587,9 @@ Environment Variables:
         # Run mode based on whether question was provided
         if args.question:
             response = await run_single_question(args.question, agents, ui_config)
-            if response:
-                print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
-                print(f"{response}", flush=True)
+            # if response:
+            #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
+            #     print(f"{response}", flush=True)
         else:
             await run_interactive_mode(agents, ui_config)
         
