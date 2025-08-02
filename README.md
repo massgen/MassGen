@@ -9,7 +9,7 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
   </a>
-  <a href="https://discord.gg/VVrT2rQaz5">
+  <a href="https://discord.massgen.ai">
     <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
   </a>
 </p>
@@ -112,8 +112,6 @@ git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 pip install uv
 uv venv
-source .venv/bin/activate  # On macOS/Linux
-uv pip install -e .
 ```
 
 ### 2. 🔐 API Configuration
@@ -166,19 +164,19 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 #### Simple Usage
 ```bash
 # Multi-agent mode with specific models
-python cli.py "Which AI won IMO in 2025?" --models gemini-2.5-flash gpt-4o
+uv run python cli.py "Which AI won IMO in 2025?" --models gemini-2.5-flash gpt-4o
 
 # Single agent mode
-python cli.py "What is greatest common divisor of 238, 756, and 1512" --models gemini-2.5-flash
+uv run python cli.py "What is greatest common divisor of 238, 756, and 1512" --models gemini-2.5-flash
 ```
 
 #### Configuration File Usage
 ```bash
 # Use configuration file
-python cli.py --config examples/fast_config.yaml "find big AI news this week"
+uv run python cli.py --config examples/fast_config.yaml "find big AI news this week"
 
 # Override specific parameters
-python cli.py --config examples/fast_config.yaml "who will win World Cup 2026" --max-duration 120 --consensus 0.5
+uv run python cli.py --config examples/fast_config.yaml "who will win World Cup 2026" --max-duration 120 --consensus 0.5
 ```
 
 #### Configuration Parameters
@@ -201,13 +199,13 @@ MassGen supports an interactive mode where you can have ongoing conversations wi
 
 ```bash
 # Start interactive mode with multiple agents
-python cli.py --models gpt-4o gemini-2.5-flash grok-3-mini
+uv run python cli.py --models gpt-4o gemini-2.5-flash grok-3-mini
 
 # Start interactive mode with configuration file
-python cli.py --config examples/fast_config.yaml
+uv run python cli.py --config examples/fast_config.yaml
 
 # Interactive mode with custom parameters
-python cli.py --models gpt-4o grok-3-mini --consensus 0.7 --max-duration 600
+uv run python cli.py --models gpt-4o grok-3-mini --consensus 0.7 --max-duration 600
 ```
 
 **Interactive Mode Features:**
@@ -270,27 +268,27 @@ To see how MassGen works in practice, check out these detailed case studies base
 <!-- ### 1. 📝 Code Generation
 
 ```bash
-python cli.py --config examples/fast_config.yaml "Design a logo for MassGen (multi-agent scaling system for GenAI) GitHub README"
+uv run python cli.py --config examples/fast_config.yaml "Design a logo for MassGen (multi-agent scaling system for GenAI) GitHub README"
 ``` -->
 
 ### 1. ❓ Question Answering
 
 ```bash
 # Ask a question about a complex topic
-python cli.py --config examples/fast_config.yaml "Explain the theory of relativity in simple terms."
-python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
+uv run python cli.py --config examples/fast_config.yaml "Explain the theory of relativity in simple terms."
+uv run python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
 ```
 
 ### 2. 🧠 Creative Writing
 
 ```bash
 # Generate a short story
-python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
+uv run python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
 ```
 
 ### 3. Research
 ```bash
-python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
+uv run python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
 ---

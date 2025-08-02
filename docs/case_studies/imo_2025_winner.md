@@ -4,7 +4,7 @@ This case study showcases how MassGen (v0.0.1alpha) orchestrated a collaboration
 
 **Command:**
 ```bash
-python cli.py "Which AI won IMO 2025?" --models gemini-2.5-flash gpt-4.1
+uv run python cli.py "Which AI won IMO 2025?" --models gemini-2.5-flash gpt-4.1
 ```
 
 **Prompt:** `Which AI won IMO 2025?`
