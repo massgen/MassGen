@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to facilitate collaborative creat
 
 **Command:**
 ```bash
-python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
+uv run python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
 ```
 
 **Prompt:** `Write a short story about a robot who discovers music.`

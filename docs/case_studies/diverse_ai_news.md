@@ -4,7 +4,7 @@ This case study demonstrates how MassGen (v0.0.1alpha) handles subjective prompt
 
 **Command:**
 ```bash
-python cli.py --config examples/fast_config.yaml "find big AI news this week"
+uv run python cli.py --config examples/fast_config.yaml "find big AI news this week"
 ```
 
 **Prompt:** `find big AI news this week`

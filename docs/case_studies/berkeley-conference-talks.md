@@ -7,7 +7,7 @@ This case study demonstrates **MassGen**'s ability to handle specialized academi
 ## Command
 
 ```bash
-python cli.py --config examples/fast_config.yaml "give me all the talks on agent frameworks at Berkeley Agentic AI Summit 2025"
+uv run python cli.py --config examples/fast_config.yaml "give me all the talks on agent frameworks at Berkeley Agentic AI Summit 2025"
 ```
 
 ---
