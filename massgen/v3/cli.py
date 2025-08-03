@@ -54,6 +54,7 @@ sys.path.insert(0, str(project_root))
 from massgen.v3.backend.openai_backend import OpenAIBackend
 from massgen.v3.backend.grok_backend import GrokBackend
 from massgen.v3.backend.claude_backend import ClaudeBackend
+from massgen.v3.backend.gemini_backend import GeminiBackend
 from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.v3.agent_config import AgentConfig
 from massgen.v3.orchestrator import MassOrchestrator
@@ -117,6 +118,12 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError("Claude API key not found. Set ANTHROPIC_API_KEY or provide in config.")
         return ClaudeBackend(api_key=api_key)
     
+    elif backend_type == 'gemini':
+        api_key = kwargs.get('api_key') or os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            raise ConfigurationError("Gemini API key not found. Set GOOGLE_API_KEY or provide in config.")
+        return GeminiBackend(api_key=api_key)
+    
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
@@ -143,6 +150,10 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             )
         elif backend_type.lower() == 'grok':
             agent_config = AgentConfig.create_grok_config(
+                **{k: v for k, v in backend_config.items() if k != 'type'}
+            )
+        elif backend_type.lower() == 'gemini':
+            agent_config = AgentConfig.create_gemini_config(
                 **{k: v for k, v in backend_config.items() if k != 'type'}
             )
         else:
