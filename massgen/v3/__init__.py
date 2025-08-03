@@ -26,8 +26,8 @@ TODO - Missing Features (to be added in future releases):
 - ✅ OpenAI builtin tools support (COMPLETED - code execution and web search streaming)
 - ✅ CLI backend parameter passing (COMPLETED - proper ConfigurableAgent integration)
 - ✅ StreamChunk builtin_tool_results support (COMPLETED - separate from regular tool_calls)
+- ✅ Gemini backend support (COMPLETED - streaming with function calling and builtin tools)
 - Orchestrator final_answer_agent configuration support (MEDIUM PRIORITY)
-- Gemini backend support (LOW PRIORITY - waiting for API multi-tool support)
 - Configuration options for voting info in user messages (MEDIUM PRIORITY)
 - Enhanced frontend features from v0.0.1 (MEDIUM PRIORITY)
 - Advanced logging and monitoring capabilities
@@ -49,6 +49,8 @@ Usage:
 # Import main classes for convenience
 from .backend.response import ResponseBackend
 from .backend.claude import ClaudeBackend
+from .backend.gemini import GeminiBackend
+from .backend.grok import GrokBackend
 from .chat_agent import (
     ChatAgent, 
     SingleAgent, 
@@ -69,6 +71,8 @@ __all__ = [
     # Backends
     "ResponseBackend",
     "ClaudeBackend",
+    "GeminiBackend",
+    "GrokBackend",
     
     # Agents
     "ChatAgent",
