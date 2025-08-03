@@ -88,7 +88,7 @@ graph TB
     class A1,A2,A3,A4 agent
     class H hub
 ```
-  
+
 The system's workflow is defined by the following key principles:
 
 **Parallel Processing** - Multiple agents tackle the same task simultaneously, each leveraging their unique capabilities (different models, tools, and specialized approaches).

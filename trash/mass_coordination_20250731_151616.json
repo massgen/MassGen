@@ -1,0 +1,2161 @@
+{
+  "metadata": {
+    "start_time": "2025-07-31T15:16:16.787418",
+    "status": "in_progress",
+    "logger_version": "1.0"
+  },
+  "session": {
+    "question": "give me all the talks on agent frameworks in ODSC Agentic AI Summit 2025",
+    "agent_ids": [
+      "claude_agent",
+      "openai_agent",
+      "grok_agent"
+    ],
+    "final_answer": ""
+  },
+  "agent_outputs": {
+    "claude_agent": [
+      {
+        "timestamp": "2025-07-31T15:16:17.924445",
+        "type": "thinking",
+        "content": "I'll"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:17.960421",
+        "type": "thinking",
+        "content": " search"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.053099",
+        "type": "thinking",
+        "content": " for information"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.064347",
+        "type": "thinking",
+        "content": " about"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.100412",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.348470",
+        "type": "thinking",
+        "content": " ODSC Agen"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.358812",
+        "type": "thinking",
+        "content": "tic AI Summit 2"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.366121",
+        "type": "thinking",
+        "content": "025 and its"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.431705",
+        "type": "thinking",
+        "content": " talks on agent frameworks."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.786158",
+        "type": "thinking",
+        "content": "\n🔍 [Web Search] Starting search...\n"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:19.381869",
+        "type": "thinking",
+        "content": "🔍 [Query] 'ODSC Agentic AI Summit 2025 agent frameworks talks conference details'\n"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:19.381958",
+        "type": "thinking",
+        "content": "✅ [Web Search] Completed\n"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.141081",
+        "type": "thinking",
+        "content": "Base"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.384396",
+        "type": "thinking",
+        "content": "d on the search results"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.384926",
+        "type": "thinking",
+        "content": ", I"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.385122",
+        "type": "thinking",
+        "content": " can"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.385213",
+        "type": "thinking",
+        "content": " provide"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.398910",
+        "type": "thinking",
+        "content": " details"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.438083",
+        "type": "thinking",
+        "content": " about"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.517650",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.528917",
+        "type": "thinking",
+        "content": " OD"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.570409",
+        "type": "thinking",
+        "content": "SC"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.801360",
+        "type": "thinking",
+        "content": " Agentic AI Summit"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.807744",
+        "type": "thinking",
+        "content": " 2025"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.808302",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.935912",
+        "type": "thinking",
+        "content": "\n\n"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.413516",
+        "type": "thinking",
+        "content": "The Agentic AI Summit"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.452966",
+        "type": "thinking",
+        "content": " 2025 is"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.460861",
+        "type": "thinking",
+        "content": " a three"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.476605",
+        "type": "thinking",
+        "content": "-week"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.513323",
+        "type": "thinking",
+        "content": " virtual event"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.536926",
+        "type": "thinking",
+        "content": " running"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.607772",
+        "type": "thinking",
+        "content": " from July"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.649216",
+        "type": "thinking",
+        "content": " 16"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.671845",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.741376",
+        "type": "thinking",
+        "content": "to "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.761871",
+        "type": "thinking",
+        "content": "31"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.840844",
+        "type": "thinking",
+        "content": ", featuring"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.856992",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.897397",
+        "type": "thinking",
+        "content": " exceptional"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.006759",
+        "type": "thinking",
+        "content": " lineup of speakers"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.006863",
+        "type": "thinking",
+        "content": " driving"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.033706",
+        "type": "thinking",
+        "content": " innovation"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.105248",
+        "type": "thinking",
+        "content": " in autonomous"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.149314",
+        "type": "thinking",
+        "content": " AI."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.172414",
+        "type": "thinking",
+        "content": " The"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.218101",
+        "type": "thinking",
+        "content": " speakers"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.279055",
+        "type": "thinking",
+        "content": " include"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.307800",
+        "type": "thinking",
+        "content": " experts"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.353486",
+        "type": "thinking",
+        "content": " from"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.396148",
+        "type": "thinking",
+        "content": " companies"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.467942",
+        "type": "thinking",
+        "content": " like Google"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.512296",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.541602",
+        "type": "thinking",
+        "content": " Datab"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.644649",
+        "type": "thinking",
+        "content": "ricks, L"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.645196",
+        "type": "thinking",
+        "content": "la"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.700482",
+        "type": "thinking",
+        "content": "maIndex"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.744908",
+        "type": "thinking",
+        "content": ", Microsoft"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.785539",
+        "type": "thinking",
+        "content": ", an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.879225",
+        "type": "thinking",
+        "content": "d NVIDIA,"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.899507",
+        "type": "thinking",
+        "content": " who"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.970940",
+        "type": "thinking",
+        "content": " will guide"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.071512",
+        "type": "thinking",
+        "content": " attendees through live"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.071614",
+        "type": "thinking",
+        "content": " workshops"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.078852",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.125687",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.170816",
+        "type": "thinking",
+        "content": " design"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.242903",
+        "type": "thinking",
+        "content": ", orchest"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.341630",
+        "type": "thinking",
+        "content": "ration, and deployment"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.341717",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.459062",
+        "type": "thinking",
+        "content": "\n\nKey"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.491005",
+        "type": "thinking",
+        "content": " Talks"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.592266",
+        "type": "thinking",
+        "content": " and Frameworks"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.592416",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.651589",
+        "type": "thinking",
+        "content": "\n\n1"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.697217",
+        "type": "thinking",
+        "content": ". "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.001170",
+        "type": "thinking",
+        "content": "The summit"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.050976",
+        "type": "thinking",
+        "content": " is"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.084576",
+        "type": "thinking",
+        "content": " structure"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.124229",
+        "type": "thinking",
+        "content": "d across"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.175516",
+        "type": "thinking",
+        "content": " three"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.223407",
+        "type": "thinking",
+        "content": " weeks"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.261821",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.349157",
+        "type": "thinking",
+        "content": "\n-"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.456355",
+        "type": "thinking",
+        "content": " Week 1:"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.457801",
+        "type": "thinking",
+        "content": " Foundations"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.552875",
+        "type": "thinking",
+        "content": " of Agentic"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.553010",
+        "type": "thinking",
+        "content": " AI –"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.558279",
+        "type": "thinking",
+        "content": " Covering"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.582062",
+        "type": "thinking",
+        "content": " building"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.649979",
+        "type": "thinking",
+        "content": " blocks of"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.669915",
+        "type": "thinking",
+        "content": " autonomous"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.715296",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.819131",
+        "type": "thinking",
+        "content": ", including core"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.819232",
+        "type": "thinking",
+        "content": " architect"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:26.928717",
+        "type": "thinking",
+        "content": "ures, planning methods"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.002634",
+        "type": "thinking",
+        "content": ", memory systems, an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.004591",
+        "type": "thinking",
+        "content": "d leading"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.005396",
+        "type": "thinking",
+        "content": " development"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.067478",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.189432",
+        "type": "thinking",
+        "content": "\n- Week 2:"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.189551",
+        "type": "thinking",
+        "content": " Advanced Techniques"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.189639",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.265153",
+        "type": "thinking",
+        "content": "d Collaboration"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.357770",
+        "type": "thinking",
+        "content": " – Focusing"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.376823",
+        "type": "thinking",
+        "content": " on advance"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.397376",
+        "type": "thinking",
+        "content": "d reasoning"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.468441",
+        "type": "thinking",
+        "content": ", multi"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.537333",
+        "type": "thinking",
+        "content": "-agent coordination"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.584723",
+        "type": "thinking",
+        "content": ", tool ch"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.629677",
+        "type": "thinking",
+        "content": "aining, self"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.656180",
+        "type": "thinking",
+        "content": "-healing"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.670983",
+        "type": "thinking",
+        "content": " workflows"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.766475",
+        "type": "thinking",
+        "content": ", and emerging"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.766569",
+        "type": "thinking",
+        "content": " security"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.909926",
+        "type": "thinking",
+        "content": " challenges\n- Week "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.926835",
+        "type": "thinking",
+        "content": "3: Evaluation"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.945196",
+        "type": "thinking",
+        "content": ", Improvement"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.016059",
+        "type": "thinking",
+        "content": ", and Deployment"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.041411",
+        "type": "thinking",
+        "content": " – Concent"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.082447",
+        "type": "thinking",
+        "content": "rating on real"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.130502",
+        "type": "thinking",
+        "content": "-world applications"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.149380",
+        "type": "thinking",
+        "content": ", agent"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.176575",
+        "type": "thinking",
+        "content": " evaluation"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.244970",
+        "type": "thinking",
+        "content": ", reliability"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.333006",
+        "type": "thinking",
+        "content": ", and deployment strategies"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.449951",
+        "type": "thinking",
+        "content": "\n\nNotable"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.469840",
+        "type": "thinking",
+        "content": " Talks"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.497671",
+        "type": "thinking",
+        "content": " Include"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.563454",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.673307",
+        "type": "thinking",
+        "content": "\n- "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.839597",
+        "type": "thinking",
+        "content": "A"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.854082",
+        "type": "thinking",
+        "content": " session"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.901124",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:28.994209",
+        "type": "thinking",
+        "content": " Jo"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.038165",
+        "type": "thinking",
+        "content": "ao"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.083462",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.132384",
+        "type": "thinking",
+        "content": " CEO"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.194547",
+        "type": "thinking",
+        "content": " of Cre"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.218931",
+        "type": "thinking",
+        "content": "w"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.263931",
+        "type": "thinking",
+        "content": "A"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.383532",
+        "type": "thinking",
+        "content": "I, exploring"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.383657",
+        "type": "thinking",
+        "content": " how"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.406987",
+        "type": "thinking",
+        "content": " enterprises"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.445121",
+        "type": "thinking",
+        "content": " are"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.589304",
+        "type": "thinking",
+        "content": " using agentic AI"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.589429",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.589521",
+        "type": "thinking",
+        "content": " real"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.672610",
+        "type": "thinking",
+        "content": "-world environments"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.742936",
+        "type": "thinking",
+        "content": "\n- An"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.765682",
+        "type": "thinking",
+        "content": " introduction"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.831750",
+        "type": "thinking",
+        "content": " to agents"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.853390",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.923856",
+        "type": "thinking",
+        "content": " Pa"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.947043",
+        "type": "thinking",
+        "content": "ige"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.990457",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.042921",
+        "type": "thinking",
+        "content": " dem"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.133024",
+        "type": "thinking",
+        "content": "ystifying core"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.133131",
+        "type": "thinking",
+        "content": " concepts"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.229229",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.245392",
+        "type": "thinking",
+        "content": " autonomous"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.265383",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.307340",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.352436",
+        "type": "thinking",
+        "content": " including"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.399125",
+        "type": "thinking",
+        "content": " goal"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.449068",
+        "type": "thinking",
+        "content": " setting"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.543955",
+        "type": "thinking",
+        "content": ", tool"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.553124",
+        "type": "thinking",
+        "content": " equ"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.654183",
+        "type": "thinking",
+        "content": "ipping, and lever"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.655064",
+        "type": "thinking",
+        "content": "aging L"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.670616",
+        "type": "thinking",
+        "content": "L"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.743119",
+        "type": "thinking",
+        "content": "Ms like"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.810530",
+        "type": "thinking",
+        "content": " Gem"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.878644",
+        "type": "thinking",
+        "content": "ini for"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.912210",
+        "type": "thinking",
+        "content": " reasoning"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.945060",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.989629",
+        "type": "thinking",
+        "content": "d action"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.182707",
+        "type": "thinking",
+        "content": "\n\nSpecific"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.182822",
+        "type": "thinking",
+        "content": " Framework"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.241407",
+        "type": "thinking",
+        "content": " Talks"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.273862",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.410537",
+        "type": "thinking",
+        "content": "\n- "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.567967",
+        "type": "thinking",
+        "content": "A talk on AG"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.581240",
+        "type": "thinking",
+        "content": "2"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.625668",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.671957",
+        "type": "thinking",
+        "content": "("
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.716731",
+        "type": "thinking",
+        "content": "formerly"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.762410",
+        "type": "thinking",
+        "content": " Auto"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.807994",
+        "type": "thinking",
+        "content": "Gen"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.852327",
+        "type": "thinking",
+        "content": ")"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.923079",
+        "type": "thinking",
+        "content": " by Chi"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:31.946444",
+        "type": "thinking",
+        "content": " Wang"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.039341",
+        "type": "thinking",
+        "content": ", exploring how"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.085136",
+        "type": "thinking",
+        "content": " to build robust"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.085228",
+        "type": "thinking",
+        "content": " multi"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.198086",
+        "type": "thinking",
+        "content": "-agent systems across"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.198709",
+        "type": "thinking",
+        "content": " industries"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.216667",
+        "type": "thinking",
+        "content": " like"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.265133",
+        "type": "thinking",
+        "content": " finance"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.406020",
+        "type": "thinking",
+        "content": ", healthcare, and gaming"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.545961",
+        "type": "thinking",
+        "content": "\n- "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.676244",
+        "type": "thinking",
+        "content": "A comprehensive session on building"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.676355",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.726056",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.769603",
+        "type": "thinking",
+        "content": " from"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.808447",
+        "type": "thinking",
+        "content": " zero"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.891513",
+        "type": "thinking",
+        "content": " to deployment"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.900780",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.947316",
+        "type": "thinking",
+        "content": " using"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.989230",
+        "type": "thinking",
+        "content": " tools"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.069083",
+        "type": "thinking",
+        "content": " like L"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.080999",
+        "type": "thinking",
+        "content": "ang"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.125983",
+        "type": "thinking",
+        "content": "Graph"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.195889",
+        "type": "thinking",
+        "content": ", MongoDB"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.263942",
+        "type": "thinking",
+        "content": ", and open"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.313923",
+        "type": "thinking",
+        "content": "-source embe"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.404016",
+        "type": "thinking",
+        "content": "ddings"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.451665",
+        "type": "thinking",
+        "content": "\n\nKey Highlights"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.563424",
+        "type": "thinking",
+        "content": ":\n- "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.938538",
+        "type": "thinking",
+        "content": "The summit offers a"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:33.945323",
+        "type": "thinking",
+        "content": " hands"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.038190",
+        "type": "thinking",
+        "content": "-on learning"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.038290",
+        "type": "thinking",
+        "content": " experience"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.080517",
+        "type": "thinking",
+        "content": " focuse"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.151572",
+        "type": "thinking",
+        "content": "d on:"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.220238",
+        "type": "thinking",
+        "content": "\n- L"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.243013",
+        "type": "thinking",
+        "content": "LM"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.266832",
+        "type": "thinking",
+        "content": "-"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.309204",
+        "type": "thinking",
+        "content": "powere"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.354232",
+        "type": "thinking",
+        "content": "d agents"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.401221",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.446143",
+        "type": "thinking",
+        "content": "d scal"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.515110",
+        "type": "thinking",
+        "content": "able architecture"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.608937",
+        "type": "thinking",
+        "content": "\n- Multi"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.722236",
+        "type": "thinking",
+        "content": "-agent coordination and tool"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.766885",
+        "type": "thinking",
+        "content": " chaining\n-"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.794369",
+        "type": "thinking",
+        "content": " Reliability and security in"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.794548",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.809121",
+        "type": "thinking",
+        "content": " design"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.904322",
+        "type": "thinking",
+        "content": "\n-"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.929418",
+        "type": "thinking",
+        "content": " Evaluation techniques"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.974852",
+        "type": "thinking",
+        "content": " and building"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.989450",
+        "type": "thinking",
+        "content": " self"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.083696",
+        "type": "thinking",
+        "content": "-healing agents"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.221197",
+        "type": "thinking",
+        "content": "\n\nTarget"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.264758",
+        "type": "thinking",
+        "content": " Audience:"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.402214",
+        "type": "thinking",
+        "content": "\n"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.513411",
+        "type": "thinking",
+        "content": "The summit is designe"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.564105",
+        "type": "thinking",
+        "content": "d for technical"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.611024",
+        "type": "thinking",
+        "content": " professionals looking"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.655786",
+        "type": "thinking",
+        "content": " to move"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.681142",
+        "type": "thinking",
+        "content": " beyon"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.718185",
+        "type": "thinking",
+        "content": "d passive"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.765548",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.808493",
+        "type": "thinking",
+        "content": " tools"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.858694",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:35.901773",
+        "type": "thinking",
+        "content": " including"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.034987",
+        "type": "thinking",
+        "content": " those"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.036404",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.107003",
+        "type": "thinking",
+        "content": "\n- Deplo"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.107182",
+        "type": "thinking",
+        "content": "ying L"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.152844",
+        "type": "thinking",
+        "content": "LMs"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.171872",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.239479",
+        "type": "thinking",
+        "content": " production"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.295358",
+        "type": "thinking",
+        "content": "\n-"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.310847",
+        "type": "thinking",
+        "content": " Experim"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.447867",
+        "type": "thinking",
+        "content": "enting with multi-agent"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.471937",
+        "type": "thinking",
+        "content": " coordination\n- Machine"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.472172",
+        "type": "thinking",
+        "content": " Learning"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.491240",
+        "type": "thinking",
+        "content": " Engineers"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.541472",
+        "type": "thinking",
+        "content": " ready"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.605263",
+        "type": "thinking",
+        "content": " to architect"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.626934",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.677084",
+        "type": "thinking",
+        "content": "d deploy"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.718034",
+        "type": "thinking",
+        "content": " autonomous"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.765703",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.812861",
+        "type": "thinking",
+        "content": " that"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.859224",
+        "type": "thinking",
+        "content": " can"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.903271",
+        "type": "thinking",
+        "content": " reason"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.946282",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.997293",
+        "type": "thinking",
+        "content": " plan"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.130449",
+        "type": "thinking",
+        "content": ", and act"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.180448",
+        "type": "thinking",
+        "content": "\n\nAdditional"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.180558",
+        "type": "thinking",
+        "content": " Benefits"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.264943",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.355411",
+        "type": "thinking",
+        "content": "\n"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.407135",
+        "type": "thinking",
+        "content": "Between"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.447663",
+        "type": "thinking",
+        "content": " live"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.491424",
+        "type": "thinking",
+        "content": " sessions"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.536109",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.638922",
+        "type": "thinking",
+        "content": " attendees will"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.640424",
+        "type": "thinking",
+        "content": " have"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.673764",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.764564",
+        "type": "thinking",
+        "content": "\n-"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.764737",
+        "type": "thinking",
+        "content": " Guide"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.813808",
+        "type": "thinking",
+        "content": "d homework"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.925713",
+        "type": "thinking",
+        "content": "\n- Access"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:37.969423",
+        "type": "thinking",
+        "content": " to a"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.063483",
+        "type": "thinking",
+        "content": " Slack/"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.175248",
+        "type": "thinking",
+        "content": "Discord community\n-"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.175530",
+        "type": "thinking",
+        "content": " Certificates"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.183316",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.216210",
+        "type": "thinking",
+        "content": " demonstrate"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.263954",
+        "type": "thinking",
+        "content": " progress"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.502614",
+        "type": "thinking",
+        "content": "\n\nIf you're interested in attending"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.502807",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.502955",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.773413",
+        "type": "thinking",
+        "content": "you can get"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.773520",
+        "type": "thinking",
+        "content": " practical"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.811287",
+        "type": "thinking",
+        "content": " skills"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.854021",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.899846",
+        "type": "thinking",
+        "content": " real"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.990318",
+        "type": "thinking",
+        "content": "-world tools"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.036898",
+        "type": "thinking",
+        "content": ", and early"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.038401",
+        "type": "thinking",
+        "content": " access"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.110427",
+        "type": "thinking",
+        "content": " to AI"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.133848",
+        "type": "thinking",
+        "content": " innovation"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.175022",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.288391",
+        "type": "thinking",
+        "content": " signing up for updates"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.289762",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.326315",
+        "type": "thinking",
+        "content": "d early"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.355197",
+        "type": "thinking",
+        "content": " registration"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.547263",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.581034",
+        "type": "thinking",
+        "content": "🔁 Agent [claude_agent] gracefully restarting due to new answer detected"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.471744",
+        "type": "thinking",
+        "content": "<web"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.651372",
+        "type": "thinking",
+        "content": "_search_function"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.659308",
+        "type": "thinking",
+        "content": "_"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.660774",
+        "type": "thinking",
+        "content": "calls"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.752428",
+        "type": "thinking",
+        "content": ">"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.763032",
+        "type": "thinking",
+        "content": "\n<invoke"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.849552",
+        "type": "thinking",
+        "content": " name=\"web_search"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.888990",
+        "type": "thinking",
+        "content": "\">"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.929312",
+        "type": "thinking",
+        "content": "\n<parameter name=\"query"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:40.966267",
+        "type": "thinking",
+        "content": "\">ODSC"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.009810",
+        "type": "thinking",
+        "content": " Agentic AI Summit"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.054037",
+        "type": "thinking",
+        "content": " 2025 agent"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.059864",
+        "type": "thinking",
+        "content": " frameworks talks"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.147233",
+        "type": "thinking",
+        "content": " schedule"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.191754",
+        "type": "thinking",
+        "content": "</parameter>"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.254559",
+        "type": "thinking",
+        "content": "\n</invoke>"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.369313",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.344354",
+        "type": "thinking",
+        "content": "I"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.466252",
+        "type": "thinking",
+        "content": "'ll"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.487984",
+        "type": "thinking",
+        "content": " search"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.594401",
+        "type": "thinking",
+        "content": " for more"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.614881",
+        "type": "thinking",
+        "content": " information about"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.798092",
+        "type": "thinking",
+        "content": " the ODSC"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.798203",
+        "type": "thinking",
+        "content": " Agentic AI Summit"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.798295",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.838938",
+        "type": "thinking",
+        "content": "\n\n<web"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.878914",
+        "type": "thinking",
+        "content": "_search_function"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.931218",
+        "type": "thinking",
+        "content": "_calls>"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:42.974767",
+        "type": "thinking",
+        "content": "\n<invoke"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:43.076635",
+        "type": "thinking",
+        "content": " name=\"web_search"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:43.098351",
+        "type": "thinking",
+        "content": "\">\n<parameter name"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:43.143806",
+        "type": "thinking",
+        "content": "=\"query\">OD"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:43.149120",
+        "type": "thinking",
+        "content": "SC Open"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:43.228965",
+        "type": "thinking",
+        "content": " Data Science Conference"
+      }
+    ],
+    "openai_agent": [
+      {
+        "timestamp": "2025-07-31T15:16:21.577925",
+        "type": "thinking",
+        "content": "💡 Providing answer: \"The ODSC Agentic AI Summit 2025 will feature a variety of talks centered around agent frameworks. As...\""
+      },
+      {
+        "timestamp": "2025-07-31T15:16:21.674459",
+        "type": "thinking",
+        "content": "[openai_agent] ✅ Answer provided"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.200020",
+        "type": "thinking",
+        "content": "🗳️ Voting for agent1: The answer provides a valid point about the schedule availability but does not give specific details about talks on agent frameworks."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:24.249741",
+        "type": "thinking",
+        "content": "[openai_agent] ✅ Vote recorded for openai_agent\n"
+      }
+    ],
+    "grok_agent": [
+      {
+        "timestamp": "2025-07-31T15:16:18.922979",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:18.923111",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:20.659829",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:20.659931",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.282203",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:22.282306",
+        "type": "thinking",
+        "content": "🔁 Agent [grok_agent] gracefully restarting due to new answer detected"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.951964",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:23.952061",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.727002",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:25.727094",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.514669",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:27.514770",
+        "type": "thinking",
+        "content": "❌ Agent failed to use workflow tools after 3 attempts"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.284516",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:29.284620",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.888950",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:30.889042",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.639876",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:32.640947",
+        "type": "thinking",
+        "content": "❌ Agent failed to use workflow tools after 3 attempts"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.492459",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:34.492564",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.227136",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:36.227268",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.199523",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:38.199633",
+        "type": "thinking",
+        "content": "❌ Agent failed to use workflow tools after 3 attempts"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.795553",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:39.795660",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.489703",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:41.491248",
+        "type": "thinking",
+        "content": "🔄 needs to use workflow tools..."
+      },
+      {
+        "timestamp": "2025-07-31T15:16:43.268009",
+        "type": "thinking",
+        "content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+      },
+      {
+        "timestamp": "2025-07-31T15:16:43.268107",
+        "type": "thinking",
+        "content": "❌ Agent failed to use workflow tools after 3 attempts"
+      }
+    ]
+  },
+  "orchestrator_events": [
+    {
+      "timestamp": "2025-07-31T15:16:18.922986",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:18.923115",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:19.381963",
+      "event": "🔄 claude_agent: ✅ [Web Search] Completed"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:20.659837",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:20.659935",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:21.674469",
+      "event": "🔄 openai_agent: [openai_agent] ✅ Answer provided"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:22.282211",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:23.951972",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:23.952065",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:24.200027",
+      "event": "🔄 openai_agent: 🗳️ Voting for agent1: The answer provides a valid point about the schedule availability but does not give specific details about talks on agent frameworks."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:24.249748",
+      "event": "🔄 openai_agent: [openai_agent] ✅ Vote recorded for openai_agent"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:25.727009",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:25.727097",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:27.514677",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:27.514773",
+      "event": "🔄 grok_agent: ❌ Agent failed to use workflow tools after 3 attempts"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:29.284524",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:29.284625",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:30.888958",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:30.889046",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:32.639884",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:32.640951",
+      "event": "🔄 grok_agent: ❌ Agent failed to use workflow tools after 3 attempts"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:34.492467",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:34.492568",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:36.227147",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:36.227272",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:38.199532",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:38.199636",
+      "event": "🔄 grok_agent: ❌ Agent failed to use workflow tools after 3 attempts"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:39.795566",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:39.795663",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:41.369321",
+      "event": "🔄 claude_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:41.489713",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:41.491252",
+      "event": "🔄 grok_agent: 🔄 needs to use workflow tools..."
+    },
+    {
+      "timestamp": "2025-07-31T15:16:43.268017",
+      "event": "🔄 grok_agent: ❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}"
+    },
+    {
+      "timestamp": "2025-07-31T15:16:43.268111",
+      "event": "🔄 grok_agent: ❌ Agent failed to use workflow tools after 3 attempts"
+    }
+  ],
+  "aggregated_responses": {
+    "orchestrator": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "🚀 Starting multi-agent coordination...\n\n## 📋 Agents Coordinating",
+      "first_timestamp": "2025-07-31T15:16:16.795794",
+      "last_timestamp": "2025-07-31T15:16:16.795808"
+    },
+    "claude_agent": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "I'll search for information about the ODSC Agentic AI Summit 2025 and its talks on agent frameworks.\n🔍 [Web Search] Starting search...\n🔍 [Query] 'ODSC Agentic AI Summit 2025 agent frameworks talks conference details'\n✅ [Web Search] Completed\nBased on the search results, I can provide details about the ODSC Agentic AI Summit 2025:\n\nThe Agentic AI Summit 2025 is a three-week virtual event running from July 16 to 31, featuring an exceptional lineup of speakers driving innovation in autonomous AI. The speakers include experts from companies like Google, Databricks, LlamaIndex, Microsoft, and NVIDIA, who will guide attendees through live workshops on agent design, orchestration, and deployment.\n\nKey Talks and Frameworks:\n\n1. The summit is structured across three weeks:\n- Week 1: Foundations of Agentic AI – Covering building blocks of autonomous agents, including core architectures, planning methods, memory systems, and leading development frameworks\n- Week 2: Advanced Techniques and Collaboration – Focusing on advanced reasoning, multi-agent coordination, tool chaining, self-healing workflows, and emerging security challenges\n- Week 3: Evaluation, Improvement, and Deployment – Concentrating on real-world applications, agent evaluation, reliability, and deployment strategies\n\nNotable Talks Include:\n- A session by Joao, CEO of CrewAI, exploring how enterprises are using agentic AI in real-world environments\n- An introduction to agents by Paige, demystifying core concepts of autonomous agents, including goal setting, tool equipping, and leveraging LLMs like Gemini for reasoning and action\n\nSpecific Framework Talks:\n- A talk on AG2 (formerly AutoGen) by Chi Wang, exploring how to build robust multi-agent systems across industries like finance, healthcare, and gaming\n- A comprehensive session on building AI agents from zero to deployment, using tools like LangGraph, MongoDB, and open-source embeddings\n\nKey Highlights:\n- The summit offers a hands-on learning experience focused on:\n- LLM-powered agents and scalable architecture\n- Multi-agent coordination and tool chaining\n- Reliability and security in agent design\n- Evaluation techniques and building self-healing agents\n\nTarget Audience:\nThe summit is designed for technical professionals looking to move beyond passive AI tools, including those:\n- Deploying LLMs in production\n- Experimenting with multi-agent coordination\n- Machine Learning Engineers ready to architect and deploy autonomous agents that can reason, plan, and act\n\nAdditional Benefits:\nBetween live sessions, attendees will have:\n- Guided homework\n- Access to a Slack/Discord community\n- Certificates to demonstrate progress\n\nIf you're interested in attending, you can get practical skills, real-world tools, and early access to AI innovation by signing up for updates and early registration.🔁 Agent [claude_agent] gracefully restarting due to new answer detected<web_search_function_calls>\n<invoke name=\"web_search\">\n<parameter name=\"query\">ODSC Agentic AI Summit 2025 agent frameworks talks schedule</parameter>\n</invoke>🔄 needs to use workflow tools...I'll search for more information about the ODSC Agentic AI Summit.\n\n<web_search_function_calls>\n<invoke name=\"web_search\">\n<parameter name=\"query\">ODSC Open Data Science Conference Agentic AI Summit",
+      "first_timestamp": "2025-07-31T15:16:17.924358",
+      "last_timestamp": "2025-07-31T15:16:43.323120"
+    },
+    "grok_agent": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔁 Agent [grok_agent] gracefully restarting due to new answer detected❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}❌ Agent failed to use workflow tools after 3 attempts❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}❌ Agent failed to use workflow tools after 3 attempts❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}❌ Agent failed to use workflow tools after 3 attempts❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}🔄 needs to use workflow tools...❌ Error: Grok API error: Error code: 429 - {'code': 'Some resource has been exhausted', 'error': 'Your team 20ae9573-bc79-4068-bceb-1bc60b948e6f has either used all available credits or reached its monthly spending limit. To continue making API requests, please purchase more credits or raise your spending limit.'}❌ Agent failed to use workflow tools after 3 attempts",
+      "first_timestamp": "2025-07-31T15:16:18.922900",
+      "last_timestamp": "2025-07-31T15:16:43.268099"
+    },
+    "openai_agent": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "💡 Providing answer: \"The ODSC Agentic AI Summit 2025 will feature a variety of talks centered around agent frameworks. As...\"[openai_agent] ✅ Answer provided🗳️ Voting for agent1: The answer provides a valid point about the schedule availability but does not give specific details about talks on agent frameworks.[openai_agent] ✅ Vote recorded for openai_agent",
+      "first_timestamp": "2025-07-31T15:16:21.577696",
+      "last_timestamp": "2025-07-31T15:16:24.249537"
+    }
+  },
+  "workflow_analysis": {
+    "new_answers": 0,
+    "votes": 0,
+    "total_chunks": 395
+  }
+}

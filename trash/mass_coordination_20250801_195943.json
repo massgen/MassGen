@@ -1,0 +1,5834 @@
+{
+  "metadata": {
+    "start_time": "2025-08-01T19:59:43.539010",
+    "status": "in_progress",
+    "logger_version": "1.0"
+  },
+  "session": {
+    "question": "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025",
+    "agent_ids": [
+      "4o",
+      "4omini",
+      "grok3"
+    ],
+    "final_answer": ""
+  },
+  "agent_outputs": {
+    "4o": [
+      {
+        "timestamp": "2025-08-01T19:59:45.323923",
+        "type": "thinking",
+        "content": "\n🔍 [Provider Tool: Web Search] Starting search..."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:45.420081",
+        "type": "thinking",
+        "content": "🔍 [Provider Tool: Web Search] Searching..."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.066383",
+        "type": "thinking",
+        "content": "✅ [Provider Tool: Web Search] Search completed"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.068791",
+        "type": "thinking",
+        "content": "🔍 [Search Query] 'Berkeley Agentic AI Summit 2025 talks on agent frameworks'"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.401495",
+        "type": "thinking",
+        "content": "At"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.411135",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.431990",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.456445",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.480340",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.481826",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.484575",
+        "type": "thinking",
+        "content": " Summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.485884",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.504286",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.507987",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.508797",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.514027",
+        "type": "thinking",
+        "content": " several"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.515344",
+        "type": "thinking",
+        "content": " sessions"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.517032",
+        "type": "thinking",
+        "content": " focus"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.533792",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.547999",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.550311",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.552452",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.664394",
+        "type": "thinking",
+        "content": "\n\n**"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.664869",
+        "type": "thinking",
+        "content": "Session"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.665468",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.684557",
+        "type": "thinking",
+        "content": "2"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.705330",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.731095",
+        "type": "thinking",
+        "content": " Framework"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.734135",
+        "type": "thinking",
+        "content": "s"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.741574",
+        "type": "thinking",
+        "content": " &"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.741936",
+        "type": "thinking",
+        "content": " St"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.742317",
+        "type": "thinking",
+        "content": "acks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.763961",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.764719",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.765077",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.765523",
+        "type": "thinking",
+        "content": " Systems"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.765814",
+        "type": "thinking",
+        "content": "**"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.775456",
+        "type": "thinking",
+        "content": "\n\n-"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.832499",
+        "type": "thinking",
+        "content": " **"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.832913",
+        "type": "thinking",
+        "content": "10"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.833295",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.854217",
+        "type": "thinking",
+        "content": "45"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.854668",
+        "type": "thinking",
+        "content": " AM"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.855729",
+        "type": "thinking",
+        "content": " –"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.867508",
+        "type": "thinking",
+        "content": " Key"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.887833",
+        "type": "thinking",
+        "content": "note"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.914573",
+        "type": "thinking",
+        "content": ":**"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.915596",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.949990",
+        "type": "thinking",
+        "content": "Ion"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.951497",
+        "type": "thinking",
+        "content": " Sto"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.952354",
+        "type": "thinking",
+        "content": "ica"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.954104",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.960073",
+        "type": "thinking",
+        "content": " Co"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.967552",
+        "type": "thinking",
+        "content": "-Founder"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.968155",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.981539",
+        "type": "thinking",
+        "content": " Dat"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.008264",
+        "type": "thinking",
+        "content": "abr"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.012979",
+        "type": "thinking",
+        "content": "icks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.015688",
+        "type": "thinking",
+        "content": " &"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.029968",
+        "type": "thinking",
+        "content": " An"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.054621",
+        "type": "thinking",
+        "content": "ys"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.064788",
+        "type": "thinking",
+        "content": "cale"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.065700",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.080853",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.105421",
+        "type": "thinking",
+        "content": " Professor"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.121077",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.145878",
+        "type": "thinking",
+        "content": " UC"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.178961",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.179512",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.194036",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.216576",
+        "type": "thinking",
+        "content": " discuss"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.217275",
+        "type": "thinking",
+        "content": " advancements"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.235402",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.257784",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.260522",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.263728",
+        "type": "thinking",
+        "content": " system"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.283547",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.305156",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.373763",
+        "type": "thinking",
+        "content": "\n\n-"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.376432",
+        "type": "thinking",
+        "content": " **"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.379698",
+        "type": "thinking",
+        "content": "11"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.381151",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.384192",
+        "type": "thinking",
+        "content": "05"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.390268",
+        "type": "thinking",
+        "content": " AM"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.402544",
+        "type": "thinking",
+        "content": " –"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.405467",
+        "type": "thinking",
+        "content": " Focus"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.406072",
+        "type": "thinking",
+        "content": " Talks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.408402",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.409771",
+        "type": "thinking",
+        "content": "**"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.430426",
+        "type": "thinking",
+        "content": "\n  -"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.431343",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.432994",
+        "type": "thinking",
+        "content": "Mate"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.433759",
+        "type": "thinking",
+        "content": "i"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.435218",
+        "type": "thinking",
+        "content": " Zah"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.437971",
+        "type": "thinking",
+        "content": "aria"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.457803",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.458897",
+        "type": "thinking",
+        "content": " Co"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.459652",
+        "type": "thinking",
+        "content": "-Founder"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.461828",
+        "type": "thinking",
+        "content": "/"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.469040",
+        "type": "thinking",
+        "content": "CT"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.495135",
+        "type": "thinking",
+        "content": "O"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.515121",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.539072",
+        "type": "thinking",
+        "content": " Dat"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.560367",
+        "type": "thinking",
+        "content": "abr"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.566479",
+        "type": "thinking",
+        "content": "icks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.567783",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.583259",
+        "type": "thinking",
+        "content": " Associate"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.629691",
+        "type": "thinking",
+        "content": " Professor"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.631485",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.632721",
+        "type": "thinking",
+        "content": " UC"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.633831",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.637575",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.638327",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.639214",
+        "type": "thinking",
+        "content": " present"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.653778",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.740063",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.740580",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.741085",
+        "type": "thinking",
+        "content": " system"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.747153",
+        "type": "thinking",
+        "content": " stacks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.767613",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.868201",
+        "type": "thinking",
+        "content": "\n  -"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.869132",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.870101",
+        "type": "thinking",
+        "content": "Sher"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.870820",
+        "type": "thinking",
+        "content": "win"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.871651",
+        "type": "thinking",
+        "content": " Wu"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.888763",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.889940",
+        "type": "thinking",
+        "content": " Head"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.893538",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.894621",
+        "type": "thinking",
+        "content": " Engineering"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.897250",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.925959",
+        "type": "thinking",
+        "content": " Open"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.962506",
+        "type": "thinking",
+        "content": "AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.963465",
+        "type": "thinking",
+        "content": " API"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.965551",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.970273",
+        "type": "thinking",
+        "content": " Open"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.998137",
+        "type": "thinking",
+        "content": "AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.005516",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.010438",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.014697",
+        "type": "thinking",
+        "content": " share"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.019043",
+        "type": "thinking",
+        "content": " insights"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.040759",
+        "type": "thinking",
+        "content": " into"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.063201",
+        "type": "thinking",
+        "content": " Open"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.085949",
+        "type": "thinking",
+        "content": "AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.115760",
+        "type": "thinking",
+        "content": "'s"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.116816",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.117997",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.128344",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.252127",
+        "type": "thinking",
+        "content": "\n\nAdditionally"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.268472",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.290754",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.293205",
+        "type": "thinking",
+        "content": " summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.312555",
+        "type": "thinking",
+        "content": " features"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.338133",
+        "type": "thinking",
+        "content": " workshops"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.359407",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.392885",
+        "type": "thinking",
+        "content": " discussions"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.425001",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.431884",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.432781",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.433506",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.449217",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.483773",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.489137",
+        "type": "thinking",
+        "content": " including"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.490974",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.530241",
+        "type": "thinking",
+        "content": "\n\n-"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.532604",
+        "type": "thinking",
+        "content": " **"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.535874",
+        "type": "thinking",
+        "content": "\""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.547309",
+        "type": "thinking",
+        "content": "Design"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.565143",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.610874",
+        "type": "thinking",
+        "content": " Build"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.612322",
+        "type": "thinking",
+        "content": " Multi"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.613205",
+        "type": "thinking",
+        "content": "-Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.617037",
+        "type": "thinking",
+        "content": " Applications"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.617584",
+        "type": "thinking",
+        "content": "\""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.638032",
+        "type": "thinking",
+        "content": "**"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.688377",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.689336",
+        "type": "thinking",
+        "content": "by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.690002",
+        "type": "thinking",
+        "content": " Val"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.694742",
+        "type": "thinking",
+        "content": "entina"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.703802",
+        "type": "thinking",
+        "content": " Alto"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.704412",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.705009",
+        "type": "thinking",
+        "content": " Technical"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.729053",
+        "type": "thinking",
+        "content": " Architect"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.729801",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.733659",
+        "type": "thinking",
+        "content": " Microsoft"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.734162",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.738912",
+        "type": "thinking",
+        "content": " focusing"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.765263",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.769586",
+        "type": "thinking",
+        "content": " building"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.770026",
+        "type": "thinking",
+        "content": " scalable"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.772593",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.773130",
+        "type": "thinking",
+        "content": " interoper"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.785139",
+        "type": "thinking",
+        "content": "able"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.787057",
+        "type": "thinking",
+        "content": " multi"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.788799",
+        "type": "thinking",
+        "content": "-agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.793429",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.793948",
+        "type": "thinking",
+        "content": " systems"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.795218",
+        "type": "thinking",
+        "content": " using"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.806926",
+        "type": "thinking",
+        "content": " orches"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.836223",
+        "type": "thinking",
+        "content": "tration"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.836627",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.845139",
+        "type": "thinking",
+        "content": " like"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.850462",
+        "type": "thinking",
+        "content": " Lang"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.854500",
+        "type": "thinking",
+        "content": "Graph"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.855085",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.859673",
+        "type": "thinking",
+        "content": " open"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.861455",
+        "type": "thinking",
+        "content": " protocols"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.862042",
+        "type": "thinking",
+        "content": " such"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.866049",
+        "type": "thinking",
+        "content": " as"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.874028",
+        "type": "thinking",
+        "content": " MCP"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.902206",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.902716",
+        "type": "thinking",
+        "content": " A"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.905958",
+        "type": "thinking",
+        "content": "2"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.906450",
+        "type": "thinking",
+        "content": "A"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.906952",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.968763",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.996607",
+        "type": "thinking",
+        "content": "([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.021363",
+        "type": "thinking",
+        "content": "\n\n-"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.027291",
+        "type": "thinking",
+        "content": " **"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.040182",
+        "type": "thinking",
+        "content": "\""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.040751",
+        "type": "thinking",
+        "content": "Build"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.044547",
+        "type": "thinking",
+        "content": " &"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.062099",
+        "type": "thinking",
+        "content": " Optimize"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.073991",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.075284",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.076184",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.098300",
+        "type": "thinking",
+        "content": " Systems"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.098988",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.099610",
+        "type": "thinking",
+        "content": " From"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.103509",
+        "type": "thinking",
+        "content": " Rapid"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.103997",
+        "type": "thinking",
+        "content": " Pro"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.104486",
+        "type": "thinking",
+        "content": "tot"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.107553",
+        "type": "thinking",
+        "content": "yp"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.108046",
+        "type": "thinking",
+        "content": "ing"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.141249",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.141843",
+        "type": "thinking",
+        "content": " Research"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.142415",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.146561",
+        "type": "thinking",
+        "content": " Production"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.147046",
+        "type": "thinking",
+        "content": "\""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.157125",
+        "type": "thinking",
+        "content": "**"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.157916",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.161908",
+        "type": "thinking",
+        "content": "by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.176092",
+        "type": "thinking",
+        "content": " Chi"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.176910",
+        "type": "thinking",
+        "content": " Wang"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.180816",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.184563",
+        "type": "thinking",
+        "content": " Founder"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.185238",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.191071",
+        "type": "thinking",
+        "content": " Auto"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.191562",
+        "type": "thinking",
+        "content": "Gen"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.202372",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.213836",
+        "type": "thinking",
+        "content": " Senior"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.246483",
+        "type": "thinking",
+        "content": " Staff"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.247021",
+        "type": "thinking",
+        "content": " Research"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.250383",
+        "type": "thinking",
+        "content": " Scientist"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.250821",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.259995",
+        "type": "thinking",
+        "content": " Google"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.261261",
+        "type": "thinking",
+        "content": " Deep"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.266771",
+        "type": "thinking",
+        "content": "Mind"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.270420",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.271044",
+        "type": "thinking",
+        "content": " introducing"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.279663",
+        "type": "thinking",
+        "content": " AG"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.305217",
+        "type": "thinking",
+        "content": "2"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.308671",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.311638",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.312115",
+        "type": "thinking",
+        "content": " open"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.339185",
+        "type": "thinking",
+        "content": "-source"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.339638",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.340084",
+        "type": "thinking",
+        "content": "OS"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.340525",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.361101",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.361551",
+        "type": "thinking",
+        "content": " Wald"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.361942",
+        "type": "thinking",
+        "content": "iez"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.364766",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.372587",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.378058",
+        "type": "thinking",
+        "content": " visual"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.378465",
+        "type": "thinking",
+        "content": " tool"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.382721",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.386021",
+        "type": "thinking",
+        "content": " building"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.386467",
+        "type": "thinking",
+        "content": " autonomous"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.386983",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.393596",
+        "type": "thinking",
+        "content": " workflows"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.398061",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.415747",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.462365",
+        "type": "thinking",
+        "content": "([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.488124",
+        "type": "thinking",
+        "content": "\n\nThese"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.488704",
+        "type": "thinking",
+        "content": " sessions"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.489305",
+        "type": "thinking",
+        "content": " provide"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.503079",
+        "type": "thinking",
+        "content": " comprehensive"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.529901",
+        "type": "thinking",
+        "content": " insights"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.552149",
+        "type": "thinking",
+        "content": " into"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.552833",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.553583",
+        "type": "thinking",
+        "content": " development"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.554174",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.572710",
+        "type": "thinking",
+        "content": " optimization"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.575786",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.576285",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.580295",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.587534",
+        "type": "thinking",
+        "content": " within"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.610579",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.630594",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.653734",
+        "type": "thinking",
+        "content": " landscape"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.654389",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.707435",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:57.722169",
+        "type": "thinking",
+        "content": "💡 Providing answer: \"At the Berkeley Agentic AI Summit 2025, several sessions focus on agent frameworks:\n\n**Session 2: Frameworks & Stacks for Agentic Systems**\n\n- **10:45 AM – Keynote:** Ion Stoica, Co-Founder of Databricks & Anyscale, and Professor at UC Berkeley, will discuss advancements in agentic system frameworks.\n\n- **11:05 AM – Focus Talks:**\n  - Matei Zaharia, Co-Founder/CTO of Databricks and Associate Professor at UC Berkeley, will present on agentic system stacks.\n  - Sherwin Wu, Head of Engineering for OpenAI API at OpenAI, will share insights into OpenAI's agent frameworks.\n\nAdditionally, the summit features workshops and discussions on agentic AI frameworks, including:\n\n- **\"Design and Build Multi-Agent Applications\"** by Valentina Alto, Technical Architect at Microsoft, focusing on building scalable, interoperable multi-agent AI systems using orchestration frameworks like LangGraph and open protocols such as MCP and A2A. ([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))\n\n- **\"Build & Optimize Agentic AI Systems: From Rapid Prototyping to Research and Production\"** by Chi Wang, Founder of AutoGen and Senior Staff Research Scientist at Google DeepMind, introducing AG2, an open-source AgentOS, and Waldiez, a visual tool for building autonomous AI workflows. ([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))\n\nThese sessions provide comprehensive insights into the development and optimization of agent frameworks within the AI landscape.\""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:57.847302",
+        "type": "thinking",
+        "content": "[4o] ✅ Answer provided"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:59.709050",
+        "type": "thinking",
+        "content": "🗳️ Voting for agent1: Provides a detailed list of specific talks and speakers related to agent frameworks at the summit."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:59.778019",
+        "type": "thinking",
+        "content": "[4o] ✅ Vote recorded for 4o"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.014789",
+        "type": "thinking",
+        "content": "🗳️ Voting for agent1: Agent1 provides a detailed list of talks and workshops related to agent frameworks at the summit, offering comprehensive coverage of the topic."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.083170",
+        "type": "thinking",
+        "content": "[4o] ✅ Vote recorded for 4o"
+      }
+    ],
+    "4omini": [
+      {
+        "timestamp": "2025-08-01T19:59:47.658885",
+        "type": "thinking",
+        "content": "💡 Providing answer: \"As of now, I don't have specific information about the talks on agent frameworks for the Berkeley Agentic AI Summit 2025. I recommend checking the official summit website or related announcements for detailed schedules, speaker lists, and topics that will be covered. You may also want to look at social media platforms or AI research forums for updates, as these events often share information leading up to the summit.\""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.674438",
+        "type": "thinking",
+        "content": "[4omini] ✅ Answer provided"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.816533",
+        "type": "thinking",
+        "content": "🗳️ Voting for agent1: The answer provides a reasonable approach to finding the requested information, suggesting resources like the official summit website and social media for updates."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.877227",
+        "type": "thinking",
+        "content": "[4omini] ✅ Vote recorded for 4omini"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:01.035806",
+        "type": "thinking",
+        "content": "🗳️ Voting for agent1: Agent 1 provides detailed information about specific sessions and talks focused on agent frameworks, which directly answers the original request."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:01.105075",
+        "type": "thinking",
+        "content": "[4omini] ✅ Vote recorded for 4o"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.223646",
+        "type": "thinking",
+        "content": "🗳️ Voting for agent1: Agent 1 provides a detailed list of specific talks and sessions focused on agent frameworks during the Berkeley Agentic AI Summit 2025, making it the most comprehensive and relevant response."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.304252",
+        "type": "thinking",
+        "content": "[4omini] ✅ Vote recorded for 4o"
+      }
+    ],
+    "grok3": [
+      {
+        "timestamp": "2025-08-01T19:59:47.719751",
+        "type": "thinking",
+        "content": "Since"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.752818",
+        "type": "thinking",
+        "content": " there"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.794925",
+        "type": "thinking",
+        "content": " are"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.795312",
+        "type": "thinking",
+        "content": " no"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.795672",
+        "type": "thinking",
+        "content": " current"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.796063",
+        "type": "thinking",
+        "content": " answers"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.796487",
+        "type": "thinking",
+        "content": " from"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.856416",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.893425",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.894731",
+        "type": "thinking",
+        "content": " yet"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.923612",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.924366",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.926433",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.927187",
+        "type": "thinking",
+        "content": " provide"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.963508",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.964244",
+        "type": "thinking",
+        "content": " new"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.964984",
+        "type": "thinking",
+        "content": " answer"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:47.966683",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.013443",
+        "type": "thinking",
+        "content": " address"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.014612",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.016064",
+        "type": "thinking",
+        "content": " original"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.045414",
+        "type": "thinking",
+        "content": " message"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.046573",
+        "type": "thinking",
+        "content": " regarding"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.047437",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.083145",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.084117",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.086307",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.131741",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.165448",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.166579",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.167291",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.167912",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.168546",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.178092",
+        "type": "thinking",
+        "content": " Summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.208151",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.210102",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.210734",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.211251",
+        "type": "thinking",
+        "content": ".\n\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.211763",
+        "type": "thinking",
+        "content": "{\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.212287",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.249840",
+        "type": "thinking",
+        "content": " \""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.250391",
+        "type": "thinking",
+        "content": "action"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.251856",
+        "type": "thinking",
+        "content": "\":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.252391",
+        "type": "thinking",
+        "content": " \""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.252940",
+        "type": "thinking",
+        "content": "new"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.253446",
+        "type": "thinking",
+        "content": "_answer"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.278863",
+        "type": "thinking",
+        "content": "\",\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.279413",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.279971",
+        "type": "thinking",
+        "content": " \""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.281634",
+        "type": "thinking",
+        "content": "action"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.332973",
+        "type": "thinking",
+        "content": "_input"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.334398",
+        "type": "thinking",
+        "content": "\":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.336673",
+        "type": "thinking",
+        "content": " {\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.337428",
+        "type": "thinking",
+        "content": "   "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.338129",
+        "type": "thinking",
+        "content": " \""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.338846",
+        "type": "thinking",
+        "content": "content"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.369859",
+        "type": "thinking",
+        "content": "\":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.374117",
+        "type": "thinking",
+        "content": " \""
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.374957",
+        "type": "thinking",
+        "content": "I"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.375637",
+        "type": "thinking",
+        "content": " have"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.404485",
+        "type": "thinking",
+        "content": " researched"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.441828",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.476609",
+        "type": "thinking",
+        "content": " about"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.478506",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.479486",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.521343",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.522571",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.523596",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.526696",
+        "type": "thinking",
+        "content": " Summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.527546",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.528225",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.568102",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.568915",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.609166",
+        "type": "thinking",
+        "content": " identify"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.640133",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.640823",
+        "type": "thinking",
+        "content": " related"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.695576",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.696111",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.696691",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.721827",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.724223",
+        "type": "thinking",
+        "content": " The"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.724848",
+        "type": "thinking",
+        "content": " summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.762757",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.763343",
+        "type": "thinking",
+        "content": " hosted"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.763913",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.764446",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.766505",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.798221",
+        "type": "thinking",
+        "content": " Center"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.798993",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.799723",
+        "type": "thinking",
+        "content": " Responsible"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.801885",
+        "type": "thinking",
+        "content": " Decentral"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.840364",
+        "type": "thinking",
+        "content": "ized"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.841168",
+        "type": "thinking",
+        "content": " Intelligence"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.841901",
+        "type": "thinking",
+        "content": " ("
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.842616",
+        "type": "thinking",
+        "content": "Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.887794",
+        "type": "thinking",
+        "content": " R"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.889117",
+        "type": "thinking",
+        "content": "DI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.890238",
+        "type": "thinking",
+        "content": "),"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.892734",
+        "type": "thinking",
+        "content": " is"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.893808",
+        "type": "thinking",
+        "content": " scheduled"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.894872",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.925165",
+        "type": "thinking",
+        "content": " August"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.926243",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.926911",
+        "type": "thinking",
+        "content": "2"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.963798",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.964649",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.967752",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.968443",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.969041",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:48.969628",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.010772",
+        "type": "thinking",
+        "content": " UC"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.011628",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.014966",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.015640",
+        "type": "thinking",
+        "content": " While"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.016216",
+        "type": "thinking",
+        "content": " comprehensive"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.041769",
+        "type": "thinking",
+        "content": " details"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.042433",
+        "type": "thinking",
+        "content": " about"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.080414",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.085049",
+        "type": "thinking",
+        "content": " full"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.123614",
+        "type": "thinking",
+        "content": " agenda"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.124575",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.176148",
+        "type": "thinking",
+        "content": " specific"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.177476",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.181793",
+        "type": "thinking",
+        "content": " are"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.182721",
+        "type": "thinking",
+        "content": " not"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.183501",
+        "type": "thinking",
+        "content": " fully"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.184213",
+        "type": "thinking",
+        "content": " available"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.210831",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.213646",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.214280",
+        "type": "thinking",
+        "content": " public"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.214872",
+        "type": "thinking",
+        "content": " domain"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.245315",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.246107",
+        "type": "thinking",
+        "content": " this"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.248786",
+        "type": "thinking",
+        "content": " time"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.249417",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.250042",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.250668",
+        "type": "thinking",
+        "content": " have"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.279863",
+        "type": "thinking",
+        "content": " gathered"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.280387",
+        "type": "thinking",
+        "content": " relevant"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.280921",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.323242",
+        "type": "thinking",
+        "content": " based"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.323813",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.324387",
+        "type": "thinking",
+        "content": " announcements"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.358360",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.359731",
+        "type": "thinking",
+        "content": " posts"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.360491",
+        "type": "thinking",
+        "content": " found"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.402878",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.404107",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.405204",
+        "type": "thinking",
+        "content": " web"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.439483",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.440171",
+        "type": "thinking",
+        "content": " social"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.443494",
+        "type": "thinking",
+        "content": " media"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.444066",
+        "type": "thinking",
+        "content": ".\\"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.483058",
+        "type": "thinking",
+        "content": "n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.489465",
+        "type": "thinking",
+        "content": "\\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.490320",
+        "type": "thinking",
+        "content": "Based"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.525200",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.530646",
+        "type": "thinking",
+        "content": " available"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.531560",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.532356",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.535604",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.536506",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.559455",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.562633",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.563217",
+        "type": "thinking",
+        "content": " Summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.563780",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.564323",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.567693",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.611948",
+        "type": "thinking",
+        "content": " focuses"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.616063",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.616776",
+        "type": "thinking",
+        "content": " autonomous"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.641884",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.686022",
+        "type": "thinking",
+        "content": " systems"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.726376",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.730025",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.730622",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.731283",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.755544",
+        "type": "thinking",
+        "content": " infrastructure"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.756050",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.758730",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.759217",
+        "type": "thinking",
+        "content": " human"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.795895",
+        "type": "thinking",
+        "content": "-A"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.796330",
+        "type": "thinking",
+        "content": "I"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.846555",
+        "type": "thinking",
+        "content": " collaboration"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.849749",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.850683",
+        "type": "thinking",
+        "content": " Several"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.887212",
+        "type": "thinking",
+        "content": " posts"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.887841",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.888422",
+        "type": "thinking",
+        "content": " X"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.917236",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.917799",
+        "type": "thinking",
+        "content": " web"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.921433",
+        "type": "thinking",
+        "content": " sources"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.922018",
+        "type": "thinking",
+        "content": " indicate"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.972648",
+        "type": "thinking",
+        "content": " that"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.973415",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:49.977440",
+        "type": "thinking",
+        "content": " summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.001476",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.002447",
+        "type": "thinking",
+        "content": " feature"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.038655",
+        "type": "thinking",
+        "content": " discussions"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.039341",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.081192",
+        "type": "thinking",
+        "content": " presentations"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.081796",
+        "type": "thinking",
+        "content": " related"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.125282",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.125931",
+        "type": "thinking",
+        "content": " next"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.158169",
+        "type": "thinking",
+        "content": "-generation"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.162170",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.197945",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.201581",
+        "type": "thinking",
+        "content": " architectures"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.202597",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.203241",
+        "type": "thinking",
+        "content": " Here"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.242194",
+        "type": "thinking",
+        "content": " are"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.242944",
+        "type": "thinking",
+        "content": " some"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.243568",
+        "type": "thinking",
+        "content": " highlights"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.283917",
+        "type": "thinking",
+        "content": " that"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.315447",
+        "type": "thinking",
+        "content": " may"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.315907",
+        "type": "thinking",
+        "content": " pertain"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.356653",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.359993",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.360525",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.401862",
+        "type": "thinking",
+        "content": ":\\"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.402368",
+        "type": "thinking",
+        "content": "n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.402855",
+        "type": "thinking",
+        "content": "\\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.403282",
+        "type": "thinking",
+        "content": "1"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.403710",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.406671",
+        "type": "thinking",
+        "content": " **"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.435806",
+        "type": "thinking",
+        "content": "Focus"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.436363",
+        "type": "thinking",
+        "content": " Talk"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.487478",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.530917",
+        "type": "thinking",
+        "content": " Py"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.531536",
+        "type": "thinking",
+        "content": "Torch"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.532184",
+        "type": "thinking",
+        "content": "**:"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.532764",
+        "type": "thinking",
+        "content": " Py"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.568052",
+        "type": "thinking",
+        "content": "Torch"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.572455",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.573359",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.601695",
+        "type": "thinking",
+        "content": " collaboration"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.602318",
+        "type": "thinking",
+        "content": " with"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.602945",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.606693",
+        "type": "thinking",
+        "content": " Linux"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.636924",
+        "type": "thinking",
+        "content": " Foundation"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.637608",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.641937",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.643128",
+        "type": "thinking",
+        "content": " present"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.680746",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.684399",
+        "type": "thinking",
+        "content": " talk"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.684867",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.685376",
+        "type": "thinking",
+        "content": " accelerating"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.718422",
+        "type": "thinking",
+        "content": " open"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.722332",
+        "type": "thinking",
+        "content": "-source"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.722790",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.757984",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.758531",
+        "type": "thinking",
+        "content": " which"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.759118",
+        "type": "thinking",
+        "content": " may"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.807296",
+        "type": "thinking",
+        "content": " include"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.807792",
+        "type": "thinking",
+        "content": " discussions"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.808235",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.808629",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.842275",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.845215",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.882609",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.883283",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.883583",
+        "type": "thinking",
+        "content": " given"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.923251",
+        "type": "thinking",
+        "content": " their"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.930478",
+        "type": "thinking",
+        "content": " involvement"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.961073",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:50.962215",
+        "type": "thinking",
+        "content": " cutting"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.000822",
+        "type": "thinking",
+        "content": "-edge"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.001882",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.047317",
+        "type": "thinking",
+        "content": " technologies"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.048374",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.088416",
+        "type": "thinking",
+        "content": " ("
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.089639",
+        "type": "thinking",
+        "content": "Source"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.090552",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.097115",
+        "type": "thinking",
+        "content": " Post"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.134438",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.136087",
+        "type": "thinking",
+        "content": " X"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.136933",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.137733",
+        "type": "thinking",
+        "content": " Py"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.169739",
+        "type": "thinking",
+        "content": "Torch"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.170529",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.171251",
+        "type": "thinking",
+        "content": " dated"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.205414",
+        "type": "thinking",
+        "content": " July"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.206478",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.212475",
+        "type": "thinking",
+        "content": "31"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.213280",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.213978",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.272285",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.272992",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.277676",
+        "type": "thinking",
+        "content": ")\\"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.278278",
+        "type": "thinking",
+        "content": "n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.278865",
+        "type": "thinking",
+        "content": "2"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.279974",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.280533",
+        "type": "thinking",
+        "content": " **"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.284453",
+        "type": "thinking",
+        "content": "Lightning"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.324424",
+        "type": "thinking",
+        "content": " Talk"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.324870",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.325374",
+        "type": "thinking",
+        "content": " '"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.367970",
+        "type": "thinking",
+        "content": "4"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.370773",
+        "type": "thinking",
+        "content": "K"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.371357",
+        "type": "thinking",
+        "content": "Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.401996",
+        "type": "thinking",
+        "content": "'"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.402308",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.402607",
+        "type": "thinking",
+        "content": " Zheng"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.449247",
+        "type": "thinking",
+        "content": "zh"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.449608",
+        "type": "thinking",
+        "content": "ong"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.449887",
+        "type": "thinking",
+        "content": " Tu"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.482049",
+        "type": "thinking",
+        "content": "**:"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.482979",
+        "type": "thinking",
+        "content": " A"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.487328",
+        "type": "thinking",
+        "content": " speaker"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.526519",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.527896",
+        "type": "thinking",
+        "content": " Zheng"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.562212",
+        "type": "thinking",
+        "content": "zh"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.563521",
+        "type": "thinking",
+        "content": "ong"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.570155",
+        "type": "thinking",
+        "content": " Tu"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.622781",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.623831",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.624647",
+        "type": "thinking",
+        "content": " deliver"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.642210",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.649709",
+        "type": "thinking",
+        "content": " lightning"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.690072",
+        "type": "thinking",
+        "content": " talk"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.691208",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.692506",
+        "type": "thinking",
+        "content": " present"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.693540",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.739153",
+        "type": "thinking",
+        "content": " poster"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.739992",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.740821",
+        "type": "thinking",
+        "content": " their"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.766103",
+        "type": "thinking",
+        "content": " recent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.767174",
+        "type": "thinking",
+        "content": " paper"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.773759",
+        "type": "thinking",
+        "content": " '"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.774449",
+        "type": "thinking",
+        "content": "4"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.783891",
+        "type": "thinking",
+        "content": "K"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.808611",
+        "type": "thinking",
+        "content": "Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.809709",
+        "type": "thinking",
+        "content": ",'"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.814040",
+        "type": "thinking",
+        "content": " which"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.814821",
+        "type": "thinking",
+        "content": " likely"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.843645",
+        "type": "thinking",
+        "content": " discusses"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.888581",
+        "type": "thinking",
+        "content": " advancements"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.928042",
+        "type": "thinking",
+        "content": " or"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.928636",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.968626",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:51.969119",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.015983",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.016839",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.017638",
+        "type": "thinking",
+        "content": " ("
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.046486",
+        "type": "thinking",
+        "content": "Source"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.047843",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.054438",
+        "type": "thinking",
+        "content": " Post"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.101498",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.102685",
+        "type": "thinking",
+        "content": " X"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.103558",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.104352",
+        "type": "thinking",
+        "content": " Zheng"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.110917",
+        "type": "thinking",
+        "content": "zh"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.134377",
+        "type": "thinking",
+        "content": "ong"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.135099",
+        "type": "thinking",
+        "content": " Tu"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.182207",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.183356",
+        "type": "thinking",
+        "content": " dated"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.191366",
+        "type": "thinking",
+        "content": " July"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.192002",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.192585",
+        "type": "thinking",
+        "content": "29"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.205501",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.206244",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.211815",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.212781",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.248619",
+        "type": "thinking",
+        "content": ")\\"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.249427",
+        "type": "thinking",
+        "content": "n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.250133",
+        "type": "thinking",
+        "content": "3"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.255609",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.256179",
+        "type": "thinking",
+        "content": " **"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.256741",
+        "type": "thinking",
+        "content": "Panel"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.287349",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.288019",
+        "type": "thinking",
+        "content": " Human"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.328914",
+        "type": "thinking",
+        "content": "-Agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.369163",
+        "type": "thinking",
+        "content": " Collaboration"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.369697",
+        "type": "thinking",
+        "content": "**:"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.370187",
+        "type": "thinking",
+        "content": " May"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.409168",
+        "type": "thinking",
+        "content": " Habib"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.463513",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.464394",
+        "type": "thinking",
+        "content": " CEO"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.484535",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.527306",
+        "type": "thinking",
+        "content": " WR"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.573270",
+        "type": "thinking",
+        "content": "ITER"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.582369",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.583223",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.583980",
+        "type": "thinking",
+        "content": " participate"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.612499",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.613630",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.620760",
+        "type": "thinking",
+        "content": " discussion"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.621426",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.622024",
+        "type": "thinking",
+        "content": " human"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.655264",
+        "type": "thinking",
+        "content": "-agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.656327",
+        "type": "thinking",
+        "content": " collaboration"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.662487",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.663070",
+        "type": "thinking",
+        "content": " which"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.663661",
+        "type": "thinking",
+        "content": " could"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.688122",
+        "type": "thinking",
+        "content": " touch"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.688808",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.694756",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.736706",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.737593",
+        "type": "thinking",
+        "content": " integrating"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.772038",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.773127",
+        "type": "thinking",
+        "content": " into"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.781085",
+        "type": "thinking",
+        "content": " enterprise"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.817423",
+        "type": "thinking",
+        "content": " settings"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.851524",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.852381",
+        "type": "thinking",
+        "content": " ("
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.853336",
+        "type": "thinking",
+        "content": "Source"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.859195",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.859897",
+        "type": "thinking",
+        "content": " Post"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.894419",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.894929",
+        "type": "thinking",
+        "content": " X"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.895448",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.899860",
+        "type": "thinking",
+        "content": " WR"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.900377",
+        "type": "thinking",
+        "content": "ITER"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.900849",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.940943",
+        "type": "thinking",
+        "content": " dated"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.941540",
+        "type": "thinking",
+        "content": " July"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.946236",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.947190",
+        "type": "thinking",
+        "content": "29"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.947697",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:52.948173",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.001731",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.008314",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.008905",
+        "type": "thinking",
+        "content": ")\\"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.009505",
+        "type": "thinking",
+        "content": "n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.010183",
+        "type": "thinking",
+        "content": "\\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.010788",
+        "type": "thinking",
+        "content": "Additionally"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.022219",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.022716",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.023216",
+        "type": "thinking",
+        "content": " summit"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.054927",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.111700",
+        "type": "thinking",
+        "content": " host"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.148317",
+        "type": "thinking",
+        "content": " speakers"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.172355",
+        "type": "thinking",
+        "content": " from"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.173412",
+        "type": "thinking",
+        "content": " notable"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.213716",
+        "type": "thinking",
+        "content": " organizations"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.215080",
+        "type": "thinking",
+        "content": " such"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.224006",
+        "type": "thinking",
+        "content": " as"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.290199",
+        "type": "thinking",
+        "content": " AMD"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.291339",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.292213",
+        "type": "thinking",
+        "content": " Oracle"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.301173",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.309678",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.310373",
+        "type": "thinking",
+        "content": " Linked"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.311695",
+        "type": "thinking",
+        "content": "In"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.312320",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.313320",
+        "type": "thinking",
+        "content": " who"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.333946",
+        "type": "thinking",
+        "content": " are"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.334435",
+        "type": "thinking",
+        "content": " expected"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.334881",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.335331",
+        "type": "thinking",
+        "content": " dive"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.397632",
+        "type": "thinking",
+        "content": " into"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.402009",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.414779",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.415284",
+        "type": "thinking",
+        "content": " systems"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.415720",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.453839",
+        "type": "thinking",
+        "content": " autonomous"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.458659",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.459210",
+        "type": "thinking",
+        "content": " infrastructure"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.459726",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.490277",
+        "type": "thinking",
+        "content": " potentially"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.490883",
+        "type": "thinking",
+        "content": " covering"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.496447",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.541372",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.542066",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.542762",
+        "type": "thinking",
+        "content": " ("
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.543431",
+        "type": "thinking",
+        "content": "Source"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.549813",
+        "type": "thinking",
+        "content": ":"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.550395",
+        "type": "thinking",
+        "content": " Post"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.575098",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.575825",
+        "type": "thinking",
+        "content": " X"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.576564",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.582390",
+        "type": "thinking",
+        "content": " Abnormal"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.621188",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.621932",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.622623",
+        "type": "thinking",
+        "content": " dated"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.623344",
+        "type": "thinking",
+        "content": " August"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.629298",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.629884",
+        "type": "thinking",
+        "content": "1"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.657163",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.657867",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.658567",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.664666",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.665158",
+        "type": "thinking",
+        "content": ")\\"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.665683",
+        "type": "thinking",
+        "content": "n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.692953",
+        "type": "thinking",
+        "content": "\\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.693671",
+        "type": "thinking",
+        "content": "Unfortunately"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.699893",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.700461",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.735018",
+        "type": "thinking",
+        "content": " complete"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.735776",
+        "type": "thinking",
+        "content": " list"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.774526",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.783683",
+        "type": "thinking",
+        "content": " all"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.784744",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.785577",
+        "type": "thinking",
+        "content": " specifically"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.811720",
+        "type": "thinking",
+        "content": " focused"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.853789",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.859379",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.859943",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.901226",
+        "type": "thinking",
+        "content": " is"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.901783",
+        "type": "thinking",
+        "content": " not"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.902270",
+        "type": "thinking",
+        "content": " available"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.906385",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.936553",
+        "type": "thinking",
+        "content": " this"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.937069",
+        "type": "thinking",
+        "content": " time"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.937517",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.983064",
+        "type": "thinking",
+        "content": " For"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:53.989110",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.016155",
+        "type": "thinking",
+        "content": " most"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.016859",
+        "type": "thinking",
+        "content": " up"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.017535",
+        "type": "thinking",
+        "content": "-to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.018213",
+        "type": "thinking",
+        "content": "-date"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.025044",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.025689",
+        "type": "thinking",
+        "content": " detailed"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.058568",
+        "type": "thinking",
+        "content": " agenda"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.059406",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.096129",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.104579",
+        "type": "thinking",
+        "content": " recommend"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.105258",
+        "type": "thinking",
+        "content": " visiting"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.105889",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.106539",
+        "type": "thinking",
+        "content": " official"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.143095",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.150661",
+        "type": "thinking",
+        "content": " R"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.183334",
+        "type": "thinking",
+        "content": "DI"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.184241",
+        "type": "thinking",
+        "content": " website"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.184990",
+        "type": "thinking",
+        "content": " ("
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.185686",
+        "type": "thinking",
+        "content": "https"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.192093",
+        "type": "thinking",
+        "content": "://"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.192675",
+        "type": "thinking",
+        "content": "rdi"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.215822",
+        "type": "thinking",
+        "content": ".ber"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.216528",
+        "type": "thinking",
+        "content": "keley"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.217240",
+        "type": "thinking",
+        "content": ".edu"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.223696",
+        "type": "thinking",
+        "content": "/events"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.255127",
+        "type": "thinking",
+        "content": "/agent"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.297390",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.299155",
+        "type": "thinking",
+        "content": "-ai"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.300044",
+        "type": "thinking",
+        "content": "-s"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.308547",
+        "type": "thinking",
+        "content": "umm"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.309399",
+        "type": "thinking",
+        "content": "it"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.310036",
+        "type": "thinking",
+        "content": ")"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.337662",
+        "type": "thinking",
+        "content": " or"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.338498",
+        "type": "thinking",
+        "content": " registering"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.379810",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.380444",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.381050",
+        "type": "thinking",
+        "content": " event"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.416210",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.416752",
+        "type": "thinking",
+        "content": " which"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.466589",
+        "type": "thinking",
+        "content": " also"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.497365",
+        "type": "thinking",
+        "content": " offers"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.501956",
+        "type": "thinking",
+        "content": " a"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.503022",
+        "type": "thinking",
+        "content": " virtual"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.507179",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.556681",
+        "type": "thinking",
+        "content": " free"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.557738",
+        "type": "thinking",
+        "content": " attendance"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.580578",
+        "type": "thinking",
+        "content": " option"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.581500",
+        "type": "thinking",
+        "content": " as"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.618104",
+        "type": "thinking",
+        "content": " mentioned"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.626857",
+        "type": "thinking",
+        "content": " in"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.627567",
+        "type": "thinking",
+        "content": " community"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.663945",
+        "type": "thinking",
+        "content": " posts"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.664971",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.665802",
+        "type": "thinking",
+        "content": " If"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.705346",
+        "type": "thinking",
+        "content": " you"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.706365",
+        "type": "thinking",
+        "content": " require"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.736670",
+        "type": "thinking",
+        "content": " specific"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.779893",
+        "type": "thinking",
+        "content": " session"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.820828",
+        "type": "thinking",
+        "content": " titles"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.829924",
+        "type": "thinking",
+        "content": " or"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.831468",
+        "type": "thinking",
+        "content": " speaker"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.862346",
+        "type": "thinking",
+        "content": " details"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.863330",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.864250",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.880178",
+        "type": "thinking",
+        "content": " can"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.897987",
+        "type": "thinking",
+        "content": " continue"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.935833",
+        "type": "thinking",
+        "content": " monitoring"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.987216",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:54.987916",
+        "type": "thinking",
+        "content": " updates"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.023305",
+        "type": "thinking",
+        "content": " or"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.023985",
+        "type": "thinking",
+        "content": " assist"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.024681",
+        "type": "thinking",
+        "content": " with"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.059029",
+        "type": "thinking",
+        "content": " contacting"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.060125",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.067632",
+        "type": "thinking",
+        "content": " organizers"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.068757",
+        "type": "thinking",
+        "content": " directly"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.069361",
+        "type": "thinking",
+        "content": ".\\"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.097575",
+        "type": "thinking",
+        "content": "n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.098341",
+        "type": "thinking",
+        "content": "\\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.105465",
+        "type": "thinking",
+        "content": "Please"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.138265",
+        "type": "thinking",
+        "content": " note"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.138970",
+        "type": "thinking",
+        "content": " that"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.139658",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.188616",
+        "type": "thinking",
+        "content": " from"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.198439",
+        "type": "thinking",
+        "content": " social"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.199551",
+        "type": "thinking",
+        "content": " media"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.200409",
+        "type": "thinking",
+        "content": " posts"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.201113",
+        "type": "thinking",
+        "content": " is"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.219679",
+        "type": "thinking",
+        "content": " used"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.271671",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.272591",
+        "type": "thinking",
+        "content": " provide"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.304116",
+        "type": "thinking",
+        "content": " context"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.305246",
+        "type": "thinking",
+        "content": " but"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.354160",
+        "type": "thinking",
+        "content": " may"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.363434",
+        "type": "thinking",
+        "content": " not"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.364289",
+        "type": "thinking",
+        "content": " be"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.365049",
+        "type": "thinking",
+        "content": " fully"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.393219",
+        "type": "thinking",
+        "content": " conclusive"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.393791",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.428700",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.429348",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.429976",
+        "type": "thinking",
+        "content": " encourage"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.430693",
+        "type": "thinking",
+        "content": " verifying"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.462949",
+        "type": "thinking",
+        "content": " details"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.468020",
+        "type": "thinking",
+        "content": " through"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.501076",
+        "type": "thinking",
+        "content": " official"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.501638",
+        "type": "thinking",
+        "content": " channels"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.502115",
+        "type": "thinking",
+        "content": ".\"\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.502596",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.550878",
+        "type": "thinking",
+        "content": " }\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.551429",
+        "type": "thinking",
+        "content": "}"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.552545",
+        "type": "thinking",
+        "content": "\n📚 **Citations:**\n1. https://rdi.berkeley.edu/events/agentic-ai-summit\n2. https://na.eventscloud.com/ereg/inactive.php?eventid=842399\n3. https://www.summit.ai/\n4. https://lu.ma/agentic-ai-summit-livestream\n5. https://voices.berkeley.edu/event/beyond-automation-age-agentic-ai\n6. https://research.aimultiple.com/agentic-frameworks/\n7. https://odsc.medium.com/from-architecture-to-execution-inside-week-2-of-the-agentic-ai-summit-88baa36ca3b5\n8. https://thecuberesearch.com/aws-summit-ny-2025-highlights-the-agentic-era-of-software-development/\n9. https://odsc.medium.com/announcing-the-first-speakers-for-the-virtual-agentic-ai-summit-in-july-4ac7fb874802\n10. https://fedresources.com/event-agentic-summit-2025/\n11. https://x.com/hetu_protocol/status/1900091352169537923\n12. https://x.com/AlexReibman/status/1874612390492553218\n13. https://x.com/NetMindAI/status/1876497744799629676\n14. https://x.com/jerryjliu0/status/1874930168739017149\n15. https://x.com/BanklessHQ/status/1874817930816631060\n"
+      },
+      {
+        "timestamp": "2025-08-01T19:59:55.553085",
+        "type": "thinking",
+        "content": "🔁 Agent [grok3] gracefully restarting due to new answer detected"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.057479",
+        "type": "thinking",
+        "content": "After"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.101263",
+        "type": "thinking",
+        "content": " reviewing"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.102393",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.103284",
+        "type": "thinking",
+        "content": " current"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.142629",
+        "type": "thinking",
+        "content": " answer"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.153255",
+        "type": "thinking",
+        "content": " provided"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.154165",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.154909",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.198931",
+        "type": "thinking",
+        "content": "1"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.200180",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.209623",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.210265",
+        "type": "thinking",
+        "content": " find"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.235273",
+        "type": "thinking",
+        "content": " that"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.236172",
+        "type": "thinking",
+        "content": " it"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.236869",
+        "type": "thinking",
+        "content": " does"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.244623",
+        "type": "thinking",
+        "content": " not"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.245211",
+        "type": "thinking",
+        "content": " fully"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.245844",
+        "type": "thinking",
+        "content": " address"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.285682",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.286777",
+        "type": "thinking",
+        "content": " original"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.338190",
+        "type": "thinking",
+        "content": " message"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.338856",
+        "type": "thinking",
+        "content": " requesting"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.387132",
+        "type": "thinking",
+        "content": " specific"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.421516",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.422308",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.430052",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.430783",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.473648",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.509930",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.510630",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.518290",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.518861",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.519388",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.519913",
+        "type": "thinking",
+        "content": " Summit"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.559680",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.567394",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.567974",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.568581",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.569095",
+        "type": "thinking",
+        "content": " The"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.601398",
+        "type": "thinking",
+        "content": " response"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.609192",
+        "type": "thinking",
+        "content": " lacks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.609850",
+        "type": "thinking",
+        "content": " detailed"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.667433",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.668612",
+        "type": "thinking",
+        "content": " about"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.669516",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.678756",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.693928",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.694623",
+        "type": "thinking",
+        "content": " which"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.695355",
+        "type": "thinking",
+        "content": " is"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.696061",
+        "type": "thinking",
+        "content": " critical"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.756240",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.757080",
+        "type": "thinking",
+        "content": " fulfilling"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.789280",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.790158",
+        "type": "thinking",
+        "content": " user's"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.834778",
+        "type": "thinking",
+        "content": " request"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.845180",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.846018",
+        "type": "thinking",
+        "content": " Therefore"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.879973",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.880934",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.881888",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.890095",
+        "type": "thinking",
+        "content": " provide"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.890820",
+        "type": "thinking",
+        "content": " an"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.937222",
+        "type": "thinking",
+        "content": " improved"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.937880",
+        "type": "thinking",
+        "content": " answer"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.938522",
+        "type": "thinking",
+        "content": " using"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.945429",
+        "type": "thinking",
+        "content": " available"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.974850",
+        "type": "thinking",
+        "content": " web"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.975357",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:08.975838",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.020880",
+        "type": "thinking",
+        "content": " posts"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.028371",
+        "type": "thinking",
+        "content": " from"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.068423",
+        "type": "thinking",
+        "content": " X"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.069138",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.069871",
+        "type": "thinking",
+        "content": " offer"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.118694",
+        "type": "thinking",
+        "content": " as"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.179116",
+        "type": "thinking",
+        "content": " much"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.180090",
+        "type": "thinking",
+        "content": " relevant"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.180823",
+        "type": "thinking",
+        "content": " detail"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.210735",
+        "type": "thinking",
+        "content": " as"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.211716",
+        "type": "thinking",
+        "content": " possible"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:09.219908",
+        "type": "thinking",
+        "content": ".\n\n"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:22.208668",
+        "type": "thinking",
+        "content": "💡 Providing answer: \"While the full schedule of talks for the Berkeley Agentic AI Summit 2025, hosted by the Berkeley Center for Responsible Decentralized Intelligence, is not yet fully detailed in the available sources, I have gathered some relevant information based on web content and posts found on X. The summit is taking place on August 2, 2025, at UC Berkeley, and focuses on the future of agentic AI, including frameworks and architectures.\n\nHere are some highlights related to agent frameworks that may be discussed, based on available information:\n1. **Focus Talk on Open Source AI and Agentic Systems**: PyTorch, participating in the summit, mentioned on X that they will be delivering a focus talk on how the Linux Foundation and PyTorch Foundation are accelerating open source AI. Given the context, this could include discussions on frameworks for AI agents (Source: Post on X by PyTorch, dated July 31, 2025).\n2. **Lightning Talk on '#4KAgent'**: Zhengzhong Tu announced on X a lightning talk and poster presentation on their recent paper '#4KAgent' at the summit. This talk may touch on specific agent framework advancements or implementations (Source: Post on X by Zhengzhong Tu, dated July 29, 2025).\n3. **Panel on Human-Agent Collaboration**: WRITER's CEO, May Habib, will discuss human-agent collaboration at the summit, which could involve agent frameworks designed for enterprise applications (Source: Post on X by WRITER, dated July 29, 2025).\n4. **General Themes on Agentic Architectures**: Posts on X and web content indicate a strong focus on next-generation AI agent architectures at the summit, with speakers from UC Berkeley, AMD, Oracle, and LinkedIn. For instance, a post by Abnormal AI highlights the event as a 'deep dive into agentic systems and autonomous AI infrastructure' (Source: Post on X by Abnormal AI, dated August 1, 2025).\n\nUnfortunately, a complete list of all talks specifically on agent frameworks is not available in the current public domain data as of my knowledge cutoff and the real-time information accessed. I recommend visiting the official Berkeley RDI website (https://rdi.berkeley.edu/events/agentic-ai-summit) or the summit's registration page (https://na.eventscloud.com/ereg/inactive.php?eventid=842399) for the most up-to-date schedule. Additionally, the livestream link shared on X (https://lu.ma/agentic-ai-summit-livestream) may provide real-time access to the talks on August 2, 2025.\n\nIf you need assistance with registering for the event or accessing specific talks, let me know, and I can guide you further.\""
+      },
+      {
+        "timestamp": "2025-08-01T20:00:22.210086",
+        "type": "thinking",
+        "content": "[grok3] ✅ Answer provided"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.698494",
+        "type": "thinking",
+        "content": "After"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.733077",
+        "type": "thinking",
+        "content": " reviewing"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.734425",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.735346",
+        "type": "thinking",
+        "content": " current"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.801653",
+        "type": "thinking",
+        "content": " answers"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.813570",
+        "type": "thinking",
+        "content": " provided"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.830595",
+        "type": "thinking",
+        "content": " by"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.831449",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.832258",
+        "type": "thinking",
+        "content": " agents"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.833128",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.840617",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.841209",
+        "type": "thinking",
+        "content": " find"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.881649",
+        "type": "thinking",
+        "content": " that"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.882442",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.883185",
+        "type": "thinking",
+        "content": "1"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.939873",
+        "type": "thinking",
+        "content": " offers"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.973878",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.974791",
+        "type": "thinking",
+        "content": " most"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:24.975630",
+        "type": "thinking",
+        "content": " detailed"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.021933",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.033015",
+        "type": "thinking",
+        "content": " specific"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.033917",
+        "type": "thinking",
+        "content": " response"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.094601",
+        "type": "thinking",
+        "content": " regarding"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.095469",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.114870",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.121254",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.121676",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.159822",
+        "type": "thinking",
+        "content": " at"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.202532",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.203458",
+        "type": "thinking",
+        "content": " Berkeley"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.211126",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.211763",
+        "type": "thinking",
+        "content": "ic"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.212308",
+        "type": "thinking",
+        "content": " AI"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.212838",
+        "type": "thinking",
+        "content": " Summit"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.269297",
+        "type": "thinking",
+        "content": " "
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.269915",
+        "type": "thinking",
+        "content": "202"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.270472",
+        "type": "thinking",
+        "content": "5"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.271027",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.271674",
+        "type": "thinking",
+        "content": " Their"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.319834",
+        "type": "thinking",
+        "content": " answer"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.320445",
+        "type": "thinking",
+        "content": " includes"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.321074",
+        "type": "thinking",
+        "content": " specific"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.321692",
+        "type": "thinking",
+        "content": " sessions"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.351033",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.351629",
+        "type": "thinking",
+        "content": " speakers"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.387366",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.388065",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.388821",
+        "type": "thinking",
+        "content": " topics"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.455355",
+        "type": "thinking",
+        "content": " related"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.456357",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.457039",
+        "type": "thinking",
+        "content": " agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.480348",
+        "type": "thinking",
+        "content": " frameworks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.481044",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.489579",
+        "type": "thinking",
+        "content": " along"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.536925",
+        "type": "thinking",
+        "content": " with"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.538074",
+        "type": "thinking",
+        "content": " credible"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.583492",
+        "type": "thinking",
+        "content": " references"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.625697",
+        "type": "thinking",
+        "content": " to"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.631797",
+        "type": "thinking",
+        "content": " support"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.671832",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.672416",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.672956",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.673489",
+        "type": "thinking",
+        "content": " While"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.739643",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.740293",
+        "type": "thinking",
+        "content": "3"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.766274",
+        "type": "thinking",
+        "content": " provides"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.767881",
+        "type": "thinking",
+        "content": " some"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.810794",
+        "type": "thinking",
+        "content": " relevant"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.821590",
+        "type": "thinking",
+        "content": " insights"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.856087",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.857047",
+        "type": "thinking",
+        "content": " sources"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.913266",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.914895",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.925357",
+        "type": "thinking",
+        "content": " response"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.953130",
+        "type": "thinking",
+        "content": " lacks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:25.954109",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.017943",
+        "type": "thinking",
+        "content": " same"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.047972",
+        "type": "thinking",
+        "content": " level"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.059054",
+        "type": "thinking",
+        "content": " of"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.059868",
+        "type": "thinking",
+        "content": " specificity"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.060519",
+        "type": "thinking",
+        "content": " and"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.061086",
+        "type": "thinking",
+        "content": " detail"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.108059",
+        "type": "thinking",
+        "content": " as"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.153032",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.153638",
+        "type": "thinking",
+        "content": "1"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.154101",
+        "type": "thinking",
+        "content": "'s"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.209835",
+        "type": "thinking",
+        "content": "."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.210394",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.217277",
+        "type": "thinking",
+        "content": "2"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.217789",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.249177",
+        "type": "thinking",
+        "content": " on"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.249747",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.250369",
+        "type": "thinking",
+        "content": " other"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.257357",
+        "type": "thinking",
+        "content": " hand"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.257900",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.258418",
+        "type": "thinking",
+        "content": " does"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.296399",
+        "type": "thinking",
+        "content": " not"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.297012",
+        "type": "thinking",
+        "content": " provide"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.304558",
+        "type": "thinking",
+        "content": " any"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.305051",
+        "type": "thinking",
+        "content": " specific"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.327384",
+        "type": "thinking",
+        "content": " information"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.327998",
+        "type": "thinking",
+        "content": " about"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.328577",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.335987",
+        "type": "thinking",
+        "content": " talks"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.379693",
+        "type": "thinking",
+        "content": ".\n\n"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.380079",
+        "type": "thinking",
+        "content": "Therefore"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.440384",
+        "type": "thinking",
+        "content": ","
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.441913",
+        "type": "thinking",
+        "content": " I"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.451640",
+        "type": "thinking",
+        "content": " will"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.452313",
+        "type": "thinking",
+        "content": " vote"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.481161",
+        "type": "thinking",
+        "content": " for"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.481986",
+        "type": "thinking",
+        "content": " Agent"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.483043",
+        "type": "thinking",
+        "content": "1"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.491932",
+        "type": "thinking",
+        "content": " as"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.492560",
+        "type": "thinking",
+        "content": " having"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.529836",
+        "type": "thinking",
+        "content": " the"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.530659",
+        "type": "thinking",
+        "content": " best"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.531393",
+        "type": "thinking",
+        "content": " current"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.577823",
+        "type": "thinking",
+        "content": " answer"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:26.578731",
+        "type": "thinking",
+        "content": ".\n\n"
+      },
+      {
+        "timestamp": "2025-08-01T20:00:27.403712",
+        "type": "thinking",
+        "content": "🗳️ Voting for agent1: Agent1 provides the most detailed and specific information about talks on agent frameworks at the Berkeley Agentic AI Summit 2025, including session times, speakers, and topics, supported by references."
+      },
+      {
+        "timestamp": "2025-08-01T20:00:27.406931",
+        "type": "thinking",
+        "content": "[grok3] ✅ Vote recorded for 4o"
+      }
+    ]
+  },
+  "orchestrator_events": [
+    {
+      "timestamp": "2025-08-01T19:59:47.066879",
+      "event": "🔄 4o: ✅ [Provider Tool: Web Search] Search completed"
+    },
+    {
+      "timestamp": "2025-08-01T19:59:47.674460",
+      "event": "🔄 4omini: [4omini] ✅ Answer provided"
+    },
+    {
+      "timestamp": "2025-08-01T19:59:51.816864",
+      "event": "🔄 4omini: 🗳️ Voting for agent1: The answer provides a reasonable approach to finding the requested information, suggesting resources like the official summit website and social media for updates."
+    },
+    {
+      "timestamp": "2025-08-01T19:59:51.877503",
+      "event": "🔄 4omini: [4omini] ✅ Vote recorded for 4omini"
+    },
+    {
+      "timestamp": "2025-08-01T19:59:57.848675",
+      "event": "🔄 4o: [4o] ✅ Answer provided"
+    },
+    {
+      "timestamp": "2025-08-01T19:59:59.709792",
+      "event": "🔄 4o: 🗳️ Voting for agent1: Provides a detailed list of specific talks and speakers related to agent frameworks at the summit."
+    },
+    {
+      "timestamp": "2025-08-01T19:59:59.779021",
+      "event": "🔄 4o: [4o] ✅ Vote recorded for 4o"
+    },
+    {
+      "timestamp": "2025-08-01T20:00:01.036688",
+      "event": "🔄 4omini: 🗳️ Voting for agent1: Agent 1 provides detailed information about specific sessions and talks focused on agent frameworks, which directly answers the original request."
+    },
+    {
+      "timestamp": "2025-08-01T20:00:01.105731",
+      "event": "🔄 4omini: [4omini] ✅ Vote recorded for 4o"
+    },
+    {
+      "timestamp": "2025-08-01T20:00:22.210131",
+      "event": "🔄 grok3: [grok3] ✅ Answer provided"
+    },
+    {
+      "timestamp": "2025-08-01T20:00:24.015161",
+      "event": "🔄 4o: 🗳️ Voting for agent1: Agent1 provides a detailed list of talks and workshops related to agent frameworks at the summit, offering comprehensive coverage of the topic."
+    },
+    {
+      "timestamp": "2025-08-01T20:00:24.083451",
+      "event": "🔄 4o: [4o] ✅ Vote recorded for 4o"
+    },
+    {
+      "timestamp": "2025-08-01T20:00:25.224028",
+      "event": "🔄 4omini: 🗳️ Voting for agent1: Agent 1 provides a detailed list of specific talks and sessions focused on agent frameworks during the Berkeley Agentic AI Summit 2025, making it the most comprehensive and relevant response."
+    },
+    {
+      "timestamp": "2025-08-01T20:00:25.304529",
+      "event": "🔄 4omini: [4omini] ✅ Vote recorded for 4o"
+    },
+    {
+      "timestamp": "2025-08-01T20:00:27.404592",
+      "event": "🔄 grok3: 🗳️ Voting for agent1: Agent1 provides the most detailed and specific information about talks on agent frameworks at the Berkeley Agentic AI Summit 2025, including session times, speakers, and topics, supported by references."
+    },
+    {
+      "timestamp": "2025-08-01T20:00:27.407437",
+      "event": "🔄 grok3: [grok3] ✅ Vote recorded for 4o"
+    }
+  ],
+  "aggregated_responses": {
+    "orchestrator": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "🚀 Starting multi-agent coordination...\n\n## 📋 Agents Coordinating\n## 🎯 Selected Coordinated Answer\n🏆 Selected Agent: 4o",
+      "first_timestamp": "2025-08-01T19:59:43.543900",
+      "last_timestamp": "2025-08-01T20:00:27.407620"
+    },
+    "4o": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "🔍 [Provider Tool: Web Search] Starting search...🔍 [Provider Tool: Web Search] Searching...✅ [Provider Tool: Web Search] Search completed🔍 [Search Query] 'Berkeley Agentic AI Summit 2025 talks on agent frameworks'At the Berkeley Agentic AI Summit 2025, several sessions focus on agent frameworks:\n\n**Session 2: Frameworks & Stacks for Agentic Systems**\n\n- **10:45 AM – Keynote:** Ion Stoica, Co-Founder of Databricks & Anyscale, and Professor at UC Berkeley, will discuss advancements in agentic system frameworks.\n\n- **11:05 AM – Focus Talks:**\n  - Matei Zaharia, Co-Founder/CTO of Databricks and Associate Professor at UC Berkeley, will present on agentic system stacks.\n  - Sherwin Wu, Head of Engineering for OpenAI API at OpenAI, will share insights into OpenAI's agent frameworks.\n\nAdditionally, the summit features workshops and discussions on agentic AI frameworks, including:\n\n- **\"Design and Build Multi-Agent Applications\"** by Valentina Alto, Technical Architect at Microsoft, focusing on building scalable, interoperable multi-agent AI systems using orchestration frameworks like LangGraph and open protocols such as MCP and A2A. ([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))\n\n- **\"Build & Optimize Agentic AI Systems: From Rapid Prototyping to Research and Production\"** by Chi Wang, Founder of AutoGen and Senior Staff Research Scientist at Google DeepMind, introducing AG2, an open-source AgentOS, and Waldiez, a visual tool for building autonomous AI workflows. ([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))\n\nThese sessions provide comprehensive insights into the development and optimization of agent frameworks within the AI landscape. 💡 Providing answer: \"At the Berkeley Agentic AI Summit 2025, several sessions focus on agent frameworks:\n\n**Session 2: Frameworks & Stacks for Agentic Systems**\n\n- **10:45 AM – Keynote:** Ion Stoica, Co-Founder of Databricks & Anyscale, and Professor at UC Berkeley, will discuss advancements in agentic system frameworks.\n\n- **11:05 AM – Focus Talks:**\n  - Matei Zaharia, Co-Founder/CTO of Databricks and Associate Professor at UC Berkeley, will present on agentic system stacks.\n  - Sherwin Wu, Head of Engineering for OpenAI API at OpenAI, will share insights into OpenAI's agent frameworks.\n\nAdditionally, the summit features workshops and discussions on agentic AI frameworks, including:\n\n- **\"Design and Build Multi-Agent Applications\"** by Valentina Alto, Technical Architect at Microsoft, focusing on building scalable, interoperable multi-agent AI systems using orchestration frameworks like LangGraph and open protocols such as MCP and A2A. ([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))\n\n- **\"Build & Optimize Agentic AI Systems: From Rapid Prototyping to Research and Production\"** by Chi Wang, Founder of AutoGen and Senior Staff Research Scientist at Google DeepMind, introducing AG2, an open-source AgentOS, and Waldiez, a visual tool for building autonomous AI workflows. ([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai))\n\nThese sessions provide comprehensive insights into the development and optimization of agent frameworks within the AI landscape.\"[4o] ✅ Answer provided🗳️ Voting for agent1: Provides a detailed list of specific talks and speakers related to agent frameworks at the summit.[4o] ✅ Vote recorded for 4o🗳️ Voting for agent1: Agent1 provides a detailed list of talks and workshops related to agent frameworks at the summit, offering comprehensive coverage of the topic.[4o] ✅ Vote recorded for 4o",
+      "first_timestamp": "2025-08-01T19:59:45.317041",
+      "last_timestamp": "2025-08-01T20:00:24.082750"
+    },
+    "4omini": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "💡 Providing answer: \"As of now, I don't have specific information about the talks on agent frameworks for the Berkeley Agentic AI Summit 2025. I recommend checking the official summit website or related announcements for detailed schedules, speaker lists, and topics that will be covered. You may also want to look at social media platforms or AI research forums for updates, as these events often share information leading up to the summit.\"[4omini] ✅ Answer provided🗳️ Voting for agent1: The answer provides a reasonable approach to finding the requested information, suggesting resources like the official summit website and social media for updates.[4omini] ✅ Vote recorded for 4omini🗳️ Voting for agent1: Agent 1 provides detailed information about specific sessions and talks focused on agent frameworks, which directly answers the original request.[4omini] ✅ Vote recorded for 4o🗳️ Voting for agent1: Agent 1 provides a detailed list of specific talks and sessions focused on agent frameworks during the Berkeley Agentic AI Summit 2025, making it the most comprehensive and relevant response.[4omini] ✅ Vote recorded for 4o",
+      "first_timestamp": "2025-08-01T19:59:47.647062",
+      "last_timestamp": "2025-08-01T20:00:25.296870"
+    },
+    "grok3": {
+      "thinking": "",
+      "tool_calls": "",
+      "presentation": "",
+      "other_content": "Since there are no current answers from the agents yet, I will provide a new answer to address the original message regarding talks on agent frameworks at the Berkeley Agentic AI Summit 2025.\n\n{\n  \"action\": \"new_answer\",\n  \"action_input\": {\n    \"content\": \"I have researched information about the Berkeley Agentic AI Summit 2025 to identify talks related to agent frameworks. The summit, hosted by the Berkeley Center for Responsible Decentralized Intelligence (Berkeley RDI), is scheduled for August 2, 2025, at UC Berkeley. While comprehensive details about the full agenda and specific talks are not fully available in the public domain at this time, I have gathered relevant information based on announcements and posts found on the web and social media.\\n\\nBased on available information, the Agentic AI Summit 2025 focuses on autonomous AI systems, agentic AI infrastructure, and human-AI collaboration. Several posts on X and web sources indicate that the summit will feature discussions and presentations related to next-generation AI agent architectures. Here are some highlights that may pertain to agent frameworks:\\n\\n1. **Focus Talk by PyTorch**: PyTorch, in collaboration with the Linux Foundation, will present a talk on accelerating open-source AI, which may include discussions on frameworks for AI agents, given their involvement in cutting-edge AI technologies. (Source: Post on X by PyTorch, dated July 31, 2025)\\n2. **Lightning Talk on '4KAgent' by Zhengzhong Tu**: A speaker, Zhengzhong Tu, will deliver a lightning talk and present a poster on their recent paper '4KAgent,' which likely discusses advancements or frameworks for AI agents. (Source: Post on X by Zhengzhong Tu, dated July 29, 2025)\\n3. **Panel on Human-Agent Collaboration**: May Habib, CEO of WRITER, will participate in a discussion on human-agent collaboration, which could touch on frameworks for integrating agents into enterprise settings. (Source: Post on X by WRITER, dated July 29, 2025)\\n\\nAdditionally, the summit will host speakers from notable organizations such as AMD, Oracle, and LinkedIn, who are expected to dive into agentic systems and autonomous AI infrastructure, potentially covering agent frameworks. (Source: Post on X by Abnormal AI, dated August 1, 2025)\\n\\nUnfortunately, a complete list of all talks specifically focused on agent frameworks is not available at this time. For the most up-to-date and detailed agenda, I recommend visiting the official Berkeley RDI website (https://rdi.berkeley.edu/events/agentic-ai-summit) or registering for the event, which also offers a virtual and free attendance option as mentioned in community posts. If you require specific session titles or speaker details, I can continue monitoring for updates or assist with contacting the organizers directly.\\n\\nPlease note that information from social media posts is used to provide context but may not be fully conclusive, and I encourage verifying details through official channels.\"\n  }\n}\n📚 **Citations:**\n1. https://rdi.berkeley.edu/events/agentic-ai-summit\n2. https://na.eventscloud.com/ereg/inactive.php?eventid=842399\n3. https://www.summit.ai/\n4. https://lu.ma/agentic-ai-summit-livestream\n5. https://voices.berkeley.edu/event/beyond-automation-age-agentic-ai\n6. https://research.aimultiple.com/agentic-frameworks/\n7. https://odsc.medium.com/from-architecture-to-execution-inside-week-2-of-the-agentic-ai-summit-88baa36ca3b5\n8. https://thecuberesearch.com/aws-summit-ny-2025-highlights-the-agentic-era-of-software-development/\n9. https://odsc.medium.com/announcing-the-first-speakers-for-the-virtual-agentic-ai-summit-in-july-4ac7fb874802\n10. https://fedresources.com/event-agentic-summit-2025/\n11. https://x.com/hetu_protocol/status/1900091352169537923\n12. https://x.com/AlexReibman/status/1874612390492553218\n13. https://x.com/NetMindAI/status/1876497744799629676\n14. https://x.com/jerryjliu0/status/1874930168739017149\n15. https://x.com/BanklessHQ/status/1874817930816631060\n🔁 Agent [grok3] gracefully restarting due to new answer detectedAfter reviewing the current answer provided by agent1, I find that it does not fully address the original message requesting specific talks on agent frameworks at the Berkeley Agentic AI Summit 2025. The response lacks detailed information about the talks, which is critical to fulfilling the user's request. Therefore, I will provide an improved answer using available web information and posts from X to offer as much relevant detail as possible.\n\n💡 Providing answer: \"While the full schedule of talks for the Berkeley Agentic AI Summit 2025, hosted by the Berkeley Center for Responsible Decentralized Intelligence, is not yet fully detailed in the available sources, I have gathered some relevant information based on web content and posts found on X. The summit is taking place on August 2, 2025, at UC Berkeley, and focuses on the future of agentic AI, including frameworks and architectures.\n\nHere are some highlights related to agent frameworks that may be discussed, based on available information:\n1. **Focus Talk on Open Source AI and Agentic Systems**: PyTorch, participating in the summit, mentioned on X that they will be delivering a focus talk on how the Linux Foundation and PyTorch Foundation are accelerating open source AI. Given the context, this could include discussions on frameworks for AI agents (Source: Post on X by PyTorch, dated July 31, 2025).\n2. **Lightning Talk on '#4KAgent'**: Zhengzhong Tu announced on X a lightning talk and poster presentation on their recent paper '#4KAgent' at the summit. This talk may touch on specific agent framework advancements or implementations (Source: Post on X by Zhengzhong Tu, dated July 29, 2025).\n3. **Panel on Human-Agent Collaboration**: WRITER's CEO, May Habib, will discuss human-agent collaboration at the summit, which could involve agent frameworks designed for enterprise applications (Source: Post on X by WRITER, dated July 29, 2025).\n4. **General Themes on Agentic Architectures**: Posts on X and web content indicate a strong focus on next-generation AI agent architectures at the summit, with speakers from UC Berkeley, AMD, Oracle, and LinkedIn. For instance, a post by Abnormal AI highlights the event as a 'deep dive into agentic systems and autonomous AI infrastructure' (Source: Post on X by Abnormal AI, dated August 1, 2025).\n\nUnfortunately, a complete list of all talks specifically on agent frameworks is not available in the current public domain data as of my knowledge cutoff and the real-time information accessed. I recommend visiting the official Berkeley RDI website (https://rdi.berkeley.edu/events/agentic-ai-summit) or the summit's registration page (https://na.eventscloud.com/ereg/inactive.php?eventid=842399) for the most up-to-date schedule. Additionally, the livestream link shared on X (https://lu.ma/agentic-ai-summit-livestream) may provide real-time access to the talks on August 2, 2025.\n\nIf you need assistance with registering for the event or accessing specific talks, let me know, and I can guide you further.\"[grok3] ✅ Answer providedAfter reviewing the current answers provided by the agents, I find that Agent1 offers the most detailed and specific response regarding talks on agent frameworks at the Berkeley Agentic AI Summit 2025. Their answer includes specific sessions, speakers, and topics related to agent frameworks, along with credible references to support the information. While Agent3 provides some relevant insights and sources, the response lacks the same level of specificity and detail as Agent1's. Agent2, on the other hand, does not provide any specific information about the talks.\n\nTherefore, I will vote for Agent1 as having the best current answer.\n\n🗳️ Voting for agent1: Agent1 provides the most detailed and specific information about talks on agent frameworks at the Berkeley Agentic AI Summit 2025, including session times, speakers, and topics, supported by references.[grok3] ✅ Vote recorded for 4o",
+      "first_timestamp": "2025-08-01T19:59:47.711246",
+      "last_timestamp": "2025-08-01T20:00:27.406524"
+    }
+  },
+  "workflow_analysis": {
+    "new_answers": 0,
+    "votes": 0,
+    "total_chunks": 1145
+  }
+}

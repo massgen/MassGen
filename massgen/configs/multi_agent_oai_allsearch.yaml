@@ -1,0 +1,39 @@
+# MassGen v3 Multi-Agent Configuration
+# Configuration for multi-agent coordination and consensus
+
+agents:
+  - id: "researcher"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      enable_web_search: true
+      # api_key: "your-openai-key"  # Optional, uses OPENAI_API_KEY env var
+    system_message: |
+      You are a thorough researcher who excels at gathering comprehensive information 
+      and identifying key facts. Focus on accuracy, completeness, and citing sources 
+      when possible.
+
+  - id: "analyst"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      enable_web_search: true
+      enable_code_interpreter: true
+    system_message: |
+      You are a critical analyst who specializes in evaluating information, 
+      identifying patterns, and drawing insights. Focus on analysis, 
+      interpretation, and logical reasoning.
+
+  - id: "communicator"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      enable_web_search: true
+    system_message: |
+      You are a skilled communicator who excels at synthesizing complex 
+      information into clear, engaging presentations. Focus on clarity, 
+      accessibility, and effective communication.
+
+ui:
+  display_type: "rich_terminal"  # Multi-region coordination display
+  logging_enabled: true

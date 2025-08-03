@@ -1,0 +1,112 @@
+=== 4O OUTPUT LOG ===
+
+
+[02:16:48] [THINKING] 
+🔍 [Provider Tool: Web Search] Starting search...
+
+[02:16:49] [THINKING] 🔍 [Provider Tool: Web Search] Searching...
+
+[02:16:50] [THINKING] ✅ [Provider Tool: Web Search] Search completed
+
+[02:16:50] [THINKING] 🔍 [Search Query] 'Berkeley Agentic AI Summit 2025 agent frameworks talks schedule'
+At the Berkeley Agentic AI Summit 2025, scheduled for August 2, 2025, at the UC Berkeley Campus, several sessions will focus on agent frameworks. Notably, Session 2, titled "Frameworks & Stacks for Agentic Systems," includes:
+
+- **10:45 AM – Keynote by Ion Stoica**: Co-Founder of Databricks & Anyscale, and Professor at UC Berkeley.
+
+- **11:05 AM – Focus Talks**:
+  - *Matei Zaharia*: Co-Founder/CTO of Databricks and Associate Professor at UC Berkeley.
+  - *Sherwin Wu*: Head of Engineering, OpenAI API at OpenAI.
+
+These sessions will delve into the development and implementation of frameworks and stacks essential for agentic systems. ([rdi.berkeley.edu](https://rdi.berkeley.edu/events/agentic-ai-summit?utm_source=openai)) 
+[02:16:56] [THINKING] 💡 Providing answer: "The Berkeley Agentic AI Summit 2025 will feature several talks focused on agent frameworks:
+
+1. **10:45 AM – Keynote by Ion Stoica**: Co-Founder of Databricks & Anyscale and Professor at UC Berkeley will discuss agentic systems.
+
+2. **11:05 AM – Focus Talks**:
+   - *Matei Zaharia*: Co-Founder/CTO of Databricks and Associate Professor at UC Berkeley will share insights.
+   - *Sherwin Wu*: Head of Engineering, OpenAI API at OpenAI will elaborate on AI agent engineering.
+
+These sessions will explore the development of frameworks and stacks essential for agentic systems."
+
+[02:16:56] [THINKING] [4o] ✅ Answer provided
+
+[02:16:57] [THINKING] 
+🔍 [Provider Tool: Web Search] Starting search...
+
+[02:16:58] [THINKING] 🔍 [Provider Tool: Web Search] Searching...
+
+[02:16:59] [THINKING] ✅ [Provider Tool: Web Search] Search completed
+
+[02:16:59] [THINKING] 🔍 [Search Query] 'Berkeley Agentic AI Summit 2025 talks on agent frameworks'
+The Berkeley Agentic AI Summit 2025, held on August 2, 2025, at UC Berkeley, featured several sessions focused on agent frameworks:
+
+**Session 2: Frameworks & Stacks for Agentic Systems**
+
+- **10:45 AM – Keynote by Ion Stoica**: Co-Founder of Databricks & Anyscale and Professor at UC Berkeley.
+
+- **11:05 AM – Focus Talks**:
+  - *Matei Zaharia*: Co-Founder/CTO of Databricks and Associate Professor at UC Berkeley.
+  - *Sherwin Wu*: Head of Engineering, OpenAI API at OpenAI.
+
+These sessions explored the development of frameworks and stacks essential for agentic systems. ([rdi.berkeley.edu](https://rdi.berkeley.edu/events/agentic-ai-summit?utm_source=openai))
+
+Additionally, the summit included workshops and talks on building multi-agent applications, agent evaluation, and test-driven agent development, providing practical insights into agentic AI frameworks. ([odsc.medium.com](https://odsc.medium.com/key-skills-youll-take-away-from-the-agentic-ai-summit-a3d29b8df96b?utm_source=openai)) 
+[02:17:06] [THINKING] 💡 Providing answer: "The Berkeley Agentic AI Summit 2025 featured several sessions focused on agent frameworks:
+
+**Session 2: Frameworks & Stacks for Agentic Systems**
+
+- **10:45 AM – Keynote by Ion Stoica**: Co-Founder of Databricks & Anyscale and Professor at UC Berkeley.
+
+- **11:05 AM – Focus Talks**:
+  - *Matei Zaharia*: Co-Founder/CTO of Databricks and Associate Professor at UC Berkeley.
+  - *Sherwin Wu*: Head of Engineering, OpenAI API at OpenAI.
+
+These sessions explored the development of frameworks and stacks essential for agentic systems. Furthermore, the summit included workshops and talks on building multi-agent applications, agent evaluation, and test-driven agent development, providing practical insights into agentic AI frameworks."
+
+[02:17:06] [THINKING] [4o] ✅ Answer provided
+
+[02:17:09] [THINKING] 🗳️ Voting for agent1: Provides specific talks and details related to agent frameworks at the summit.
+
+[02:17:09] [THINKING] [4o] ✅ Vote recorded for 4o
+
+[02:17:13] [THINKING] 🗳️ Voting for agent1: Agent 1 provides specific details about the talks on agent frameworks, including names, positions, and topics covered. This directly addresses the original request more accurately than the other responses.
+
+[02:17:14] [THINKING] [4o] ✅ Vote recorded for 4o
+
+[02:17:59] [THINKING] 🗳️ Voting for agent1: Provides specific sessions and speakers from the Berkeley Agentic AI Summit 2025, focusing on agent frameworks. Includes detailed descriptions of talks and relevant workshops.
+
+[02:17:59] [THINKING] [4o] ✅ Vote recorded for 4o
+
+[02:18:21] [THINKING] 🗳️ Voting for agent1: Provides specific session information and relevant details about talks on agent frameworks, directly addressing the query with known details from the summit.
+
+[02:18:21] [THINKING] [4o] ✅ Vote recorded for 4o
+
+[02:18:30] [THINKING] 🗳️ Voting for agent3: Provides detailed information about specific sessions relevant to agent frameworks and offers links to official sites for further details.
+
+[02:18:30] [THINKING] [4o] ✅ Vote recorded for grok3
+
+[02:18:39] [THINKING] 🗳️ Voting for agent3: Provides detailed information on specific sessions, keynotes, and references relevant sources, offering a comprehensive overview with web links for further exploration.
+
+[02:18:39] [THINKING] [4o] ✅ Vote recorded for grok3
+
+[02:19:20] [THINKING] 🗳️ Voting for agent3: Provides detailed session information with sources and links for further reference.
+
+[02:19:20] [THINKING] [4o] ✅ Vote recorded for grok3
+
+[02:20:00] [THINKING] 🗳️ Voting for agent3: Provides detailed information on specific talks and offers additional resources for obtaining a complete list. It also refers to recent articles and relevant links, making it the most comprehensive response.
+
+[02:20:00] [THINKING] [4o] ✅ Vote recorded for grok3
+
+[02:20:12] [THINKING] 🗳️ Voting for agent3: Provides detailed information on the sessions, their relevance to agent frameworks, and additional resources for more comprehensive data.
+
+[02:20:12] [THINKING] [4o] ✅ Vote recorded for grok3
+
+[02:20:28] [THINKING] 🗳️ Voting for agent3: Provides detailed information on specific sessions and links to additional resources for a more comprehensive agenda.
+
+[02:20:28] [THINKING] [4o] ✅ Vote recorded for grok3
+
+[02:20:42] [THINKING] 🗳️ Voting for agent3: Provides specific details about talks and context while suggesting official resources for complete and up-to-date information, addressing the original request comprehensively.
+
+[02:20:42] [THINKING] [4o] ✅ Vote recorded for grok3
+
+=== SESSION ENDED at 2025-08-02 21:35:12 ===
