@@ -59,7 +59,6 @@ docs = [
     "myst-parser>=1.0.0",
 ]
 all = [
-    "anthropic>=0.18.0",
 ]
 
 [project.scripts]
