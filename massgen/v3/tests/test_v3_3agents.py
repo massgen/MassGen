@@ -23,7 +23,7 @@ import os
 project_root = os.path.dirname(__file__)
 sys.path.insert(0, project_root)
 
-from massgen.v3 import create_simple_agent, OpenAIBackend, Orchestrator
+from massgen.v3 import create_simple_agent, ResponseBackend, Orchestrator
 from massgen.v3.frontend.coordination_ui import coordinate_with_terminal_ui
 
 
@@ -42,7 +42,7 @@ async def three_agent_v3_example():
     
     try:
         # Create backend
-        backend = OpenAIBackend(model="gpt-4o-mini")
+        backend = ResponseBackend(model="gpt-4o-mini")
         print("✅ OpenAI backend created")
         
         # Create three agents with different specialties

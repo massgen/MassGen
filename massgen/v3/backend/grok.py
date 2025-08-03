@@ -19,7 +19,7 @@ TODO for future releases:
 
 import os
 from typing import Dict, List, Any, AsyncGenerator, Optional
-from .chat_completions_backend import ChatCompletionsBackend
+from .chat_completions import ChatCompletionsBackend
 from .base import StreamChunk
 
 

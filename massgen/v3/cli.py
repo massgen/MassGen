@@ -51,10 +51,10 @@ load_env_file()
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
-from massgen.v3.backend.grok_backend import GrokBackend
-from massgen.v3.backend.claude_backend import ClaudeBackend
-from massgen.v3.backend.gemini_backend import GeminiBackend
+from massgen.v3.backend.response import ResponseBackend
+from massgen.v3.backend.grok import GrokBackend
+from massgen.v3.backend.claude import ClaudeBackend
+from massgen.v3.backend.gemini import GeminiBackend
 from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.v3.agent_config import AgentConfig
 from massgen.v3.orchestrator import Orchestrator
@@ -104,7 +104,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         api_key = kwargs.get('api_key') or os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ConfigurationError("OpenAI API key not found. Set OPENAI_API_KEY or provide in config.")
-        return OpenAIBackend(api_key=api_key)
+        return ResponseBackend(api_key=api_key)
     
     elif backend_type == 'grok':
         api_key = kwargs.get('api_key') or os.getenv('XAI_API_KEY')
