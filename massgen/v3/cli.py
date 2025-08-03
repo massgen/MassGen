@@ -28,6 +28,8 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+from .utils import MODEL_MAPPINGS, get_backend_type_from_model
+
 # Load environment variables from .env file
 def load_env_file():
     """Load environment variables from .env file if it exists."""
@@ -561,15 +563,29 @@ Environment Variables:
         return
     
     # Validate arguments
-    if not args.config and not args.backend:
-        parser.error("Either --config or --backend must be specified")
+    if not args.backend:
+        if not args.model and not args.config:
+            parser.error("If there is not --backend, either --config or --model must be specified")
     
     try:
         # Load or create configuration
         if args.config:
             config = load_config_file(args.config)
         else:
-            config = create_simple_config(args.backend, args.model, args.system_message)
+            model = args.model
+            if args.backend:
+                backend = args.backend
+            else:
+                backend = get_backend_type_from_model(model=model)
+            if args.system_message:
+                system_message = args.system_message
+            else:
+                system_message = None
+            config = create_simple_config(
+                backend_type=backend,
+                model=model,
+                system_message=system_message
+            )
         
         # Apply command-line overrides
         ui_config = config.get('ui', {})
