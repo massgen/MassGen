@@ -1,4 +1,4 @@
-# MassGen Configuration Examples
+# MassGen v3 Configuration Examples
 
 This directory contains sample configuration files for MassGen CLI usage.
 

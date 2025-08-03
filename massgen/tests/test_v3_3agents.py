@@ -2,7 +2,7 @@
 """
 MassGen Example: Three Agent Coordination
 
-This example demonstrates three-agent coordination using MassGen with the 
+This example demonstrates three-agent coordination using v3 with the 
 multi-region coordination UI. Three agents with different specialties work 
 together on a question that benefits from multiple perspectives.
 

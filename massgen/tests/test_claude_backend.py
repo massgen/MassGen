@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Claude Backend Integration Tests for MassGen
+Claude Backend Integration Tests for MassGen v3
 
 Tests the Claude backend implementation with real API calls:
 - Basic text streaming
