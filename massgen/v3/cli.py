@@ -129,7 +129,15 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     if 'agent' in config:
         agent_config_data = config['agent']
         backend_config = agent_config_data.get('backend', {})
-        backend_type = backend_config['type']
+        
+        # Infer backend type from model if not explicitly provided
+        if 'type' not in backend_config and 'model' in backend_config:
+            backend_type = get_backend_type_from_model(backend_config['model'])
+        else:
+            backend_type = backend_config.get('type')
+            if not backend_type:
+                raise ConfigurationError("Backend type must be specified or inferrable from model")
+        
         backend = create_backend(backend_type, **backend_config)
         
         # Create proper AgentConfig with backend_params
@@ -163,7 +171,15 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     elif 'agents' in config:
         for agent_config_data in config['agents']:
             backend_config = agent_config_data.get('backend', {})
-            backend_type = backend_config['type']
+            
+            # Infer backend type from model if not explicitly provided
+            if 'type' not in backend_config and 'model' in backend_config:
+                backend_type = get_backend_type_from_model(backend_config['model'])
+            else:
+                backend_type = backend_config.get('type')
+                if not backend_type:
+                    raise ConfigurationError("Backend type must be specified or inferrable from model")
+            
             backend = create_backend(backend_type, **backend_config)
             
             # Create proper AgentConfig with backend_params
