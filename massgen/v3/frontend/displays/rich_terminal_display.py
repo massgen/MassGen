@@ -1336,10 +1336,11 @@ class RichTerminalDisplay(TerminalDisplay):
             pass
     
     def show_agent_selector(self):
-        """Show agent selector and handle user input."""
+        """Show agent selector and handle user input.""" 
+
         if not self._interactive_mode or not hasattr(self, '_agent_keys'):
             return
-        
+                
         # Prevent duplicate agent selector calls
         if self._agent_selector_active:
             return
@@ -1350,7 +1351,10 @@ class RichTerminalDisplay(TerminalDisplay):
         self._ensure_clean_keyboard_state()
         
         try:
+            loop_count = 0
             while True:
+                loop_count += 1
+                
                 # Display available options
                 options_text = Text()
                 options_text.append("\n🎮 Select an agent to view full output:\n", style=self.colors['primary'])
@@ -1384,7 +1388,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     break
         finally:
             # Always reset the flag when exiting
-            self._agent_selector_active = False
+            self._agent_selector_active = True
     
     def _show_system_status(self):
         """Display system status from txt file."""
@@ -2280,9 +2284,14 @@ class RichTerminalDisplay(TerminalDisplay):
             self.display_vote_results(vote_results)
             time.sleep(1.0)  # Allow time for voting results to be visible
         
-        # Now display the final answer prominently
+        # Now display only the selected agent instead of the full answer
+        if selected_agent:
+            selected_agent_text = Text(f"🏆 Selected agent: {selected_agent}", style=self.colors['success'])
+        else:
+            selected_agent_text = Text("No agent selected", style=self.colors['warning'])
+        
         final_panel = Panel(
-            Align.center(Text(answer, style=self.colors['text'])),
+            Align.center(selected_agent_text),
             title="[bold bright_green]🎯 FINAL COORDINATED ANSWER[/bold bright_green]",
             border_style=self.colors['success'],
             box=DOUBLE,
