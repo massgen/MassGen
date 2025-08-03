@@ -58,7 +58,7 @@ def _get_curr_messages_and_tools(self, task: TaskInput):
 ### 1. Orchestrator-Level Conversation Management
 
 ```python
-class MassOrchestrator:
+class Orchestrator:
     def __init__(self, ...):
         self.conversation_history: List[Dict[str, Any]] = []  # User conversation
         self.current_coordination_context: Optional[str] = None

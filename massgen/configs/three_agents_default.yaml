@@ -1,13 +1,13 @@
 # MassGen v3 Three Agent Configuration
-# Claude Haiku, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
+# Gemini-2.5-flash, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
 
 agents:
-  - id: "4o"
+  - id: "gemini2.5flash"
     backend:
-      type: "openai"
-      model: "gpt-4o"
+      type: "gemini"
+      model: "gemini-2.5-flash"
       enable_web_search: true
-      enable_code_execution: true
+      # enable_code_execution: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
   - id: "4omini"
@@ -18,12 +18,10 @@ agents:
       enable_code_interpreter: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
-  - id: "grok3"
+  - id: "grok3mini"
     backend:
       type: "grok"
-      model: "grok-3"
-      # type: "openai"
-      # model: "gpt-4o"
+      model: "grok-3-mini"
       enable_web_search: true
       return_citations: true
     # system_message: "You are a helpful AI assistant with web search capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."

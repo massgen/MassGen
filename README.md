@@ -123,9 +123,10 @@ Create a `.env` file in the `massgen` directory with your API keys:
 cp massgen/.env.example massgen/.env
 
 # Edit with your API keys
-OPENAI_API_KEY=sk-your-openai-key-here
-XAI_API_KEY=xai-your-xai-key-here
+OPENAI_API_KEY=your-openai-key-here
+XAI_API_KEY=your-xai-key-here
 ANTHROPIC_API_KEY=your-anthropic-key-here
+GEMINI_API_KEY=your-gemini-key-here
 ```
 
 Make sure you set up the API key for the model you want to use.
@@ -134,6 +135,7 @@ Make sure you set up the API key for the model you want to use.
  - [Claude](https://docs.anthropic.com/en/api/overview)
  - [OpenAI](https://platform.openai.com/api-keys)
  - [Grok](https://docs.x.ai/docs/overview)
+ - [Gemini](https://ai.google.dev/gemini-api/docs)
 
 ### 3. 🧩 Supported Models and Tools
 
@@ -142,7 +144,7 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-The system currently supports three model providers with advanced reasoning capabilities: **Anthropic Claude**, **OpenAI**, and **xAI Grok**. 
+The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **OpenAI**, **xAI Grok** and **Google Gemini**. 
 More providers and local inference of open-sourced models (using vllm or sglang) will be added (help wanted!) and the extension will be made easier.
 
 #### Tools
@@ -156,13 +158,14 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Claude** | ✅ | ✅ |
 | **OpenAI** | ✅ | ✅ |
 | **Grok** | ✅ | ❌ |
+| **Gemini** | ✅ | ✅ |
 
 ### 4. 🏃 Run MassGen
 
 #### Quick Setup with Backend and Model
 
 ```bash
-uv run python -m massgen.cli --backend openai --model gpt-4o-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
 ```
 
 #### Multiple Agents from Config
@@ -184,7 +187,48 @@ uv run python -m massgen.cli --config multi_agent.yaml "Compare different approa
 | `--no-logs`        | Disable logging of session inputs/outputs to file |
 | `question`         | Optional single-question input; if omitted, MassGen enters interactive chat mode |
 
-**Note**: `--config` and `--models` are mutually exclusive - use one or the other.
+#### Configuration File Format
+
+MassGen v3 supports YAML/JSON configuration files with the following structure:
+
+**Single Agent Configuration:**
+```yaml
+agent:
+  id: "assistant"
+  backend:
+    type: "openai"              # Backend type: openai, claude, grok, or gemini (optional)
+    model: "gpt-4o-mini"        # Model name specific to the backend
+    enable_web_search: true     # Enable web search capability (optional)
+    enable_code_interpreter: true # Enable code execution (optional)
+    # api_key: "your-key"       # Optional, uses environment variables if not set
+  system_message: "Custom system prompt"  # Optional custom system message
+
+ui:
+  display_type: "rich_terminal" # Display type: rich_terminal, terminal, or simple
+  logging_enabled: true         # Enable session logging
+```
+
+**Multi-Agent Configuration:**
+```yaml
+agents:
+  - id: "agent1"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+    system_message: "Specialized prompt for agent 1"
+    
+  - id: "agent2" 
+    backend:
+      type: "claude"
+      model: "claude-3-5-sonnet-20241022"
+    system_message: "Specialized prompt for agent 2"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+```
+
+**Note**: `--config` and `--model` are mutually exclusive - use one or the other.
 
 #### Interactive Multi-Turn Mode
 
@@ -192,7 +236,7 @@ MassGen supports an interactive mode where you can have ongoing conversations wi
 
 ```bash
 # Start interactive mode with multiple agents
-uv run python -m massgen.cli --backend openai --model gpt-4o-mini
+uv run python -m massgen.cli --model gpt-4o-mini
 
 # Start interactive mode with configuration file
 uv run python -m massgen.cli --config config.yaml
@@ -299,3 +343,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 Made with ❤️ by the MassGen team
 
 </div>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Leezekun/MassGen&type=Date)](https://www.star-history.com/#Leezekun/MassGen&Date)

@@ -109,6 +109,29 @@ class AgentConfig:
             
         return cls(backend_params=backend_params)
     
+    @classmethod
+    def create_gemini_config(cls, model: str = "gemini-2.5-flash", 
+                           enable_web_search: bool = False,
+                           enable_code_execution: bool = False,
+                           **kwargs) -> 'AgentConfig':
+        """Create Google Gemini configuration.
+        
+        Args:
+            model: Gemini model name
+            enable_web_search: Enable Google Search retrieval tool
+            enable_code_execution: Enable code execution tool
+            **kwargs: Additional backend parameters
+        """
+        backend_params = {"model": model, **kwargs}
+        
+        # Add tool enablement to backend_params
+        if enable_web_search:
+            backend_params["enable_web_search"] = True
+        if enable_code_execution:
+            backend_params["enable_code_execution"] = True
+            
+        return cls(backend_params=backend_params)
+    
     # =============================================================================
     # AGENT CUSTOMIZATION
     # =============================================================================
@@ -145,6 +168,8 @@ class AgentConfig:
             return cls.create_grok_config(model, enable_web_search=True)
         elif backend == "claude":
             return cls.create_claude_config(model, enable_web_search=True)
+        elif backend == "gemini":
+            return cls.create_gemini_config(model, enable_web_search=True)
         else:
             raise ValueError(f"Research configuration not available for backend: {backend}")
     
@@ -160,6 +185,8 @@ class AgentConfig:
             return cls.create_openai_config(model, enable_code_interpreter=True)
         elif backend == "claude":
             return cls.create_claude_config(model, enable_code_execution=True)
+        elif backend == "gemini":
+            return cls.create_gemini_config(model, enable_code_execution=True)
         else:
             raise ValueError(f"Computational configuration not available for backend: {backend}")
     
@@ -177,6 +204,8 @@ class AgentConfig:
             return cls.create_claude_config(model)
         elif backend == "grok":
             return cls.create_grok_config(model)
+        elif backend == "gemini":
+            return cls.create_gemini_config(model)
         else:
             raise ValueError(f"Analytical configuration not available for backend: {backend}")
     
@@ -197,6 +226,8 @@ class AgentConfig:
             config = cls.create_openai_config(model, enable_web_search=True)
         elif backend == "grok":
             config = cls.create_grok_config(model, enable_web_search=True)
+        elif backend == "gemini":
+            config = cls.create_gemini_config(model, enable_web_search=True)
         else:
             raise ValueError(f"Domain expert configuration not available for backend: {backend}")
         

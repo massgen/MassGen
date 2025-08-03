@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 """
-OpenAI backend implementation using Response API.
-Standalone implementation optimized for OpenAI's Response API format.
+Response API backend implementation.
+Standalone implementation optimized for the standard Response API format (originated by OpenAI).
 """
 
 import os
@@ -10,8 +10,8 @@ from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
 
 
-class OpenAIBackend(LLMBackend):
-    """OpenAI backend using the Response API."""
+class ResponseBackend(LLMBackend):
+    """Backend using the standard Response API format."""
     
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)

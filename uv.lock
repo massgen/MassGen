@@ -1045,9 +1045,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-all = [
-    { name = "anthropic" },
-]
 dev = [
     { name = "autoflake" },
     { name = "bandit" },
@@ -1071,7 +1068,6 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = "==0.49.0" },
-    { name = "anthropic", marker = "extra == 'all'", specifier = ">=0.18.0" },
     { name = "autoflake", marker = "extra == 'dev'", specifier = ">=2.1.0" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },

@@ -259,7 +259,6 @@ class SingleAgent(ChatAgent):
             "content": system_message
         })
 
-
 class ConfigurableAgent(SingleAgent):
     """
     Single agent that uses AgentConfig for advanced configuration.

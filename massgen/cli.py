@@ -28,6 +28,8 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+from .utils import MODEL_MAPPINGS, get_backend_type_from_model
+
 # Load environment variables from .env file
 def load_env_file():
     """Load environment variables from .env file if it exists."""
@@ -49,13 +51,14 @@ load_env_file()
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.openai_backend import OpenAIBackend
-from massgen.backend.grok_backend import GrokBackend
-from massgen.backend.claude_backend import ClaudeBackend
-from massgen.chat_agent import SingleAgent, ConfigurableAgent
-from massgen.agent_config import AgentConfig
-from massgen.orchestrator import MassOrchestrator
-from massgen.frontend.coordination_ui import CoordinationUI
+from massgen.v3.backend.response import ResponseBackend
+from massgen.v3.backend.grok import GrokBackend
+from massgen.v3.backend.claude import ClaudeBackend
+from massgen.v3.backend.gemini import GeminiBackend
+from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
+from massgen.v3.agent_config import AgentConfig
+from massgen.v3.orchestrator import Orchestrator
+from massgen.v3.frontend.coordination_ui import CoordinationUI
 
 # Color constants for terminal output
 BRIGHT_CYAN = '\033[96m'
@@ -107,7 +110,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         api_key = kwargs.get('api_key') or os.getenv('OPENAI_API_KEY')
         if not api_key:
             raise ConfigurationError("OpenAI API key not found. Set OPENAI_API_KEY or provide in config.")
-        return OpenAIBackend(api_key=api_key)
+        return ResponseBackend(api_key=api_key)
     
     elif backend_type == 'grok':
         api_key = kwargs.get('api_key') or os.getenv('XAI_API_KEY')
@@ -121,6 +124,12 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError("Claude API key not found. Set ANTHROPIC_API_KEY or provide in config.")
         return ClaudeBackend(api_key=api_key)
     
+    elif backend_type == 'gemini':
+        api_key = kwargs.get('api_key') or os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            raise ConfigurationError("Gemini API key not found. Set GOOGLE_API_KEY or provide in config.")
+        return GeminiBackend(api_key=api_key)
+    
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
@@ -133,7 +142,15 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     if 'agent' in config:
         agent_config_data = config['agent']
         backend_config = agent_config_data.get('backend', {})
-        backend_type = backend_config['type']
+        
+        # Infer backend type from model if not explicitly provided
+        if 'type' not in backend_config and 'model' in backend_config:
+            backend_type = get_backend_type_from_model(backend_config['model'])
+        else:
+            backend_type = backend_config.get('type')
+            if not backend_type:
+                raise ConfigurationError("Backend type must be specified or inferrable from model")
+        
         backend = create_backend(backend_type, **backend_config)
         
         # Create proper AgentConfig with backend_params
@@ -147,6 +164,10 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             )
         elif backend_type.lower() == 'grok':
             agent_config = AgentConfig.create_grok_config(
+                **{k: v for k, v in backend_config.items() if k != 'type'}
+            )
+        elif backend_type.lower() == 'gemini':
+            agent_config = AgentConfig.create_gemini_config(
                 **{k: v for k, v in backend_config.items() if k != 'type'}
             )
         else:
@@ -167,7 +188,15 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     elif 'agents' in config:
         for agent_config_data in config['agents']:
             backend_config = agent_config_data.get('backend', {})
-            backend_type = backend_config['type']
+            
+            # Infer backend type from model if not explicitly provided
+            if 'type' not in backend_config and 'model' in backend_config:
+                backend_type = get_backend_type_from_model(backend_config['model'])
+            else:
+                backend_type = backend_config.get('type')
+                if not backend_type:
+                    raise ConfigurationError("Backend type must be specified or inferrable from model")
+            
             backend = create_backend(backend_type, **backend_config)
             
             # Create proper AgentConfig with backend_params
@@ -259,7 +288,7 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
     
     else:
         # Multi-agent mode with history
-        orchestrator = MassOrchestrator(agents=agents)
+        orchestrator = Orchestrator(agents=agents)
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
@@ -322,7 +351,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
     
     else:
         # Multi-agent mode
-        orchestrator = MassOrchestrator(agents=agents)
+        orchestrator = Orchestrator(agents=agents)
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
@@ -567,15 +596,29 @@ Environment Variables:
         return
     
     # Validate arguments
-    if not args.config and not args.backend:
-        parser.error("Either --config or --backend must be specified")
+    if not args.backend:
+        if not args.model and not args.config:
+            parser.error("If there is not --backend, either --config or --model must be specified")
     
     try:
         # Load or create configuration
         if args.config:
             config = load_config_file(args.config)
         else:
-            config = create_simple_config(args.backend, args.model, args.system_message)
+            model = args.model
+            if args.backend:
+                backend = args.backend
+            else:
+                backend = get_backend_type_from_model(model=model)
+            if args.system_message:
+                system_message = args.system_message
+            else:
+                system_message = None
+            config = create_simple_config(
+                backend_type=backend,
+                model=model,
+                system_message=system_message
+            )
         
         # Apply command-line overrides
         ui_config = config.get('ui', {})

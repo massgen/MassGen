@@ -13,10 +13,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.openai_backend import OpenAIBackend
-from massgen.chat_agent import SingleAgent
-from massgen.orchestrator import MassOrchestrator
-from massgen.frontend.coordination_ui import CoordinationUI
+from massgen.v3.backend.response import ResponseBackend
+from massgen.v3.chat_agent import SingleAgent
+from massgen.v3.orchestrator import Orchestrator
+from massgen.v3.frontend.coordination_ui import CoordinationUI
 
 
 async def test_two_agents_coordination():
@@ -33,7 +33,7 @@ async def test_two_agents_coordination():
     
     try:
         # Create backend
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         
         # Create two agents with different expertise
         scientist = SingleAgent(
@@ -54,7 +54,7 @@ async def test_two_agents_coordination():
             "educator": educator
         }
         
-        orchestrator = MassOrchestrator(agents=agents)
+        orchestrator = Orchestrator(agents=agents)
         
         # Create UI for coordination display
         ui = CoordinationUI(display_type="terminal", logging_enabled=True)
@@ -98,7 +98,7 @@ async def test_two_agents_simple():
         return False
     
     try:
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         
         # Create minimal agents
         agent1 = SingleAgent(
@@ -113,7 +113,7 @@ async def test_two_agents_simple():
             system_message="You are a reviewer. Provide critical evaluation."
         )
         
-        orchestrator = MassOrchestrator(agents={"analyst": agent1, "reviewer": agent2})
+        orchestrator = Orchestrator(agents={"analyst": agent1, "reviewer": agent2})
         
         print("📤 Testing simple coordination...")
         

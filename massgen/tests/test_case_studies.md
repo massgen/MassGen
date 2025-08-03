@@ -1,95 +1,88 @@
 # MassGen v3 Case Study Test Commands
 
-This document contains commands to test all the case studies from `docs/case_studies/` using the current v3 implementation.
+This document contains commands to test all the case studies from `docs/case_studies/` using the three agents default configuration.
 
 ## Quick Commands
+
+All tests use the `three_agents_default.yaml` configuration with:
+- **Gemini 2.5 Flash** (web search enabled)
+- **GPT-4o-mini** (web search + code interpreter)  
+- **Grok 3 mini** (web search with citations)
 
 ### 1. Collaborative Creative Writing
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/creative_team.yaml "Write a short story about a robot who discovers music."
+python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "Write a short story about a robot who discovers music."
 
 # From tests directory:
-python ../cli.py --config ../configs/creative_team.yaml "Write a short story about a robot who discovers music."
+python ../cli.py --config ../configs/three_agents_default.yaml "Write a short story about a robot who discovers music."
 ```
 **Original:** gpt-4o, gemini-2.5-flash, grok-3-mini  
-**Adapted:** storyteller (gpt-4o), editor (gpt-4o-mini), critic (grok-3-mini)  
-**Temperature:** 0.8 (creative)
+**Current:** gemini2.5flash, 4omini, grok3mini with builtin tools  
 
 ### 2. AI News Synthesis
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/news_analysis.yaml "find big AI news this week"
+python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "find big AI news this week"
 
 # From tests directory:
-python ../cli.py --config ../configs/news_analysis.yaml "find big AI news this week"
+python ../cli.py --config ../configs/three_agents_default.yaml "find big AI news this week"
 ```
 **Original:** gpt-4.1, gemini-2.5-flash, grok-3-mini  
-**Adapted:** news_gatherer (gpt-4o), trend_analyst (grok-3-mini), news_synthesizer (gpt-4o-mini)  
-**Temperature:** 0.4 (balanced)
+**Current:** gemini2.5flash, 4omini, grok3mini with web search  
 
 ### 3. Grok HLE Cost Estimation
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/technical_analysis.yaml "How much does it cost to run HLE benchmark with Grok-4"
+python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "How much does it cost to run HLE benchmark with Grok-4"
 
 # From tests directory:
-python ../cli.py --config ../configs/technical_analysis.yaml "How much does it cost to run HLE benchmark with Grok-4"
+python ../cli.py --config ../configs/three_agents_default.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 **Original:** gpt-4o, gemini-2.5-flash, grok-3-mini  
-**Adapted:** technical_researcher (gpt-4o), cost_analyst (grok-3-mini), technical_advisor (grok-4o-mini)  
-**Temperature:** 0.2 (precise)
+**Current:** gemini2.5flash, 4omini, grok3mini with web search  
 
 ### 4. IMO 2025 Winner
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/two_agents.yaml "Which AI won IMO 2025?"
+python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "Which AI won IMO 2025?"
 
 # From tests directory:
-python ../cli.py --config ../configs/two_agents.yaml "Which AI won IMO 2025?"
+python ../cli.py --config ../configs/three_agents_default.yaml "Which AI won IMO 2025?"
 ```
 **Original:** gemini-2.5-flash, gpt-4.1 (2 agents)  
-**Adapted:** primary_agent (gpt-4o), secondary_agent (gpt-4o-mini)  
-**Temperature:** 0.5 (neutral)
+**Current:** gemini2.5flash, 4omini, grok3mini (3 agents with web search)  
 
 ### 5. Stockholm Travel Guide
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/travel_planning.yaml "what's best to do in Stockholm in October 2025"
+python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "what's best to do in Stockholm in October 2025"
 
 # From tests directory:
-python ../cli.py --config ../configs/travel_planning.yaml "what's best to do in Stockholm in October 2025"
+python ../cli.py --config ../configs/three_agents_default.yaml "what's best to do in Stockholm in October 2025"
 ```
 **Original:** gemini-2.5-flash, gpt-4o (2 agents)  
-**Adapted:** travel_researcher (gpt-4o), local_expert (grok-3-mini), travel_planner (gpt-4o-mini)  
-**Temperature:** 0.6 (balanced creativity)
+**Current:** gemini2.5flash, 4omini, grok3mini with web search for current info
 
-## Alternative Configurations
+## Configuration Details
 
-### General Multi-Agent (Mixed OpenAI + Grok)
+The `three_agents_default.yaml` configuration provides:
+
+### Agent Capabilities
+- **gemini2.5flash**: Gemini 2.5 Flash with web search
+- **4omini**: GPT-4o-mini with web search + code interpreter  
+- **grok3mini**: Grok 3 mini with web search and citations
+
+### UI Features
+- Rich terminal display with enhanced visualization
+- Real-time coordination updates
+- Logging enabled for debugging
+
+### Custom Queries
 ```bash
-python massgen/v3/cli.py --config massgen/v3/configs/multi_agent.yaml "your question here"
+# Use for any question with the three agents setup:
+python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "your question here"
 ```
-**Agents:** researcher (gpt-4o-mini), analyst (grok-3-mini), communicator (gpt-4o-mini)
-
-### All OpenAI Agents
-```bash
-python massgen/v3/cli.py --config massgen/v3/configs/multi_agent_oai.yaml "your question here"
-```
-**Agents:** researcher, analyst, communicator (all gpt-4o-mini)
-
-### Research Team
-```bash
-python massgen/v3/cli.py --config massgen/v3/configs/research_team.yaml "your question here"
-```
-**Agents:** information_gatherer (grok-3-mini), domain_expert (gpt-4o), synthesizer (gpt-4o-mini)  
-**Features:** Web search enabled, lower temperature (0.3)
-
-### Single Agent
-```bash
-python massgen/v3/cli.py --config massgen/v3/configs/single_agent.yaml "your question here"
-```
-**Agent:** assistant (gpt-4o-mini)
 
 ## Running All Tests
 
@@ -104,16 +97,17 @@ Use the interactive test script:
 
 ## Requirements
 
-- **OpenAI API Key:** Set `OPENAI_API_KEY` environment variable
-- **Grok API Key:** Set `XAI_API_KEY` environment variable (for Grok-based configs)
+- **OpenAI API Key:** Set `OPENAI_API_KEY` environment variable (for GPT-4o-mini)
+- **Gemini API Key:** Set `GOOGLE_API_KEY` environment variable (for Gemini 2.5 Flash)
+- **Grok API Key:** Set `XAI_API_KEY` environment variable (for Grok 3 mini)
 
 ## Notes
 
-- Original case studies used Gemini models which are not yet supported in v3
-- Adapted configurations use equivalent model combinations with OpenAI and Grok
-- Temperature settings are optimized per use case:
-  - Creative tasks: 0.8
-  - Technical analysis: 0.2  
-  - News/travel: 0.4-0.6
-  - General: 0.5
-- All configurations include proper agent role specialization matching the original case study intents
+- All tests now use the unified `three_agents_default.yaml` configuration
+- Combines three different model providers for diverse perspectives
+- Built-in tools (web search, code execution) available across agents
+- Rich terminal UI provides enhanced visualization and real-time updates
+- Each agent brings unique strengths:
+  - Gemini: Advanced reasoning with web search
+  - GPT-4o-mini: Cost-effective with code execution
+  - Grok: Real-time information with citations

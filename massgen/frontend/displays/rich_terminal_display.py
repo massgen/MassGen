@@ -159,6 +159,11 @@ class RichTerminalDisplay(TerminalDisplay):
         self._original_settings = None
         self._agent_selector_active = False  # Flag to prevent duplicate agent selector calls
         
+        # Store final presentation for re-display
+        self._stored_final_presentation = None
+        self._stored_presentation_agent = None
+        self._stored_vote_results = None
+        
         # Code detection patterns
         self.code_patterns = [
             r'```(\w+)?\n(.*?)\n```',  # Markdown code blocks
@@ -1300,8 +1305,8 @@ class RichTerminalDisplay(TerminalDisplay):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
                 
-                # Clear screen and show content
-                self.console.clear()
+                # Add separator instead of clearing screen
+                self.console.print("\n" + "=" * 80 + "\n")
                 
                 # Create header
                 header_text = Text()
@@ -1328,8 +1333,8 @@ class RichTerminalDisplay(TerminalDisplay):
                 # Wait for key press to return
                 input("Press Enter to return to agent selector...")
                 
-                # Clear screen before returning to agent selector
-                self.console.clear()
+                # Add separator instead of clearing screen
+                self.console.print("\n" + "=" * 80 + "\n")
                     
         except Exception as e:
             # Handle errors gracefully
@@ -1363,6 +1368,11 @@ class RichTerminalDisplay(TerminalDisplay):
                     options_text.append(f"  {key}: {agent_id.upper()}\n", style=self.colors['text'])
                 
                 options_text.append("  s: System Status\n", style=self.colors['warning'])
+                
+                # Add option to show final presentation if it's stored
+                if self._stored_final_presentation and self._stored_presentation_agent:
+                    options_text.append("  f: Show Final Presentation\n", style=self.colors['success'])
+                
                 options_text.append("  q: Quit\n", style=self.colors['info'])
                 
                 self.console.print(Panel(
@@ -1379,6 +1389,8 @@ class RichTerminalDisplay(TerminalDisplay):
                         self._show_agent_full_content(self._agent_keys[choice])
                     elif choice == 's':
                         self._show_system_status()
+                    elif choice == 'f' and self._stored_final_presentation:
+                        self._redisplay_final_presentation()
                     elif choice == 'q':
                         break
                     else:
@@ -1390,6 +1402,27 @@ class RichTerminalDisplay(TerminalDisplay):
             # Always reset the flag when exiting
             self._agent_selector_active = True
     
+    def _redisplay_final_presentation(self):
+        """Redisplay the stored final presentation."""
+        if not self._stored_final_presentation or not self._stored_presentation_agent:
+            self.console.print(f"[{self.colors['error']}]No final presentation stored.[/{self.colors['error']}]")
+            return
+        
+        # Add separator
+        self.console.print("\n" + "=" * 80 + "\n")
+        
+        # Display the stored presentation
+        self._display_final_presentation_content(
+            self._stored_presentation_agent, 
+            self._stored_final_presentation
+        )
+        
+        # Wait for user to continue
+        input("\nPress Enter to return to agent selector...")
+        
+        # Add separator
+        self.console.print("\n" + "=" * 80 + "\n")
+    
     def _show_system_status(self):
         """Display system status from txt file."""
         if not self.system_status_file or not self.system_status_file.exists():
@@ -1400,8 +1433,8 @@ class RichTerminalDisplay(TerminalDisplay):
             with open(self.system_status_file, 'r', encoding='utf-8') as f:
                 content = f.read()
             
-            # Clear screen and show content
-            self.console.clear()
+            # Add separator instead of clearing screen
+            self.console.print("\n" + "=" * 80 + "\n")
             
             # Create header
             header_text = Text()
@@ -1428,8 +1461,8 @@ class RichTerminalDisplay(TerminalDisplay):
             # Wait for key press to return
             input("Press Enter to return to agent selector...")
             
-            # Clear screen before returning to agent selector
-            self.console.clear()
+            # Add separator instead of clearing screen
+            self.console.print("\n" + "=" * 80 + "\n")
                 
         except Exception as e:
             self.console.print(f"[{self.colors['error']}]Error reading system status file: {e}[/{self.colors['error']}]")
@@ -2240,6 +2273,12 @@ class RichTerminalDisplay(TerminalDisplay):
                             style=self.colors['info'])
             self.console.print(stats_text)
         
+        # Store the presentation content for later re-display
+        if presentation_content:
+            self._stored_final_presentation = presentation_content
+            self._stored_presentation_agent = selected_agent
+            self._stored_vote_results = vote_results
+        
         # Restart live display if needed
         if was_live:
             time.sleep(0.5)  # Brief pause before restarting live display
@@ -2524,6 +2563,10 @@ class RichTerminalDisplay(TerminalDisplay):
         """Display the final presentation content in a formatted panel with orchestrator query enhancements."""
         if not presentation_content.strip():
             return
+        
+        # Store the presentation content for later re-display
+        self._stored_final_presentation = presentation_content
+        self._stored_presentation_agent = selected_agent
         
         # Create presentation header with orchestrator context
         header_text = Text()
