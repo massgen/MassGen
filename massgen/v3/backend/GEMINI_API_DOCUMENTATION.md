@@ -19,6 +19,10 @@ The Gemini API provides access to Google's latest generative AI models with mult
 
 ## Python SDK Installation & Basic Usage
 
+```bash
+pip install -q -U google-genai
+```
+
 ```python
 from google import genai
 
@@ -119,11 +123,176 @@ async def async_demo():
 - Gemini 2.5 Flash
 - Gemini 2.5 Flash-Lite
 
+## Structured Output
+
+### Overview
+Structured output allows constraining model responses to specific JSON schemas or enums, ensuring predictable data formats.
+
+### Implementation with Pydantic Models
+
+```python
+from google import genai
+from pydantic import BaseModel, Field
+import enum
+
+class ActionType(enum.Enum):
+    VOTE = "vote"
+    NEW_ANSWER = "new_answer"
+
+class VoteAction(BaseModel):
+    action: ActionType = Field(default=ActionType.VOTE)
+    agent_id: str = Field(description="Agent ID to vote for")
+    reason: str = Field(description="Reason for voting")
+
+class CoordinationResponse(BaseModel):
+    action_type: ActionType
+    vote_data: VoteAction | None = None
+
+client = genai.Client()
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="Choose the best agent and explain why.",
+    config={
+        "response_mime_type": "application/json",
+        "response_schema": CoordinationResponse,
+    }
+)
+
+# Response will be structured JSON matching the schema
+```
+
+### Enum-Only Responses
+
+```python
+class Instrument(enum.Enum):
+    PERCUSSION = "Percussion"
+    STRING = "String"
+    WIND = "Wind"
+
+response = client.models.generate_content(
+    model='gemini-2.5-flash',
+    contents='What type of instrument is an oboe?',
+    config={
+        'response_mime_type': 'text/x.enum',
+        'response_schema': Instrument,
+    }
+)
+```
+
+### Best Practices for Structured Output
+- Keep schemas simple to avoid `InvalidArgument: 400` errors
+- Use Pydantic models for complex JSON structures
+- Add field descriptions for clarity
+- Provide clear context in prompts
+- Use `propertyOrdering` for consistent output order
+
+## Builtin Tools
+
+### Code Execution
+
+**Overview:**
+- Executes Python code within the model's runtime environment
+- Maximum execution time: 30 seconds
+- Can regenerate code up to 5 times if errors occur
+- No additional charge beyond standard token pricing
+
+**Supported Libraries:**
+- numpy, pandas, matplotlib, scikit-learn
+- Cannot install custom libraries
+- Can generate Matplotlib graphs and handle file inputs (CSV, text)
+
+**Configuration:**
+```python
+from google.genai import types
+
+code_tool = types.Tool(code_execution=types.ToolCodeExecution())
+config = types.GenerateContentConfig(tools=[code_tool])
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash",
+    contents="Calculate sum of first 50 prime numbers",
+    config=config
+)
+```
+
+**Response Format:**
+- `text`: Model's explanatory text
+- `executableCode`: Generated Python code  
+- `codeExecutionResult`: Execution output
+- Access via `response.candidates[0].content.parts`
+
+**Limitations:**
+- Python only
+- Cannot return non-code artifacts
+- Maximum file input ~2MB
+- Some variation in performance
+
+### Grounding (Web Search)
+
+**Overview:**
+- Provides real-time web information for factual accuracy
+- Includes citations and source attribution
+- Single billable use per request (even with multiple queries)
+
+**Configuration:**
+```python
+from google.genai import types
+
+grounding_tool = types.Tool(google_search=types.GoogleSearch())
+config = types.GenerateContentConfig(tools=[grounding_tool])
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash", 
+    contents="Latest AI developments in 2025",
+    config=config
+)
+```
+
+**Response Metadata:**
+Access via `response.candidates[0].grounding_metadata`:
+- `webSearchQueries`: Search queries used
+- `groundingChunks`: Web sources (URI and title)
+- `groundingSupports`: Links text segments to sources
+
+**Best Practices:**
+- Process citations using `groundingSupports` and `groundingChunks`
+- Use for current events and factual verification
+- Review Search tool notebook for detailed examples
+
+### URL Context (Experimental)
+
+**Overview:**
+- Process up to 20 URLs per request as additional context
+- Extract and analyze content from web pages
+- Currently free during experimental phase
+
+**Capabilities:**
+- Extract key data points from web pages
+- Compare information across multiple URLs
+- Synthesize data from multiple sources
+- Answer questions based on webpage content
+
+**Limitations:**
+- Works best with standard web pages
+- Not recommended for multimedia (YouTube videos)
+- Daily quotas: 1500 queries per project, 100 per user
+- Available on gemini-2.5-pro and gemini-2.5-flash
+
+**Example Use Cases:**
+```python
+# Compare recipes from multiple URLs
+"Compare recipes from URL1 and URL2"
+
+# Extract schedule information
+"Give me three day events schedule based on URL"
+```
+
 ## Additional Capabilities
 
 - **Multimodal input**: text, images, video
 - **Long context support**: millions of tokens
-- **Structured output generation**
+- **Structured output generation** (see above)
 - **Native image generation**
 - **Embeddings** for RAG workflows
 - **OpenAI-compatible interface**: Can use OpenAI Python library with `stream=True`
@@ -131,21 +300,37 @@ async def async_demo():
 ## Integration Notes for v3 Backend
 
 ### Key Implementation Points:
-1. Use `generate_content_stream()` for synchronous streaming
-2. Use `aio.models.generate_content_stream()` for asynchronous streaming  
-3. Check for `chunk.text` to ensure non-empty chunks
-4. Supports both immediate and background processing
-5. Compatible with asyncio patterns needed for v3 architecture
+1. Use `google.generativeai` (imported as `genai`) for direct API access
+2. Use `from google import genai` with `genai.Client()` for newer client patterns
+3. Use `generate_content()` with `stream=True` for streaming
+4. Check for `chunk.text` to ensure non-empty chunks
+5. Configure structured output with `config={"response_mime_type": "application/json", "response_schema": Schema}`
+6. Compatible with asyncio patterns needed for v3 architecture
+
+### Correct Package Usage:
+```python
+# Correct import (google-genai package)
+from google import genai
+
+# Client-based approach (recommended)
+client = genai.Client()
+client.models.generate_content(...)
+
+# Note: Old google-generativeai package is deprecated
+# Use google-genai instead: pip install -q -U google-genai
+```
 
 ### Authentication Setup:
 - Get API key from Google AI Studio
-- Initialize client with proper credentials
+- Set `GOOGLE_API_KEY` or `GEMINI_API_KEY` environment variable
+- Use `genai.configure(api_key=api_key)` for direct API access
 - Handle authentication errors appropriately
 
 ### Error Handling:
 - Implement robust error handling for API failures
 - Handle rate limits and quota exceeded scenarios
 - Manage streaming connection failures gracefully
+- Handle `InvalidArgument: 400` errors for complex schemas
 
 ### Pricing and Rate Limits:
 - Pricing details: https://ai.google.dev/pricing
@@ -192,14 +377,34 @@ async def async_demo():
 
 ## Implementation Status for MassGen v3
 
-**TODO**: Implement GeminiBackend class with:
-- [ ] Google Gemini API integration with proper authentication
-- [ ] Tool message conversion for Gemini format (code_execution + grounding)
-- [ ] Streaming functionality compatible with v3 StreamChunk architecture
-- [ ] Cost calculation for Gemini models
-- [ ] Error handling for Gemini-specific responses
-- [ ] Support for builtin tools (code_execution + grounding) 
-- [ ] Integration with SingleAgent and orchestrator patterns
-- [ ] NO Live API support (use regular API only)
+**✅ COMPLETED**: GeminiBackend class implemented with:
+- [x] Google Gemini API integration with proper authentication
+- [x] Structured output for coordination (vote/new_answer) using JSON schemas
+- [x] Streaming functionality compatible with v3 StreamChunk architecture
+- [x] Cost calculation for Gemini 2.5 models (Flash, Flash-Lite, Pro)
+- [x] Error handling for Gemini-specific responses and API limitations
+- [x] Support for builtin tools (code_execution + grounding/web search)
+- [x] Integration with SingleAgent and orchestrator patterns
+- [x] Tool result detection and streaming for code execution and web search
+- [x] CLI and configuration support with AgentConfig.create_gemini_config()
+- [x] NO Live API support (uses regular API only)
 
-This backend was available in v0.0.1 but needs to be ported to v3 architecture.
+**Key Features:**
+- **Structured Output**: Uses `response_mime_type: "application/json"` with Pydantic schemas for coordination
+- **Builtin Tools**: Supports code_execution and google_search_retrieval with proper result detection
+- **Multi-mode Support**: Handles coordination-only, tools-only, and mixed scenarios
+- **Cost Tracking**: Tracks token usage, search count, and code execution count
+- **MassGen Compatible**: Full integration with v3 orchestrator and agent patterns
+
+**Usage Examples:**
+```python
+# CLI usage
+python -m massgen.v3.cli --backend gemini --model gemini-2.5-flash "Your question"
+
+# Configuration
+AgentConfig.create_gemini_config(
+    model="gemini-2.5-flash",
+    enable_web_search=True,
+    enable_code_execution=True
+)
+```
