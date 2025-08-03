@@ -7,16 +7,16 @@ Supports both interactive mode and single-question mode.
 
 Usage examples:
     # Use YAML/JSON configuration file
-    python -m massgen.v3.cli --config config.yaml "What is the capital of France?"
+    python -m massgen.cli --config config.yaml "What is the capital of France?"
     
     # Quick setup with backend and model
-    python -m massgen.v3.cli --backend openai --model gpt-4o-mini "What is 2+2?"
+    python -m massgen.cli --backend openai --model gpt-4o-mini "What is 2+2?"
     
     # Interactive mode
-    python -m massgen.v3.cli --config config.yaml
+    python -m massgen.cli --config config.yaml
     
     # Multiple agents from config
-    python -m massgen.v3.cli --config multi_agent.yaml "Compare different approaches to renewable energy"
+    python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"
 """
 
 import argparse
@@ -49,13 +49,13 @@ load_env_file()
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
-from massgen.v3.backend.grok_backend import GrokBackend
-from massgen.v3.backend.claude_backend import ClaudeBackend
-from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
-from massgen.v3.agent_config import AgentConfig
-from massgen.v3.orchestrator import MassOrchestrator
-from massgen.v3.frontend.coordination_ui import CoordinationUI
+from massgen.backend.openai_backend import OpenAIBackend
+from massgen.backend.grok_backend import GrokBackend
+from massgen.backend.claude_backend import ClaudeBackend
+from massgen.chat_agent import SingleAgent, ConfigurableAgent
+from massgen.agent_config import AgentConfig
+from massgen.orchestrator import MassOrchestrator
+from massgen.frontend.coordination_ui import CoordinationUI
 
 # Color constants for terminal output
 BRIGHT_CYAN = '\033[96m'
@@ -78,8 +78,14 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
     """Load configuration from YAML or JSON file."""
     path = Path(config_path)
     
+    # If file doesn't exist in current path, try massgen/configs/ directory
     if not path.exists():
-        raise ConfigurationError(f"Configuration file not found: {config_path}")
+        # Try in massgen/configs/ directory
+        configs_path = Path(__file__).parent / 'configs' / path.name
+        if configs_path.exists():
+            path = configs_path
+        else:
+            raise ConfigurationError(f"Configuration file not found: {config_path} (also checked {configs_path})")
     
     try:
         with open(path, 'r', encoding='utf-8') as f:
@@ -507,17 +513,17 @@ async def main():
         epilog="""
 Examples:
   # Use configuration file
-  python -m massgen.v3.cli --config config.yaml "What is machine learning?"
+  python -m massgen.cli --config config.yaml "What is machine learning?"
   
   # Quick single agent setup
-  python -m massgen.v3.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
-  python -m massgen.v3.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
+  python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
+  python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
   
   # Interactive mode
-  python -m massgen.v3.cli --config config.yaml
+  python -m massgen.cli --config config.yaml
   
   # Create sample configurations
-  python -m massgen.v3.cli --create-samples
+  python -m massgen.cli --create-samples
 
 Environment Variables:
   OPENAI_API_KEY      - Required for OpenAI backend

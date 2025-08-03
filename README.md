@@ -9,7 +9,7 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
   </a>
-  <a href="https://discord.gg/VVrT2rQaz5">
+  <a href="https://discord.massgen.ai">
     <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
   </a>
 </p>
@@ -88,7 +88,7 @@ graph TB
     class A1,A2,A3,A4 agent
     class H hub
 ```
-  
+
 The system's workflow is defined by the following key principles:
 
 **Parallel Processing** - Multiple agents tackle the same task simultaneously, each leveraging their unique capabilities (different models, tools, and specialized approaches).
@@ -112,28 +112,26 @@ git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 pip install uv
 uv venv
-source .venv/bin/activate  # On macOS/Linux
-uv pip install -e .
 ```
 
 ### 2. 🔐 API Configuration
 
-Create a `.env` file in the `massgen/backends/` directory with your API keys:
+Create a `.env` file in the `massgen` directory with your API keys:
 
 ```bash
 # Copy example configuration
-cp massgen/backends/.env.example massgen/backends/.env
+cp massgen/.env.example massgen/.env
 
 # Edit with your API keys
 OPENAI_API_KEY=sk-your-openai-key-here
 XAI_API_KEY=xai-your-xai-key-here
-GEMINI_API_KEY=your-gemini-key-here
+ANTHROPIC_API_KEY=your-anthropic-key-here
 ```
 
 Make sure you set up the API key for the model you want to use.
 
 **Useful links to get API keys:**
- - [Gemini](https://ai.google.dev/gemini-api/docs)
+ - [Claude](https://docs.anthropic.com/en/api/overview)
  - [OpenAI](https://platform.openai.com/api-keys)
  - [Grok](https://docs.x.ai/docs/overview)
 
@@ -144,70 +142,60 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-The system currently supports three model providers with advanced reasoning capabilities: **Google Gemini**, **OpenAI**, and **xAI Grok**. The specific models tested can be found in `massgen/utils.py`. Additional models can be registered in that file.
+The system currently supports three model providers with advanced reasoning capabilities: **Anthropic Claude**, **OpenAI**, and **xAI Grok**. 
 More providers and local inference of open-sourced models (using vllm or sglang) will be added (help wanted!) and the extension will be made easier.
 
 #### Tools
 
-MassGen agents can leverage various tools to enhance their problem-solving capabilities. The Gemini, OpenAI, and Grok models can use their own built-in search and code execution. You can easily extend functionality by registering custom tools in `massgen/tools.py`.
+MassGen agents can leverage various tools to enhance their problem-solving capabilities. The Claude, OpenAI, and Grok models can use their own built-in search and code execution. 
 
 **Supported Built-in Tools by Models:**
 
 | Backend | Live Search | Code Execution |
 |---------|:-----------:|:--------------:|
-| **Gemini** | ✅ | ✅ |
+| **Claude** | ✅ | ✅ |
 | **OpenAI** | ✅ | ✅ |
 | **Grok** | ✅ | ❌ |
 
-> 🔧 **Custom Tools**: More tools are coming soon! Check `massgen/tools.py` to add your own custom tools and expand agent capabilities.
-
 ### 4. 🏃 Run MassGen
 
-#### Simple Usage
-```bash
-# Multi-agent mode with specific models
-python cli.py "Which AI won IMO in 2025?" --models gemini-2.5-flash gpt-4o
+#### Quick Setup with Backend and Model
 
-# Single agent mode
-python cli.py "What is greatest common divisor of 238, 756, and 1512" --models gemini-2.5-flash
+```bash
+uv run python -m massgen.cli --backend openai --model gpt-4o-mini "Which AI won IMO in 2025?"
 ```
 
-#### Configuration File Usage
+#### Multiple Agents from Config
 ```bash
 # Use configuration file
-python cli.py --config examples/fast_config.yaml "find big AI news this week"
-
-# Override specific parameters
-python cli.py --config examples/fast_config.yaml "who will win World Cup 2026" --max-duration 120 --consensus 0.5
+uv run python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"
 ```
 
 #### Configuration Parameters
 
-| Parameter | Description |
-|-----------|-------------|
-| `--config` | Path to YAML configuration file with agent setup, model parameters, and orchestrator settings |
-| `--models` | Space-separated model names. Single model enables single-agent mode; multiple models enable collaborative multi-agent mode |
-| `--consensus` | Consensus threshold (0.0-1.0) for multi-agent agreement. Unmet thresholds trigger continued debate and refinement |
-| `--max-duration` | Maximum session execution time in seconds before automatic termination |
-| `--max-debates` | Maximum number of debate rounds allowed when agents fail to reach consensus |
-| `--no-display` | Disable real-time streaming display of agent progress |
-| `--no-logs` | Disable automatic session logging to files |
+| Parameter          | Description |
+|-------------------|-------------|
+| `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, and UI settings |
+| `--backend`        | Backend type for quick setup without a config file (`openai`, `grok`, or `claude`) |
+| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`) |
+| `--system-message` | Custom system prompt for the agent in quick setup mode |
+| `--create-samples` | Create example configuration files (`single_agent.yaml`, `multi_agent.yaml`) in a `configs/` directory |
+| `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output) |
+| `--no-logs`        | Disable logging of session inputs/outputs to file |
+| `question`         | Optional single-question input; if omitted, MassGen enters interactive chat mode |
 
 **Note**: `--config` and `--models` are mutually exclusive - use one or the other.
 
-#### Interactive Multi-turn Mode
+#### Interactive Multi-Turn Mode
 
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
 
 ```bash
 # Start interactive mode with multiple agents
-python cli.py --models gpt-4o gemini-2.5-flash grok-3-mini
+uv run python -m massgen.cli --backend openai --model gpt-4o-mini
 
 # Start interactive mode with configuration file
-python cli.py --config examples/fast_config.yaml
-
-# Interactive mode with custom parameters
-python cli.py --models gpt-4o grok-3-mini --consensus 0.7 --max-duration 600
+uv run python -m massgen.cli --config config.yaml
 ```
 
 **Interactive Mode Features:**
@@ -226,34 +214,15 @@ The system provides multiple ways to view and analyze results:
 - **Streaming Output**: Watch agents' reasoning and responses as they develop
 
 #### Comprehensive Logging
-All sessions are automatically logged with detailed information. The file locations are also displayed and clickable in the UI.
+All sessions are automatically logged with detailed information. The file can be viewed throught the interaction with UI.
 
 ```bash
-logs/
-└── 20250123_142530/          # Session timestamp (YYYYMMDD_HHMMSS)
-    ├── answers/
-    │   ├── agent_1.txt       # The proposed answers by agent 1
-    │   ├── agent_2.txt       # The proposed answers by agent 2
-    │   └── agent_3.txt       # The proposed answers by agent 3
-    ├── votes/
-    │   ├── agent_1.txt       # The votes cast by agent 1
-    │   ├── agent_2.txt       # The votes cast by agent 2
-    │   └── agent_3.txt       # The votes cast by agent 3
-    ├── display/
-    │   ├── agent_1.txt       # The full log in the streaming display of agent 1
-    │   ├── agent_2.txt       # The full log in the streaming display of agent 2
-    │   ├── agent_3.txt       # The full log in the streaming display of agent 3
-    │   └── system.txt        # The full log of system events and phase changes
-    ├── console.log           # Console output and system messages
-    ├── events.jsonl          # Orchestrator events and phase changes (JSONL format)
-    └── result.json           # Final results and session summary
+agent_outputs/
+  ├── agent_1.txt       # The full logs by agent 1
+  ├── agent_2.txt       # The full logs by agent 2
+  ├── agent_3.txt       # The full logs by agent 3
+  ├── system_status.txt # The full logs of system status
 ```
-
-#### Log File Contents
-- **Session Summary**: Final answer, consensus score, voting results, execution time
-- **Agent History**: Complete action and chat history for each agent
-- **System Events**: Phase transitions, restarts, consensus detection of the whole system
-
 ---
 
 ## 💡 Examples
@@ -270,27 +239,27 @@ To see how MassGen works in practice, check out these detailed case studies base
 <!-- ### 1. 📝 Code Generation
 
 ```bash
-python cli.py --config examples/fast_config.yaml "Design a logo for MassGen (multi-agent scaling system for GenAI) GitHub README"
+uv run python cli.py --config examples/fast_config.yaml "Design a logo for MassGen (multi-agent scaling system for GenAI) GitHub README"
 ``` -->
 
 ### 1. ❓ Question Answering
 
 ```bash
 # Ask a question about a complex topic
-python cli.py --config examples/fast_config.yaml "Explain the theory of relativity in simple terms."
-python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
+uv run python cli.py --config examples/fast_config.yaml "Explain the theory of relativity in simple terms."
+uv run python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
 ```
 
 ### 2. 🧠 Creative Writing
 
 ```bash
 # Generate a short story
-python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
+uv run python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
 ```
 
 ### 3. Research
 ```bash
-python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
+uv run python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
 ---
