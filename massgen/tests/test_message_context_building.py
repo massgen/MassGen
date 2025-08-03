@@ -12,7 +12,7 @@ from typing import Dict, List, Any
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.message_templates import MessageTemplates
+from massgen.message_templates import MessageTemplates
 
 
 def print_message_structure(title: str, conversation: Dict[str, Any]):
@@ -220,7 +220,7 @@ def test_context_comparison():
 
 def main():
     """Run all context building tests."""
-    print("🚀 MassGen v3 - Message Context Building Analysis")
+    print("🚀 MassGen - Message Context Building Analysis")
     print("=" * 80)
     print("This test examines how conversation context is structured")
     print("for LLM input across multiple conversation turns.")

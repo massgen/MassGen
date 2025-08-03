@@ -13,15 +13,15 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
-from massgen.v3.chat_agent import SingleAgent
-from massgen.v3.orchestrator import MassOrchestrator
-from massgen.v3.frontend.coordination_ui import CoordinationUI
+from massgen.backend.openai_backend import OpenAIBackend
+from massgen.chat_agent import SingleAgent
+from massgen.orchestrator import MassOrchestrator
+from massgen.frontend.coordination_ui import CoordinationUI
 
 
 async def test_three_agents_coordination():
     """Test three-agent coordination with diverse expertise areas."""
-    print("🚀 MassGen v3 - Three Agents Coordination Test")
+    print("🚀 MassGen - Three Agents Coordination Test")
     print("=" * 60)
     
     # Check if API key is available
@@ -220,7 +220,7 @@ async def test_three_agents_consensus():
 
 async def main():
     """Run three-agent coordination tests."""
-    print("🚀 MassGen v3 - Three Agents Test Suite")
+    print("🚀 MassGen - Three Agents Test Suite")
     print("=" * 60)
     
     results = []

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for MassGen v3 Rich Terminal Display.
+Test script for MassGen Rich Terminal Display.
 Tests RichTerminalDisplay functionality with two-agent coordination.
 """
 
@@ -13,11 +13,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
-from massgen.v3.chat_agent import SingleAgent
-from massgen.v3.orchestrator import MassOrchestrator
-from massgen.v3.frontend.coordination_ui import CoordinationUI, coordinate_with_rich_ui
-from massgen.v3.frontend.displays.rich_terminal_display import is_rich_available
+from massgen.backend.openai_backend import OpenAIBackend
+from massgen.chat_agent import SingleAgent
+from massgen.orchestrator import MassOrchestrator
+from massgen.frontend.coordination_ui import CoordinationUI, coordinate_with_rich_ui
+from massgen.frontend.displays.rich_terminal_display import is_rich_available
 
 
 async def test_rich_availability():
@@ -49,7 +49,7 @@ async def test_rich_display_basic():
         return False
     
     try:
-        from massgen.v3.frontend.displays.rich_terminal_display import RichTerminalDisplay
+        from massgen.frontend.displays.rich_terminal_display import RichTerminalDisplay
         
         # Test basic creation
         agent_ids = ["agent1", "agent2"]
@@ -232,7 +232,7 @@ async def test_rich_fallback():
         
         if is_rich_available():
             print("✅ Rich is available - RichTerminalDisplay should be used")
-            from massgen.v3.frontend.displays.rich_terminal_display import RichTerminalDisplay
+            from massgen.frontend.displays.rich_terminal_display import RichTerminalDisplay
             # Note: We can't easily test the actual fallback without mocking
             print("📝 Note: Fallback logic tested through UI creation")
         else:
@@ -255,7 +255,7 @@ async def test_rich_themes():
         return False
     
     try:
-        from massgen.v3.frontend.displays.rich_terminal_display import RichTerminalDisplay
+        from massgen.frontend.displays.rich_terminal_display import RichTerminalDisplay
         
         agent_ids = ["agent1", "agent2"]
         themes_to_test = [
@@ -296,7 +296,7 @@ async def test_rich_themes():
 
 async def main():
     """Run Rich Terminal Display test suite."""
-    print("🎨 MassGen v3 - Rich Terminal Display Test Suite")
+    print("🎨 MassGen - Rich Terminal Display Test Suite")
     print("=" * 60)
     
     results = []

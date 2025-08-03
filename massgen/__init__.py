@@ -1,5 +1,5 @@
 """
-MassGen v3 - Multi-Agent System Generator (Foundation Release)
+MassGen - Multi-Agent System Generator (Foundation Release)
 
 Built on the proven MassGen framework with working tool message handling,
 async generator patterns, and reliable multi-agent coordination.
@@ -35,7 +35,7 @@ TODO - Missing Features (to be added in future releases):
 - Performance optimizations
 
 Usage:
-    from massgen.v3 import OpenAIBackend, create_simple_agent, MassOrchestrator
+    from massgen import OpenAIBackend, create_simple_agent, MassOrchestrator
     
     backend = OpenAIBackend()
     agent = create_simple_agent(backend, "You are a helpful assistant")

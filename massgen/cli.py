@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-MassGen v3 Command Line Interface
+MassGen Command Line Interface
 
-A clean CLI for MassGen v3 with file-based configuration support.
+A clean CLI for MassGen with file-based configuration support.
 Supports both interactive mode and single-question mode.
 
 Usage examples:
