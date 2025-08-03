@@ -484,7 +484,16 @@ class Orchestrator(ChatAgent):
                             elif tool_name == "vote":
                                 agent_voted_for = tool_args.get("agent_id", "")
                                 reason = tool_args.get("reason", "")
-                                yield ("content", f"🗳️ Voting for {agent_voted_for}: {reason}")
+                                
+                                # Convert anonymous agent ID to real agent ID for display
+                                real_agent_id = agent_voted_for
+                                if answers:  # Only do mapping if answers exist
+                                    agent_mapping = {}
+                                    for i, real_id in enumerate(sorted(answers.keys()), 1):
+                                        agent_mapping[f"agent{i}"] = real_id
+                                    real_agent_id = agent_mapping.get(agent_voted_for, agent_voted_for)
+                                
+                                yield ("content", f"🗳️ Voting for {real_agent_id}: {reason}")
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
                     elif chunk.type == "error":
