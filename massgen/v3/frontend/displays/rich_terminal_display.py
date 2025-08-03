@@ -2713,9 +2713,15 @@ class RichTerminalDisplay(TerminalDisplay):
             # Flush any remaining buffered content
             self._flush_all_buffers()
             
+            # Stop live display with proper error handling
             if self.live:
-                self.live.stop()
-                self.live = None
+                try:
+                    self.live.stop()
+                except Exception:
+                    # Ignore any errors during stop
+                    pass
+                finally:
+                    self.live = None
             
             # Stop input thread if active
             self._stop_input_thread = True
@@ -2726,7 +2732,15 @@ class RichTerminalDisplay(TerminalDisplay):
                     pass
             
             # Restore terminal settings
-            self._restore_terminal_settings()
+            try:
+                self._restore_terminal_settings()
+            except:
+                # Ignore errors during terminal restoration
+                pass
+            
+            # Reset all state flags
+            self._agent_selector_active = False
+            self._final_answer_shown = False
             
             # Remove resize signal handler
             try:

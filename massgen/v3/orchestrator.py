@@ -769,7 +769,7 @@ class Orchestrator(ChatAgent):
                 "content": presentation_content
             }
         ]
-        yield StreamChunk(type="status", content=f"🎤  [{selected_agent_id}] presenting final answer")
+        yield StreamChunk(type="status", content=f"🎤  [{selected_agent_id}] presenting final answer\n")
         
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         async for chunk in agent.chat(presentation_messages, reset_chat=True):

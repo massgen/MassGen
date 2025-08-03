@@ -283,6 +283,7 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
     else:
         # Multi-agent mode with history
         orchestrator = Orchestrator(agents=agents)
+        # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
@@ -346,6 +347,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
     else:
         # Multi-agent mode
         orchestrator = Orchestrator(agents=agents)
+        # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
