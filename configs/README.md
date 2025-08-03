@@ -1,6 +1,6 @@
-# MassGen v3 Configuration Examples
+# MassGen Configuration Examples
 
-This directory contains sample configuration files for MassGen v3 CLI usage.
+This directory contains sample configuration files for MassGen CLI usage.
 
 ## Configuration Files
 
@@ -30,28 +30,28 @@ This directory contains sample configuration files for MassGen v3 CLI usage.
 ### Single Agent Mode
 ```bash
 # Using configuration file
-python -m massgen.v3.cli --config massgen/v3/configs/single_agent.yaml "What is machine learning?"
+python -m massgen.cli --config massgen/configs/single_agent.yaml "What is machine learning?"
 
 # Quick setup without config file
-python -m massgen.v3.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
+python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
 ```
 
 ### Multi-Agent Mode
 ```bash
 # Research team for complex questions
-python -m massgen.v3.cli --config massgen/v3/configs/research_team.yaml "What are the latest developments in renewable energy technology?"
+python -m massgen.cli --config massgen/configs/research_team.yaml "What are the latest developments in renewable energy technology?"
 
 # General multi-agent coordination
-python -m massgen.v3.cli --config massgen/v3/configs/multi_agent.yaml "Compare different programming languages for web development"
+python -m massgen.cli --config massgen/configs/multi_agent.yaml "Compare different programming languages for web development"
 ```
 
 ### Interactive Mode
 ```bash
 # Start interactive session
-python -m massgen.v3.cli --config massgen/v3/configs/multi_agent.yaml
+python -m massgen.cli --config massgen/configs/multi_agent.yaml
 
 # Quick interactive setup
-python -m massgen.v3.cli --backend openai --model gpt-4o-mini
+python -m massgen.cli --backend openai --model gpt-4o-mini
 ```
 
 ## Configuration Structure

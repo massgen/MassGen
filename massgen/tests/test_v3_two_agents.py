@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for MassGen v3 two-agent coordination with terminal display.
+Test script for MassGen two-agent coordination with terminal display.
 Tests orchestrator coordination between two agents with different expertise.
 """
 
@@ -13,15 +13,15 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
-from massgen.v3.chat_agent import SingleAgent
-from massgen.v3.orchestrator import MassOrchestrator
-from massgen.v3.frontend.coordination_ui import CoordinationUI
+from massgen.backend.openai_backend import OpenAIBackend
+from massgen.chat_agent import SingleAgent
+from massgen.orchestrator import MassOrchestrator
+from massgen.frontend.coordination_ui import CoordinationUI
 
 
 async def test_two_agents_coordination():
     """Test two-agent coordination with different expertise areas."""
-    print("🚀 MassGen v3 - Two Agents Coordination Test")
+    print("🚀 MassGen - Two Agents Coordination Test")
     print("=" * 60)
     
     # Check if API key is available
@@ -140,7 +140,7 @@ async def test_two_agents_simple():
 
 async def main():
     """Run two-agent coordination tests."""
-    print("🚀 MassGen v3 - Two Agents Test Suite")
+    print("🚀 MassGen - Two Agents Test Suite")
     print("=" * 60)
     
     results = []

@@ -1,15 +1,15 @@
 #!/bin/bash
-# MassGen v3 Case Study Test Commands
+# MassGen Case Study Test Commands
 # Based on the original case studies from docs/case_studies/
 
-echo "🚀 MassGen v3 Case Study Test Suite"
+echo "🚀 MassGen Case Study Test Suite"
 echo "===================================="
 echo ""
 
 # Set absolute paths for configs
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
-CONFIG_PATH="$PROJECT_ROOT/massgen/v3/configs"
+CONFIG_PATH="$PROJECT_ROOT/massgen/configs"
 
 # Verify we have the right directory structure
 if [ ! -d "$CONFIG_PATH" ]; then
@@ -46,7 +46,7 @@ run_test() {
     echo "---"
     
     # Run with proper Python path setup
-    PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH" python -m massgen.v3.cli --config "$config" "$prompt"
+    PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH" python -m massgen.cli --config "$config" "$prompt"
     
     echo ""
     echo "✅ Completed: $test_name"
@@ -108,5 +108,5 @@ echo "• $CONFIG_PATH/research_team.yaml - Research-optimized (3 agents)"
 echo "• $CONFIG_PATH/single_agent.yaml - Single agent mode"
 echo ""
 echo "💡 Example alternative commands:"
-echo "PYTHONPATH=$PROJECT_ROOT python -m massgen.v3.cli --config $CONFIG_PATH/research_team.yaml \"your question\""
-echo "PYTHONPATH=$PROJECT_ROOT python -m massgen.v3.cli --config $CONFIG_PATH/multi_agent.yaml \"your question\""
+echo "PYTHONPATH=$PROJECT_ROOT python -m massgen.cli --config $CONFIG_PATH/research_team.yaml \"your question\""
+echo "PYTHONPATH=$PROJECT_ROOT python -m massgen.cli --config $CONFIG_PATH/multi_agent.yaml \"your question\""

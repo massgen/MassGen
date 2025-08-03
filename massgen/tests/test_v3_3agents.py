@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-MassGen v3 Example: Three Agent Coordination
+MassGen Example: Three Agent Coordination
 
-This example demonstrates three-agent coordination using v3 with the 
+This example demonstrates three-agent coordination using MassGen with the 
 multi-region coordination UI. Three agents with different specialties work 
 together on a question that benefits from multiple perspectives.
 
@@ -23,14 +23,14 @@ import os
 project_root = os.path.dirname(__file__)
 sys.path.insert(0, project_root)
 
-from massgen.v3 import create_simple_agent, OpenAIBackend, MassOrchestrator
-from massgen.v3.frontend.coordination_ui import coordinate_with_terminal_ui
+from massgen import create_simple_agent, OpenAIBackend, MassOrchestrator
+from massgen.frontend.coordination_ui import coordinate_with_terminal_ui
 
 
 async def three_agent_v3_example():
     """Demonstrate three agent coordination with v3 multi-region UI."""
     
-    print("🎯 MassGen v3: Three Agent Coordination")
+    print("🎯 MassGen: Three Agent Coordination")
     print("=" * 50)
     
     # Check API key
@@ -70,7 +70,7 @@ async def three_agent_v3_example():
             "engineer": engineer,
             "educator": educator
         })
-        print("✅ v3 orchestrator ready")
+        print("✅ orchestrator ready")
         
         # Question that benefits from multiple perspectives
         question = "How does solar energy work and why is it important?"

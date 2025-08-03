@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Claude Backend Integration Tests for MassGen v3
+Claude Backend Integration Tests for MassGen
 
 Tests the Claude backend implementation with real API calls:
 - Basic text streaming
@@ -22,8 +22,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.claude_backend import ClaudeBackend
-from massgen.v3.backend.base import StreamChunk
+from massgen.backend.claude_backend import ClaudeBackend
+from massgen.backend.base import StreamChunk
 
 
 async def test_claude_basic_streaming():

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for Grok backend integration with v3 architecture.
+Test script for Grok backend integration with MassGen architecture.
 Tests basic functionality, tool integration, and streaming.
 """
 
@@ -13,8 +13,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.grok_backend import GrokBackend
-from massgen.v3.chat_agent import SingleAgent
+from massgen.backend.grok_backend import GrokBackend
+from massgen.chat_agent import SingleAgent
 
 
 async def test_grok_basic():
@@ -127,7 +127,7 @@ async def test_grok_with_agent():
 
 async def main():
     """Run all Grok backend tests."""
-    print("🚀 MassGen v3 - Grok Backend Testing")
+    print("🚀 MassGen - Grok Backend Testing")
     print("=" * 50)
     
     results = []

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple test script for MassGen v3 basic functionality.
+Simple test script for MassGen basic functionality.
 Tests single agent and basic orchestrator functionality.
 """
 
@@ -13,9 +13,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
-from massgen.v3.chat_agent import SingleAgent
-from massgen.v3.orchestrator import MassOrchestrator
+from massgen.backend.openai_backend import OpenAIBackend
+from massgen.chat_agent import SingleAgent
+from massgen.orchestrator import MassOrchestrator
 
 
 async def test_single_agent():
@@ -182,7 +182,7 @@ async def test_conversation_history():
 
 async def main():
     """Run all simple functionality tests."""
-    print("🚀 MassGen v3 - Simple Functionality Test Suite")
+    print("🚀 MassGen - Simple Functionality Test Suite")
     print("=" * 60)
     
     results = []
@@ -201,7 +201,7 @@ async def main():
     
     if all(results):
         print("🎉 All simple functionality tests passed!")
-        print("✅ MassGen v3 basic functionality is working correctly")
+        print("✅ MassGen basic functionality is working correctly")
     else:
         print("⚠️  Some tests failed - check API key and configuration")
 
