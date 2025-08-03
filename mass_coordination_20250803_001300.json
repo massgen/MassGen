@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "start_time": "2025-08-03T00:13:00.044086",
+    "status": "in_progress",
+    "logger_version": "1.0"
+  },
+  "session": {
+    "question": "Compare different approaches to renewable energy",
+    "agent_ids": [
+      "researcher",
+      "analyst",
+      "communicator"
+    ],
+    "final_answer": ""
+  },
+  "agent_outputs": {
+    "researcher": [],
+    "analyst": [],
+    "communicator": []
+  },
+  "orchestrator_events": [],
+  "aggregated_responses": {},
+  "workflow_analysis": {
+    "new_answers": 0,
+    "votes": 0,
+    "total_chunks": 0
+  }
+}
