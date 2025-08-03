@@ -5,7 +5,7 @@ Built on the proven MassGen framework with working tool message handling,
 async generator patterns, and reliable multi-agent coordination.
 
 Key Features:
-- Multi-backend support: OpenAI (Responses API), Claude (Messages API), Grok (Chat API)
+- Multi-backend support: Response API (standard format), Claude (Messages API), Grok (Chat API)
 - Builtin tools: Code execution and web search with streaming results
 - Async streaming with proper chat agent interfaces and tool result handling
 - Multi-agent orchestration with voting and consensus mechanisms
@@ -35,9 +35,9 @@ TODO - Missing Features (to be added in future releases):
 - Performance optimizations
 
 Usage:
-    from massgen.v3 import OpenAIBackend, create_simple_agent, Orchestrator
+    from massgen.v3 import ResponseBackend, create_simple_agent, Orchestrator
     
-    backend = OpenAIBackend()
+    backend = ResponseBackend()
     agent = create_simple_agent(backend, "You are a helpful assistant")
     orchestrator = Orchestrator(agents={"agent1": agent})
     
@@ -47,8 +47,8 @@ Usage:
 """
 
 # Import main classes for convenience
-from .backend.openai_backend import OpenAIBackend
-from .backend.claude_backend import ClaudeBackend
+from .backend.response import ResponseBackend
+from .backend.claude import ClaudeBackend
 from .chat_agent import (
     ChatAgent, 
     SingleAgent, 
@@ -67,7 +67,7 @@ __author__ = "MassGen Contributors"
 
 __all__ = [
     # Backends
-    "OpenAIBackend",
+    "ResponseBackend",
     "ClaudeBackend",
     
     # Agents

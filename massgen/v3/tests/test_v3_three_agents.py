@@ -13,7 +13,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
+from massgen.v3.backend.response import ResponseBackend
 from massgen.v3.chat_agent import SingleAgent
 from massgen.v3.orchestrator import Orchestrator
 from massgen.v3.frontend.coordination_ui import CoordinationUI
@@ -33,7 +33,7 @@ async def test_three_agents_coordination():
     
     try:
         # Create backend
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         
         # Create three agents with different expertise
         researcher = SingleAgent(
@@ -106,7 +106,7 @@ async def test_three_agents_simple():
         return False
     
     try:
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         
         # Create minimal agents with different roles
         planner = SingleAgent(
@@ -167,7 +167,7 @@ async def test_three_agents_consensus():
         return False
     
     try:
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         
         # Create agents with potentially different perspectives
         optimist = SingleAgent(

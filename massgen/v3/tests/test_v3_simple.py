@@ -13,7 +13,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.openai_backend import OpenAIBackend
+from massgen.v3.backend.response import ResponseBackend
 from massgen.v3.chat_agent import SingleAgent
 from massgen.v3.orchestrator import Orchestrator
 
@@ -29,7 +29,7 @@ async def test_single_agent():
         return False
     
     try:
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         agent = SingleAgent(
             backend=backend,
             agent_id="test_agent",
@@ -70,7 +70,7 @@ async def test_orchestrator_single():
         return False
     
     try:
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         agent = SingleAgent(
             backend=backend,
             agent_id="solo_agent",
@@ -113,7 +113,7 @@ async def test_agent_status():
         return False
     
     try:
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         agent = SingleAgent(
             backend=backend,
             agent_id="status_test_agent",
@@ -147,7 +147,7 @@ async def test_conversation_history():
         return False
     
     try:
-        backend = OpenAIBackend(api_key=api_key)
+        backend = ResponseBackend(api_key=api_key)
         agent = SingleAgent(
             backend=backend,
             agent_id="history_agent",
