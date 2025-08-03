@@ -5,6 +5,7 @@ Main interface for coordinating agents with visual display and logging.
 """
 
 import time
+import asyncio
 from typing import Optional, List, Dict, Any, AsyncGenerator
 from .displays.base_display import BaseDisplay
 from .displays.terminal_display import TerminalDisplay
@@ -86,6 +87,11 @@ class CoordinationUI:
         
         # Pass orchestrator reference to display for backend info
         self.display.orchestrator = orchestrator
+        
+        # Initialize answer buffering for preventing duplicate show_final_answer calls
+        self._answer_buffer = ""
+        self._answer_timeout_task = None
+        self._final_answer_shown = False
         
         # Initialize logger and display
         log_filename = None
@@ -243,8 +249,27 @@ class CoordinationUI:
                 self.logger.finalize_session("", success=False)
             raise
         finally:
+            # Flush any remaining buffered answer before cleanup
+            if hasattr(self, '_answer_buffer') and self._answer_buffer and not self._final_answer_shown:
+                await self._flush_final_answer()
+            # Cancel any pending timeout task
+            if hasattr(self, '_answer_timeout_task') and self._answer_timeout_task:
+                self._answer_timeout_task.cancel()
             if self.display:
                 self.display.cleanup()
+
+            if selected_agent:
+                print(f"✅ Selected by: {selected_agent}")
+                if vote_results.get('vote_counts'):
+                    vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results['vote_counts'].items()])
+                    print(f"🗳️ Vote results: {vote_summary}")
+            print()
+
+            if self.logger:
+                session_info = self.logger.finalize_session(final_answer, success=True)
+                print(f"💾 Session log: {session_info['filename']}")
+                print(f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}")
+
     
     async def coordinate_with_context(self, orchestrator, question: str, messages: List[Dict[str, Any]], agent_ids: Optional[List[str]] = None) -> str:
         """Coordinate agents with conversation context and visual display.
@@ -415,10 +440,10 @@ class CoordinationUI:
             # Use orchestrator's clean answer if available, otherwise fall back to presentation
             final_result = orchestrator_final_answer if orchestrator_final_answer else (final_answer if final_answer else full_response)
             if final_result:
-                print(f"\n🎯 FINAL COORDINATED ANSWER")
-                print("=" * 80)
-                print(f"{final_result.strip()}")
-                print("=" * 80)
+                # print(f"\n🎯 FINAL COORDINATED ANSWER")
+                # print("=" * 80)
+                # print(f"{final_result.strip()}")
+                # print("=" * 80)
                 
                 # Show which agent was selected
                 if selected_agent:
@@ -441,6 +466,12 @@ class CoordinationUI:
                 self.logger.finalize_session("", success=False)
             raise
         finally:
+            # Flush any remaining buffered answer before cleanup
+            if hasattr(self, '_answer_buffer') and self._answer_buffer and not self._final_answer_shown:
+                await self._flush_final_answer()
+            # Cancel any pending timeout task
+            if hasattr(self, '_answer_timeout_task') and self._answer_timeout_task:
+                self._answer_timeout_task.cancel()
             if self.display:
                 self.display.cleanup()
     
@@ -529,6 +560,22 @@ class CoordinationUI:
             if self.logger:
                 self.logger.log_agent_content(agent_id, content, "thinking")
     
+    async def _flush_final_answer(self):
+        """Flush the buffered final answer after a timeout to prevent duplicate calls."""
+        if self._final_answer_shown or not self._answer_buffer.strip():
+            return
+            
+        # Get orchestrator status for voting results and winner
+        status = self.orchestrator.get_status()
+        selected_agent = status.get('selected_agent', 'Unknown')
+        vote_results = status.get('vote_results', {})
+        
+        # Mark as shown to prevent duplicate calls
+        self._final_answer_shown = True
+        
+        # Show the final answer
+        self.display.show_final_answer(self._answer_buffer.strip(), vote_results=vote_results, selected_agent=selected_agent)
+    
     async def _process_orchestrator_content(self, content: str):
         """Process content from orchestrator."""
         # Handle final answer - merge with voting info
@@ -545,39 +592,49 @@ class CoordinationUI:
                 if self.logger:
                     self.logger.log_orchestrator_event(event)
         
-        # Handle final answer content - create merged event with voting info
+        # Handle final answer content - buffer it to prevent duplicate calls
         elif ("Final Coordinated Answer" not in content and 
               not any(marker in content for marker in ["✅", "🗳️", "🎯", "Starting", "Agents Coordinating", "🔄", "**", "result ignored", "restart pending"])):
             # Extract clean final answer content
             clean_content = content.strip()
             if clean_content and not clean_content.startswith('---') and not clean_content.startswith('*Coordinated by'):
-                # Get orchestrator status for voting results and winner
+                # Add to buffer
+                if self._answer_buffer:
+                    self._answer_buffer += " " + clean_content
+                else:
+                    self._answer_buffer = clean_content
+                
+                # Cancel previous timeout if it exists
+                if self._answer_timeout_task:
+                    self._answer_timeout_task.cancel()
+                
+                # Set a timeout to flush the answer (in case streaming stops)
+                self._answer_timeout_task = asyncio.create_task(self._schedule_final_answer_flush())
+                
+                # Create event for this chunk but don't call show_final_answer yet
                 status = self.orchestrator.get_status()
                 selected_agent = status.get('selected_agent', 'Unknown')
                 vote_results = status.get('vote_results', {})
                 vote_counts = vote_results.get('vote_counts', {})
                 is_tie = vote_results.get('is_tie', False)
                 
-                # Create comprehensive final event
-                if vote_counts:
-                    vote_summary = ", ".join([f"{agent}: {count} vote{'s' if count != 1 else ''}" for agent, count in vote_counts.items()])
-                    tie_info = " (tie-broken by registration order)" if is_tie else ""
-                    event = f"🎯 FINAL: {selected_agent} selected ({vote_summary}{tie_info}) → {clean_content}"
-                else:
-                    event = f"🎯 FINAL: {selected_agent} selected → {clean_content}"
-                
-                self.display.add_orchestrator_event(event)
-                if self.logger:
-                    self.logger.log_orchestrator_event(event)
-                
-                import asyncio
-                await asyncio.sleep(1.5) 
-                
-                if hasattr(self.display, '_update_display'):
-                    self.display._update_display(force=True)
-                    await asyncio.sleep(0.3) 
-                
-                self.display.show_final_answer(clean_content, vote_results=vote_results, selected_agent=selected_agent)
+                # Only create final event for first chunk to avoid spam
+                if self._answer_buffer == clean_content:  # First chunk
+                    if vote_counts:
+                        vote_summary = ", ".join([f"{agent}: {count} vote{'s' if count != 1 else ''}" for agent, count in vote_counts.items()])
+                        tie_info = " (tie-broken by registration order)" if is_tie else ""
+                        event = f"🎯 FINAL: {selected_agent} selected ({vote_summary}{tie_info}) → [buffering...]"
+                    else:
+                        event = f"🎯 FINAL: {selected_agent} selected → [buffering...]"
+                    
+                    self.display.add_orchestrator_event(event)
+                    if self.logger:
+                        self.logger.log_orchestrator_event(event)
+    
+    async def _schedule_final_answer_flush(self):
+        """Schedule the final answer flush after a delay to collect all chunks."""
+        await asyncio.sleep(2.0)  # Wait 2 seconds for more chunks
+        await self._flush_final_answer()
     
     def _print_with_flush(self, content: str):
         """Print content chunks directly without character-by-character flushing."""
@@ -590,7 +647,7 @@ class CoordinationUI:
 
 
 # Convenience functions for common use cases
-async def coordinate_with_terminal_ui(orchestrator, question: str, enable_final_presentation: bool = True, **kwargs) -> str:
+async def coordinate_with_terminal_ui(orchestrator, question: str, enable_final_presentation: bool = False, **kwargs) -> str:
     """Quick coordination with terminal UI and logging.
     
     Args:
@@ -606,7 +663,7 @@ async def coordinate_with_terminal_ui(orchestrator, question: str, enable_final_
     return await ui.coordinate(orchestrator, question)
 
 
-async def coordinate_with_simple_ui(orchestrator, question: str, enable_final_presentation: bool = True, **kwargs) -> str:
+async def coordinate_with_simple_ui(orchestrator, question: str, enable_final_presentation: bool = False, **kwargs) -> str:
     """Quick coordination with simple UI and logging.
     
     Args:
@@ -621,7 +678,7 @@ async def coordinate_with_simple_ui(orchestrator, question: str, enable_final_pr
     return await ui.coordinate(orchestrator, question)
 
 
-async def coordinate_with_rich_ui(orchestrator, question: str, enable_final_presentation: bool = True, **kwargs) -> str:
+async def coordinate_with_rich_ui(orchestrator, question: str, enable_final_presentation: bool = False, **kwargs) -> str:
     """Quick coordination with rich terminal UI and logging.
     
     Args:
