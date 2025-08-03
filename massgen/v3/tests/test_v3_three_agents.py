@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 
 from massgen.v3.backend.openai_backend import OpenAIBackend
 from massgen.v3.chat_agent import SingleAgent
-from massgen.v3.orchestrator import MassOrchestrator
+from massgen.v3.orchestrator import Orchestrator
 from massgen.v3.frontend.coordination_ui import CoordinationUI
 
 
@@ -61,7 +61,7 @@ async def test_three_agents_coordination():
             "communicator": communicator
         }
         
-        orchestrator = MassOrchestrator(agents=agents)
+        orchestrator = Orchestrator(agents=agents)
         
         # Create UI for coordination display
         ui = CoordinationUI(display_type="terminal", logging_enabled=True)
@@ -127,7 +127,7 @@ async def test_three_agents_simple():
             system_message="You are an evaluator. Focus on assessment and quality control."
         )
         
-        orchestrator = MassOrchestrator(agents={
+        orchestrator = Orchestrator(agents={
             "planner": planner,
             "executor": executor, 
             "evaluator": evaluator
@@ -188,7 +188,7 @@ async def test_three_agents_consensus():
             system_message="You are a skeptical viewpoint agent. Focus on potential challenges and risks."
         )
         
-        orchestrator = MassOrchestrator(agents={
+        orchestrator = Orchestrator(agents={
             "optimist": optimist,
             "realist": realist, 
             "skeptic": skeptic

@@ -57,7 +57,7 @@ from massgen.v3.backend.claude_backend import ClaudeBackend
 from massgen.v3.backend.gemini_backend import GeminiBackend
 from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.v3.agent_config import AgentConfig
-from massgen.v3.orchestrator import MassOrchestrator
+from massgen.v3.orchestrator import Orchestrator
 from massgen.v3.frontend.coordination_ui import CoordinationUI
 
 # Color constants for terminal output
@@ -282,7 +282,7 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
     
     else:
         # Multi-agent mode with history
-        orchestrator = MassOrchestrator(agents=agents)
+        orchestrator = Orchestrator(agents=agents)
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
@@ -345,7 +345,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
     
     else:
         # Multi-agent mode
-        orchestrator = MassOrchestrator(agents=agents)
+        orchestrator = Orchestrator(agents=agents)
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)

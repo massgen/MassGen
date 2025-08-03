@@ -23,7 +23,7 @@ import os
 project_root = os.path.dirname(__file__)
 sys.path.insert(0, project_root)
 
-from massgen.v3 import create_simple_agent, OpenAIBackend, MassOrchestrator
+from massgen.v3 import create_simple_agent, OpenAIBackend, Orchestrator
 from massgen.v3.frontend.coordination_ui import coordinate_with_terminal_ui
 
 
@@ -65,7 +65,7 @@ async def three_agent_v3_example():
         print("  • educator: Clear explanations")
         
         # Create orchestrator
-        orchestrator = MassOrchestrator(agents={
+        orchestrator = Orchestrator(agents={
             "scientist": scientist,
             "engineer": engineer,
             "educator": educator

@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 
 from massgen.v3.backend.openai_backend import OpenAIBackend
 from massgen.v3.chat_agent import SingleAgent
-from massgen.v3.orchestrator import MassOrchestrator
+from massgen.v3.orchestrator import Orchestrator
 
 
 async def test_single_agent():
@@ -77,7 +77,7 @@ async def test_orchestrator_single():
             system_message="You are a knowledgeable assistant."
         )
         
-        orchestrator = MassOrchestrator(agents={"solo": agent})
+        orchestrator = Orchestrator(agents={"solo": agent})
         
         print("📤 Testing orchestrator with single agent...")
         
