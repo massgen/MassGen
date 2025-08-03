@@ -1,6 +1,7 @@
 include README.md
 include LICENSE
 include CONTRIBUTING.md
+include CHANGELOG.md
 include requirements.txt
 include examples/*.yaml
 include massgen/backends/.env.example
