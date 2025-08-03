@@ -30,12 +30,12 @@ class AgentState:
     restart_pending: bool = False
 
 
-class MassOrchestrator(ChatAgent):
+class Orchestrator(ChatAgent):
     """
-    MassGen Orchestrator Agent - Unified chat interface with sub-agent coordination.
+    Orchestrator Agent - Unified chat interface with sub-agent coordination.
     
     The orchestrator acts as a single agent from the user's perspective, but internally
-    coordinates multiple sub-agents using the proven MassGen binary decision framework.
+    coordinates multiple sub-agents using the proven binary decision framework.
     
     Key Features:
     - Unified chat interface (same as any individual agent)
@@ -920,7 +920,7 @@ class MassOrchestrator(ChatAgent):
 def create_orchestrator(agents: List[tuple], 
                        orchestrator_id: str = "orchestrator",
                        session_id: Optional[str] = None,
-                       config: Optional[AgentConfig] = None) -> MassOrchestrator:
+                       config: Optional[AgentConfig] = None) -> Orchestrator:
     """
     Create a MassGen orchestrator with sub-agents.
     
@@ -931,11 +931,11 @@ def create_orchestrator(agents: List[tuple],
         config: Optional AgentConfig for orchestrator customization
         
     Returns:
-        Configured MassOrchestrator
+        Configured Orchestrator
     """
     agents_dict = {agent_id: agent for agent_id, agent in agents}
     
-    return MassOrchestrator(
+    return Orchestrator(
         agents=agents_dict,
         orchestrator_id=orchestrator_id,
         session_id=session_id,

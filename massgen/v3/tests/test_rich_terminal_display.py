@@ -15,7 +15,7 @@ sys.path.insert(0, str(project_root))
 
 from massgen.v3.backend.openai_backend import OpenAIBackend
 from massgen.v3.chat_agent import SingleAgent
-from massgen.v3.orchestrator import MassOrchestrator
+from massgen.v3.orchestrator import Orchestrator
 from massgen.v3.frontend.coordination_ui import CoordinationUI, coordinate_with_rich_ui
 from massgen.v3.frontend.displays.rich_terminal_display import is_rich_available
 
@@ -115,7 +115,7 @@ async def test_rich_display_coordination():
             "technical": technical_agent
         }
         
-        orchestrator = MassOrchestrator(agents=agents)
+        orchestrator = Orchestrator(agents=agents)
         
         # Test with Rich UI using cyberpunk theme
         print("🎨 Testing with cyberpunk theme...")
@@ -186,7 +186,7 @@ async def test_rich_convenience_function():
             system_message="You are a strategic thinker who focuses on long-term implications and strategic recommendations."
         )
         
-        orchestrator = MassOrchestrator(agents={"analyst": analyst, "strategist": strategist})
+        orchestrator = Orchestrator(agents={"analyst": analyst, "strategist": strategist})
         
         print("🎯 Testing convenience function with light theme...")
         

@@ -35,11 +35,11 @@ TODO - Missing Features (to be added in future releases):
 - Performance optimizations
 
 Usage:
-    from massgen.v3 import OpenAIBackend, create_simple_agent, MassOrchestrator
+    from massgen.v3 import OpenAIBackend, create_simple_agent, Orchestrator
     
     backend = OpenAIBackend()
     agent = create_simple_agent(backend, "You are a helpful assistant")
-    orchestrator = MassOrchestrator(agents={"agent1": agent})
+    orchestrator = Orchestrator(agents={"agent1": agent})
     
     async for chunk in orchestrator.chat_simple("Your question"):
         if chunk.type == "content":
@@ -58,7 +58,7 @@ from .chat_agent import (
     create_research_agent,
     create_computational_agent
 )
-from .orchestrator import MassOrchestrator, create_orchestrator
+from .orchestrator import Orchestrator, create_orchestrator
 from .message_templates import MessageTemplates, get_templates
 from .agent_config import AgentConfig
 
@@ -80,7 +80,7 @@ __all__ = [
     "create_computational_agent",
     
     # Orchestrator
-    "MassOrchestrator",
+    "Orchestrator",
     "create_orchestrator",
     
     # Configuration
