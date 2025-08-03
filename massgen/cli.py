@@ -51,14 +51,14 @@ load_env_file()
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.v3.backend.response import ResponseBackend
-from massgen.v3.backend.grok import GrokBackend
-from massgen.v3.backend.claude import ClaudeBackend
-from massgen.v3.backend.gemini import GeminiBackend
-from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
-from massgen.v3.agent_config import AgentConfig
-from massgen.v3.orchestrator import Orchestrator
-from massgen.v3.frontend.coordination_ui import CoordinationUI
+from massgen.backend.response import ResponseBackend
+from massgen.backend.grok import GrokBackend
+from massgen.backend.claude import ClaudeBackend
+from massgen.backend.gemini import GeminiBackend
+from massgen.chat_agent import SingleAgent, ConfigurableAgent
+from massgen.agent_config import AgentConfig
+from massgen.orchestrator import Orchestrator
+from massgen.frontend.coordination_ui import CoordinationUI
 
 # Color constants for terminal output
 BRIGHT_CYAN = '\033[96m'

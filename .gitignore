@@ -200,3 +200,6 @@ models/
 *.sqlite
 *.sqlite3
 gemini_streaming.txt
+
+agent_outputs
+mass_coordination*

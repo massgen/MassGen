@@ -35,7 +35,7 @@ TODO - Missing Features (to be added in future releases):
 - Performance optimizations
 
 Usage:
-    from massgen.v3 import ResponseBackend, create_simple_agent, Orchestrator
+    from massgen import ResponseBackend, create_simple_agent, Orchestrator
     
     backend = ResponseBackend()
     agent = create_simple_agent(backend, "You are a helpful assistant")
