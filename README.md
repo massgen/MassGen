@@ -38,15 +38,23 @@ This project started with the "threads of thought" and "iterative refinement" id
 ## 📋 Table of Contents
 
 <details open>
-  <summary>
-    <a href="#-key-features-1" style="text-decoration: none; font-size: 1.25em;">✨ Key Features</a>
-  </summary>
+<summary><h3>✨ Key Features</h3></summary>
+
+- [Cross-Model/Agent Synergy](#-key-features)
+- [Parallel Processing](#-key-features)  
+- [Intelligence Sharing](#-key-features)
+- [Consensus Building](#-key-features)
+- [Live Visualization](#-key-features)
 </details>
 
 <details open>
-  <summary>
-    <a href="#%EF%B8%8F-system-design-1" style="text-decoration: none; font-size: 1.25em;">🏗️ System Design</a>
-  </summary>
+<summary><h3>🏗️ System Design</h3></summary>
+
+- [System Architecture](#%EF%B8%8F-system-design)
+- [Parallel Processing](#%EF%B8%8F-system-design)
+- [Real-time Collaboration](#%EF%B8%8F-system-design)
+- [Convergence Detection](#%EF%B8%8F-system-design)
+- [Adaptive Coordination](#%EF%B8%8F-system-design)
 </details>
 
 <details open>
@@ -203,9 +211,9 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | Backend | Live Search | Code Execution |
 |---------|:-----------:|:--------------:|
 | **Claude** | ✅ | ✅ |
-| **Gemini** | ✅ | ✅ |
-| **Grok** | ✅ | ❌ |
 | **OpenAI** | ✅ | ✅ |
+| **Grok** | ✅ | ❌ |
+| **Gemini** | ✅ | ✅ |
 
 ### 4. 🏃 Run MassGen
 
