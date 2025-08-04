@@ -40,11 +40,73 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ## 📋 Table of Contents
 
-- [✨ Key Features](#-key-features)
-- [🏗️ System Design](#️-system-design)
-- [🚀 Quick Start](#-quick-start)
-- [💡 Examples](#-examples)
+<details>
+<summary><h3>✨ Key Features</h3></summary>
+
+- [Cross-Model/Agent Synergy](#-key-features)
+- [Parallel Processing](#-key-features)  
+- [Intelligence Sharing](#-key-features)
+- [Consensus Building](#-key-features)
+- [Live Visualization](#-key-features)
+</details>
+
+<details>
+<summary><h3>🏗️ System Design</h3></summary>
+
+- [System Architecture](#️-system-design)
+- [Parallel Processing](#️-system-design)
+- [Real-time Collaboration](#️-system-design)
+- [Convergence Detection](#️-system-design)
+- [Adaptive Coordination](#️-system-design)
+</details>
+
+<details>
+<summary><h3>🚀 Quick Start</h3></summary>
+
+- [📥 Installation](#1--installation)
+- [🔐 API Configuration](#2--api-configuration)
+- [🧩 Supported Models and Tools](#3--supported-models-and-tools)
+  - [Models](#models)
+  - [Tools](#tools)
+- [🏃 Run MassGen](#4--run-massgen)
+  - [Quick Test with A Single Model](#quick-test-with-a-single-model)
+  - [Multiple Agents from Config](#multiple-agents-from-config)
+  - [CLI Configuration Parameters](#cli-configuration-parameters)
+  - [Configuration File Format](#configuration-file-format)
+  - [Interactive Multi-Turn Mode](#interactive-multi-turn-mode)
+- [📊 View Results](#5--view-results)
+  - [Real-time Display](#real-time-display)
+  - [Comprehensive Logging](#comprehensive-logging)
+</details>
+
+<details>
+<summary><h3>💡 Examples</h3></summary>
+
+- [📚 Case Studies](#case-studies)
+- [❓ Question Answering](#1--question-answering)
+- [🧠 Creative Writing](#2--creative-writing)
+- [🔬 Research](#3-research)
+</details>
+
+<details>
+<summary><h3>🗺️ Roadmap</h3></summary>
+
+- [Current Development Stage](#️-roadmap)
+- [Key Future Enhancements](#key-future-enhancements)
+  - Advanced Agent Collaboration
+  - Expanded Model, Tool & Agent Integration
+  - Improved Performance & Scalability
+  - Enhanced Developer Experience
+  - Web Interface
+</details>
+
+<details>
+<summary><h3>📚 Additional Resources</h3></summary>
+
 - [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [⭐ Star History](#-star-history)
+</details>
 
 ---
 
