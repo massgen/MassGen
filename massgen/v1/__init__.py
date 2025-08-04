@@ -18,14 +18,14 @@ Key Features:
 - Comprehensive logging and monitoring
 
 Command-Line Usage:
-    # Use cli.py for all command-line operations
+    # Use massgen.v1.cli for all command-line operations
     
     # Single agent mode
-    python cli.py "What is 2+2?" --models gpt-4o
+    uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o
     
     # Multi-agent mode
-    python cli.py "What is 2+2?" --models gpt-4o gemini-2.5-flash
-    python cli.py "Complex question" --config examples/production.yaml
+    uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o gemini-2.5-flash
+    uv run python -m massgen.v1.cli "Complex question" --config examples/production.yaml
 
 Programmatic Usage:
     # Using YAML configuration

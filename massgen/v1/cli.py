@@ -7,14 +7,14 @@ This provides a clean command-line interface for the MassGen system.
 
 Usage examples:
     # Use YAML configuration file
-    python cli.py "What is 2+2?" --config examples/production.yaml
+    uv run python -m massgen.v1.cli "What is 2+2?" --config examples/production.yaml
     
     # Use model names directly (single or multiple agents)
-    python cli.py "What is 2+2?" --models gpt-4o gemini-2.5-flash
-    python cli.py "What is 2+2?" --models gpt-4o  # Single agent mode
+    uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o gemini-2.5-flash
+    uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o  # Single agent mode
     
     # Interactive mode (no question provided)
-    python cli.py --models gpt-4o grok-4
+    uv run python -m massgen.v1.cli --models gpt-4o grok-4
 """
 
 import argparse
@@ -25,7 +25,7 @@ from pathlib import Path
 # Add massgen package to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from massgen import (
+from massgen.v1 import (
     run_mass_with_config, load_config_from_yaml, create_config_from_models, 
     ConfigurationError
 )
@@ -187,17 +187,17 @@ def main():
         epilog="""
 Examples:
   # Use YAML configuration
-  python cli.py "What is the capital of France?" --config examples/production.yaml
+  uv run python -m massgen.v1.cli "What is the capital of France?" --config examples/production.yaml
   
   # Use model names directly (single or multiple agents)
-  python cli.py "What is 2+2?" --models gpt-4o gemini-2.5-flash
-  python cli.py "What is 2+2?" --models gpt-4o  # Single agent mode
+  uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o gemini-2.5-flash
+  uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o  # Single agent mode
   
   # Interactive mode (no question provided)
-  python cli.py --models gpt-4o grok-4
+  uv run python -m massgen.v1.cli --models gpt-4o grok-4
   
   # Override parameters
-  python cli.py "Question" --models gpt-4o gemini-2.5-flash --max-duration 1200 --consensus 0.8
+  uv run python -m massgen.v1.cli "Question" --models gpt-4o gemini-2.5-flash --max-duration 1200 --consensus 0.8
         """
     )
     

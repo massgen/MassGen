@@ -4,7 +4,7 @@
 # Ideal for straightforward tasks that don't require multi-agent collaboration.
 #
 # Usage:
-#   python cli.py --config examples/single_agent.yaml "Simple question"
+#   uv run python -m massgen.v1.cli --config examples/single_agent.yaml "Simple question"
 
 orchestrator:
   max_duration: 300           # 5 minutes - shorter for simple tasks

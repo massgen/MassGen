@@ -3,7 +3,7 @@
 MassGen (Multi-Agent Scaling System) - Programmatic Interface
 
 This module provides programmatic interfaces for running the MassGen system.
-For command-line usage, use: python cli.py
+For command-line usage, use: uv run python -m massgen.v1.cli
 
 Programmatic usage examples:
     # Using YAML configuration

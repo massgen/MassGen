@@ -10,8 +10,8 @@ load_dotenv()
 from openai import OpenAI
 
 # Import utility functions
-from massgen.utils import function_to_json, execute_function_calls
-from massgen.types import AgentResponse
+from massgen.v1.utils import function_to_json, execute_function_calls
+from massgen.v1.types import AgentResponse
 
             
 def parse_completion(response, add_citations=True):
