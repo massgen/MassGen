@@ -203,9 +203,9 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | Backend | Live Search | Code Execution |
 |---------|:-----------:|:--------------:|
 | **Claude** | ✅ | ✅ |
-| **OpenAI** | ✅ | ✅ |
-| **Grok** | ✅ | ❌ |
 | **Gemini** | ✅ | ✅ |
+| **Grok** | ✅ | ❌ |
+| **OpenAI** | ✅ | ✅ |
 
 ### 4. 🏃 Run MassGen
 
