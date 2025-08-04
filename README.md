@@ -199,10 +199,10 @@ MassGen v3 supports YAML/JSON configuration files with the following structure (
 agent:  # Single agent
   id: "agent_name"
   backend:
-    type: "openai" | "grok"
+    type: "claude" | "openai" | "grok" | "gemini"
     model: "model_name"
     api_key: "optional_key"  # Uses env vars by default
-  system_message: "Agent role and instructions"
+  system_message: "..."
 ```
 
 **Multi-Agent Configuration:**
@@ -219,7 +219,7 @@ agents:  # Multiple agents (alternative to 'agent')
 ### UI Configuration
 ```yaml
 ui:
-  display_type: "terminal" | "simple"
+  display_type: "rich_terminal" | "terminal" | "simple"
   logging_enabled: true | false
 ```
 
