@@ -238,11 +238,10 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### CLI Configuration Parameters
 
-
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `openai`, `grok` or `gemini`). Optional because we can infer backend type through model.|
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok` or `openai`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--create-samples` | Create example configuration files (`single_agent.yaml`, `multi_agent.yaml`) in a `configs/` directory |
@@ -264,7 +263,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
+    type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -278,16 +277,16 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
+      type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
   - id: "..."
     backend:
-      type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
-      model: "<model_name>" # Model name
-      api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
-    system_message: "..."    # System Message for Single Agent
+      type: "..."
+      model: "..."
+      ...
+    system_message: "..."
 ```
 
 **Backend Configuration:**
@@ -307,34 +306,6 @@ backend:
   enable_code_execution: true        # Code execution capability
 ```
 
-#### OpenAI
-
-```yaml
-backend:
-  type: "openai"
-  model: "gpt-4o"                    # Model name
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, o-series models don't support this)
-  max_tokens: 2500                   # Maximum response length (o-series models don't support this)
-  enable_web_search: true            # Web search capability
-  enable_code_interpreter: true      # Code interpreter capability
-```
-
-#### Grok
-
-```yaml
-backend:
-  type: "grok"
-  model: "grok-3"                    # Model name
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500                   # Maximum response length
-  enable_web_search: true            # Web search capability
-  return_citations: true             # Include search result citations
-  max_search_results: 10             # Maximum search results to use 
-  search_mode: "auto"                # Search strategy: "auto", "fast", "thorough" 
-```
-
 #### Gemini
 
 ```yaml
@@ -346,6 +317,34 @@ backend:
   max_tokens: 2500                   # Maximum response length
   enable_web_search: true            # Web search capability
   enable_code_execution: true        # Code execution capability
+```
+
+#### Grok
+
+```yaml
+backend:
+  type: "grok"
+  model: "grok-3-mini"               # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  return_citations: true             # Include search result citations
+  max_search_results: 10             # Maximum search results to use 
+  search_mode: "auto"                # Search strategy: "auto", "fast", "thorough" 
+```
+
+#### OpenAI
+
+```yaml
+backend:
+  type: "openai"
+  model: "gpt-4o"                    # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, o-series models don't support this)
+  max_tokens: 2500                   # Maximum response length (o-series models don't support this)
+  enable_web_search: true            # Web search capability
+  enable_code_interpreter: true      # Code interpreter capability
 ```
 
 **UI Configuration:**
