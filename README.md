@@ -266,7 +266,7 @@ All available quick configuration files can be found [here](massgen/configs).
 
 | Parameter          | Description |
 |-------------------|-------------|
-| `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, backend parameters and UI settings |
+| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
 | `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `gemini-cli`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
@@ -276,7 +276,7 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### Configuration File Format
 
-MassGen supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
+MassGen supports YAML configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
 
