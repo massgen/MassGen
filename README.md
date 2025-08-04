@@ -62,7 +62,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ## 🏗️ System Design
 
-MassGen operates through a sophisticated architecture designed for **seamless multi-agent collaboration**:
+MassGen operates through an architecture designed for **seamless multi-agent collaboration**:
 
 ```mermaid
 graph TB
@@ -123,33 +123,30 @@ Create a `.env` file in the `massgen` directory with your API keys:
 cp massgen/.env.example massgen/.env
 
 # Edit with your API keys
-OPENAI_API_KEY=your-openai-key-here
-XAI_API_KEY=your-xai-key-here
 ANTHROPIC_API_KEY=your-anthropic-key-here
 GEMINI_API_KEY=your-gemini-key-here
+OPENAI_API_KEY=your-openai-key-here
+XAI_API_KEY=your-xai-key-here
 ```
 
 Make sure you set up the API key for the model you want to use.
 
 **Useful links to get API keys:**
  - [Claude](https://docs.anthropic.com/en/api/overview)
- - [OpenAI](https://platform.openai.com/api-keys)
- - [Grok](https://docs.x.ai/docs/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
+ - [Grok](https://docs.x.ai/docs/overview)
+ - [OpenAI](https://platform.openai.com/api-keys)
 
 ### 3. 🧩 Supported Models and Tools
 
-<!-- What does the following mean? If it can be clarified, then we can uncomment -->
-<!-- Configure the models you wish to use by updating the model registry in `massgen/utils.py`.  -->
-
 #### Models
 
-The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **OpenAI**, **xAI Grok** and **Google Gemini**. 
-More providers and local inference of open-sourced models (using vllm or sglang) will be added (help wanted!) and the extension will be made easier.
+The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok** and . 
+More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
 
-MassGen agents can leverage various tools to enhance their problem-solving capabilities. The Claude, OpenAI, and Grok models can use their own built-in search and code execution. 
+MassGen agents can leverage various tools to enhance their problem-solving capabilities. The Claude, Gemini, Grok and OpenAI models can use their own built-in search or code execution. 
 
 **Supported Built-in Tools by Models:**
 
@@ -162,10 +159,12 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 ### 4. 🏃 Run MassGen
 
-#### Quick Setup with Backend and Model
+#### Quick Test with A Single Model
 
 ```bash
+uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 ```
 
 #### Multiple Agents from Config
