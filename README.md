@@ -40,21 +40,21 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>✨ Key Features</h3></summary>
 
-- [Cross-Model/Agent Synergy](#-key-features)
-- [Parallel Processing](#-key-features)  
-- [Intelligence Sharing](#-key-features)
-- [Consensus Building](#-key-features)
-- [Live Visualization](#-key-features)
+- [Cross-Model/Agent Synergy](#-key-features-1)
+- [Parallel Processing](#-key-features-1)  
+- [Intelligence Sharing](#-key-features-1)
+- [Consensus Building](#-key-features-1)
+- [Live Visualization](#-key-features-1)
 </details>
 
 <details open>
 <summary><h3>🏗️ System Design</h3></summary>
 
-- [System Architecture](#%EF%B8%8F-system-design)
-- [Parallel Processing](#%EF%B8%8F-system-design)
-- [Real-time Collaboration](#%EF%B8%8F-system-design)
-- [Convergence Detection](#%EF%B8%8F-system-design)
-- [Adaptive Coordination](#%EF%B8%8F-system-design)
+- [System Architecture](#%EF%B8%8F-system-design-1)
+- [Parallel Processing](#%EF%B8%8F-system-design-1)
+- [Real-time Collaboration](#%EF%B8%8F-system-design-1)
+- [Convergence Detection](#%EF%B8%8F-system-design-1)
+- [Adaptive Coordination](#%EF%B8%8F-system-design-1)
 </details>
 
 <details open>
