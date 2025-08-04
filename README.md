@@ -242,7 +242,7 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `openai`, `grok` or `claude`). Optional because we can infer backend type through model.|
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `openai`, `grok` or `gemini`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--create-samples` | Create example configuration files (`single_agent.yaml`, `multi_agent.yaml`) in a `configs/` directory |
