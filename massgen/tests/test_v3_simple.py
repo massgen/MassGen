@@ -13,9 +13,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.response import ResponseBackend
-from massgen.chat_agent import SingleAgent
-from massgen.orchestrator import Orchestrator
+from massgen.v3.backend.response import ResponseBackend
+from massgen.v3.chat_agent import SingleAgent
+from massgen.v3.orchestrator import Orchestrator
 
 
 async def test_single_agent():

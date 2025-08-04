@@ -1423,6 +1423,27 @@ class RichTerminalDisplay(TerminalDisplay):
         # Add separator
         self.console.print("\n" + "=" * 80 + "\n")
     
+    def _redisplay_final_presentation(self):
+        """Redisplay the stored final presentation."""
+        if not self._stored_final_presentation or not self._stored_presentation_agent:
+            self.console.print(f"[{self.colors['error']}]No final presentation stored.[/{self.colors['error']}]")
+            return
+        
+        # Add separator
+        self.console.print("\n" + "=" * 80 + "\n")
+        
+        # Display the stored presentation
+        self._display_final_presentation_content(
+            self._stored_presentation_agent, 
+            self._stored_final_presentation
+        )
+        
+        # Wait for user to continue
+        input("\nPress Enter to return to agent selector...")
+        
+        # Add separator
+        self.console.print("\n" + "=" * 80 + "\n")
+    
     def _show_system_status(self):
         """Display system status from txt file."""
         if not self.system_status_file or not self.system_status_file.exists():
@@ -2713,9 +2734,15 @@ class RichTerminalDisplay(TerminalDisplay):
             # Flush any remaining buffered content
             self._flush_all_buffers()
             
+            # Stop live display with proper error handling
             if self.live:
-                self.live.stop()
-                self.live = None
+                try:
+                    self.live.stop()
+                except Exception:
+                    # Ignore any errors during stop
+                    pass
+                finally:
+                    self.live = None
             
             # Stop input thread if active
             self._stop_input_thread = True
@@ -2726,7 +2753,15 @@ class RichTerminalDisplay(TerminalDisplay):
                     pass
             
             # Restore terminal settings
-            self._restore_terminal_settings()
+            try:
+                self._restore_terminal_settings()
+            except:
+                # Ignore errors during terminal restoration
+                pass
+            
+            # Reset all state flags
+            self._agent_selector_active = False
+            self._final_answer_shown = False
             
             # Remove resize signal handler
             try:

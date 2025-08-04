@@ -49,6 +49,34 @@ class CoordinationUI:
         # Flush output configuration (matches rich_terminal_display)
         self._flush_char_delay = 0.03  # 30ms between characters
         self._flush_word_delay = 0.08  # 80ms after punctuation
+        
+        # Initialize answer buffer state
+        self._answer_buffer = ""
+        self._answer_timeout_task = None
+        self._final_answer_shown = False
+    
+    def reset(self):
+        """Reset UI state for next coordination session."""
+        # Clean up display if exists
+        if self.display:
+            try:
+                self.display.cleanup()
+            except Exception:
+                pass  # Ignore cleanup errors
+            self.display = None
+        
+        # Reset all state variables
+        self.agent_ids = []
+        self.orchestrator = None
+        
+        # Reset answer buffer state if they exist
+        if hasattr(self, '_answer_buffer'):
+            self._answer_buffer = ""
+        if hasattr(self, '_answer_timeout_task') and self._answer_timeout_task:
+            self._answer_timeout_task.cancel()
+            self._answer_timeout_task = None
+        if hasattr(self, '_final_answer_shown'):
+            self._final_answer_shown = False
     
     async def coordinate(self, orchestrator, question: str, agent_ids: Optional[List[str]] = None) -> str:
         """Coordinate agents with visual display and logging.
@@ -61,6 +89,11 @@ class CoordinationUI:
         Returns:
             Final coordinated response
         """
+        # Reset display to ensure clean state for each coordination
+        if self.display is not None:
+            self.display.cleanup()
+        self.display = None
+        
         self.orchestrator = orchestrator
         
         # Auto-detect agent IDs if not provided
@@ -249,12 +282,24 @@ class CoordinationUI:
                 self.logger.finalize_session("", success=False)
             raise
         finally:
-            # Flush any remaining buffered answer before cleanup
+            # Wait for any pending timeout task to complete before cleanup
+            if hasattr(self, '_answer_timeout_task') and self._answer_timeout_task:
+                try:
+                    # Give the task a chance to complete
+                    await asyncio.wait_for(self._answer_timeout_task, timeout=1.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    # If it takes too long or was cancelled, force flush
+                    if hasattr(self, '_answer_buffer') and self._answer_buffer and not self._final_answer_shown:
+                        await self._flush_final_answer()
+                    self._answer_timeout_task.cancel()
+            
+            # Final check to flush any remaining buffered answer
             if hasattr(self, '_answer_buffer') and self._answer_buffer and not self._final_answer_shown:
                 await self._flush_final_answer()
-            # Cancel any pending timeout task
-            if hasattr(self, '_answer_timeout_task') and self._answer_timeout_task:
-                self._answer_timeout_task.cancel()
+            
+            # Small delay to ensure display updates are processed
+            await asyncio.sleep(0.1)
+            
             if self.display:
                 self.display.cleanup()
 
@@ -283,6 +328,11 @@ class CoordinationUI:
         Returns:
             Final coordinated response
         """
+        # Reset display to ensure clean state for each coordination
+        if self.display is not None:
+            self.display.cleanup()
+        self.display = None
+        
         self.orchestrator = orchestrator
         
         # Auto-detect agent IDs if not provided
@@ -466,12 +516,24 @@ class CoordinationUI:
                 self.logger.finalize_session("", success=False)
             raise
         finally:
-            # Flush any remaining buffered answer before cleanup
+            # Wait for any pending timeout task to complete before cleanup
+            if hasattr(self, '_answer_timeout_task') and self._answer_timeout_task:
+                try:
+                    # Give the task a chance to complete
+                    await asyncio.wait_for(self._answer_timeout_task, timeout=1.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    # If it takes too long or was cancelled, force flush
+                    if hasattr(self, '_answer_buffer') and self._answer_buffer and not self._final_answer_shown:
+                        await self._flush_final_answer()
+                    self._answer_timeout_task.cancel()
+            
+            # Final check to flush any remaining buffered answer
             if hasattr(self, '_answer_buffer') and self._answer_buffer and not self._final_answer_shown:
                 await self._flush_final_answer()
-            # Cancel any pending timeout task
-            if hasattr(self, '_answer_timeout_task') and self._answer_timeout_task:
-                self._answer_timeout_task.cancel()
+            
+            # Small delay to ensure display updates are processed
+            await asyncio.sleep(0.1)
+            
             if self.display:
                 self.display.cleanup()
     
@@ -633,7 +695,7 @@ class CoordinationUI:
     
     async def _schedule_final_answer_flush(self):
         """Schedule the final answer flush after a delay to collect all chunks."""
-        await asyncio.sleep(2.0)  # Wait 2 seconds for more chunks
+        await asyncio.sleep(0.5)  # Wait 0.5 seconds for more chunks
         await self._flush_final_answer()
     
     def _print_with_flush(self, content: str):
@@ -692,3 +754,4 @@ async def coordinate_with_rich_ui(orchestrator, question: str, enable_final_pres
     """
     ui = CoordinationUI(display_type="rich_terminal", enable_final_presentation=enable_final_presentation, **kwargs)
     return await ui.coordinate(orchestrator, question)
+

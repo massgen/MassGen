@@ -51,14 +51,14 @@ load_env_file()
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.response import ResponseBackend
-from massgen.backend.grok import GrokBackend
-from massgen.backend.claude import ClaudeBackend
-from massgen.backend.gemini import GeminiBackend
-from massgen.chat_agent import SingleAgent, ConfigurableAgent
-from massgen.agent_config import AgentConfig
-from massgen.orchestrator import Orchestrator
-from massgen.frontend.coordination_ui import CoordinationUI
+from massgen.v3.backend.response import ResponseBackend
+from massgen.v3.backend.grok import GrokBackend
+from massgen.v3.backend.claude import ClaudeBackend
+from massgen.v3.backend.gemini import GeminiBackend
+from massgen.v3.chat_agent import SingleAgent, ConfigurableAgent
+from massgen.v3.agent_config import AgentConfig
+from massgen.v3.orchestrator import Orchestrator
+from massgen.v3.frontend.coordination_ui import CoordinationUI
 
 # Color constants for terminal output
 BRIGHT_CYAN = '\033[96m'
@@ -289,6 +289,7 @@ async def run_question_with_history(question: str, agents: Dict[str, SingleAgent
     else:
         # Multi-agent mode with history
         orchestrator = Orchestrator(agents=agents)
+        # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
@@ -352,6 +353,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
     else:
         # Multi-agent mode
         orchestrator = Orchestrator(agents=agents)
+        # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get('display_type', 'rich_terminal'),
             logging_enabled=ui_config.get('logging_enabled', True)
@@ -654,3 +656,4 @@ Environment Variables:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
