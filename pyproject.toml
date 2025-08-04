@@ -37,7 +37,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "PyYAML>=6.0",
     "rich==13.7.0",
-    "pynput>=1.7.6",
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
 ]

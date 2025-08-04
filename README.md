@@ -171,7 +171,7 @@ uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
 #### Multiple Agents from Config
 ```bash
 # Use configuration file
-uv run python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"
+uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
 ```
 
 #### Configuration Parameters
@@ -239,7 +239,7 @@ MassGen supports an interactive mode where you can have ongoing conversations wi
 uv run python -m massgen.cli --model gpt-4o-mini
 
 # Start interactive mode with configuration file
-uv run python -m massgen.cli --config config.yaml
+uv run python -m massgen.cli --config three_agents_default.yaml
 ```
 
 **Interactive Mode Features:**
