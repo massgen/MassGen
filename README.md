@@ -40,13 +40,13 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>✨ Key Features</h3></summary>
 
-- [Overview](#key-features)
+- [Overview](#-key-features-1)
 </details>
 
 <details open>
 <summary><h3>🏗️ System Design</h3></summary>
 
-- [Overview](#system-design)
+- [Overview](#%EF%B8%8F-system-design-1)
 </details>
 
 <details open>
