@@ -103,69 +103,123 @@ uv run python -m massgen.cli --config gemini_4o_claude.yaml
 
 ## 📋 Configuration Structure
 
-### Basic Structure
-```yaml
-# Single agent
-agent:
-  id: "agent_name"
-  backend:
-    type: "claude" | "openai" | "grok" | "gemini"
-    model: "model_name"
-    api_key: "optional_key"  # Uses env vars by default
-  system_message: "Agent role and instructions"
+**Single Agent Configuration:**
 
-# Multiple agents
-agents:
-  - id: "agent1"
-    backend: {...}
-    system_message: "..."
-  - id: "agent2"
-    backend: {...}
+Use the `agent` field to define a single agent with its backend and settings:
+
+```yaml
+agent: 
+  id: "<agent_name>"
+  backend:
+    type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
+    model: "<model_name>" # Model name
+    api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
+  system_message: "..."    # System Message for Single Agent
+```
+
+**Multi-Agent Configuration:**
+
+Use the `agents` field to define multiple agents, each with its own backend and config:
+
+```yaml
+agents:  # Multiple agents (alternative to 'agent')
+  - id: "<agent1 name>"
+    backend: 
+      type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
+      model: "<model_name>" # Model name
+      api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
+    system_message: "..."    # System Message for Single Agent
+  - id: "..."
+    backend:
+      type: "..."
+      model: "..."
+      ...
     system_message: "..."
 ```
 
-### Backend Configuration
+**Backend Configuration:**
+
+Detailed parameters for each agent's backend can be specified using the following configuration formats:
+
+#### Claude
+
 ```yaml
 backend:
-  type: "openai"           # "openai", "claude", "gemini", "grok"
-  model: "gpt-4o"          # Model name
-  api_key: "optional_key"  # API key (uses env vars by default)
-  temperature: 0.7         # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500         # Maximum response length
-  enable_web_search: true  # Web search capability (all backends)
-  enable_code_interpreter: true  # OpenAI only
-  enable_code_execution: true    # Gemini/Claude only
+  type: "claude"
+  model: "claude-sonnet-4-20250514"  # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  enable_code_execution: true        # Code execution capability
 ```
 
-### UI Configuration
+#### Gemini
+
+```yaml
+backend:
+  type: "gemini"
+  model: "gemini-2.5-flash"          # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  enable_code_execution: true        # Code execution capability
+```
+
+#### Grok
+
+```yaml
+backend:
+  type: "grok"
+  model: "grok-3-mini"               # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  return_citations: true             # Include search result citations
+  max_search_results: 10             # Maximum search results to use 
+  search_mode: "auto"                # Search strategy: "auto", "fast", "thorough" 
+```
+
+#### OpenAI
+
+```yaml
+backend:
+  type: "openai"
+  model: "gpt-4o"                    # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, o-series models don't support this)
+  max_tokens: 2500                   # Maximum response length (o-series models don't support this)
+  enable_web_search: true            # Web search capability
+  enable_code_interpreter: true      # Code interpreter capability
+```
+
+**UI Configuration:**
+
+Configure how MassGen displays information and handles logging during execution:
+
 ```yaml
 ui:
-  display_type: "rich_terminal" | "terminal" | "simple"
-  logging_enabled: true | false
+  display_type: "rich_terminal" | "terminal" | "simple"  # Display format for agent interactions
+  logging_enabled: true | false                          # Enable/disable real-time logging 
 ```
 
-### Advanced Parameters
-```yaml
-# Orchestrator settings
-orchestrator:
-  voting_timeout: 30
-  max_coordination_rounds: 3
-  require_consensus: false
+- `display_type`: Controls the visual presentation of agent interactions
+  - `"rich_terminal"`: Full-featured display with multi-region layout, live status updates, and colored output
+  - `"terminal"`: Standard terminal display with basic formatting and sequential output
+  - `"simple"`: Plain text output without any formatting or special display features
+- `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
 
+**Advanced Parameters:**
+```yaml
 # Global backend parameters
 backend_params:
   temperature: 0.7
   max_tokens: 2000
-
-# Web search advanced parameters
-web_search:
-  return_citations: true         # Include search result citations (Grok/Claude)
-  max_search_results: 10         # Maximum search results to use (Grok)
-  search_mode: "auto"            # Search strategy: "auto", "fast", "thorough" (Grok)
-
-# Code execution advanced parameters  
-code_execution:
-  container_type: "auto"         # Container type for OpenAI code interpreter
+  enable_web_search: true  # Web search capability (all backends)
+  enable_code_interpreter: true  # OpenAI only
+  enable_code_execution: true    # Gemini/Claude only
 ```
 
 ## 🔧 Environment Variables
