@@ -19,10 +19,10 @@ Key Features:
 
 Command-Line Usage:
     # Use massgen.v1.cli for all command-line operations
-    
+
     # Single agent mode
     uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o
-    
+
     # Multi-agent mode
     uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o gemini-2.5-flash
     uv run python -m massgen.v1.cli "Complex question" --config examples/production.yaml
@@ -32,11 +32,11 @@ Programmatic Usage:
     from massgen import run_mass_with_config, load_config_from_yaml
     config = load_config_from_yaml("config.yaml")
     result = run_mass_with_config("Your question here", config)
-    
+
     # Using simple model list (single agent)
     from massgen import run_mass_agents
     result = run_mass_agents("What is 2+2?", ["gpt-4o"])
-    
+
     # Using simple model list (multi-agent)
     from massgen import run_mass_agents
     result = run_mass_agents("What is 2+2?", ["gpt-4o", "gemini-2.5-flash"])
@@ -44,28 +44,20 @@ Programmatic Usage:
 """
 
 # Core system components
-from .main import (
-    MassSystem, 
-    run_mass_agents, 
-    run_mass_with_config
-)
+from .main import MassSystem, run_mass_agents, run_mass_with_config
 
 # Configuration system
-from .config import (
-    load_config_from_yaml,
-    create_config_from_models,
-    ConfigurationError
-)
+from .config import load_config_from_yaml, create_config_from_models, ConfigurationError
 
 # Configuration classes
 from .types import (
     MassConfig,
-    OrchestratorConfig, 
+    OrchestratorConfig,
     AgentConfig,
     ModelConfig,
     StreamingDisplayConfig,
     LoggingConfig,
-    TaskInput
+    TaskInput,
 )
 
 # Advanced components (for custom usage)
@@ -78,26 +70,22 @@ __version__ = "0.0.1"
 __all__ = [
     # Main interfaces
     "MassSystem",
-    "run_mass_agents", 
+    "run_mass_agents",
     "run_mass_with_config",
-    
     # Configuration system
     "load_config_from_yaml",
     "create_config_from_models",
     "ConfigurationError",
-    
     # Configuration classes
     "MassConfig",
     "OrchestratorConfig",
-    "AgentConfig", 
+    "AgentConfig",
     "ModelConfig",
     "StreamingDisplayConfig",
     "LoggingConfig",
     "TaskInput",
-    
     # Advanced components
     "MassOrchestrator",
     "create_streaming_display",
     "MassLogManager",
-    
-] 
+]

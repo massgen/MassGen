@@ -4,7 +4,7 @@ MassGen v3 Tests
 Test suite for MassGen v3 functionality including:
 - Basic agent functionality
 - Tool handling
-- Orchestrator coordination  
+- Orchestrator coordination
 - Multi-agent scenarios
 - Frontend displays
 """

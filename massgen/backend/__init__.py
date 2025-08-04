@@ -16,10 +16,10 @@ from .gemini import GeminiBackend
 
 __all__ = [
     "LLMBackend",
-    "StreamChunk", 
+    "StreamChunk",
     "TokenUsage",
     "ResponseBackend",
     "GrokBackend",
     "ClaudeBackend",
-    "GeminiBackend"
+    "GeminiBackend",
 ]
