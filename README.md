@@ -290,20 +290,21 @@ uv run python cli.py --config examples/fast_config.yaml "Design a logo for MassG
 
 ```bash
 # Ask a question about a complex topic
-uv run python cli.py --config examples/fast_config.yaml "Explain the theory of relativity in simple terms."
-uv run python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "what's best to do in Stockholm in October 2025"
+
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
 ```
 
 ### 2. 🧠 Creative Writing
 
 ```bash
 # Generate a short story
-uv run python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
 ```
 
 ### 3. Research
 ```bash
-uv run python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
 ---
