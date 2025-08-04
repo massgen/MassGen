@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to achieve a highly detailed and 
 
 **Command:**
 ```bash
-python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
+uv run python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
 ```
 
 **Prompt:** `what's best to do in Stockholm in October 2025`

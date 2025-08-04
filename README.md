@@ -165,13 +165,20 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 #### Quick Setup with Backend and Model
 
 ```bash
-uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
+# Multi-agent mode with specific models
+uv run python cli.py "Which AI won IMO in 2025?" --models gemini-2.5-flash gpt-4o
+
+# Single agent mode
+uv run python cli.py "What is greatest common divisor of 238, 756, and 1512" --models gemini-2.5-flash
 ```
 
 #### Multiple Agents from Config
 ```bash
 # Use configuration file
-uv run python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"
+uv run python cli.py --config examples/fast_config.yaml "find big AI news this week"
+
+# Override specific parameters
+uv run python cli.py --config examples/fast_config.yaml "who will win World Cup 2026" --max-duration 120 --consensus 0.5
 ```
 
 #### Configuration Parameters
@@ -236,10 +243,13 @@ MassGen supports an interactive mode where you can have ongoing conversations wi
 
 ```bash
 # Start interactive mode with multiple agents
-uv run python -m massgen.cli --model gpt-4o-mini
+uv run python cli.py --models gpt-4o gemini-2.5-flash grok-3-mini
 
 # Start interactive mode with configuration file
-uv run python -m massgen.cli --config config.yaml
+uv run python cli.py --config examples/fast_config.yaml
+
+# Interactive mode with custom parameters
+uv run python cli.py --models gpt-4o grok-3-mini --consensus 0.7 --max-duration 600
 ```
 
 **Interactive Mode Features:**

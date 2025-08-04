@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to converge on a detailed and wel
 
 **Command:**
 ```bash
-python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
+uv run python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
 **Prompt:** `How much does it cost to run HLE benchmark with Grok-4`

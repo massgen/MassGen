@@ -3,7 +3,9 @@
 This case study demonstrates **MassGen's** ability to handle complex research queries by leveraging multiple agents to systematically gather, organize, and synthesize comprehensive information on a specialized technical topic.
 
 **Command:**  
-```python cli.py --config examples/fast_config.yaml "give me all the talks on agent frameworks in ODSC Agentic AI Summit 2025"```
+```bash
+uv run python cli.py --config examples/fast_config.yaml "give me all the talks on agent frameworks in ODSC Agentic AI Summit 2025"
+```
 
 **Agents:**
 
