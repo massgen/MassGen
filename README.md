@@ -205,7 +205,7 @@ More providers and local inference of open-weight models (using vllm or sglang) 
 
 #### Tools
 
-MassGen agents can leverage various tools to enhance their problem-solving capabilities. The Claude, Gemini, Grok and OpenAI models can use their own built-in search or code execution. 
+MassGen agents can leverage various tools to enhance their problem-solving capabilities. `Claude`, `Gemini`, and `OpenAI` models support built-in web search and code execution. `Grok` supports web search as well, but it does not currently offer native code execution at the model level.
 
 **Supported Built-in Tools by Models:**
 
