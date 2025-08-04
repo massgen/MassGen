@@ -390,6 +390,9 @@ uv run python -m massgen.cli --config three_agents_default.yaml
 - **Clear conversation history**: Type `/clear` to reset the conversation and start fresh
 - **Easy exit**: Type `/quit`, `/exit`, `/q`, or press `Ctrl+C` to stop
 
+**Watch the recorded demo:**
+
+[![MassGen Case Study](https://img.youtube.com/vi/h1R7fxFJ0Zc/0.jpg)](https://www.youtube.com/watch?v=h1R7fxFJ0Zc)
 
 ### 5. 📊 View Results
 

@@ -400,6 +400,15 @@ async def run_single_question(
         return final_response
 
 
+def print_help_messages():
+    print(
+        "\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.",
+        flush=True,
+    )
+    print("💡 Commands: /quit, /exit, /reset, /help", flush=True)
+    print("=" * 60, flush=True)
+
+
 async def run_interactive_mode(
     agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]
 ):
@@ -428,12 +437,7 @@ async def run_interactive_mode(
     print(f"   Mode: {mode}", flush=True)
     print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
 
-    print(
-        "\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.",
-        flush=True,
-    )
-    print("💡 Commands: /quit, /exit, /reset, /help", flush=True)
-    print("=" * 60, flush=True)
+    print_help_messages()
 
     # Maintain conversation history
     conversation_history = []
@@ -541,6 +545,8 @@ async def run_interactive_mode(
                         f"{BRIGHT_CYAN}💭 History: {len(conversation_history)//2} exchanges{RESET}",
                         flush=True,
                     )
+                    print_help_messages()
+
                 else:
                     print(f"\n{BRIGHT_RED}❌ No response generated{RESET}", flush=True)
 

@@ -1514,7 +1514,7 @@ class RichTerminalDisplay(TerminalDisplay):
                         "  f: Show Final Presentation\n", style=self.colors["success"]
                     )
 
-                options_text.append("  q: Quit\n", style=self.colors["info"])
+                options_text.append("  q: next Question\n" if self._interactive_mode else "  q: Quit\n", style=self.colors["info"])
 
                 self.console.print(
                     Panel(
