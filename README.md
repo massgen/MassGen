@@ -167,11 +167,15 @@ uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 ```
 
+All supported models can be found [here](massgen/utils.py).
+
 #### Multiple Agents from Config
 ```bash
 # Use configuration file
 uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
 ```
+
+All available quick configuration files can be found [here](massgen/configs).
 
 #### Configuration Parameters
 
@@ -179,7 +183,7 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Compare differe
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, and UI settings |
 | `--backend`        | Backend type for quick setup without a config file (`openai`, `grok`, or `claude`) |
-| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`) |
+| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`). See all [supported models](massgen/utils.py) |
 | `--system-message` | Custom system prompt for the agent in quick setup mode |
 | `--create-samples` | Create example configuration files (`single_agent.yaml`, `multi_agent.yaml`) in a `configs/` directory |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output) |
@@ -188,45 +192,50 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Compare differe
 
 #### Configuration File Format
 
-MassGen v3 supports YAML/JSON configuration files with the following structure:
+MassGen v3 supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
 ```yaml
-agent:
-  id: "assistant"
+agent:  # Single agent
+  id: "agent_name"
   backend:
-    type: "openai"              # Backend type: openai, claude, grok, or gemini (optional)
-    model: "gpt-4o-mini"        # Model name specific to the backend
-    enable_web_search: true     # Enable web search capability (optional)
-    enable_code_interpreter: true # Enable code execution (optional)
-    # api_key: "your-key"       # Optional, uses environment variables if not set
-  system_message: "Custom system prompt"  # Optional custom system message
-
-ui:
-  display_type: "rich_terminal" # Display type: rich_terminal, terminal, or simple
-  logging_enabled: true         # Enable session logging
+    type: "openai" | "grok"
+    model: "model_name"
+    api_key: "optional_key"  # Uses env vars by default
+  system_message: "Agent role and instructions"
 ```
 
 **Multi-Agent Configuration:**
 ```yaml
-agents:
+agents:  # Multiple agents (alternative to 'agent')
   - id: "agent1"
-    backend:
-      type: "openai"
-      model: "gpt-4o"
-    system_message: "Specialized prompt for agent 1"
-    
-  - id: "agent2" 
-    backend:
-      type: "claude"
-      model: "claude-3-5-sonnet-20241022"
-    system_message: "Specialized prompt for agent 2"
-
-ui:
-  display_type: "rich_terminal"
-  logging_enabled: true
+    backend: {...}
+    system_message: "..."
+  - id: "agent2"
+    backend: {...}
+    system_message: "..."
 ```
 
+### UI Configuration
+```yaml
+ui:
+  display_type: "terminal" | "simple"
+  logging_enabled: true | false
+```
+
+### Optional Parameters
+```yaml
+orchestrator:
+  voting_timeout: 30
+  max_coordination_rounds: 3
+  require_consensus: false
+
+backend_params:
+  temperature: 0.7
+  max_tokens: 2000
+  enable_web_search: true  # Grok backend
+  enable_code_interpreter: true  # OpenAI backend
+```
 **Note**: `--config` and `--model` are mutually exclusive - use one or the other.
 
 #### Interactive Multi-Turn Mode
