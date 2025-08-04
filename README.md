@@ -279,16 +279,16 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "..."
-      model: "..." 
-      api_key: "...>" 
-    system_message: "..."
+      type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
+      model: "<model_name>" # Model name
+      api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
+    system_message: "..."    # System Message for Single Agent
   - id: "..."
     backend:
-      type: "..." 
-      model: "..." 
-      api_key: "..." 
-    system_message: "..."
+      type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
+      model: "<model_name>" # Model name
+      api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
+    system_message: "..."    # System Message for Single Agent
 ```
 
 **Backend Configuration:**
@@ -308,11 +308,20 @@ backend:
 ```
 
 **UI Configuration:**
+
+Configure how MassGen displays information and handles logging during execution:
+
 ```yaml
 ui:
-  display_type: "rich_terminal" | "terminal" | "simple" 
-  logging_enabled: true | false
+  display_type: "rich_terminal" | "terminal" | "simple"  # Display format for agent interactions
+  logging_enabled: true | false                          # Enable/disable session logging to json file
 ```
+
+- `display_type`: Controls the visual presentation of agent interactions
+  - `"rich_terminal"`: Full-featured display with multi-region layout, live status updates, and colored output
+  - `"terminal"`: Standard terminal display with basic formatting and sequential output
+  - `"simple"`: Plain text output without any formatting or special display features
+- `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status to json file
 
 **Advanced Parameters:**
 ```yaml
