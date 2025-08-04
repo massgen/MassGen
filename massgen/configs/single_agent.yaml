@@ -14,5 +14,5 @@ agent:
 
 # Display configuration
 ui:
-  type: "rich_terminal"
+  display_type: "rich_terminal"
   logging_enabled: true
