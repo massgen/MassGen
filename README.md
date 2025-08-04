@@ -21,8 +21,8 @@
 </p>
 
 <p align="center">
-  <a href="https://youtu.be/eMBdoAYeujw">
-    <img src="assets/thumbnail.png" alt="MassGen Demo Video" width="600">
+  <a href="https://youtu.be/Dp2oldJJImw">
+    <img src="https://img.youtube.com/vi/Dp2oldJJImw/0.jpg" alt="MassGen Demo Video" width="600">
   </a>
 </p>
 
@@ -120,7 +120,7 @@ Create a `.env` file in the `massgen` directory with your API keys:
 
 ```bash
 # Copy example configuration
-cp massgen/.env.example massgen/.env
+cp .env.example .env
 
 # Edit with your API keys
 ANTHROPIC_API_KEY=your-anthropic-key-here
