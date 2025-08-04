@@ -57,6 +57,8 @@ from massgen.backend.response import ResponseBackend
 from massgen.backend.grok import GrokBackend
 from massgen.backend.claude import ClaudeBackend
 from massgen.backend.gemini import GeminiBackend
+from massgen.backend.claude_code_cli import ClaudeCodeCLIBackend
+from massgen.backend.gemini_cli import GeminiCLIBackend
 from massgen.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.agent_config import AgentConfig
 from massgen.orchestrator import Orchestrator
@@ -148,6 +150,20 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 "Gemini API key not found. Set GOOGLE_API_KEY or provide in config."
             )
         return GeminiBackend(api_key=api_key)
+
+    elif backend_type == "claude-code-cli":
+        api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
+        # API key is optional for Claude Code CLI if user is logged in
+        return ClaudeCodeCLIBackend(api_key=api_key, **kwargs)
+
+    elif backend_type == "gemini-cli":
+        api_key = (
+            kwargs.get("api_key")
+            or os.getenv("GOOGLE_API_KEY")
+            or os.getenv("GEMINI_API_KEY")
+        )
+        # API key is optional for Gemini CLI if user is logged in with Google account
+        return GeminiCLIBackend(api_key=api_key, **kwargs)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -404,7 +420,7 @@ async def run_interactive_mode(
     agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]
 ):
     """Run MassGen in interactive mode with conversation history."""
-    print(f"\n{BRIGHT_CYAN}🤖 MassGen v3 Interactive Mode{RESET}", flush=True)
+    print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
     print("=" * 60, flush=True)
 
     # Display configuration
@@ -557,7 +573,7 @@ async def run_interactive_mode(
 async def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="MassGen v3 - Multi-Agent Coordination CLI",
+        description="MassGen - Multi-Agent Coordination CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -596,7 +612,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["openai", "grok", "claude", "gemini"],
+        choices=["openai", "grok", "claude", "gemini", "claude-code-cli", "gemini-cli"],
         help="Backend type for quick setup",
     )
 

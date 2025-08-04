@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple test script for MassGen v3 basic functionality.
+Simple test script for MassGen basic functionality.
 Tests single agent and basic orchestrator functionality.
 """
 

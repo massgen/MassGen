@@ -165,11 +165,23 @@ This collaborative approach ensures that the final output leverages collective i
 
 ### 1. 📥 Installation
 
+**Core Installation:**
 ```bash
 git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 pip install uv
 uv venv
+```
+
+**Optional CLI Tools** (for enhanced capabilities):
+```bash
+# Claude Code CLI - Advanced coding assistant
+npm install -g @anthropic-ai/claude-code
+
+# Gemini CLI - Multimodal AI agent  
+npm install -g @google/gemini-cli
+# OR
+brew install gemini-cli
 ```
 
 ### 2. 🔐 API Configuration
@@ -199,30 +211,42 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**. 
+The system currently supports multiple model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**, and **CLI interfaces** for Claude Code and Gemini CLI. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
 
-MassGen agents can leverage various tools to enhance their problem-solving capabilities. `Claude`, `Gemini`, and `OpenAI` models support built-in web search and code execution. `Grok` supports web search as well, but it does not currently offer native code execution at the model level.
+MassGen agents can leverage various tools to enhance their problem-solving capabilities. Both API-based and CLI-based backends support different tool capabilities.
 
-**Supported Built-in Tools by Models:**
+**Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution |
-|---------|:-----------:|:--------------:|
-| **Claude** | ✅ | ✅ |
-| **OpenAI** | ✅ | ✅ |
-| **Grok** | ✅ | ❌ |
-| **Gemini** | ✅ | ✅ |
+| Backend | Live Search | Code Execution | File Operations | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------------|
+| **Claude API** | ✅ | ✅ | ❌ | Web search, code interpreter |
+| **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
+| **Grok API** | ✅ | ❌ | ❌ | Web search only |
+| **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
+| **Claude Code CLI** | ✅ | ✅ | ✅ | **Advanced coding, debugging, file ops** |
+| **Gemini CLI** | ✅ | ✅ | ✅ | **Multimodal, reasoning, MCP integration** |
 
 ### 4. 🏃 Run MassGen
 
 #### Quick Test with A Single Model
 
+**API-based backends:**
 ```bash
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
+```
+
+**CLI-based backends** (requires CLI tools installed):
+```bash
+# Claude Code CLI - Advanced coding and file operations
+uv run python -m massgen.cli --backend claude-code-cli --model sonnet "Debug this Python script"
+
+# Gemini CLI - Multimodal reasoning with MCP integration  
+uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro "Analyze this code and suggest improvements"
 ```
 
 All supported models can be found [here](massgen/utils.py).
@@ -231,6 +255,9 @@ All supported models can be found [here](massgen/utils.py).
 ```bash
 # Use configuration file
 uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
+
+# Mixed API and CLI backends
+uv run python -m massgen.cli --config cli_backends_mixed.yaml "Complex coding task requiring multiple perspectives"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
@@ -240,7 +267,7 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok` or `openai`). Optional because we can infer backend type through model.|
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `gemini-cli`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
@@ -249,7 +276,7 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### Configuration File Format
 
-MassGen v3 supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
+MassGen supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
 
@@ -341,6 +368,29 @@ backend:
   max_tokens: 2500                   # Maximum response length (o-series models don't support this)
   enable_web_search: true            # Web search capability
   enable_code_interpreter: true      # Code interpreter capability
+```
+
+#### Claude Code CLI
+
+```yaml
+backend:
+  type: "claude-code-cli"
+  model: "sonnet"                    # Options: sonnet, opus, haiku
+  api_key: "<optional_key>"          # API key (optional if logged in via CLI)
+  max_turns: 5                       # Maximum interaction turns
+  verbose: false                     # Enable verbose CLI output
+  timeout: 300                       # Command timeout in seconds
+```
+
+#### Gemini CLI
+
+```yaml
+backend:
+  type: "gemini-cli"
+  model: "gemini-2.5-pro"            # Options: gemini-2.5-pro, gemini-2.5-flash
+  api_key: "<optional_key>"          # API key (optional if logged in via CLI)
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  timeout: 300                       # Command timeout in seconds
 ```
 
 **UI Configuration:**

@@ -1,11 +1,13 @@
 """
-MassGen v3 Backend System - Multi-Provider LLM Integration
+MassGen Backend System - Multi-Provider LLM Integration
 
 Supports multiple LLM providers with standardized StreamChunk interface:
 - Response API (standard format with tool support)
 - Grok/xAI (Chat Completions API compatible)
 - Claude (Messages API with multi-tool support)
 - Gemini (structured output for coordination)
+- Claude Code CLI (command-line interface integration)
+- Gemini CLI (command-line interface integration)
 """
 
 from .base import LLMBackend, StreamChunk, TokenUsage
@@ -13,6 +15,9 @@ from .response import ResponseBackend
 from .grok import GrokBackend
 from .claude import ClaudeBackend
 from .gemini import GeminiBackend
+from .cli_base import CLIBackend
+from .claude_code_cli import ClaudeCodeCLIBackend
+from .gemini_cli import GeminiCLIBackend
 
 __all__ = [
     "LLMBackend",
@@ -22,4 +27,7 @@ __all__ = [
     "GrokBackend",
     "ClaudeBackend",
     "GeminiBackend",
+    "CLIBackend",
+    "ClaudeCodeCLIBackend",
+    "GeminiCLIBackend",
 ]

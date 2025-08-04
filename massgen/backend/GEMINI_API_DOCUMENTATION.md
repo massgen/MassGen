@@ -354,7 +354,7 @@ client.models.generate_content(...)
 - Can combine `google_search` + `code_execution` + `function_declarations`
 - Full flexibility but comes with major limitations
 
-**🚨 Live API Restrictions (NOT Recommended for MassGen v3):**
+**🚨 Live API Restrictions (NOT Recommended for MassGen):**
 - **Status**: Preview/experimental - unstable for production
 - **Session Limits**: 3 free, 50-1000 paid (too restrictive)
 - **Real-time focus**: WebSocket-based, designed for audio/video
@@ -362,7 +362,7 @@ client.models.generate_content(...)
 - **Availability**: Not guaranteed, capacity varies
 - **Complexity**: Requires WebSocket implementation
 
-### Recommendation for MassGen v3 Backend
+### Recommendation for MassGen Backend
 **✅ Use Regular API with `code_execution + grounding`:**
 - Stable, production-ready
 - Covers both code execution and web search needs
@@ -375,7 +375,7 @@ client.models.generate_content(...)
 - Preview status unsuitable for production
 - Unnecessary complexity for text-based coordination
 
-## Implementation Status for MassGen v3
+## Implementation Status for MassGen
 
 **✅ COMPLETED**: GeminiBackend class implemented with:
 - [x] Google Gemini API integration with proper authentication
@@ -399,7 +399,7 @@ client.models.generate_content(...)
 **Usage Examples:**
 ```python
 # CLI usage
-python -m massgen.v3.cli --backend gemini --model gemini-2.5-flash "Your question"
+uv run python -m massgen.cli --backend gemini --model gemini-2.5-flash "Your question"
 
 # Configuration
 AgentConfig.create_gemini_config(

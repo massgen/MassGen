@@ -1,5 +1,5 @@
 """
-MassGen v3 - Multi-Agent System Generator (Foundation Release)
+MassGen - Multi-Agent System Generator (Foundation Release)
 
 Built on the proven MassGen framework with working tool message handling,
 async generator patterns, and reliable multi-agent coordination.
@@ -15,7 +15,7 @@ Key Features:
 
 TODO - Missing Features (to be added in future releases):
 - ✅ Grok backend testing and fixes (COMPLETED)
-- ✅ CLI interface for MassGen v3 (COMPLETED - file-based config, interactive mode, slash commands)
+- ✅ CLI interface for MassGen (COMPLETED - file-based config, interactive mode, slash commands)
 - ✅ Missing v3 test files recovery (COMPLETED - two agents, three agents)
 - ✅ Multi-turn conversation support (COMPLETED - dynamic context reconstruction)
 - ✅ Chat interface with orchestrator (COMPLETED - async streaming with context)

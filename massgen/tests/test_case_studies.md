@@ -1,4 +1,4 @@
-# MassGen v3 Case Study Test Commands
+# MassGen Case Study Test Commands
 
 This document contains commands to test all the case studies from `docs/case_studies/` using the three agents default configuration.
 

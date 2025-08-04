@@ -1,12 +1,12 @@
-# Multi-Turn Conversation Design for MassGen v3 Orchestrator
+# Multi-Turn Conversation Design for MassGen Orchestrator
 
 ## Overview
 
-This document outlines the design approach for implementing multi-turn conversations in the MassGen v3 orchestrator, based on the proven approach used in MassGen v0.0.1.
+This document outlines the design approach for implementing multi-turn conversations in the MassGen orchestrator, based on the proven approach used in MassGen v0.0.1.
 
-## Current State (v3)
+## Current State
 
-The v3 orchestrator currently has **partial multi-turn support**:
+The orchestrator currently has **partial multi-turn support**:
 - ✅ Accepts conversation history through `chat(messages)` interface
 - ✅ Maintains conversation history at orchestrator level
 - ❌ **Limited**: Only processes the last user message for coordination
@@ -53,7 +53,7 @@ def _get_curr_messages_and_tools(self, task: TaskInput):
     return working_status, working_messages, all_tools
 ```
 
-## Proposed V3 Implementation
+## Proposed Implementation
 
 ### 1. Orchestrator-Level Conversation Management
 
@@ -211,4 +211,4 @@ This approach addresses multiple TODO items:
 
 ---
 
-*This design document is based on analysis of MassGen v0.0.1's proven multi-turn approach and adapted for v3's async streaming architecture.*
+*This design document is based on analysis of MassGen v0.0.1 and the current's async streaming architecture.*

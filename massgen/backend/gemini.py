@@ -9,7 +9,7 @@ KEY FEATURES:
 - ✅ Builtin tools support (code_execution + grounding)
 - ✅ Streaming with proper token usage tracking
 - ✅ Error handling and response parsing
-- ✅ Compatible with MassGen v3 StreamChunk architecture
+- ✅ Compatible with MassGen StreamChunk architecture
 
 TECHNICAL SOLUTION:
 - Uses Pydantic models to define structured output schemas

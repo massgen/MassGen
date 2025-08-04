@@ -1,4 +1,4 @@
-# MassGen v3 Three Agent Configuration
+# MassGen Three Agent Configuration
 # Gemini-2.5-flash, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
 
 agents:

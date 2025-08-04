@@ -57,11 +57,13 @@ class BaseDisplay(ABC):
         pass
 
     @abstractmethod
-    def show_final_answer(self, answer: str):
+    def show_final_answer(self, answer: str, vote_results=None, selected_agent=None):
         """Display the final coordinated answer.
 
         Args:
             answer: The final coordinated answer
+            vote_results: Dictionary of vote results (optional)
+            selected_agent: The selected agent (optional)
         """
         pass
 

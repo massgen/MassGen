@@ -1,0 +1,18 @@
+# Claude Code CLI configuration for MassGen
+# Usage: uv run python -m massgen.cli --config claude_code_cli.yaml "Your question here"
+
+# Single agent configuration using Claude Code CLI
+agent:
+  id: "claude_code_agent"
+  backend:
+    type: "claude-code-cli"
+    model: "sonnet"           # Options: sonnet, opus, haiku
+    max_turns: 5              # Maximum interaction turns
+    verbose: false            # Enable verbose output
+    timeout: 300              # Timeout in seconds (5 minutes)
+  system_message: "You are a helpful AI assistant powered by Claude Code CLI with advanced coding and file manipulation capabilities."
+
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
