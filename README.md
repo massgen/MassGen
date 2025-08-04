@@ -26,12 +26,9 @@
   </a>
 </p>
 
-
-<!-- <div align="center">
-  <img src="assets/MassGen-v1.gif" alt="MassGen Demo" width="800">
-</div> -->
-
-> 🧠 **Multi-agent scaling through intelligent collaboration in Grok Heavy style**
+<p align="center">
+  <i>Multi-agent scaling through intelligent collaboration in Grok Heavy style</i>
+</p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
 This project started with the "threads of thought" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/2025/04/16/Reasoning/), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2).
@@ -40,7 +37,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ## 📋 Table of Contents
 
-<details>
+<details open>
 <summary><h3>✨ Key Features</h3></summary>
 
 - [Cross-Model/Agent Synergy](#-key-features)
@@ -50,7 +47,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 - [Live Visualization](#-key-features)
 </details>
 
-<details>
+<details open>
 <summary><h3>🏗️ System Design</h3></summary>
 
 - [System Architecture](#️-system-design)
@@ -60,7 +57,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 - [Adaptive Coordination](#️-system-design)
 </details>
 
-<details>
+<details open>
 <summary><h3>🚀 Quick Start</h3></summary>
 
 - [📥 Installation](#1--installation)
@@ -79,7 +76,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - [Comprehensive Logging](#comprehensive-logging)
 </details>
 
-<details>
+<details open>
 <summary><h3>💡 Examples</h3></summary>
 
 - [📚 Case Studies](#case-studies)
@@ -88,7 +85,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 - [🔬 Research](#3-research)
 </details>
 
-<details>
+<details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - [Current Development Stage](#️-roadmap)
@@ -100,7 +97,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Web Interface
 </details>
 
-<details>
+<details open>
 <summary><h3>📚 Additional Resources</h3></summary>
 
 - [🤝 Contributing](#-contributing)
@@ -247,12 +244,12 @@ TODO: check & update
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, and UI settings |
 | `--backend`        | Backend type for quick setup without a config file (`openai`, `grok`, or `claude`) |
-| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`). See all [supported models](massgen/utils.py) |
+| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | Custom system prompt for the agent in quick setup mode |
 | `--create-samples` | Create example configuration files (`single_agent.yaml`, `multi_agent.yaml`) in a `configs/` directory |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output) |
 | `--no-logs`        | Disable logging of session inputs/outputs to file |
-| `question`         | Optional single-question input; if omitted, MassGen enters interactive chat mode |
+| `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode |
 
 #### Configuration File Format
 
@@ -263,21 +260,21 @@ MassGen v3 supports YAML/JSON configuration files with the following structure (
 **Single Agent Configuration:**
 ```yaml
 agent:  # Single agent
-  id: "agent_name"
+  id: "<agent_name>"
   backend:
     type: "claude" | "openai" | "grok" | "gemini"
-    model: "model_name"
-    api_key: "optional_key"  # Uses env vars by default
-  system_message: "..."
+    model: "<model_name>"
+    api_key: "<optional_key>"  # Uses env vars by default
+  system_message: "..."    # 
 ```
 
 **Multi-Agent Configuration:**
 ```yaml
 agents:  # Multiple agents (alternative to 'agent')
-  - id: "agent1"
+  - id: "<agent1 name>"
     backend: {...}
     system_message: "..."
-  - id: "agent2"
+  - id: "<agent2 name>"
     backend: {...}
     system_message: "..."
 ```
@@ -285,12 +282,12 @@ agents:  # Multiple agents (alternative to 'agent')
 **Backend Configuration:**
 ```yaml
 backend:
-  type: "openai"           # "openai", "claude", "gemini", "grok"
-  model: "gpt-4o"          # Model name
-  api_key: "optional_key"  # API key (uses env vars by default)
-  temperature: 0.7         # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500         # Maximum response length
-  enable_web_search: true  # Web search capability (all backends)
+  type: "claude" | "openai" | "grok" | "gemini"
+  model: "gpt-4o"            # Model name
+  api_key: "<optional_key>"  # API key (uses env vars by default)
+  temperature: 0.7           # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500           # Maximum response length
+  enable_web_search: true    # Web search capability (all backends)
   enable_code_interpreter: true  # OpenAI only
   enable_code_execution: true    # Gemini/Claude only
 ```
@@ -327,8 +324,6 @@ code_execution:
   container_type: "auto"         # Container type for OpenAI code interpreter
 ```
 
-**Note**: `--config` and `--model` are mutually exclusive - use one or the other.
-
 #### Interactive Multi-Turn Mode
 
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
@@ -356,6 +351,10 @@ The system provides multiple ways to view and analyze results:
 - **Live Collaboration View**: See agents working in parallel through a multi-region terminal display
 - **Status Updates**: Real-time phase transitions, voting progress, and consensus building
 - **Streaming Output**: Watch agents' reasoning and responses as they develop
+
+**Watch an example here:**
+
+[![MassGen Case Study](https://img.youtube.com/vi/Dp2oldJJImw/0.jpg)](https://www.youtube.com/watch?v=Dp2oldJJImw)
 
 #### Comprehensive Logging
 All sessions are automatically logged with detailed information. The file can be viewed throught the interaction with UI.

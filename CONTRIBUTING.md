@@ -77,29 +77,7 @@ uv pip install -r requirements.txt
 
 #### Environment Configuration
 
-Create a `.env` file in the `massgen` directory:
-
-```bash
-# Copy example configuration
-cp massgen/.env.example massgen/.env
-
-# Add your API keys
-OPENAI_API_KEY=your-openai-key-here
-XAI_API_KEY=your-xai-key-here
-ANTHROPIC_API_KEY=your-anthropic-key-here
-GEMINI_API_KEY=your-gemini-key-here
-```
-
-### Built-in Tool Support
-
-Current built-in tool support by backend:
-
-| Backend | Live Search | Code Execution |
-|---------|:-----------:|:--------------:|
-| **Claude** | ✅ | ✅ |
-| **OpenAI** | ✅ | ✅ |
-| **Grok** | ✅ | ❌ |
-| **Gemini** | ✅ | ✅ |
+Create a `.env` file in the `massgen` directory as described in [README](README.md)
 
 ### Contributing Areas
 
@@ -109,6 +87,7 @@ We welcome contributions in these areas:
 - **Enhanced User Interface**: Improve the web interface, terminal displays, and visualization features
 - **Performance & Scalability**: Optimize streaming, logging, coordination, and resource management
 - **Advanced Agent Collaboration**: Improve communication patterns and consensus-building protocols
+- **AG2 Integration**: Support AG2 agents in MassGen
 - **Tool Ecosystem Integration**: Add support for MCP Servers and additional tool capabilities
 - **Configuration & Templates**: Expand agent configuration options and pre-built templates
 - **Documentation**: Add guides, examples, use cases, and comprehensive API documentation
@@ -140,6 +119,7 @@ uv run python -m massgen.cli --config massgen/configs/single_4omini.yaml "Test q
 ## 🤝 Community
 
 - **Discord**: Join the #massgen channel of AG2 Discord server: https://discord.gg/VVrT2rQaz5
+- **X**: Follow the official MassGen X account: https://x.com/MassGen_Offical
 - **GitHub Issues**: Report bugs and request features
 - **GitHub Discussions**: Ask questions and share ideas
 
