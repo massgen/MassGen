@@ -1,0 +1,7 @@
+{git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+pip install uv
+uv venv
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": {}
+}
