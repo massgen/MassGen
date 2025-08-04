@@ -177,7 +177,7 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Compare differe
 
 All available quick configuration files can be found [here](massgen/configs).
 
-#### Configuration Parameters
+#### CLI Configuration Parameters
 
 TODO: check & update
 
