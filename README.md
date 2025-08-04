@@ -216,14 +216,14 @@ agents:  # Multiple agents (alternative to 'agent')
     system_message: "..."
 ```
 
-### UI Configuration
+**UI Configuration:**
 ```yaml
 ui:
   display_type: "rich_terminal" | "terminal" | "simple"
   logging_enabled: true | false
 ```
 
-### Optional Parameters
+**Optional Parameters:**
 ```yaml
 orchestrator:
   voting_timeout: 30
