@@ -40,13 +40,13 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>✨ Key Features</h3></summary>
 
-- [Overview](#-key-features)
+- [Overview](#key-features)
 </details>
 
 <details open>
 <summary><h3>🏗️ System Design</h3></summary>
 
-- [Overview](#️-system-design)
+- [Overview](#system-design)
 </details>
 
 <details open>
@@ -80,7 +80,6 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Current Development Stage](#️-roadmap)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
