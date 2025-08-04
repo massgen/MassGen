@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.0.3] - 2025-08-03
 
 ### Added
-- Complete v3 architecture with foundation release
+- Complete architecture with foundation release
 - Multi-backend support: OpenAI (Responses API), Claude (Messages API), Grok (Chat API)
 - Builtin tools: Code execution and web search with streaming results
 - Async streaming with proper chat agent interfaces and tool result handling
@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI backend parameter passing with proper ConfigurableAgent integration
 
 ### Changed
-- Restructured codebase with v3 folder containing the new architecture
+- Restructured codebase with new architecture
 - Improved message handling and streaming capabilities
 - Enhanced frontend features and user experience
 

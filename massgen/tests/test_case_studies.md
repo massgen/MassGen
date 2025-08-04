@@ -1,4 +1,4 @@
-# MassGen v3 Case Study Test Commands
+# MassGen Case Study Test Commands
 
 This document contains commands to test all the case studies from `docs/case_studies/` using the three agents default configuration.
 
@@ -12,7 +12,7 @@ All tests use the `three_agents_default.yaml` configuration with:
 ### 1. Collaborative Creative Writing
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "Write a short story about a robot who discovers music."
+python massgen/cli.py --config massgen/configs/three_agents_default.yaml "Write a short story about a robot who discovers music."
 
 # From tests directory:
 python ../cli.py --config ../configs/three_agents_default.yaml "Write a short story about a robot who discovers music."
@@ -23,7 +23,7 @@ python ../cli.py --config ../configs/three_agents_default.yaml "Write a short st
 ### 2. AI News Synthesis
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "find big AI news this week"
+python massgen/cli.py --config massgen/configs/three_agents_default.yaml "find big AI news this week"
 
 # From tests directory:
 python ../cli.py --config ../configs/three_agents_default.yaml "find big AI news this week"
@@ -34,7 +34,7 @@ python ../cli.py --config ../configs/three_agents_default.yaml "find big AI news
 ### 3. Grok HLE Cost Estimation
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "How much does it cost to run HLE benchmark with Grok-4"
+python massgen/cli.py --config massgen/configs/three_agents_default.yaml "How much does it cost to run HLE benchmark with Grok-4"
 
 # From tests directory:
 python ../cli.py --config ../configs/three_agents_default.yaml "How much does it cost to run HLE benchmark with Grok-4"
@@ -45,7 +45,7 @@ python ../cli.py --config ../configs/three_agents_default.yaml "How much does it
 ### 4. IMO 2025 Winner
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "Which AI won IMO 2025?"
+python massgen/cli.py --config massgen/configs/three_agents_default.yaml "Which AI won IMO 2025?"
 
 # From tests directory:
 python ../cli.py --config ../configs/three_agents_default.yaml "Which AI won IMO 2025?"
@@ -56,7 +56,7 @@ python ../cli.py --config ../configs/three_agents_default.yaml "Which AI won IMO
 ### 5. Stockholm Travel Guide
 ```bash
 # From project root:
-python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "what's best to do in Stockholm in October 2025"
+python massgen/cli.py --config massgen/configs/three_agents_default.yaml "what's best to do in Stockholm in October 2025"
 
 # From tests directory:
 python ../cli.py --config ../configs/three_agents_default.yaml "what's best to do in Stockholm in October 2025"
@@ -81,7 +81,7 @@ The `three_agents_default.yaml` configuration provides:
 ### Custom Queries
 ```bash
 # Use for any question with the three agents setup:
-python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "your question here"
+python massgen/cli.py --config massgen/configs/three_agents_default.yaml "your question here"
 ```
 
 ## Running All Tests
@@ -89,7 +89,7 @@ python massgen/v3/cli.py --config massgen/v3/configs/three_agents_default.yaml "
 Use the interactive test script:
 ```bash
 # From project root:
-./massgen/v3/tests/test_case_studies.sh
+./massgen/tests/test_case_studies.sh
 
 # From tests directory:
 ./test_case_studies.sh

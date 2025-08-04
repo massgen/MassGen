@@ -1,7 +1,7 @@
 """
-MassGen v3 Tests
+MassGen Tests
 
-Test suite for MassGen v3 functionality including:
+Test suite for MassGen functionality including:
 - Basic agent functionality
 - Tool handling
 - Orchestrator coordination

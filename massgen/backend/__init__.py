@@ -1,5 +1,5 @@
 """
-MassGen v3 Backend System - Multi-Provider LLM Integration
+MassGen Backend System - Multi-Provider LLM Integration
 
 Supports multiple LLM providers with standardized StreamChunk interface:
 - Response API (standard format with tool support)

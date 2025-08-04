@@ -9,7 +9,7 @@ Production-ready implementation with full multi-tool support.
 - ✅ Multi-tool support (server-side + user-defined tools combined)
 - ✅ Web search tool integration with pricing tracking
 - ✅ Code execution tool integration with session management
-- ✅ Tool message format conversion for MassGen v3 compatibility
+- ✅ Tool message format conversion for MassGen compatibility
 - ✅ Advanced streaming with tool parameter streaming
 - ✅ Error handling and token usage tracking
 - ✅ Production-ready pricing calculations (2025 rates)
@@ -18,7 +18,7 @@ Multi-Tool Capabilities:
 - Can combine web search + code execution + user functions in single request
 - No API limitations unlike other providers
 - Parallel and sequential tool execution supported
-- Perfect integration with MassGen v3 StreamChunk pattern
+- Perfect integration with MassGen StreamChunk pattern
 """
 
 import os

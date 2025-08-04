@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for MassGen v3 two-agent coordination with terminal display.
+Test script for MassGen two-agent coordination with terminal display.
 Tests orchestrator coordination between two agents with different expertise.
 """
 

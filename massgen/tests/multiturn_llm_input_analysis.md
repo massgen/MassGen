@@ -1,8 +1,8 @@
-# Multi-Turn LLM Input Analysis - MassGen v3
+# Multi-Turn LLM Input Analysis - MassGen
 
 ## Overview
 
-This document shows the exact input structure sent to LLMs during multi-turn conversations in MassGen v3, demonstrating how conversation context is built and passed to agents.
+This document shows the exact input structure sent to LLMs during multi-turn conversations in MassGen, demonstrating how conversation context is built and passed to agents.
 
 ## Context Building Progression
 
@@ -186,4 +186,4 @@ Run these tests to see the exact LLM inputs and validate the context building be
 
 ---
 
-*This analysis confirms that MassGen v3's multi-turn conversation support properly implements the proven v0.0.1 dynamic context reconstruction approach, adapted for v3's async streaming architecture.*
+*This analysis confirms that MassGen's multi-turn conversation support properly implements the proven v0.0.1 dynamic context reconstruction approach, adapted for the current async streaming architecture.*

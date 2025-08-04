@@ -404,9 +404,9 @@ async def run_interactive_mode(
     agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]
 ):
     """Run MassGen in interactive mode with conversation history."""
-    print(f"\n{BRIGHT_CYAN}🤖 MassGen v3 Interactive Mode{RESET}", flush=True)
-    print("=" * 60, flush=True)
-
+    print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
+    print("="*60, flush=True)
+    
     # Display configuration
     print(f"📋 {BRIGHT_YELLOW}Configuration:{RESET}", flush=True)
     print(f"   Agents: {len(agents)}", flush=True)
@@ -557,7 +557,7 @@ async def run_interactive_mode(
 async def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="MassGen v3 - Multi-Agent Coordination CLI",
+        description="MassGen - Multi-Agent Coordination CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

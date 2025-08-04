@@ -249,7 +249,9 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### Configuration File Format
 
-MassGen v3 supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
+TODO: check & update
+
+MassGen supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 Grok/xAI backend implementation using OpenAI-compatible API.
 Clean implementation with only Grok-specific features.
 
-✅ TESTED: Backend works correctly with v3 architecture
+✅ TESTED: Backend works correctly with architecture
 - ✅ Grok API integration working
 - ✅ Tool message conversion compatible with Chat Completions format
 - ✅ Streaming functionality working correctly  
