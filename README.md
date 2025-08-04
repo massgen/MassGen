@@ -38,15 +38,11 @@ This project started with the "threads of thought" and "iterative refinement" id
 ## 📋 Table of Contents
 
 <details open>
-<summary><h3>✨ Key Features</h3></summary>
-
-- [Key Features](#-key-features-1)
+<summary><h3>✨ [Key Features](#-key-features-1)</h3></summary>
 </details>
 
 <details open>
-<summary><h3>🏗️ System Design</h3></summary>
-
-- [System Design](#%EF%B8%8F-system-design-1)
+<summary><h3>🏗️ [System Design](#%EF%B8%8F-system-design-1)</h3></summary>
 </details>
 
 <details open>
