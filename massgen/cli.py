@@ -571,7 +571,7 @@ Environment Variables:
     config_group = parser.add_mutually_exclusive_group()
     config_group.add_argument("--config", type=str,
                              help="Path to YAML/JSON configuration file")
-    config_group.add_argument("--backend", type=str, choices=['openai', 'grok', 'claude'],
+    config_group.add_argument("--backend", type=str, choices=['openai', 'grok', 'claude', 'gemini'],
                              help="Backend type for quick setup")
     
     # Quick setup options
