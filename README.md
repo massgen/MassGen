@@ -141,7 +141,7 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok** and . 
+The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
