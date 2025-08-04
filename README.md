@@ -179,6 +179,8 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### Configuration Parameters
 
+TODO: check & update
+
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, and UI settings |
@@ -191,6 +193,8 @@ All available quick configuration files can be found [here](massgen/configs).
 | `question`         | Optional single-question input; if omitted, MassGen enters interactive chat mode |
 
 #### Configuration File Format
+
+TODO: check & update
 
 MassGen v3 supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
@@ -227,8 +231,6 @@ ui:
 ```yaml
 orchestrator:
   voting_timeout: 30
-  max_coordination_rounds: 3
-  require_consensus: false
 
 backend_params:
   temperature: 0.7
