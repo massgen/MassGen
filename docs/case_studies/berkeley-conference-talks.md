@@ -76,7 +76,7 @@ The voting process revealed sophisticated evaluation of constraint adherence and
 
 ## The Final Answer: Constrained Research Mastery
 
-**Agent 1's answer** was selected as the final output, featuring:
+**Agent 1** was selected to present the final answer, featuring:
 
 - **Strict Source Compliance**: All information explicitly tied to **Berkeley-sourced materials**  
 - **Framework Precision**: Talk titles that explicitly mentioned specific frameworks (_DSPy_, _ADK_, _MCP_, _LlamaIndex_)  

@@ -1,43 +1,67 @@
-# MassGen Case Study: Estimating Grok-4 HLE Benchmark Costs
+# MassGen Case Study: Grok-4 HLE Benchmark Cost Analysis - Unanimous Expert Consensus
 
-This case study demonstrates MassGen's ability to converge on a detailed and well-supported answer for a technical query, showcasing iterative refinement and dynamic voting.
+This case study demonstrates MassGen's ability to achieve unanimous consensus on a complex technical pricing query, showcasing how three different AI agents can converge on a comprehensive, well-researched answer through collaborative analysis.
 
-**Command:**
+## Command:
 ```bash
-uv run python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
-**Prompt:** `How much does it cost to run HLE benchmark with Grok-4`
+**Prompt:**  
+How much does it cost to run HLE benchmark with Grok-4
 
-**Agents:**
-*   Agent 1: `gpt-4o`
-*   Agent 2: `gemini-2.5-flash`
-*   Agent 3: `grok-3-mini` (Designated Representative Agent)
+## Agents:
+
+- Agent 1: gemini2.5flash (Designated Winner)  
+- Agent 2: gpt-4o  
+- Agent 3: claude-3-5-haiku
 
 **Watch the recorded demo:**
 
-[![MassGen Case Study](https://img.youtube.com/vi/lKeDHgcitRQ/0.jpg)](https://www.youtube.com/watch?v=lKeDHgcitRQ)
+[![MassGen Case Study](https://img.youtube.com/vi/VU444dr4q7E/0.jpg)](https://www.youtube.com/watch?v=VU444dr4q7E)
+
+**Duration:** 162.0s | **826 chunks** | **18 events**
 
 ## The Collaborative Process
 
-### Initial Responses and Iterative Refinement
+### Initial Response Diversity
 
-All three agents provided initial estimates for the cost of running the HLE benchmark with Grok-4, focusing on xAI's token-based pricing. However, Agent 3 (`grok-3-mini`) distinguished itself through a highly iterative refinement process, updating its answer 13 times throughout the session. This frequent updating allowed Agent 3 to incorporate more details, refine its cost estimations, and improve the clarity and structure of its response.
+Each agent approached the complex pricing question from different analytical perspectives:
 
-### Dynamic Voting and Consensus
+- Agent 1 (gemini2.5flash) conducted comprehensive web research and immediately focused on token-based pricing specifics, gathering detailed information about Grok-4's API costs ($3.00 per million input tokens, $15.00 per million output tokens) and contextualizing these with real-world benchmarking cost examples.
 
-The voting process in this session was particularly insightful:
+- Agent 2 (gpt-4o) initially provided a more general infrastructure-focused answer covering cloud costs, hardware requirements, and setup considerations. However, it later refined its response to include specific token pricing and benchmark scope details, demonstrating adaptive learning.
 
-1.  **Agent 1 (`gpt-4o`)** consistently voted for its own answer, maintaining its initial perspective.
-2.  **Agent 3 (`grok-3-mini`)** also consistently voted for its own answer, reflecting its continuous refinement and growing confidence in its detailed response.
-3.  **Agent 2 (`gemini-2.5-flash`)** initially voted for its own answer. However, after observing Agent 3's numerous updates and the increasing comprehensiveness of its response, **Agent 2 changed its vote to support Agent 3's answer**.
+- Agent 3 (claude-3-5-haiku) performed extensive iterative research with multiple web searches, continuously refining its understanding of both the HLE benchmark structure (2,500-3,000 PhD-level questions) and Grok-4's various configuration options (standard vs. Heavy multi-agent mode).
 
-This shift in Agent 2's vote, combined with Agent 3's self-vote, led to Agent 3's answer receiving the majority of votes (2 out of 3), resulting in a clear consensus.
+### Research-Driven Refinement
+
+A key strength demonstrated in this session was the agents' commitment to thorough research:
+
+- Agent 3 conducted three separate web searches, each time deepening its understanding and providing more precise details about benchmark costs and model configurations  
+- Agent 1 integrated comparative cost data from similar reasoning model benchmarks, citing specific examples like Artificial Analysis's $2,767 cost for evaluating OpenAI's o1 model  
+- All agents recognized the importance of token consumption patterns for reasoning models, which generate significantly more tokens than standard models
+
+## The Vote: Clear Recognition of Quality
+
+The voting process revealed unanimous recognition of Agent 1's superior comprehensive analysis:
+
+- Agent 1 voted for itself, citing its comprehensive and well-reasoned approach with strong cost estimates  
+- Agent 2 voted for Agent 1, recognizing its "detailed cost analysis and comparison to other reasoning benchmarks, including specific token cost breakdown"  
+- Agent 3 voted for Agent 1, praising its "more comprehensive and detailed explanation" with "comparative insights from similar benchmarking efforts"  
+
+This resulted in a unanimous 3-0 consensus, demonstrating clear quality differentiation.
 
 ## The Final Answer
 
-Agent 3's answer was chosen as the final output. It provided a comprehensive breakdown of Grok-4's API pricing, estimated token consumption for the HLE benchmark, and a detailed cost breakdown, including additional factors like subscription requirements and potential cost variations. The answer was well-structured, clearly sourced (from xAI's documentation and AI benchmarking discussions), and provided a realistic range for the estimated cost.
+Agent 1 presented the final response, featuring:
+
+- **Precise pricing structure:** $3.00 per million input tokens, $15.00 per million output tokens, with blended rate of $6.00 per million tokens  
+- **Comprehensive benchmark context:** 2,500-3,000 expert-crafted questions across multiple disciplines, with 10-14% requiring multi-modal comprehension  
+- **Real-world cost comparisons:** Cited specific examples including Artificial Analysis's $2,767 cost for o1 evaluation and $5,200 for testing a dozen reasoning models  
+- **Performance considerations:** Detailed breakdown of Grok-4's accuracy rates (26.9% without tools, 41.0% with tools, 50.7% in Heavy configuration)  
+- **Practical cost estimate:** "Hundreds to thousands of dollars" range based on token consumption patterns
 
 ## Conclusion
 
-This case study demonstrates MassGen's effectiveness in handling complex, technical queries that require detailed research and estimation. The iterative refinement process, particularly by Agent 3, combined with the dynamic voting where Agent 2 shifted its support, highlights the system's ability to converge on a high-quality, well-supported answer. This showcases MassGen's strength in achieving robust consensus even in scenarios requiring deep domain-specific knowledge and continuous information synthesis.
+This case study exemplifies MassGen's effectiveness in handling complex technical queries requiring both research depth and practical analysis. The unanimous consensus emerged not from simple agreement, but from all agents recognizing the superior quality of Agent 1's comprehensive, well-sourced, and contextually rich response. The system successfully synthesized technical pricing information, benchmark specifications, and real-world cost comparisons into a definitive answer that addresses both the specific query and provides valuable context for decision-making. This demonstrates MassGen's strength in achieving research-driven consensus on complex technical topics where accuracy and comprehensiveness are paramount.

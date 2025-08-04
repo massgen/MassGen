@@ -1,43 +1,79 @@
-# MassGen Case Study: Synthesis from Diverse Perspectives
+# MassGen Case Study: AI News Synthesis - Cross-Verification and Content Aggregation Excellence
 
-This case study demonstrates how MassGen (v0.0.1alpha) handles subjective prompts by tasking a representative agent to synthesize a final, comprehensive answer from multiple, diverse viewpoints.
+This case study demonstrates MassGen's sophisticated ability to synthesize current events through extensive cross-verification, where agents conduct independent research and converge on a comprehensive, well-sourced news summary that integrates multiple perspectives and data points.
 
 **Command:**
-```bash
-uv run python cli.py --config examples/fast_config.yaml "find big AI news this week"
+```
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "find big AI news this week"
 ```
 
-**Prompt:** `find big AI news this week`
+**Prompt:** find big AI news this week
 
 **Agents:**
-*   Agent 1: `gpt-4.1` (Designated Representative Agent)
-*   Agent 2: `gemini-2.5-flash`
-*   Agent 3: `grok-3-mini`
+* Agent 1: gemini2.5flash (Designated Winner)
+* Agent 2: gpt-4o
+* Agent 3: claude-3-5-haiku
 
 **Watch the recorded demo:**
 
-[![MassGen Case Study](https://img.youtube.com/vi/SMmgCG7MZ2M/0.jpg)](https://www.youtube.com/watch?v=SMmgCG7MZ2M)
+[![MassGen Case Study](https://img.youtube.com/vi/flGkjedejrE/0.jpg)](https://www.youtube.com/watch?v=flGkjedejrE)
+
+**Duration:** 170.4s | 1,437 chunks | 17 events
 
 ## The Collaborative Process
 
-### Divergent Interpretations
+### Independent Research and Cross-Verification
 
-Given the subjective nature of the prompt, each agent interpreted "big news" differently, leading to three distinct and valuable initial answers:
+Each agent conducted extensive independent research with multiple web searches, demonstrating MassGen's ability to cross-verify current events:
 
-*   **Agent 1 (gpt-4.1)** focused on high-impact, headline-grabbing news like major policy changes and corporate launches.
-*   **Agent 2 (gemini-2.5-flash)** provided a highly detailed, categorized list that included more technical and research-oriented updates.
-*   **Agent 3 (grok-3-mini)** prioritized news with clear sources and attempted to provide a broad, balanced summary.
+* **Agent 1 (gemini2.5flash)** conducted 29 distinct web searches covering major investments, product updates, industry trends, and regulatory developments. It systematically categorized findings into Major Investments, Product Updates, Industry Trends, and Other Notable News.
 
-### The Vote: A Tie Between Strong Opinions
+* **Agent 2 (gpt-4o)** performed focused searches on specific developments, particularly emphasizing regulatory changes (EU AI Act, US National AI Action Plan) and corporate earnings impacts. It organized findings into 10 numbered key developments with detailed sourcing.
 
-Each agent, confident in its own unique and valid interpretation, voted for its own answer. This resulted in a 1-1-1 tie. This outcome highlights the different strengths and priorities of each model, and it provides the system with three different lenses through which to view the week's AI news.
+* **Agent 3 (claude-3-5-haiku)** conducted multiple verification searches and experienced several "graceful restarts" due to new information discovery, demonstrating the system's real-time adaptation. It focused on geopolitical implications and global AI competition metrics.
 
-## The Final Answer: Synthesis by the Representative Agent
+### Content Aggregation and Synthesis
 
-Instead of simply defaulting to one answer, MassGen's orchestrator designated a `representative_agent` (Agent 1) to perform a final, crucial step: **synthesis**.
+The session showcased sophisticated content integration across multiple search iterations:
 
-Agent 1 was tasked with reviewing its own answer, the answers from Agents 2 and 3, and the voting results. It then created a *new, final answer* that integrated the best elements from all participants. The final output explicitly states it is "**integrating all agents’ highlights**" and combines the policy news from Agent 1, the research breakthroughs from Agent 2, and the sourced consumer news from Agent 3 into a single, cohesive, and comprehensive summary.
+**Comprehensive Coverage Areas:**
+- **Investment Scale:** Microsoft's $100B AI infrastructure spend, OpenAI's $1B monthly revenue, NVIDIA's $4T+ market cap
+- **Global Expansion:** OpenAI's "Stargate Norway," Google's $37M Africa initiative, Microsoft's $1.7B Indonesia investment
+- **Product Innovations:** Google's "Deep Think" feature, ChatGPT Study Mode, Microsoft Edge's Copilot Mode
+- **Industry Transformation:** Microsoft's 15,000 layoffs due to AI code generation, Meta's "personal superintelligence" vision
+- **Regulatory Developments:** EU AI Act implementation, US state-level AI legislation, China's national AI platform
+
+### Verification and Vote Convergence
+
+The voting process revealed sophisticated quality assessment based on comprehensiveness and verification:
+
+**Progressive Recognition of Quality:**
+- **Agent 1** initially voted for itself, citing comprehensive coverage and detailed categorization
+- **Agent 2** voted for Agent 1, recognizing its *"more comprehensive overview of AI developments, covering investments, product updates, industry trends, and other notable news"*
+- **Agent 3** experienced vote invalidation due to ongoing answer updates, then conducted additional verification searches before voting for Agent 1, stating: *"This agent provided a comprehensive overview of AI news, but the vote goes to this response as it has been verified and supplemented with additional search results, providing a more current and accurate summary"*
+
+### Research Depth and Sourcing
+
+The final presentation integrated 29 distinct web searches with specific citations and data points:
+
+**Quantitative Precision:**
+- Microsoft: $100B planned AI infrastructure spend, $30B this quarter
+- OpenAI: Revenue doubled to $12B annualized, $1B monthly
+- NVIDIA: $4.236T market capitalization 
+- Tesla: $16.5B Samsung chip deal for "AI6" models
+- Anthropic: 32% enterprise market share vs OpenAI's 25%
+
+## The Final Answer
+
+**Agent 1** presented the final response, featuring:
+
+- **Exhaustive Research Integration:** 29 web searches synthesized into coherent categories
+- **Precise Financial Data:** Specific investment figures, revenue numbers, and market valuations
+- **Global Scope:** Coverage spanning US, EU, China, Africa, Indonesia, and Norway
+- **Regulatory Context:** Detailed coverage of policy changes and compliance implications
+- **Industry Impact Analysis:** Job displacement trends, infrastructure overhaul requirements, and competitive dynamics
+- **Source Attribution:** Proper citations and verification of claims across multiple sources
 
 ## Conclusion
 
-This case study demonstrates a sophisticated feature of MassGen. When a simple consensus isn't possible, the system doesn't fail; it intelligently leverages the diverse outputs to create a synthesized result that is more complete and well-rounded than any single agent's initial response. This makes it exceptionally powerful for exploring complex, subjective topics where multiple viewpoints are not just valid, but essential for a full understanding.
+This case study exemplifies MassGen's exceptional capability in current events synthesis through extensive cross-verification and content aggregation. The 170-second session with 29 web searches demonstrates the system's commitment to comprehensive, accurate reporting on rapidly evolving topics. The unanimous 3-0 consensus emerged from agents recognizing not just accuracy, but the superior breadth, depth, and verification quality of Agent 1's research-intensive approach. Agent 3's final vote particularly emphasized how the response had been *"verified and supplemented with additional search results,"* highlighting MassGen's strength in research-driven journalism and fact-checking. This showcases the system's ability to transform multiple independent research efforts into authoritative, well-sourced content that synthesizes complex, fast-moving developments across the global AI landscape into a coherent, actionable intelligence briefing.

@@ -71,7 +71,7 @@ The voting process revealed remarkable consensus on creative quality assessment:
 
 ## The Final Answer: Creative Excellence
 
-**Agent 1's story** was selected with unanimous support, featuring:
+**Agent 1** was selected to present the final answer, featuring:
 
 - **Rich Sensory Detail**: Vivid descriptions of the robot's auditory processing and physical sensations  
 - **Character Arc**: Clear transformation from mechanical efficiency to artistic curiosity  
