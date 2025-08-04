@@ -1,4 +1,4 @@
-# MassGen Case Study: Constrained Research Excellence - Source Verification and Framework Precision
+# MassGen Case Study: Berkeley Agentic AI Summit Summary
 
 This case study demonstrates **MassGen**'s ability to handle specialized research queries with strict constraints, showcasing how agents can recognize and prioritize responses that precisely meet user specifications while maintaining high academic standards.
 
