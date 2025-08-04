@@ -59,7 +59,6 @@ class ChatCompletionsBackend(LLMBackend):
         
         async for chunk in stream:
             try:
-                
                 if hasattr(chunk, 'choices') and chunk.choices:
                     choice = chunk.choices[0]
                     

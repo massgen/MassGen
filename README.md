@@ -238,7 +238,6 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### CLI Configuration Parameters
 
-TODO: check & update
 
 | Parameter          | Description |
 |-------------------|-------------|
@@ -314,14 +313,14 @@ Configure how MassGen displays information and handles logging during execution:
 ```yaml
 ui:
   display_type: "rich_terminal" | "terminal" | "simple"  # Display format for agent interactions
-  logging_enabled: true | false                          # Enable/disable session logging to json file
+  logging_enabled: true | false                          # Enable/disable real-time logging 
 ```
 
 - `display_type`: Controls the visual presentation of agent interactions
   - `"rich_terminal"`: Full-featured display with multi-region layout, live status updates, and colored output
   - `"terminal"`: Standard terminal display with basic formatting and sequential output
   - `"simple"`: Plain text output without any formatting or special display features
-- `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status to json file
+- `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
 
 **Advanced Parameters:**
 ```yaml
