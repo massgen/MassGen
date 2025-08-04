@@ -554,51 +554,6 @@ async def run_interactive_mode(
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")
 
-
-def create_sample_configs():
-    """Create sample configuration files."""
-    configs_dir = Path("configs")
-    configs_dir.mkdir(exist_ok=True)
-
-    # Single agent config
-    single_agent_config = {
-        "agent": {
-            "id": "assistant",
-            "backend": {"type": "openai", "model": "gpt-4o-mini"},
-            "system_message": "You are a helpful AI assistant.",
-        },
-        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
-    }
-
-    # Multi-agent config
-    multi_agent_config = {
-        "agents": [
-            {
-                "id": "researcher",
-                "backend": {"type": "openai", "model": "gpt-4o-mini"},
-                "system_message": "You are a thorough researcher focused on gathering accurate information.",
-            },
-            {
-                "id": "analyst",
-                "backend": {"type": "grok", "model": "grok-3-mini"},
-                "system_message": "You are a critical analyst focused on evaluation and insights.",
-            },
-        ],
-        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
-    }
-
-    # Write sample configs
-    with open(configs_dir / "single_agent.yaml", "w") as f:
-        yaml.dump(single_agent_config, f, default_flow_style=False)
-
-    with open(configs_dir / "multi_agent.yaml", "w") as f:
-        yaml.dump(multi_agent_config, f, default_flow_style=False)
-
-    print(f"✅ Sample configurations created in {configs_dir}/", flush=True)
-    print("   • single_agent.yaml - Single agent setup", flush=True)
-    print("   • multi_agent.yaml - Multi-agent coordination", flush=True)
-
-
 async def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -656,13 +611,6 @@ Environment Variables:
         "--system-message", type=str, help="System message for quick setup"
     )
 
-    # Utility options
-    parser.add_argument(
-        "--create-samples",
-        action="store_true",
-        help="Create sample configuration files",
-    )
-
     # UI options
     parser.add_argument(
         "--no-display", action="store_true", help="Disable visual coordination display"
@@ -670,11 +618,6 @@ Environment Variables:
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
 
     args = parser.parse_args()
-
-    # Handle utility commands
-    if args.create_samples:
-        create_sample_configs()
-        return
 
     # Validate arguments
     if not args.backend:
