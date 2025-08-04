@@ -216,6 +216,19 @@ agents:  # Multiple agents (alternative to 'agent')
     system_message: "..."
 ```
 
+**Backend Configuration:**
+```yaml
+backend:
+  type: "openai"           # "openai", "claude", "gemini", "grok"
+  model: "gpt-4o"          # Model name
+  api_key: "optional_key"  # API key (uses env vars by default)
+  temperature: 0.7         # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500         # Maximum response length
+  enable_web_search: true  # Web search capability (all backends)
+  enable_code_interpreter: true  # OpenAI only
+  enable_code_execution: true    # Gemini/Claude only
+```
+
 **UI Configuration:**
 ```yaml
 ui:
@@ -223,19 +236,33 @@ ui:
   logging_enabled: true | false
 ```
 
-**Optional Parameters:**
+**Advanced Parameters:**
 ```yaml
+# Orchestrator settings
 orchestrator:
   voting_timeout: 30
   max_coordination_rounds: 3
   require_consensus: false
 
+# Global backend parameters
 backend_params:
   temperature: 0.7
   max_tokens: 2000
-  enable_web_search: true  # Grok backend
-  enable_code_interpreter: true  # OpenAI backend
+  enable_web_search: true  # Web search capability (all backends)
+  enable_code_interpreter: true  # OpenAI only
+  enable_code_execution: true    # Gemini/Claude only
+
+# Web search advanced parameters
+web_search:
+  return_citations: true         # Include search result citations (Grok/Claude)
+  max_search_results: 10         # Maximum search results to use (Grok)
+  search_mode: "auto"            # Search strategy: "auto", "fast", "thorough" (Grok)
+
+# Code execution advanced parameters  
+code_execution:
+  container_type: "auto"         # Container type for OpenAI code interpreter
 ```
+
 **Note**: `--config` and `--model` are mutually exclusive - use one or the other.
 
 #### Interactive Multi-Turn Mode
