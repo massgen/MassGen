@@ -292,18 +292,60 @@ agents:  # Multiple agents (alternative to 'agent')
 
 **Backend Configuration:**
 
-Detailed parameters for each agent's backend can be specified using the following configuration format:
+Detailed parameters for each agent's backend can be specified using the following configuration formats:
+
+#### Claude
 
 ```yaml
 backend:
-  type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
-  model: "gpt-4o"            # Model name
-  api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
-  temperature: 0.7           # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500           # Maximum response length
-  enable_web_search: true    # Web search capability (all backends)
-  enable_code_interpreter: true  # Code execution capability (OpenAI only)
-  enable_code_execution: true    # Code execution capability (Gemini/Claude only)
+  type: "claude"
+  model: "claude-sonnet-4-20250514"  # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  enable_code_execution: true        # Code execution capability
+```
+
+#### OpenAI
+
+```yaml
+backend:
+  type: "openai"
+  model: "gpt-4o"                    # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, o-series models don't support this)
+  max_tokens: 2500                   # Maximum response length (o-series models don't support this)
+  enable_web_search: true            # Web search capability
+  enable_code_interpreter: true      # Code interpreter capability
+```
+
+#### Grok
+
+```yaml
+backend:
+  type: "grok"
+  model: "grok-3"                    # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  return_citations: true             # Include search result citations
+  max_search_results: 10             # Maximum search results to use 
+  search_mode: "auto"                # Search strategy: "auto", "fast", "thorough" 
+```
+
+#### Gemini
+
+```yaml
+backend:
+  type: "gemini"
+  model: "gemini-2.5-flash"          # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  enable_code_execution: true        # Code execution capability
 ```
 
 **UI Configuration:**
@@ -324,10 +366,6 @@ ui:
 
 **Advanced Parameters:**
 ```yaml
-# Orchestrator settings
-orchestrator:
-  voting_timeout: 30
-
 # Global backend parameters
 backend_params:
   temperature: 0.7
@@ -335,16 +373,6 @@ backend_params:
   enable_web_search: true  # Web search capability (all backends)
   enable_code_interpreter: true  # OpenAI only
   enable_code_execution: true    # Gemini/Claude only
-
-# Web search advanced parameters
-web_search:
-  return_citations: true         # Include search result citations (Grok/Claude)
-  max_search_results: 10         # Maximum search results to use (Grok)
-  search_mode: "auto"            # Search strategy: "auto", "fast", "thorough" (Grok)
-
-# Code execution advanced parameters  
-code_execution:
-  container_type: "auto"         # Container type for OpenAI code interpreter
 ```
 
 #### Interactive Multi-Turn Mode
