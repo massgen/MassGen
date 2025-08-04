@@ -243,7 +243,7 @@ TODO: check & update
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `openai`, `grok` or `claude) |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `openai`, `grok` or `claude`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If --config is provided, --system-message is omitted. |
 | `--create-samples` | Create example configuration files (`single_agent.yaml`, `multi_agent.yaml`) in a `configs/` directory |
@@ -258,44 +258,59 @@ TODO: check & update
 MassGen v3 supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
+
+Use the `agent` field to define a single agent with its backend and settings:
+
 ```yaml
-agent:  # Single agent
+agent: 
   id: "<agent_name>"
   backend:
-    type: "claude" | "openai" | "grok" | "gemini"
-    model: "<model_name>"
-    api_key: "<optional_key>"  # Uses env vars by default
-  system_message: "..."    # 
+    type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
+    model: "<model_name>" # Model name
+    api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
+  system_message: "..."    # System Message for Single Agent
 ```
 
 **Multi-Agent Configuration:**
+
+Use the `agents` field to define multiple agents, each with its own backend and config:
+
 ```yaml
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
-    backend: {...}
+    backend: 
+      type: "..."
+      model: "..." 
+      api_key: "...>" 
     system_message: "..."
-  - id: "<agent2 name>"
-    backend: {...}
+  - id: "..."
+    backend:
+      type: "..." 
+      model: "..." 
+      api_key: "..." 
     system_message: "..."
 ```
 
 **Backend Configuration:**
+
+Detailed parameters for each agent's backend can be specified using the following configuration format:
+
 ```yaml
 backend:
-  type: "claude" | "openai" | "grok" | "gemini"
+  type: "claude" | "openai" | "grok" | "gemini" #Type of backend (Optional because we can infer backend type through model.)
   model: "gpt-4o"            # Model name
-  api_key: "<optional_key>"  # API key (uses env vars by default)
+  api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   temperature: 0.7           # Creativity vs consistency (0.0-1.0)
   max_tokens: 2500           # Maximum response length
   enable_web_search: true    # Web search capability (all backends)
-  enable_code_interpreter: true  # OpenAI only
-  enable_code_execution: true    # Gemini/Claude only
+  enable_code_interpreter: true  # Code execution capability (OpenAI only)
+  enable_code_execution: true    # Code execution capability (Gemini/Claude only)
 ```
 
 **UI Configuration:**
 ```yaml
 ui:
-  display_type: "rich_terminal" | "terminal" | "simple"
+  display_type: "rich_terminal" | "terminal" | "simple" 
   logging_enabled: true | false
 ```
 
