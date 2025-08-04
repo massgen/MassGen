@@ -141,7 +141,7 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok** and . 
+The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
@@ -243,7 +243,7 @@ backend_params:
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
 
 ```bash
-# Start interactive mode with multiple agents
+# Start interactive mode with a single agent
 uv run python -m massgen.cli --model gpt-4o-mini
 
 # Start interactive mode with configuration file
@@ -253,7 +253,8 @@ uv run python -m massgen.cli --config three_agents_default.yaml
 **Interactive Mode Features:**
 - **Multi-turn conversations**: Multiple agents collaborate to chat with you in an ongoing conversation
 - **Real-time feedback**: Displays real-time agent and system status
-- **Easy exit**: Type `quit`, `exit`, or press `Ctrl+C` to stop
+- **Clear conversation history**: Type `/clear` to reset the conversation and start fresh
+- **Easy exit**: Type `/quit`, `/exit`, `/q`, or press `Ctrl+C` to stop
 
 
 ### 5. 📊 View Results
