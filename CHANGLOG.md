@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CLI backend parameter passing with proper ConfigurableAgent integration
 
 ### Changed
-- Restructured codebase with new architecture
+- Restructured codebase containing the new architecture
 - Improved message handling and streaming capabilities
 - Enhanced frontend features and user experience
 

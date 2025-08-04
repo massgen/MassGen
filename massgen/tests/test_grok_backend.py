@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for Grok backend integration with architecture.
+Test script for Grok backend integration with current architecture.
 Tests basic functionality, tool integration, and streaming.
 """
 

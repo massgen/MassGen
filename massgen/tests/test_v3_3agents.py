@@ -2,8 +2,8 @@
 """
 MassGen Example: Three Agent Coordination
 
-This example demonstrates three-agent coordination using MassGen with the
-multi-region coordination UI. Three agents with different specialties work
+This example demonstrates three-agent coordination using the 
+multi-region coordination UI. Three agents with different specialties work 
 together on a question that benefits from multiple perspectives.
 
 Features:
@@ -28,8 +28,8 @@ from massgen.frontend.coordination_ui import coordinate_with_terminal_ui
 
 
 async def three_agent_example():
-    """Demonstrate three agent coordination with v3 multi-region UI."""
-
+    """Demonstrate three agent coordination with multi-region UI."""
+    
     print("🎯 MassGen: Three Agent Coordination")
     print("=" * 50)
 

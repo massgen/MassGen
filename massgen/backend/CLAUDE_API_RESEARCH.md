@@ -130,7 +130,7 @@ response = await beta_client.beta.messages.create(
 
 ## Architecture Compatibility with MassGen
 
-### ✅ Perfect Fit for v3 Requirements
+### ✅ Perfect Fit for Requirements
 
 **Multi-Tool Support:**
 - ✅ Can combine web search + code execution + user functions
@@ -261,6 +261,6 @@ Based on successful test with `claude-3-5-haiku-latest`:
 - Complete multi-tool support without restrictions
 - Production-ready stability and pricing
 - Advanced streaming capabilities with server-side code execution
-- Perfect alignment with v3 architecture requirements
+- Perfect alignment with architecture requirements
 
 Unlike Gemini's API limitations, Claude provides the flexibility we need without compromising the architecture.

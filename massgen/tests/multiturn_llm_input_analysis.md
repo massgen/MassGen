@@ -186,4 +186,4 @@ Run these tests to see the exact LLM inputs and validate the context building be
 
 ---
 
-*This analysis confirms that MassGen's multi-turn conversation support properly implements the proven v0.0.1 and the current's async streaming architecture.*
+*This analysis confirms that MassGen's multi-turn conversation support properly implements the proven v0.0.1 dynamic context reconstruction approach, adapted for the current async streaming architecture.*

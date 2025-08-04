@@ -297,7 +297,7 @@ Access via `response.candidates[0].grounding_metadata`:
 - **Embeddings** for RAG workflows
 - **OpenAI-compatible interface**: Can use OpenAI Python library with `stream=True`
 
-## Integration Notes for v3 Backend
+## Integration Notes for Backend
 
 ### Key Implementation Points:
 1. Use `google.generativeai` (imported as `genai`) for direct API access
@@ -305,7 +305,7 @@ Access via `response.candidates[0].grounding_metadata`:
 3. Use `generate_content()` with `stream=True` for streaming
 4. Check for `chunk.text` to ensure non-empty chunks
 5. Configure structured output with `config={"response_mime_type": "application/json", "response_schema": Schema}`
-6. Compatible with asyncio patterns needed for v3 architecture
+6. Compatible with asyncio patterns needed for architecture
 
 ### Correct Package Usage:
 ```python
@@ -380,7 +380,7 @@ client.models.generate_content(...)
 **✅ COMPLETED**: GeminiBackend class implemented with:
 - [x] Google Gemini API integration with proper authentication
 - [x] Structured output for coordination (vote/new_answer) using JSON schemas
-- [x] Streaming functionality compatible with v3 StreamChunk architecture
+- [x] Streaming functionality compatible with StreamChunk architecture
 - [x] Cost calculation for Gemini 2.5 models (Flash, Flash-Lite, Pro)
 - [x] Error handling for Gemini-specific responses and API limitations
 - [x] Support for builtin tools (code_execution + grounding/web search)
@@ -394,7 +394,7 @@ client.models.generate_content(...)
 - **Builtin Tools**: Supports code_execution and google_search_retrieval with proper result detection
 - **Multi-mode Support**: Handles coordination-only, tools-only, and mixed scenarios
 - **Cost Tracking**: Tracks token usage, search count, and code execution count
-- **MassGen Compatible**: Full integration with v3 orchestrator and agent patterns
+- **MassGen Compatible**: Full integration with orchestrator and agent patterns
 
 **Usage Examples:**
 ```python
