@@ -120,7 +120,7 @@ Create a `.env` file in the `massgen` directory with your API keys:
 
 ```bash
 # Copy example configuration
-cp massgen/.env.example massgen/.env
+cp .env.example .env
 
 # Edit with your API keys
 OPENAI_API_KEY=your-openai-key-here
