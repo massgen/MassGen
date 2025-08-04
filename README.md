@@ -179,6 +179,8 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### Configuration Parameters
 
+TODO: check & update
+
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, and UI settings |
@@ -191,6 +193,8 @@ All available quick configuration files can be found [here](massgen/configs).
 | `question`         | Optional single-question input; if omitted, MassGen enters interactive chat mode |
 
 #### Configuration File Format
+
+TODO: check & update
 
 MassGen v3 supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
@@ -241,8 +245,6 @@ ui:
 # Orchestrator settings
 orchestrator:
   voting_timeout: 30
-  max_coordination_rounds: 3
-  require_consensus: false
 
 # Global backend parameters
 backend_params:
@@ -354,7 +356,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 ### Key Future Enhancements:
 
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy.
--   **Expanded Model, Tool & Agent Integration:** Adding support for more models/tools/agents, including Claude, a wider range of tools like MCP Servers, and coding agents.
+-   **Expanded Model, Tool & Agent Integration:** Adding support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents.
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management.
 -   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation.
 -   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem.
