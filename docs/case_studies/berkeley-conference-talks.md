@@ -1,87 +1,95 @@
-# MassGen Case Study: Berkeley Agent Framework Research – Precision Through Collaboration
+# MassGen Case Study: Constrained Research Excellence - Source Verification and Framework Precision
 
-This case study demonstrates **MassGen**'s ability to handle specialized academic queries by combining focused research with collaborative verification to produce authoritative, well-sourced answers on niche technical topics.
+This case study demonstrates **MassGen**'s ability to handle specialized research queries with strict constraints, showcasing how agents can recognize and prioritize responses that precisely meet user specifications while maintaining high academic standards.
 
 ---
 
 ## Command
 
 ```bash
-uv run python cli.py --config examples/fast_config.yaml "give me all the talks on agent frameworks at Berkeley Agentic AI Summit 2025"
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
 ```
+
+**Prompt:**  
+`give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits`
 
 ---
 
 ## Agents
 
-- **Agent 1**: gpt-4o  
-- **Agent 2**: gemini-2.5-flash (**Designated Representative Agent**)  
-- **Agent 3**: grok-3-mini
+- **Agent 1**: gemini-2.5-flash (**Designated Representative Agent**)  
+- **Agent 2**: gpt-4o  
+- **Agent 3**: claude-3-5-haiku
 
 **Watch the recorded demo:**
 
-[![MassGen Case Study](https://img.youtube.com/vi/rH6_feyIhxE/0.jpg)](https://www.youtube.com/watch?v=rH6_feyIhxE)
+[![MassGen Case Study](https://img.youtube.com/vi/Dp2oldJJImw/0.jpg)](https://www.youtube.com/watch?v=Dp2oldJJImw)
 
 ---
 
 ## The Collaborative Process
 
-### Initial Research Approaches and Information Quality
+### Research Approaches and Constraint Adherence
 
-Each agent demonstrated different research methodologies and attention to detail:
+Each agent demonstrated different levels of precision in adhering to the user's strict source requirements:
 
-- **Agent 1 (gpt-4o)** provided a **concise, accurate answer** focusing on the core _"Frameworks & Stacks for Agentic Systems"_ session, including key speakers like **Ion Stoica**, **Matei Zaharia**, and **Sherwin Wu**. The response was well-structured and included the official event link.
+- **Agent 1 (gemini-2.5-flash)** focused on framework-specific talks with explicit mention of technologies like _DSPy_, _Google Agent Development Kit (ADK)_, and _Model Context Protocol (MCP)_ while carefully ensuring **Berkeley-sourced information**.
 
-- **Agent 2 (gemini-2.5-flash)** delivered the **most comprehensive research**, providing detailed coverage of not just the main frameworks session but also related sessions on _"Building Infrastructure for Agents"_ and _"Foundations of Agents"_. It included specific **talk titles**, **speaker credentials**, and **panel details**.
+- **Agent 2 (gpt-4o)** provided **comprehensive session coverage** with detailed workshop information, organizing content by sessions and **explicitly noting Berkeley sources** in the response structure.
 
-- **Agent 3 (grok-3-mini)** took a **broader interpretive approach**, attempting to include related events and competitions, but with **less precision** in distinguishing between different summit events and their specific programming.
-
----
-
-### Information Verification and Source Quality
-
-A critical aspect of this session was the agents' ability to distinguish between different events with similar names:
-
-- **Agent 2** explicitly noted the importance of distinguishing _"this in-person summit from other events also named 'Agentic AI Summit 2025,' which are virtual training events with different agendas."_  
-
-This attention to detail prevented confusion between the **Berkeley academic summit** and other **commercial training events**.
+- **Agent 3 (claude-3-5-haiku)** took a **broader approach**, including research presentations like _SkyRL Framework_, _Maris Project_, and _CVE-Bench_, but with **less specificity** on core agent frameworks mentioned in the user's request.
 
 ---
 
-### The Voting Pattern: Recognition of Thoroughness
+### Critical Constraint Recognition
 
-The voting process demonstrated clear recognition of research quality and completeness:
+A defining feature of this session was the agents' ability to recognize and evaluate adherence to the user's explicit constraints:
 
-- **Agent 1** initially **voted for itself**, confident in its focused, accurate answer.
+- **Source Verification**:  
+  Agent 1 explicitly acknowledged in its voting that it _"correctly ensured that the sources included the word 'Berkeley' and did not include talks from other summits, fulfilling all constraints of the original message."_
 
-- **Crucial Vote Change**:  
-  Agent 1 **changed its vote** to support Agent 2, explicitly recognizing Agent 2's _"comprehensive list of all talks"_ and noting it _"includes all the speakers, session details, and additional related sessions, offering a complete view of the relevant content."_  
+- **Framework Specificity**:  
+  Agent 1's second vote specifically noted its _"more focused list of talks directly related to 'agent frameworks', explicitly mentioning specific frameworks like DSPy and the Google Agent Development Kit (ADK).”_
 
-- **Consistent Recognition**:  
-  Agent 3 **voted for Agent 2**, praising its _"thorough and accurate"_ response with a _"detailed list of talks"_ while noting Agent 2's success in _"avoiding confusion with other events."_  
-
-- **Self-Confidence**:  
-  Agent 2 **voted for itself**, citing its comprehensive coverage and correct identification of the specific summit sessions.
-
-- **Final Result**:  
-  **Agent 2 achieved majority consensus (3 out of 3 votes)**, with all agents ultimately recognizing its **superior research quality**.
+- **Precision Recognition**:  
+  Agent 2 emphasized that its response _"ensures relevancy by explicitly mentioning Berkeley, per the original request."_
 
 ---
 
-## The Final Answer: Academic Research Excellence
+### The Voting Pattern: Constraint Compliance Excellence
 
-**Agent 2's answer** was selected as the final output, featuring:
+The voting process revealed sophisticated evaluation of constraint adherence and research precision:
 
-- **Event Precision**: Clear identification of the specific **Berkeley summit** vs. other similarly named events  
-- **Comprehensive Coverage**: Three full sessions with detailed speaker lineups and talk titles  
-- **Academic Credibility**: Proper attribution of speakers' academic and industry credentials  
-- **Structured Organization**: Sessions organized chronologically with clear time stamps  
-- **Authoritative Sources**: Distinction between official **Berkeley programming** and external events
+- **Self-Assessment with Constraint Awareness**:  
+  Agent 1 voted for itself twice, with both votes explicitly referencing **constraint compliance** and **framework specificity**.
+
+- **Quality vs. Constraint Tension**:  
+  Agent 2 voted for itself, recognizing its comprehensive coverage while emphasizing **Berkeley source compliance**.
+
+- **Cross-Agent Validation**:  
+  Agent 3 voted for Agent 1, praising it for providing _"the most comprehensive and verified information about the Berkeley Agentic AI Summit 2025, with specific details about agent framework talks sourced directly from the summit's materials."_
+
+- **Final Consensus**:  
+  **Agent 1 achieved majority support (2 out of 3 votes)**, with agents specifically recognizing its **superior constraint adherence** and **framework precision**.
+
+---
+
+## The Final Answer: Constrained Research Mastery
+
+**Agent 1's answer** was selected as the final output, featuring:
+
+- **Strict Source Compliance**: All information explicitly tied to **Berkeley-sourced materials**  
+- **Framework Precision**: Talk titles that explicitly mentioned specific frameworks (_DSPy_, _ADK_, _MCP_, _LlamaIndex_)  
+- **Constraint Acknowledgment**: Clear distinction from other **non-Berkeley agentic AI summits**  
+- **Technical Accuracy**: Proper identification of **framework-specific** versus general agentic system content  
+- **Comprehensive Coverage**: Both **keynotes** and **technical sessions** while maintaining constraint adherence
 
 ---
 
 ## Conclusion
 
-This case study highlights **MassGen**'s effectiveness in academic and professional research contexts where **precision** and **comprehensive coverage** are paramount. The system successfully identified and promoted the most thorough research approach, with agents demonstrating the ability to **recognize superior methodology** and **change their votes accordingly**.
+This case study showcases **MassGen**'s exceptional ability to handle research queries with **explicit constraints**, demonstrating how agents can **recognize**, **evaluate**, and **prioritize** responses that precisely meet user specifications. The system successfully identified and promoted the approach that best balanced **comprehensive research** with **strict constraint adherence**.
 
-**Agent 2's systematic approach** to distinguishing between similar events and providing complete session coverage ultimately earned unanimous support, showcasing how **MassGen** can produce **authoritative answers** for specialized academic queries that require **careful source verification** and **comprehensive information synthesis**.
+**Agent 1's methodology**—which explicitly tracked **constraint compliance** while maintaining **technical precision**—ultimately earned recognition from other agents who could evaluate both the **quality of research** and **adherence to user requirements**.
+
+This demonstrates **MassGen**'s strength in academic and professional contexts where **following specific guidelines** and **constraints** is as important as **research comprehensiveness**, making it particularly valuable for **compliance-sensitive research tasks** and **constrained information gathering scenarios**.

@@ -10,7 +10,7 @@ agents:
       # enable_code_execution: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
-  - id: "4o"
+  - id: "gpt-4o"
     backend:
       type: "openai"
       model: "gpt-4o"
@@ -18,7 +18,7 @@ agents:
       enable_code_interpreter: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
-  - id: "claude"
+  - id: "claude-3-5-haiku"
     backend:
       type: "claude"
       model: "claude-3-5-haiku-20241022"
