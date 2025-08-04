@@ -10,7 +10,7 @@ from xai_sdk import Client
 from xai_sdk.chat import assistant, system, user, tool_result, tool as xai_tool_func
 from xai_sdk.search import SearchParameters
 
-# Import utility functions and tools  
+# Import utility functions and tools
 from massgen.v1.utils import function_to_json, execute_function_calls
 from massgen.v1.types import AgentResponse
 
@@ -27,54 +27,60 @@ def parse_completion(response, add_citations=True):
 
     if hasattr(response, "citations") and response.citations:
         for citation in response.citations:
-            citations.append({"url": citation, "title": "", "start_index": -1, "end_index": -1})
+            citations.append(
+                {"url": citation, "title": "", "start_index": -1, "end_index": -1}
+            )
 
     if citations and add_citations:
         citation_content = []
         for idx, citation in enumerate(citations):
             citation_content.append(f"[{idx}]({citation['url']})")
         text = text + "\n\nReferences:\n" + "\n".join(citation_content)
-    
+
     # Check if response has tool_calls directly (some SDK formats)
     if hasattr(response, "tool_calls") and response.tool_calls:
         for tool_call in response.tool_calls:
-            if hasattr(tool_call, 'function'):
+            if hasattr(tool_call, "function"):
                 # OpenAI-style structure: tool_call.function.name, tool_call.function.arguments
-                function_calls.append({
-                    "type": "function_call",
-                    "call_id": tool_call.id,
-                    "name": tool_call.function.name,
-                    "arguments": tool_call.function.arguments
-                })
-            elif hasattr(tool_call, 'name') and hasattr(tool_call, 'arguments'):
+                function_calls.append(
+                    {
+                        "type": "function_call",
+                        "call_id": tool_call.id,
+                        "name": tool_call.function.name,
+                        "arguments": tool_call.function.arguments,
+                    }
+                )
+            elif hasattr(tool_call, "name") and hasattr(tool_call, "arguments"):
                 # Direct structure: tool_call.name, tool_call.arguments
-                function_calls.append({
-                    "type": "function_call",
-                    "call_id": tool_call.id,
-                    "name": tool_call.name,
-                    "arguments": tool_call.arguments
-                })
-        
+                function_calls.append(
+                    {
+                        "type": "function_call",
+                        "call_id": tool_call.id,
+                        "name": tool_call.name,
+                        "arguments": tool_call.arguments,
+                    }
+                )
+
     return AgentResponse(
-        text=text,
-        code=code,
-        citations=citations,
-        function_calls=function_calls
+        text=text, code=code, citations=citations, function_calls=function_calls
     )
 
-def process_message(messages,
-                    model="grok-3-mini", 
-                    tools=None, 
-                    max_retries=10, 
-                    max_tokens=None, 
-                    temperature=None, 
-                    top_p=None, 
-                    api_key=None, 
-                    stream=False, 
-                    stream_callback=None):
+
+def process_message(
+    messages,
+    model="grok-3-mini",
+    tools=None,
+    max_retries=10,
+    max_tokens=None,
+    temperature=None,
+    top_p=None,
+    api_key=None,
+    stream=False,
+    stream_callback=None,
+):
     """
     Generate content using Grok API with optional streaming support and custom tools.
-    
+
     Args:
         messages: List of message dictionaries with 'role' and 'content' keys
         model: Model name to use (default: "grok-4")
@@ -104,10 +110,10 @@ def process_message(messages,
         api_key: XAI API key (default: None, uses environment variable)
         stream: Enable streaming response (default: False)
         stream_callback: Callback function for streaming (default: None)
-    
+
     Returns:
         Dict with keys: 'text', 'code', 'citations', 'function_calls'
-        
+
     Note:
         - For backward compatibility, tools=["live_search"] is still supported and will enable search
         - Function calls will be returned in the 'function_calls' key as a list of dicts with 'name' and 'arguments'
@@ -128,7 +134,7 @@ def process_message(messages,
     # Handle backward compatibility for old tools=["live_search"] format
     enable_search = False
     custom_tools = []
-    
+
     if tools and isinstance(tools, list) and len(tools) > 0:
         for tool in tools:
             if tool == "live_search":
@@ -154,19 +160,19 @@ def process_message(messages,
         # Convert OpenAI format tools to X.AI SDK format for the API call
         api_tools = []
         for custom_tool in custom_tools:
-            if isinstance(custom_tool, dict) and custom_tool.get('type') == 'function':
+            if isinstance(custom_tool, dict) and custom_tool.get("type") == "function":
                 # Check if it's the OpenAI nested format or the direct format from function_to_json
-                if 'function' in custom_tool:
+                if "function" in custom_tool:
                     # OpenAI format: {"type": "function", "function": {...}}
-                    func_def = custom_tool['function']
+                    func_def = custom_tool["function"]
                 else:
                     # Older format: {"type": "function", "name": ..., "description": ...}
                     func_def = custom_tool
-                
+
                 xai_tool = xai_tool_func(
-                    name=func_def['name'],
-                    description=func_def['description'],
-                    parameters=func_def['parameters']
+                    name=func_def["name"],
+                    description=func_def["description"],
+                    parameters=func_def["parameters"],
                 )
                 api_tools.append(xai_tool)
             else:
@@ -179,7 +185,7 @@ def process_message(messages,
             "model": model,
             "search_parameters": search_parameters,
         }
-        
+
         # Add optional parameters only if they have values
         if temperature is not None:
             chat_params["temperature"] = temperature
@@ -189,7 +195,7 @@ def process_message(messages,
             chat_params["max_tokens"] = max_tokens
         if api_tools is not None:
             chat_params["tools"] = api_tools
-        
+
         chat = client.chat.create(**chat_params)
 
         for message in messages:
@@ -224,10 +230,13 @@ def process_message(messages,
             print(f"Error on attempt {retry + 1}: {e}")
             retry += 1
             import time  # Local import to ensure availability in threading context
+
             time.sleep(1.5)
 
     if completion is None:
-        print(f"Failed to get completion after {max_retries} retries, returning empty response")
+        print(
+            f"Failed to get completion after {max_retries} retries, returning empty response"
+        )
         return AgentResponse(text="", code=[], citations=[], function_calls=[])
 
     if stream and stream_callback is not None:
@@ -247,33 +256,41 @@ def process_message(messages,
 
                 # Extract delta content from chunk - XAI SDK specific format
                 # Primary method: check for choices structure and extract content directly
-                if hasattr(chunk, "choices") and chunk.choices and len(chunk.choices) > 0:
+                if (
+                    hasattr(chunk, "choices")
+                    and chunk.choices
+                    and len(chunk.choices) > 0
+                ):
                     choice = chunk.choices[0]
                     # XAI SDK stores content directly in choice.content, not choice.delta.content
                     if hasattr(choice, "content") and choice.content:
                         delta_content = choice.content
-                
+
                 # Fallback method: direct content attribute on chunk
                 elif hasattr(chunk, "content") and chunk.content:
                     delta_content = chunk.content
-                
+
                 # Additional fallback: text attribute
                 elif hasattr(chunk, "text") and chunk.text:
                     delta_content = chunk.text
-                        
+
                 if delta_content:
                     has_delta_content = True
                     # Check if this is a "Thinking..." chunk (indicates processing/search)
                     if delta_content.strip() == "Thinking...":
                         thinking_count += 1
                         # Show search indicator after first few thinking chunks
-                        if thinking_count == 3 and not has_shown_search_indicator and search_parameters:
+                        if (
+                            thinking_count == 3
+                            and not has_shown_search_indicator
+                            and search_parameters
+                        ):
                             try:
                                 stream_callback("\n🧠 Thinking...\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
                             has_shown_search_indicator = True
-                        
+
                         # Stream the "Thinking..." to user but don't add to final text
                         try:
                             stream_callback(delta_content)
@@ -290,43 +307,51 @@ def process_message(messages,
                 # Check for function calls in streaming response
                 if hasattr(response, "tool_calls") and response.tool_calls:
                     for tool_call in response.tool_calls:
-                        if hasattr(tool_call, 'function'):
+                        if hasattr(tool_call, "function"):
                             _func_call = {
                                 "type": "function_call",
                                 "call_id": tool_call.id,
                                 "name": tool_call.function.name,
-                                "arguments": tool_call.function.arguments
+                                "arguments": tool_call.function.arguments,
                             }
                             if _func_call not in function_calls:
                                 function_calls.append(_func_call)
-                        elif hasattr(tool_call, 'name') and hasattr(tool_call, 'arguments'):
+                        elif hasattr(tool_call, "name") and hasattr(
+                            tool_call, "arguments"
+                        ):
                             _func_call = {
                                 "type": "function_call",
                                 "call_id": tool_call.id,
                                 "name": tool_call.name,
-                                "arguments": tool_call.arguments
+                                "arguments": tool_call.arguments,
                             }
                             if _func_call not in function_calls:
                                 function_calls.append(_func_call)
-                elif hasattr(response, 'choices') and response.choices:
+                elif hasattr(response, "choices") and response.choices:
                     for choice in response.choices:
-                        if hasattr(choice, 'message') and hasattr(choice.message, 'tool_calls') and choice.message.tool_calls:
+                        if (
+                            hasattr(choice, "message")
+                            and hasattr(choice.message, "tool_calls")
+                            and choice.message.tool_calls
+                        ):
                             for tool_call in choice.message.tool_calls:
-                                if hasattr(tool_call, 'function'):
+                                if hasattr(tool_call, "function"):
                                     _func_call = {
                                         "type": "function_call",
                                         "call_id": tool_call.id,
                                         "name": tool_call.function.name,
-                                        "arguments": tool_call.function.arguments
+                                        "arguments": tool_call.function.arguments,
                                     }
                                     if _func_call not in function_calls:
                                         function_calls.append(_func_call)
-                                elif hasattr(tool_call, 'name') and hasattr(tool_call, 'arguments'):
+                                elif hasattr(tool_call, "name") and hasattr(
+                                    tool_call, "arguments"
+                                ):
                                     _func_call = {
                                         "type": "function_call",
                                         "call_id": tool_call.id,
                                         "name": tool_call.name,
-                                        "arguments": tool_call.arguments
+                                        "arguments": tool_call.arguments,
                                     }
                                     if _func_call not in function_calls:
                                         function_calls.append(_func_call)
@@ -347,7 +372,9 @@ def process_message(messages,
                     # Notify about found sources if we had search enabled
                     if citations and enable_search and stream_callback is not None:
                         try:
-                            stream_callback(f"\n\n🔍 Found {len(citations)} web sources\n")
+                            stream_callback(
+                                f"\n\n🔍 Found {len(citations)} web sources\n"
+                            )
                         except Exception as e:
                             print(f"Stream callback error: {e}")
 
@@ -357,26 +384,26 @@ def process_message(messages,
                     stream_callback(text)
                 if function_calls:
                     for function_call in function_calls:
-                        stream_callback(f"🔧 Calling function: {function_call['name']}\n")
-                        stream_callback(f"🔧 Arguments: {json.dumps(function_call['arguments'], indent=4)}\n\n")
+                        stream_callback(
+                            f"🔧 Calling function: {function_call['name']}\n"
+                        )
+                        stream_callback(
+                            f"🔧 Arguments: {json.dumps(function_call['arguments'], indent=4)}\n\n"
+                        )
 
         except Exception as e:
             # Fall back to non-streaming
             completion = make_grok_request(stream=False)
             result = parse_completion(completion, add_citations=True)
             return result
-            
+
         result = AgentResponse(
-            text=text,
-            code=code,
-            citations=citations,
-            function_calls=function_calls
+            text=text, code=code, citations=citations, function_calls=function_calls
         )
     else:
         result = parse_completion(completion, add_citations=True)
 
     return result
-
 
 
 if __name__ == "__main__":

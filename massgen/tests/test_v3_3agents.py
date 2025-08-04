@@ -2,13 +2,13 @@
 """
 MassGen Example: Three Agent Coordination
 
-This example demonstrates three-agent coordination using v3 with the 
-multi-region coordination UI. Three agents with different specialties work 
+This example demonstrates three-agent coordination using v3 with the
+multi-region coordination UI. Three agents with different specialties work
 together on a question that benefits from multiple perspectives.
 
 Features:
 - Three agents with distinct specialties
-- Multi-region terminal display 
+- Multi-region terminal display
 - Real coordination with voting and consensus
 - Cost-effective with gpt-4o-mini model
 
@@ -29,80 +29,79 @@ from massgen.frontend.coordination_ui import coordinate_with_terminal_ui
 
 async def three_agent_v3_example():
     """Demonstrate three agent coordination with v3 multi-region UI."""
-    
+
     print("🎯 MassGen: Three Agent Coordination")
     print("=" * 50)
-    
+
     # Check API key
     if not os.getenv("OPENAI_API_KEY"):
         print("❌ OPENAI_API_KEY not found")
         return False
-    
+
     print("✅ OpenAI API key found")
-    
+
     try:
         # Create backend
         backend = ResponseBackend(model="gpt-4o-mini")
         print("✅ OpenAI backend created")
-        
+
         # Create three agents with different specialties
         scientist = create_simple_agent(
             backend=backend,
-            system_message="You are a scientist who focuses on scientific accuracy and evidence-based explanations."
+            system_message="You are a scientist who focuses on scientific accuracy and evidence-based explanations.",
         )
         engineer = create_simple_agent(
             backend=backend,
-            system_message="You are an engineer who focuses on practical applications and real-world implementation."
+            system_message="You are an engineer who focuses on practical applications and real-world implementation.",
         )
         educator = create_simple_agent(
             backend=backend,
-            system_message="You are an educator who focuses on clear, accessible explanations for learning."
+            system_message="You are an educator who focuses on clear, accessible explanations for learning.",
         )
-        
+
         print("✅ Created 3 agents:")
         print("  • scientist: Scientific accuracy")
-        print("  • engineer: Practical applications") 
+        print("  • engineer: Practical applications")
         print("  • educator: Clear explanations")
-        
+
         # Create orchestrator
-        orchestrator = Orchestrator(agents={
-            "scientist": scientist,
-            "engineer": engineer,
-            "educator": educator
-        })
+        orchestrator = Orchestrator(
+            agents={"scientist": scientist, "engineer": engineer, "educator": educator}
+        )
         print("✅ orchestrator ready")
-        
+
         # Question that benefits from multiple perspectives
         question = "How does solar energy work and why is it important?"
         print(f"\n💬 Question: {question}")
         print("🔄 Starting three-agent coordination...\n")
-        
+
         # Use coordination UI
         result = await coordinate_with_terminal_ui(
-            orchestrator, 
+            orchestrator,
             question,
             enable_final_presentation=True,
-            logging_enabled=False
+            logging_enabled=False,
         )
-        
+
         print(f"\n✅ Three agent coordination completed!")
-        
+
         # Show results
         orchestrator_status = orchestrator.get_status()
-        selected_agent = orchestrator_status.get('selected_agent')
-        vote_results = orchestrator_status.get('vote_results', {})
-        
+        selected_agent = orchestrator_status.get("selected_agent")
+        vote_results = orchestrator_status.get("vote_results", {})
+
         print(f"\n📊 Results:")
         print(f"🏆 Selected agent: {selected_agent}")
-        if vote_results.get('vote_counts'):
-            for agent, votes in vote_results['vote_counts'].items():
+        if vote_results.get("vote_counts"):
+            for agent, votes in vote_results["vote_counts"].items():
                 print(f"🗳️ {agent}: {votes} vote(s)")
-        
+
         return result
-        
+
     except Exception as e:
         print(f"❌ Failed: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -114,5 +113,5 @@ if __name__ == "__main__":
         print("💡 Demonstrated multi-agent collaboration with diverse expertise")
     else:
         print("\n⚠️ Check error above")
-    
+
     print("\n📝 Three agent example completed!")

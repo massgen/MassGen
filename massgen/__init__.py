@@ -36,11 +36,11 @@ TODO - Missing Features (to be added in future releases):
 
 Usage:
     from massgen import ResponseBackend, create_simple_agent, Orchestrator
-    
+
     backend = ResponseBackend()
     agent = create_simple_agent(backend, "You are a helpful assistant")
     orchestrator = Orchestrator(agents={"agent1": agent})
-    
+
     async for chunk in orchestrator.chat_simple("Your question"):
         if chunk.type == "content":
             print(chunk.content, end="")
@@ -52,13 +52,13 @@ from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
 from .chat_agent import (
-    ChatAgent, 
-    SingleAgent, 
+    ChatAgent,
+    SingleAgent,
     ConfigurableAgent,
     create_simple_agent,
-    create_expert_agent, 
+    create_expert_agent,
     create_research_agent,
-    create_computational_agent
+    create_computational_agent,
 )
 from .orchestrator import Orchestrator, create_orchestrator
 from .message_templates import MessageTemplates, get_templates
@@ -73,26 +73,22 @@ __all__ = [
     "ClaudeBackend",
     "GeminiBackend",
     "GrokBackend",
-    
     # Agents
     "ChatAgent",
-    "SingleAgent", 
+    "SingleAgent",
     "ConfigurableAgent",
     "create_simple_agent",
     "create_expert_agent",
-    "create_research_agent", 
+    "create_research_agent",
     "create_computational_agent",
-    
     # Orchestrator
     "Orchestrator",
     "create_orchestrator",
-    
     # Configuration
     "AgentConfig",
     "MessageTemplates",
     "get_templates",
-    
     # Metadata
     "__version__",
-    "__author__"
+    "__author__",
 ]
