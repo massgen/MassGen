@@ -88,6 +88,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
+- [v0.0.4 Roadmap](#v004-roadmap)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
@@ -472,6 +473,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 -   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem.
 
 We welcome community contributions to help us achieve these goals.
+
+### v0.0.4 Roadmap
+
+Version 0.0.4 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+
+- **Coding Agent Integration** (Required): Seamless integration of Claude Code CLI and Gemini CLI with coding-specific tools and workflows
+- **Enhanced Backend Features** (Optional): Improved error handling, health monitoring, and support for additional model providers
+- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
+
+For detailed milestones and technical specifications, see the [full v0.0.4 roadmap](ROADMAP_v0.0.4.md).
 
 ---
 
