@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Complete architecture with foundation release
-- Multi-backend support: Claude (Messages API), OpenAI (Responses API), Grok (Chat API), Gemini (Chat API)
+- Multi-backend support: Claude (Messages API), Gemini (Chat API), Grok (Chat API), OpenAI (Responses API)
 - Builtin tools: Code execution and web search with streaming results
 - Async streaming with proper chat agent interfaces and tool result handling
 - Multi-agent orchestration with voting and consensus mechanisms
