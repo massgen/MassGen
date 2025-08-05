@@ -26,7 +26,7 @@ uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "fin
 
 Each agent conducted extensive independent research with multiple web searches, demonstrating MassGen's ability to cross-verify current events:
 
-* **Agent 1 (gemini2.5flash)** conducted 29 distinct web searches covering major investments, product updates, industry trends, and regulatory developments. It systematically categorized findings into Major Investments, Product Updates, Industry Trends, and Other Notable News.
+* **Agent 1 (gemini2.5flash)** conducted 30+ distinct web searches covering major investments, product updates, industry trends, and regulatory developments. It systematically categorized findings into Major Investments, Product Updates, Industry Trends, and Other Notable News.
 
 * **Agent 2 (gpt-4o)** performed focused searches on specific developments, particularly emphasizing regulatory changes (EU AI Act, US National AI Action Plan) and corporate earnings impacts. It organized findings into 10 numbered key developments with detailed sourcing.
 
@@ -67,7 +67,7 @@ The final presentation integrated 29 distinct web searches with specific citatio
 
 **Agent 1** presented the final response, featuring:
 
-- **Exhaustive Research Integration:** 29 web searches synthesized into coherent categories
+- **Exhaustive Research Integration:** dozens of web searches synthesized into coherent categories
 - **Precise Financial Data:** Specific investment figures, revenue numbers, and market valuations
 - **Global Scope:** Coverage spanning US, EU, China, Africa, Indonesia, and Norway
 - **Regulatory Context:** Detailed coverage of policy changes and compliance implications
@@ -76,4 +76,4 @@ The final presentation integrated 29 distinct web searches with specific citatio
 
 ## Conclusion
 
-This case study exemplifies MassGen's exceptional capability in current events synthesis through extensive cross-verification and content aggregation. The 170-second session with 29 web searches demonstrates the system's commitment to comprehensive, accurate reporting on rapidly evolving topics. The unanimous 3-0 consensus emerged from agents recognizing not just accuracy, but the superior breadth, depth, and verification quality of Agent 1's research-intensive approach. Agent 3's final vote particularly emphasized how the response had been *"verified and supplemented with additional search results,"* highlighting MassGen's strength in research-driven journalism and fact-checking. This showcases the system's ability to transform multiple independent research efforts into authoritative, well-sourced content that synthesizes complex, fast-moving developments across the global AI landscape into a coherent, actionable intelligence briefing.
+This case study exemplifies MassGen's exceptional capability in current events synthesis through extensive cross-verification and content aggregation. The 170-second session with dozens of web searches demonstrates the system's commitment to comprehensive, accurate reporting on rapidly evolving topics. The unanimous 3-0 consensus emerged from agents recognizing not just accuracy, but the superior breadth, depth, and verification quality of Agent 1's research-intensive approach. Agent 3's final vote particularly emphasized how the response had been *"verified and supplemented with additional search results,"* highlighting MassGen's strength in research-driven journalism and fact-checking. This showcases the system's ability to transform multiple independent research efforts into authoritative, well-sourced content that synthesizes complex, fast-moving developments across the global AI landscape into a coherent, actionable intelligence briefing.
