@@ -172,7 +172,7 @@ class RichTerminalDisplay(TerminalDisplay):
         self._setup_theme()
 
         # Interactive mode variables
-        self._interactive_mode = kwargs.get("interactive_mode", True)
+        self._keyboard_interactive_mode = kwargs.get("keyboard_interactive_mode", True)
         self._safe_keyboard_mode = kwargs.get(
             "safe_keyboard_mode", False
         )  # Non-interfering keyboard mode
@@ -960,7 +960,7 @@ class RichTerminalDisplay(TerminalDisplay):
         self._create_initial_display()
 
         # Setup keyboard handling if in interactive mode
-        if self._interactive_mode:
+        if self._keyboard_interactive_mode:
             self._setup_keyboard_handler()
 
         # Start live display with adaptive settings and fallback support
@@ -1083,12 +1083,11 @@ class RichTerminalDisplay(TerminalDisplay):
                 self._agent_keys[key] = agent_id
 
             # Start background input thread for Live mode
-            if self._interactive_mode:
+            if self._keyboard_interactive_mode:
                 self._start_input_thread()
 
         except ImportError:
-            # Fall back to non-interactive mode if keyboard library not available
-            self._interactive_mode = False
+            self._keyboard_interactive_mode = False
 
     def _start_input_thread(self):
         """Start background thread for keyboard input during Live mode."""
@@ -1475,7 +1474,7 @@ class RichTerminalDisplay(TerminalDisplay):
     def show_agent_selector(self):
         """Show agent selector and handle user input."""
 
-        if not self._interactive_mode or not hasattr(self, "_agent_keys"):
+        if not self._keyboard_interactive_mode or not hasattr(self, "_agent_keys"):
             return
 
         # Prevent duplicate agent selector calls
@@ -1493,7 +1492,13 @@ class RichTerminalDisplay(TerminalDisplay):
                 loop_count += 1
 
                 # Display available options
+
                 options_text = Text()
+                options_text.append(
+                    "\nThis is a system inspection interface for diving into the multi-agent collaboration behind the scenes in MassGen. It lets you examine each agent’s original output and compare it to the final MassGen answer in terms of quality. You can explore the detailed communication, collaboration, voting, and decision-making process.\n",
+                    style=self.colors["text"],
+                )
+
                 options_text.append(
                     "\n🎮 Select an agent to view full output:\n",
                     style=self.colors["primary"],
@@ -1501,20 +1506,26 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 for key, agent_id in self._agent_keys.items():
                     options_text.append(
-                        f"  {key}: {agent_id.upper()}\n", style=self.colors["text"]
+                        f"  {key}: ", style=self.colors["warning"]
+                    )
+                    options_text.append(
+                        f"Inspect the original answer and working log of agent ", style=self.colors["text"]
+                    )
+                    options_text.append(
+                        f"{agent_id}\n", style=self.colors["warning"]
                     )
 
                 options_text.append(
-                    "  s: System Status\n", style=self.colors["warning"]
+                    "  s: Inpsect the orchestrator working log including the voting process\n", style=self.colors["warning"]
                 )
 
                 # Add option to show final presentation if it's stored
                 if self._stored_final_presentation and self._stored_presentation_agent:
                     options_text.append(
-                        "  f: Show Final Presentation\n", style=self.colors["success"]
+                        f"  f: Show final presentation from Selected Agent ({agent_id})\n", style=self.colors["success"]
                     )
 
-                options_text.append("  q: next Question\n" if self._interactive_mode else "  q: Quit\n", style=self.colors["info"])
+                options_text.append("  q: Quit Inspection\n", style=self.colors["info"])
 
                 self.console.print(
                     Panel(
@@ -1687,7 +1698,7 @@ class RichTerminalDisplay(TerminalDisplay):
             title += f" ({backend_name})"
 
         # Add interactive indicator if enabled
-        if self._interactive_mode and hasattr(self, "_agent_keys"):
+        if self._keyboard_interactive_mode and hasattr(self, "_agent_keys"):
             agent_key = next(
                 (k for k, v in self._agent_keys.items() if v == agent_id), None
             )
@@ -2069,7 +2080,7 @@ class RichTerminalDisplay(TerminalDisplay):
             )
 
         # Interactive mode instructions
-        if self._interactive_mode and hasattr(self, "_agent_keys"):
+        if self._keyboard_interactive_mode and hasattr(self, "_agent_keys"):
             if self._safe_keyboard_mode:
                 footer_content.append(
                     "📂 Safe Mode: Keyboard disabled to prevent rendering issues\n",
@@ -2709,7 +2720,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Show interactive options for viewing agent details (only if not in safe mode)
         if (
-            self._interactive_mode
+            self._keyboard_interactive_mode
             and hasattr(self, "_agent_keys")
             and not self._safe_keyboard_mode
         ):
