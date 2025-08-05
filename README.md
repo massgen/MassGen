@@ -249,8 +249,6 @@ All available quick configuration files can be found [here](massgen/configs).
 
 #### Configuration File Format
 
-TODO: check & update
-
 MassGen supports YAML configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
