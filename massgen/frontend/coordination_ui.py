@@ -1,0 +1,945 @@
+"""
+MassGen Coordination UI
+
+Main interface for coordinating agents with visual display and logging.
+"""
+
+import time
+import asyncio
+from typing import Optional, List, Dict, Any, AsyncGenerator
+from .displays.base_display import BaseDisplay
+from .displays.terminal_display import TerminalDisplay
+from .displays.simple_display import SimpleDisplay
+from .displays.rich_terminal_display import RichTerminalDisplay, is_rich_available
+from .logging.realtime_logger import RealtimeLogger
+
+
+class CoordinationUI:
+    """Main coordination interface with display and logging capabilities."""
+
+    def __init__(
+        self,
+        display: Optional[BaseDisplay] = None,
+        logger: Optional[RealtimeLogger] = None,
+        display_type: str = "terminal",
+        logging_enabled: bool = True,
+        enable_final_presentation: bool = False,
+        **kwargs,
+    ):
+        """Initialize coordination UI.
+
+        Args:
+            display: Custom display instance (overrides display_type)
+            logger: Custom logger instance
+            display_type: Type of display ("terminal", "simple", "rich_terminal", "textual_terminal")
+            logging_enabled: Whether to enable real-time logging
+            enable_final_presentation: Whether to ask winning agent to present final answer
+            **kwargs: Additional configuration passed to display/logger
+        """
+        self.enable_final_presentation = enable_final_presentation
+        self.display = display
+        # Filter kwargs for logger (only pass logger-specific params)
+        logger_kwargs = {
+            k: v for k, v in kwargs.items() if k in ["filename", "update_frequency"]
+        }
+        self.logger = (
+            logger
+            if logger is not None
+            else (RealtimeLogger(**logger_kwargs) if logging_enabled else None)
+        )
+        self.display_type = display_type
+        self.config = kwargs
+
+        # Will be set during coordination
+        self.agent_ids = []
+        self.orchestrator = None
+
+        # Flush output configuration (matches rich_terminal_display)
+        self._flush_char_delay = 0.03  # 30ms between characters
+        self._flush_word_delay = 0.08  # 80ms after punctuation
+
+        # Initialize answer buffer state
+        self._answer_buffer = ""
+        self._answer_timeout_task = None
+        self._final_answer_shown = False
+
+    def reset(self):
+        """Reset UI state for next coordination session."""
+        # Clean up display if exists
+        if self.display:
+            try:
+                self.display.cleanup()
+            except Exception:
+                pass  # Ignore cleanup errors
+            self.display = None
+
+        # Reset all state variables
+        self.agent_ids = []
+        self.orchestrator = None
+
+        # Reset answer buffer state if they exist
+        if hasattr(self, "_answer_buffer"):
+            self._answer_buffer = ""
+        if hasattr(self, "_answer_timeout_task") and self._answer_timeout_task:
+            self._answer_timeout_task.cancel()
+            self._answer_timeout_task = None
+        if hasattr(self, "_final_answer_shown"):
+            self._final_answer_shown = False
+
+    async def coordinate(
+        self, orchestrator, question: str, agent_ids: Optional[List[str]] = None
+    ) -> str:
+        """Coordinate agents with visual display and logging.
+
+        Args:
+            orchestrator: MassGen orchestrator instance
+            question: Question for coordination
+            agent_ids: Optional list of agent IDs (auto-detected if not provided)
+
+        Returns:
+            Final coordinated response
+        """
+        # Reset display to ensure clean state for each coordination
+        if self.display is not None:
+            self.display.cleanup()
+        self.display = None
+
+        self.orchestrator = orchestrator
+
+        # Auto-detect agent IDs if not provided
+        if agent_ids is None:
+            self.agent_ids = list(orchestrator.agents.keys())
+        else:
+            self.agent_ids = agent_ids
+
+        # Initialize display if not provided
+        if self.display is None:
+            if self.display_type == "terminal":
+                self.display = TerminalDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "simple":
+                self.display = SimpleDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "rich_terminal":
+                if not is_rich_available():
+                    print(
+                        "⚠️  Rich library not available. Falling back to terminal display."
+                    )
+                    print("   Install with: pip install rich")
+                    self.display = TerminalDisplay(self.agent_ids, **self.config)
+                else:
+                    self.display = RichTerminalDisplay(self.agent_ids, **self.config)
+            else:
+                raise ValueError(f"Unknown display type: {self.display_type}")
+
+        # Pass orchestrator reference to display for backend info
+        self.display.orchestrator = orchestrator
+
+        # Initialize answer buffering for preventing duplicate show_final_answer calls
+        self._answer_buffer = ""
+        self._answer_timeout_task = None
+        self._final_answer_shown = False
+
+        # Initialize logger and display
+        log_filename = None
+        if self.logger:
+            log_filename = self.logger.initialize_session(question, self.agent_ids)
+            monitoring = self.logger.get_monitoring_commands()
+            print(f"📁 Real-time log: {log_filename}")
+            print(f"💡 Monitor with: {monitoring['tail']}")
+            print()
+
+        self.display.initialize(question, log_filename)
+
+        try:
+            # Process coordination stream
+            full_response = ""
+            final_answer = ""
+
+            async for chunk in orchestrator.chat_simple(question):
+                content = getattr(chunk, "content", "") or ""
+                source = getattr(chunk, "source", None)
+                chunk_type = getattr(chunk, "type", "")
+
+                # Handle agent status updates
+                if chunk_type == "agent_status":
+                    status = getattr(chunk, "status", None)
+                    if source and status:
+                        self.display.update_agent_status(source, status)
+                    continue
+
+                # Handle builtin tool results
+                elif chunk_type == "builtin_tool_results":
+                    builtin_results = getattr(chunk, "builtin_tool_results", [])
+                    if builtin_results and source:
+                        for result in builtin_results:
+                            tool_type = result.get("tool_type", "unknown")
+                            status_result = result.get("status", "unknown")
+                            tool_msg = (
+                                f"🔧 [{tool_type.title()}] {status_result.title()}"
+                            )
+
+                            if tool_type in ["code_interpreter", "code_execution"]:
+                                code = result.get("code", "") or result.get(
+                                    "input", {}
+                                ).get("code", "")
+                                outputs = result.get("outputs")
+                                if code:
+                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
+                                if outputs:
+                                    tool_msg += f" - Result: {outputs}"
+                            elif tool_type == "web_search":
+                                query = result.get("query", "") or result.get(
+                                    "input", {}
+                                ).get("query", "")
+                                if query:
+                                    tool_msg += f" - Query: '{query}'"
+
+                            # Display as tool content for the specific agent
+                            await self._process_agent_content(source, tool_msg)
+                    continue
+
+                if content:
+                    full_response += content
+
+                    # Log chunk
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk.type)
+
+                    # Process content by source
+                    await self._process_content(source, content)
+
+            # Display vote results and get final presentation
+            status = orchestrator.get_status()
+            vote_results = status.get("vote_results", {})
+            selected_agent = status.get("selected_agent")
+
+            # if vote_results.get('vote_counts'):
+            #     self._display_vote_results(vote_results)
+            #     # Allow time for voting results to be visible
+            #     import time
+            #     time.sleep(1.0)
+
+            # Get final presentation from winning agent
+            if (
+                self.enable_final_presentation
+                and selected_agent
+                and vote_results.get("vote_counts")
+            ):
+                print(f"\n🎤  Final Presentation from {selected_agent}:")
+                print("=" * 60)
+
+                presentation_content = ""
+                try:
+                    async for chunk in orchestrator.get_final_presentation(
+                        selected_agent, vote_results
+                    ):
+                        content = getattr(chunk, "content", "") or ""
+                        if content:
+                            # Ensure content is a string
+                            if isinstance(content, list):
+                                content = " ".join(str(item) for item in content)
+                            elif not isinstance(content, str):
+                                content = str(content)
+
+                            # Simple content accumulation - let the display handle formatting
+                            presentation_content += content
+
+                            # Log presentation chunk
+                            if self.logger:
+                                self.logger.log_chunk(
+                                    selected_agent,
+                                    content,
+                                    getattr(chunk, "type", "presentation"),
+                                )
+
+                            # Display the presentation in real-time
+                            if self.display:
+                                try:
+                                    await self._process_content(selected_agent, content)
+                                except Exception as e:
+                                    # Error processing presentation content - continue gracefully
+                                    pass
+                                # Also print to console with flush using consistent timing with rich display
+                                self._print_with_flush(content)
+                            else:
+                                # Simple print for non-display mode
+                                print(content, end="", flush=True)
+                except AttributeError:
+                    # get_final_presentation method doesn't exist or failed
+                    print(
+                        "Final presentation not available - using coordination result"
+                    )
+                    presentation_content = ""
+
+                final_answer = presentation_content
+                print("\n" + "=" * 60)
+                # Allow time for final presentation to be fully visible
+                time.sleep(1.5)
+
+            # Get the clean final answer from orchestrator's stored state (avoids token spacing issues)
+            orchestrator_final_answer = None
+            if (
+                selected_agent
+                and hasattr(orchestrator, "agent_states")
+                and selected_agent in orchestrator.agent_states
+            ):
+                stored_answer = orchestrator.agent_states[selected_agent].answer
+                if stored_answer:
+                    # Clean up the stored answer
+                    orchestrator_final_answer = (
+                        stored_answer.replace("\\", "\n").replace("**", "").strip()
+                    )
+
+            # Use orchestrator's clean answer if available, otherwise fall back to presentation
+            final_result = (
+                orchestrator_final_answer
+                if orchestrator_final_answer
+                else (final_answer if final_answer else full_response)
+            )
+            if final_result:
+                # print(f"\n🎯 FINAL COORDINATED ANSWER")
+                # print("=" * 80)
+                # print(f"{final_result.strip()}")
+                # print("=" * 80)
+
+                # Show which agent was selected
+                if selected_agent:
+                    print(f"✅ Selected by: {selected_agent}")
+                    if vote_results.get("vote_counts"):
+                        vote_summary = ", ".join(
+                            [
+                                f"{agent}: {count}"
+                                for agent, count in vote_results["vote_counts"].items()
+                            ]
+                        )
+                        print(f"🗳️ Vote results: {vote_summary}")
+                print()
+
+            # Finalize session
+            if self.logger:
+                session_info = self.logger.finalize_session(final_answer, success=True)
+                print(f"💾 Session log: {session_info['filename']}")
+                print(
+                    f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
+                )
+
+            return final_result
+
+        except Exception as e:
+            if self.logger:
+                self.logger.finalize_session("", success=False)
+            raise
+        finally:
+            # Wait for any pending timeout task to complete before cleanup
+            if hasattr(self, "_answer_timeout_task") and self._answer_timeout_task:
+                try:
+                    # Give the task a chance to complete
+                    await asyncio.wait_for(self._answer_timeout_task, timeout=1.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    # If it takes too long or was cancelled, force flush
+                    if (
+                        hasattr(self, "_answer_buffer")
+                        and self._answer_buffer
+                        and not self._final_answer_shown
+                    ):
+                        await self._flush_final_answer()
+                    self._answer_timeout_task.cancel()
+
+            # Final check to flush any remaining buffered answer
+            if (
+                hasattr(self, "_answer_buffer")
+                and self._answer_buffer
+                and not self._final_answer_shown
+            ):
+                await self._flush_final_answer()
+
+            # Small delay to ensure display updates are processed
+            await asyncio.sleep(0.1)
+
+            if self.display:
+                self.display.cleanup()
+
+            if selected_agent:
+                print(f"✅ Selected by: {selected_agent}")
+                if vote_results.get("vote_counts"):
+                    vote_summary = ", ".join(
+                        [
+                            f"{agent}: {count}"
+                            for agent, count in vote_results["vote_counts"].items()
+                        ]
+                    )
+                    print(f"🗳️ Vote results: {vote_summary}")
+            print()
+
+            if self.logger:
+                session_info = self.logger.finalize_session(final_answer, success=True)
+                print(f"💾 Session log: {session_info['filename']}")
+                print(
+                    f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
+                )
+
+    async def coordinate_with_context(
+        self,
+        orchestrator,
+        question: str,
+        messages: List[Dict[str, Any]],
+        agent_ids: Optional[List[str]] = None,
+    ) -> str:
+        """Coordinate agents with conversation context and visual display.
+
+        Args:
+            orchestrator: MassGen orchestrator instance
+            question: Current question for coordination
+            messages: Full conversation message history
+            agent_ids: Optional list of agent IDs (auto-detected if not provided)
+
+        Returns:
+            Final coordinated response
+        """
+        # Reset display to ensure clean state for each coordination
+        if self.display is not None:
+            self.display.cleanup()
+        self.display = None
+
+        self.orchestrator = orchestrator
+
+        # Auto-detect agent IDs if not provided
+        if agent_ids is None:
+            self.agent_ids = list(orchestrator.agents.keys())
+        else:
+            self.agent_ids = agent_ids
+
+        # Initialize display if not provided
+        if self.display is None:
+            if self.display_type == "terminal":
+                self.display = TerminalDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "simple":
+                self.display = SimpleDisplay(self.agent_ids, **self.config)
+            elif self.display_type == "rich_terminal":
+                if not is_rich_available():
+                    print(
+                        "⚠️  Rich library not available. Falling back to terminal display."
+                    )
+                    print("   Install with: pip install rich")
+                    self.display = TerminalDisplay(self.agent_ids, **self.config)
+                else:
+                    self.display = RichTerminalDisplay(self.agent_ids, **self.config)
+            else:
+                raise ValueError(f"Unknown display type: {self.display_type}")
+
+        # Pass orchestrator reference to display for backend info
+        self.display.orchestrator = orchestrator
+
+        # Initialize logger and display with context info
+        log_filename = None
+        if self.logger:
+            # Add context info to session initialization
+            context_info = (
+                f"(with {len(messages)//2} previous exchanges)"
+                if len(messages) > 1
+                else ""
+            )
+            session_question = f"{question} {context_info}"
+            log_filename = self.logger.initialize_session(
+                session_question, self.agent_ids
+            )
+            monitoring = self.logger.get_monitoring_commands()
+            print(f"📁 Real-time log: {log_filename}")
+            print(f"💡 Monitor with: {monitoring['tail']}")
+            print()
+
+        self.display.initialize(question, log_filename)
+
+        try:
+            # Process coordination stream with conversation context
+            full_response = ""
+            final_answer = ""
+
+            # Use the orchestrator's chat method with full message context
+            async for chunk in orchestrator.chat(messages):
+                content = getattr(chunk, "content", "") or ""
+                source = getattr(chunk, "source", None)
+                chunk_type = getattr(chunk, "type", "")
+
+                # Handle agent status updates
+                if chunk_type == "agent_status":
+                    status = getattr(chunk, "status", None)
+                    if source and status:
+                        self.display.update_agent_status(source, status)
+                    continue
+
+                # Handle builtin tool results
+                elif chunk_type == "builtin_tool_results":
+                    builtin_results = getattr(chunk, "builtin_tool_results", [])
+                    if builtin_results and source:
+                        for result in builtin_results:
+                            tool_type = result.get("tool_type", "unknown")
+                            status_result = result.get("status", "unknown")
+                            tool_msg = (
+                                f"🔧 [{tool_type.title()}] {status_result.title()}"
+                            )
+
+                            if tool_type in ["code_interpreter", "code_execution"]:
+                                code = result.get("code", "") or result.get(
+                                    "input", {}
+                                ).get("code", "")
+                                outputs = result.get("outputs")
+                                if code:
+                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
+                                if outputs:
+                                    tool_msg += f" - Result: {outputs}"
+                            elif tool_type == "web_search":
+                                query = result.get("query", "") or result.get(
+                                    "input", {}
+                                ).get("query", "")
+                                if query:
+                                    tool_msg += f" - Query: '{query}'"
+
+                            # Display as tool content for the specific agent
+                            await self._process_agent_content(source, tool_msg)
+                    continue
+
+                if content:
+                    full_response += content
+
+                    # Log chunk
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk.type)
+
+                    # Process content by source
+                    await self._process_content(source, content)
+
+            # Display vote results and get final presentation
+            status = orchestrator.get_status()
+            vote_results = status.get("vote_results", {})
+            selected_agent = status.get("selected_agent")
+
+            # if vote_results.get('vote_counts'):
+            #     self._display_vote_results(vote_results)
+            #     # Allow time for voting results to be visible
+            #     import time
+            #     time.sleep(1.0)
+
+            # Get final presentation from winning agent
+            if (
+                self.enable_final_presentation
+                and selected_agent
+                and vote_results.get("vote_counts")
+            ):
+                print(f"\n🎤 Final Presentation from {selected_agent}:")
+                print("=" * 60)
+
+                presentation_content = ""
+                try:
+                    async for chunk in orchestrator.get_final_presentation(
+                        selected_agent, vote_results
+                    ):
+                        content = getattr(chunk, "content", "") or ""
+                        if content:
+                            # Ensure content is a string
+                            if isinstance(content, list):
+                                content = " ".join(str(item) for item in content)
+                            elif not isinstance(content, str):
+                                content = str(content)
+
+                            # Simple content accumulation - let the display handle formatting
+                            presentation_content += content
+
+                            # Log presentation chunk
+                            if self.logger:
+                                self.logger.log_chunk(
+                                    selected_agent,
+                                    content,
+                                    getattr(chunk, "type", "presentation"),
+                                )
+
+                            # Stream presentation to console with consistent flush timing
+                            self._print_with_flush(content)
+
+                            # Update display
+                            await self._process_content(selected_agent, content)
+
+                            if getattr(chunk, "type", "") == "done":
+                                break
+
+                except Exception as e:
+                    print(f"\n❌ Error during final presentation: {e}")
+                    presentation_content = full_response  # Fallback
+
+                final_answer = presentation_content
+                print("\n" + "=" * 60)
+                # Allow time for final presentation to be fully visible
+                time.sleep(1.5)
+
+            # Get the clean final answer from orchestrator's stored state
+            orchestrator_final_answer = None
+            if (
+                selected_agent
+                and hasattr(orchestrator, "agent_states")
+                and selected_agent in orchestrator.agent_states
+            ):
+                stored_answer = orchestrator.agent_states[selected_agent].answer
+                if stored_answer:
+                    # Clean up the stored answer
+                    orchestrator_final_answer = (
+                        stored_answer.replace("\\", "\n").replace("**", "").strip()
+                    )
+
+            # Use orchestrator's clean answer if available, otherwise fall back to presentation
+            final_result = (
+                orchestrator_final_answer
+                if orchestrator_final_answer
+                else (final_answer if final_answer else full_response)
+            )
+            if final_result:
+                # print(f"\n🎯 FINAL COORDINATED ANSWER")
+                # print("=" * 80)
+                # print(f"{final_result.strip()}")
+                # print("=" * 80)
+
+                # Show which agent was selected
+                if selected_agent:
+                    print(f"✅ Selected by: {selected_agent}")
+                    if vote_results.get("vote_counts"):
+                        vote_summary = ", ".join(
+                            [
+                                f"{agent}: {count}"
+                                for agent, count in vote_results["vote_counts"].items()
+                            ]
+                        )
+                        print(f"🗳️ Vote results: {vote_summary}")
+                print()
+
+            # Finalize session
+            if self.logger:
+                session_info = self.logger.finalize_session(final_answer, success=True)
+                print(f"💾 Session log: {session_info['filename']}")
+                print(
+                    f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
+                )
+
+            return final_result
+
+        except Exception as e:
+            if self.logger:
+                self.logger.finalize_session("", success=False)
+            raise
+        finally:
+            # Wait for any pending timeout task to complete before cleanup
+            if hasattr(self, "_answer_timeout_task") and self._answer_timeout_task:
+                try:
+                    # Give the task a chance to complete
+                    await asyncio.wait_for(self._answer_timeout_task, timeout=1.0)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    # If it takes too long or was cancelled, force flush
+                    if (
+                        hasattr(self, "_answer_buffer")
+                        and self._answer_buffer
+                        and not self._final_answer_shown
+                    ):
+                        await self._flush_final_answer()
+                    self._answer_timeout_task.cancel()
+
+            # Final check to flush any remaining buffered answer
+            if (
+                hasattr(self, "_answer_buffer")
+                and self._answer_buffer
+                and not self._final_answer_shown
+            ):
+                await self._flush_final_answer()
+
+            # Small delay to ensure display updates are processed
+            await asyncio.sleep(0.1)
+
+            if self.display:
+                self.display.cleanup()
+
+    def _display_vote_results(self, vote_results: Dict[str, Any]):
+        """Display voting results in a formatted table."""
+        print(f"\n🗳️  VOTING RESULTS")
+        print("=" * 50)
+
+        vote_counts = vote_results.get("vote_counts", {})
+        voter_details = vote_results.get("voter_details", {})
+        winner = vote_results.get("winner")
+        is_tie = vote_results.get("is_tie", False)
+
+        # Display vote counts
+        if vote_counts:
+            print(f"\n📊 Vote Count:")
+            for agent_id, count in sorted(
+                vote_counts.items(), key=lambda x: x[1], reverse=True
+            ):
+                winner_mark = "🏆" if agent_id == winner else "  "
+                tie_mark = " (tie-broken)" if is_tie and agent_id == winner else ""
+                print(
+                    f"   {winner_mark} {agent_id}: {count} vote{'s' if count != 1 else ''}{tie_mark}"
+                )
+
+        # Display voter details
+        if voter_details:
+            print(f"\n🔍 Vote Details:")
+            for voted_for, voters in voter_details.items():
+                print(f"   → {voted_for}:")
+                for voter_info in voters:
+                    voter = voter_info["voter"]
+                    reason = voter_info["reason"]
+                    print(f'     • {voter}: "{reason}"')
+
+        # Display tie-breaking info
+        if is_tie:
+            print(
+                f"\n⚖️  Tie broken by agent registration order (orchestrator setup order)"
+            )
+
+        # Display summary stats
+        total_votes = vote_results.get("total_votes", 0)
+        agents_voted = vote_results.get("agents_voted", 0)
+        print(f"\n📈 Summary: {agents_voted}/{total_votes} agents voted")
+        print("=" * 50)
+
+    async def _process_content(self, source: Optional[str], content: str):
+        """Process content from coordination stream."""
+        # Handle agent content
+        if source in self.agent_ids:
+            await self._process_agent_content(source, content)
+
+        # Handle orchestrator content
+        elif source in ["coordination_hub", "orchestrator"] or source is None:
+            await self._process_orchestrator_content(content)
+
+        # Capture coordination events from any source (orchestrator or agents)
+        if any(marker in content for marker in ["✅", "🗳️", "🔄", "❌"]):
+            clean_line = content.replace("**", "").replace("##", "").strip()
+            if clean_line and not any(
+                skip in clean_line
+                for skip in [
+                    "result ignored",
+                    "Starting",
+                    "Agents Coordinating",
+                    "Coordinating agents, please wait",
+                ]
+            ):
+                event = (
+                    f"🔄 {source}: {clean_line}"
+                    if source and source not in ["coordination_hub", "orchestrator"]
+                    else f"🔄 {clean_line}"
+                )
+                self.display.add_orchestrator_event(event)
+                if self.logger:
+                    self.logger.log_orchestrator_event(event)
+
+    async def _process_agent_content(self, agent_id: str, content: str):
+        """Process content from a specific agent."""
+        # Update agent status - if agent is streaming content, they're working
+        # But don't override "completed" status
+        current_status = self.display.get_agent_status(agent_id)
+        if current_status not in ["working", "completed"]:
+            self.display.update_agent_status(agent_id, "working")
+
+        # Determine content type and process
+        if "🔧" in content or "🔄 Vote invalid" in content:
+            # Tool usage or status messages
+            content_type = "tool" if "🔧" in content else "status"
+            self.display.update_agent_content(agent_id, content, content_type)
+
+            # Update status on completion
+            if "new_answer" in content or "vote" in content:
+                self.display.update_agent_status(agent_id, "completed")
+
+            # Log to detailed logger
+            if self.logger:
+                self.logger.log_agent_content(agent_id, content, content_type)
+
+        else:
+            # Thinking content
+            self.display.update_agent_content(agent_id, content, "thinking")
+            if self.logger:
+                self.logger.log_agent_content(agent_id, content, "thinking")
+
+    async def _flush_final_answer(self):
+        """Flush the buffered final answer after a timeout to prevent duplicate calls."""
+        if self._final_answer_shown or not self._answer_buffer.strip():
+            return
+
+        # Get orchestrator status for voting results and winner
+        status = self.orchestrator.get_status()
+        selected_agent = status.get("selected_agent", "Unknown")
+        vote_results = status.get("vote_results", {})
+
+        # Mark as shown to prevent duplicate calls
+        self._final_answer_shown = True
+
+        # Show the final answer
+        self.display.show_final_answer(
+            self._answer_buffer.strip(),
+            vote_results=vote_results,
+            selected_agent=selected_agent,
+        )
+
+    async def _process_orchestrator_content(self, content: str):
+        """Process content from orchestrator."""
+        # Handle final answer - merge with voting info
+        if "Final Coordinated Answer" in content:
+            # Don't create event yet - wait for actual answer content to merge
+            pass
+
+        # Handle coordination events (provided answer, votes)
+        elif any(marker in content for marker in ["✅", "🗳️", "🔄", "❌"]):
+            clean_line = content.replace("**", "").replace("##", "").strip()
+            if clean_line and not any(
+                skip in clean_line
+                for skip in [
+                    "result ignored",
+                    "Starting",
+                    "Agents Coordinating",
+                    "Coordinating agents, please wait",
+                ]
+            ):
+                event = f"🔄 {clean_line}"
+                self.display.add_orchestrator_event(event)
+                if self.logger:
+                    self.logger.log_orchestrator_event(event)
+
+        # Handle final answer content - buffer it to prevent duplicate calls
+        elif "Final Coordinated Answer" not in content and not any(
+            marker in content
+            for marker in [
+                "✅",
+                "🗳️",
+                "🎯",
+                "Starting",
+                "Agents Coordinating",
+                "🔄",
+                "**",
+                "result ignored",
+                "restart pending",
+            ]
+        ):
+            # Extract clean final answer content
+            clean_content = content.strip()
+            if (
+                clean_content
+                and not clean_content.startswith("---")
+                and not clean_content.startswith("*Coordinated by")
+            ):
+                # Add to buffer
+                if self._answer_buffer:
+                    self._answer_buffer += " " + clean_content
+                else:
+                    self._answer_buffer = clean_content
+
+                # Cancel previous timeout if it exists
+                if self._answer_timeout_task:
+                    self._answer_timeout_task.cancel()
+
+                # Set a timeout to flush the answer (in case streaming stops)
+                self._answer_timeout_task = asyncio.create_task(
+                    self._schedule_final_answer_flush()
+                )
+
+                # Create event for this chunk but don't call show_final_answer yet
+                status = self.orchestrator.get_status()
+                selected_agent = status.get("selected_agent", "Unknown")
+                vote_results = status.get("vote_results", {})
+                vote_counts = vote_results.get("vote_counts", {})
+                is_tie = vote_results.get("is_tie", False)
+
+                # Only create final event for first chunk to avoid spam
+                if self._answer_buffer == clean_content:  # First chunk
+                    if vote_counts:
+                        vote_summary = ", ".join(
+                            [
+                                f"{agent}: {count} vote{'s' if count != 1 else ''}"
+                                for agent, count in vote_counts.items()
+                            ]
+                        )
+                        tie_info = (
+                            " (tie-broken by registration order)" if is_tie else ""
+                        )
+                        event = f"🎯 FINAL: {selected_agent} selected ({vote_summary}{tie_info}) → [buffering...]"
+                    else:
+                        event = f"🎯 FINAL: {selected_agent} selected → [buffering...]"
+
+                    self.display.add_orchestrator_event(event)
+                    if self.logger:
+                        self.logger.log_orchestrator_event(event)
+
+    async def _schedule_final_answer_flush(self):
+        """Schedule the final answer flush after a delay to collect all chunks."""
+        await asyncio.sleep(0.5)  # Wait 0.5 seconds for more chunks
+        await self._flush_final_answer()
+
+    def _print_with_flush(self, content: str):
+        """Print content chunks directly without character-by-character flushing."""
+        try:
+            # Display the entire chunk immediately
+            print(content, end="", flush=True)
+        except Exception:
+            # On any error, fallback to immediate display
+            print(content, end="", flush=True)
+
+
+# Convenience functions for common use cases
+async def coordinate_with_terminal_ui(
+    orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
+) -> str:
+    """Quick coordination with terminal UI and logging.
+
+    Args:
+        orchestrator: MassGen orchestrator instance
+        question: Question for coordination
+        enable_final_presentation: Whether to ask winning agent to present final answer
+        **kwargs: Additional configuration
+
+    Returns:
+        Final coordinated response
+    """
+    ui = CoordinationUI(
+        display_type="terminal",
+        enable_final_presentation=enable_final_presentation,
+        **kwargs,
+    )
+    return await ui.coordinate(orchestrator, question)
+
+
+async def coordinate_with_simple_ui(
+    orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
+) -> str:
+    """Quick coordination with simple UI and logging.
+
+    Args:
+        orchestrator: MassGen orchestrator instance
+        question: Question for coordination
+        **kwargs: Additional configuration
+
+    Returns:
+        Final coordinated response
+    """
+    ui = CoordinationUI(
+        display_type="simple",
+        enable_final_presentation=enable_final_presentation,
+        **kwargs,
+    )
+    return await ui.coordinate(orchestrator, question)
+
+
+async def coordinate_with_rich_ui(
+    orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
+) -> str:
+    """Quick coordination with rich terminal UI and logging.
+
+    Args:
+        orchestrator: MassGen orchestrator instance
+        question: Question for coordination
+        enable_final_presentation: Whether to ask winning agent to present final answer
+        **kwargs: Additional configuration (theme, refresh_rate, etc.)
+
+    Returns:
+        Final coordinated response
+    """
+    ui = CoordinationUI(
+        display_type="rich_terminal",
+        enable_final_presentation=enable_final_presentation,
+        **kwargs,
+    )
+    return await ui.coordinate(orchestrator, question)

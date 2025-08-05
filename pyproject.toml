@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "massgen"
-version = "0.0.1"
+dynamic = ["version"]
 description = "Multi-Agent Scaling System - A powerful framework for collaborative AI"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = { text = "Apache-2.0" }
 authors = [
     { name = "MassGen Team", email = "contact@massgen.dev" }
 ]
-keywords = ["ai", "multi-agent", "collaboration", "orchestration", "llm", "gpt", "claude", "gemini", "grok"]
+keywords = ["ai", "multi-agent", "collaboration", "orchestration", "llm", "claude", "gemini", "gpt", "xai"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -27,13 +27,18 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "openai>=1.0.0",
+    "datasets==3.2.0",
+    "openai==1.71.0",
+    "xai-sdk==1.0.0",
+    "anthropic==0.49.0",
+    "nest-asyncio==1.6.0",
+    "wcwidth>=0.2.5",
+    "google-genai>=1.27.0",
     "python-dotenv>=1.0.0",
+    "PyYAML>=6.0",
+    "rich==13.7.0",
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
-    "PyYAML>=6.0.0",
-    "google-genai>=1.27.0",
-    "xai-sdk>=0.0.1",
 ]
 
 [project.optional-dependencies]
@@ -56,8 +61,6 @@ docs = [
     "myst-parser>=1.0.0",
 ]
 all = [
-    "google-generativeai>=0.3.0",
-    "anthropic>=0.18.0",
 ]
 
 [project.scripts]
@@ -73,6 +76,9 @@ Documentation = "https://github.com/Leezekun/MassGen/blob/main/README.md"
 [tool.setuptools]
 include-package-data = true
 zip-safe = false
+
+[tool.setuptools.dynamic]
+version = {attr = "massgen.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -21,30 +21,89 @@
 </p>
 
 <p align="center">
-  <a href="https://youtu.be/eMBdoAYeujw">
-    <img src="assets/thumbnail.png" alt="MassGen Demo Video" width="600">
+  <a href="https://youtu.be/Dp2oldJJImw">
+    <img src="https://img.youtube.com/vi/Dp2oldJJImw/0.jpg" alt="MassGen Demo Video" width="600">
   </a>
 </p>
 
-
-<!-- <div align="center">
-  <img src="assets/MassGen-v1.gif" alt="MassGen Demo" width="800">
-</div> -->
-
-> 🧠 **Multi-agent scaling through intelligent collaboration in Grok Heavy style**
+<p align="center">
+  <i>Multi-agent scaling through intelligent collaboration in Grok Heavy style</i>
+</p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
-This project started with the "threads of thought" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/2025/04/16/Reasoning/), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2).
+This project started with the "threads of thought" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/2025/04/16/Reasoning/), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2). Here is a [video recording](https://www.youtube.com/watch?v=xM2Uguw1UsQ) of the background context introduction presented at the Berkeley Agentic AI Summit 2025.
 
 ---
 
 ## 📋 Table of Contents
 
-- [✨ Key Features](#-key-features)
-- [🏗️ System Design](#️-system-design)
-- [🚀 Quick Start](#-quick-start)
-- [💡 Examples](#-examples)
+<details open>
+<summary><h3>✨ Key Features</h3></summary>
+
+- [Cross-Model/Agent Synergy](#-key-features-1)
+- [Parallel Processing](#-key-features-1)  
+- [Intelligence Sharing](#-key-features-1)
+- [Consensus Building](#-key-features-1)
+- [Live Visualization](#-key-features-1)
+</details>
+
+<details open>
+<summary><h3>🏗️ System Design</h3></summary>
+
+- [System Architecture](#%EF%B8%8F-system-design-1)
+- [Parallel Processing](#%EF%B8%8F-system-design-1)
+- [Real-time Collaboration](#%EF%B8%8F-system-design-1)
+- [Convergence Detection](#%EF%B8%8F-system-design-1)
+- [Adaptive Coordination](#%EF%B8%8F-system-design-1)
+</details>
+
+<details open>
+<summary><h3>🚀 Quick Start</h3></summary>
+
+- [📥 Installation](#1--installation)
+- [🔐 API Configuration](#2--api-configuration)
+- [🧩 Supported Models and Tools](#3--supported-models-and-tools)
+  - [Models](#models)
+  - [Tools](#tools)
+- [🏃 Run MassGen](#4--run-massgen)
+  - [Quick Test with A Single Model](#quick-test-with-a-single-model)
+  - [Multiple Agents from Config](#multiple-agents-from-config)
+  - [CLI Configuration Parameters](#cli-configuration-parameters)
+  - [Configuration File Format](#configuration-file-format)
+  - [Interactive Multi-Turn Mode](#interactive-multi-turn-mode)
+- [📊 View Results](#5--view-results)
+  - [Real-time Display](#real-time-display)
+  - [Comprehensive Logging](#comprehensive-logging)
+</details>
+
+<details open>
+<summary><h3>💡 Examples</h3></summary>
+
+- [📚 Case Studies](#case-studies)
+- [❓ Question Answering](#1--question-answering)
+- [🧠 Creative Writing](#2--creative-writing)
+- [🔬 Research](#3-research)
+</details>
+
+<details open>
+<summary><h3>🗺️ Roadmap</h3></summary>
+
+- [Key Future Enhancements](#key-future-enhancements)
+  - Advanced Agent Collaboration
+  - Expanded Model, Tool & Agent Integration
+  - Improved Performance & Scalability
+  - Enhanced Developer Experience
+  - Web Interface
+- [v0.0.4 Roadmap](#v004-roadmap)
+</details>
+
+<details open>
+<summary><h3>📚 Additional Resources</h3></summary>
+
 - [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [⭐ Star History](#-star-history)
+</details>
 
 ---
 
@@ -62,7 +121,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ## 🏗️ System Design
 
-MassGen operates through a sophisticated architecture designed for **seamless multi-agent collaboration**:
+MassGen operates through an architecture designed for **seamless multi-agent collaboration**:
 
 ```mermaid
 graph TB
@@ -116,103 +175,223 @@ uv venv
 
 ### 2. 🔐 API Configuration
 
-Create a `.env` file in the `massgen/backends/` directory with your API keys:
+Create a `.env` file in the `massgen` directory with your API keys:
 
 ```bash
 # Copy example configuration
-cp massgen/backends/.env.example massgen/backends/.env
+cp .env.example .env
 
 # Edit with your API keys
-OPENAI_API_KEY=sk-your-openai-key-here
-XAI_API_KEY=xai-your-xai-key-here
+ANTHROPIC_API_KEY=your-anthropic-key-here
 GEMINI_API_KEY=your-gemini-key-here
+OPENAI_API_KEY=your-openai-key-here
+XAI_API_KEY=your-xai-key-here
 ```
 
 Make sure you set up the API key for the model you want to use.
 
 **Useful links to get API keys:**
+ - [Claude](https://docs.anthropic.com/en/api/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
- - [OpenAI](https://platform.openai.com/api-keys)
  - [Grok](https://docs.x.ai/docs/overview)
+ - [OpenAI](https://platform.openai.com/api-keys)
 
 ### 3. 🧩 Supported Models and Tools
 
-<!-- What does the following mean? If it can be clarified, then we can uncomment -->
-<!-- Configure the models you wish to use by updating the model registry in `massgen/utils.py`.  -->
-
 #### Models
 
-The system currently supports three model providers with advanced reasoning capabilities: **Google Gemini**, **OpenAI**, and **xAI Grok**. The specific models tested can be found in `massgen/utils.py`. Additional models can be registered in that file.
-More providers and local inference of open-sourced models (using vllm or sglang) will be added (help wanted!) and the extension will be made easier.
+The system currently supports four model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**. 
+More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
 
-MassGen agents can leverage various tools to enhance their problem-solving capabilities. The Gemini, OpenAI, and Grok models can use their own built-in search and code execution. You can easily extend functionality by registering custom tools in `massgen/tools.py`.
+MassGen agents can leverage various tools to enhance their problem-solving capabilities. `Claude`, `Gemini`, and `OpenAI` models support built-in web search and code execution. `Grok` supports web search as well, but it does not currently offer native code execution at the model level.
 
 **Supported Built-in Tools by Models:**
 
 | Backend | Live Search | Code Execution |
 |---------|:-----------:|:--------------:|
-| **Gemini** | ✅ | ✅ |
+| **Claude** | ✅ | ✅ |
 | **OpenAI** | ✅ | ✅ |
 | **Grok** | ✅ | ❌ |
-
-> 🔧 **Custom Tools**: More tools are coming soon! Check `massgen/tools.py` to add your own custom tools and expand agent capabilities.
+| **Gemini** | ✅ | ✅ |
 
 ### 4. 🏃 Run MassGen
 
-#### Simple Usage
-```bash
-# Multi-agent mode with specific models
-uv run python cli.py "Which AI won IMO in 2025?" --models gemini-2.5-flash gpt-4o
+#### Quick Test with A Single Model
 
-# Single agent mode
-uv run python cli.py "What is greatest common divisor of 238, 756, and 1512" --models gemini-2.5-flash
+```bash
+uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 ```
 
-#### Configuration File Usage
+All supported models can be found [here](massgen/utils.py).
+
+#### Multiple Agents from Config
 ```bash
 # Use configuration file
-uv run python cli.py --config examples/fast_config.yaml "find big AI news this week"
-
-# Override specific parameters
-uv run python cli.py --config examples/fast_config.yaml "who will win World Cup 2026" --max-duration 120 --consensus 0.5
+uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
 ```
 
-#### Configuration Parameters
+All available quick configuration files can be found [here](massgen/configs).
 
-| Parameter | Description |
-|-----------|-------------|
-| `--config` | Path to YAML configuration file with agent setup, model parameters, and orchestrator settings |
-| `--models` | Space-separated model names. Single model enables single-agent mode; multiple models enable collaborative multi-agent mode |
-| `--consensus` | Consensus threshold (0.0-1.0) for multi-agent agreement. Unmet thresholds trigger continued debate and refinement |
-| `--max-duration` | Maximum session execution time in seconds before automatic termination |
-| `--max-debates` | Maximum number of debate rounds allowed when agents fail to reach consensus |
-| `--no-display` | Disable real-time streaming display of agent progress |
-| `--no-logs` | Disable automatic session logging to files |
+#### CLI Configuration Parameters
 
-**Note**: `--config` and `--models` are mutually exclusive - use one or the other.
+| Parameter          | Description |
+|-------------------|-------------|
+| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok` or `openai`). Optional because we can infer backend type through model.|
+| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
+| `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
+| `--no-logs`        | Disable real-time logging.|
+| `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
 
-#### Interactive Multi-turn Mode
+#### Configuration File Format
+
+MassGen supports YAML configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
+
+**Single Agent Configuration:**
+
+Use the `agent` field to define a single agent with its backend and settings:
+
+```yaml
+agent: 
+  id: "<agent_name>"
+  backend:
+    type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
+    model: "<model_name>" # Model name
+    api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
+  system_message: "..."    # System Message for Single Agent
+```
+
+**Multi-Agent Configuration:**
+
+Use the `agents` field to define multiple agents, each with its own backend and config:
+
+```yaml
+agents:  # Multiple agents (alternative to 'agent')
+  - id: "<agent1 name>"
+    backend: 
+      type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
+      model: "<model_name>" # Model name
+      api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
+    system_message: "..."    # System Message for Single Agent
+  - id: "..."
+    backend:
+      type: "..."
+      model: "..."
+      ...
+    system_message: "..."
+```
+
+**Backend Configuration:**
+
+Detailed parameters for each agent's backend can be specified using the following configuration formats:
+
+#### Claude
+
+```yaml
+backend:
+  type: "claude"
+  model: "claude-sonnet-4-20250514"  # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  enable_code_execution: true        # Code execution capability
+```
+
+#### Gemini
+
+```yaml
+backend:
+  type: "gemini"
+  model: "gemini-2.5-flash"          # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  enable_code_execution: true        # Code execution capability
+```
+
+#### Grok
+
+```yaml
+backend:
+  type: "grok"
+  model: "grok-3-mini"               # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_web_search: true            # Web search capability
+  return_citations: true             # Include search result citations
+  max_search_results: 10             # Maximum search results to use 
+  search_mode: "auto"                # Search strategy: "auto", "fast", "thorough" 
+```
+
+#### OpenAI
+
+```yaml
+backend:
+  type: "openai"
+  model: "gpt-4o"                    # Model name
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, o-series models don't support this)
+  max_tokens: 2500                   # Maximum response length (o-series models don't support this)
+  enable_web_search: true            # Web search capability
+  enable_code_interpreter: true      # Code interpreter capability
+```
+
+**UI Configuration:**
+
+Configure how MassGen displays information and handles logging during execution:
+
+```yaml
+ui:
+  display_type: "rich_terminal" | "terminal" | "simple"  # Display format for agent interactions
+  logging_enabled: true | false                          # Enable/disable real-time logging 
+```
+
+- `display_type`: Controls the visual presentation of agent interactions
+  - `"rich_terminal"`: Full-featured display with multi-region layout, live status updates, and colored output
+  - `"terminal"`: Standard terminal display with basic formatting and sequential output
+  - `"simple"`: Plain text output without any formatting or special display features
+- `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
+
+**Advanced Parameters:**
+```yaml
+# Global backend parameters
+backend_params:
+  temperature: 0.7
+  max_tokens: 2000
+  enable_web_search: true  # Web search capability (all backends)
+  enable_code_interpreter: true  # OpenAI only
+  enable_code_execution: true    # Gemini/Claude only
+```
+
+#### Interactive Multi-Turn Mode
 
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
 
 ```bash
-# Start interactive mode with multiple agents
-uv run python cli.py --models gpt-4o gemini-2.5-flash grok-3-mini
+# Start interactive mode with a single agent
+uv run python -m massgen.cli --model gpt-4o-mini
 
 # Start interactive mode with configuration file
-uv run python cli.py --config examples/fast_config.yaml
-
-# Interactive mode with custom parameters
-uv run python cli.py --models gpt-4o grok-3-mini --consensus 0.7 --max-duration 600
+uv run python -m massgen.cli --config three_agents_default.yaml
 ```
 
 **Interactive Mode Features:**
 - **Multi-turn conversations**: Multiple agents collaborate to chat with you in an ongoing conversation
 - **Real-time feedback**: Displays real-time agent and system status
-- **Easy exit**: Type `quit`, `exit`, or press `Ctrl+C` to stop
+- **Clear conversation history**: Type `/clear` to reset the conversation and start fresh
+- **Easy exit**: Type `/quit`, `/exit`, `/q`, or press `Ctrl+C` to stop
 
+**Watch the recorded demo:**
+
+[![MassGen Case Study](https://img.youtube.com/vi/h1R7fxFJ0Zc/0.jpg)](https://www.youtube.com/watch?v=h1R7fxFJ0Zc)
 
 ### 5. 📊 View Results
 
@@ -223,35 +402,20 @@ The system provides multiple ways to view and analyze results:
 - **Status Updates**: Real-time phase transitions, voting progress, and consensus building
 - **Streaming Output**: Watch agents' reasoning and responses as they develop
 
+**Watch an example here:**
+
+[![MassGen Case Study](https://img.youtube.com/vi/Dp2oldJJImw/0.jpg)](https://www.youtube.com/watch?v=Dp2oldJJImw)
+
 #### Comprehensive Logging
-All sessions are automatically logged with detailed information. The file locations are also displayed and clickable in the UI.
+All sessions are automatically logged with detailed information. The file can be viewed throught the interaction with UI.
 
 ```bash
-logs/
-└── 20250123_142530/          # Session timestamp (YYYYMMDD_HHMMSS)
-    ├── answers/
-    │   ├── agent_1.txt       # The proposed answers by agent 1
-    │   ├── agent_2.txt       # The proposed answers by agent 2
-    │   └── agent_3.txt       # The proposed answers by agent 3
-    ├── votes/
-    │   ├── agent_1.txt       # The votes cast by agent 1
-    │   ├── agent_2.txt       # The votes cast by agent 2
-    │   └── agent_3.txt       # The votes cast by agent 3
-    ├── display/
-    │   ├── agent_1.txt       # The full log in the streaming display of agent 1
-    │   ├── agent_2.txt       # The full log in the streaming display of agent 2
-    │   ├── agent_3.txt       # The full log in the streaming display of agent 3
-    │   └── system.txt        # The full log of system events and phase changes
-    ├── console.log           # Console output and system messages
-    ├── events.jsonl          # Orchestrator events and phase changes (JSONL format)
-    └── result.json           # Final results and session summary
+agent_outputs/
+  ├── agent_1.txt       # The full logs by agent 1
+  ├── agent_2.txt       # The full logs by agent 2
+  ├── agent_3.txt       # The full logs by agent 3
+  ├── system_status.txt # The full logs of system status
 ```
-
-#### Log File Contents
-- **Session Summary**: Final answer, consensus score, voting results, execution time
-- **Agent History**: Complete action and chat history for each agent
-- **System Events**: Phase transitions, restarts, consensus detection of the whole system
-
 ---
 
 ## 💡 Examples
@@ -275,37 +439,50 @@ uv run python cli.py --config examples/fast_config.yaml "Design a logo for MassG
 
 ```bash
 # Ask a question about a complex topic
-uv run python cli.py --config examples/fast_config.yaml "Explain the theory of relativity in simple terms."
-uv run python cli.py "what's best to do in Stockholm in October 2025" --models gemini-2.5-flash gpt-4o
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "what's best to do in Stockholm in October 2025"
+
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
 ```
 
 ### 2. 🧠 Creative Writing
 
 ```bash
 # Generate a short story
-uv run python cli.py --config examples/fast_config.yaml "Write a short story about a robot who discovers music."
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
 ```
 
 ### 3. Research
 ```bash
-uv run python cli.py --config examples/fast_config.yaml "How much does it cost to run HLE benchmark with Grok-4"
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
 ---
 
 ## 🗺️ Roadmap
 
-MassGen is currently in its foundational stage, with a focus on parallel, asynchronous multi-agent collaboration and orchestration. Our roadmap is centered on transforming this foundation into a highly robust, intelligent, and user-friendly system, while enabling frontier research and exploration.
+MassGen is currently in its foundational stage, with a focus on parallel, asynchronous multi-agent collaboration and orchestration. Our roadmap is centered on transforming this foundation into a highly robust, intelligent, and user-friendly system, while enabling frontier research and exploration. An earlier version of MassGen can be found [here](./massgen/v1).
+
+⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
 ### Key Future Enhancements:
 
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy.
--   **Expanded Model, Tool & Agent Integration:** Adding support for more models/tools/agents, including Claude, a wider range of tools like MCP Servers, and coding agents.
+-   **Expanded Model, Tool & Agent Integration:** Adding support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents.
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management.
 -   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation.
 -   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem.
 
 We welcome community contributions to help us achieve these goals.
+
+### v0.0.4 Roadmap
+
+Version 0.0.4 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+
+- **Coding Agent Integration** (Required): Seamless integration of Claude Code CLI and Gemini CLI with coding-specific tools and workflows
+- **Enhanced Backend Features** (Optional): Improved error handling, health monitoring, and support for additional model providers
+- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
+
+For detailed milestones and technical specifications, see the [full v0.0.4 roadmap](ROADMAP_v0.0.4.md).
 
 ---
 
@@ -328,3 +505,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 Made with ❤️ by the MassGen team
 
 </div>
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Leezekun/MassGen&type=Date)](https://www.star-history.com/#Leezekun/MassGen&Date)

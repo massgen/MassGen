@@ -1,0 +1,44 @@
+orchestrator:
+  max_duration: 600
+  consensus_threshold: 0.0
+  max_debate_rounds: 1
+  status_check_interval: 1.0
+  thread_pool_timeout: 5
+agents:
+- agent_id: 1
+  agent_type: openai
+  model_config:
+    model: gpt-4o-mini
+    tools:
+    - live_search
+    - code_execution
+    max_retries: 10
+    max_rounds: 5
+    inference_timeout: 150
+    stream: true
+- agent_id: 2
+  agent_type: gemini
+  model_config:
+    model: gemini-2.5-flash
+    tools:
+    - live_search
+    max_retries: 10
+    max_rounds: 5
+    inference_timeout: 150
+    stream: true
+- agent_id: 3
+  agent_type: "grok"
+  model_config:
+    model: "grok-3-mini"
+    tools: ["live_search"]
+    max_retries: 10
+    max_rounds: 5
+    inference_timeout: 150
+    stream: true
+streaming_display:
+  display_enabled: true
+  max_lines: 10
+  save_logs: true
+logging:
+  log_dir: logs
+  non_blocking: false

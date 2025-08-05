@@ -1,0 +1,14 @@
+[2025-07-30 18:53:28] Agent 2 (gemini-2.5-flash):
+{
+  "type": "function_call_output",
+  "call_id": null,
+  "output": "Error executing function: Target agent None not registered"
+}
+Successful called: False
+[2025-07-30 21:06:15] Agent 2 (gemini-2.5-flash):
+{
+  "type": "function_call_output",
+  "call_id": null,
+  "output": "Error executing function: Target agent None not registered"
+}
+Successful called: False

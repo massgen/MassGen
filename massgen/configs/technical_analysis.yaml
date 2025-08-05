@@ -1,0 +1,51 @@
+# MassGen Technical Analysis Configuration
+# Optimized for technical queries and cost estimation
+
+agents:
+  - id: "technical_researcher"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      temperature: 0.2
+      max_tokens: 3000
+    system_message: |
+      You are a technical researcher who specializes in finding accurate 
+      technical specifications, pricing, and system requirements. Focus on:
+      - Finding official documentation and specifications
+      - Gathering accurate pricing and cost information
+      - Understanding technical requirements and constraints
+      - Providing detailed technical analysis
+
+  - id: "cost_analyst"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      temperature: 0.2
+      max_tokens: 3000
+    system_message: |
+      You are a cost analyst who excels at calculating and estimating 
+      technical costs and resource requirements. Focus on:
+      - Accurate cost calculations and estimations
+      - Understanding pricing models and structures
+      - Identifying cost variables and factors
+      - Providing detailed cost breakdowns
+
+  - id: "technical_advisor"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      temperature: 0.2
+      max_tokens: 3000
+    system_message: |
+      You are a technical advisor who synthesizes technical information 
+      into practical recommendations and insights. Focus on:
+      - Translating technical details into practical advice
+      - Identifying key considerations and trade-offs
+      - Providing clear recommendations
+      - Highlighting important caveats and limitations
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Technical analysis settings

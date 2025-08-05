@@ -1,0 +1,18 @@
+# Example Gemini configuration for MassGen
+# Usage: python -m massgen.cli --config example_gemini_config.yaml "Your question here"
+
+# Single agent configuration
+agent:
+  id: "gemini_agent"
+  # system_message: "You are a helpful AI assistant powered by Google Gemini."
+  backend:
+    type: "gemini"
+    model: "gemini-2.5-flash"
+    enable_web_search: true
+    # enable_code_execution: true
+  system_message: "You are a helpful assistant"
+
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
