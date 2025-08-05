@@ -88,13 +88,13 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [v0.0.4 Roadmap](#v004-roadmap)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
+- [v0.0.4 Roadmap](#v004-roadmap)
 </details>
 
 <details open>
