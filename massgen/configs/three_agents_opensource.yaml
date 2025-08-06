@@ -1,0 +1,30 @@
+# MassGen Three Agent Configuration
+# GPT-OSS-120B, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
+
+agents:
+  # Cerebras AI  
+  - id: "gpt-oss-120b"
+    backend:
+      type: "chatcompletion"
+      model: "gpt-oss-120b"
+      base_url: "https://api.cerebras.ai/v1/chat/completions"
+      # api_key: "cerebras_api_key"
+  - id: "4omini"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      enable_web_search: true
+      enable_code_interpreter: true
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+  - id: "grok3mini"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      enable_web_search: true
+      return_citations: true
+    # system_message: "You are a helpful AI assistant with web search capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

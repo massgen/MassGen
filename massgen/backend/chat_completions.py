@@ -85,8 +85,6 @@ class ChatCompletionsBackend(LLMBackend):
                     if hasattr(choice, "delta") and choice.delta:
                         delta = choice.delta
 
-                        print(delta)
-
                         # Plain text content
                         if getattr(delta, "content", None):
                             content_chunk = delta.content
@@ -116,24 +114,10 @@ class ChatCompletionsBackend(LLMBackend):
                                     hasattr(tool_call_delta, "function")
                                     and tool_call_delta.function
                                 ):
-                                    # import pdb
-                                    # pdb.set_trace()
                                     if getattr(tool_call_delta.function, "name", None):
-                                        if tool_call_delta.function.name == "web_search":
-                                            yield StreamChunk(
-                                                type="content",
-                                                content=f"\n🔍 [Provider Tool: Web Search] Starting search...",
-                                            )
-
                                         current_tool_calls[index]["function"][
                                             "name"
                                         ] = tool_call_delta.function.name
-
-                                        if tool_call_delta.function.name == "web_search":
-                                            yield StreamChunk(
-                                                type="content",
-                                                content=f"🔍 [Provider Tool: Web Search] Searching...",
-                                            )
 
                                     # Accumulate arguments (as string chunks)
                                     if getattr(tool_call_delta.function, "arguments", None):
@@ -141,14 +125,10 @@ class ChatCompletionsBackend(LLMBackend):
                                             "arguments"
                                         ] += tool_call_delta.function.arguments
 
-                                    
-
                     # Handle finish reason
                     if getattr(choice, "finish_reason", None):
                         if choice.finish_reason == "tool_calls" and current_tool_calls:
 
-                            import pdb
-                            pdb.set_trace()
                             final_tool_calls = []
 
                             for index in sorted(current_tool_calls.keys()):
@@ -156,22 +136,11 @@ class ChatCompletionsBackend(LLMBackend):
                                 function_name = call["function"]["name"]
                                 arguments_str = call["function"]["arguments"]
 
-                                if function_name == "web_search":
-                                    yield StreamChunk(
-                                        type="content",
-                                        content=f"✅ [Provider Tool: Web Search] Search completed",
-                                    )
-                                    search_query = json.loads(arguments_str)["query"]
-                                    if search_query:
-                                        yield StreamChunk(
-                                            type="content",
-                                            content=f"🔍 [Search Query] '{search_query}'",
-                                        )
                                 try:
                                     arguments_obj = (
-                                            json.loads(arguments_str)
-                                            if arguments_str.strip()
-                                            else {}
+                                        json.loads(arguments_str)
+                                        if arguments_str.strip()
+                                        else {}
                                     )
                                 except json.JSONDecodeError:
                                     arguments_obj = {}
@@ -197,8 +166,6 @@ class ChatCompletionsBackend(LLMBackend):
                                 "tool_calls": final_tool_calls,
                             }
 
-                            import pdb
-                            pdb.set_trace()
                             yield StreamChunk(
                                 type="complete_message",
                                 complete_message=complete_message,
@@ -275,7 +242,7 @@ class ChatCompletionsBackend(LLMBackend):
             model = kwargs.get("model", "openai/gpt-oss-120b")
             max_tokens = kwargs.get("max_tokens", None)
             temperature = kwargs.get("temperature", None)
-            enable_web_search = kwargs.get("enable_web_search", True)
+            enable_web_search = kwargs.get("enable_web_search", False)
             enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
 
             # Convert tools to Chat Completions format
@@ -330,8 +297,6 @@ class ChatCompletionsBackend(LLMBackend):
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(provider_tools)
-
-            print(api_params)
 
             # create stream
             stream = await client.chat.completions.create(**api_params)

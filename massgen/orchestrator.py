@@ -701,9 +701,6 @@ class Orchestrator(ChatAgent):
                         tool_name = agent.backend.extract_tool_name(tool_call)
                         tool_args = agent.backend.extract_tool_arguments(tool_call)
 
-                        import pdb
-                        pdb.set_trace()
-
                         if tool_name == "vote":
                             # Check if agent should restart - votes invalid during restart
                             if self.agent_states[agent_id].restart_pending:
@@ -843,8 +840,7 @@ class Orchestrator(ChatAgent):
                             yield ("result", ("answer", content))
                             yield ("done", None)
                             return
-                        elif tool_name == "web_search":
-                            pass
+
                         else:
                             # Non-workflow tools not yet implemented
                             yield (
