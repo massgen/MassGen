@@ -156,13 +156,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         
         # Determine API key based on base URL if not explicitly provided
         if not api_key:
-            if base_url and "together.xyz" in base_url:
-                api_key = os.getenv("TOGETHER_API_KEY")
-                if not api_key:
-                    raise ConfigurationError(
-                        "Together AI API key not found. Set TOGETHER_API_KEY or provide in config."
-                    )
-            elif base_url and "cerebras.ai" in base_url:
+            if base_url and "cerebras.ai" in base_url:
                 api_key = os.getenv("CEREBRAS_API_KEY")
                 if not api_key:
                     raise ConfigurationError(
@@ -611,7 +605,6 @@ Examples:
   python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
   
   # Use ChatCompletion backend with custom base URL
-  python -m massgen.cli --backend chatcompletion --model openai/gpt-oss-120b --base-url https://api.together.xyz/v1 "What is 2+2?"
   python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
   
   # Interactive mode
@@ -624,7 +617,6 @@ Environment Variables:
   OPENAI_API_KEY      - Required for OpenAI backend
   XAI_API_KEY         - Required for Grok backend  
   ANTHROPIC_API_KEY   - Required for Claude backend
-  TOGETHER_API_KEY    - Required for Together AI (chatcompletion backend)
   CERABRAS_API_KEY    - Required for CERABRAS CLOUD API (chatcompletion backend)
         """,
     )
@@ -659,7 +651,7 @@ Environment Variables:
         "--system-message", type=str, help="System message for quick setup"
     )
     parser.add_argument(
-        "--base-url", type=str, help="Base URL for API endpoint (e.g., https://api.together.xyz/v1)"
+        "--base-url", type=str, help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)"
     )
 
     # UI options

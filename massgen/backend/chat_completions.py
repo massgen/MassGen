@@ -15,7 +15,7 @@ class ChatCompletionsBackend(LLMBackend):
     """Complete OpenAI-compatible Chat Completions API backend.
     
     Can be used directly with any OpenAI-compatible provider by setting base_url.
-    Supports OpenAI, Together AI, and other compatible providers.
+    Supports Cerabras AI and other compatible providers.
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -226,89 +226,85 @@ class ChatCompletionsBackend(LLMBackend):
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
             """Stream response using OpenAI-compatible Chat Completions API."""
-            #try:
+            try:  
 
-            # from together import AsyncTogether
+                from cerebras.cloud.sdk import AsyncCerebras
 
-            # client = AsyncTogether(api_key=self.api_key)      
-
-            from cerebras.cloud.sdk import AsyncCerebras
-
-            client = AsyncCerebras(
-                api_key=self.api_key,  # This is the default and can be omitted
-            )
-
-            # Extract parameters
-            model = kwargs.get("model", "openai/gpt-oss-120b")
-            max_tokens = kwargs.get("max_tokens", None)
-            temperature = kwargs.get("temperature", None)
-            enable_web_search = kwargs.get("enable_web_search", False)
-            enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
-
-            # Convert tools to Chat Completions format
-            converted_tools = (
-                self.convert_tools_to_chat_completions_format(tools) if tools else None
-            )
-
-            # Chat Completions API parameters
-            api_params = {
-                "model": model,
-                "messages": messages,
-                "stream": True,
-            }
-
-            # Add tools if provided
-            if converted_tools:
-                api_params["tools"] = converted_tools
-
-            # Add optional parameters only if they have values
-            if max_tokens is not None:
-                api_params["max_tokens"] = max_tokens
-            if temperature is not None:
-                api_params["temperature"] = temperature
-
-            # Add provider tools (web search, code interpreter) if enabled
-            provider_tools = []
-            if enable_web_search:
-                provider_tools.append({
-                    "type": "function",
-                    "function": {
-                    "name": "web_search",
-                    "description": "Search the web for current or factual information",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to send to the web"
-                        }
-                        },
-                        "required": ["query"]
-                    }
-                    }
-                })
-
-            if enable_code_interpreter:
-                provider_tools.append(
-                    {"type": "code_interpreter", "container": {"type": "auto"}}
+                client = AsyncCerebras(
+                    api_key=self.api_key,  # This is the default and can be omitted
                 )
 
-            if provider_tools:
-                if "tools" not in api_params:
-                    api_params["tools"] = []
-                api_params["tools"].extend(provider_tools)
+                # Extract parameters
+                model = kwargs.get("model", "openai/gpt-oss-120b")
+                max_tokens = kwargs.get("max_tokens", None)
+                temperature = kwargs.get("temperature", None)
+                enable_web_search = kwargs.get("enable_web_search", False)
+                enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
 
-            # create stream
-            stream = await client.chat.completions.create(**api_params)
+                # Convert tools to Chat Completions format
+                converted_tools = (
+                    self.convert_tools_to_chat_completions_format(tools) if tools else None
+                )
 
-            # Use existing streaming handler with enhanced error handling
-            async for chunk in self.handle_chat_completions_stream(
-                stream, enable_web_search
-            ):
-                yield chunk
+                # Chat Completions API parameters
+                api_params = {
+                    "model": model,
+                    "messages": messages,
+                    "stream": True,
+                }
 
-            # except Exception as e:
-            #     yield StreamChunk(type="error", error=f"Chat Completions API error: {str(e)}")
+                # Add tools if provided
+                if converted_tools:
+                    api_params["tools"] = converted_tools
+
+                # Add optional parameters only if they have values
+                if max_tokens is not None:
+                    api_params["max_tokens"] = max_tokens
+                if temperature is not None:
+                    api_params["temperature"] = temperature
+
+                # Add provider tools (web search, code interpreter) if enabled
+                provider_tools = []
+                if enable_web_search:
+                    provider_tools.append({
+                        "type": "function",
+                        "function": {
+                        "name": "web_search",
+                        "description": "Search the web for current or factual information",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query to send to the web"
+                            }
+                            },
+                            "required": ["query"]
+                        }
+                        }
+                    })
+
+                if enable_code_interpreter:
+                    provider_tools.append(
+                        {"type": "code_interpreter", "container": {"type": "auto"}}
+                    )
+
+                if provider_tools:
+                    if "tools" not in api_params:
+                        api_params["tools"] = []
+                    api_params["tools"].extend(provider_tools)
+
+                # create stream
+                stream = await client.chat.completions.create(**api_params)
+
+                # Use existing streaming handler with enhanced error handling
+                async for chunk in self.handle_chat_completions_stream(
+                    stream, enable_web_search
+                ):
+                    yield chunk
+
+            except Exception as e:
+                yield StreamChunk(type="error", error=f"Chat Completions API error: {str(e)}")
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
