@@ -160,7 +160,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 api_key = os.getenv("CEREBRAS_API_KEY")
                 if not api_key:
                     raise ConfigurationError(
-                        "Cerebras AI API key not found. Set CERABRAS_API_KEY or provide in config."
+                        "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
                     )
         
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
