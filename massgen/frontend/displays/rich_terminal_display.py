@@ -857,34 +857,26 @@ class RichTerminalDisplay(TerminalDisplay):
 
     def _setup_theme(self):
         """Setup color theme configuration."""
+        # Unified colors that work well in both dark and light modes
+        unified_colors = {
+            "primary": "#0066CC",        # Deep blue - good contrast on both backgrounds
+            "secondary": "#4A90E2",      # Medium blue - readable on both
+            "success": "#00AA44",        # Deep green - visible on both
+            "warning": "#CC6600",        # Orange-brown - works on both
+            "error": "#CC0000",          # Deep red - strong contrast
+            "info": "#6633CC",           # Purple - good on both backgrounds
+            "text": "default",           # Use terminal's default text color
+            "border": "#4A90E2",         # Medium blue for panels
+            "panel_style": "#4A90E2",    # Consistent panel border color
+            "header_style": "bold #0066CC",  # Bold deep blue headers
+        }
+        
         themes = {
-            "dark": {
-                "primary": "bright_cyan",
-                "secondary": "bright_blue",
-                "success": "bright_green",
-                "warning": "bright_yellow",
-                "error": "bright_red",
-                "info": "bright_magenta",
-                "text": "white",
-                "border": "blue",
-                "panel_style": "blue",
-                "header_style": "bold bright_cyan",
-            },
-            "light": {
-                "primary": "blue",
-                "secondary": "cyan",
-                "success": "green",
-                "warning": "yellow",
-                "error": "red",
-                "info": "magenta",
-                "text": "black",
-                "border": "blue",
-                "panel_style": "blue",
-                "header_style": "bold blue",
-            },
+            "dark": unified_colors.copy(),
+            "light": unified_colors.copy(),
             "cyberpunk": {
                 "primary": "bright_magenta",
-                "secondary": "bright_cyan",
+                "secondary": "bright_cyan", 
                 "success": "bright_green",
                 "warning": "bright_yellow",
                 "error": "bright_red",
@@ -900,13 +892,13 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # VSCode terminal-specific color adjustments
         if self._terminal_performance["type"] == "vscode":
-            # VSCode terminal sometimes has issues with certain bright colors
-            # Use more stable color palette
+            # VSCode terminal works well with our unified color scheme
+            # Keep the hex colors for consistent appearance
             vscode_adjustments = {
-                "primary": "cyan",  # Less bright than bright_cyan
-                "secondary": "blue",
-                "border": "cyan",
-                "panel_style": "cyan",
+                "primary": "#0066CC",     # Deep blue - stable in VSCode
+                "secondary": "#4A90E2",   # Medium blue
+                "border": "#4A90E2",      # Consistent panel borders
+                "panel_style": "#4A90E2", # Unified panel style
             }
             self.colors.update(vscode_adjustments)
 
