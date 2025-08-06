@@ -581,6 +581,7 @@ class Orchestrator(ChatAgent):
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
+
                 async for chunk in chat_stream:
                     if chunk.type == "content":
                         response_text += chunk.content
@@ -699,6 +700,9 @@ class Orchestrator(ChatAgent):
                     for tool_call in tool_calls:
                         tool_name = agent.backend.extract_tool_name(tool_call)
                         tool_args = agent.backend.extract_tool_arguments(tool_call)
+
+                        import pdb
+                        pdb.set_trace()
 
                         if tool_name == "vote":
                             # Check if agent should restart - votes invalid during restart
@@ -839,7 +843,8 @@ class Orchestrator(ChatAgent):
                             yield ("result", ("answer", content))
                             yield ("done", None)
                             return
-
+                        elif tool_name == "web_search":
+                            pass
                         else:
                             # Non-workflow tools not yet implemented
                             yield (
