@@ -15,7 +15,7 @@ class ChatCompletionsBackend(LLMBackend):
     """Complete OpenAI-compatible Chat Completions API backend.
     
     Can be used directly with any OpenAI-compatible provider by setting base_url.
-    Supports Cerabras AI and other compatible providers.
+    Supports Cerebras AI and other compatible providers.
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
