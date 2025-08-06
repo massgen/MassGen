@@ -24,24 +24,24 @@ class MessageTemplates:
 
         import time
 
-        return f"""You are evaluating answers from multiple agents for final response to a message.
+#         return f"""You are evaluating answers from multiple agents for final response to a message.
 
-For every aspect, claim, and reasoning step in the CURRENT ANSWERS, verify correctness, factual accuracy, and completeness using your expertise, reasoning, and **available tools**.
+# For every aspect, claim, and reasoning step in the CURRENT ANSWERS, verify correctness, factual accuracy, and completeness using your expertise, reasoning, and **available tools**.
 
-**You must use at least one tool in every evaluation round**—this is mandatory.
+# **You must use at least one tool in every evaluation round**—this is mandatory.
 
-- If the CURRENT ANSWERS fully address the ORIGINAL MESSAGE, use the `vote` tool to record your vote and skip the `new_answer` tool.
-- If the CURRENT ANSWERS are incomplete, incorrect, or do not fully address the ORIGINAL MESSAGE, conduct any necessary reasoning or research using tools (such as `search`), and then use the `new_answer` tool to submit a new response.
+# - If the CURRENT ANSWERS fully address the ORIGINAL MESSAGE, use the `vote` tool to record your vote and skip the `new_answer` tool.
+# - If the CURRENT ANSWERS are incomplete, incorrect, or do not fully address the ORIGINAL MESSAGE, conduct any necessary reasoning or research using tools (such as `search`), and then use the `new_answer` tool to submit a new response.
 
-Your new answer must be self-contained, process-complete, well-sourced, and compelling—ready to serve as the final reply.
+# Your new answer must be self-contained, process-complete, well-sourced, and compelling—ready to serve as the final reply.
 
-**Important**:
-- You must actually call at least one tool per round.
-- If no other tools are relevant or available, you must use either `new_answer` or `vote` to fulfill the tool-use requirement.
+# **Important**:
+# - You must actually call at least one tool per round.
+# - If no other tools are relevant or available, you must use either `new_answer` or `vote` to fulfill the tool-use requirement.
 
-*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.  
-For any time-sensitive requests, use the `search` tool (if available) rather than relying on prior knowledge.
-"""
+# *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.  
+# For any time-sensitive requests, use the `search` tool (if available) rather than relying on prior knowledge.
+# """
 
         # return f"""You are evaluating answers from multiple agents for final response to a message.
 
@@ -58,13 +58,13 @@ For any time-sensitive requests, use the `search` tool (if available) rather tha
         # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
         # For any time-sensitive requests, use the search tool (if available) rather than relying on prior knowledge."""
 
-#         return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
+        return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
 
-# If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
-# Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
+If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
+Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
 
-# *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
-# """
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
+"""
 
     # =============================================================================
     # USER MESSAGE TEMPLATES

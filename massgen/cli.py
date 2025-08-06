@@ -299,7 +299,7 @@ def create_simple_config(
             "backend": backend_config,
             "system_message": system_message or "You are a helpful AI assistant.",
         },
-        "ui": {"display_type": "simple", "logging_enabled": True},
+        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
     }
 
 
@@ -351,7 +351,7 @@ async def run_question_with_history(
         orchestrator = Orchestrator(agents=agents)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "simple"),
+            display_type=ui_config.get("display_type", "rich_terminal"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -423,7 +423,7 @@ async def run_single_question(
         orchestrator = Orchestrator(agents=agents)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "simple"),
+            display_type=ui_config.get("display_type", "rich_terminal"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -471,7 +471,7 @@ async def run_interactive_mode(
     else:
         mode = "Multi-Agent Coordination"
     print(f"   Mode: {mode}", flush=True)
-    print(f"   UI: {ui_config.get('display_type', 'simple')}", flush=True)
+    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
 
     print_help_messages()
 
