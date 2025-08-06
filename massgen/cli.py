@@ -617,7 +617,7 @@ Environment Variables:
   OPENAI_API_KEY      - Required for OpenAI backend
   XAI_API_KEY         - Required for Grok backend  
   ANTHROPIC_API_KEY   - Required for Claude backend
-  CERABRAS_API_KEY    - Required for CERABRAS CLOUD API (chatcompletion backend)
+  CEREBRAS_API_KEY    - Required for CEREBRAS CLOUD API (chatcompletion backend)
         """,
     )
 
