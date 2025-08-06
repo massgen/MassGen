@@ -1,0 +1,36 @@
+# agents:
+#   # Together AI
+#   - id: "gpt-oss-120b"
+#     backend:
+#       type: "chatcompletion"
+#       model: "gpt-oss-120b"
+#       base_url: "https://api.together.xyz/v1"
+#       api_key: "together_api_key"
+  
+#   # Cerebras AI  
+#   - id: "llama-3.1-8b"
+#     backend:
+#       type: "chatcompletion"
+#       model: "llama3.1-8b"
+#       base_url: "https://api.cerebras.ai/v1"
+#       api_key: "cerebras_api_key"
+      
+#   # xAI Grok (continues to use optimized backend)
+#   - id: "grok-3-mini"
+#     backend:
+#       type: "grok"
+#       model: "grok-3-mini"
+#       enable_web_search: true
+
+agent:
+  # Cerebras AI  
+  id: "gpt-oss-120b"
+  backend:
+    type: "chatcompletion"
+    model: "gpt-oss-120b"
+    base_url: "https://api.cerebras.ai/v1/chat/completions"
+    # api_key: "cerebras_api_key"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

@@ -237,7 +237,7 @@ class SingleAgent(ChatAgent):
             # Regular conversation - append new messages to agent's history
             self.conversation_history.extend(messages)
             backend_messages = self.conversation_history.copy()
-
+        
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
             messages=backend_messages,
@@ -395,16 +395,6 @@ def create_simple_agent(
 
         templates = MessageTemplates()
         system_message = templates.evaluation_system_message()
-
-        import pdb
-
-        pdb.set_trace()
-        print(system_message)
-
-    import pdb
-
-    pdb.set_trace()
-    print(system_message)
     return SingleAgent(
         backend=backend, agent_id=agent_id, system_message=system_message
     )

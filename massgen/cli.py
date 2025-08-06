@@ -57,6 +57,7 @@ from massgen.backend.response import ResponseBackend
 from massgen.backend.grok import GrokBackend
 from massgen.backend.claude import ClaudeBackend
 from massgen.backend.gemini import GeminiBackend
+from massgen.backend.chat_completions import ChatCompletionsBackend
 from massgen.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.agent_config import AgentConfig
 from massgen.orchestrator import Orchestrator
@@ -149,6 +150,27 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             )
         return GeminiBackend(api_key=api_key)
 
+    elif backend_type == "chatcompletion":
+        api_key = kwargs.get("api_key")
+        base_url = kwargs.get("base_url")
+        
+        # Determine API key based on base URL if not explicitly provided
+        if not api_key:
+            if base_url and "together.xyz" in base_url:
+                api_key = os.getenv("TOGETHER_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Together AI API key not found. Set TOGETHER_API_KEY or provide in config."
+                    )
+            elif base_url and "cerebras.ai" in base_url:
+                api_key = os.getenv("CEREBRAS_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Cerebras AI API key not found. Set CERABRAS_API_KEY or provide in config."
+                    )
+        
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
@@ -189,6 +211,11 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             )
         elif backend_type.lower() == "gemini":
             agent_config = AgentConfig.create_gemini_config(
+                **{k: v for k, v in backend_config.items() if k != "type"}
+            )
+        elif backend_type.lower() == "chatcompletion":
+            # Use OpenAI config as base since ChatCompletionsBackend is OpenAI-compatible
+            agent_config = AgentConfig.create_openai_config(
                 **{k: v for k, v in backend_config.items() if k != "type"}
             )
         else:
@@ -232,6 +259,11 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
                 agent_config = AgentConfig.create_grok_config(
                     **{k: v for k, v in backend_config.items() if k != "type"}
                 )
+            elif backend_type.lower() == "chatcompletion":
+                # Use OpenAI config as base since ChatCompletionsBackend is OpenAI-compatible
+                agent_config = AgentConfig.create_openai_config(
+                    **{k: v for k, v in backend_config.items() if k != "type"}
+                )
             else:
                 # Fallback to basic config
                 agent_config = AgentConfig(backend_params=backend_config)
@@ -254,16 +286,20 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
 
 
 def create_simple_config(
-    backend_type: str, model: str, system_message: Optional[str] = None
+    backend_type: str, model: str, system_message: Optional[str] = None, base_url: Optional[str] = None
 ) -> Dict[str, Any]:
     """Create a simple single-agent configuration."""
+    backend_config = {"type": backend_type, "model": model}
+    if base_url:
+        backend_config["base_url"] = base_url
+    
     return {
         "agent": {
             "id": "agent1",
-            "backend": {"type": backend_type, "model": model},
+            "backend": backend_config,
             "system_message": system_message or "You are a helpful AI assistant.",
         },
-        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
+        "ui": {"display_type": "simple", "logging_enabled": True},
     }
 
 
@@ -315,7 +351,7 @@ async def run_question_with_history(
         orchestrator = Orchestrator(agents=agents)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
+            display_type=ui_config.get("display_type", "simple"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -387,7 +423,7 @@ async def run_single_question(
         orchestrator = Orchestrator(agents=agents)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
+            display_type=ui_config.get("display_type", "simple"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -435,7 +471,7 @@ async def run_interactive_mode(
     else:
         mode = "Multi-Agent Coordination"
     print(f"   Mode: {mode}", flush=True)
-    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
+    print(f"   UI: {ui_config.get('display_type', 'simple')}", flush=True)
 
     print_help_messages()
 
@@ -574,6 +610,10 @@ Examples:
   python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
   python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
   
+  # Use ChatCompletion backend with custom base URL
+  python -m massgen.cli --backend chatcompletion --model openai/gpt-oss-120b --base-url https://api.together.xyz/v1 "What is 2+2?"
+  python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
+  
   # Interactive mode
   python -m massgen.cli --config config.yaml
   
@@ -584,6 +624,8 @@ Environment Variables:
   OPENAI_API_KEY      - Required for OpenAI backend
   XAI_API_KEY         - Required for Grok backend  
   ANTHROPIC_API_KEY   - Required for Claude backend
+  TOGETHER_API_KEY    - Required for Together AI (chatcompletion backend)
+  CERABRAS_API_KEY    - Required for CERABRAS CLOUD API (chatcompletion backend)
         """,
     )
 
@@ -602,7 +644,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["openai", "grok", "claude", "gemini"],
+        choices=["openai", "grok", "claude", "gemini", "chatcompletion"],
         help="Backend type for quick setup",
     )
 
@@ -615,6 +657,9 @@ Environment Variables:
     )
     parser.add_argument(
         "--system-message", type=str, help="System message for quick setup"
+    )
+    parser.add_argument(
+        "--base-url", type=str, help="Base URL for API endpoint (e.g., https://api.together.xyz/v1)"
     )
 
     # UI options
@@ -647,7 +692,7 @@ Environment Variables:
             else:
                 system_message = None
             config = create_simple_config(
-                backend_type=backend, model=model, system_message=system_message
+                backend_type=backend, model=model, system_message=system_message, base_url=args.base_url
             )
 
         # Apply command-line overrides
