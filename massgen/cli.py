@@ -290,7 +290,7 @@ async def run_question_with_history(
         print(f"Agent: {agent.agent_id}", flush=True)
         if history:
             print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         response_content = ""
@@ -323,7 +323,7 @@ async def run_question_with_history(
         print(f"Agents: {', '.join(agents.keys())}", flush=True)
         if history:
             print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         # For multi-agent with history, we need to use a different approach
@@ -362,7 +362,7 @@ async def run_single_question(
 
         print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}", flush=True)
         print(f"Agent: {agent.agent_id}", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         messages = [{"role": "user", "content": question}]
@@ -393,7 +393,7 @@ async def run_single_question(
 
         print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
         print(f"Agents: {', '.join(agents.keys())}", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         final_response = await ui.coordinate(orchestrator, question)
