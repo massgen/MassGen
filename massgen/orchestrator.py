@@ -1083,6 +1083,11 @@ class Orchestrator(ChatAgent):
             if not winner:
                 winner = tied_agents[0] if tied_agents else None
 
+        # Create agent mapping for anonymous display
+        agent_mapping = {}
+        for i, real_id in enumerate(sorted(agent_answers.keys()), 1):
+            agent_mapping[f"agent{i}"] = real_id
+
         return {
             "vote_counts": vote_counts,
             "voter_details": voter_details,
@@ -1091,6 +1096,7 @@ class Orchestrator(ChatAgent):
             "total_votes": len(votes),
             "agents_with_answers": len(agent_answers),
             "agents_voted": len([v for v in votes.values() if v.get("agent_id")]),
+            "agent_mapping": agent_mapping,
         }
 
     def _determine_final_agent_from_states(self) -> Optional[str]:

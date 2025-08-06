@@ -2425,6 +2425,13 @@ class RichTerminalDisplay(TerminalDisplay):
                         f'     • {voter}: "{reason}"\n', style=self.colors["text"]
                     )
 
+        # Agent mapping section
+        agent_mapping = vote_results.get("agent_mapping", {})
+        if agent_mapping:
+            vote_content.append("\n🔀 Agent Mapping:\n", style=self.colors["primary"])
+            for anon_id, real_id in sorted(agent_mapping.items()):
+                vote_content.append(f"   {anon_id} → {real_id}\n", style=self.colors["info"])
+
         # Tie-breaking info
         if is_tie:
             vote_content.append(
