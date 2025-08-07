@@ -1,5 +1,5 @@
 # MassGen Three Agent Configuration
-# Gemini-2.5-flash, GPT-5-mini, and Claude-3.5-Haiku with builtin tools enabled
+# 3 GPT-5-nano models
 
 agents:
   - id: "gpt-5-nano-1"
