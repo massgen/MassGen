@@ -10,3 +10,4 @@ This directory contains detailed case studies demonstrating MassGen's capabiliti
 *   [Berkeley Conference Talks](berkeley-conference-talks.md)
 *   [Estimating Grok-4 HLE Benchmark Costs](grok_hle_cost.md)
 *   [Stockholm Travel Guide - Convergence on Detail](stockholm_travel_guide.md)
+*   [MassGen Case Study - Collaborative Monte Carlo Simulation](nvidia_stock_prediction.md)
