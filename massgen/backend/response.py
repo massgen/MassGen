@@ -165,12 +165,12 @@ class ResponseBackend(LLMBackend):
                     elif chunk.type == "response.web_search_call.searching":
                         yield StreamChunk(
                             type="content",
-                            content=f"🔍 [Provider Tool: Web Search] Searching...",
+                            content=f"\n🔍 [Provider Tool: Web Search] Searching...",
                         )
                     elif chunk.type == "response.web_search_call.completed":
                         yield StreamChunk(
                             type="content",
-                            content=f"✅ [Provider Tool: Web Search] Search completed",
+                            content=f"\n✅ [Provider Tool: Web Search] Search completed",
                         )
                     elif chunk.type == "response.code_interpreter_call.in_progress":
                         yield StreamChunk(
@@ -180,12 +180,12 @@ class ResponseBackend(LLMBackend):
                     elif chunk.type == "response.code_interpreter_call.executing":
                         yield StreamChunk(
                             type="content",
-                            content=f"💻 [Provider Tool: Code Interpreter] Executing...",
+                            content=f"\n💻 [Provider Tool: Code Interpreter] Executing...",
                         )
                     elif chunk.type == "response.code_interpreter_call.completed":
                         yield StreamChunk(
                             type="content",
-                            content=f"✅ [Provider Tool: Code Interpreter] Execution completed",
+                            content=f"\n✅ [Provider Tool: Code Interpreter] Execution completed",
                         )
                     elif chunk.type == "response.output_item.done":
                         # Get search query or executed code details - show them right after completion
@@ -199,7 +199,7 @@ class ResponseBackend(LLMBackend):
                                     if search_query:
                                         yield StreamChunk(
                                             type="content",
-                                            content=f"🔍 [Search Query] '{search_query}'",
+                                            content=f"\n🔍 [Search Query] '{search_query}'",
                                         )
                             elif (
                                 hasattr(chunk.item, "type")
