@@ -122,7 +122,7 @@ class ResponseBackend(LLMBackend):
             
             # Add reasoning.effort parameter
             reasoning = kwargs.get("reasoning")
-            if reasoning and "gpt-5" in model:
+            if reasoning:
                 api_params["reasoning"] = reasoning
             
             # Add framework tools (convert to Response API format)
