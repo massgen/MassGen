@@ -4,6 +4,10 @@ from typing import Any, Union, Optional, Dict, List
 
 MODEL_MAPPINGS = {
     "openai": [
+        # GPT-5 variants
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
         # GPT-4.1 variants
         "gpt-4.1",
         "gpt-4.1-mini",

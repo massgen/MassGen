@@ -96,7 +96,7 @@ class ResponseBackend(LLMBackend):
 
             # Extract model and provider tool settings
             model = kwargs.get("model", "gpt-4o-mini")
-            enable_web_search = kwargs.get("enable_web_search", False)
+            enable_web_search = kwargs.get("enable_web_search", True)
             enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
 
             # Convert messages to Response API format (handles tool messages)
@@ -107,9 +107,24 @@ class ResponseBackend(LLMBackend):
 
             # Add max_output_tokens if specified (o-series models don't support this)
             max_tokens = kwargs.get("max_tokens")
-            if max_tokens and not model.startswith("o"):
+            if max_tokens and not model.startswith("o") and not "gpt-5" in model:
                 api_params["max_output_tokens"] = max_tokens
 
+            # Add temperature parameter
+            temperature = kwargs.get("temperature")
+            if temperature and not model.startswith("o") and not "gpt-5" in model:
+                api_params["temperature"] = temperature
+
+            # Add text.verbosity parameter
+            text = kwargs.get("text")
+            if text and "gpt-5" in model:
+                api_params["text"] = text
+            
+            # Add reasoning.effort parameter
+            reasoning = kwargs.get("reasoning")
+            if reasoning and "gpt-5" in model:
+                api_params["reasoning"] = reasoning
+            
             # Add framework tools (convert to Response API format)
             if tools:
                 converted_tools = self.convert_tools_to_response_api_format(tools)
@@ -117,7 +132,7 @@ class ResponseBackend(LLMBackend):
 
             # Add provider tools (web search, code interpreter) if enabled
             provider_tools = []
-            if enable_web_search:
+            if not reasoning and enable_web_search:
                 provider_tools.append({"type": "web_search"})
 
             if enable_code_interpreter:
@@ -179,10 +194,8 @@ class ResponseBackend(LLMBackend):
                                 hasattr(chunk.item, "type")
                                 and chunk.item.type == "web_search_call"
                             ):
-                                if hasattr(chunk.item, "action") and hasattr(
-                                    chunk.item.action, "query"
-                                ):
-                                    search_query = chunk.item.action.query
+                                if hasattr(chunk.item, "action") and ("query" in chunk.item.action):
+                                    search_query = chunk.item.action["query"]
                                     if search_query:
                                         yield StreamChunk(
                                             type="content",
