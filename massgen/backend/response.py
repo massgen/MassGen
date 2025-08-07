@@ -96,7 +96,7 @@ class ResponseBackend(LLMBackend):
 
             # Extract model and provider tool settings
             model = kwargs.get("model", "gpt-4o-mini")
-            enable_web_search = kwargs.get("enable_web_search", True)
+            enable_web_search = kwargs.get("enable_web_search", False)
             enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
 
             # Convert messages to Response API format (handles tool messages)
