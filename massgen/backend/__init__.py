@@ -3,10 +3,10 @@ MassGen Backend System - Multi-Provider LLM Integration
 
 Supports multiple LLM providers with standardized StreamChunk interface:
 - ChatCompletions (OpenAI-compatible for Cerebras AI, etc.)
-- Response API (standard format with tool support)
-- Grok/xAI (Chat Completions API compatible)
 - Claude (Messages API with multi-tool support)
 - Gemini (structured output for coordination)
+- Grok/xAI (Chat Completions API compatible)
+- Response API (standard format with tool support)
 """
 
 from .base import LLMBackend, StreamChunk, TokenUsage

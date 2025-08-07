@@ -24,3 +24,4 @@ agents:
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
+  

@@ -237,6 +237,7 @@ class SingleAgent(ChatAgent):
             # Regular conversation - append new messages to agent's history
             self.conversation_history.extend(messages)
             backend_messages = self.conversation_history.copy()
+            
         
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
