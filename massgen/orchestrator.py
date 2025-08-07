@@ -581,6 +581,7 @@ class Orchestrator(ChatAgent):
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
+
                 async for chunk in chat_stream:
                     if chunk.type == "content":
                         response_text += chunk.content

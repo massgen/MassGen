@@ -3494,3 +3494,4 @@ def create_rich_display(agent_ids: List[str], **kwargs) -> RichTerminalDisplay:
         ImportError: If Rich library is not available
     """
     return RichTerminalDisplay(agent_ids, **kwargs)
+

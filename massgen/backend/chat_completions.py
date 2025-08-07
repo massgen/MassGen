@@ -6,15 +6,26 @@ Handles common message processing, tool conversion, and streaming patterns.
 """
 
 import os
+import asyncio
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
 
 
 class ChatCompletionsBackend(LLMBackend):
-    """Base class for backends using Chat Completions API with shared streaming logic."""
+    """Complete OpenAI-compatible Chat Completions API backend.
+    
+    Can be used directly with any OpenAI-compatible provider by setting base_url.
+    Supports Cerebras AI and other compatible providers.
+    """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
+        # Get API key from parameter, environment, or default to OpenAI
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        # Get base_url from backend_params or use OpenAI default
+        self.base_url = kwargs.get("base_url", "https://api.openai.com/v1")
+        # Store provider name for identification
+        self._provider_name = kwargs.get("provider_name", "OpenAI")
 
     def convert_tools_to_chat_completions_format(
         self, tools: List[Dict[str, Any]]
@@ -58,6 +69,8 @@ class ChatCompletionsBackend(LLMBackend):
         self, stream, enable_web_search: bool = False
     ) -> AsyncGenerator[StreamChunk, None]:
         """Handle standard Chat Completions API streaming format."""
+        import json
+
         content = ""
         current_tool_calls = {}
         search_sources_used = 0
@@ -70,81 +83,75 @@ class ChatCompletionsBackend(LLMBackend):
 
                     # Handle content delta
                     if hasattr(choice, "delta") and choice.delta:
-                        if hasattr(choice.delta, "content") and choice.delta.content:
-                            content_chunk = choice.delta.content
+                        delta = choice.delta
+
+                        # Plain text content
+                        if getattr(delta, "content", None):
+                            content_chunk = delta.content
                             content += content_chunk
                             yield StreamChunk(type="content", content=content_chunk)
-
-                        # Handle tool calls streaming
-                        if (
-                            hasattr(choice.delta, "tool_calls")
-                            and choice.delta.tool_calls
-                        ):
-                            for tool_call_delta in choice.delta.tool_calls:
+                        
+                        # Tool calls streaming (OpenAI-style)
+                        if getattr(delta, "tool_calls", None):
+                            for tool_call_delta in delta.tool_calls:
                                 index = getattr(tool_call_delta, "index", 0)
 
                                 if index not in current_tool_calls:
                                     current_tool_calls[index] = {
                                         "id": "",
-                                        "name": "",
-                                        "arguments": "",
+                                        "function": {
+                                            "name": "",
+                                            "arguments": "",
+                                        },
                                     }
 
-                                if (
-                                    hasattr(tool_call_delta, "id")
-                                    and tool_call_delta.id
-                                ):
+                                # Accumulate id
+                                if getattr(tool_call_delta, "id", None):
                                     current_tool_calls[index]["id"] = tool_call_delta.id
 
+                                # Function name
                                 if (
                                     hasattr(tool_call_delta, "function")
                                     and tool_call_delta.function
                                 ):
-                                    if (
-                                        hasattr(tool_call_delta.function, "name")
-                                        and tool_call_delta.function.name
-                                    ):
-                                        current_tool_calls[index][
+                                    if getattr(tool_call_delta.function, "name", None):
+                                        current_tool_calls[index]["function"][
                                             "name"
                                         ] = tool_call_delta.function.name
 
-                                    if (
-                                        hasattr(tool_call_delta.function, "arguments")
-                                        and tool_call_delta.function.arguments
-                                    ):
-                                        current_tool_calls[index][
+                                    # Accumulate arguments (as string chunks)
+                                    if getattr(tool_call_delta.function, "arguments", None):
+                                        current_tool_calls[index]["function"][
                                             "arguments"
                                         ] += tool_call_delta.function.arguments
 
                     # Handle finish reason
-                    if hasattr(choice, "finish_reason") and choice.finish_reason:
+                    if getattr(choice, "finish_reason", None):
                         if choice.finish_reason == "tool_calls" and current_tool_calls:
-                            # Convert accumulated tool calls to final format
+
                             final_tool_calls = []
+
                             for index in sorted(current_tool_calls.keys()):
-                                tool_call = current_tool_calls[index]
+                                call = current_tool_calls[index]
+                                function_name = call["function"]["name"]
+                                arguments_str = call["function"]["arguments"]
 
-                                # Parse arguments as JSON
-                                arguments = tool_call["arguments"]
-                                if isinstance(arguments, str):
-                                    try:
-                                        import json
-
-                                        arguments = (
-                                            json.loads(arguments)
-                                            if arguments.strip()
-                                            else {}
-                                        )
-                                    except json.JSONDecodeError:
-                                        arguments = {}
+                                try:
+                                    arguments_obj = (
+                                        json.loads(arguments_str)
+                                        if arguments_str.strip()
+                                        else {}
+                                    )
+                                except json.JSONDecodeError:
+                                    arguments_obj = {}
 
                                 final_tool_calls.append(
                                     {
-                                        "id": tool_call["id"] or f"call_{index}",
+                                        "id": call["id"] or f"toolcall_{index}",
                                         "type": "function",
                                         "function": {
-                                            "name": tool_call["name"],
-                                            "arguments": arguments,
+                                            "name": function_name,
+                                            "arguments": arguments_obj,
                                         },
                                     }
                                 )
@@ -153,17 +160,19 @@ class ChatCompletionsBackend(LLMBackend):
                                 type="tool_calls", tool_calls=final_tool_calls
                             )
 
-                            # Build and yield complete message
                             complete_message = {
                                 "role": "assistant",
                                 "content": content.strip(),
+                                "tool_calls": final_tool_calls,
                             }
-                            if final_tool_calls:
-                                complete_message["tool_calls"] = final_tool_calls
+
                             yield StreamChunk(
                                 type="complete_message",
                                 complete_message=complete_message,
                             )
+                            yield StreamChunk(type="done")
+                            return
+
                         elif choice.finish_reason in ["stop", "length"]:
                             if search_sources_used > 0:
                                 yield StreamChunk(
@@ -171,12 +180,8 @@ class ChatCompletionsBackend(LLMBackend):
                                     content=f"\n✅ [Live Search Complete] Used {search_sources_used} sources\n",
                                 )
 
-                            # Check for citations before building complete message
-                            if (
-                                hasattr(chunk, "citations")
-                                and chunk.citations
-                                and len(chunk.citations) > 0
-                            ):
+                            # Handle citations if present
+                            if hasattr(chunk, "citations") and chunk.citations:
                                 if enable_web_search:
                                     citation_text = "\n📚 **Citations:**\n"
                                     for i, citation in enumerate(chunk.citations, 1):
@@ -185,7 +190,7 @@ class ChatCompletionsBackend(LLMBackend):
                                         type="content", content=citation_text
                                     )
 
-                            # Build and yield complete message (no tool calls)
+                            # Return final message
                             complete_message = {
                                 "role": "assistant",
                                 "content": content.strip(),
@@ -194,18 +199,14 @@ class ChatCompletionsBackend(LLMBackend):
                                 type="complete_message",
                                 complete_message=complete_message,
                             )
-
                             yield StreamChunk(type="done")
-                        return
+                            return
 
-                # Check for usage information (search sources) and citations
+                # Optionally handle usage metadata
                 if hasattr(chunk, "usage") and chunk.usage:
-                    if (
-                        hasattr(chunk.usage, "num_sources_used")
-                        and chunk.usage.num_sources_used
-                    ):
+                    if getattr(chunk.usage, "num_sources_used", 0) > 0:
                         search_sources_used = chunk.usage.num_sources_used
-                        if enable_web_search and search_sources_used > 0:
+                        if enable_web_search:
                             yield StreamChunk(
                                 type="content",
                                 content=f"\n📊 [Live Search] Using {search_sources_used} sources for real-time data\n",
@@ -217,7 +218,135 @@ class ChatCompletionsBackend(LLMBackend):
                 )
                 continue
 
+        # Fallback in case stream ends without finish_reason
         yield StreamChunk(type="done")
+
+
+    async def stream_with_tools(
+        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+            """Stream response using OpenAI-compatible Chat Completions API."""
+            try:  
+
+                from cerebras.cloud.sdk import AsyncCerebras
+
+                client = AsyncCerebras(
+                    api_key=self.api_key,  # This is the default and can be omitted
+                )
+
+                # Extract parameters
+                model = kwargs.get("model", "openai/gpt-oss-120b")
+                max_tokens = kwargs.get("max_tokens", None)
+                temperature = kwargs.get("temperature", None)
+                enable_web_search = kwargs.get("enable_web_search", False)
+                enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
+
+                # Convert tools to Chat Completions format
+                converted_tools = (
+                    self.convert_tools_to_chat_completions_format(tools) if tools else None
+                )
+
+                # Chat Completions API parameters
+                api_params = {
+                    "model": model,
+                    "messages": messages,
+                    "stream": True,
+                }
+
+                # Add tools if provided
+                if converted_tools:
+                    api_params["tools"] = converted_tools
+
+                # Add optional parameters only if they have values
+                if max_tokens is not None:
+                    api_params["max_tokens"] = max_tokens
+                if temperature is not None:
+                    api_params["temperature"] = temperature
+
+                # Add provider tools (web search, code interpreter) if enabled
+                provider_tools = []
+                if enable_web_search:
+                    provider_tools.append({
+                        "type": "function",
+                        "function": {
+                        "name": "web_search",
+                        "description": "Search the web for current or factual information",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query to send to the web"
+                            }
+                            },
+                            "required": ["query"]
+                        }
+                        }
+                    })
+
+                if enable_code_interpreter:
+                    provider_tools.append(
+                        {"type": "code_interpreter", "container": {"type": "auto"}}
+                    )
+
+                if provider_tools:
+                    if "tools" not in api_params:
+                        api_params["tools"] = []
+                    api_params["tools"].extend(provider_tools)
+
+                # create stream
+                stream = await client.chat.completions.create(**api_params)
+
+                # Use existing streaming handler with enhanced error handling
+                async for chunk in self.handle_chat_completions_stream(
+                    stream, enable_web_search
+                ):
+                    yield chunk
+
+            except Exception as e:
+                yield StreamChunk(type="error", error=f"Chat Completions API error: {str(e)}")
+
+    def get_provider_name(self) -> str:
+        """Get the name of this provider."""
+        return self._provider_name
+
+    def estimate_tokens(self, text: str) -> int:
+        """Estimate token count for text (rough approximation)."""
+        # Simple approximation: ~1.3 tokens per word
+        return int(len(text.split()) * 1.3)
+
+    def calculate_cost(
+        self, input_tokens: int, output_tokens: int, model: str
+    ) -> float:
+        """Calculate cost for token usage based on OpenAI pricing (default fallback)."""
+        model_lower = model.lower()
+        
+        # OpenAI GPT-4o pricing (most common)
+        if "gpt-4o" in model_lower:
+            if "mini" in model_lower:
+                input_cost = (input_tokens / 1_000_000) * 0.15
+                output_cost = (output_tokens / 1_000_000) * 0.60
+            else:
+                input_cost = (input_tokens / 1_000_000) * 2.50
+                output_cost = (output_tokens / 1_000_000) * 10.00
+        # GPT-4 pricing
+        elif "gpt-4" in model_lower:
+            if "turbo" in model_lower:
+                input_cost = (input_tokens / 1_000_000) * 10.00
+                output_cost = (output_tokens / 1_000_000) * 30.00
+            else:
+                input_cost = (input_tokens / 1_000_000) * 30.00
+                output_cost = (output_tokens / 1_000_000) * 60.00
+        # GPT-3.5 pricing
+        elif "gpt-3.5" in model_lower:
+            input_cost = (input_tokens / 1_000_000) * 0.50
+            output_cost = (output_tokens / 1_000_000) * 1.50
+        else:
+            # Generic fallback pricing (moderate cost estimate)
+            input_cost = (input_tokens / 1_000_000) * 1.00
+            output_cost = (output_tokens / 1_000_000) * 3.00
+
+        return input_cost + output_cost
 
     def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
         """Extract tool name from Chat Completions format."""
@@ -225,4 +354,36 @@ class ChatCompletionsBackend(LLMBackend):
 
     def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
         """Extract tool arguments from Chat Completions format."""
-        return tool_call.get("function", {}).get("arguments", {})
+        arguments = tool_call.get("function", {}).get("arguments", {})
+        if isinstance(arguments, str):
+            try:
+                import json
+                return json.loads(arguments) if arguments.strip() else {}
+            except json.JSONDecodeError:
+                return {}
+        return arguments
+
+    def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
+        """Extract tool call ID from Chat Completions format."""
+        return tool_call.get("id", "")
+
+    def create_tool_result_message(
+        self, tool_call: Dict[str, Any], result_content: str
+    ) -> Dict[str, Any]:
+        """Create tool result message for Chat Completions format."""
+        tool_call_id = self.extract_tool_call_id(tool_call)
+        return {
+            "role": "tool",
+            "tool_call_id": tool_call_id,
+            "content": result_content,
+        }
+
+    def extract_tool_result_content(self, tool_result_message: Dict[str, Any]) -> str:
+        """Extract content from Chat Completions tool result message."""
+        return tool_result_message.get("content", "")
+
+    def get_supported_builtin_tools(self) -> List[str]:
+        """Get list of builtin tools supported by this provider."""
+        # Chat Completions API doesn't typically support builtin tools like web_search
+        # But some providers might - this can be overridden in subclasses
+        return []
