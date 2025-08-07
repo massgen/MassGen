@@ -59,6 +59,7 @@ MassGen v0.0.4 focuses on **Coding Agent Integration** as the primary goal. Buil
 - [ ] Add performance profiling and optimization tools
 - [ ] Create interactive setup and configuration wizard
 - [ ] Implement configurable output verbosity levels
+- [ ] Provide fluid `pip install` developer experience
 
 #### 3.3 Production & Extensibility
 - [ ] Add comprehensive logging and monitoring

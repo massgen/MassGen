@@ -57,6 +57,7 @@ from massgen.backend.response import ResponseBackend
 from massgen.backend.grok import GrokBackend
 from massgen.backend.claude import ClaudeBackend
 from massgen.backend.gemini import GeminiBackend
+from massgen.backend.chat_completions import ChatCompletionsBackend
 from massgen.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.agent_config import AgentConfig
 from massgen.orchestrator import Orchestrator
@@ -149,118 +150,87 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             )
         return GeminiBackend(api_key=api_key)
 
+    elif backend_type == "chatcompletion":
+        api_key = kwargs.get("api_key")
+        base_url = kwargs.get("base_url")
+        
+        # Determine API key based on base URL if not explicitly provided
+        if not api_key:
+            if base_url and "cerebras.ai" in base_url:
+                api_key = os.getenv("CEREBRAS_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
+                    )
+        
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
+
 
 
 def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration."""
     agents = {}
 
-    # Handle single agent configuration
-    if "agent" in config:
-        agent_config_data = config["agent"]
-        backend_config = agent_config_data.get("backend", {})
+    agent_entries = (
+        [config["agent"]] if "agent" in config else
+        config.get("agents", None)
+    )
+
+    if not agent_entries:
+        raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
+
+    for i, agent_data in enumerate(agent_entries, start=1):
+        backend_config = agent_data.get("backend", {})
 
         # Infer backend type from model if not explicitly provided
-        if "type" not in backend_config and "model" in backend_config:
-            backend_type = get_backend_type_from_model(backend_config["model"])
-        else:
-            backend_type = backend_config.get("type")
-            if not backend_type:
-                raise ConfigurationError(
-                    "Backend type must be specified or inferrable from model"
-                )
+        backend_type = backend_config.get("type") or (
+            get_backend_type_from_model(backend_config["model"])
+            if "model" in backend_config else None
+        )
+        if not backend_type:
+            raise ConfigurationError("Backend type must be specified or inferrable from model")
 
         backend = create_backend(backend_type, **backend_config)
+        backend_params = {k: v for k, v in backend_config.items() if k != "type"}
 
-        # Create proper AgentConfig with backend_params
-        if backend_type.lower() == "openai":
-            agent_config = AgentConfig.create_openai_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
-        elif backend_type.lower() == "claude":
-            agent_config = AgentConfig.create_claude_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
-        elif backend_type.lower() == "grok":
-            agent_config = AgentConfig.create_grok_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
-        elif backend_type.lower() == "gemini":
-            agent_config = AgentConfig.create_gemini_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
+        backend_type_lower = backend_type.lower()
+        if backend_type_lower == "openai":
+            agent_config = AgentConfig.create_openai_config(**backend_params)
+        elif backend_type_lower == "claude":
+            agent_config = AgentConfig.create_claude_config(**backend_params)
+        elif backend_type_lower == "grok":
+            agent_config = AgentConfig.create_grok_config(**backend_params)
+        elif backend_type_lower == "gemini":
+            agent_config = AgentConfig.create_gemini_config(**backend_params)
+        elif backend_type_lower == "chatcompletion":
+            agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         else:
-            # Fallback to basic config
             agent_config = AgentConfig(backend_params=backend_config)
 
-        # Set agent ID and system message
-        agent_config.agent_id = agent_config_data.get("id", "agent1")
-        agent_config.custom_system_instruction = agent_config_data.get("system_message")
+        agent_config.agent_id = agent_data.get("id", f"agent{i}")
+        agent_config.custom_system_instruction = agent_data.get("system_message")
 
         agent = ConfigurableAgent(config=agent_config, backend=backend)
-        agents[agent.agent_id] = agent
-
-    # Handle multiple agents configuration
-    elif "agents" in config:
-        for agent_config_data in config["agents"]:
-            backend_config = agent_config_data.get("backend", {})
-
-            # Infer backend type from model if not explicitly provided
-            if "type" not in backend_config and "model" in backend_config:
-                backend_type = get_backend_type_from_model(backend_config["model"])
-            else:
-                backend_type = backend_config.get("type")
-                if not backend_type:
-                    raise ConfigurationError(
-                        "Backend type must be specified or inferrable from model"
-                    )
-
-            backend = create_backend(backend_type, **backend_config)
-
-            # Create proper AgentConfig with backend_params
-            if backend_type.lower() == "openai":
-                agent_config = AgentConfig.create_openai_config(
-                    **{k: v for k, v in backend_config.items() if k != "type"}
-                )
-            elif backend_type.lower() == "claude":
-                agent_config = AgentConfig.create_claude_config(
-                    **{k: v for k, v in backend_config.items() if k != "type"}
-                )
-            elif backend_type.lower() == "grok":
-                agent_config = AgentConfig.create_grok_config(
-                    **{k: v for k, v in backend_config.items() if k != "type"}
-                )
-            else:
-                # Fallback to basic config
-                agent_config = AgentConfig(backend_params=backend_config)
-
-            # Set agent ID and system message
-            agent_config.agent_id = agent_config_data.get("id", f"agent{len(agents)+1}")
-            agent_config.custom_system_instruction = agent_config_data.get(
-                "system_message"
-            )
-
-            agent = ConfigurableAgent(config=agent_config, backend=backend)
-            agents[agent.agent_id] = agent
-
-    else:
-        raise ConfigurationError(
-            "Configuration must contain either 'agent' or 'agents' section"
-        )
+        agents[agent.config.agent_id] = agent
 
     return agents
 
 
 def create_simple_config(
-    backend_type: str, model: str, system_message: Optional[str] = None
+    backend_type: str, model: str, system_message: Optional[str] = None, base_url: Optional[str] = None
 ) -> Dict[str, Any]:
     """Create a simple single-agent configuration."""
+    backend_config = {"type": backend_type, "model": model}
+    if base_url:
+        backend_config["base_url"] = base_url
+    
     return {
         "agent": {
             "id": "agent1",
-            "backend": {"type": backend_type, "model": model},
+            "backend": backend_config,
             "system_message": system_message or "You are a helpful AI assistant.",
         },
         "ui": {"display_type": "rich_terminal", "logging_enabled": True},
@@ -290,7 +260,7 @@ async def run_question_with_history(
         print(f"Agent: {agent.agent_id}", flush=True)
         if history:
             print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         response_content = ""
@@ -323,7 +293,7 @@ async def run_question_with_history(
         print(f"Agents: {', '.join(agents.keys())}", flush=True)
         if history:
             print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         # For multi-agent with history, we need to use a different approach
@@ -362,7 +332,7 @@ async def run_single_question(
 
         print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}", flush=True)
         print(f"Agent: {agent.agent_id}", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         messages = [{"role": "user", "content": question}]
@@ -393,7 +363,7 @@ async def run_single_question(
 
         print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
         print(f"Agents: {', '.join(agents.keys())}", flush=True)
-        print(f"Question: {BRIGHT_WHITE}{question}{RESET}", flush=True)
+        print(f"Question: {question}", flush=True)
         print("\n" + "=" * 60, flush=True)
 
         final_response = await ui.coordinate(orchestrator, question)
@@ -574,6 +544,9 @@ Examples:
   python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
   python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
   
+  # Use ChatCompletion backend with custom base URL
+  python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
+  
   # Interactive mode
   python -m massgen.cli --config config.yaml
   
@@ -584,6 +557,7 @@ Environment Variables:
   OPENAI_API_KEY      - Required for OpenAI backend
   XAI_API_KEY         - Required for Grok backend  
   ANTHROPIC_API_KEY   - Required for Claude backend
+  CEREBRAS_API_KEY    - Required for CEREBRAS CLOUD API (chatcompletion backend)
         """,
     )
 
@@ -602,7 +576,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["openai", "grok", "claude", "gemini"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai"],
         help="Backend type for quick setup",
     )
 
@@ -615,6 +589,9 @@ Environment Variables:
     )
     parser.add_argument(
         "--system-message", type=str, help="System message for quick setup"
+    )
+    parser.add_argument(
+        "--base-url", type=str, help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)"
     )
 
     # UI options
@@ -647,7 +624,7 @@ Environment Variables:
             else:
                 system_message = None
             config = create_simple_config(
-                backend_type=backend, model=model, system_message=system_message
+                backend_type=backend, model=model, system_message=system_message, base_url=args.base_url
             )
 
         # Apply command-line overrides

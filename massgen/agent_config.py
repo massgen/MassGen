@@ -35,6 +35,42 @@ class AgentConfig:
     custom_system_instruction: Optional[str] = None
 
     @classmethod
+    def create_chatcompletion_config(
+        cls,
+        model: str = "gpt-oss-120b",
+        enable_web_search: bool = False,
+        enable_code_interpreter: bool = False,
+        **kwargs,
+    ) -> "AgentConfig":
+        """Create ChatCompletion configuration following proven patterns.
+
+        Args:
+            model: Opensource Model Name
+            enable_web_search: Enable web search via Responses API
+            enable_code_interpreter: Enable code execution for computational tasks
+            **kwargs: Additional backend parameters
+
+        Examples:
+            # Basic configuration
+            config = AgentConfig.create_chatcompletion_config("gpt-oss-120b")
+
+            # Research task with web search
+            config = AgentConfig.create_chatcompletion_config("gpt-oss-120b", enable_web_search=True)
+
+            # Computational task with code execution
+            config = AgentConfig.create_chatcompletion_config("gpt-oss-120b", enable_code_interpreter=True)
+        """
+        backend_params = {"model": model, **kwargs}
+
+        # Add tool enablement to backend_params
+        if enable_web_search:
+            backend_params["enable_web_search"] = True
+        if enable_code_interpreter:
+            backend_params["enable_code_interpreter"] = True
+
+        return cls(backend_params=backend_params)
+    
+    @classmethod
     def create_openai_config(
         cls,
         model: str = "gpt-4o-mini",
