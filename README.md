@@ -201,10 +201,11 @@ Make sure you set up the API key for the model you want to use.
 #### Models
 
 <p align="center">
-  <i>MassGen now supports GPT-OSS models! 🚀</i>
+  <b>MassGen now supports GPT-OSS models! 🚀</b>
 </p>
 
-The system currently supports major model providers with advanced reasoning capabilities: **Anthropic Claude**, **Cerebras**, **Google Gemini**, **OpenAI**, and **xAI Grok**. GPT-OSS models can be accessed through the **Cerebras** backend. More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
+The system currently supports major model providers with advanced reasoning capabilities: **Anthropic Claude**, **Cerebras**, **Google Gemini**, **OpenAI**, and **xAI Grok**. GPT-OSS models can be accessed through the **Cerebras** backend. 
+More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
 
