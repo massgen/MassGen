@@ -4,41 +4,10 @@ This case study demonstrates MassGen's ability to handle complex technical reque
 
 ## Command:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "estimate the price of NVIDIA 5 years from now through actual simulation, not just talking about simulation"
+uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude_code_execution.yaml "estimate the price of NVIDIA 5 years from now through actual simulation, not just talking about simulation"
 ```
 
 **Prompt:** estimate the price of NVIDIA 5 years from now through actual simulation, not just talking about simulation
-
-**Configuration File (gemini_4o_claude.yaml):**
-*Note: All agents have code execution capabilities enabled*
-
-```yaml
-agents:
-  - id: "gemini2.5flash"
-    backend:
-      type: "gemini"
-      model: "gemini-2.5-flash"
-      enable_web_search: true
-      enable_code_execution: true
-
-  - id: "gpt-4o"
-    backend:
-      type: "openai"
-      model: "gpt-4o"
-      enable_web_search: true
-      enable_code_interpreter: true
-
-  - id: "claude-3-5-haiku"
-    backend:
-      type: "claude"
-      model: "claude-3-5-haiku-20241022"
-      enable_web_search: true
-      enable_code_execution: true
-
-ui:
-  display_type: "rich_terminal"
-  logging_enabled: true
-```
 
 **Agents:**
 * Agent 1: gemini2.5flash (Designated Representative Agent)
