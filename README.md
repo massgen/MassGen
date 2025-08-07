@@ -191,6 +191,7 @@ XAI_API_KEY=your-xai-key-here
 Make sure you set up the API key for the model you want to use.
 
 **Useful links to get API keys:**
+ - [Cerabras](https://inference-docs.cerebras.ai/introduction)
  - [Claude](https://docs.anthropic.com/en/api/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
  - [Grok](https://docs.x.ai/docs/overview)
@@ -213,12 +214,13 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Models:**
 
-| Backend | Live Search | Code Execution |
-|---------|:-----------:|:--------------:|
-| **Claude** | ✅ | ✅ |
-| **OpenAI** | ✅ | ✅ |
-| **Grok** | ✅ | ❌ |
-| **Gemini** | ✅ | ✅ |
+| Backend | Live Search | Code Execution | Example Models|
+|---------|:-----------:|:--------------:|:----------:|
+| **Claude** | ✅ | ✅ | Claude-4-Opus |
+| **Gemini** | ✅ | ✅ | Gemini-2.5 |
+| **Grok** | ✅ | ❌ | Grok-4 |
+| **OpenAI** | ✅ | ✅ | GPT-4o |
+| **Others (Cerebras...)** | ❌ | ❌ | GPT-OSS-120B |
 
 ### 4. 🏃 Run MassGen
 
@@ -228,9 +230,12 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "Which AI won IMO in 2025?"
 ```
 
-All supported models can be found [here](massgen/utils.py).
+All models that can be directly accessed using the `--model` parameter can be found [here](massgen/utils.py). 
+
+Other models can be used with the `--backend` parameter, the `--model` parameter and optionally the `--base-url` parameter (e.g GPT-OSS-120B).
 
 #### Multiple Agents from Config
 ```bash
@@ -244,9 +249,10 @@ All available quick configuration files can be found [here](massgen/configs).
 
 | Parameter          | Description |
 |-------------------|-------------|
-| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok` or `openai`). Optional because we can infer backend type through model.|
-| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings.|
+| `--backend`        | Backend type for quick setup without a config file (`chatcompletion`, `claude`, `gemini`, `grok` or `openai`).|
+| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models without needing to specify backend](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--base_url`       | Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions) |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
@@ -264,7 +270,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
+    type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -278,7 +284,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "claude" | "gemini" | "grok" | "openai" #Type of backend (Optional because we can infer backend type through model.)
+      type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -293,6 +299,18 @@ agents:  # Multiple agents (alternative to 'agent')
 **Backend Configuration:**
 
 Detailed parameters for each agent's backend can be specified using the following configuration formats:
+
+#### Chatcompletion
+
+```yaml
+backend:
+  type: "chatcompletion"
+  model: "gpt-oss-120b"  # Model name
+  base_url: "https://api.cerebras.ai/v1/chat/completions" # Base URL for API endpoint
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+```
 
 #### Claude
 
