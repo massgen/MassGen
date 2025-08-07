@@ -11,11 +11,17 @@ import threading
 import asyncio
 import os
 import sys
-import select
-import tty
-import termios
 import subprocess
 import signal
+
+# Unix-specific imports (not available on Windows)
+try:
+    import select
+    import tty
+    import termios
+    UNIX_TERMINAL_SUPPORT = True
+except ImportError:
+    UNIX_TERMINAL_SUPPORT = False
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Dict, Any
@@ -1113,6 +1119,10 @@ class RichTerminalDisplay(TerminalDisplay):
 
     def _input_thread_worker_improved(self):
         """Improved background thread worker that doesn't interfere with Rich rendering."""
+        # Fall back to simple method if Unix terminal support is not available
+        if not UNIX_TERMINAL_SUPPORT:
+            return self._input_thread_worker_fallback()
+            
         try:
             # Save original terminal settings but don't change to raw mode
             if sys.stdin.isatty():
@@ -1188,7 +1198,7 @@ class RichTerminalDisplay(TerminalDisplay):
     def _restore_terminal_settings(self):
         """Restore original terminal settings."""
         try:
-            if self._original_settings and sys.stdin.isatty():
+            if UNIX_TERMINAL_SUPPORT and self._original_settings and sys.stdin.isatty():
                 termios.tcsetattr(
                     sys.stdin.fileno(), termios.TCSADRAIN, self._original_settings
                 )
@@ -1211,9 +1221,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Clear any pending keyboard input from stdin buffer
         try:
-            if sys.stdin.isatty():
-                import termios
-
+            if UNIX_TERMINAL_SUPPORT and sys.stdin.isatty():
                 # Flush input buffer to remove any pending keystrokes
                 termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
         except:
