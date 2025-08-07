@@ -1,6 +1,6 @@
 # OpenAI GPT-5 Models - Backend Implementation Notes
 
-> **Status**: Latest information as of January 2025  
+> **Status**: Latest information as of August 2025  
 > **Source**: OpenAI Platform Documentation - GPT-5 Guide  
 > **Impact**: Major updates required for MassGen backend implementations
 
