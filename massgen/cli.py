@@ -169,112 +169,52 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
+
 def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration."""
     agents = {}
 
-    # Handle single agent configuration
-    if "agent" in config:
-        agent_config_data = config["agent"]
-        backend_config = agent_config_data.get("backend", {})
+    agent_entries = (
+        [config["agent"]] if "agent" in config else
+        config.get("agents", None)
+    )
+
+    if not agent_entries:
+        raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
+
+    for i, agent_data in enumerate(agent_entries, start=1):
+        backend_config = agent_data.get("backend", {})
 
         # Infer backend type from model if not explicitly provided
-        if "type" not in backend_config and "model" in backend_config:
-            backend_type = get_backend_type_from_model(backend_config["model"])
-        else:
-            backend_type = backend_config.get("type")
-            if not backend_type:
-                raise ConfigurationError(
-                    "Backend type must be specified or inferrable from model"
-                )
+        backend_type = backend_config.get("type") or (
+            get_backend_type_from_model(backend_config["model"])
+            if "model" in backend_config else None
+        )
+        if not backend_type:
+            raise ConfigurationError("Backend type must be specified or inferrable from model")
 
         backend = create_backend(backend_type, **backend_config)
+        backend_params = {k: v for k, v in backend_config.items() if k != "type"}
 
-        # Create proper AgentConfig with backend_params
-        if backend_type.lower() == "openai":
-            agent_config = AgentConfig.create_openai_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
-        elif backend_type.lower() == "claude":
-            agent_config = AgentConfig.create_claude_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
-        elif backend_type.lower() == "grok":
-            agent_config = AgentConfig.create_grok_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
-        elif backend_type.lower() == "gemini":
-            agent_config = AgentConfig.create_gemini_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
-        elif backend_type.lower() == "chatcompletion":
-            # Use OpenAI config as base since ChatCompletionsBackend is OpenAI-compatible
-            agent_config = AgentConfig.create_openai_config(
-                **{k: v for k, v in backend_config.items() if k != "type"}
-            )
+        backend_type_lower = backend_type.lower()
+        if backend_type_lower == "openai":
+            agent_config = AgentConfig.create_openai_config(**backend_params)
+        elif backend_type_lower == "claude":
+            agent_config = AgentConfig.create_claude_config(**backend_params)
+        elif backend_type_lower == "grok":
+            agent_config = AgentConfig.create_grok_config(**backend_params)
+        elif backend_type_lower == "gemini":
+            agent_config = AgentConfig.create_gemini_config(**backend_params)
+        elif backend_type_lower == "chatcompletion":
+            agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         else:
-            # Fallback to basic config
             agent_config = AgentConfig(backend_params=backend_config)
 
-        # Set agent ID and system message
-        agent_config.agent_id = agent_config_data.get("id", "agent1")
-        agent_config.custom_system_instruction = agent_config_data.get("system_message")
+        agent_config.agent_id = agent_data.get("id", f"agent{i}")
+        agent_config.custom_system_instruction = agent_data.get("system_message")
 
         agent = ConfigurableAgent(config=agent_config, backend=backend)
-        agents[agent.agent_id] = agent
-
-    # Handle multiple agents configuration
-    elif "agents" in config:
-        for agent_config_data in config["agents"]:
-            backend_config = agent_config_data.get("backend", {})
-
-            # Infer backend type from model if not explicitly provided
-            if "type" not in backend_config and "model" in backend_config:
-                backend_type = get_backend_type_from_model(backend_config["model"])
-            else:
-                backend_type = backend_config.get("type")
-                if not backend_type:
-                    raise ConfigurationError(
-                        "Backend type must be specified or inferrable from model"
-                    )
-
-            backend = create_backend(backend_type, **backend_config)
-
-            # Create proper AgentConfig with backend_params
-            if backend_type.lower() == "openai":
-                agent_config = AgentConfig.create_openai_config(
-                    **{k: v for k, v in backend_config.items() if k != "type"}
-                )
-            elif backend_type.lower() == "claude":
-                agent_config = AgentConfig.create_claude_config(
-                    **{k: v for k, v in backend_config.items() if k != "type"}
-                )
-            elif backend_type.lower() == "grok":
-                agent_config = AgentConfig.create_grok_config(
-                    **{k: v for k, v in backend_config.items() if k != "type"}
-                )
-            elif backend_type.lower() == "chatcompletion":
-                # Use OpenAI config as base since ChatCompletionsBackend is OpenAI-compatible
-                agent_config = AgentConfig.create_openai_config(
-                    **{k: v for k, v in backend_config.items() if k != "type"}
-                )
-            else:
-                # Fallback to basic config
-                agent_config = AgentConfig(backend_params=backend_config)
-
-            # Set agent ID and system message
-            agent_config.agent_id = agent_config_data.get("id", f"agent{len(agents)+1}")
-            agent_config.custom_system_instruction = agent_config_data.get(
-                "system_message"
-            )
-
-            agent = ConfigurableAgent(config=agent_config, backend=backend)
-            agents[agent.agent_id] = agent
-
-    else:
-        raise ConfigurationError(
-            "Configuration must contain either 'agent' or 'agents' section"
-        )
+        agents[agent.config.agent_id] = agent
 
     return agents
 
@@ -636,7 +576,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["openai", "grok", "claude", "gemini", "chatcompletion"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai"],
         help="Backend type for quick setup",
     )
 
