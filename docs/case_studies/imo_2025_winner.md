@@ -1,6 +1,6 @@
 # MassGen Case Study: IMO 2025 AI Winners
 
-This case study demonstrates MassGen's ability to achieve unanimous consensus through strategic vote switching, where agents recognize and reward superior detail and structure in responses to current events queries.
+This case study demonstrates MassGen's ability to achieve unanimous consensus through strategic vote switching, where agents recognize and reward superior detail and structure in responses to current events queries. This case study was run on version v0.0.4.
 
 **Command:**
 ```

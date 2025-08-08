@@ -1,6 +1,6 @@
 # MassGen Case Study: Stockholm Travel Guide - Extended Intelligence Sharing and Comprehensive Convergence
 
-This case study demonstrates MassGen's sophisticated intelligence sharing mechanism over an extended session, showcasing how multiple agents can iteratively refine and cross-pollinate their responses to achieve unanimous consensus on a comprehensive travel guide.
+This case study demonstrates MassGen's sophisticated intelligence sharing mechanism over an extended session, showcasing how multiple agents can iteratively refine and cross-pollinate their responses to achieve unanimous consensus on a comprehensive travel guide. This case study was run on version v0.0.4.
 
 **Command:**
 ```

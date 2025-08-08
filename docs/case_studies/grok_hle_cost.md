@@ -1,6 +1,6 @@
 # MassGen Case Study: Grok-4 HLE Benchmark Cost Analysis - Unanimous Expert Consensus
 
-This case study demonstrates MassGen's ability to achieve unanimous consensus on a complex technical pricing query, showcasing how three different AI agents can converge on a comprehensive, well-researched answer through collaborative analysis.
+This case study demonstrates MassGen's ability to achieve unanimous consensus on a complex technical pricing query, showcasing how three different AI agents can converge on a comprehensive, well-researched answer through collaborative analysis. This case study was run on version v0.0.4.
 
 ## Command:
 ```bash
