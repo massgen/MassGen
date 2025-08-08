@@ -1,6 +1,6 @@
 # MassGen Case Study: Super Intelligence Approaches
 
-This case study demonstrates MassGen's ability to tackle complex philosophical and technical questions by leveraging different reasoning capacities. The agents collaborate to explore the multifaceted challenge of achieving super intelligence from various perspectives.
+This case study demonstrates MassGen's ability to tackle complex philosophical and technical questions by leveraging different reasoning capacities. The agents collaborate to explore the multifaceted challenge of achieving super intelligence from various perspectives. This case study was run on version v0.0.4.
 
 ## Command:
 ```bash
@@ -16,7 +16,7 @@ uv run python -m massgen.cli --config massgen/configs/gpt5_nano.yaml "What's the
 
 **Watch the recorded demo:**
 
-TODO
+[![MassGen Case Study](https://img.youtube.com/vi/ZLQ7b096hEU/0.jpg)](https://www.youtube.com/watch?v=ZLQ7b096hEU)
 
 ---
 
