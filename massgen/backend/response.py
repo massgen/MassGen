@@ -262,7 +262,7 @@ class ResponseBackend(LLMBackend):
                                             {
                                                 "id": item.get("id", ""),
                                                 "tool_type": "code_interpreter",
-                                                "status": item.get("status"),
+                                                "status": item.get("status", ""),
                                                 "code": item.get("code", ""),
                                                 "outputs": item.get("outputs"),
                                                 "container_id": item.get(
@@ -276,7 +276,7 @@ class ResponseBackend(LLMBackend):
                                             {
                                                 "id": item.get("id", ""),
                                                 "tool_type": "web_search",
-                                                "status": item.get("status"),
+                                                "status": item.get("status", ""),
                                                 "query": item.get("query", ""),
                                                 "results": item.get("results"),
                                             }
