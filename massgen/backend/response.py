@@ -75,13 +75,22 @@ class ResponseBackend(LLMBackend):
             elif message.get("role") == "assistant" and "tool_calls" in message:
                 # Assistant message with tool_calls in native Responses API format
                 # Remove tool_calls when sending as input - only results should be sent back
+                # Also filter to only valid fields for GPT-5 Response API
+                valid_fields = {"role", "content", "type", "call_id", "output", "name"}
                 cleaned_message = {
-                    k: v for k, v in message.items() if k != "tool_calls"
+                    k: v for k, v in message.items() 
+                    if k != "tool_calls" and k in valid_fields
                 }
                 converted_messages.append(cleaned_message)
             else:
-                # Keep other message types as-is
-                converted_messages.append(message)
+                # Keep other message types but filter out invalid fields
+                # GPT-5 Response API only accepts specific fields
+                valid_fields = {"role", "content", "type", "call_id", "output", "name"}
+                filtered_message = {
+                    k: v for k, v in message.items() 
+                    if k in valid_fields
+                }
+                converted_messages.append(filtered_message)
 
         return converted_messages
 
@@ -199,7 +208,7 @@ class ResponseBackend(LLMBackend):
                                     if search_query:
                                         yield StreamChunk(
                                             type="content",
-                                            content=f"\n🔍 [Search Query] '{search_query}'",
+                                            content=f"\n🔍 [Search Query] '{search_query}'\n",
                                         )
                             elif (
                                 hasattr(chunk.item, "type")
