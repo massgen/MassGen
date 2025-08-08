@@ -1,6 +1,6 @@
 # MassGen Case Study: Collaborative Monte Carlo Simulation
 
-This case study demonstrates MassGen's ability to handle complex technical requests requiring actual computation and simulation, showcasing how agents can distinguish between theoretical explanations and practical execution.
+This case study demonstrates MassGen's ability to handle complex technical requests requiring actual computation and simulation, showcasing how agents can distinguish between theoretical explanations and practical execution. This case study was run on version v0.0.3.
 
 ## Command:
 ```bash

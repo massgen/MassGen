@@ -1,6 +1,6 @@
 # MassGen Case Study: Comprehensive Algorithm Enumeration
 
-This case study demonstrates MassGen's ability to handle exhaustive knowledge compilation requests, showcasing how multiple agents with different levels of reasoning capacity can collaborate to create an encyclopedic resource on algorithmic approaches.
+This case study demonstrates MassGen's ability to handle exhaustive knowledge compilation requests, showcasing how multiple agents with different levels of reasoning capacity can collaborate to create an encyclopedic resource on algorithmic approaches. This case study was run on version v0.0.4.
 
 ## Command:
 ```bash

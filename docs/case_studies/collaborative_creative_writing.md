@@ -1,6 +1,6 @@
 # MassGen Case Study: Collaborative Creative Writing
 
-This case study demonstrates **MassGen**'s ability to achieve unanimous consensus on creative writing tasks, showcasing how agents can recognize and converge on superior narrative quality through sophisticated literary evaluation.
+This case study demonstrates **MassGen**'s ability to achieve unanimous consensus on creative writing tasks, showcasing how agents can recognize and converge on superior narrative quality through sophisticated literary evaluation. This case study was run on version v0.0.3.
 
 ---
 

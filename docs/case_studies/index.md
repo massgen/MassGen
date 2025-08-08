@@ -11,5 +11,5 @@ This directory contains detailed case studies demonstrating MassGen's capabiliti
 *   [Estimating Grok-4 HLE Benchmark Costs](grok_hle_cost.md)
 *   [Stockholm Travel Guide - Convergence on Detail](stockholm_travel_guide.md)
 *   [Collaborative Monte Carlo Simulation](nvidia_stock_prediction.md)
-*   [Fibonacci number algorithms](fibonacci_number_algorithms.md)
+*   [Superintelligence](superIntelligence.md)
 
