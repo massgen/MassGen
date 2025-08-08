@@ -1,6 +1,6 @@
 # MassGen Case Study: Berkeley Agentic AI Summit Summary
 
-This case study demonstrates **MassGen**'s ability to handle specialized research queries with strict constraints, showcasing how agents can recognize and prioritize responses that precisely meet user specifications while maintaining high academic standards. This case study was run on version v0.0.4.
+This case study demonstrates **MassGen**'s ability to handle specialized research queries with strict constraints, showcasing how agents can recognize and prioritize responses that precisely meet user specifications while maintaining high academic standards. This case study was run on version v0.0.3.
 
 ---
 
