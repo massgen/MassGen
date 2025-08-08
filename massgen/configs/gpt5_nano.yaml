@@ -1,0 +1,43 @@
+# MassGen Three Agent Configuration
+# 3 GPT-5-nano models
+
+agents:
+  - id: "gpt-5-nano-1"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text: 
+        verbosity: "medium"
+      reasoning:
+        effort: "minimal"
+      #enable_web_search: true # reasoning and enable_web_search cannot be used synchronically
+      # enable_code_execution: true
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+  - id: "gpt-5-nano-2"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text: 
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+      #enable_web_search: true
+      #enable_code_interpreter: true
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+  - id: "gpt-5-nano-3"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text: 
+        verbosity: "medium"
+      reasoning:
+        effort: "high"
+      #enable_web_search: true
+      #enable_code_interpreter: true
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

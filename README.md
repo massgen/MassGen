@@ -94,7 +94,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.4 Roadmap](#v004-roadmap)
+- [v0.0.5 Roadmap](#v005-roadmap)
 </details>
 
 <details open>
@@ -202,7 +202,7 @@ Make sure you set up the API key for the model you want to use.
 #### Models
 
 <p align="center">
-  <b>MassGen now supports GPT-OSS models! 🚀</b>
+  <b>MassGen now supports GPT-5 series models & GPT-OSS models! 🚀</b>
 </p>
 
 The system currently supports major model providers with advanced reasoning capabilities: **Anthropic Claude**, **Cerebras**, **Google Gemini**, **OpenAI**, and **xAI Grok**. GPT-OSS models can be accessed through the **Cerebras** backend. 
@@ -219,7 +219,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Claude** | ✅ | ✅ | Claude-4-Opus |
 | **Gemini** | ✅ | ✅ | Gemini-2.5 |
 | **Grok** | ✅ | ❌ | Grok-4 |
-| **OpenAI** | ✅ | ✅ | GPT-4o |
+| **OpenAI** | ✅ | ✅ | GPT-5 |
 | **Others (Cerebras...)** | ❌ | ❌ | GPT-OSS-120B |
 
 ### 4. 🏃 Run MassGen
@@ -228,7 +228,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 ```bash
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-4o-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "Which AI won IMO in 2025?"
 ```
@@ -358,11 +358,15 @@ backend:
 ```yaml
 backend:
   type: "openai"
-  model: "gpt-4o"                    # Model name
+  model: "gpt-5"                     # Model name
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, o-series models don't support this)
-  max_tokens: 2500                   # Maximum response length (o-series models don't support this)
-  enable_web_search: true            # Web search capability
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, GPT-5 series models and GPT o-series models don't support this)
+  max_tokens: 2500                   # Maximum response length (GPT-5 series models and GPT o-series models don't support this)
+  text: 
+    verbosity: "medium"              # Response detail level (low/medium/high, only supported in GPT-5 series models)
+  reasoning:                         
+    effort: "high"                   # Reasoning depth (low/medium/high, only supported in GPT-5 series models and GPT o-series models)
+  enable_web_search: true            # Web search capability. Note, reasoning and web_search are mutually exclusive and can't be turned on at the same time
   enable_code_interpreter: true      # Code interpreter capability
 ```
 
@@ -399,7 +403,7 @@ MassGen supports an interactive mode where you can have ongoing conversations wi
 
 ```bash
 # Start interactive mode with a single agent
-uv run python -m massgen.cli --model gpt-4o-mini
+uv run python -m massgen.cli --model gpt-5-mini
 
 # Start interactive mode with configuration file
 uv run python -m massgen.cli --config three_agents_default.yaml
@@ -496,15 +500,15 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to help us achieve these goals.
 
-### v0.0.4 Roadmap
+### v0.0.5 Roadmap
 
-Version 0.0.4 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.5 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
 
 - **Coding Agent Integration** (Required): Seamless integration of Claude Code CLI and Gemini CLI with coding-specific tools and workflows
 - **Enhanced Backend Features** (Optional): Improved error handling, health monitoring, and support for additional model providers
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.4 roadmap](ROADMAP_v0.0.4.md).
+For detailed milestones and technical specifications, see the [full v0.0.5 roadmap](ROADMAP_v0.0.5.md).
 
 ---
 
