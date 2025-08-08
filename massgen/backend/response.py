@@ -77,17 +77,12 @@ class ResponseBackend(LLMBackend):
             if message.get("role") == "tool":
                 # Convert Chat Completions tool message to Response API format
                 converted_message = {
-                    "id": f"msg_{i}",  # Add required id field
                     "type": "function_call_output",
                     "call_id": message.get("tool_call_id"),
                     "output": message.get("content", ""),
                 }
                 converted_messages.append(converted_message)
             elif message.get("type") == "function_call_output":
-                # Already in Response API format - ensure it has an id
-                if "id" not in message:
-                    message = message.copy()
-                    message["id"] = f"msg_{i}"
                 converted_messages.append(message)
             elif message.get("role") == "assistant" and "tool_calls" in message:
                 # Assistant message with tool_calls in native Responses API format
@@ -96,16 +91,10 @@ class ResponseBackend(LLMBackend):
                     k: v for k, v in message.items() 
                     if k != "tool_calls"
                 }
-                # Ensure it has an id
-                if "id" not in cleaned_message:
-                    cleaned_message["id"] = f"msg_{i}"
                 converted_messages.append(cleaned_message)
             else:
                 # For other message types, just ensure they have an id
                 filtered_message = message.copy()
-                # Ensure it has an id
-                if "id" not in filtered_message:
-                    filtered_message["id"] = f"msg_{i}"
                 converted_messages.append(filtered_message)
         return converted_messages
 
