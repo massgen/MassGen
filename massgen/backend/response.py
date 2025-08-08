@@ -107,17 +107,17 @@ class ResponseBackend(LLMBackend):
 
             # Add max_output_tokens if specified (o-series models don't support this)
             max_tokens = kwargs.get("max_tokens")
-            if max_tokens and not model.startswith("o") and not "gpt-5" in model:
+            if max_tokens:
                 api_params["max_output_tokens"] = max_tokens
 
             # Add temperature parameter
             temperature = kwargs.get("temperature")
-            if temperature and not model.startswith("o") and not "gpt-5" in model:
+            if temperature:
                 api_params["temperature"] = temperature
 
             # Add text.verbosity parameter
             text = kwargs.get("text")
-            if text and "gpt-5" in model:
+            if text:
                 api_params["text"] = text
             
             # Add reasoning.effort parameter
