@@ -213,11 +213,6 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-<p align="center">
-  <b>MassGen now supports GPT-5 series models & GPT-OSS models! 🚀</b>
-</p>
-
-The system currently supports major model providers with advanced reasoning capabilities: **Anthropic Claude**, **Cerebras**, **Google Gemini**, **OpenAI**, and **xAI Grok**. GPT-OSS models can be accessed through the **Cerebras** backend. 
 The system currently supports multiple model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**, and **CLI interfaces** for Claude Code and Gemini CLI. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
@@ -227,13 +222,6 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | Example Models|
-|---------|:-----------:|:--------------:|:----------:|
-| **Claude** | ✅ | ✅ | Claude-4-Opus |
-| **Gemini** | ✅ | ✅ | Gemini-2.5 |
-| **Grok** | ✅ | ❌ | Grok-4 |
-| **OpenAI** | ✅ | ✅ | GPT-5 |
-| **Others (Cerebras...)** | ❌ | ❌ | GPT-OSS-120B |
 | Backend | Live Search | Code Execution | File Operations | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------------|
 | **Claude API** | ✅ | ✅ | ❌ | Web search, code interpreter |
@@ -252,7 +240,6 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "Which AI won IMO in 2025?"
 ```
 
 **CLI-based backends** (requires CLI tools installed):
@@ -264,9 +251,7 @@ uv run python -m massgen.cli --backend claude-code-cli --model sonnet "Debug thi
 uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro "Analyze this code and suggest improvements"
 ```
 
-All models that can be directly accessed using the `--model` parameter can be found [here](massgen/utils.py). 
-
-Other models can be used with the `--backend` parameter, the `--model` parameter and optionally the `--base-url` parameter (e.g GPT-OSS-120B).
+All supported models can be found [here](massgen/utils.py).
 
 #### Multiple Agents from Config
 ```bash
@@ -283,11 +268,7 @@ All available quick configuration files can be found [here](massgen/configs).
 
 | Parameter          | Description |
 |-------------------|-------------|
-| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings.|
-| `--backend`        | Backend type for quick setup without a config file (`chatcompletion`, `claude`, `gemini`, `grok` or `openai`).|
-| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-mini`). See all [supported models without needing to specify backend](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
-| `--base_url`       | Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions) |
-| `--config`         | Path to YAML/JSON configuration file with agent definitions, model parameters, backend parameters and UI settings |
+| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
 | `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `gemini-cli`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
