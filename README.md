@@ -251,7 +251,7 @@ All available quick configuration files can be found [here](massgen/configs).
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings.|
 | `--backend`        | Backend type for quick setup without a config file (`chatcompletion`, `claude`, `gemini`, `grok` or `openai`).|
-| `--model`          | Model name for quick setup (e.g., `gpt-5-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models without needing to specify backend](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-mini`). See all [supported models without needing to specify backend](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--base_url`       | Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions) |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
