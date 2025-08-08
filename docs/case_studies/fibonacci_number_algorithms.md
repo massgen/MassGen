@@ -25,20 +25,20 @@ uv run python -m massgen.cli --config massgen/configs/gpt5_nano.yaml "provide as
 ### Comprehensive Coverage Strategy
 Each agent approached the exhaustive enumeration request by systematically covering different algorithmic categories:
 
-**Agent 1 (gpt-5-nano-1)** provided foundational coverage:
+**Agent 1 (gpt-5-nano-1, minimal reasoning)** provided foundational coverage:
 - Classical approaches: naive recursion, memoization, dynamic programming
 - Optimization techniques: space-optimized variants
 - Fast algorithms: matrix exponentiation, fast doubling
 - Mathematical approaches: closed-form solutions, generating functions
 - Practical considerations: big integer arithmetic, language-specific implementations
 
-**Agent 2 (gpt-5-nano-2)** offered structured categorization:
+**Agent 2 (gpt-5-nano-2, medium reasoning)** offered structured categorization:
 - Organized by time/space complexity characteristics
 - Included modular arithmetic variants
 - Covered specialized techniques: Pisano periods, parallel computation
 - Provided practical implementation guidance and benchmarking suggestions
 
-**Agent 3 (gpt-5-nano-3)** delivered advanced mathematical coverage:
+**Agent 3 (gpt-5-nano-3, high reasoning)** delivered advanced mathematical coverage:
 - Sophisticated algorithms: Kitamasa method, Bostan-Mori algorithm
 - Algebraic approaches: Lucas number relations, polynomial exponentiation
 - Combinatorial interpretations: Zeckendorf representation, tiling methods
