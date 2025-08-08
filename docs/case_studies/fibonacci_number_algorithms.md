@@ -1,6 +1,6 @@
 # MassGen Case Study: Comprehensive Algorithm Enumeration
 
-This case study demonstrates MassGen's ability to handle exhaustive knowledge compilation requests, showcasing how multiple agents can collaborate to create an encyclopedic resource on algorithmic approaches.
+This case study demonstrates MassGen's ability to handle exhaustive knowledge compilation requests, showcasing how multiple agents with different levels of reasoning capacity can collaborate to create an encyclopedic resource on algorithmic approaches.
 
 ## Command:
 ```bash
@@ -94,4 +94,4 @@ This case study demonstrates MassGen's effectiveness in creating comprehensive r
 3. **Recognized Superior Synthesis** - The voting mechanism correctly identified the most complete and well-organized compilation
 4. **Balanced Theory with Practice** - The final answer provided both mathematical rigor and implementation practicality
 
-The homogeneous agent configuration (all GPT-5-nano) created an interesting dynamic where success was determined purely by thoroughness and organization rather than model-specific capabilities. This showcases MassGen's ability to extract maximum value from identical models through collaborative competition, making it particularly valuable for creating exhaustive reference materials, algorithm catalogs, and comprehensive technical documentation where breadth and completeness are paramount.
+This case showcases MassGen's ability to extract maximum value from identical models through collaborative competition, making it particularly valuable for creating exhaustive reference materials, algorithm catalogs, and comprehensive technical documentation where breadth and completeness are paramount.
