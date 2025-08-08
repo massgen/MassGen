@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 - **Commits**: 9 commits since version 0.0.3
 - **Files Modified**: 6 files (response.py, utils.py, README.md, __init__.py, and 2 new config files)
-- **Contributors**: @qidanrui @sonichi @voidcenter
+- **Contributors**: @qidanrui @sonichi @voidcenter @JeffreyCh0 @praneeth999
 
 ## [0.0.3] - 2025-08-03
 
