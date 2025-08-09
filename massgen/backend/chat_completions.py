@@ -14,6 +14,7 @@ Supported Providers and Environment Variables:
 - OpenRouter: OPENROUTER_API_KEY
 """
 
+
 # Standard library imports
 import asyncio
 import os
@@ -27,6 +28,7 @@ from openai import AsyncOpenAI
 import logging
 
 # Local imports
+
 from .base import LLMBackend, StreamChunk
 
 # Set up logger
@@ -240,6 +242,7 @@ class ChatCompletionsBackend(LLMBackend):
         _, display_name, _ = ProviderRegistry.detect_provider(self.base_url)
         return display_name
 
+
     def convert_tools_to_chat_completions_format(
         self, tools: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
@@ -287,7 +290,6 @@ class ChatCompletionsBackend(LLMBackend):
         content = ""
         current_tool_calls = {}
         search_sources_used = 0
-        citations = []
 
         async for chunk in stream:
             try:
@@ -587,6 +589,7 @@ class ChatCompletionsBackend(LLMBackend):
                         "query": {
                             "type": "string",
                             "description": "The search query to send to the web"
+           
                         }
                         },
                         "required": ["query"]

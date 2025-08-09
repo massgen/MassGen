@@ -1,0 +1,32 @@
+# Mixed CLI backends configuration for MassGen
+# Usage: uv run python -m massgen.cli --config cli_backends_mixed.yaml "Your question here"
+
+# Multiple agents using different CLI backends
+agents:
+  - id: "claude_code"
+    backend:
+      type: "claude-code-cli"
+      model: "sonnet"
+      max_turns: 3
+      verbose: false
+    system_message: "You are Claude Code CLI, specialized in coding, debugging, and file operations."
+
+  - id: "gemini_cli"
+    backend:
+      type: "gemini-cli"
+      model: "gemini-2.5-flash"
+      temperature: 0.5
+    system_message: "You are Gemini CLI, specialized in reasoning, analysis, and multimodal understanding."
+
+  - id: "claude_api"
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-20250514"
+      enable_web_search: true
+      enable_code_execution: true
+    system_message: "You are Claude API with builtin tools for web search and code execution."
+
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

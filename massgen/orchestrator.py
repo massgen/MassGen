@@ -327,6 +327,10 @@ class Orchestrator(ChatAgent):
                             type="content", content=chunk_data, source=agent_id
                         )
 
+                    elif chunk_type == "reasoning":
+                        # Stream reasoning content with proper attribution
+                        yield chunk_data  # chunk_data is already a StreamChunk with source
+
                     elif chunk_type == "result":
                         # Agent completed with result
                         result_type, result_data = chunk_data
@@ -347,7 +351,7 @@ class Orchestrator(ChatAgent):
                             reset_signal = True
                             yield StreamChunk(
                                 type="content",
-                                content=f"[{agent_id}] ✅ Answer provided",
+                                content=f"✅ Answer provided\n",
                                 source=agent_id,
                             )
 
@@ -359,7 +363,7 @@ class Orchestrator(ChatAgent):
                                 reason = result_data.get("reason", "No reason provided")
                                 yield StreamChunk(
                                     type="content",
-                                    content=f"🔄 Vote by [{agent_id}] for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
+                                    content=f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
                                     source=agent_id,
                                 )
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
@@ -367,7 +371,7 @@ class Orchestrator(ChatAgent):
                                 voted_agents[agent_id] = result_data
                                 yield StreamChunk(
                                     type="content",
-                                    content=f"[{agent_id}] ✅ Vote recorded for {result_data['agent_id']}",
+                                    content=f"✅ Vote recorded for [{result_data['agent_id']}]",
                                     source=agent_id,
                                 )
 
@@ -548,7 +552,7 @@ class Orchestrator(ChatAgent):
                     # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
                     yield (
                         "content",
-                        f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                        f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                     )
                     yield ("done", None)
                     return
@@ -587,6 +591,21 @@ class Orchestrator(ChatAgent):
                         response_text += chunk.content
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
+                    elif chunk.type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                        # Stream reasoning content as tuple format
+                        reasoning_chunk = StreamChunk(
+                            type=chunk.type,
+                            content=chunk.content,
+                            source=agent_id,
+                            reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                            reasoning_text=getattr(chunk, "reasoning_text", None),
+                            reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
+                            reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
+                            item_id=getattr(chunk, "item_id", None),
+                            content_index=getattr(chunk, "content_index", None),
+                            summary_index=getattr(chunk, "summary_index", None)
+                        )
+                        yield ("reasoning", reasoning_chunk)
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
@@ -617,7 +636,7 @@ class Orchestrator(ChatAgent):
 
                                 yield (
                                     "content",
-                                    f"🗳️ Voting for {real_agent_id}: {reason}",
+                                    f"🗳️ Voting for [{real_agent_id}]: {reason}",
                                 )
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
@@ -628,7 +647,7 @@ class Orchestrator(ChatAgent):
                             if hasattr(chunk, "error")
                             else str(chunk.content)
                         )
-                        yield ("content", f"❌ Error: {error_msg}")
+                        yield ("content", f"❌ Error: {error_msg}\n")
 
                 # Check for multiple vote calls before processing
                 vote_calls = [
@@ -641,7 +660,7 @@ class Orchestrator(ChatAgent):
                         if self._check_restart_pending(agent_id):
                             yield (
                                 "content",
-                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                             )
                             yield ("done", None)
                             return
@@ -675,7 +694,7 @@ class Orchestrator(ChatAgent):
                         if self._check_restart_pending(agent_id):
                             yield (
                                 "content",
-                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                             )
                             yield ("done", None)
                             return
@@ -706,7 +725,7 @@ class Orchestrator(ChatAgent):
                             if self.agent_states[agent_id].restart_pending:
                                 yield (
                                     "content",
-                                    f"🔄 Agent [{agent_id}] Vote invalid - restarting due to new answers",
+                                    f"🔄 [{agent_id}] Vote invalid - restarting due to new answers",
                                 )
                                 yield ("done", None)
                                 return
@@ -719,7 +738,7 @@ class Orchestrator(ChatAgent):
                                     if self._check_restart_pending(agent_id):
                                         yield (
                                             "content",
-                                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                                         )
                                         yield ("done", None)
                                         return
@@ -758,7 +777,7 @@ class Orchestrator(ChatAgent):
                                     if self._check_restart_pending(agent_id):
                                         yield (
                                             "content",
-                                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                                         )
                                         yield ("done", None)
                                         return
@@ -815,7 +834,7 @@ class Orchestrator(ChatAgent):
                                         if self._check_restart_pending(agent_id):
                                             yield (
                                                 "content",
-                                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                                             )
                                             yield ("done", None)
                                             return
@@ -853,12 +872,12 @@ class Orchestrator(ChatAgent):
                     if self._check_restart_pending(agent_id):
                         yield (
                             "content",
-                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                         )
                         yield ("done", None)
                         return
                     if attempt < max_attempts - 1:
-                        yield ("content", f"🔄 needs to use workflow tools...")
+                        yield ("content", f"🔄 needs to use workflow tools...\n")
                         # Reset to default enforcement message for this case
                         enforcement_msg = self.message_templates.enforcement_message()
                         continue  # Retry with updated conversation
@@ -1023,6 +1042,22 @@ class Orchestrator(ChatAgent):
                 yield StreamChunk(
                     type="content", content=chunk.content, source=selected_agent_id
                 )
+            elif chunk.type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                # Stream reasoning content with proper attribution (same as main coordination)
+                reasoning_chunk = StreamChunk(
+                    type=chunk.type,
+                    content=chunk.content,
+                    source=selected_agent_id,
+                    reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                    reasoning_text=getattr(chunk, "reasoning_text", None),
+                    reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
+                    reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
+                    item_id=getattr(chunk, "item_id", None),
+                    content_index=getattr(chunk, "content_index", None),
+                    summary_index=getattr(chunk, "summary_index", None)
+                )
+                # Use the same format as main coordination for consistency
+                yield reasoning_chunk
             elif chunk.type == "done":
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":

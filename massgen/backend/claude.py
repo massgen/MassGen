@@ -175,14 +175,12 @@ class ClaudeBackend(LLMBackend):
             # Initialize client
             client = anthropic.AsyncAnthropic(api_key=self.api_key)
 
-            # Extract parameters
-            model = kwargs.get(
-                "model", "claude-3-5-haiku-latest"
-            )  # Use model that supports code execution
-            max_tokens = kwargs.get("max_tokens", 8192)
-            temperature = kwargs.get("temperature", None)
-            enable_web_search = kwargs.get("enable_web_search", False)
-            enable_code_execution = kwargs.get("enable_code_execution", False)
+            # Merge constructor config with stream kwargs (stream kwargs take priority)
+            all_params = {**self.config, **kwargs}
+            
+            # Extract framework-specific parameters  
+            enable_web_search = all_params.get("enable_web_search", False)
+            enable_code_execution = all_params.get("enable_code_execution", False)
 
             # Convert messages to Claude format and extract system message
             converted_messages, system_message = self.convert_messages_to_claude_format(
@@ -210,20 +208,22 @@ class ClaudeBackend(LLMBackend):
 
             # Build API parameters
             api_params = {
-                "model": model,
                 "messages": converted_messages,
-                "max_tokens": max_tokens,
                 "stream": True,
             }
 
             if system_message:
                 api_params["system"] = system_message
 
-            if temperature is not None:
-                api_params["temperature"] = temperature
-
             if combined_tools:
                 api_params["tools"] = combined_tools
+
+            # Direct passthrough of all parameters except those handled separately
+            excluded_params = {"enable_web_search", "enable_code_execution"}
+            for key, value in all_params.items():
+                if key not in excluded_params and value is not None:
+                    api_params[key] = value
+
 
             # Set up beta features and create stream
             if enable_code_execution:

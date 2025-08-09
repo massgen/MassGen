@@ -2,6 +2,8 @@
 """
 MassGen Example: Three Agent Coordination
 
+This example demonstrates three-agent coordination using MassGen with the
+multi-region coordination UI. Three agents with different specialties work
 This example demonstrates three-agent coordination using the 
 multi-region coordination UI. Three agents with different specialties work 
 together on a question that benefits from multiple perspectives.
@@ -107,6 +109,7 @@ async def three_agent_example():
 
 
 if __name__ == "__main__":
+    result = asyncio.run(three_agent_example())
     result = asyncio.run(three_agent_example())
     if result:
         print("\n🚀 Three agent coordination successful!")

@@ -171,6 +171,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         # Just pass through all kwargs including api_key and base_url
         return ChatCompletionsBackend(**kwargs)
 
+
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
@@ -390,8 +391,8 @@ async def run_interactive_mode(
 ):
     """Run MassGen in interactive mode with conversation history."""
     print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
-    print("="*60, flush=True)
-    
+    print("=" * 60, flush=True)
+
     # Display configuration
     print(f"📋 {BRIGHT_YELLOW}Configuration:{RESET}", flush=True)
     print(f"   Agents: {len(agents)}", flush=True)

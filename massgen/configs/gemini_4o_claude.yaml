@@ -1,5 +1,5 @@
 # MassGen Three Agent Configuration
-# Gemini-2.5-flash, GPT-4o-mini, and Claude-3.5-Haiku with builtin tools enabled
+# Gemini-2.5-flash, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
 
 agents:
   - id: "gemini2.5flash"

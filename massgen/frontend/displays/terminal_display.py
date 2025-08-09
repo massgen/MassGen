@@ -248,11 +248,16 @@ class TerminalDisplay(BaseDisplay):
         self.orchestrator_events.append(event)
         self._refresh_display()
 
-    def show_final_answer(self, answer: str):
+    def show_final_answer(self, answer: str, vote_results=None, selected_agent=None):
         """Display the final coordinated answer prominently."""
         print(f"\n🎯 FINAL COORDINATED ANSWER:")
         print("=" * 60)
         print(f"📋 {answer}")
+        if selected_agent:
+            print(f"✅ Selected by: {selected_agent}")
+        if vote_results:
+            vote_summary = ", ".join([f"{agent}: {votes}" for agent, votes in vote_results.items()])
+            print(f"🗳️ Vote results: {vote_summary}")
         print("=" * 60)
 
     def cleanup(self):

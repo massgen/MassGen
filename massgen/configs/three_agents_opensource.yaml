@@ -11,6 +11,7 @@ agents:
   - id: "qwen"
     backend:
       type: "chatcompletion"
+
       model: "Qwen/Qwen3-4B-fast"
       base_url: "https://api.studio.nebius.ai/v1"
       # api_key: "Nebius_api_key"

@@ -19,7 +19,13 @@ agents:
   - id: "domain_expert"
     backend:
       type: "openai"
-      model: "gpt-4o"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
       enable_code_interpreter: true
     system_message: |
       You are a domain expert with analytical capabilities. Your role is to 
@@ -32,7 +38,14 @@ agents:
   - id: "synthesizer"
     backend:
       type: "openai"
-      model: "gpt-4o-mini"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a synthesis specialist who excels at combining multiple perspectives 
       into coherent, actionable insights. Your role is to:
@@ -44,8 +57,3 @@ agents:
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
-
-# Research-optimized settings
-backend_params:
-  temperature: 0.3  # Lower temperature for more focused research
-  max_tokens: 3000  # Longer responses for detailed research

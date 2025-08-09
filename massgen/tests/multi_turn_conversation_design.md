@@ -4,14 +4,6 @@
 
 This document outlines the design approach for implementing multi-turn conversations in the MassGen orchestrator, based on the proven approach used in MassGen v0.0.1.
 
-## Current State
-
-The current orchestrator has **partial multi-turn support**:
-- ✅ Accepts conversation history through `chat(messages)` interface
-- ✅ Maintains conversation history at orchestrator level
-- ❌ **Limited**: Only processes the last user message for coordination
-- ❌ **CLI Issue**: Multi-agent mode with history bypasses coordination UI display
-
 ## V0.0.1 Approach Analysis
 
 ### Key Innovation: Dynamic Context Reconstruction
