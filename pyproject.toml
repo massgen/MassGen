@@ -40,6 +40,7 @@ dependencies = [
     "rich==14.1.0",
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
+    "claude-code-sdk>=0.0.19",
 ]
 
 [project.optional-dependencies]
