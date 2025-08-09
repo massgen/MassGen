@@ -27,7 +27,6 @@ agents:
         summary: "auto"
       enable_web_search: true
       enable_code_interpreter: true
-      enable_code_interpreter: true
     system_message: |
       You are a domain expert with analytical capabilities. Your role is to 
       provide deep subject matter expertise and analytical insights. Focus on:
