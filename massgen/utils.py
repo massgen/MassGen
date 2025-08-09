@@ -62,6 +62,14 @@ MODEL_MAPPINGS = {
         "grok-3",
         "grok-4",
     ],
+    "claude_code_stream": [
+        "claude-opus-4-1-20250805",
+        "claude-opus-4-20250514",
+        "claude-sonnet-4-20250514",
+        "claude-3-7-sonnet-20250219",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-haiku-20241022",
+    ],
 }
 
 
