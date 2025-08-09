@@ -1,0 +1,15 @@
+# MassGen Single Agent Configuration
+# GPT-OSS-120B model
+
+agents:
+  # Cerebras AI
+  - id: "gpt-oss-120b"
+    backend:
+      type: "chatcompletion"
+      model: "gpt-oss-120b"
+      base_url: "https://api.cerebras.ai/v1"
+      # api_key: "cerebras_api_key"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
