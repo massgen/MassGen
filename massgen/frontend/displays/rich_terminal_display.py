@@ -1757,12 +1757,25 @@ class RichTerminalDisplay(TerminalDisplay):
         if self._is_web_search_content(line):
             return self._format_web_search_line(line)
 
-        # Truncate line if too long, but never truncate error messages
+        # Wrap long lines instead of truncating
         is_error_message = any(error_indicator in line for error_indicator in [
             "❌ Error:", "Error:", "Exception:", "Traceback", "❌"
         ])
         if len(line) > self.max_line_length and not is_error_message:
-            line = line[: self.max_line_length - 3] + "..."
+            # Wrap the line at word boundaries
+            wrapped_lines = []
+            remaining = line
+            while len(remaining) > self.max_line_length:
+                # Find last space before max_line_length
+                break_point = remaining[:self.max_line_length].rfind(' ')
+                if break_point == -1:  # No space found, break at max_line_length
+                    break_point = self.max_line_length
+                wrapped_lines.append(remaining[:break_point])
+                remaining = remaining[break_point:].lstrip()
+            if remaining:
+                wrapped_lines.append(remaining)
+            # Join wrapped lines with newlines - Rich will handle the formatting
+            line = '\n'.join(wrapped_lines)
 
         # Check for special prefixes and format accordingly
         if line.startswith("→"):
