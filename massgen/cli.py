@@ -58,6 +58,7 @@ from massgen.backend.grok import GrokBackend
 from massgen.backend.claude import ClaudeBackend
 from massgen.backend.gemini import GeminiBackend
 from massgen.backend.chat_completions import ChatCompletionsBackend
+from massgen.backend.claude_code_cli_stream import ClaudeCodeStreamBackend
 from massgen.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.agent_config import AgentConfig
 from massgen.orchestrator import Orchestrator
@@ -164,6 +165,23 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                     )
         
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
+    elif backend_type == "claude_code_stream":
+        # ClaudeCodeStreamBackend using claude-code-sdk-python
+        api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
+        if not api_key:
+            raise ConfigurationError(
+                "Anthropic API key not found. Set ANTHROPIC_API_KEY or provide in config."
+            )
+        
+        # Validate claude-code-sdk availability
+        try:
+            import claude_code_sdk
+        except ImportError:
+            raise ConfigurationError(
+                "claude-code-sdk not found. Install with: pip install claude-code-sdk"
+            )
+        
+        return ClaudeCodeStreamBackend(api_key=api_key, **kwargs)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -576,7 +594,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code_stream"],
         help="Backend type for quick setup",
     )
 

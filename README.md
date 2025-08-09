@@ -229,6 +229,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Grok API** | ✅ | ❌ | ❌ | Web search only |
 | **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
 | **Claude Code CLI** | ✅ | ✅ | ✅ | **Advanced coding, debugging, file ops** |
+| **Claude Code Stream** | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools** |
 | **Gemini CLI** | ✅ | ✅ | ✅ | **Multimodal, reasoning, MCP integration** |
 
 ### 4. 🏃 Run MassGen
@@ -240,6 +241,12 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
+```
+
+**Advanced backends** (requires additional setup):
+```bash
+# Claude Code Stream - Native Claude Code SDK with comprehensive dev tools
+uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Debug this Python script and run tests"
 ```
 
 **CLI-based backends** (requires CLI tools installed):
@@ -269,7 +276,7 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `gemini-cli`). Optional because we can infer backend type through model.|
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `claude_code_stream`, `gemini-cli`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
@@ -289,7 +296,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" #Type of backend 
+    type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code_stream" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -303,7 +310,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" #Type of backend
+      type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code_stream" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -399,6 +406,39 @@ backend:
   max_turns: 5                       # Maximum interaction turns
   verbose: false                     # Enable verbose CLI output
   timeout: 300                       # Command timeout in seconds
+```
+
+#### Claude Code Stream
+
+```yaml
+backend:
+  type: "claude_code_stream"
+  model: "claude-sonnet-4-20250514"  # Model name (claude-sonnet-4-20250514, claude-3-5-sonnet-20241022, etc.)
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  
+  # Claude Code Stream specific options
+  system_prompt: "You are a helpful AI assistant..."  # Custom system prompt
+  max_turns: 3                       # Maximum conversation turns (null for unlimited)
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 4096                   # Maximum response length
+  
+  # Tool configuration (Claude Code's native tools)
+  allowed_tools:
+    - "Read"           # Read files from filesystem
+    - "Write"          # Write files to filesystem  
+    - "Edit"           # Edit existing files
+    - "MultiEdit"      # Multiple edits in one operation
+    - "Bash"           # Execute shell commands
+    - "Grep"           # Search within files
+    - "Glob"           # Find files by pattern
+    - "LS"             # List directory contents
+    - "WebSearch"      # Search the web
+    - "WebFetch"       # Fetch web content
+    - "TodoWrite"      # Task management
+    - "NotebookEdit"   # Jupyter notebook editing
+    # MCP tools (if available)
+    - "mcp__ide__getDiagnostics"
+    - "mcp__ide__executeCode"
 ```
 
 #### Gemini CLI
@@ -519,9 +559,21 @@ uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "giv
 uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
 ```
 
-### 3. Research
+### 3. 🧠 Research
 ```bash
 uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
+```
+
+### 4. 💻 Development & Coding Tasks
+```bash
+# Single agent with comprehensive development tools
+uv run python -m massgen.cli --config massgen/configs/claude_code_stream_single.yaml "Create a Flask web app with user authentication and database integration"
+
+# Multi-agent development team collaboration  
+uv run python -m massgen.cli --config massgen/configs/claude_code_stream_team.yaml "Debug and optimize this React application, then write comprehensive tests"
+
+# Quick coding task with claude_code_stream backend
+uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Refactor this Python code to use async/await and add error handling"
 ```
 
 ---
