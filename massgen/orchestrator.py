@@ -552,7 +552,7 @@ class Orchestrator(ChatAgent):
                     # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
                     yield (
                         "content",
-                        f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                        f"🔁 [{agent_id}] gracefully restarting due to new answer detected",
                     )
                     yield ("done", None)
                     return
@@ -660,7 +660,7 @@ class Orchestrator(ChatAgent):
                         if self._check_restart_pending(agent_id):
                             yield (
                                 "content",
-                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected",
                             )
                             yield ("done", None)
                             return
@@ -694,7 +694,7 @@ class Orchestrator(ChatAgent):
                         if self._check_restart_pending(agent_id):
                             yield (
                                 "content",
-                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected",
                             )
                             yield ("done", None)
                             return
@@ -725,7 +725,7 @@ class Orchestrator(ChatAgent):
                             if self.agent_states[agent_id].restart_pending:
                                 yield (
                                     "content",
-                                    f"🔄 Agent [{agent_id}] Vote invalid - restarting due to new answers",
+                                    f"🔄 [{agent_id}] Vote invalid - restarting due to new answers",
                                 )
                                 yield ("done", None)
                                 return
@@ -738,7 +738,7 @@ class Orchestrator(ChatAgent):
                                     if self._check_restart_pending(agent_id):
                                         yield (
                                             "content",
-                                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected",
                                         )
                                         yield ("done", None)
                                         return
@@ -777,7 +777,7 @@ class Orchestrator(ChatAgent):
                                     if self._check_restart_pending(agent_id):
                                         yield (
                                             "content",
-                                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected",
                                         )
                                         yield ("done", None)
                                         return
@@ -834,7 +834,7 @@ class Orchestrator(ChatAgent):
                                         if self._check_restart_pending(agent_id):
                                             yield (
                                                 "content",
-                                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected",
                                             )
                                             yield ("done", None)
                                             return
@@ -872,7 +872,7 @@ class Orchestrator(ChatAgent):
                     if self._check_restart_pending(agent_id):
                         yield (
                             "content",
-                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected",
                         )
                         yield ("done", None)
                         return
