@@ -58,8 +58,3 @@ agents:
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
-
-# Research-optimized settings
-backend_params:
-  temperature: 0.3  # Lower temperature for more focused research
-  max_tokens: 3000  # Longer responses for detailed research
