@@ -226,6 +226,7 @@ class RichTerminalDisplay(TerminalDisplay):
         # Message filtering settings - tool content always important
         self._important_content_types = {"presentation", "status", "tool", "error"}
         self._status_change_keywords = {
+            "complete",
             "completed",
             "failed",
             "waiting",
@@ -236,6 +237,7 @@ class RichTerminalDisplay(TerminalDisplay):
             "vote recorded",
         }
         self._important_event_keywords = {
+            "complete",
             "completed",
             "failed",
             "voting",
@@ -2532,29 +2534,23 @@ class RichTerminalDisplay(TerminalDisplay):
                         content = " ".join(str(item) for item in content)
                     elif not isinstance(content, str):
                         content = str(content)
-
-                    # Process reasoning content with shared logic
-                    processed_content = self.process_reasoning_content(chunk_type, content, source)
                     
                     # Accumulate content
-                    presentation_content += processed_content
+                    presentation_content += content
 
                     # Enhanced formatting for orchestrator query responses
                     if chunk_type == "status":
                         # Status updates from orchestrator query
-                        status_text = Text(f"🔄 {processed_content}", style=self.colors["info"])
+                        status_text = Text(f"🔄 {content}", style=self.colors["info"])
                         self.console.print(status_text)
                     elif "error" in chunk_type:
                         # Error handling in orchestrator query
-                        error_text = Text(f"❌ {processed_content}", style=self.colors["error"])
+                        error_text = Text(f"❌ {content}", style=self.colors["error"])
                         self.console.print(error_text)
                     else:
                         # Main presentation content with simple output
                         # Use markup=False to prevent Rich from interpreting brackets as markup
-                        self.console.print(processed_content, end="", highlight=False, markup=False)
-                else:
-                    # Handle reasoning chunks with no content (like reasoning_summary_done)
-                    self.process_reasoning_content(chunk_type, "", source)
+                        self.console.print(content, end="", highlight=False, markup=False)
 
                 # Handle orchestrator query completion signals
                 if chunk_type == "done":
