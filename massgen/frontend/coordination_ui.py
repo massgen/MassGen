@@ -6,7 +6,7 @@ Main interface for coordinating agents with visual display and logging.
 
 import time
 import asyncio
-from typing import Optional, List, Dict, Any, AsyncGenerator
+from typing import Optional, List, Dict, Any
 from .displays.base_display import BaseDisplay
 from .displays.terminal_display import TerminalDisplay
 from .displays.simple_display import SimpleDisplay
@@ -365,7 +365,7 @@ class CoordinationUI:
                             if self.display:
                                 try:
                                     await self._process_content(selected_agent, content)
-                                except Exception as e:
+                                except Exception:
                                     # Error processing presentation content - continue gracefully
                                     pass
                                 # Also print to console with flush using consistent timing with rich display
@@ -434,7 +434,7 @@ class CoordinationUI:
 
             return final_result
 
-        except Exception as e:
+        except Exception:
             if self.logger:
                 self.logger.finalize_session("", success=False)
             raise
@@ -816,7 +816,7 @@ class CoordinationUI:
 
             return final_result
 
-        except Exception as e:
+        except Exception:
             if self.logger:
                 self.logger.finalize_session("", success=False)
             raise

@@ -2544,6 +2544,9 @@ class RichTerminalDisplay(TerminalDisplay):
                     else:
                         # Main presentation content with simple output
                         self.console.print(processed_content, end="", highlight=False)
+                else:
+                    # Handle reasoning chunks with no content (like reasoning_summary_done)
+                    self.process_reasoning_content(chunk_type, "", source)
 
                 # Handle orchestrator query completion signals
                 if chunk_type == "done":
