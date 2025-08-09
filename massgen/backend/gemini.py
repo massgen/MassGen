@@ -275,11 +275,12 @@ Make your decision and include the JSON at the very end of your response."""
         try:
             from google import genai
 
-            # Extract parameters
-            model_name = kwargs.get("model", "gemini-2.5-flash")
-            temperature = kwargs.get("temperature", 0.1)
-            enable_web_search = kwargs.get("enable_web_search", False)
-            enable_code_execution = kwargs.get("enable_code_execution", False)
+            # Merge constructor config with stream kwargs (stream kwargs take priority)
+            all_params = {**self.config, **kwargs}
+            
+            # Extract framework-specific parameters
+            enable_web_search = all_params.get("enable_web_search", False)
+            enable_code_execution = all_params.get("enable_code_execution", False)
 
             # Check if this is a coordination request
             is_coordination = self.detect_coordination_tools(tools)
@@ -353,10 +354,20 @@ Make your decision and include the JSON at the very end of your response."""
                         content="\n⚠️  Code execution requires google.genai.types\n",
                     )
 
-            config = {
-                "temperature": temperature,
-                "max_output_tokens": kwargs.get("max_tokens", 8192),
-            }
+            # Build config with direct parameter passthrough
+            config = {}
+            
+            # Direct passthrough of all parameters except those handled separately
+            excluded_params = {"enable_web_search", "enable_code_execution"}
+            for key, value in all_params.items():
+                if key not in excluded_params and value is not None:
+                    # Handle Gemini-specific parameter mappings
+                    if key == "max_tokens":
+                        config["max_output_tokens"] = value
+                    elif key == "model":
+                        model_name = value
+                    else:
+                        config[key] = value
 
             # Add builtin tools to config
             if builtin_tools:

@@ -351,7 +351,7 @@ class Orchestrator(ChatAgent):
                             reset_signal = True
                             yield StreamChunk(
                                 type="content",
-                                content=f"[{agent_id}] ✅ Answer provided",
+                                content=f"✅ Answer provided\n",
                                 source=agent_id,
                             )
 
@@ -363,7 +363,7 @@ class Orchestrator(ChatAgent):
                                 reason = result_data.get("reason", "No reason provided")
                                 yield StreamChunk(
                                     type="content",
-                                    content=f"🔄 Vote by [{agent_id}] for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
+                                    content=f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
                                     source=agent_id,
                                 )
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
@@ -371,7 +371,7 @@ class Orchestrator(ChatAgent):
                                 voted_agents[agent_id] = result_data
                                 yield StreamChunk(
                                     type="content",
-                                    content=f"[{agent_id}] ✅ Vote recorded for {result_data['agent_id']}",
+                                    content=f"✅ Vote recorded for [{result_data['agent_id']}]",
                                     source=agent_id,
                                 )
 
@@ -552,7 +552,7 @@ class Orchestrator(ChatAgent):
                     # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
                     yield (
                         "content",
-                        f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                        f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                     )
                     yield ("done", None)
                     return
@@ -636,7 +636,7 @@ class Orchestrator(ChatAgent):
 
                                 yield (
                                     "content",
-                                    f"🗳️ Voting for {real_agent_id}: {reason}",
+                                    f"🗳️ Voting for [{real_agent_id}]: {reason}",
                                 )
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
@@ -647,7 +647,7 @@ class Orchestrator(ChatAgent):
                             if hasattr(chunk, "error")
                             else str(chunk.content)
                         )
-                        yield ("content", f"❌ Error: {error_msg}")
+                        yield ("content", f"❌ Error: {error_msg}\n")
 
                 # Check for multiple vote calls before processing
                 vote_calls = [
@@ -660,7 +660,7 @@ class Orchestrator(ChatAgent):
                         if self._check_restart_pending(agent_id):
                             yield (
                                 "content",
-                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                             )
                             yield ("done", None)
                             return
@@ -694,7 +694,7 @@ class Orchestrator(ChatAgent):
                         if self._check_restart_pending(agent_id):
                             yield (
                                 "content",
-                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                             )
                             yield ("done", None)
                             return
@@ -725,7 +725,7 @@ class Orchestrator(ChatAgent):
                             if self.agent_states[agent_id].restart_pending:
                                 yield (
                                     "content",
-                                    f"🔄 Agent [{agent_id}] Vote invalid - restarting due to new answers",
+                                    f"🔄 [{agent_id}] Vote invalid - restarting due to new answers",
                                 )
                                 yield ("done", None)
                                 return
@@ -738,7 +738,7 @@ class Orchestrator(ChatAgent):
                                     if self._check_restart_pending(agent_id):
                                         yield (
                                             "content",
-                                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                                         )
                                         yield ("done", None)
                                         return
@@ -777,7 +777,7 @@ class Orchestrator(ChatAgent):
                                     if self._check_restart_pending(agent_id):
                                         yield (
                                             "content",
-                                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                                         )
                                         yield ("done", None)
                                         return
@@ -834,7 +834,7 @@ class Orchestrator(ChatAgent):
                                         if self._check_restart_pending(agent_id):
                                             yield (
                                                 "content",
-                                                f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                                                f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                                             )
                                             yield ("done", None)
                                             return
@@ -872,12 +872,12 @@ class Orchestrator(ChatAgent):
                     if self._check_restart_pending(agent_id):
                         yield (
                             "content",
-                            f"🔁 Agent [{agent_id}] gracefully restarting due to new answer detected",
+                            f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
                         )
                         yield ("done", None)
                         return
                     if attempt < max_attempts - 1:
-                        yield ("content", f"🔄 needs to use workflow tools...")
+                        yield ("content", f"🔄 needs to use workflow tools...\n")
                         # Reset to default enforcement message for this case
                         enforcement_msg = self.message_templates.enforcement_message()
                         continue  # Retry with updated conversation

@@ -325,7 +325,7 @@ Detailed parameters for each agent's backend can be specified using the followin
 backend:
   type: "chatcompletion"
   model: "gpt-oss-120b"  # Model name
-  base_url: "https://api.cerebras.ai/v1/chat/completions" # Base URL for API endpoint
+  base_url: "https://api.cerebras.ai/v1" # Base URL for API endpoint
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
   max_tokens: 2500                   # Maximum response length
@@ -366,10 +366,12 @@ backend:
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
   max_tokens: 2500                   # Maximum response length
-  enable_web_search: true            # Web search capability
-  return_citations: true             # Include search result citations
-  max_search_results: 10             # Maximum search results to use 
-  search_mode: "auto"                # Search strategy: "auto", "fast", "thorough" 
+  enable_web_search: true            # Web search capability (uses default: mode="auto", return_citations=true)
+  # OR manually specify search parameters via extra_body (conflicts with enable_web_search):
+  # extra_body:
+  #   search_parameters:
+  #     mode: "auto"                 # Search strategy (see Grok API docs for valid values)
+  #     return_citations: true       # Include search result citations 
 ```
 
 #### OpenAI
@@ -395,7 +397,7 @@ backend:
 ```yaml
 backend:
   type: "claude-code-cli"
-  model: "sonnet"                    # Options: sonnet, opus, haiku
+  model: "TODO"                    # Options: TODO
   api_key: "<optional_key>"          # API key (optional if logged in via CLI)
   max_turns: 5                       # Maximum interaction turns
   verbose: false                     # Enable verbose CLI output
@@ -428,17 +430,6 @@ ui:
   - `"terminal"`: Standard terminal display with basic formatting and sequential output
   - `"simple"`: Plain text output without any formatting or special display features
 - `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
-
-**Advanced Parameters:**
-```yaml
-# Global backend parameters
-backend_params:
-  temperature: 0.7
-  max_tokens: 2000
-  enable_web_search: true  # Web search capability (all backends)
-  enable_code_interpreter: true  # OpenAI only
-  enable_code_execution: true    # Gemini/Claude only
-```
 
 #### Interactive Multi-Turn Mode
 
