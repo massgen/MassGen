@@ -1432,6 +1432,8 @@ class RichTerminalDisplay(TerminalDisplay):
             if file_path.exists():
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
+                    if "[" in content:
+                        content = content.replace("[", "\[")
 
                 # Add separator instead of clearing screen
                 self.console.print("\n" + "=" * 80 + "\n")
@@ -1613,6 +1615,8 @@ class RichTerminalDisplay(TerminalDisplay):
         try:
             with open(self.system_status_file, "r", encoding="utf-8") as f:
                 content = f.read()
+                if "[" in content:
+                    content = content.replace("[", "\[")
 
             # Add separator instead of clearing screen
             self.console.print("\n" + "=" * 80 + "\n")
@@ -1757,7 +1761,7 @@ class RichTerminalDisplay(TerminalDisplay):
             else:
                 formatted.append(line, style=f"bold {self.colors['info']}")
         else:
-            # Regular content
+            # Regular content - escape to prevent markup interpretation
             formatted.append(line, style=self.colors["text"])
 
         return formatted
@@ -2546,7 +2550,8 @@ class RichTerminalDisplay(TerminalDisplay):
                         self.console.print(error_text)
                     else:
                         # Main presentation content with simple output
-                        self.console.print(processed_content, end="", highlight=False)
+                        # Use markup=False to prevent Rich from interpreting brackets as markup
+                        self.console.print(processed_content, end="", highlight=False, markup=False)
                 else:
                     # Handle reasoning chunks with no content (like reasoning_summary_done)
                     self.process_reasoning_content(chunk_type, "", source)
