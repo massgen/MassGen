@@ -205,7 +205,7 @@ class CoordinationUI:
                                 ).get("code", "")
                                 outputs = result.get("outputs")
                                 if code:
-                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
+                                    tool_msg += f" - Code: {code}"
                                 if outputs:
                                     tool_msg += f" - Result: {outputs}"
                             elif tool_type == "web_search":
@@ -594,7 +594,7 @@ class CoordinationUI:
                                 ).get("code", "")
                                 outputs = result.get("outputs")
                                 if code:
-                                    tool_msg += f" - Code: {code[:50]}{'...' if len(code) > 50 else ''}"
+                                    tool_msg += f" - Code: {code}"
                                 if outputs:
                                     tool_msg += f" - Result: {outputs}"
                             elif tool_type == "web_search":
