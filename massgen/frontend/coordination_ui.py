@@ -56,6 +56,27 @@ class CoordinationUI:
 
         # Flush output configuration (matches rich_terminal_display)
         self._flush_char_delay = 0.03  # 30ms between characters
+
+    def _process_reasoning_summary(self, chunk_type: str, summary_delta: str, source: str) -> str:
+        """Process reasoning summary content using display's shared logic."""
+        if self.display and hasattr(self.display, 'process_reasoning_content'):
+            return self.display.process_reasoning_content(chunk_type, summary_delta, source)
+        else:
+            # Fallback logic if no display available
+            if chunk_type == "reasoning_summary":
+                summary_active_key = f"_summary_active_{source}"
+                if not getattr(self, summary_active_key, False):
+                    setattr(self, summary_active_key, True)
+                    return f"📋 [Reasoning Summary] {summary_delta}"
+                return summary_delta
+            elif chunk_type == "reasoning_summary_done":
+                summary_active_key = f"_summary_active_{source}"
+                if hasattr(self, summary_active_key):
+                    setattr(self, summary_active_key, False)
+            return summary_delta
+
+    def __post_init__(self):
+        """Post-initialization setup."""
         self._flush_word_delay = 0.08  # 80ms after punctuation
 
         # Initialize answer buffer state
@@ -216,21 +237,15 @@ class CoordinationUI:
                             # Stream reasoning summary delta
                             summary_delta = getattr(chunk, "reasoning_summary_delta", "")
                             if summary_delta:
-                                # Track if we're in an active summary for this source
-                                summary_active_key = f"_summary_active_{source}"
-                                
-                                if not getattr(self, summary_active_key, False):
-                                    # Start of new summary - add prefix and mark as active
-                                    reasoning_content = f"📋 [Reasoning Summary] {summary_delta}"
-                                    setattr(self, summary_active_key, True)
-                                else:
-                                    # Continuing existing summary - no prefix
-                                    reasoning_content = summary_delta
+                                reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
                         elif chunk_type == "reasoning_summary_done":
                             # Complete reasoning summary
                             summary_text = getattr(chunk, "reasoning_summary_text", "")
                             if summary_text:
                                 reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                            
+                            # Reset flag using helper method
+                            self._process_reasoning_summary(chunk_type, "", source)
                             
                             # Mark summary as complete - next summary can get a prefix
                             summary_active_key = f"_summary_active_{source}"
@@ -309,21 +324,15 @@ class CoordinationUI:
                                 # Stream reasoning summary delta
                                 summary_delta = getattr(chunk, "reasoning_summary_delta", "")
                                 if summary_delta:
-                                    # Use same key format as main coordination
-                                    summary_active_key = f"_summary_active_{source}"
-                                    
-                                    if not getattr(self, summary_active_key, False):
-                                        # First chunk of reasoning summary - add prefix
-                                        reasoning_content = f"📋 [Reasoning Summary] {summary_delta}"
-                                        setattr(self, summary_active_key, True)
-                                    else:
-                                        # Subsequent chunks - no prefix
-                                        reasoning_content = summary_delta
+                                    reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
                             elif chunk_type == "reasoning_summary_done":
                                 # Complete reasoning summary
                                 summary_text = getattr(chunk, "reasoning_summary_text", "")
                                 if summary_text:
                                     reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                                
+                                # Reset flag using helper method
+                                self._process_reasoning_summary(chunk_type, "", source)
                                 
                                 # Reset the prefix flag so next summary can get a prefix
                                 summary_active_key = f"_summary_active_{source}"
@@ -617,21 +626,15 @@ class CoordinationUI:
                             # Stream reasoning summary delta
                             summary_delta = getattr(chunk, "reasoning_summary_delta", "")
                             if summary_delta:
-                                # Track if we're in an active summary for this source
-                                summary_active_key = f"_summary_active_{source}"
-                                
-                                if not getattr(self, summary_active_key, False):
-                                    # Start of new summary - add prefix and mark as active
-                                    reasoning_content = f"📋 [Reasoning Summary] {summary_delta}"
-                                    setattr(self, summary_active_key, True)
-                                else:
-                                    # Continuing existing summary - no prefix
-                                    reasoning_content = summary_delta
+                                reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
                         elif chunk_type == "reasoning_summary_done":
                             # Complete reasoning summary
                             summary_text = getattr(chunk, "reasoning_summary_text", "")
                             if summary_text:
                                 reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                            
+                            # Reset flag using helper method
+                            self._process_reasoning_summary(chunk_type, "", source)
                             
                             # Mark summary as complete - next summary can get a prefix
                             summary_active_key = f"_summary_active_{source}"
@@ -709,21 +712,15 @@ class CoordinationUI:
                                 # Stream reasoning summary delta
                                 summary_delta = getattr(chunk, "reasoning_summary_delta", "")
                                 if summary_delta:
-                                    # Use same key format as main coordination
-                                    summary_active_key = f"_summary_active_{source}"
-                                    
-                                    if not getattr(self, summary_active_key, False):
-                                        # First chunk of reasoning summary - add prefix
-                                        reasoning_content = f"📋 [Reasoning Summary] {summary_delta}"
-                                        setattr(self, summary_active_key, True)
-                                    else:
-                                        # Subsequent chunks - no prefix
-                                        reasoning_content = summary_delta
+                                    reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
                             elif chunk_type == "reasoning_summary_done":
                                 # Complete reasoning summary
                                 summary_text = getattr(chunk, "reasoning_summary_text", "")
                                 if summary_text:
                                     reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                                
+                                # Reset flag using helper method
+                                self._process_reasoning_summary(chunk_type, "", source)
                                 
                                 # Reset the prefix flag so next summary can get a prefix
                                 summary_active_key = f"_summary_active_{source}"

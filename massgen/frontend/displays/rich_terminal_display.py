@@ -2526,21 +2526,24 @@ class RichTerminalDisplay(TerminalDisplay):
                     elif not isinstance(content, str):
                         content = str(content)
 
+                    # Process reasoning content with shared logic
+                    processed_content = self.process_reasoning_content(chunk_type, content, source)
+                    
                     # Accumulate content
-                    presentation_content += content
+                    presentation_content += processed_content
 
                     # Enhanced formatting for orchestrator query responses
                     if chunk_type == "status":
                         # Status updates from orchestrator query
-                        status_text = Text(f"🔄 {content}", style=self.colors["info"])
+                        status_text = Text(f"🔄 {processed_content}", style=self.colors["info"])
                         self.console.print(status_text)
                     elif "error" in chunk_type:
                         # Error handling in orchestrator query
-                        error_text = Text(f"❌ {content}", style=self.colors["error"])
+                        error_text = Text(f"❌ {processed_content}", style=self.colors["error"])
                         self.console.print(error_text)
                     else:
                         # Main presentation content with simple output
-                        self.console.print(content, end="", highlight=False)
+                        self.console.print(processed_content, end="", highlight=False)
 
                 # Handle orchestrator query completion signals
                 if chunk_type == "done":
