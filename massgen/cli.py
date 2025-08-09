@@ -163,7 +163,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                         "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
                     )
         
-        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+        return ChatCompletionsBackend(api_key=api_key)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")

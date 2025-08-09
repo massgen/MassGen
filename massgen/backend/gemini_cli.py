@@ -35,8 +35,8 @@ class GeminiCLIBackend(CLIBackend):
         super().__init__("gemini", api_key, **kwargs)
         
         # Gemini CLI specific configuration
-        self.model = kwargs.get("model", "gemini-2.5-pro")
-        self.temperature = kwargs.get("temperature", 0.7)
+        self.model = kwargs.get("model")
+        self.temperature = kwargs.get("temperature")
         
         # Set API key in environment if provided
         if api_key:

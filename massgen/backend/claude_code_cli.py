@@ -32,9 +32,9 @@ class ClaudeCodeCLIBackend(CLIBackend):
         super().__init__("claude", api_key, **kwargs)
         
         # Claude Code CLI specific configuration
-        self.model = kwargs.get("model", "sonnet")  # Default to sonnet
-        self.max_turns = kwargs.get("max_turns", 5)
-        self.verbose = kwargs.get("verbose", False)
+        self.model = kwargs.get("model")
+        self.max_turns = kwargs.get("max_turns")
+        self.verbose = kwargs.get("verbose")
         
         # Set API key in environment if provided
         if api_key:

@@ -110,8 +110,7 @@ class ResponseBackend(LLMBackend):
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
             
-            # Extract model and provider tool settings
-            model = all_params.get("model", "gpt-4o-mini")
+            # Extract provider tool settings
             enable_web_search = all_params.get("enable_web_search", False)
             enable_code_interpreter = all_params.get("enable_code_interpreter", False)
 
@@ -119,27 +118,18 @@ class ResponseBackend(LLMBackend):
             converted_messages = self.convert_messages_to_response_api_format(messages)
 
             # Response API parameters (uses 'input', not 'messages')
-            api_params = {"model": model, "input": converted_messages, "stream": True}
+            api_params = {"input": converted_messages, "stream": True}
 
-            # Add max_output_tokens if specified (o-series models don't support this)
-            max_tokens = all_params.get("max_tokens")
-            if max_tokens:
-                api_params["max_output_tokens"] = max_tokens
+            # Direct passthrough of all parameters except those handled separately
+            excluded_params = {"enable_web_search", "enable_code_interpreter"}
+            for key, value in all_params.items():
+                if key not in excluded_params and value is not None:
+                    # Handle OpenAI Response API parameter name differences
+                    if key == "max_tokens":
+                        api_params["max_output_tokens"] = value
+                    else:
+                        api_params[key] = value
 
-            # Add temperature parameter
-            temperature = all_params.get("temperature")
-            if temperature:
-                api_params["temperature"] = temperature
-
-            # Add text.verbosity parameter
-            text = all_params.get("text")
-            if text:
-                api_params["text"] = text
-            
-            # Add reasoning.effort parameter
-            reasoning = all_params.get("reasoning")
-            if reasoning:
-                api_params["reasoning"] = reasoning
             
             # Add framework tools (convert to Response API format)
             if tools:

@@ -1727,8 +1727,11 @@ class RichTerminalDisplay(TerminalDisplay):
         if self._is_web_search_content(line):
             return self._format_web_search_line(line)
 
-        # Truncate line if too long
-        if len(line) > self.max_line_length:
+        # Truncate line if too long, but never truncate error messages
+        is_error_message = any(error_indicator in line for error_indicator in [
+            "❌ Error:", "Error:", "Exception:", "Traceback", "❌"
+        ])
+        if len(line) > self.max_line_length and not is_error_message:
             line = line[: self.max_line_length - 3] + "..."
 
         # Check for special prefixes and format accordingly

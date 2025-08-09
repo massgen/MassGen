@@ -353,8 +353,6 @@ class ConfigurableAgent(SingleAgent):
         backend_stream = self.backend.stream_with_tools(
             messages=backend_messages,
             tools=tools,  # Use provided tools (for MassGen workflow)
-            agent_id=self.agent_id,
-            session_id=self.session_id,
             **backend_params,
         )
 
