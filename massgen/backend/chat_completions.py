@@ -177,9 +177,13 @@ class ChatCompletionsBackend(LLMBackend):
         
         # Initialize provider configuration
         # Support both provider name and base_url for backward compatibility
-        provider_name = kwargs.get("provider", kwargs.get("provider_name", "openai"))
+        provider_name = kwargs.get("provider", kwargs.get("provider_name"))
+        if not provider_name and "base_url" in kwargs:
+            _, detected_name, _ = ProviderRegistry.detect_provider(kwargs["base_url"])
+            provider_name = detected_name
+        provider_name = provider_name or "openai"
         self.base_url: str = kwargs.get("base_url") or ProviderRegistry.get_base_url_from_provider(provider_name)
-        self.model_name: str = kwargs.get("model", "gpt-4")
+        self.model_name: str = kwargs.get("model", "gpt-5-mini")
         self.stream: bool = kwargs.get("stream", True)
         
         # Optional provider-specific HTTP headers used by some OpenAI-compatible providers.
@@ -221,13 +225,12 @@ class ChatCompletionsBackend(LLMBackend):
         
         # No valid key found - raise error with helpful message
         domain, display_name, env_var = ProviderRegistry.detect_provider(self.base_url)
-        provider_display = self._provider_name or display_name
-        
+        provider_display = display_name
+
         raise ValueError(
             f"API key required for {provider_display}. "
             f"Please set the {env_var} environment variable or provide api_key in configuration."
-        )
-    
+        )    
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         if self._provider_name:
