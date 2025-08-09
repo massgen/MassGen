@@ -327,6 +327,10 @@ class Orchestrator(ChatAgent):
                             type="content", content=chunk_data, source=agent_id
                         )
 
+                    elif chunk_type == "reasoning":
+                        # Stream reasoning content with proper attribution
+                        yield chunk_data  # chunk_data is already a StreamChunk with source
+
                     elif chunk_type == "result":
                         # Agent completed with result
                         result_type, result_data = chunk_data
@@ -587,6 +591,21 @@ class Orchestrator(ChatAgent):
                         response_text += chunk.content
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
+                    elif chunk.type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                        # Stream reasoning content as tuple format
+                        reasoning_chunk = StreamChunk(
+                            type=chunk.type,
+                            content=chunk.content,
+                            source=agent_id,
+                            reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                            reasoning_text=getattr(chunk, "reasoning_text", None),
+                            reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
+                            reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
+                            item_id=getattr(chunk, "item_id", None),
+                            content_index=getattr(chunk, "content_index", None),
+                            summary_index=getattr(chunk, "summary_index", None)
+                        )
+                        yield ("reasoning", reasoning_chunk)
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
@@ -1023,6 +1042,22 @@ class Orchestrator(ChatAgent):
                 yield StreamChunk(
                     type="content", content=chunk.content, source=selected_agent_id
                 )
+            elif chunk.type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                # Stream reasoning content with proper attribution (same as main coordination)
+                reasoning_chunk = StreamChunk(
+                    type=chunk.type,
+                    content=chunk.content,
+                    source=selected_agent_id,
+                    reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                    reasoning_text=getattr(chunk, "reasoning_text", None),
+                    reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
+                    reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
+                    item_id=getattr(chunk, "item_id", None),
+                    content_index=getattr(chunk, "content_index", None),
+                    summary_index=getattr(chunk, "summary_index", None)
+                )
+                # Use the same format as main coordination for consistency
+                yield reasoning_chunk
             elif chunk.type == "done":
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":

@@ -1,0 +1,20 @@
+# GPT-5-nano with Full Capabilities
+# Single agent with reasoning, web search, and code execution enabled
+
+agents:
+  - id: "gpt-5-nano"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text: 
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_execution: true
+    # system_message: "You are an advanced AI assistant with reasoning, web search, and code execution capabilities. When solving problems, think step by step using your reasoning abilities, use web search to get current information when needed, and execute code to perform calculations or data analysis. Provide clear, well-reasoned responses."
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
