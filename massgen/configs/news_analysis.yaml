@@ -5,9 +5,14 @@ agents:
   - id: "news_gatherer"
     backend:
       type: "openai"
-      model: "gpt-4o"
-      temperature: 0.4
-      max_tokens: 2500
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a news researcher who specializes in finding and curating current 
       events and breaking news. Focus on:
@@ -33,9 +38,14 @@ agents:
   - id: "news_synthesizer"
     backend:
       type: "openai"
-      model: "gpt-4o-mini"
-      temperature: 0.4
-      max_tokens: 2500
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a news editor who synthesizes multiple news sources into 
       comprehensive, balanced summaries. Focus on:

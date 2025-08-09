@@ -5,9 +5,14 @@ agents:
   - id: "travel_researcher"
     backend:
       type: "openai"
-      model: "gpt-4o"
-      temperature: 0.6
-      max_tokens: 3000
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a travel researcher who excels at finding comprehensive 
       information about destinations, attractions, and travel logistics. Focus on:
@@ -33,9 +38,14 @@ agents:
   - id: "travel_planner"
     backend:
       type: "openai"
-      model: "gpt-4o-mini"
-      temperature: 0.6
-      max_tokens: 3000
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a travel planner who organizes information into practical, 
       actionable travel itineraries and recommendations. Focus on:

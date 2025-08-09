@@ -6,7 +6,7 @@ Main interface for coordinating agents with visual display and logging.
 
 import time
 import asyncio
-from typing import Optional, List, Dict, Any, AsyncGenerator
+from typing import Optional, List, Dict, Any
 from .displays.base_display import BaseDisplay
 from .displays.terminal_display import TerminalDisplay
 from .displays.simple_display import SimpleDisplay
@@ -56,6 +56,27 @@ class CoordinationUI:
 
         # Flush output configuration (matches rich_terminal_display)
         self._flush_char_delay = 0.03  # 30ms between characters
+
+    def _process_reasoning_summary(self, chunk_type: str, summary_delta: str, source: str) -> str:
+        """Process reasoning summary content using display's shared logic."""
+        if self.display and hasattr(self.display, 'process_reasoning_content'):
+            return self.display.process_reasoning_content(chunk_type, summary_delta, source)
+        else:
+            # Fallback logic if no display available
+            if chunk_type == "reasoning_summary":
+                summary_active_key = f"_summary_active_{source}"
+                if not getattr(self, summary_active_key, False):
+                    setattr(self, summary_active_key, True)
+                    return f"📋 [Reasoning Summary] {summary_delta}"
+                return summary_delta
+            elif chunk_type == "reasoning_summary_done":
+                summary_active_key = f"_summary_active_{source}"
+                if hasattr(self, summary_active_key):
+                    setattr(self, summary_active_key, False)
+            return summary_delta
+
+    def __post_init__(self):
+        """Post-initialization setup."""
         self._flush_word_delay = 0.08  # 80ms after punctuation
 
         # Initialize answer buffer state
@@ -158,6 +179,7 @@ class CoordinationUI:
                 content = getattr(chunk, "content", "") or ""
                 source = getattr(chunk, "source", None)
                 chunk_type = getattr(chunk, "type", "")
+                
 
                 # Handle agent status updates
                 if chunk_type == "agent_status":
@@ -196,7 +218,54 @@ class CoordinationUI:
                             # Display as tool content for the specific agent
                             await self._process_agent_content(source, tool_msg)
                     continue
+                
+                # Handle reasoning streams
+                elif chunk_type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                    if source:
+                        reasoning_content = ""
+                        if chunk_type == "reasoning":
+                            # Stream reasoning delta as thinking content
+                            reasoning_delta = getattr(chunk, "reasoning_delta", "")
+                            if reasoning_delta:
+                                reasoning_content = reasoning_delta
+                        elif chunk_type == "reasoning_done":
+                            # Complete reasoning text
+                            reasoning_text = getattr(chunk, "reasoning_text", "")
+                            if reasoning_text:
+                                reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
+                        elif chunk_type == "reasoning_summary":
+                            # Stream reasoning summary delta
+                            summary_delta = getattr(chunk, "reasoning_summary_delta", "")
+                            if summary_delta:
+                                reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
+                        elif chunk_type == "reasoning_summary_done":
+                            # Complete reasoning summary
+                            summary_text = getattr(chunk, "reasoning_summary_text", "")
+                            if summary_text:
+                                reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                            
+                            # Reset flag using helper method
+                            self._process_reasoning_summary(chunk_type, "", source)
+                            
+                            # Mark summary as complete - next summary can get a prefix
+                            summary_active_key = f"_summary_active_{source}"
+                            if hasattr(self, summary_active_key):
+                                delattr(self, summary_active_key)
+                        
+                        if reasoning_content:
+                            # Display reasoning as thinking content
+                            self.display.update_agent_content(source, reasoning_content, "thinking")
+                            if self.logger:
+                                self.logger.log_agent_content(source, reasoning_content, "reasoning")
+                    continue
 
+                # Reset reasoning prefix state when final presentation starts
+                if chunk_type == "status" and "presenting final answer" in content:
+                    # Clear all summary active flags for final presentation
+                    for attr_name in list(vars(self).keys()):
+                        if attr_name.startswith('_summary_active_'):
+                            delattr(self, attr_name)
+                
                 if content:
                     full_response += content
 
@@ -226,6 +295,7 @@ class CoordinationUI:
             ):
                 print(f"\n🎤  Final Presentation from {selected_agent}:")
                 print("=" * 60)
+                
 
                 presentation_content = ""
                 try:
@@ -233,6 +303,46 @@ class CoordinationUI:
                         selected_agent, vote_results
                     ):
                         content = getattr(chunk, "content", "") or ""
+                        chunk_type = getattr(chunk, "type", "")
+                        
+                        # Use the same reasoning processing as main coordination
+                        if chunk_type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                            source = getattr(chunk, "source", selected_agent)
+                            
+                            reasoning_content = ""
+                            if chunk_type == "reasoning":
+                                # Stream reasoning delta as thinking content
+                                reasoning_delta = getattr(chunk, "reasoning_delta", "")
+                                if reasoning_delta:
+                                    reasoning_content = reasoning_delta
+                            elif chunk_type == "reasoning_done":
+                                # Complete reasoning step
+                                reasoning_text = getattr(chunk, "reasoning_text", "")
+                                if reasoning_text:
+                                    reasoning_content = f"\n🧠 [Reasoning Complete]\n"
+                            elif chunk_type == "reasoning_summary":
+                                # Stream reasoning summary delta
+                                summary_delta = getattr(chunk, "reasoning_summary_delta", "")
+                                if summary_delta:
+                                    reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
+                            elif chunk_type == "reasoning_summary_done":
+                                # Complete reasoning summary
+                                summary_text = getattr(chunk, "reasoning_summary_text", "")
+                                if summary_text:
+                                    reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                                
+                                # Reset flag using helper method
+                                self._process_reasoning_summary(chunk_type, "", source)
+                                
+                                # Reset the prefix flag so next summary can get a prefix
+                                summary_active_key = f"_summary_active_{source}"
+                                if hasattr(self, summary_active_key):
+                                    delattr(self, summary_active_key)
+                            
+                            if reasoning_content:
+                                # Add to presentation content and display
+                                content = reasoning_content
+                        
                         if content:
                             # Ensure content is a string
                             if isinstance(content, list):
@@ -255,7 +365,7 @@ class CoordinationUI:
                             if self.display:
                                 try:
                                     await self._process_content(selected_agent, content)
-                                except Exception as e:
+                                except Exception:
                                     # Error processing presentation content - continue gracefully
                                     pass
                                 # Also print to console with flush using consistent timing with rich display
@@ -324,7 +434,7 @@ class CoordinationUI:
 
             return final_result
 
-        except Exception as e:
+        except Exception:
             if self.logger:
                 self.logger.finalize_session("", success=False)
             raise
@@ -497,7 +607,54 @@ class CoordinationUI:
                             # Display as tool content for the specific agent
                             await self._process_agent_content(source, tool_msg)
                     continue
+                
+                # Handle reasoning streams
+                elif chunk_type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                    if source:
+                        reasoning_content = ""
+                        if chunk_type == "reasoning":
+                            # Stream reasoning delta as thinking content
+                            reasoning_delta = getattr(chunk, "reasoning_delta", "")
+                            if reasoning_delta:
+                                reasoning_content = reasoning_delta
+                        elif chunk_type == "reasoning_done":
+                            # Complete reasoning text
+                            reasoning_text = getattr(chunk, "reasoning_text", "")
+                            if reasoning_text:
+                                reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
+                        elif chunk_type == "reasoning_summary":
+                            # Stream reasoning summary delta
+                            summary_delta = getattr(chunk, "reasoning_summary_delta", "")
+                            if summary_delta:
+                                reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
+                        elif chunk_type == "reasoning_summary_done":
+                            # Complete reasoning summary
+                            summary_text = getattr(chunk, "reasoning_summary_text", "")
+                            if summary_text:
+                                reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                            
+                            # Reset flag using helper method
+                            self._process_reasoning_summary(chunk_type, "", source)
+                            
+                            # Mark summary as complete - next summary can get a prefix
+                            summary_active_key = f"_summary_active_{source}"
+                            if hasattr(self, summary_active_key):
+                                delattr(self, summary_active_key)
+                        
+                        if reasoning_content:
+                            # Display reasoning as thinking content
+                            self.display.update_agent_content(source, reasoning_content, "thinking")
+                            if self.logger:
+                                self.logger.log_agent_content(source, reasoning_content, "reasoning")
+                    continue
 
+                # Reset reasoning prefix state when final presentation starts
+                if chunk_type == "status" and "presenting final answer" in content:
+                    # Clear all summary active flags for final presentation
+                    for attr_name in list(vars(self).keys()):
+                        if attr_name.startswith('_summary_active_'):
+                            delattr(self, attr_name)
+                
                 if content:
                     full_response += content
 
@@ -534,6 +691,46 @@ class CoordinationUI:
                         selected_agent, vote_results
                     ):
                         content = getattr(chunk, "content", "") or ""
+                        chunk_type = getattr(chunk, "type", "")
+                        
+                        # Use the same reasoning processing as main coordination
+                        if chunk_type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
+                            source = getattr(chunk, "source", selected_agent)
+                            
+                            reasoning_content = ""
+                            if chunk_type == "reasoning":
+                                # Stream reasoning delta as thinking content
+                                reasoning_delta = getattr(chunk, "reasoning_delta", "")
+                                if reasoning_delta:
+                                    reasoning_content = reasoning_delta
+                            elif chunk_type == "reasoning_done":
+                                # Complete reasoning step
+                                reasoning_text = getattr(chunk, "reasoning_text", "")
+                                if reasoning_text:
+                                    reasoning_content = f"\n🧠 [Reasoning Complete]\n"
+                            elif chunk_type == "reasoning_summary":
+                                # Stream reasoning summary delta
+                                summary_delta = getattr(chunk, "reasoning_summary_delta", "")
+                                if summary_delta:
+                                    reasoning_content = self._process_reasoning_summary(chunk_type, summary_delta, source)
+                            elif chunk_type == "reasoning_summary_done":
+                                # Complete reasoning summary
+                                summary_text = getattr(chunk, "reasoning_summary_text", "")
+                                if summary_text:
+                                    reasoning_content = f"\n📋 [Reasoning Summary Complete]\n{summary_text}\n"
+                                
+                                # Reset flag using helper method
+                                self._process_reasoning_summary(chunk_type, "", source)
+                                
+                                # Reset the prefix flag so next summary can get a prefix
+                                summary_active_key = f"_summary_active_{source}"
+                                if hasattr(self, summary_active_key):
+                                    delattr(self, summary_active_key)
+                            
+                            if reasoning_content:
+                                # Add to presentation content and display
+                                content = reasoning_content
+                        
                         if content:
                             # Ensure content is a string
                             if isinstance(content, list):
@@ -619,7 +816,7 @@ class CoordinationUI:
 
             return final_result
 
-        except Exception as e:
+        except Exception:
             if self.logger:
                 self.logger.finalize_session("", success=False)
             raise

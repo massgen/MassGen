@@ -164,7 +164,8 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                         "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
                     )
         
-        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+        return ChatCompletionsBackend(api_key=api_key)
+    
     elif backend_type == "claude_code_stream":
         # ClaudeCodeStreamBackend using claude-code-sdk-python
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")

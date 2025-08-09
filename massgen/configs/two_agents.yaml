@@ -5,10 +5,14 @@ agents:
   - id: "primary_agent"
     backend:
       type: "openai"
-      model: "gpt-4o"
-      temperature: 0.5
-      max_tokens: 2500
+      model: "gpt-5"
+      text:
+        verbosity: "high"
+      reasoning:
+        effort: "high"
+        summary: "auto"
       enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a knowledgeable primary agent who provides comprehensive, 
       well-researched responses. Focus on:
@@ -20,10 +24,14 @@ agents:
   - id: "secondary_agent"
     backend:
       type: "openai"
-      model: "gpt-4o-mini"
-      temperature: 0.5
-      max_tokens: 2500
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
       enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a secondary agent who reviews, refines, and enhances responses. 
       Focus on:

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 class StreamChunk:
     """Standardized chunk format for streaming responses."""
 
-    type: str  # "content", "tool_calls", "builtin_tool_results", "complete_message", "complete_response", "done", "error", "agent_status"
+    type: str  # "content", "tool_calls", "builtin_tool_results", "complete_message", "complete_response", "done", "error", "agent_status", "reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"
     content: Optional[str] = None
     tool_calls: Optional[List[Dict[str, Any]]] = (
         None  # User-defined function tools (need execution)
@@ -26,6 +26,15 @@ class StreamChunk:
     error: Optional[str] = None
     source: Optional[str] = None  # Source identifier (e.g., agent_id, "orchestrator")
     status: Optional[str] = None  # For agent status updates
+    
+    # Reasoning-related fields
+    reasoning_delta: Optional[str] = None  # Delta text from reasoning stream
+    reasoning_text: Optional[str] = None  # Complete reasoning text
+    reasoning_summary_delta: Optional[str] = None  # Delta text from reasoning summary stream
+    reasoning_summary_text: Optional[str] = None  # Complete reasoning summary text
+    item_id: Optional[str] = None  # Reasoning item ID
+    content_index: Optional[int] = None  # Reasoning content index
+    summary_index: Optional[int] = None  # Reasoning summary index
 
 
 @dataclass

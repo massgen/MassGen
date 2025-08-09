@@ -107,36 +107,29 @@ class ResponseBackend(LLMBackend):
 
             client = openai.AsyncOpenAI(api_key=self.api_key)
 
-            # Extract model and provider tool settings
-            model = kwargs.get("model", "gpt-4o-mini")
-            enable_web_search = kwargs.get("enable_web_search", False)
-            enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
+            # Merge constructor config with stream kwargs (stream kwargs take priority)
+            all_params = {**self.config, **kwargs}
+            
+            # Extract provider tool settings
+            enable_web_search = all_params.get("enable_web_search", False)
+            enable_code_interpreter = all_params.get("enable_code_interpreter", False)
 
             # Convert messages to Response API format (handles tool messages)
             converted_messages = self.convert_messages_to_response_api_format(messages)
 
             # Response API parameters (uses 'input', not 'messages')
-            api_params = {"model": model, "input": converted_messages, "stream": True}
+            api_params = {"input": converted_messages, "stream": True}
 
-            # Add max_output_tokens if specified (o-series models don't support this)
-            max_tokens = kwargs.get("max_tokens")
-            if max_tokens:
-                api_params["max_output_tokens"] = max_tokens
+            # Direct passthrough of all parameters except those handled separately
+            excluded_params = {"enable_web_search", "enable_code_interpreter"}
+            for key, value in all_params.items():
+                if key not in excluded_params and value is not None:
+                    # Handle OpenAI Response API parameter name differences
+                    if key == "max_tokens":
+                        api_params["max_output_tokens"] = value
+                    else:
+                        api_params[key] = value
 
-            # Add temperature parameter
-            temperature = kwargs.get("temperature")
-            if temperature:
-                api_params["temperature"] = temperature
-
-            # Add text.verbosity parameter
-            text = kwargs.get("text")
-            if text:
-                api_params["text"] = text
-            
-            # Add reasoning.effort parameter
-            reasoning = kwargs.get("reasoning")
-            if reasoning:
-                api_params["reasoning"] = reasoning
             
             # Add framework tools (convert to Response API format)
             if tools:
@@ -145,7 +138,7 @@ class ResponseBackend(LLMBackend):
 
             # Add provider tools (web search, code interpreter) if enabled
             provider_tools = []
-            if not reasoning and enable_web_search:
+            if enable_web_search:
                 provider_tools.append({"type": "web_search"})
 
             if enable_code_interpreter:
@@ -170,6 +163,48 @@ class ResponseBackend(LLMBackend):
                     ):
                         content += chunk.delta
                         yield StreamChunk(type="content", content=chunk.delta)
+                    elif chunk.type == "response.reasoning_text.delta" and hasattr(
+                        chunk, "delta"
+                    ):
+                        # Stream reasoning process as it develops
+                        yield StreamChunk(
+                            type="reasoning",
+                            content=f"🧠 [Reasoning] {chunk.delta}",
+                            reasoning_delta=chunk.delta,
+                            item_id=getattr(chunk, "item_id", None),
+                            content_index=getattr(chunk, "content_index", None)
+                        )
+                    elif chunk.type == "response.reasoning_text.done":
+                        # Complete reasoning step finished
+                        reasoning_text = getattr(chunk, "text", "")
+                        yield StreamChunk(
+                            type="reasoning_done",
+                            content=f"\n🧠 [Reasoning Complete]\n",
+                            reasoning_text=reasoning_text,
+                            item_id=getattr(chunk, "item_id", None),
+                            content_index=getattr(chunk, "content_index", None)
+                        )
+                    elif chunk.type == "response.reasoning_summary_text.delta" and hasattr(
+                        chunk, "delta"
+                    ):
+                        # Stream reasoning summary as it develops
+                        yield StreamChunk(
+                            type="reasoning_summary",
+                            content=chunk.delta,  # Raw delta content without prefix
+                            reasoning_summary_delta=chunk.delta,
+                            item_id=getattr(chunk, "item_id", None),
+                            summary_index=getattr(chunk, "summary_index", None)
+                        )
+                    elif chunk.type == "response.reasoning_summary_text.done":
+                        # Complete reasoning summary finished
+                        summary_text = getattr(chunk, "text", "")
+                        yield StreamChunk(
+                            type="reasoning_summary_done", 
+                            content=f"\n📋 [Reasoning Summary Complete]\n",
+                            reasoning_summary_text=summary_text,
+                            item_id=getattr(chunk, "item_id", None),
+                            summary_index=getattr(chunk, "summary_index", None)
+                        )
                     elif chunk.type == "response.web_search_call.in_progress":
                         yield StreamChunk(
                             type="content",

@@ -7,19 +7,19 @@ agents:
     backend:
       type: "chatcompletion"
       model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1/chat/completions"
+      base_url: "https://api.cerebras.ai/v1"
       # api_key: "cerebras_api_key"
   - id: "gpt-oss-120b-2"
     backend:
       type: "chatcompletion"
       model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1/chat/completions"
+      base_url: "https://api.cerebras.ai/v1"
       # api_key: "cerebras_api_key"
   - id: "gpt-oss-120b-3"
     backend:
       type: "chatcompletion"
       model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1/chat/completions"
+      base_url: "https://api.cerebras.ai/v1"
       # api_key: "cerebras_api_key"
 ui:
   display_type: "rich_terminal"

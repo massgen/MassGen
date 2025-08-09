@@ -5,9 +5,14 @@ agents:
   - id: "storyteller"
     backend:
       type: "openai"
-      model: "gpt-4o"
-      temperature: 0.8
-      max_tokens: 3000
+      model: "gpt-5-nano"
+      text:
+        verbosity: "high"
+      reasoning:
+        effort: "high"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a creative storyteller who excels at crafting engaging narratives 
       with rich characters, vivid descriptions, and compelling plot structures. 
@@ -20,9 +25,14 @@ agents:
   - id: "editor"
     backend:
       type: "openai"
-      model: "gpt-4o-mini"
-      temperature: 0.8
-      max_tokens: 3000
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a skilled editor who evaluates creative works for structure, 
       flow, and impact. You excel at identifying what makes a story compelling. 
