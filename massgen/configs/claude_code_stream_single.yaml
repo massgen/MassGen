@@ -6,27 +6,25 @@ agents:
     backend:
       type: "claude_code_stream"
       model: "claude-sonnet-4-20250514"
-      
+
       # Claude Code Stream specific options
-      system_prompt: "You are a helpful AI assistant powered by Claude Code. You have access to a comprehensive set of development tools including file operations, code execution, web search, and more. Use these capabilities thoughtfully to provide the best assistance."
-      max_turns: 3  # Allow unlimited conversation turns
-      temperature: 0.7
-      max_tokens: 4096
-      
+      # system_prompt: "You are a helpful AI assistant powered by Claude Code. You have access to a comprehensive set of development tools including file operations, code execution, web search, and more. Use these capabilities thoughtfully to provide the best assistance."
+      # max_turns: 3 # Allow unlimited conversation turns
+
       # Tool configuration (Claude Code's native tools)
       allowed_tools:
-        - "Read"           # Read files from filesystem
-        - "Write"          # Write files to filesystem  
-        - "Edit"           # Edit existing files
-        - "MultiEdit"      # Multiple edits in one operation
-        - "Bash"           # Execute shell commands
-        - "Grep"           # Search within files
-        - "Glob"           # Find files by pattern
-        - "LS"             # List directory contents
-        - "WebSearch"      # Search the web
-        - "WebFetch"       # Fetch web content
-        - "TodoWrite"      # Task management
-        - "NotebookEdit"   # Jupyter notebook editing
+        - "Read" # Read files from filesystem
+        - "Write" # Write files to filesystem
+        - "Edit" # Edit existing files
+        - "MultiEdit" # Multiple edits in one operation
+        - "Bash" # Execute shell commands
+        - "Grep" # Search within files
+        - "Glob" # Find files by pattern
+        - "LS" # List directory contents
+        - "WebSearch" # Search the web
+        - "WebFetch" # Fetch web content
+        - "TodoWrite" # Task management
+        - "NotebookEdit" # Jupyter notebook editing
         # MCP tools (if available)
         - "mcp__ide__getDiagnostics"
         - "mcp__ide__executeCode"
@@ -36,12 +34,7 @@ ui:
   type: "rich_terminal"
   show_agent_thinking: true
   show_coordination: true
-  
-# Orchestration settings (for single agent, these are minimal)
-orchestration:
-  max_coordination_rounds: 1  # Single agent doesn't need coordination
-  timeout_seconds: 300
-  
+
 # Session configuration
 session:
   save_conversation: true

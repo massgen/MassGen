@@ -246,7 +246,7 @@ uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 **Advanced backends**:
 ```bash
 # Claude Code Stream - Native Claude Code SDK with comprehensive dev tools
-uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Debug this Python script and run tests"
+uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Can I use claude-3-5-haiku for claude code?"
 ```
 
 **CLI-based backends** (requires CLI tools installed):

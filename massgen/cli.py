@@ -168,11 +168,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     
     elif backend_type == "claude_code_stream":
         # ClaudeCodeStreamBackend using claude-code-sdk-python
-        api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ConfigurationError(
-                "Anthropic API key not found. Set ANTHROPIC_API_KEY or provide in config."
-            )
+        # Authentication handled by backend (API key or subscription)
         
         # Validate claude-code-sdk availability
         try:
@@ -182,7 +178,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 "claude-code-sdk not found. Install with: pip install claude-code-sdk"
             )
         
-        return ClaudeCodeStreamBackend(api_key=api_key, **kwargs)
+        return ClaudeCodeStreamBackend(**kwargs)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
