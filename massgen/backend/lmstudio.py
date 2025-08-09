@@ -22,12 +22,10 @@ class LMStudioBackend(ChatCompletionsBackend):
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         # Ensure LM Studio defaults
-        base_url = kwargs.get("base_url") or "http://localhost:1234/v1"
+        base_url = kwargs.pop("base_url", "http://localhost:1234/v1")
         # Pass through with our resolved key and base_url
         resolved_api_key = (api_key.strip() if api_key and api_key.strip() else "lm-studio")
-        super().__init__(resolved_api_key, base_url=base_url, **kwargs)
-
-    # Override to avoid environment-variable enforcement; LM Studio accepts any key
+        super().__init__(resolved_api_key, base_url=base_url, **kwargs)    # Override to avoid environment-variable enforcement; LM Studio accepts any key
     def _resolve_api_key(self, provided_key: Optional[str], provider_name: str) -> str:  # type: ignore[override]
         return (provided_key.strip() if provided_key and provided_key.strip() else "lm-studio")
 
