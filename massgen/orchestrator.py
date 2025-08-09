@@ -351,7 +351,7 @@ class Orchestrator(ChatAgent):
                             reset_signal = True
                             yield StreamChunk(
                                 type="content",
-                                content=f"[{agent_id}] ✅ Answer provided",
+                                content=f"✅ Answer provided",
                                 source=agent_id,
                             )
 
@@ -363,7 +363,7 @@ class Orchestrator(ChatAgent):
                                 reason = result_data.get("reason", "No reason provided")
                                 yield StreamChunk(
                                     type="content",
-                                    content=f"🔄 Vote by [{agent_id}] for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
+                                    content=f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
                                     source=agent_id,
                                 )
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
@@ -371,7 +371,7 @@ class Orchestrator(ChatAgent):
                                 voted_agents[agent_id] = result_data
                                 yield StreamChunk(
                                     type="content",
-                                    content=f"[{agent_id}] ✅ Vote recorded for {result_data['agent_id']}",
+                                    content=f"✅ Vote recorded for [{result_data['agent_id']}]",
                                     source=agent_id,
                                 )
 
@@ -636,7 +636,7 @@ class Orchestrator(ChatAgent):
 
                                 yield (
                                     "content",
-                                    f"🗳️ Voting for {real_agent_id}: {reason}",
+                                    f"🗳️ Voting for [{real_agent_id}]: {reason}",
                                 )
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
