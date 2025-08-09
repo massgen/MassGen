@@ -50,7 +50,6 @@ class ProviderRegistry:
     PROVIDERS = [
         ProviderConfig("cerebras.ai", "Cerebras AI", "CEREBRAS_API_KEY"),
         ProviderConfig("together.xyz", "Together AI", "TOGETHER_API_KEY"),
-        ProviderConfig("together.ai",  "Together AI", "TOGETHER_API_KEY"),
         ProviderConfig("deepinfra.com", "DeepInfra",  "DEEPINFRA_API_KEY"),
         ProviderConfig("fireworks.ai", "Fireworks AI", "FIREWORKS_API_KEY"),
         ProviderConfig("api.groq.com", "Groq", "GROQ_API_KEY"),

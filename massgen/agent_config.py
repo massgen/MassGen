@@ -152,6 +152,25 @@ class AgentConfig:
         return cls(backend_params=backend_params)
 
     @classmethod
+    def create_lmstudio_config(
+        cls,
+        model: str = "gpt-4o-mini",
+        enable_web_search: bool = False,
+        **kwargs,
+    ) -> "AgentConfig":
+        """Create LM Studio configuration (OpenAI-compatible local server).
+
+        Args:
+            model: Local model name exposed by LM Studio
+            enable_web_search: No builtin web search; kept for interface parity
+            **kwargs: Additional backend parameters (e.g., base_url, api_key)
+        """
+        backend_params = {"model": model, **kwargs}
+        if enable_web_search:
+            backend_params["enable_web_search"] = True
+        return cls(backend_params=backend_params)
+
+    @classmethod
     def create_gemini_config(
         cls,
         model: str = "gemini-2.5-flash",

@@ -1,0 +1,11 @@
+# MassGen Single Agent Configuration for LM Studio (local OpenAI-compatible server)
+agent:
+  id: "lmstudio"
+  backend:
+    type: "lmstudio"
+    model: "qwen/qwen3-4b"  # Replace with the model name LM Studio exposes
+  system_message: "You are a helpful AI assistant running against a local LM Studio server."
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+

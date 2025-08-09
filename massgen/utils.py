@@ -62,6 +62,7 @@ MODEL_MAPPINGS = {
         "grok-3",
         "grok-4",
     ],
+    # LM Studio often proxies various model names; treat unknowns via explicit backend type.
 }
 
 

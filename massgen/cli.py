@@ -58,6 +58,7 @@ from massgen.backend.grok import GrokBackend
 from massgen.backend.claude import ClaudeBackend
 from massgen.backend.gemini import GeminiBackend
 from massgen.backend.chat_completions import ChatCompletionsBackend
+from massgen.backend.lmstudio import LMStudioBackend
 from massgen.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.agent_config import AgentConfig
 from massgen.orchestrator import Orchestrator
@@ -171,6 +172,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         # Just pass through all kwargs including api_key and base_url
         return ChatCompletionsBackend(**kwargs)
 
+    elif backend_type == "lmstudio":
+        # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
+        return LMStudioBackend(**kwargs)
+
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -214,6 +219,8 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             agent_config = AgentConfig.create_gemini_config(**backend_params)
         elif backend_type_lower == "chatcompletion":
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
+        elif backend_type_lower == "lmstudio":
+            agent_config = AgentConfig.create_lmstudio_config(**backend_params)
         else:
             agent_config = AgentConfig(backend_params=backend_config)
 
@@ -595,7 +602,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "lmstudio"],
         help="Backend type for quick setup",
     )
 

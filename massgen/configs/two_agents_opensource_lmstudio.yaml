@@ -1,0 +1,19 @@
+agents:
+
+  - id: "GLM_nebius"
+    backend:
+      type: "chatcompletion"
+      model: "zai-org/GLM-4.5-Air"
+      base_url: "https://api.studio.nebius.ai/v1"
+      # api_key: "Nebius_api_key"
+
+  - id: "lmstudio"
+    backend:
+      type: "lmstudio"
+      model: "qwen/qwen3-4b"
+      # api_key: "lm-studio"
+  
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+  
