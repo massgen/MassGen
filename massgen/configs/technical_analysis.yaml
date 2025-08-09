@@ -5,9 +5,14 @@ agents:
   - id: "technical_researcher"
     backend:
       type: "openai"
-      model: "gpt-4o"
-      temperature: 0.2
-      max_tokens: 3000
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a technical researcher who specializes in finding accurate 
       technical specifications, pricing, and system requirements. Focus on:
@@ -33,9 +38,14 @@ agents:
   - id: "technical_advisor"
     backend:
       type: "openai"
-      model: "gpt-4o-mini"
-      temperature: 0.2
-      max_tokens: 3000
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     system_message: |
       You are a technical advisor who synthesizes technical information 
       into practical recommendations and insights. Focus on:

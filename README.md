@@ -384,9 +384,10 @@ backend:
   text: 
     verbosity: "medium"              # Response detail level (low/medium/high, only supported in GPT-5 series models)
   reasoning:                         
-    effort: "high"                   # Reasoning depth (low/medium/high, only supported in GPT-5 series models and GPT o-series models)
-  enable_web_search: true            # Web search capability. Note, reasoning and web_search are mutually exclusive and can't be turned on at the same time
-  enable_code_interpreter: true      # Code interpreter capability
+    effort: "medium"                 # Reasoning depth (low/medium/high, only supported in GPT-5 series models and GPT o-series models)
+    summary: "auto"                  # Automatic reasoning summaries (optional)
+  enable_web_search: true            # Web search capability - can be used with reasoning
+  enable_code_interpreter: true      # Code interpreter capability - can be used with reasoning
 ```
 
 #### Claude Code CLI
