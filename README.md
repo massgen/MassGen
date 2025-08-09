@@ -244,6 +244,12 @@ uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 ```
 
 **Advanced backends** (requires additional setup):
+This backend require claude-code-sdk and set ANTHROPIC_API_KEY in environment.
+```bash
+pip install claude-code-sdk
+export ANTHROPIC_API_KEY="your-api-key-here"
+```
+
 ```bash
 # Claude Code Stream - Native Claude Code SDK with comprehensive dev tools
 uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Debug this Python script and run tests"
