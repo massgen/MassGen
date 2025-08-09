@@ -33,7 +33,7 @@ sudo npm install -g @anthropic-ai/claude-code
 
 # Install Gemini CLI
 echo "💎 Installing Gemini CLI..."
-sudo npm install -g @google/generative-ai-cli
+sudo npm install -g @google/gemini-cli
 
 # Create .env file from .env.example if it doesn't exist
 echo "🔑 Setting up environment file..."
@@ -63,6 +63,6 @@ echo "3. Run MassGen: python -m massgen.cli --config configs/single_gpt5nano.yam
 echo ""
 echo "Available tools:"
 echo "- uv (Python package manager)"
-echo "- claude-code (Claude Code CLI)"
-echo "- generative-ai (Gemini CLI)"
+echo "- claude (Claude Code CLI)"
+echo "- gemini (Gemini CLI)"
 echo "- Standard Python dev tools (black, isort, flake8)"
