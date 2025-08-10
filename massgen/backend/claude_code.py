@@ -627,15 +627,19 @@ class ClaudeCodeBackend(LLMBackend):
             # Format the entire conversation context (not just latest
             # message). This ensures Claude Code has full context including
             # tools.
-            if messages:
-                # For streaming, we can send the formatted context as a
-                # single query
-                formatted_context = self._format_messages_for_claude_code(
-                    messages, tools or [])
-                await client.query(formatted_context)
-            else:
-                # Fallback: just send a basic query
-                await client.query("Hello")
+            if not messages:
+                # No messages to process - yield error
+                yield StreamChunk(
+                    type="error",
+                    error="No messages provided to stream_with_tools",
+                    source="claude_code"
+                )
+                return
+                
+            # Send the formatted context as a single query
+            formatted_context = self._format_messages_for_claude_code(
+                messages, tools or [])
+            await client.query(formatted_context)
 
             # Stream response and convert to MassGen StreamChunks
             accumulated_content = ""
