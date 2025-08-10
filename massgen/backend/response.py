@@ -297,8 +297,7 @@ class ResponseBackend(LLMBackend):
                         if hasattr(chunk, "response"):
                             response_dict = self._convert_to_dict(chunk.response)
 
-                            # Extract builtin tool results from output array
-                            builtin_tool_results = []
+                            # Handle builtin tool results from output array with simple content format
                             if (
                                 isinstance(response_dict, dict)
                                 and "output" in response_dict
@@ -306,36 +305,32 @@ class ResponseBackend(LLMBackend):
                                 for item in response_dict["output"]:
                                     if item.get("type") == "code_interpreter_call":
                                         # Code execution result
-                                        builtin_tool_results.append(
-                                            {
-                                                "id": item.get("id", ""),
-                                                "tool_type": "code_interpreter",
-                                                "status": item.get("status", ""),
-                                                "code": item.get("code", ""),
-                                                "outputs": item.get("outputs"),
-                                                "container_id": item.get(
-                                                    "container_id"
-                                                ),
-                                            }
+                                        status = item.get("status", "unknown")
+                                        code = item.get("code", "")
+                                        outputs = item.get("outputs")
+                                        content = f"🔧 Code Interpreter [{status.title()}]"
+                                        if code:
+                                            content += f": {code}"
+                                        if outputs:
+                                            content += f" → {outputs}"
+                                        
+                                        yield StreamChunk(
+                                            type="content",
+                                            content=content
                                         )
                                     elif item.get("type") == "web_search_call":
                                         # Web search result
-                                        builtin_tool_results.append(
-                                            {
-                                                "id": item.get("id", ""),
-                                                "tool_type": "web_search",
-                                                "status": item.get("status", ""),
-                                                "query": item.get("query", ""),
-                                                "results": item.get("results"),
-                                            }
+                                        status = item.get("status", "unknown")
+                                        query = item.get("query", "")
+                                        results = item.get("results")
+                                        content = f"🔧 Web Search [{status.title()}]: {query}"
+                                        if results:
+                                            content += f" → Found {len(results)} results"
+                                        
+                                        yield StreamChunk(
+                                            type="content",
+                                            content=content
                                         )
-
-                            # Yield builtin tool results if any were found
-                            if builtin_tool_results:
-                                yield StreamChunk(
-                                    type="builtin_tool_results",
-                                    builtin_tool_results=builtin_tool_results,
-                                )
 
                             # Yield the complete response for internal use
                             yield StreamChunk(
