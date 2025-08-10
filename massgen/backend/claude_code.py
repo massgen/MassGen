@@ -50,7 +50,10 @@ import re
 import uuid
 from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
-from claude_code_sdk import ClaudeSDKClient, ClaudeCodeOptions  # type: ignore
+from claude_code_sdk import (  # type: ignore
+    ClaudeSDKClient, ClaudeCodeOptions, ResultMessage, SystemMessage,
+    AssistantMessage, TextBlock, ToolUseBlock, ToolResultBlock
+)
 
 
 from .base import LLMBackend, StreamChunk
@@ -95,6 +98,7 @@ class ClaudeCodeBackend(LLMBackend):
         # Single ClaudeSDKClient for this backend instance
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
+        self._cwd: Optional[str] = None
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -175,16 +179,13 @@ class ClaudeCodeBackend(LLMBackend):
         """
         # If we have a ResultMessage with actual cost, use that
         if result_message is not None:
-            try:
-                from claude_code_sdk import ResultMessage  # type: ignore
-                if (isinstance(result_message, ResultMessage) and
-                        result_message.total_cost_usd is not None):
-                    return result_message.total_cost_usd
-            except ImportError:
-                # Fallback: check if it has the expected attribute
-                if (hasattr(result_message, 'total_cost_usd') and
-                        result_message.total_cost_usd is not None):
-                    return result_message.total_cost_usd
+            if (ResultMessage is not None and isinstance(result_message, ResultMessage) and
+                    result_message.total_cost_usd is not None):
+                return result_message.total_cost_usd
+            # Fallback: check if it has the expected attribute (for SDK compatibility)
+            elif (hasattr(result_message, 'total_cost_usd') and
+                    result_message.total_cost_usd is not None):
+                return result_message.total_cost_usd
 
         # Fallback: calculate estimated cost based on Claude pricing (2025)
         model_lower = model.lower()
@@ -223,16 +224,13 @@ class ClaudeCodeBackend(LLMBackend):
         Args:
             result_message: ResultMessage from Claude Code with usage data
         """
-        # Import locally to avoid import issues
-        try:
-            from claude_code_sdk import ResultMessage  # type: ignore
-            if not isinstance(result_message, ResultMessage):
-                return
-        except ImportError:
-            # Fallback: check if it has the expected attributes
-            if (not hasattr(result_message, 'usage') or
-                    not hasattr(result_message, 'total_cost_usd')):
-                return
+        # Check if we have a valid ResultMessage
+        if ResultMessage is not None and not isinstance(result_message, ResultMessage):
+            return
+        # Fallback: check if it has the expected attributes (for SDK compatibility)
+        if (not hasattr(result_message, 'usage') or
+                not hasattr(result_message, 'total_cost_usd')):
+            return
 
         # Extract usage information from ResultMessage
         if result_message.usage:
@@ -258,7 +256,7 @@ class ClaudeCodeBackend(LLMBackend):
                 result_message.usage.get("output_tokens", 0)
                 if result_message.usage else 0)
             cost = self.calculate_cost(
-                input_tokens, output_tokens, self.model, result_message)
+                input_tokens, output_tokens, "", result_message)
             self.token_usage.estimated_cost += cost
 
     def update_token_usage(
@@ -438,7 +436,7 @@ class ClaudeCodeBackend(LLMBackend):
             ClaudeCodeOptions configured with provided parameters and
             security restrictions
         """
-        cwd_path = options_kwargs.get("cwd")
+        cwd_path = options_kwargs.get("cwd", os.getcwd())
         permission_mode = options_kwargs.get("permission_mode", "acceptEdits")
         
         # Filter out parameters handled separately or not for ClaudeCodeOptions
@@ -446,18 +444,20 @@ class ClaudeCodeBackend(LLMBackend):
             "cwd", "permission_mode", "type", "agent_id", "session_id", "api_key"
         }
         
-        # Handle cwd - create directory if it doesn't exist or use current dir
+        # Handle cwd - create directory if it doesn't exist and ensure absolute path
         cwd_option = None
         if cwd_path:
             cwd_dir = Path(cwd_path)
-            if cwd_dir.is_absolute():
-                # Absolute path - create if needed
-                cwd_dir.mkdir(parents=True, exist_ok=True)
-                cwd_option = cwd_dir
-            else:
-                # Relative path - create relative to current working directory
-                cwd_dir.mkdir(parents=True, exist_ok=True)
-                cwd_option = cwd_dir
+            if not cwd_dir.is_absolute():
+                # Convert relative path to absolute path
+                cwd_dir = cwd_dir.resolve()
+            
+            # Create directory if it doesn't exist
+            cwd_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Ensure we return a valid absolute path
+            cwd_option = cwd_dir
+        self._cwd = str(cwd_option)
         
         return ClaudeCodeOptions(
             # No model set by default - let Claude Code decide
@@ -520,7 +520,7 @@ class ClaudeCodeBackend(LLMBackend):
                 if system_msg:
                     system_content = system_msg.get('content', '')  # noqa: E128
                 else:
-                    system_content = ''
+                    system_content = ''                
                 workflow_system_prompt = (
                     self._build_system_prompt_with_workflow_tools(
                         tools or [], system_content))
@@ -593,13 +593,8 @@ class ClaudeCodeBackend(LLMBackend):
         accumulated_content = ""
         try:
             async for message in client.receive_response():
-                # Import message types
-                from claude_code_sdk import (  # type: ignore
-                    AssistantMessage, SystemMessage, ResultMessage,
-                    TextBlock, ToolUseBlock, ToolResultBlock
-                )
 
-                if isinstance(message, AssistantMessage):
+                if AssistantMessage is not None and isinstance(message, AssistantMessage):
                     # Process assistant message content
                     for block in message.content:
                         if isinstance(block, TextBlock):
@@ -615,7 +610,7 @@ class ClaudeCodeBackend(LLMBackend):
                         elif isinstance(block, ToolUseBlock):
                             # Claude Code's builtin tool usage
                             yield StreamChunk(
-                                type="builtin_tool_results",
+                                type="tool_calls",
                                 builtin_tool_results=[{
                                     "tool_name": block.name,
                                     "tool_input": block.input,
@@ -660,6 +655,7 @@ class ClaudeCodeBackend(LLMBackend):
 
                 elif isinstance(message, SystemMessage):
                     # System status updates
+                    self._track_session_info(message=message)
                     yield StreamChunk(
                         type="backend_status",
                         status=message.subtype,
@@ -669,7 +665,7 @@ class ClaudeCodeBackend(LLMBackend):
 
                 elif isinstance(message, ResultMessage):
                     # Track session ID from server response
-                    self._track_session_id(message)
+                    self._track_session_info(message)
 
                     # Update token usage using ResultMessage data
                     self.update_token_usage_from_result_message(message)
@@ -677,7 +673,7 @@ class ClaudeCodeBackend(LLMBackend):
                     # Yield completion
                     yield StreamChunk(
                         type="complete_response",
-                        response={
+                        complete_message={
                             "session_id": message.session_id,
                             "duration_ms": message.duration_ms,
                             "cost_usd": message.total_cost_usd,
@@ -698,27 +694,37 @@ class ClaudeCodeBackend(LLMBackend):
                 source="claude_code"
             )
 
-    def _track_session_id(self, message) -> None:
-        """Track session ID from server responses for session persistence.
+    def _track_session_info(self, message) -> None:
+        """Track session information from Claude Code server responses.
 
-        Extracts and stores session ID from ResultMessage to enable
-        session continuation across multiple interactions.  # noqa: E501
+        Extracts and stores session ID, working directory, and other session
+        metadata from ResultMessage and SystemMessage responses to enable
+        session continuation and state management across multiple interactions.
 
         Args:
-            message: Message from Claude Code, potentially containing
-                session ID  # noqa: E129
+            message: Message from Claude Code (ResultMessage or SystemMessage)
+                    potentially containing session information
         """
-        # Import message types locally to avoid import issues
-        try:
-            from claude_code_sdk import ResultMessage  # type: ignore
-            if (isinstance(message, ResultMessage) and
-                    hasattr(message, 'session_id') and
-                    message.session_id):
-                self._current_session_id = message.session_id
-        except ImportError:
-            # Fallback - check if message has session_id attribute
+        if ResultMessage is not None and isinstance(message, ResultMessage):
+            # ResultMessage contains definitive session information
             if hasattr(message, 'session_id') and message.session_id:
-                self._current_session_id = message.session_id
+                old_session_id = self._current_session_id
+                self._current_session_id = message.session_id                
+    
+        elif SystemMessage is not None and isinstance(message, SystemMessage):
+            # SystemMessage may contain session state updates
+            if hasattr(message, 'data') and isinstance(message.data, dict):
+                # Extract session ID from system message data
+                if 'session_id' in message.data and message.data['session_id']:
+                    old_session_id = self._current_session_id
+                    self._current_session_id = message.data['session_id']
+                    if old_session_id != self._current_session_id:
+                        print(f"[ClaudeCodeBackend] Session ID from SystemMessage: {old_session_id} → {self._current_session_id}")
+                
+                # Extract working directory from system message data
+                if 'cwd' in message.data and message.data['cwd']:
+                    self._cwd = message.data['cwd']
+           
 
     async def disconnect(self):
         """Disconnect the ClaudeSDKClient and clean up resources.
