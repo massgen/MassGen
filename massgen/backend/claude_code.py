@@ -42,19 +42,19 @@ from .base import LLMBackend, StreamChunk
 
 
 class ClaudeCodeBackend(LLMBackend):
-    """Claude Code backend using claude-code-sdk-python with server-side session persistence.
+    """Claude Code backend using claude-code-sdk-python.
 
     Provides streaming interface to Claude Code with built-in tool execution
-    capabilities and MassGen workflow tool integration. Uses ClaudeSDKClient for
-    direct communication with Claude Code server.
+    capabilities and MassGen workflow tool integration. Uses ClaudeSDKClient
+    for direct communication with Claude Code server.
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         """Initialize ClaudeCodeBackend.
 
         Args:
-            api_key: Anthropic API key (falls back to ANTHROPIC_API_KEY env var)
-                    If None, will attempt to use Claude subscription
+            api_key: Anthropic API key (falls back to ANTHROPIC_API_KEY env
+                    var). If None, will attempt to use Claude subscription
                     authentication
             **kwargs: Additional configuration options including:
                 - model: Claude model name (default: claude-sonnet-4-20250514)
@@ -103,9 +103,12 @@ class ClaudeCodeBackend(LLMBackend):
         # More accurate than 4:1 ratio, especially for code/structured text
         return max(1, len(text.encode('utf-8')) // 4)
 
-    def calculate_cost(self, input_tokens: int, output_tokens: int,
-                      model: str, result_message=None) -> float:
-        """Calculate cost for token usage, preferring ResultMessage actual cost.
+    def calculate_cost(
+            self, input_tokens: int, output_tokens: int,
+            model: str, result_message=None) -> float:
+        """Calculate cost for token usage.
+
+        Prefers ResultMessage actual cost over estimation.
 
         Args:
             input_tokens: Number of input tokens
@@ -157,8 +160,9 @@ class ClaudeCodeBackend(LLMBackend):
         return ((input_tokens * input_cost_per_token) +
                 (output_tokens * output_cost_per_token))
 
-    def update_token_usage_from_result_message(self, result_message) -> None:
-        """Update token usage from Claude Code ResultMessage (preferred method).
+    def update_token_usage_from_result_message(
+            self, result_message) -> None:
+        """Update token usage from Claude Code ResultMessage.
 
         Extracts actual token usage and cost data from Claude Code server
         response. This is more accurate than estimation-based methods.
@@ -194,18 +198,21 @@ class ClaudeCodeBackend(LLMBackend):
             self.token_usage.estimated_cost += result_message.total_cost_usd
         else:
             # Fallback: calculate cost if not provided
-            input_tokens = (result_message.usage.get("input_tokens", 0)
-                           if result_message.usage else 0)
-            output_tokens = (result_message.usage.get("output_tokens", 0)
-                            if result_message.usage else 0)
-            cost = self.calculate_cost(input_tokens, output_tokens, self.model,
-                                     result_message)
+            input_tokens = (
+                result_message.usage.get("input_tokens", 0)
+                if result_message.usage else 0)
+            output_tokens = (
+                result_message.usage.get("output_tokens", 0)
+                if result_message.usage else 0)
+            cost = self.calculate_cost(
+                input_tokens, output_tokens, self.model, result_message)
             self.token_usage.estimated_cost += cost
 
-    def update_token_usage(self, messages: List[Dict[str, Any]],
-                          response_content: str, model: str):
+    def update_token_usage(
+            self, messages: List[Dict[str, Any]], response_content: str,
+            model: str):
         """Update token usage tracking (fallback method).
-        
+
         Only used when no ResultMessage available. Provides estimated token
         tracking for compatibility with base class interface. Should only be
         called when ResultMessage data is not available.
@@ -215,8 +222,9 @@ class ClaudeCodeBackend(LLMBackend):
             response_content: Generated response content
             model: Model name for cost calculation
         """
-        # This method should only be called when we don't have a ResultMessage
-        # It provides estimated tracking for compatibility with base class interface
+        # This method should only be called when we don't have a
+        # ResultMessage. It provides estimated tracking for compatibility
+        # with base class interface
 
         # Estimate input tokens from messages
         input_text = "\n".join([msg.get("content", "") for msg in messages])
@@ -238,8 +246,8 @@ class ClaudeCodeBackend(LLMBackend):
         """Get list of builtin tools supported by Claude Code.
 
         Returns maximum tool set available, with security enforced through
-        disallowed_tools. Dangerous operations are blocked at the tool level,
-        not by restricting tool access.
+        disallowed_tools. Dangerous operations are blocked at the tool
+        level, not by restricting tool access.
 
         Returns:
             List of all tool names that Claude Code provides natively
@@ -263,10 +271,10 @@ class ClaudeCodeBackend(LLMBackend):
             self, messages: List[Dict[str, Any]],
             tools: List[Dict[str, Any]]) -> str:
         """Format messages specifically for Claude Code.
-        
-        Adapted from previous Claude Code CLI backend. Converts MassGen message
-        format to Claude Code's expected format, including conversation history
-        and tool information.
+
+        Adapted from previous Claude Code CLI backend. Converts MassGen
+        message format to Claude Code's expected format, including
+        conversation history and tool information.
 
         Args:
             messages: List of conversation messages
@@ -309,10 +317,10 @@ class ClaudeCodeBackend(LLMBackend):
     def _format_tools_for_claude_code(
             self, tools: List[Dict[str, Any]]) -> str:
         """Format tools information for Claude Code.
-        
-        Adapted from previous Claude Code CLI backend. Converts tool definitions
-        to human-readable format with special handling for MassGen workflow
-        tools (new_answer, vote).
+
+        Adapted from previous Claude Code CLI backend. Converts tool
+        definitions to human-readable format with special handling for
+        MassGen workflow tools (new_answer, vote).
 
         Args:
             tools: List of tool definitions
@@ -336,7 +344,8 @@ class ClaudeCodeBackend(LLMBackend):
                 param_details = []
                 for param_name, param_def in params.items():
                     param_desc = param_def.get("description", "")
-                    param_details.append(f"    {param_name}: {param_desc}")
+                    param_details.append(
+                    f"    {param_name}: {param_desc}")
 
                 tool_descriptions.append(f"- {name}: {description}")
                 if param_details:
@@ -350,8 +359,8 @@ class ClaudeCodeBackend(LLMBackend):
                 elif name == "vote":
                     tool_descriptions.append(
                         '    Usage: {"tool_name": "vote", '
-                        '"arguments": {"agent_id": "agent1", "reason": '
-                        '"explanation"}}')
+                        '"arguments": {"agent_id": "agent1", '
+                        '"reason": "explanation"}}')
             else:
                 tool_descriptions.append(f"- {name}: {description}")
 
@@ -362,8 +371,8 @@ class ClaudeCodeBackend(LLMBackend):
             base_system: Optional[str] = None) -> str:
         """Build system prompt that includes workflow tools information.
 
-        Creates comprehensive system prompt that instructs Claude on tool usage,
-        particularly for MassGen workflow coordination tools.
+        Creates comprehensive system prompt that instructs Claude on tool
+        usage, particularly for MassGen workflow coordination tools.
 
         Args:
             tools: List of available tools
@@ -391,20 +400,21 @@ class ClaudeCodeBackend(LLMBackend):
             if workflow_tools:
                 system_parts.append("\n--- MassGen Workflow Instructions ---")
                 system_parts.append(
-                    "You must use the coordination tools (new_answer, vote) to "
-                    "participate in multi-agent workflows.")
+                    "You must use the coordination tools (new_answer, vote) "
+                    "to participate in multi-agent workflows.")
                 system_parts.append(
                     "Respond with the JSON format shown in the tool usage "
                     "examples above.")
 
         return "\n".join(system_parts)
 
-    def _parse_workflow_tool_calls(self, text_content: str) -> List[Dict[str, Any]]:
+    def _parse_workflow_tool_calls(
+            self, text_content: str) -> List[Dict[str, Any]]:
         """Parse workflow tool calls from text content.
 
-        Searches for JSON-formatted tool calls in the response text and converts
-        them to the standard tool call format used by MassGen. Generates unique
-        tool call IDs using uuid4.
+        Searches for JSON-formatted tool calls in the response text and
+        converts them to the standard tool call format used by MassGen.
+        Generates unique tool call IDs using uuid4.
 
         Args:
             text_content: Response text to search for tool calls
@@ -416,9 +426,10 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Look for JSON tool call patterns
         json_patterns = [
-            r'\{"tool_name":\s*"([^"]+)",\s*"arguments":\s*(\{[^}]*\})\}',
-            r'\{\s*"tool_name"\s*:\s*"([^"]+)"\s*,\s*"arguments"\s*:'
-            r'\s*(\{[^}]*\})\s*\}'
+            r'\{"tool_name":\s*"([^"]+)",\s*"arguments":\s*'
+            r'(\{[^}]*\})\}',
+            r'\{\s*"tool_name"\s*:\s*"([^"]+)"\s*,\s*"arguments"'
+            r'\s*:\s*(\{[^}]*\})\s*\}'
         ]
 
         for pattern in json_patterns:
@@ -442,19 +453,20 @@ class ClaudeCodeBackend(LLMBackend):
 
     def _get_default_claude_options(self) -> ClaudeCodeOptions:
         """Get default ClaudeCodeOptions with maximum tool access.
-        
-        Except dangerous operations. Creates a secure configuration that allows
-        ALL Claude Code tools while explicitly disallowing dangerous operations.
-        This gives Claude Code maximum power while maintaining security.
+
+        Except dangerous operations. Creates a secure configuration that
+        allows ALL Claude Code tools while explicitly disallowing dangerous
+        operations. This gives Claude Code maximum power while maintaining
+        security.
 
         Returns:
-            ClaudeCodeOptions configured for maximum capability with security
-            restrictions
+            ClaudeCodeOptions configured for maximum capability with
+            security restrictions
         """
         return ClaudeCodeOptions(
             model=self.model,
-            # No allowed_tools restriction - allow ALL tools for maximum power
-            # Security is enforced through disallowed_tools only
+            # No allowed_tools restriction - allow ALL tools for maximum
+            # power. Security is enforced through disallowed_tools only
             disallowed_tools=[
                 "Bash(rm*)", "Bash(sudo*)", "Bash(su*)",
                 "Bash(chmod*)", "Bash(chown*)"],
@@ -498,7 +510,8 @@ class ClaudeCodeBackend(LLMBackend):
         if allowed_tools:
             options.allowed_tools = allowed_tools
         elif self.allowed_tools:
-            # Only set allowed_tools if explicitly provided (legacy support)
+            # Only set allowed_tools if explicitly provided (legacy
+            # support)
             options.allowed_tools = self.allowed_tools
 
         # Handle disallowed_tools (preferred security approach)
@@ -520,18 +533,18 @@ class ClaudeCodeBackend(LLMBackend):
     async def stream_with_tools(
             self, messages: List[Dict[str, Any]],
             tools: List[Dict[str, Any]], **kwargs
-    ) -> AsyncGenerator[StreamChunk, None]:  # pylint: disable=unused-argument
+    ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream a response with tool calling support using claude-code-sdk.
 
-        Uses previous Claude Code CLI backend's formatting approach to properly
-        handle messages and tools context for Claude Code.
+        Uses previous Claude Code CLI backend's formatting approach to
+        properly handle messages and tools context for Claude Code.
 
         Args:
             messages: List of conversation messages
             tools: List of available tools (includes workflow tools)
-            **kwargs: Additional options (unused but maintained for interface
-                     compatibility)
+            **kwargs: Additional options (unused but maintained for
+                     interface compatibility)
 
         Yields:
             StreamChunk objects with response content and metadata
@@ -563,11 +576,12 @@ class ClaudeCodeBackend(LLMBackend):
             if not client._transport:
                 await client.connect()
 
-            # Format the entire conversation context (not just latest message)
-            # This ensures Claude Code has full context including tools
+            # Format the entire conversation context (not just latest
+            # message). This ensures Claude Code has full context including
+            # tools.
             if messages:
-                # For streaming, we can send the formatted context as a single
-                # query
+                # For streaming, we can send the formatted context as a
+                # single query
                 formatted_context = self._format_messages_for_claude_code(
                     messages, tools or [])
                 await client.query(formatted_context)
@@ -612,8 +626,8 @@ class ClaudeCodeBackend(LLMBackend):
 
                         elif isinstance(block, ToolResultBlock):
                             # Tool result from Claude Code
-                            # Note: ToolResultBlock.tool_use_id references the
-                            # original ToolUseBlock.id
+                            # Note: ToolResultBlock.tool_use_id references
+                            # the original ToolUseBlock.id
                             yield StreamChunk(
                                 type="builtin_tool_results",
                                 builtin_tool_results=[{
@@ -625,8 +639,8 @@ class ClaudeCodeBackend(LLMBackend):
                             )
 
                     # Parse workflow tool calls from accumulated content
-                    workflow_tool_calls = self._parse_workflow_tool_calls(
-                        accumulated_content)
+                    workflow_tool_calls = (
+                        self._parse_workflow_tool_calls(accumulated_content))
                     if workflow_tool_calls:
                         yield StreamChunk(
                             type="tool_calls",
