@@ -58,7 +58,7 @@ from massgen.backend.grok import GrokBackend
 from massgen.backend.claude import ClaudeBackend
 from massgen.backend.gemini import GeminiBackend
 from massgen.backend.chat_completions import ChatCompletionsBackend
-from massgen.backend.claude_code_cli_stream import ClaudeCodeStreamBackend
+from massgen.backend.claude_code import ClaudeCodeBackend
 from massgen.chat_agent import SingleAgent, ConfigurableAgent
 from massgen.agent_config import AgentConfig
 from massgen.orchestrator import Orchestrator
@@ -167,7 +167,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         return ChatCompletionsBackend(api_key=api_key)
     
     elif backend_type == "claude_code_stream":
-        # ClaudeCodeStreamBackend using claude-code-sdk-python
+        # ClaudeCodeBackend using claude-code-sdk-python
         # Authentication handled by backend (API key or subscription)
         
         # Validate claude-code-sdk availability
@@ -178,7 +178,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 "claude-code-sdk not found. Install with: pip install claude-code-sdk"
             )
         
-        return ClaudeCodeStreamBackend(**kwargs)
+        return ClaudeCodeBackend(**kwargs)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")

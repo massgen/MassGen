@@ -39,7 +39,7 @@ from claude_code_sdk import ClaudeSDKClient, ClaudeCodeOptions
 from .base import LLMBackend, StreamChunk
 
 
-class ClaudeCodeStreamBackend(LLMBackend):
+class ClaudeCodeBackend(LLMBackend):
     """Claude Code backend using claude-code-sdk-python with server-side session persistence.
 
     Provides streaming interface to Claude Code with built-in tool execution capabilities
@@ -48,7 +48,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
-        """Initialize ClaudeCodeStreamBackend.
+        """Initialize ClaudeCodeBackend.
 
         Args:
             api_key: Anthropic API key (falls back to ANTHROPIC_API_KEY env var)
@@ -91,7 +91,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
-        return "claude_code_stream"
+        return "claude_code"
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (approximation for Claude)."""
@@ -560,7 +560,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
                             yield StreamChunk(
                                 type="content",
                                 content=block.text,
-                                source="claude_code_stream"
+                                source="claude_code"
                             )
 
                         elif isinstance(block, ToolUseBlock):
@@ -572,7 +572,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
                                     "tool_input": block.input,
                                     "tool_call_id": block.id
                                 }],
-                                source="claude_code_stream"
+                                source="claude_code"
                             )
 
                         elif isinstance(block, ToolResultBlock):
@@ -585,7 +585,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
                                     "tool_result": block.content,
                                     "is_error": block.is_error or False
                                 }],
-                                source="claude_code_stream"
+                                source="claude_code"
                             )
 
                     # Parse workflow tool calls from accumulated content
@@ -595,7 +595,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
                         yield StreamChunk(
                             type="tool_calls",
                             tool_calls=workflow_tool_calls,
-                            source="claude_code_stream"
+                            source="claude_code"
                         )
 
                     # Yield complete message
@@ -605,7 +605,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
                             "role": "assistant",
                             "content": accumulated_content
                         },
-                        source="claude_code_stream"
+                        source="claude_code"
                     )
 
                 elif isinstance(message, SystemMessage):
@@ -614,7 +614,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
                         type="agent_status",
                         status=message.subtype,
                         content=str(message.data),
-                        source="claude_code_stream"
+                        source="claude_code"
                     )
 
                 elif isinstance(message, ResultMessage):
@@ -634,7 +634,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
                             "usage": message.usage,
                             "is_error": message.is_error
                         },
-                        source="claude_code_stream"
+                        source="claude_code"
                     )
 
                     # Final done signal

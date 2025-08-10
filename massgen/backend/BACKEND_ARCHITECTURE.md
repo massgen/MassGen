@@ -99,7 +99,7 @@ def reset_conversation(self):
 
 - `base.py` - Base backend interface with `LLMBackend` abstract class
 - `chat_completions.py` - Stateless ChatCompletion backends (OpenAI-compatible)  
-- `claude_code_cli_stream.py` - **Stateful** Claude Code backend with streaming support
+- `claude_code.py` - **Stateful** Claude Code backend with streaming support
 - `cli_base.py` - Base CLI backend functionality
 
 ## Benefits of Proper Implementation
