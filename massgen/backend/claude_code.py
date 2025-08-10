@@ -111,14 +111,30 @@ class ClaudeCodeBackend(LLMBackend):
 
     async def clear_history(self) -> None:
         """
-        Clear Claude Code conversation history while maintaining session.
+        Clear Claude Code conversation history while preserving session.
         
-        This would require a clear/reset command to the Claude Code session
-        without destroying the session itself. For now, we reset the session
-        since Claude Code doesn't have a clear-only command.
+        Uses the /clear slash command to clear conversation history without
+        destroying the session, working directory, or other session state.
         """
-        # TODO: Implement session-preserving clear when Claude Code SDK supports it
-        await self.reset_state()
+        if self._client is None:
+            # No active session to clear
+            return
+            
+        try:
+            # Send /clear command to clear history while preserving session
+            await self._client.query("/clear")
+            
+            # The /clear command should preserve:
+            # - Session ID
+            # - Working directory
+            # - Tool availability
+            # - Permission settings
+            # While clearing only the conversation history
+            
+        except Exception as e:
+            # Fallback to full reset if /clear command fails
+            print(f"Warning: /clear command failed ({e}), falling back to full reset")
+            await self.reset_state()
 
     async def reset_state(self) -> None:
         """
