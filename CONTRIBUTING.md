@@ -121,7 +121,7 @@ uv run python -m massgen.cli --config massgen/configs/single_4omini.yaml "Test q
 ## 🤝 Community
 
 - **Discord**: Join the #massgen channel of AG2 Discord server: https://discord.gg/VVrT2rQaz5
-- **X**: Follow the official MassGen X account: https://x.com/MassGen_Offical
+- **X**: Follow the official MassGen X account: https://x.com/massgen_ai
 - **GitHub Issues**: Report bugs and request features
 - **GitHub Discussions**: Ask questions and share ideas
 
