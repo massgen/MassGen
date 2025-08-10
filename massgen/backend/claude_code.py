@@ -320,98 +320,6 @@ class ClaudeCodeBackend(LLMBackend):
         """
         return self._current_session_id
 
-    def _format_messages_for_claude_code(
-            self, messages: List[Dict[str, Any]],
-            tools: List[Dict[str, Any]]) -> str:
-        """Format messages specifically for Claude Code.
-
-        Converts MassGen
-        message format to Claude Code's expected format, including
-        conversation history and tool information.
-
-        Args:
-            messages: List of conversation messages
-            tools: List of available tools
-
-        Returns:
-            Formatted string suitable for Claude Code query
-        """
-        formatted_parts = []
-
-        # Add conversation history (skip system messages - they're handled by client system prompt)
-        conversation_parts = []
-        for msg in messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-
-            if role == "user":
-                conversation_parts.append(f"User: {content}")
-            elif role == "assistant":
-                conversation_parts.append(f"Assistant: {content}")
-            # Skip system messages - they're already set as client system prompt
-
-        if conversation_parts:
-            formatted_parts.append("Conversation:\n" +
-                                   "\n".join(conversation_parts))
-
-        # Add available tools information (including workflow tools)
-        if tools:
-            tools_info = self._format_tools_for_claude_code(tools)
-            formatted_parts.append(f"Available tools: {tools_info}")
-
-        return "\n\n".join(formatted_parts)
-
-    def _format_tools_for_claude_code(
-            self, tools: List[Dict[str, Any]]) -> str:
-        """Format tools information for Claude Code.
-
-        Converts tool
-        definitions to human-readable format with special handling for
-        MassGen workflow tools (new_answer, vote).
-
-        Args:
-            tools: List of tool definitions
-
-        Returns:
-            Formatted tool descriptions string
-        """
-        if not tools:
-            return "None"
-
-        tool_descriptions = []
-        for tool in tools:
-            name = tool.get("function", {}).get("name", "unknown")
-            func_data = tool.get("function", {})  # noqa: E127
-            description = func_data.get("description", "No description")
-
-            # Special handling for MassGen workflow tools
-            if name in ["new_answer", "vote"]:
-                params = tool.get("function", {}).get(
-                    "parameters", {}).get("properties", {})
-                param_details = []
-                for param_name, param_def in params.items():
-                    param_desc = param_def.get("description", "")
-                    param_str = f"    {param_name}: {param_desc}"  # noqa: E122
-                    param_details.append(param_str)
-
-                tool_descriptions.append(f"- {name}: {description}")
-                if param_details:
-                    tool_descriptions.append("\n".join(param_details))
-
-                # Add usage example for workflow tools
-                if name == "new_answer":
-                    tool_descriptions.append(
-                        '    Usage: {"tool_name": "new_answer", '
-                        '"arguments": {"content": "your answer"}}')
-                elif name == "vote":
-                    tool_descriptions.append(
-                        '    Usage: {"tool_name": "vote", '
-                        '"arguments": {"agent_id": "agent1", '
-                        '"reason": "explanation"}}')
-            else:
-                tool_descriptions.append(f"- {name}: {description}")
-
-        return "\n".join(tool_descriptions)
 
     def _build_system_prompt_with_workflow_tools(
             self, tools: List[Dict[str, Any]],
@@ -434,17 +342,29 @@ class ClaudeCodeBackend(LLMBackend):
         if base_system:
             system_parts.append(base_system)
 
-        # Add tools information if present
+        # Add workflow tools information if present
         if tools:
-            system_parts.append("\n--- Available Tools ---")
-            tools_info = self._format_tools_for_claude_code(tools)
-            system_parts.append(tools_info)
-
-            # Check for workflow tools and add special instructions
             workflow_tools = [
                 t for t in tools
                 if t.get("function", {}).get("name") in ["new_answer", "vote"]]
             if workflow_tools:
+                system_parts.append("\n--- Available Tools ---")
+                for tool in workflow_tools:
+                    name = tool.get("function", {}).get("name", "unknown")
+                    description = tool.get("function", {}).get("description", "No description")
+                    system_parts.append(f"- {name}: {description}")
+                    
+                    # Add usage examples for workflow tools
+                    if name == "new_answer":
+                        system_parts.append(
+                            '    Usage: {"tool_name": "new_answer", '
+                            '"arguments": {"content": "your answer"}}')
+                    elif name == "vote":
+                        system_parts.append(
+                            '    Usage: {"tool_name": "vote", '
+                            '"arguments": {"agent_id": "agent1", '
+                            '"reason": "explanation"}}')
+                        
                 system_parts.append("\n--- MassGen Workflow Instructions ---")
                 system_parts.append(
                     "You must use the coordination tools (new_answer, vote) "
@@ -636,10 +556,44 @@ class ClaudeCodeBackend(LLMBackend):
                 )
                 return
                 
-            # Send the formatted context as a single query
-            formatted_context = self._format_messages_for_claude_code(
-                messages, tools or [])
-            await client.query(formatted_context)
+            # Validate messages - should only contain user messages for Claude Code
+            user_messages = [msg for msg in messages if msg.get("role") == "user"]
+            assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
+            
+            if assistant_messages:
+                yield StreamChunk(
+                    type="error",
+                    error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
+                    source="claude_code"
+                )
+                return
+                
+            if not user_messages:
+                yield StreamChunk(
+                    type="error",
+                    error="No user messages found to send to Claude Code",
+                    source="claude_code"
+                )
+                return
+            
+            # Combine all user messages into a single query
+            user_contents = []
+            for user_msg in user_messages:
+                content = user_msg.get("content", "").strip()
+                if content:
+                    user_contents.append(content)
+            
+            if user_contents:
+                # Join multiple user messages with newlines
+                combined_query = "\n\n".join(user_contents)
+                await client.query(combined_query)
+            else:
+                yield StreamChunk(
+                    type="error",
+                    error="All user messages were empty",
+                    source="claude_code"
+                )
+                return
 
             # Stream response and convert to MassGen StreamChunks
             accumulated_content = ""
