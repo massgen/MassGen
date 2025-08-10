@@ -354,9 +354,6 @@ class ClaudeCodeStreamBackend(LLMBackend):
         # Start with base system prompt
         if base_system:
             system_parts.append(base_system)
-        else:
-            system_parts.append(
-                "You are a helpful AI assistant powered by Claude Code.")
 
         # Add tools information if present
         if tools:
