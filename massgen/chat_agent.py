@@ -228,16 +228,27 @@ class SingleAgent(ChatAgent):
                 msg for msg in self.conversation_history if msg.get("role") == "system"
             ]
             self.conversation_history = system_messages.copy()
+            # Clear backend history while maintaining session
+            if self.backend.is_stateful():
+                self.backend.clear_history()
 
         if reset_chat:
             # Reset conversation history to the provided messages
             self.conversation_history = messages.copy()
+            # Reset backend state completely
+            if self.backend.is_stateful():
+                self.backend.reset_state()
             backend_messages = self.conversation_history.copy()
         else:
             # Regular conversation - append new messages to agent's history
             self.conversation_history.extend(messages)
-            backend_messages = self.conversation_history.copy()
-            
+            # Handle stateful vs stateless backends differently
+            if self.backend.is_stateful():
+                # Stateful: only send new messages, backend maintains context
+                backend_messages = messages.copy()
+            else:
+                # Stateless: send full conversation history
+                backend_messages = self.conversation_history.copy()
         
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
@@ -263,6 +274,10 @@ class SingleAgent(ChatAgent):
     def reset(self) -> None:
         """Reset conversation for new chat."""
         self.conversation_history.clear()
+
+        # Reset stateful backend if needed
+        if self.backend.is_stateful():
+            self.backend.reset_state()
 
         # Re-add system message if it exists
         if self.system_message:

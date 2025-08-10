@@ -187,3 +187,33 @@ class LLMBackend(ABC):
         """
         # Default implementation assumes Chat Completions format
         return tool_result_message.get("content", "")
+
+    def is_stateful(self) -> bool:
+        """
+        Check if this backend maintains conversation state across requests.
+
+        Returns:
+            True if backend is stateful (maintains context), False if stateless
+
+        Stateless backends require full conversation history with each request.
+        Stateful backends maintain context internally and only need new messages.
+        """
+        return False
+
+    def clear_history(self) -> None:
+        """
+        Clear conversation history while maintaining session.
+        
+        For stateless backends, this is a no-op.
+        For stateful backends, this clears conversation history but keeps session.
+        """
+        pass  # Default implementation for stateless backends
+
+    def reset_state(self) -> None:
+        """
+        Reset backend state for stateful backends.
+        
+        For stateless backends, this is a no-op.
+        For stateful backends, this clears conversation history and session state.
+        """
+        pass  # Default implementation for stateless backends

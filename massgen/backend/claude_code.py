@@ -35,7 +35,7 @@ import re
 import uuid
 from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
-from claude_code_sdk import ClaudeSDKClient, ClaudeCodeOptions
+from claude_code_sdk import ClaudeSDKClient, ClaudeCodeOptions  # type: ignore
 
 
 from .base import LLMBackend, StreamChunk
@@ -97,6 +97,35 @@ class ClaudeCodeBackend(LLMBackend):
         """Get the name of this provider."""
         return "claude_code"
 
+    def is_stateful(self) -> bool:
+        """
+        Claude Code backend is stateful - maintains conversation context.
+        
+        Returns:
+            True - Claude Code maintains server-side session state
+        """
+        return True
+
+    def clear_history(self) -> None:
+        """
+        Clear Claude Code conversation history while maintaining session.
+        
+        This would require a clear/reset command to the Claude Code session
+        without destroying the session itself. For now, we reset the session
+        since Claude Code doesn't have a clear-only command.
+        """
+        # TODO: Implement session-preserving clear when Claude Code SDK supports it
+        self.reset_state()
+
+    def reset_state(self) -> None:
+        """
+        Reset Claude Code backend state.
+        
+        Clears the current session and client connection to start fresh.
+        """
+        self._client = None
+        self._current_session_id = None
+
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (approximation for Claude)."""
         # Claude tokenization approximation: ~3.5-4 characters per token
@@ -123,7 +152,7 @@ class ClaudeCodeBackend(LLMBackend):
         # If we have a ResultMessage with actual cost, use that
         if result_message is not None:
             try:
-                from claude_code_sdk import ResultMessage
+                from claude_code_sdk import ResultMessage  # type: ignore
                 if (isinstance(result_message, ResultMessage) and
                         result_message.total_cost_usd is not None):
                     return result_message.total_cost_usd
@@ -172,7 +201,7 @@ class ClaudeCodeBackend(LLMBackend):
         """
         # Import locally to avoid import issues
         try:
-            from claude_code_sdk import ResultMessage
+            from claude_code_sdk import ResultMessage  # type: ignore
             if not isinstance(result_message, ResultMessage):
                 return
         except ImportError:
@@ -532,7 +561,7 @@ class ClaudeCodeBackend(LLMBackend):
 
     async def stream_with_tools(
             self, messages: List[Dict[str, Any]],
-            tools: List[Dict[str, Any]], **kwargs
+            tools: List[Dict[str, Any]], **_kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream a response with tool calling support using claude-code-sdk.
@@ -596,7 +625,7 @@ class ClaudeCodeBackend(LLMBackend):
 
             async for message in client.receive_response():
                 # Import message types
-                from claude_code_sdk import (
+                from claude_code_sdk import (  # type: ignore
                     AssistantMessage, SystemMessage, ResultMessage,
                     TextBlock, ToolUseBlock, ToolResultBlock
                 )
@@ -736,7 +765,7 @@ class ClaudeCodeBackend(LLMBackend):
         """
         # Import message types locally to avoid import issues
         try:
-            from claude_code_sdk import ResultMessage
+            from claude_code_sdk import ResultMessage  # type: ignore
             if (isinstance(message, ResultMessage) and
                     hasattr(message, 'session_id') and
                     message.session_id):
