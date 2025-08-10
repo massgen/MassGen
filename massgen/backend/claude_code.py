@@ -25,6 +25,21 @@ Requirements:
 - claude-code-sdk-python installed: uv add claude-code-sdk
 - Claude Code CLI available in PATH
 - ANTHROPIC_API_KEY configured OR Claude subscription authentication
+
+Test Results:
+✅ TESTED 2025-08-10: Single agent coordination working correctly
+- Command: uv run python -m massgen.cli --config claude_code_single.yaml "2+2=?"
+- Auto-created working directory: claude_code_workspace/
+- Session: 42593707-bca6-40ad-b154-7dc1c222d319
+- Model: claude-sonnet-4-20250514 (Claude Code default)
+- Tools available: Task, Bash, Glob, Grep, LS, Read, Write, WebSearch, etc.
+- Answer provided: "2 + 2 = 4" 
+- Coordination: Agent voted for itself, selected as final answer
+- Performance: 70 seconds total (includes coordination overhead)
+
+TODO:
+- Consider including cwd/session_id in new_answer results for context preservation
+- Investigate whether next iterations need working directory context
 """
 
 from __future__ import annotations
@@ -57,10 +72,10 @@ class ClaudeCodeBackend(LLMBackend):
                     var). If None, will attempt to use Claude subscription
                     authentication
             **kwargs: Additional configuration options including:
-                - model: Claude model name (default: claude-sonnet-4-20250514)
+                - model: Claude model name
                 - system_prompt: Base system prompt
                 - allowed_tools: List of allowed tools
-                - max_thinking_tokens: Maximum thinking tokens (default: 8000)
+                - max_thinking_tokens: Maximum thinking tokens
                 - cwd: Current working directory
 
         Note:
@@ -76,18 +91,6 @@ class ClaudeCodeBackend(LLMBackend):
         # Set API key in environment for SDK if provided
         if self.api_key:
             os.environ["ANTHROPIC_API_KEY"] = self.api_key
-
-        # Configuration
-        self.model = kwargs.get("model", "claude-sonnet-4-20250514")
-        self.system_prompt = kwargs.get("system_prompt")
-        self.append_system_prompt = kwargs.get("append_system_prompt")
-        # Keep for backward compatibility
-        self.allowed_tools = kwargs.get("allowed_tools", [])
-        self.disallowed_tools = kwargs.get("disallowed_tools", [
-            "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
-            "Bash(chown*)"])
-        self.max_thinking_tokens = kwargs.get("max_thinking_tokens", 8000)
-        self.cwd = kwargs.get("cwd")
 
         # Single ClaudeSDKClient for this backend instance
         self._client: Optional[Any] = None  # ClaudeSDKClient
@@ -106,23 +109,44 @@ class ClaudeCodeBackend(LLMBackend):
         """
         return True
 
-    def clear_history(self) -> None:
+    async def clear_history(self) -> None:
         """
-        Clear Claude Code conversation history while maintaining session.
+        Clear Claude Code conversation history while preserving session.
         
-        This would require a clear/reset command to the Claude Code session
-        without destroying the session itself. For now, we reset the session
-        since Claude Code doesn't have a clear-only command.
+        Uses the /clear slash command to clear conversation history without
+        destroying the session, working directory, or other session state.
         """
-        # TODO: Implement session-preserving clear when Claude Code SDK supports it
-        self.reset_state()
+        if self._client is None:
+            # No active session to clear
+            return
+            
+        try:
+            # Send /clear command to clear history while preserving session
+            await self._client.query("/clear")
+            
+            # The /clear command should preserve:
+            # - Session ID
+            # - Working directory
+            # - Tool availability
+            # - Permission settings
+            # While clearing only the conversation history
+            
+        except Exception as e:
+            # Fallback to full reset if /clear command fails
+            print(f"Warning: /clear command failed ({e}), falling back to full reset")
+            await self.reset_state()
 
-    def reset_state(self) -> None:
+    async def reset_state(self) -> None:
         """
         Reset Claude Code backend state.
         
-        Clears the current session and client connection to start fresh.
+        Properly disconnects and clears the current session and client connection to start fresh.
         """
+        if self._client is not None:
+            try:
+                await self._client.disconnect()
+            except Exception:
+                pass  # Ignore cleanup errors
         self._client = None
         self._current_session_id = None
 
@@ -296,104 +320,6 @@ class ClaudeCodeBackend(LLMBackend):
         """
         return self._current_session_id
 
-    def _format_messages_for_claude_code(
-            self, messages: List[Dict[str, Any]],
-            tools: List[Dict[str, Any]]) -> str:
-        """Format messages specifically for Claude Code.
-
-        Adapted from previous Claude Code CLI backend. Converts MassGen
-        message format to Claude Code's expected format, including
-        conversation history and tool information.
-
-        Args:
-            messages: List of conversation messages
-            tools: List of available tools
-
-        Returns:
-            Formatted string suitable for Claude Code query
-        """
-        formatted_parts = []
-
-        # Add system message if present
-        system_msg = next(
-            (msg for msg in messages if msg.get("role") == "system"), None)
-        if system_msg:
-            formatted_parts.append(
-                f"System instructions: {system_msg.get('content', '')}")
-
-        # Add conversation history
-        conversation_parts = []
-        for msg in messages:
-            role = msg.get("role", "user")
-            content = msg.get("content", "")
-
-            if role == "user":
-                conversation_parts.append(f"User: {content}")
-            elif role == "assistant":
-                conversation_parts.append(f"Assistant: {content}")
-
-        if conversation_parts:
-            formatted_parts.append("Conversation:\n" +
-                                   "\n".join(conversation_parts))
-
-        # Add available tools information (including workflow tools)
-        if tools:
-            tools_info = self._format_tools_for_claude_code(tools)
-            formatted_parts.append(f"Available tools: {tools_info}")
-
-        return "\n\n".join(formatted_parts)
-
-    def _format_tools_for_claude_code(
-            self, tools: List[Dict[str, Any]]) -> str:
-        """Format tools information for Claude Code.
-
-        Adapted from previous Claude Code CLI backend. Converts tool
-        definitions to human-readable format with special handling for
-        MassGen workflow tools (new_answer, vote).
-
-        Args:
-            tools: List of tool definitions
-
-        Returns:
-            Formatted tool descriptions string
-        """
-        if not tools:
-            return "None"
-
-        tool_descriptions = []
-        for tool in tools:
-            name = tool.get("function", {}).get("name", "unknown")
-            func_data = tool.get("function", {})  # noqa: E127
-            description = func_data.get("description", "No description")
-
-            # Special handling for MassGen workflow tools
-            if name in ["new_answer", "vote"]:
-                params = tool.get("function", {}).get(
-                    "parameters", {}).get("properties", {})
-                param_details = []
-                for param_name, param_def in params.items():
-                    param_desc = param_def.get("description", "")
-                    param_str = f"    {param_name}: {param_desc}"  # noqa: E122
-                    param_details.append(param_str)
-
-                tool_descriptions.append(f"- {name}: {description}")
-                if param_details:
-                    tool_descriptions.append("\n".join(param_details))
-
-                # Add usage example for workflow tools
-                if name == "new_answer":
-                    tool_descriptions.append(
-                        '    Usage: {"tool_name": "new_answer", '
-                        '"arguments": {"content": "your answer"}}')
-                elif name == "vote":
-                    tool_descriptions.append(
-                        '    Usage: {"tool_name": "vote", '
-                        '"arguments": {"agent_id": "agent1", '
-                        '"reason": "explanation"}}')
-            else:
-                tool_descriptions.append(f"- {name}: {description}")
-
-        return "\n".join(tool_descriptions)
 
     def _build_system_prompt_with_workflow_tools(
             self, tools: List[Dict[str, Any]],
@@ -416,17 +342,29 @@ class ClaudeCodeBackend(LLMBackend):
         if base_system:
             system_parts.append(base_system)
 
-        # Add tools information if present
+        # Add workflow tools information if present
         if tools:
-            system_parts.append("\n--- Available Tools ---")
-            tools_info = self._format_tools_for_claude_code(tools)
-            system_parts.append(tools_info)
-
-            # Check for workflow tools and add special instructions
             workflow_tools = [
                 t for t in tools
                 if t.get("function", {}).get("name") in ["new_answer", "vote"]]
             if workflow_tools:
+                system_parts.append("\n--- Available Tools ---")
+                for tool in workflow_tools:
+                    name = tool.get("function", {}).get("name", "unknown")
+                    description = tool.get("function", {}).get("description", "No description")
+                    system_parts.append(f"- {name}: {description}")
+                    
+                    # Add usage examples for workflow tools
+                    if name == "new_answer":
+                        system_parts.append(
+                            '    Usage: {"tool_name": "new_answer", '
+                            '"arguments": {"content": "your answer"}}')
+                    elif name == "vote":
+                        system_parts.append(
+                            '    Usage: {"tool_name": "vote", '
+                            '"arguments": {"agent_id": "agent1", '
+                            '"reason": "explanation"}}')
+                        
                 system_parts.append("\n--- MassGen Workflow Instructions ---")
                 system_parts.append(
                     "You must use the coordination tools (new_answer, vote) "
@@ -489,80 +427,59 @@ class ClaudeCodeBackend(LLMBackend):
 
         return tool_calls
 
-    def _get_default_claude_options(self) -> ClaudeCodeOptions:
-        """Get default ClaudeCodeOptions with maximum tool access.
+    def _build_claude_options(self, **options_kwargs) -> ClaudeCodeOptions:
+        """Build ClaudeCodeOptions with provided parameters.
 
-        Except dangerous operations. Creates a secure configuration that
-        allows ALL Claude Code tools while explicitly disallowing dangerous
-        operations. This gives Claude Code maximum power while maintaining
-        security.
+        Creates a secure configuration that allows ALL Claude Code tools while
+        explicitly disallowing dangerous operations. This gives Claude Code
+        maximum power while maintaining security.
 
         Returns:
-            ClaudeCodeOptions configured for maximum capability with
+            ClaudeCodeOptions configured with provided parameters and
             security restrictions
         """
+        cwd_path = options_kwargs.get("cwd")
+        permission_mode = options_kwargs.get("permission_mode", "acceptEdits")
+        
+        # Filter out parameters handled separately or not for ClaudeCodeOptions
+        excluded_params = {
+            "cwd", "permission_mode", "type", "agent_id", "session_id", "api_key"
+        }
+        
+        # Handle cwd - create directory if it doesn't exist or use current dir
+        cwd_option = None
+        if cwd_path:
+            cwd_dir = Path(cwd_path)
+            if cwd_dir.is_absolute():
+                # Absolute path - create if needed
+                cwd_dir.mkdir(parents=True, exist_ok=True)
+                cwd_option = cwd_dir
+            else:
+                # Relative path - create relative to current working directory
+                cwd_dir.mkdir(parents=True, exist_ok=True)
+                cwd_option = cwd_dir
+        
         return ClaudeCodeOptions(
-            model=self.model,
+            # No model set by default - let Claude Code decide
             # No allowed_tools restriction - allow ALL tools for maximum
             # power. Security is enforced through disallowed_tools only
-            disallowed_tools=[
-                "Bash(rm*)", "Bash(sudo*)", "Bash(su*)",
-                "Bash(chmod*)", "Bash(chown*)"],
-            max_thinking_tokens=self.max_thinking_tokens,
-            cwd=Path(self.cwd) if self.cwd else None,
+            cwd=cwd_option,
             resume=self.get_current_session_id(),
-            permission_mode="acceptEdits",  # Accept file edits by default
+            permission_mode=permission_mode,
+            **{k: v for k, v in options_kwargs.items() if k not in excluded_params}
         )
 
-    def get_or_create_client(
-            self, system_prompt: Optional[str] = None,
-            allowed_tools: Optional[List[str]] = None,
-            disallowed_tools: Optional[List[str]] = None,
-            **options_kwargs) -> ClaudeSDKClient:
-        """Get or create ClaudeSDKClient with configurable parameters.
+    def create_client(self, **options_kwargs) -> ClaudeSDKClient:
+        """Create ClaudeSDKClient with configurable parameters.
 
         Args:
-            system_prompt: Override system prompt
-            allowed_tools: Override allowed tools list (for backward
-                          compatibility)
-            disallowed_tools: Override disallowed tools list (preferred
-                             approach)
-            **options_kwargs: Additional ClaudeCodeOptions parameters
+            **options_kwargs: ClaudeCodeOptions parameters
 
         Returns:
             ClaudeSDKClient instance
         """
-        if self._client is not None:
-            return self._client
-
-        # Start with default options
-        options = self._get_default_claude_options()
-
-        # Override with provided parameters
-        if system_prompt:
-            options.system_prompt = system_prompt
-        elif self.system_prompt:
-            options.system_prompt = self.system_prompt
-
-        # Handle allowed_tools for backward compatibility
-        if allowed_tools:
-            options.allowed_tools = allowed_tools
-        elif self.allowed_tools:
-            # Only set allowed_tools if explicitly provided (legacy
-            # support)
-            options.allowed_tools = self.allowed_tools
-
-        # Handle disallowed_tools (preferred security approach)
-        if disallowed_tools:
-            options.disallowed_tools = disallowed_tools
-        else:
-            # Use instance disallowed_tools (includes secure defaults)
-            options.disallowed_tools = self.disallowed_tools
-
-        # Apply any additional options
-        for key, value in options_kwargs.items():
-            if hasattr(options, key):
-                setattr(options, key, value)
+        # Build options with all parameters
+        options = self._build_claude_options(**options_kwargs)
 
         # Create ClaudeSDKClient with configured options
         self._client = ClaudeSDKClient(options)
@@ -570,68 +487,111 @@ class ClaudeCodeBackend(LLMBackend):
 
     async def stream_with_tools(
             self, messages: List[Dict[str, Any]],
-            tools: List[Dict[str, Any]], **_kwargs
+            tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream a response with tool calling support using claude-code-sdk.
 
-        Uses previous Claude Code CLI backend's formatting approach to
-        properly handle messages and tools context for Claude Code.
+        Properly handle messages and tools context for Claude Code.
 
         Args:
             messages: List of conversation messages
             tools: List of available tools (includes workflow tools)
-            **kwargs: Additional options (unused but maintained for
-                     interface compatibility)
+            **kwargs: Additional options for client configuration
 
         Yields:
             StreamChunk objects with response content and metadata
         """
-        # Note: kwargs unused but maintained for base class interface
-        # compatibility
+        # Merge constructor config with stream kwargs (stream kwargs take priority)
+        all_params = {**self.config, **kwargs}
+        # Check if we already have a client
+        if self._client is not None:
+            client = self._client
+        else:
+            # Set default disallowed_tools if not provided
+            if "disallowed_tools" not in all_params:
+                all_params["disallowed_tools"] = [
+                    "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
+                    "Bash(chown*)"
+                ]
+                # Extract system message from messages for append mode
+                system_msg = next(
+                    (msg for msg in messages if msg.get("role") == "system"), None)
+                if system_msg:
+                    system_content = system_msg.get('content', '')  # noqa: E128
+                else:
+                    system_content = ''
+                workflow_system_prompt = (
+                    self._build_system_prompt_with_workflow_tools(
+                        tools or [], system_content))
+                # Handle different system prompt modes
+                if all_params.get("append_system_prompt"):
+                    # Create client with append_system_prompt
+                    client = self.create_client(
+                        append_system_prompt=workflow_system_prompt,
+                        **all_params)
+                else:
+                    # Build system prompt with tools information
+                    # (following ClaudeCodeCLI approach)
+                    # Create client with the enhanced system prompt
+                    client = self.create_client(
+                        system_prompt=workflow_system_prompt,
+                        **all_params)
+
+        # Connect client if not already connected
+        if not client._transport:
+            await client.connect()
+
+        # Format the messages for Claude Code
+        if not messages:
+            # No messages to process - yield error
+            yield StreamChunk(
+                type="error",
+                error="No messages provided to stream_with_tools",
+                source="claude_code"
+            )
+            return
+            
+        # Validate messages - should only contain user messages for Claude Code
+        user_messages = [msg for msg in messages if msg.get("role") == "user"]
+        assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
+        
+        if assistant_messages:
+            yield StreamChunk(
+                type="error",
+                error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
+                source="claude_code"
+            )
+            return
+            
+        if not user_messages:
+            yield StreamChunk(
+                type="error",
+                error="No user messages found to send to Claude Code",
+                source="claude_code"
+            )
+            return
+        
+        # Combine all user messages into a single query
+        user_contents = []
+        for user_msg in user_messages:
+            content = user_msg.get("content", "").strip()
+            if content:
+                user_contents.append(content)
+        if user_contents:
+            # Join multiple user messages with newlines
+            combined_query = "\n\n".join(user_contents)
+            await client.query(combined_query)
+        else:
+            yield StreamChunk(
+                type="error",
+                error="All user messages were empty",
+                    source="claude_code"
+                )
+            return
+        # Stream response and convert to MassGen StreamChunks
+        accumulated_content = ""
         try:
-            # Extract system message from messages for append mode
-            system_msg = next(
-                (msg for msg in messages if msg.get("role") == "system"), None)
-            if system_msg:
-                system_content = system_msg.get('content', '')  # noqa: E128
-            else:
-                system_content = ''
-            workflow_system_prompt = (
-                self._build_system_prompt_with_workflow_tools(
-                    tools or [], system_content))
-            # Handle different system prompt modes
-            if self.append_system_prompt:
-                # Get or create client with append_system_prompt
-                client = self.get_or_create_client(
-                    append_system_prompt=workflow_system_prompt)
-            else:
-                # Build system prompt with tools information
-                # (following ClaudeCodeCLI approach)
-                # Get or create client with the enhanced system prompt
-                client = self.get_or_create_client(
-                    system_prompt=workflow_system_prompt)
-
-            # Connect client if not already connected
-            if not client._transport:
-                await client.connect()
-
-            # Format the entire conversation context (not just latest
-            # message). This ensures Claude Code has full context including
-            # tools.
-            if messages:
-                # For streaming, we can send the formatted context as a
-                # single query
-                formatted_context = self._format_messages_for_claude_code(
-                    messages, tools or [])
-                await client.query(formatted_context)
-            else:
-                # Fallback: just send a basic query
-                await client.query("Hello")
-
-            # Stream response and convert to MassGen StreamChunks
-            accumulated_content = ""
-
             async for message in client.receive_response():
                 # Import message types
                 from claude_code_sdk import (  # type: ignore
@@ -701,9 +661,9 @@ class ClaudeCodeBackend(LLMBackend):
                 elif isinstance(message, SystemMessage):
                     # System status updates
                     yield StreamChunk(
-                        type="agent_status",
+                        type="agent_status",  # TODO: orchestrator & frontend
                         status=message.subtype,
-                        content=str(message.data),
+                        content=str(message.data),  # TODO: str or object?
                         source="claude_code"
                     )
 
