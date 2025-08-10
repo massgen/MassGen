@@ -22,9 +22,7 @@ async def test_claude_code_with_orchestrator():
     print("=" * 60)
 
     # Create Claude Code backend
-    backend = ClaudeCodeBackend(
-        model="claude-sonnet-4-20250514"
-    )
+    backend = ClaudeCodeBackend()
 
     print(f"✅ Backend initialized: {backend.get_provider_name()}")
     print(f"📊 Stateful backend: {backend.is_stateful()}")
