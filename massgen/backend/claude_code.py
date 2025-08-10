@@ -449,9 +449,10 @@ class ClaudeCodeBackend(LLMBackend):
             text_content: Response text to search for tool calls
 
         Returns:
-            List of tool call dictionaries in standard format
+            List of unique tool call dictionaries in standard format
         """
         tool_calls = []
+        seen_calls = set()  # Track unique tool calls to prevent duplicates
 
         # Look for JSON tool call patterns
         json_patterns = [
@@ -467,14 +468,22 @@ class ClaudeCodeBackend(LLMBackend):
                 tool_name = match.group(1)
                 try:
                     arguments = json.loads(match.group(2))
-                    tool_calls.append({
-                        "id": f"call_{uuid.uuid4().hex[:8]}",
-                        "type": "function",
-                        "function": {
-                            "name": tool_name,
-                            "arguments": arguments
-                        }
-                    })
+                    
+                    # Create a unique identifier for this tool call
+                    # Based on tool name and arguments content
+                    call_signature = (tool_name, json.dumps(arguments, sort_keys=True))
+                    
+                    # Only add if we haven't seen this exact call before
+                    if call_signature not in seen_calls:
+                        seen_calls.add(call_signature)
+                        tool_calls.append({
+                            "id": f"call_{uuid.uuid4().hex[:8]}",
+                            "type": "function",
+                            "function": {
+                                "name": tool_name,
+                                "arguments": arguments
+                            }
+                        })
                 except json.JSONDecodeError:
                     continue
 
@@ -728,30 +737,6 @@ class ClaudeCodeBackend(LLMBackend):
                 error=f"Claude Code streaming error: {str(e)}",
                 source="claude_code"
             )
-
-    def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool name from tool call."""
-        return tool_call.get("function", {}).get("name", "unknown")  # noqa: E501
-
-    def extract_tool_arguments(
-            self, tool_call: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Extract tool arguments from tool call."""
-        return tool_call.get("function", {}).get("arguments", {})
-
-    def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool call ID from tool call."""
-        return tool_call.get("id", "")
-
-    def create_tool_result_message(
-            self, tool_call: Dict[str, Any], result_content: str
-    ) -> Dict[str, Any]:
-        """Create tool result message."""
-        return {
-            "role": "tool",
-            "tool_call_id": self.extract_tool_call_id(tool_call),
-            "content": result_content
-        }
 
     def _track_session_id(self, message) -> None:
         """Track session ID from server responses for session persistence.
