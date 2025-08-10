@@ -1457,7 +1457,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     if "[" in content:
-                        content = content.replace("[", "\[")
+                        content = content.replace("[", r"\[")
 
                 # Add separator instead of clearing screen
                 self.console.print("\n" + "=" * 80 + "\n")
@@ -1641,7 +1641,7 @@ class RichTerminalDisplay(TerminalDisplay):
             with open(self.system_status_file, "r", encoding="utf-8") as f:
                 content = f.read()
                 if "[" in content:
-                    content = content.replace("[", "\[")
+                    content = content.replace("[", r"\[")
 
             # Add separator instead of clearing screen
             self.console.print("\n" + "=" * 80 + "\n")
