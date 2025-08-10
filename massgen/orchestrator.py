@@ -592,20 +592,46 @@ class Orchestrator(ChatAgent):
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
                     elif chunk.type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
-                        # Stream reasoning content as tuple format
-                        reasoning_chunk = StreamChunk(
-                            type=chunk.type,
-                            content=chunk.content,
-                            source=agent_id,
-                            reasoning_delta=getattr(chunk, "reasoning_delta", None),
-                            reasoning_text=getattr(chunk, "reasoning_text", None),
-                            reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
-                            reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
-                            item_id=getattr(chunk, "item_id", None),
-                            content_index=getattr(chunk, "content_index", None),
-                            summary_index=getattr(chunk, "summary_index", None)
-                        )
-                        yield ("reasoning", reasoning_chunk)
+                        if chunk.type == "reasoning":
+                            # Stream reasoning delta as thinking content
+                            reasoning_delta = getattr(chunk, "reasoning_delta", "")
+                            if reasoning_delta:
+                                yield ("content", reasoning_delta)
+                        elif chunk.type == "reasoning_done":
+                            # Complete reasoning text
+                            reasoning_text = getattr(chunk, "reasoning_text", "")
+                            if reasoning_text:
+                                yield("content", f"\n🧠 [Reasoning Complete]\n")
+                                yield("content", f"{reasoning_text}\n")
+                        elif chunk.type == "reasoning_summary":
+                            # Stream reasoning summary delta
+                            summary_delta = getattr(chunk, "reasoning_summary_delta", "")
+                            if summary_delta:
+                                # Track if we're in an active summary for this source
+                                summary_active_key = f"_summary_active_{agent_id}"
+                                
+                                if not hasattr(self, summary_active_key) or not getattr(self, summary_active_key, False):
+                                    # Start of new summary - add prefix and mark as active
+                                    setattr(self, summary_active_key, True)
+                                    yield ("content", f"📋 [Reasoning Summary]\n")
+                                    yield ("content", f"{summary_delta}")
+                                else:
+                                    # Continuing existing summary - no prefix
+                                    yield ("content", f"{summary_delta}")
+                        elif chunk.type == "reasoning_summary_done":
+                            # Complete reasoning summary
+                            summary_text = getattr(chunk, "reasoning_summary_text", "")
+                            if summary_text:
+                                yield ("content", f"\n📋 [Reasoning Summary Complete]\n")
+                                yield ("content", f"{summary_text}\n")
+                            
+                            # Reset flag using helper method
+                            self._process_reasoning_content(chunk.type, "", agent_id)
+                            
+                            # Mark summary as complete - next summary can get a prefix
+                            summary_active_key = f"_summary_active_{agent_id}"
+                            if hasattr(self, summary_active_key):
+                                delattr(self, summary_active_key)
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
@@ -978,6 +1004,25 @@ class Orchestrator(ChatAgent):
             if tied_agents
             else next(iter(agent_answers)) if agent_answers else None
         )
+    
+    def _process_reasoning_content(self, chunk_type: str, content: str, source: str) -> str:
+        """Process reasoning content and add prefixes as needed.
+        
+        Args:
+            chunk_type: Type of the chunk (e.g., "reasoning_summary")
+            content: The content to process
+            source: The source agent/component
+            
+        Returns:
+            Processed content with prefix if needed
+        """
+        if chunk_type == "reasoning_summary_done":
+            # End of reasoning summary - reset flag
+            summary_active_key = f"_summary_active_{source}"
+            if hasattr(self, summary_active_key):
+                setattr(self, summary_active_key, False)
+        return content
+
 
     async def get_final_presentation(
         self, selected_agent_id: str, vote_results: Dict[str, Any]
@@ -988,7 +1033,7 @@ class Orchestrator(ChatAgent):
                 type="error", error=f"Selected agent {selected_agent_id} not found"
             )
             return
-
+        
         agent = self.agents[selected_agent_id]
 
         # Prepare context about the voting
@@ -1043,21 +1088,62 @@ class Orchestrator(ChatAgent):
                     type="content", content=chunk.content, source=selected_agent_id
                 )
             elif chunk.type in ["reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"]:
-                # Stream reasoning content with proper attribution (same as main coordination)
-                reasoning_chunk = StreamChunk(
-                    type=chunk.type,
-                    content=chunk.content,
-                    source=selected_agent_id,
-                    reasoning_delta=getattr(chunk, "reasoning_delta", None),
-                    reasoning_text=getattr(chunk, "reasoning_text", None),
-                    reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
-                    reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
-                    item_id=getattr(chunk, "item_id", None),
-                    content_index=getattr(chunk, "content_index", None),
-                    summary_index=getattr(chunk, "summary_index", None)
-                )
-                # Use the same format as main coordination for consistency
-                yield reasoning_chunk
+                if chunk.type == "reasoning":
+                    # Stream reasoning delta as thinking content
+                    reasoning_delta = getattr(chunk, "reasoning_delta", "")
+                    if reasoning_delta:
+                        yield StreamChunk(
+                            type="content", content=reasoning_delta, source=selected_agent_id
+                        )
+                elif chunk.type == "reasoning_done":
+                    # Complete reasoning text
+                    reasoning_text = getattr(chunk, "reasoning_text", "")
+                    if reasoning_text:
+                        yield StreamChunk(
+                            type="content", content=f"\n🧠 [Reasoning Complete]\n", source=selected_agent_id
+                        )
+                        yield StreamChunk(
+                            type="content", content=f"{reasoning_text}\n", source=selected_agent_id
+                        )
+                elif chunk.type == "reasoning_summary":
+                    # Stream reasoning summary delta
+                    summary_delta = getattr(chunk, "reasoning_summary_delta", "")
+                    if summary_delta:
+                        # Track if we're in an active summary for this source
+                        summary_active_key = f"_summary_active_final_presentation"
+                                
+                        if not hasattr(self, summary_active_key) or not getattr(self, summary_active_key, False):
+                            # Start of new summary - add prefix and mark as active
+                            setattr(self, summary_active_key, True)
+                            yield StreamChunk(
+                                type="content", content=f"📋 [Reasoning Summary]\n", source=selected_agent_id
+                            )
+                            yield StreamChunk(
+                                type="content", content=f"{summary_delta}", source=selected_agent_id
+                            )
+                        else:
+                            # Continuing existing summary - no prefix
+                            yield StreamChunk(
+                                type="content", content=f"{summary_delta}", source=selected_agent_id
+                            )
+                elif chunk.type == "reasoning_summary_done":
+                    # Complete reasoning summary
+                    summary_text = getattr(chunk, "reasoning_summary_text", "")
+                    if summary_text:
+                        yield StreamChunk(
+                            type="content", content=f"\n📋 [Reasoning Summary Complete]\n", source=selected_agent_id
+                        )
+                        yield StreamChunk(
+                            type="content", content=f"{summary_text}\n", source=selected_agent_id
+                        )
+                            
+                    # Reset flag using helper method
+                    self._process_reasoning_content(chunk.type, "", "final_presentation")
+                            
+                    # Mark summary as complete - next summary can get a prefix
+                    summary_active_key = f"_summary_active_final_presentation"
+                    if hasattr(self, summary_active_key):
+                        delattr(self, summary_active_key)
             elif chunk.type == "done":
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
