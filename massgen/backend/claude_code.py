@@ -325,7 +325,7 @@ class ClaudeCodeBackend(LLMBackend):
             tools: List[Dict[str, Any]]) -> str:
         """Format messages specifically for Claude Code.
 
-        Adapted from previous Claude Code CLI backend. Converts MassGen
+        Converts MassGen
         message format to Claude Code's expected format, including
         conversation history and tool information.
 
@@ -338,14 +338,7 @@ class ClaudeCodeBackend(LLMBackend):
         """
         formatted_parts = []
 
-        # Add system message if present
-        system_msg = next(
-            (msg for msg in messages if msg.get("role") == "system"), None)
-        if system_msg:
-            formatted_parts.append(
-                f"System instructions: {system_msg.get('content', '')}")
-
-        # Add conversation history
+        # Add conversation history (skip system messages - they're handled by client system prompt)
         conversation_parts = []
         for msg in messages:
             role = msg.get("role", "user")
@@ -355,6 +348,7 @@ class ClaudeCodeBackend(LLMBackend):
                 conversation_parts.append(f"User: {content}")
             elif role == "assistant":
                 conversation_parts.append(f"Assistant: {content}")
+            # Skip system messages - they're already set as client system prompt
 
         if conversation_parts:
             formatted_parts.append("Conversation:\n" +
@@ -371,7 +365,7 @@ class ClaudeCodeBackend(LLMBackend):
             self, tools: List[Dict[str, Any]]) -> str:
         """Format tools information for Claude Code.
 
-        Adapted from previous Claude Code CLI backend. Converts tool
+        Converts tool
         definitions to human-readable format with special handling for
         MassGen workflow tools (new_answer, vote).
 
