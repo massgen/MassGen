@@ -334,8 +334,8 @@ class ClaudeCodeBackend(LLMBackend):
         tool_descriptions = []
         for tool in tools:
             name = tool.get("function", {}).get("name", "unknown")
-            description = tool.get("function", {}).get("description",
-                                                        "No description")
+            func_data = tool.get("function", {})  # noqa: E127
+            description = func_data.get("description", "No description")
 
             # Special handling for MassGen workflow tools
             if name in ["new_answer", "vote"]:
@@ -344,8 +344,8 @@ class ClaudeCodeBackend(LLMBackend):
                 param_details = []
                 for param_name, param_def in params.items():
                     param_desc = param_def.get("description", "")
-                    param_details.append(
-                    f"    {param_name}: {param_desc}")
+                    param_str = f"    {param_name}: {param_desc}"  # noqa: E122
+                    param_details.append(param_str)
 
                 tool_descriptions.append(f"- {name}: {description}")
                 if param_details:
@@ -555,8 +555,10 @@ class ClaudeCodeBackend(LLMBackend):
             # Extract system message from messages for append mode
             system_msg = next(
                 (msg for msg in messages if msg.get("role") == "system"), None)
-            system_content = (system_msg.get('content', '')
-                             if system_msg else '')
+            if system_msg:
+                system_content = system_msg.get('content', '')  # noqa: E128
+            else:
+                system_content = ''
             workflow_system_prompt = (
                 self._build_system_prompt_with_workflow_tools(
                     tools or [], system_content))
@@ -700,9 +702,11 @@ class ClaudeCodeBackend(LLMBackend):
 
     def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
         """Extract tool name from tool call."""
-        return tool_call.get("function", {}).get("name", "unknown")
+        return tool_call.get("function", {}).get("name", "unknown")  # noqa: E501
 
-    def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
+    def extract_tool_arguments(
+            self, tool_call: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Extract tool arguments from tool call."""
         return tool_call.get("function", {}).get("arguments", {})
 
@@ -723,17 +727,19 @@ class ClaudeCodeBackend(LLMBackend):
     def _track_session_id(self, message) -> None:
         """Track session ID from server responses for session persistence.
 
-        Extracts and stores session ID from ResultMessage to enable session
-        continuation across multiple interactions.
+        Extracts and stores session ID from ResultMessage to enable
+        session continuation across multiple interactions.  # noqa: E501
 
         Args:
-            message: Message from Claude Code, potentially containing session ID
+            message: Message from Claude Code, potentially containing
+                session ID  # noqa: E129
         """
         # Import message types locally to avoid import issues
         try:
             from claude_code_sdk import ResultMessage
             if (isinstance(message, ResultMessage) and
-                hasattr(message, 'session_id') and message.session_id):
+                    hasattr(message, 'session_id') and
+                    message.session_id):
                 self._current_session_id = message.session_id
         except ImportError:
             # Fallback - check if message has session_id attribute
