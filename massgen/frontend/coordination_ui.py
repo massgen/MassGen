@@ -295,7 +295,6 @@ class CoordinationUI:
             ):
                 print(f"\n🎤  Final Presentation from {selected_agent}:")
                 print("=" * 60)
-                
 
                 presentation_content = ""
                 try:
