@@ -358,20 +358,151 @@ class ClaudeCodeBackend(LLMBackend):
                             '    Usage: {"tool_name": "new_answer", '
                             '"arguments": {"content": "your answer"}}')
                     elif name == "vote":
-                        system_parts.append(
-                            '    Usage: {"tool_name": "vote", '
-                            '"arguments": {"agent_id": "agent1", '
-                            '"reason": "explanation"}}')
+                        # Extract valid agent IDs from enum if available
+                        agent_id_enum = None
+                        for t in tools:
+                            if t.get("function", {}).get("name") == "vote":
+                                agent_id_param = (
+                                    t.get("function", {})
+                                    .get("parameters", {})
+                                    .get("properties", {})
+                                    .get("agent_id", {})
+                                )
+                                if "enum" in agent_id_param:
+                                    agent_id_enum = agent_id_param["enum"]
+                                break
+                        
+                        if agent_id_enum:
+                            agent_list = ", ".join(agent_id_enum)
+                            system_parts.append(
+                                f'    Usage: {{"tool_name": "vote", '
+                                f'"arguments": {{"agent_id": "agent1", '
+                                f'"reason": "explanation"}}}} // Choose agent_id from: {agent_list}')
+                        else:
+                            system_parts.append(
+                                '    Usage: {"tool_name": "vote", '
+                                '"arguments": {"agent_id": "agent1", '
+                                '"reason": "explanation"}}')
                         
                 system_parts.append("\n--- MassGen Workflow Instructions ---")
                 system_parts.append(
+                    "IMPORTANT: You must respond with a structured JSON decision at the end of your response.")
+                system_parts.append(
                     "You must use the coordination tools (new_answer, vote) "
                     "to participate in multi-agent workflows.")
+                # system_parts.append(
+                #     "Make sure to include the JSON in the exact format shown in the usage examples above.")
                 system_parts.append(
-                    "Respond with the JSON format shown in the tool usage "
-                    "examples above.")
+                    "The JSON MUST be formatted as a strict JSON code block:")
+                system_parts.append(
+                    "1. Start with ```json on one line")
+                system_parts.append(
+                    "2. Include your JSON content (properly formatted)")
+                system_parts.append(
+                    "3. End with ``` on one line")
+                system_parts.append(
+                    "Example format:\n```json\n{\"tool_name\": \"vote\", \"arguments\": {\"agent_id\": \"agent1\", \"reason\": \"explanation\"}}\n```")
+                system_parts.append(
+                    "The JSON block should be placed at the very end of your response, after your analysis.")
 
         return "\n".join(system_parts)
+
+    def extract_structured_response(
+            self, response_text: str) -> Optional[Dict[str, Any]]:
+        """Extract structured JSON response for Claude Code format.
+
+        Looks for JSON in the format:
+        {"tool_name": "vote/new_answer", "arguments": {...}}
+
+        Args:
+            response_text: The full response text to search
+
+        Returns:
+            Extracted JSON dict if found, None otherwise
+        """
+        try:
+            import re
+
+            # Strategy 0: Look for JSON inside markdown code blocks first
+            markdown_json_pattern = r"```json\s*(\{.*?\})\s*```"
+            markdown_matches = re.findall(
+                markdown_json_pattern, response_text, re.DOTALL
+            )
+
+            for match in reversed(markdown_matches):
+                try:
+                    parsed = json.loads(match.strip())
+                    if isinstance(parsed, dict) and "tool_name" in parsed:
+                        return parsed
+                except json.JSONDecodeError:
+                    continue
+
+            # Strategy 1: Look for complete JSON blocks with proper braces
+            json_pattern = r"\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}"
+            json_matches = re.findall(json_pattern, response_text, re.DOTALL)
+
+            # Try parsing each match (in reverse order - last one first)
+            for match in reversed(json_matches):
+                try:
+                    cleaned_match = match.strip()
+                    parsed = json.loads(cleaned_match)
+                    if isinstance(parsed, dict) and "tool_name" in parsed:
+                        return parsed
+                except json.JSONDecodeError:
+                    continue
+
+            # Strategy 2: Look for JSON blocks with nested braces (more complex)
+            brace_count = 0
+            json_start = -1
+
+            for i, char in enumerate(response_text):
+                if char == "{":
+                    if brace_count == 0:
+                        json_start = i
+                    brace_count += 1
+                elif char == "}":
+                    brace_count -= 1
+                    if brace_count == 0 and json_start >= 0:
+                        # Found a complete JSON block
+                        json_block = response_text[json_start : i + 1]
+                        try:
+                            parsed = json.loads(json_block)
+                            if isinstance(parsed, dict) and "tool_name" in parsed:
+                                return parsed
+                        except json.JSONDecodeError:
+                            pass
+                        json_start = -1
+
+            # Strategy 3: Line-by-line approach (fallback)
+            lines = response_text.strip().split("\n")
+            json_candidates = []
+
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+                if stripped.startswith("{") and stripped.endswith("}"):
+                    json_candidates.append(stripped)
+                elif stripped.startswith("{"):
+                    # Multi-line JSON - collect until closing brace
+                    json_text = stripped
+                    for j in range(i + 1, len(lines)):
+                        json_text += "\n" + lines[j].strip()
+                        if lines[j].strip().endswith("}"):
+                            json_candidates.append(json_text)
+                            break
+
+            # Try to parse each candidate
+            for candidate in reversed(json_candidates):
+                try:
+                    parsed = json.loads(candidate)
+                    if isinstance(parsed, dict) and "tool_name" in parsed:
+                        return parsed
+                except json.JSONDecodeError:
+                    continue
+
+            return None
+
+        except Exception:
+            return None
 
     def _parse_workflow_tool_calls(
             self, text_content: str) -> List[Dict[str, Any]]:
@@ -379,7 +510,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         Searches for JSON-formatted tool calls in the response text and
         converts them to the standard tool call format used by MassGen.
-        Generates unique tool call IDs using uuid4.
+        Uses the extract_structured_response method for robust JSON extraction.
 
         Args:
             text_content: Response text to search for tool calls
@@ -388,8 +519,28 @@ class ClaudeCodeBackend(LLMBackend):
             List of unique tool call dictionaries in standard format
         """
         tool_calls = []
+        
+        # First try to extract structured JSON response
+        structured_response = self.extract_structured_response(text_content)
+        
+        if structured_response and isinstance(structured_response, dict):
+            tool_name = structured_response.get("tool_name")
+            arguments = structured_response.get("arguments", {})
+            
+            if tool_name and isinstance(arguments, dict):
+                tool_calls.append({
+                    "id": f"call_{uuid.uuid4().hex[:8]}",
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "arguments": arguments
+                    }
+                })
+                return tool_calls
+        
+        # Fallback: Look for multiple JSON tool calls using regex patterns
         seen_calls = set()  # Track unique tool calls to prevent duplicates
-
+        
         # Look for JSON tool call patterns
         json_patterns = [
             r'\{"tool_name":\s*"([^"]+)",\s*"arguments":\s*'
