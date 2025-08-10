@@ -52,7 +52,7 @@ from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from claude_code_sdk import (  # type: ignore
     ClaudeSDKClient, ClaudeCodeOptions, ResultMessage, SystemMessage,
-    AssistantMessage, TextBlock, ToolUseBlock, ToolResultBlock
+    AssistantMessage, UserMessage, TextBlock, ToolUseBlock, ToolResultBlock
 )
 
 
@@ -745,7 +745,7 @@ class ClaudeCodeBackend(LLMBackend):
         try:
             async for message in client.receive_response():
 
-                if AssistantMessage is not None and isinstance(message, AssistantMessage):
+                if isinstance(message, (AssistantMessage, UserMessage)):
                     # Process assistant message content
                     for block in message.content:
                         if isinstance(block, TextBlock):
@@ -761,26 +761,19 @@ class ClaudeCodeBackend(LLMBackend):
                         elif isinstance(block, ToolUseBlock):
                             # Claude Code's builtin tool usage
                             yield StreamChunk(
-                                type="tool_calls",
-                                builtin_tool_results=[{
-                                    "tool_name": block.name,
-                                    "tool_input": block.input,
-                                    "tool_call_id": block.id
-                                }],
+                                type="content",
+                                content=f"🔧 {block.name}({block.input})",
                                 source="claude_code"
                             )
 
                         elif isinstance(block, ToolResultBlock):
-                            # Tool result from Claude Code
+                            # Tool result from Claude Code - use simple content format
                             # Note: ToolResultBlock.tool_use_id references
                             # the original ToolUseBlock.id
+                            status = "❌ Error" if block.is_error else "✅ Result"
                             yield StreamChunk(
-                                type="builtin_tool_results",
-                                builtin_tool_results=[{
-                                    "tool_call_id": block.tool_use_id,
-                                    "tool_result": block.content,
-                                    "is_error": block.is_error or False
-                                }],
+                                type="content",
+                                content=f"🔧 Tool {status}: {block.content}",
                                 source="claude_code"
                             )
 

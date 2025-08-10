@@ -1065,7 +1065,9 @@ class Orchestrator(ChatAgent):
                 status_json = json.loads(chunk.content)
                 cwd = status_json["cwd"]
                 session_id = status_json["session_id"]
-                content = f"""Final Temp Working directory: {cwd}. \n Final Session ID: {session_id}. \n"""
+                content = f"""Final Temp Working directory: {cwd}.
+Final Session ID: {session_id}.
+"""
 
                 yield StreamChunk(type="content", content=content, source=selected_agent_id)
 

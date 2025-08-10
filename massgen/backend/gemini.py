@@ -463,7 +463,6 @@ Make your decision and include the JSON at the very end of your response."""
                         tool_calls_detected = tool_calls
 
             # Process builtin tool results if any tools were used
-            builtin_tool_results = []
             if (
                 builtin_tools
                 and final_response
@@ -521,13 +520,6 @@ Make your decision and include the JSON at the very end of your response."""
                                 type="content", content=f"🔍 [Search Query] '{query}'\n"
                             )
 
-                        builtin_result = {
-                            "id": f"web_search_{hash(str(candidate.grounding_metadata)) % 10000}",
-                            "tool_type": "google_search_retrieval",
-                            "status": "completed",
-                            "metadata": str(candidate.grounding_metadata),
-                        }
-                        builtin_tool_results.append(builtin_result)
                         self.search_count += 1
 
                 # Check for code execution in the response parts
@@ -576,22 +568,7 @@ Make your decision and include the JSON at the very end of your response."""
                                     content=f"📊 [Result] {result_content}\n",
                                 )
 
-                        builtin_result = {
-                            "id": f"code_execution_{hash(str(code_parts)) % 10000}",
-                            "tool_type": "code_execution",
-                            "status": "completed",
-                            "code_parts": code_parts,
-                            "output": "; ".join(code_parts),
-                        }
-                        builtin_tool_results.append(builtin_result)
                         self.code_execution_count += 1
-
-            # Yield builtin tool results
-            if builtin_tool_results:
-                yield StreamChunk(
-                    type="builtin_tool_results",
-                    builtin_tool_results=builtin_tool_results,
-                )
 
             # Yield coordination tool calls if detected
             if tool_calls_detected:
