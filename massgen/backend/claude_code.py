@@ -661,7 +661,7 @@ class ClaudeCodeBackend(LLMBackend):
                 elif isinstance(message, SystemMessage):
                     # System status updates
                     yield StreamChunk(
-                        type="agent_status",
+                        type="agent_status",  # TODO: what type to use here?
                         status=message.subtype,
                         content=str(message.data),
                         source="claude_code"
