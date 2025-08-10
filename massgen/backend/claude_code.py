@@ -1,12 +1,14 @@
 """
 Claude Code Stream Backend - Streaming interface using claude-code-sdk-python.
 
-This backend provides integration with Claude Code through the claude-code-sdk-python,
-leveraging Claude Code's server-side session persistence and tool execution capabilities.
+This backend provides integration with Claude Code through the
+claude-code-sdk-python, leveraging Claude Code's server-side session
+persistence and tool execution capabilities.
 
 Key Features:
-- ✅ Native Claude Code streaming integration  
-- ✅ Server-side session persistence (no client-side session management needed)
+- ✅ Native Claude Code streaming integration
+- ✅ Server-side session persistence (no client-side session
+  management needed)
 - ✅ Built-in tool execution (Read, Write, Bash, WebSearch, etc.)
 - ✅ MassGen workflow tool integration (new_answer, vote via system prompts)
 - ✅ Single persistent client with automatic session ID tracking
@@ -104,7 +106,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         Args:
             input_tokens: Number of input tokens
-            output_tokens: Number of output tokens  
+            output_tokens: Number of output tokens
             model: Model name for pricing lookup
             result_message: Optional ResultMessage with actual cost data
 
@@ -116,11 +118,13 @@ class ClaudeCodeBackend(LLMBackend):
         if result_message is not None:
             try:
                 from claude_code_sdk import ResultMessage
-                if isinstance(result_message, ResultMessage) and result_message.total_cost_usd is not None:
+                if (isinstance(result_message, ResultMessage) and
+                        result_message.total_cost_usd is not None):
                     return result_message.total_cost_usd
             except ImportError:
                 # Fallback: check if it has the expected attribute
-                if hasattr(result_message, 'total_cost_usd') and result_message.total_cost_usd is not None:
+                if (hasattr(result_message, 'total_cost_usd') and
+                        result_message.total_cost_usd is not None):
                     return result_message.total_cost_usd
 
         # Fallback: calculate estimated cost based on Claude pricing (2025)
