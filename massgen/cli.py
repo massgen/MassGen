@@ -166,7 +166,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         
         return ChatCompletionsBackend(api_key=api_key)
     
-    elif backend_type == "claude_code_stream":
+    elif backend_type == "claude_code":
         # ClaudeCodeBackend using claude-code-sdk-python
         # Authentication handled by backend (API key or subscription)
         
@@ -591,7 +591,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code_stream"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code"],
         help="Backend type for quick setup",
     )
 

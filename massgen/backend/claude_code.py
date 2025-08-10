@@ -247,7 +247,7 @@ class ClaudeCodeBackend(LLMBackend):
         return self._current_session_id
 
     def _format_messages_for_claude_code(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]]) -> str:
-        """Format messages specifically for Claude Code (adapted from ClaudeCodeCLIBackend).
+        """Format messages specifically for Claude Code (adapted from previous Claude Code CLI backend).
 
         Converts MassGen message format to Claude Code's expected format,
         including conversation history and tool information.
@@ -291,7 +291,7 @@ class ClaudeCodeBackend(LLMBackend):
         return "\n\n".join(formatted_parts)
 
     def _format_tools_for_claude_code(self, tools: List[Dict[str, Any]]) -> str:
-        """Format tools information for Claude Code (adapted from ClaudeCodeCLIBackend).
+        """Format tools information for Claude Code (adapted from previous Claude Code CLI backend).
 
         Converts tool definitions to human-readable format with special handling
         for MassGen workflow tools (new_answer, vote).
@@ -492,7 +492,7 @@ class ClaudeCodeBackend(LLMBackend):
         """
         Stream a response with tool calling support using claude-code-sdk.
 
-        Uses ClaudeCodeCLIBackend's formatting approach to properly handle
+        Uses previous Claude Code CLI backend's formatting approach to properly handle
         messages and tools context for Claude Code.
 
         Args:
@@ -638,14 +638,14 @@ class ClaudeCodeBackend(LLMBackend):
                     )
 
                     # Final done signal
-                    yield StreamChunk(type="done", source="claude_code_stream")
+                    yield StreamChunk(type="done", source="claude_code")
                     break
 
         except Exception as e:
             yield StreamChunk(
                 type="error",
                 error=f"Claude Code streaming error: {str(e)}",
-                source="claude_code_stream"
+                source="claude_code"
             )
 
     def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:

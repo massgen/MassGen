@@ -4,7 +4,7 @@
 agents:
   - id: "claude_code_agent"
     backend:
-      type: "claude_code_stream"
+      type: "claude_code"
       model: "claude-sonnet-4-20250514"
 
       # Claude Code Stream specific options

@@ -178,7 +178,7 @@ class AgentConfig:
         return cls(backend_params=backend_params)
 
     @classmethod
-    def create_claude_code_stream_config(
+    def create_claude_code_config(
         cls,
         model: str = "claude-sonnet-4-20250514",
         system_prompt: Optional[str] = None,
@@ -206,21 +206,21 @@ class AgentConfig:
 
         Examples:
             # Maximum power configuration (recommended)
-            config = AgentConfig.create_claude_code_stream_config()
+            config = AgentConfig.create_claude_code_config()
             
             # Custom security restrictions
-            config = AgentConfig.create_claude_code_stream_config(
+            config = AgentConfig.create_claude_code_config(
                 disallowed_tools=["Bash(rm*)", "Bash(sudo*)", "WebSearch"]
             )
 
             # Development task with custom directory
-            config = AgentConfig.create_claude_code_stream_config(
+            config = AgentConfig.create_claude_code_config(
                 cwd="/path/to/project",
                 system_prompt="You are an expert developer assistant."
             )
 
             # Legacy allowed_tools approach (not recommended)
-            config = AgentConfig.create_claude_code_stream_config(
+            config = AgentConfig.create_claude_code_config(
                 allowed_tools=["Read", "Write", "Edit", "Bash"]
             )
         """
@@ -283,9 +283,9 @@ class AgentConfig:
             return cls.create_claude_config(model, enable_web_search=True)
         elif backend == "gemini":
             return cls.create_gemini_config(model, enable_web_search=True)
-        elif backend == "claude_code_stream":
+        elif backend == "claude_code":
             # Maximum power research config - all tools available
-            return cls.create_claude_code_stream_config(model)
+            return cls.create_claude_code_config(model)
         else:
             raise ValueError(
                 f"Research configuration not available for backend: {backend}"
@@ -307,9 +307,9 @@ class AgentConfig:
             return cls.create_claude_config(model, enable_code_execution=True)
         elif backend == "gemini":
             return cls.create_gemini_config(model, enable_code_execution=True)
-        elif backend == "claude_code_stream":
+        elif backend == "claude_code":
             # Maximum power computational config - all tools available
-            return cls.create_claude_code_stream_config(model)
+            return cls.create_claude_code_config(model)
         else:
             raise ValueError(
                 f"Computational configuration not available for backend: {backend}"
@@ -333,9 +333,9 @@ class AgentConfig:
             return cls.create_grok_config(model)
         elif backend == "gemini":
             return cls.create_gemini_config(model)
-        elif backend == "claude_code_stream":
+        elif backend == "claude_code":
             # Maximum power analytical config - all tools available
-            return cls.create_claude_code_stream_config(model)
+            return cls.create_claude_code_config(model)
         else:
             raise ValueError(
                 f"Analytical configuration not available for backend: {backend}"
