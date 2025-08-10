@@ -69,7 +69,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
 
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         self.use_subscription_auth = not bool(self.api_key)
-        
+
         # Set API key in environment for SDK if provided
         if self.api_key:
             os.environ["ANTHROPIC_API_KEY"] = self.api_key
@@ -77,6 +77,7 @@ class ClaudeCodeStreamBackend(LLMBackend):
         # Configuration
         self.model = kwargs.get("model", "claude-sonnet-4-20250514")
         self.system_prompt = kwargs.get("system_prompt")
+        self.append_system_prompt = kwargs.get("append_system_prompt")
         # Keep for backward compatibility
         self.allowed_tools = kwargs.get("allowed_tools", [])
         self.disallowed_tools = kwargs.get("disallowed_tools", [
@@ -244,7 +245,6 @@ class ClaudeCodeStreamBackend(LLMBackend):
             Current session ID if available, None otherwise
         """
         return self._current_session_id
-
 
     def _format_messages_for_claude_code(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]]) -> str:
         """Format messages specifically for Claude Code (adapted from ClaudeCodeCLIBackend).
@@ -508,14 +508,25 @@ class ClaudeCodeStreamBackend(LLMBackend):
         """
         # Note: kwargs unused but maintained for base class interface compatibility
         try:
-            # Build system prompt with tools information (following ClaudeCodeCLI approach)
+            # Extract system message from messages for append mode
+            system_msg = next(
+                (msg for msg in messages if msg.get("role") == "system"), None)
+            system_content = system_msg.get(
+                'content', '') if system_msg else ''
             workflow_system_prompt = self._build_system_prompt_with_workflow_tools(
-                tools or [], self.system_prompt
+                tools or [], system_content
             )
+            # Handle different system prompt modes
+            if self.append_system_prompt:
+                # Get or create client with append_system_prompt
+                client = self.get_or_create_client(
+                    append_system_prompt=workflow_system_prompt)
+            else:
+                # Build system prompt with tools information (following ClaudeCodeCLI approach)
 
-            # Get or create client with the enhanced system prompt
-            client = self.get_or_create_client(
-                system_prompt=workflow_system_prompt)
+                # Get or create client with the enhanced system prompt
+                client = self.get_or_create_client(
+                    system_prompt=workflow_system_prompt)
 
             # Connect client if not already connected
             if not client._transport:
