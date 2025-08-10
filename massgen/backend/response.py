@@ -121,7 +121,7 @@ class ResponseBackend(LLMBackend):
             api_params = {"input": converted_messages, "stream": True}
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {"enable_web_search", "enable_code_interpreter"}
+            excluded_params = {"enable_web_search", "enable_code_interpreter", "agent_id", "session_id"}
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
                     # Handle OpenAI Response API parameter name differences

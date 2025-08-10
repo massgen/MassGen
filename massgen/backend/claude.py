@@ -219,11 +219,14 @@ class ClaudeBackend(LLMBackend):
                 api_params["tools"] = combined_tools
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {"enable_web_search", "enable_code_execution"}
+            excluded_params = {"enable_web_search", "enable_code_execution", "agent_id", "session_id"}
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
                     api_params[key] = value
 
+            # Claude API requires max_tokens - add default if not provided
+            if "max_tokens" not in api_params:
+                api_params["max_tokens"] = 4096
 
             # Set up beta features and create stream
             if enable_code_execution:

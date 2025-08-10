@@ -358,7 +358,7 @@ Make your decision and include the JSON at the very end of your response."""
             config = {}
             
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {"enable_web_search", "enable_code_execution"}
+            excluded_params = {"enable_web_search", "enable_code_execution", "agent_id", "session_id"}
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
                     # Handle Gemini-specific parameter mappings
