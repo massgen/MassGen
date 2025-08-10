@@ -504,18 +504,16 @@ class ClaudeCodeBackend(LLMBackend):
         """
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
-        
-        # Set default disallowed_tools if not provided
-        if "disallowed_tools" not in all_params:
-            all_params["disallowed_tools"] = [
-                "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
-                "Bash(chown*)"
-            ]
-        try:
-            # Check if we already have a client
-            if self._client is not None:
-                client = self._client
-            else:
+        # Check if we already have a client
+        if self._client is not None:
+            client = self._client
+        else:
+            # Set default disallowed_tools if not provided
+            if "disallowed_tools" not in all_params:
+                all_params["disallowed_tools"] = [
+                    "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
+                    "Bash(chown*)"
+                ]
                 # Extract system message from messages for append mode
                 system_msg = next(
                     (msg for msg in messages if msg.get("role") == "system"), None)
@@ -540,64 +538,60 @@ class ClaudeCodeBackend(LLMBackend):
                         system_prompt=workflow_system_prompt,
                         **all_params)
 
-            # Connect client if not already connected
-            if not client._transport:
-                await client.connect()
+        # Connect client if not already connected
+        if not client._transport:
+            await client.connect()
 
-            # Format the entire conversation context (not just latest
-            # message). This ensures Claude Code has full context including
-            # tools.
-            if not messages:
-                # No messages to process - yield error
-                yield StreamChunk(
-                    type="error",
-                    error="No messages provided to stream_with_tools",
-                    source="claude_code"
-                )
-                return
-                
-            # Validate messages - should only contain user messages for Claude Code
-            user_messages = [msg for msg in messages if msg.get("role") == "user"]
-            assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
+        # Format the messages for Claude Code
+        if not messages:
+            # No messages to process - yield error
+            yield StreamChunk(
+                type="error",
+                error="No messages provided to stream_with_tools",
+                source="claude_code"
+            )
+            return
             
-            if assistant_messages:
-                yield StreamChunk(
-                    type="error",
-                    error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
-                    source="claude_code"
-                )
-                return
-                
-            if not user_messages:
-                yield StreamChunk(
-                    type="error",
-                    error="No user messages found to send to Claude Code",
-                    source="claude_code"
-                )
-                return
+        # Validate messages - should only contain user messages for Claude Code
+        user_messages = [msg for msg in messages if msg.get("role") == "user"]
+        assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
+        
+        if assistant_messages:
+            yield StreamChunk(
+                type="error",
+                error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
+                source="claude_code"
+            )
+            return
             
-            # Combine all user messages into a single query
-            user_contents = []
-            for user_msg in user_messages:
-                content = user_msg.get("content", "").strip()
-                if content:
-                    user_contents.append(content)
-            
-            if user_contents:
-                # Join multiple user messages with newlines
-                combined_query = "\n\n".join(user_contents)
-                await client.query(combined_query)
-            else:
-                yield StreamChunk(
-                    type="error",
-                    error="All user messages were empty",
+        if not user_messages:
+            yield StreamChunk(
+                type="error",
+                error="No user messages found to send to Claude Code",
+                source="claude_code"
+            )
+            return
+        
+        # Combine all user messages into a single query
+        user_contents = []
+        for user_msg in user_messages:
+            content = user_msg.get("content", "").strip()
+            if content:
+                user_contents.append(content)
+        if user_contents:
+            # Join multiple user messages with newlines
+            combined_query = "\n\n".join(user_contents)
+            await client.query(combined_query)
+        else:
+            yield StreamChunk(
+                type="error",
+                error="All user messages were empty",
                     source="claude_code"
                 )
-                return
-
-            # Stream response and convert to MassGen StreamChunks
-            accumulated_content = ""
-
+            return
+        # Stream response and convert to MassGen StreamChunks
+        accumulated_content = ""
+        try:
             async for message in client.receive_response():
                 # Import message types
                 from claude_code_sdk import (  # type: ignore
