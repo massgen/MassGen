@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Test ClaudeCodeBackend with MassGen Orchestrator.
-This test demonstrates the full multi-agent workflow with Claude Code backend.
+This test demonstrates a workflow with Claude Code backend.
 """
 
 from massgen.frontend.coordination_ui import CoordinationUI
