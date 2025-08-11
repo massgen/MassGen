@@ -4,6 +4,9 @@ Test script for CLI backends - Claude Code CLI and Gemini CLI integration.
 
 This script tests the basic functionality of CLI backends without requiring
 the actual CLI tools to be installed (mocked for testing).
+
+TODO: This file is outdated - ClaudeCodeCLIBackend was removed, only SDK-based ClaudeCodeBackend remains.
+Update tests to reflect current backend architecture.
 """
 
 import asyncio
