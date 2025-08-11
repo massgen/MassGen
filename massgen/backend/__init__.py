@@ -1,14 +1,14 @@
 """
 MassGen Backend System - Multi-Provider LLM Integration
-MassGen Backend System - Multi-Provider LLM Integration
 
 Supports multiple LLM providers with standardized StreamChunk interface:
 - ChatCompletions (OpenAI-compatible for Cerebras AI, etc.)
+- Response API (OpenAI Response API with reasoning support)
+- Grok (xAI API with live search capabilities)
 - Claude (Messages API with multi-tool support)
 - Gemini (structured output for coordination)
-# - Claude Code CLI (command-line interface integration) - REMOVED
 - Claude Code (claude-code-sdk streaming integration)
-- Gemini CLI (command-line interface integration)
+TODO - Gemini CLI (command-line interface integration)
 """
 
 from .base import LLMBackend, StreamChunk, TokenUsage
@@ -20,7 +20,7 @@ from .gemini import GeminiBackend
 from .cli_base import CLIBackend
 # from .claude_code_cli import ClaudeCodeCLIBackend  # File removed
 from .claude_code import ClaudeCodeBackend
-from .gemini_cli import GeminiCLIBackend
+# from .gemini_cli import GeminiCLIBackend
 
 __all__ = [
     "LLMBackend",
@@ -32,7 +32,6 @@ __all__ = [
     "ClaudeBackend",
     "GeminiBackend",
     "CLIBackend",
-    # "ClaudeCodeCLIBackend",  # File removed
     "ClaudeCodeBackend",
-    "GeminiCLIBackend",
+    # "GeminiCLIBackend",
 ]
