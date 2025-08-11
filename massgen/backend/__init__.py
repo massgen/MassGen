@@ -10,6 +10,7 @@ Supports multiple LLM providers with standardized StreamChunk interface:
 - Claude Code (claude-code-sdk streaming integration)
 TODO - Gemini CLI (command-line interface integration)
 TODO - Clean up StreamChunk design (too many optional fields for reasoning/provider features)
+TODO - Check if we indeed need to pass agent_id & session_id to backends
 """
 
 from .base import LLMBackend, StreamChunk, TokenUsage
