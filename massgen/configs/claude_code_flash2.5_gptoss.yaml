@@ -30,7 +30,7 @@ agents:
       #   - "mcp__ide__getDiagnostics"
       #   - "mcp__ide__executeCode"
 
-  - id: "gemini_agent"
+  - id: "gemini-2.5-flash"
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"

@@ -15,8 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Session management with append system prompt support
 - **New Configuration Files**: Added Claude Code specific YAML configurations
   - `claude_code_single.yaml`: Single agent setup using Claude Code backend
-- **Test Coverage**: Added extensive test suite for Claude Code functionality
-  - `test_claude_code_orchestrator.py`: Comprehensive orchestrator testing
+  - `claude_code_flash2.5.yaml`: Multi-agent setup with Claude Code and Gemini Flash 2.5
+  - `claude_code_flash2.5_gptoss.yaml`: Multi-agent setup with Claude Code, Gemini Flash 2.5, and GPT-OSS
+- **Test Coverage**: Added test suite for Claude Code functionality
+  - `test_claude_code_orchestrator.py`: orchestrator testing
   - Backend-specific test coverage for Claude Code integration
 
 ### Fixed
@@ -43,8 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Simplified chat agent architecture and removed redundant code
   - Streamlined orchestrator logic with improved error handling
 - **Configuration Management**: Updated and cleaned up configuration files
-  - Removed obsolete configuration files (`gemini_cli.py`, `cli_backends_mixed.yaml`)
-  - Standardized configuration naming conventions
   - Updated agent configuration with Claude Code support
 - **Backend Infrastructure**: Enhanced backend parameter handling
   - Improved stateful conversation management across all backends
@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Files Modified**: 25+ files across backend, configuration, frontend, and test modules
 - **Major Components Updated**: Backend systems, orchestrator, frontend display, configuration management
 - **New Dependencies**: Added Claude Code SDK integration
-- **Contributors**: @qidanrui @sonichi @randombet
+- **Contributors**: @qidanrui @randombet @sonichi
 
 ## [0.0.4] - 2025-08-08
 
