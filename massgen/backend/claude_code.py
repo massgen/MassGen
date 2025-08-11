@@ -671,22 +671,21 @@ class ClaudeCodeBackend(LLMBackend):
                 if system_msg:
                     system_content = system_msg.get('content', '')  # noqa: E128
                 else:
-                    system_content = ''                
+                    system_content = ''   
+                # Build system prompt with tools information             
                 workflow_system_prompt = (
                     self._build_system_prompt_with_workflow_tools(
                         tools or [], system_content))
-                # Handle different system prompt modes
-                if all_params.get("append_system_prompt"):
-                    # Create client with append_system_prompt
-                    client = self.create_client(
-                        append_system_prompt=workflow_system_prompt,
-                        **all_params)
-                else:
-                    # Build system prompt with tools information
-                    # (following ClaudeCodeCLI approach)
-                    # Create client with the enhanced system prompt
+                # Handle different system prompt mode
+                if all_params.get("system_prompt"):
+                    # Create client with system_prompt
                     client = self.create_client(
                         system_prompt=workflow_system_prompt,
+                        **all_params)
+                else:
+                    # Create client with the enhanced system prompt
+                    client = self.create_client(
+                        append_system_prompt=workflow_system_prompt,
                         **all_params)
 
         # Connect client if not already connected
