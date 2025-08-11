@@ -1,6 +1,9 @@
 """
 Agent configuration for MassGen framework following input_cases_reference.md
 Simplified configuration focused on the proven binary decision approach.
+
+TODO: This file is outdated - check claude_code config and
+deprecated patterns. Update to reflect current backend architecture.
 """
 
 from dataclasses import dataclass, field
