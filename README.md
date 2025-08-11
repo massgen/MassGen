@@ -94,7 +94,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.6 Roadmap](#v006-roadmap)
+- [v0.0.7 Roadmap](#v007-roadmap)
 </details>
 
 <details open>
@@ -562,7 +562,7 @@ Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Cla
 - **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.6 roadmap](ROADMAP_v0.0.6.md).
+For detailed milestones and technical specifications, see the [full v0.0.7 roadmap](ROADMAP_v0.0.7.md).
 
 ---
 
