@@ -402,14 +402,12 @@ backend:
 ```yaml
 backend:
   type: "claude_code"
-  model: "claude-sonnet-4-20250514"  # Model name (claude-sonnet-4-20250514, claude-3-5-sonnet-20241022, etc.)
+  cwd: "claude_code_workspace"  # Working directory for file operations
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   
   # Claude Code Stream specific options
   system_prompt: "You are a helpful AI assistant..."  # Custom system prompt
-  max_turns: 3                       # Maximum conversation turns (null for unlimited)
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 4096                   # Maximum response length
+  max_thinking_tokens: 4096                   # Maximum response length
   
   # Tool configuration (Claude Code's native tools)
   allowed_tools:
