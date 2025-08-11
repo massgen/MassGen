@@ -5,6 +5,63 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.5] - 2025-08-11
+
+### Added
+- **Claude Code Integration**: Complete integration with Claude Code CLI backend
+  - New `claude_code.py` backend with streaming capabilities and tool support
+  - Support for Claude Code SDK with stateful conversation management
+  - JSON tool call functionality and proper tool result handling
+  - Session management with append system prompt support
+- **New Configuration Files**: Added Claude Code specific YAML configurations
+  - `claude_code_single.yaml`: Single agent setup using Claude Code backend
+- **Test Coverage**: Added extensive test suite for Claude Code functionality
+  - `test_claude_code_orchestrator.py`: Comprehensive orchestrator testing
+  - Backend-specific test coverage for Claude Code integration
+
+### Fixed
+- **Backend Stability**: Multiple critical bug fixes across all backend systems
+  - Fixed parameter handling in `chat_completions.py`, `claude.py`, `gemini.py`, `grok.py`
+  - Resolved response processing issues in `response.py`
+  - Improved error handling and client existence validation
+- **Tool Call Processing**: Enhanced tool call parsing and execution
+  - Deduplicated tool call parsing logic across backends
+  - Fixed JSON tool call functionality and result formatting
+  - Improved builtin tool result handling in streaming contexts
+- **Message Handling**: Resolved system message processing issues
+  - Fixed SystemMessage to StreamChunk conversion
+  - Proper session info extraction from system messages
+  - Cleaned up message formatting and display consistency
+- **Frontend Display**: Fixed output formatting and presentation
+  - Improved rich terminal display formatting
+  - Better coordination UI integration and multi-turn conversation display
+  - Enhanced status message display with proper newline handling
+
+### Changed
+- **Code Architecture**: Significant refactoring and cleanup across the codebase
+  - Renamed and consolidated backend files for consistency
+  - Simplified chat agent architecture and removed redundant code
+  - Streamlined orchestrator logic with improved error handling
+- **Configuration Management**: Updated and cleaned up configuration files
+  - Removed obsolete configuration files (`gemini_cli.py`, `cli_backends_mixed.yaml`)
+  - Standardized configuration naming conventions
+  - Updated agent configuration with Claude Code support
+- **Backend Infrastructure**: Enhanced backend parameter handling
+  - Improved stateful conversation management across all backends
+  - Better integration with orchestrator for multi-agent coordination
+  - Enhanced streaming capabilities with proper chunk processing
+- **Documentation**: Updated project documentation
+  - Added Claude Code setup instructions in README
+  - Updated backend architecture documentation
+  - Improved reasoning and streaming integration notes
+
+### Technical Details
+- **Commits**: 50+ commits since version 0.0.4
+- **Files Modified**: 25+ files across backend, configuration, frontend, and test modules
+- **Major Components Updated**: Backend systems, orchestrator, frontend display, configuration management
+- **New Dependencies**: Added Claude Code SDK integration
+- **Contributors**: @qidanrui @sonichi @randombet
+
 ## [0.0.4] - 2025-08-08
 
 ### Added
