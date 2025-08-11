@@ -1,23 +1,20 @@
-# MassGen v0.0.5 Roadmap
+# MassGen v0.0.6 Roadmap
 
 ## Overview
 
-MassGen v0.0.5 focuses on **Coding Agent Integration** as the primary goal. Building on the solid foundation of existing backends and multi-turn conversation support, this version primarily aims to deliver Claude Code CLI and Gemini CLI integration, with additional enhancements as optional features.
+MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary goal. Building on the solid foundation of existing backends and multi-turn conversation support, this version primarily aims to deliver multiple Claude Code CLI agent integration and Gemini CLI integration, with additional enhancements as optional features.
 
 ## Key Milestones
 
 ### 🎯 Milestone 1: Coding Agent Integration (REQUIRED)
-**Goal**: Implement Claude Code CLI and Gemini CLI as coding agents
+**Goal**: Implement multiple Claude Code CLI coding agents and Gemini CLI coding agents
 
 #### 1.1 Core Coding Agent Implementation (REQUIRED)
-- [ ] Implement Claude Code CLI backend integration
 - [ ] Implement Gemini CLI backend integration  
 - [ ] Add coding-specific tool and workflow support
 - [ ] Create coding agent configuration templates
 
-#### 1.2 Coding Agent Testing & Validation (REQUIRED)
-- [ ] Create comprehensive test suite for coding agents
-- [ ] Validate coding workflows and tool integration
+#### 1.2 Coding Agent Testing & Validation (REQUIRED)n
 - [ ] Test multi-agent coordination with coding agents
 - [ ] Ensure backward compatibility with existing configurations
 
@@ -119,7 +116,7 @@ MassGen v0.0.5 focuses on **Coding Agent Integration** as the primary goal. Buil
 4. **Backward Compatibility**: *Mitigation*: Extensive regression testing
 5. **Production Deployment**: *Mitigation*: Clear deployment guides and monitoring tools
 
-## Post-v0.0.5 Considerations
+## Post-v0.0.6 Considerations
 
 ### Future Enhancements (v0.0.6+)
 - **Web Interface**: Browser-based conversation interface
@@ -151,7 +148,7 @@ MassGen v0.0.5 focuses on **Coding Agent Integration** as the primary goal. Buil
 4. Run existing backend tests to understand current capabilities
 
 ### For Users
-- v0.0.5 will be fully backward compatible with existing configurations
+- v0.0.6 will be fully backward compatible with existing configurations
 - New features will enhance existing functionality without breaking changes
 - All current backends (OpenAI, Claude, Gemini, Grok) will continue to work with improvements
 - Enhanced documentation and production deployment guides will be provided
