@@ -4,6 +4,8 @@ Common chat interface for MassGen agents.
 Defines the standard interface that both individual agents and the orchestrator implement,
 allowing seamless interaction regardless of whether you're talking to a single agent
 or a coordinated multi-agent system.
+
+# TODO: Consider how to best handle stateful vs stateless backends in this interface.
 """
 
 import uuid
