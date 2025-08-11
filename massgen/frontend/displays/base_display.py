@@ -57,11 +57,13 @@ class BaseDisplay(ABC):
         pass
 
     @abstractmethod
-    def show_final_answer(self, answer: str):
+    def show_final_answer(self, answer: str, vote_results=None, selected_agent=None):
         """Display the final coordinated answer.
 
         Args:
             answer: The final coordinated answer
+            vote_results: Dictionary of vote results (optional)
+            selected_agent: The selected agent (optional)
         """
         pass
 
@@ -81,3 +83,34 @@ class BaseDisplay(ABC):
     def get_orchestrator_events(self) -> List[str]:
         """Get all orchestrator events."""
         return self.orchestrator_events.copy()
+
+    def process_reasoning_content(self, chunk_type: str, content: str, source: str) -> str:
+        """Process reasoning content and add prefixes as needed.
+        
+        Args:
+            chunk_type: Type of the chunk (e.g., "reasoning_summary")
+            content: The content to process
+            source: The source agent/component
+            
+        Returns:
+            Processed content with prefix if needed
+        """
+        if chunk_type == "reasoning_summary":
+            # Track if we're in an active summary for this source
+            summary_active_key = f"_summary_active_{source}"
+            
+            if not hasattr(self, summary_active_key) or not getattr(self, summary_active_key, False):
+                # Start of new summary - add prefix and mark as active
+                setattr(self, summary_active_key, True)
+                return f"📋 [Reasoning Summary] {content}"
+            else:
+                # Continuing existing summary - no prefix
+                return content
+                
+        elif chunk_type == "reasoning_summary_done":
+            # End of reasoning summary - reset flag
+            summary_active_key = f"_summary_active_{source}"
+            if hasattr(self, summary_active_key):
+                setattr(self, summary_active_key, False)
+                
+        return content

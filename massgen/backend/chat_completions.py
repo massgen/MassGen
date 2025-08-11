@@ -5,8 +5,6 @@ Base class for backends using OpenAI Chat Completions API format.
 Handles common message processing, tool conversion, and streaming patterns.
 """
 
-import os
-import asyncio
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
 
@@ -20,12 +18,6 @@ class ChatCompletionsBackend(LLMBackend):
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
-        # Get API key from parameter, environment, or default to OpenAI
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        # Get base_url from backend_params or use OpenAI default
-        self.base_url = kwargs.get("base_url", "https://api.openai.com/v1")
-        # Store provider name for identification
-        self._provider_name = kwargs.get("provider_name", "OpenAI")
 
     def convert_tools_to_chat_completions_format(
         self, tools: List[Dict[str, Any]]
@@ -74,7 +66,6 @@ class ChatCompletionsBackend(LLMBackend):
         content = ""
         current_tool_calls = {}
         search_sources_used = 0
-        citations = []
 
         async for chunk in stream:
             try:
@@ -228,18 +219,22 @@ class ChatCompletionsBackend(LLMBackend):
             """Stream response using OpenAI-compatible Chat Completions API."""
             try:  
 
-                from cerebras.cloud.sdk import AsyncCerebras
+                import openai
 
-                client = AsyncCerebras(
-                    api_key=self.api_key,  # This is the default and can be omitted
+                # Merge constructor config with stream kwargs (stream kwargs take priority)
+                all_params = {**self.config, **kwargs}
+                
+                # Get base_url from config or use OpenAI default
+                base_url = all_params.get("base_url", "https://api.openai.com/v1")
+                
+                client = openai.AsyncOpenAI(
+                    api_key=self.api_key,
+                    base_url=base_url
                 )
-
-                # Extract parameters
-                model = kwargs.get("model", "openai/gpt-oss-120b")
-                max_tokens = kwargs.get("max_tokens", None)
-                temperature = kwargs.get("temperature", None)
-                enable_web_search = kwargs.get("enable_web_search", False)
-                enable_code_interpreter = kwargs.get("enable_code_interpreter", False)
+                
+                # Extract framework-specific parameters
+                enable_web_search = all_params.get("enable_web_search", False)
+                enable_code_interpreter = all_params.get("enable_code_interpreter", False)
 
                 # Convert tools to Chat Completions format
                 converted_tools = (
@@ -248,7 +243,6 @@ class ChatCompletionsBackend(LLMBackend):
 
                 # Chat Completions API parameters
                 api_params = {
-                    "model": model,
                     "messages": messages,
                     "stream": True,
                 }
@@ -257,11 +251,12 @@ class ChatCompletionsBackend(LLMBackend):
                 if converted_tools:
                     api_params["tools"] = converted_tools
 
-                # Add optional parameters only if they have values
-                if max_tokens is not None:
-                    api_params["max_tokens"] = max_tokens
-                if temperature is not None:
-                    api_params["temperature"] = temperature
+                # Direct passthrough of all parameters except those handled separately
+                excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id"}
+                for key, value in all_params.items():
+                    if key not in excluded_params and value is not None:
+                        api_params[key] = value
+
 
                 # Add provider tools (web search, code interpreter) if enabled
                 provider_tools = []
@@ -308,7 +303,7 @@ class ChatCompletionsBackend(LLMBackend):
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
-        return self._provider_name
+        return "ChatCompletions"
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (rough approximation)."""

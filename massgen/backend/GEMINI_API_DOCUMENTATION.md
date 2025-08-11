@@ -399,7 +399,7 @@ client.models.generate_content(...)
 **Usage Examples:**
 ```python
 # CLI usage
-python -m massgen.cli --backend gemini --model gemini-2.5-flash "Your question"
+uv run python -m massgen.cli --backend gemini --model gemini-2.5-flash "Your question"
 
 # Configuration
 AgentConfig.create_gemini_config(

@@ -16,7 +16,7 @@ Usage examples:
     python -m massgen.cli --config config.yaml
 
     # Multiple agents from config
-    python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"
+    python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"  # noqa
 """
 
 import argparse
@@ -28,7 +28,17 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
-from .utils import MODEL_MAPPINGS, get_backend_type_from_model
+from .utils import get_backend_type_from_model
+from .backend.response import ResponseBackend
+from .backend.grok import GrokBackend
+from .backend.claude import ClaudeBackend
+from .backend.gemini import GeminiBackend
+from .backend.chat_completions import ChatCompletionsBackend
+from .backend.claude_code import ClaudeCodeBackend
+from .chat_agent import SingleAgent, ConfigurableAgent
+from .agent_config import AgentConfig
+from .orchestrator import Orchestrator
+from .frontend.coordination_ui import CoordinationUI
 
 
 # Load environment variables from .env file
@@ -52,16 +62,6 @@ load_env_file()
 # Add project root to path for imports
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from massgen.backend.response import ResponseBackend
-from massgen.backend.grok import GrokBackend
-from massgen.backend.claude import ClaudeBackend
-from massgen.backend.gemini import GeminiBackend
-from massgen.backend.chat_completions import ChatCompletionsBackend
-from massgen.chat_agent import SingleAgent, ConfigurableAgent
-from massgen.agent_config import AgentConfig
-from massgen.orchestrator import Orchestrator
-from massgen.frontend.coordination_ui import CoordinationUI
 
 # Color constants for terminal output
 BRIGHT_CYAN = "\033[96m"
@@ -93,7 +93,8 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
             path = configs_path
         else:
             raise ConfigurationError(
-                f"Configuration file not found: {config_path} (also checked {configs_path})"
+                f"Configuration file not found: {config_path} "
+                f"(also checked {configs_path})"
             )
 
     try:
@@ -118,7 +119,8 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ConfigurationError(
-                "OpenAI API key not found. Set OPENAI_API_KEY or provide in config."
+                "OpenAI API key not found. Set OPENAI_API_KEY or provide "
+                "in config."
             )
         return ResponseBackend(api_key=api_key)
 
@@ -163,7 +165,21 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                         "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
                     )
         
-        return ChatCompletionsBackend(api_key=api_key, **kwargs)
+        return ChatCompletionsBackend(api_key=api_key)
+    
+    elif backend_type == "claude_code":
+        # ClaudeCodeBackend using claude-code-sdk-python
+        # Authentication handled by backend (API key or subscription)
+        
+        # Validate claude-code-sdk availability
+        try:
+            import claude_code_sdk
+        except ImportError:
+            raise ConfigurationError(
+                "claude-code-sdk not found. Install with: pip install claude-code-sdk"
+            )
+        
+        return ClaudeCodeBackend(**kwargs)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -384,8 +400,8 @@ async def run_interactive_mode(
 ):
     """Run MassGen in interactive mode with conversation history."""
     print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
-    print("="*60, flush=True)
-    
+    print("=" * 60, flush=True)
+
     # Display configuration
     print(f"📋 {BRIGHT_YELLOW}Configuration:{RESET}", flush=True)
     print(f"   Agents: {len(agents)}", flush=True)
@@ -576,7 +592,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code"],
         help="Backend type for quick setup",
     )
 

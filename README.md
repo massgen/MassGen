@@ -94,7 +94,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.5 Roadmap](#v005-roadmap)
+- [v0.0.6 Roadmap](#v006-roadmap)
 </details>
 
 <details open>
@@ -166,11 +166,23 @@ This collaborative approach ensures that the final output leverages collective i
 
 ### 1. 📥 Installation
 
+**Core Installation:**
 ```bash
 git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 pip install uv
 uv venv
+```
+
+**Optional CLI Tools** (for enhanced capabilities):
+```bash
+# Claude Code CLI - Advanced coding assistant
+npm install -g @anthropic-ai/claude-code
+
+# Gemini CLI - Multimodal AI agent  
+npm install -g @google/gemini-cli
+# OR
+brew install gemini-cli
 ```
 
 ### 2. 🔐 API Configuration
@@ -201,46 +213,53 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-<p align="center">
-  <b>MassGen now supports GPT-5 series models & GPT-OSS models! 🚀</b>
-</p>
-
-The system currently supports major model providers with advanced reasoning capabilities: **Anthropic Claude**, **Cerebras**, **Google Gemini**, **OpenAI**, and **xAI Grok**. GPT-OSS models can be accessed through the **Cerebras** backend. 
+The system currently supports multiple model providers with advanced capabilities: **Anthropic Claude**, **Claude Code**, **Google Gemini**, **OpenAI**, **xAI Grok**. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
 
-MassGen agents can leverage various tools to enhance their problem-solving capabilities. `Claude`, `Gemini`, and `OpenAI` models support built-in web search and code execution. `Grok` supports web search as well, but it does not currently offer native code execution at the model level.
+MassGen agents can leverage various tools to enhance their problem-solving capabilities. Both API-based and CLI-based backends support different tool capabilities.
 
-**Supported Built-in Tools by Models:**
+**Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | Example Models|
-|---------|:-----------:|:--------------:|:----------:|
-| **Claude** | ✅ | ✅ | Claude-4-Opus |
-| **Gemini** | ✅ | ✅ | Gemini-2.5 |
-| **Grok** | ✅ | ❌ | Grok-4 |
-| **OpenAI** | ✅ | ✅ | GPT-5 |
-| **Others (Cerebras...)** | ❌ | ❌ | GPT-OSS-120B |
+| Backend | Live Search | Code Execution | File Operations | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------------|
+| **Claude API** | ✅ | ✅ | ❌ | Web search, code interpreter |
+| **Claude Code** | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools** |
+| **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
+| **Grok API** | ✅ | ❌ | ❌ | Web search only |
+| **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
 
 ### 4. 🏃 Run MassGen
 
 #### Quick Test with A Single Model
 
+**API-based backends:**
 ```bash
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "Which AI won IMO in 2025?"
+```
+All supported models can be found [here](massgen/utils.py).
+
+**CLI-based backends**:
+```bash
+# Claude Code - Native Claude Code SDK with comprehensive dev tools
+uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku for claude code?"
+uv run python -m massgen.cli --backend claude-code "Debug this Python script"
 ```
 
-All models that can be directly accessed using the `--model` parameter can be found [here](massgen/utils.py). 
-
-Other models can be used with the `--backend` parameter, the `--model` parameter and optionally the `--base-url` parameter (e.g GPT-OSS-120B).
+<!-- # Gemini CLI - Multimodal reasoning with MCP integration  
+uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro "Analyze this code and suggest improvements" -->
+`--backend` is required for this type of backends.
 
 #### Multiple Agents from Config
 ```bash
 # Use configuration file
 uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
+
+# Mixed API and CLI backends
+uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
@@ -249,10 +268,9 @@ All available quick configuration files can be found [here](massgen/configs).
 
 | Parameter          | Description |
 |-------------------|-------------|
-| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings.|
-| `--backend`        | Backend type for quick setup without a config file (`chatcompletion`, `claude`, `gemini`, `grok` or `openai`).|
-| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-mini`). See all [supported models without needing to specify backend](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
-| `--base_url`       | Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions) |
+| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`). Optional because we can infer backend type through model.|
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
@@ -261,6 +279,7 @@ All available quick configuration files can be found [here](massgen/configs).
 #### Configuration File Format
 
 MassGen supports YAML configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
+MassGen supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
 
@@ -270,7 +289,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" #Type of backend 
+    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -284,7 +303,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" #Type of backend
+      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -306,7 +325,7 @@ Detailed parameters for each agent's backend can be specified using the followin
 backend:
   type: "chatcompletion"
   model: "gpt-oss-120b"  # Model name
-  base_url: "https://api.cerebras.ai/v1/chat/completions" # Base URL for API endpoint
+  base_url: "https://api.cerebras.ai/v1" # Base URL for API endpoint
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
   max_tokens: 2500                   # Maximum response length
@@ -347,10 +366,12 @@ backend:
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
   max_tokens: 2500                   # Maximum response length
-  enable_web_search: true            # Web search capability
-  return_citations: true             # Include search result citations
-  max_search_results: 10             # Maximum search results to use 
-  search_mode: "auto"                # Search strategy: "auto", "fast", "thorough" 
+  enable_web_search: true            # Web search capability (uses default: mode="auto", return_citations=true)
+  # OR manually specify search parameters via extra_body (conflicts with enable_web_search):
+  # extra_body:
+  #   search_parameters:
+  #     mode: "auto"                 # Search strategy (see Grok API docs for valid values)
+  #     return_citations: true       # Include search result citations 
 ```
 
 #### OpenAI
@@ -365,9 +386,41 @@ backend:
   text: 
     verbosity: "medium"              # Response detail level (low/medium/high, only supported in GPT-5 series models)
   reasoning:                         
-    effort: "high"                   # Reasoning depth (low/medium/high, only supported in GPT-5 series models and GPT o-series models)
-  enable_web_search: true            # Web search capability. Note, reasoning and web_search are mutually exclusive and can't be turned on at the same time
-  enable_code_interpreter: true      # Code interpreter capability
+    effort: "medium"                 # Reasoning depth (low/medium/high, only supported in GPT-5 series models and GPT o-series models)
+    summary: "auto"                  # Automatic reasoning summaries (optional)
+  enable_web_search: true            # Web search capability - can be used with reasoning
+  enable_code_interpreter: true      # Code interpreter capability - can be used with reasoning
+```
+
+#### Claude Code
+
+```yaml
+backend:
+  type: "claude_code"
+  cwd: "claude_code_workspace"  # Working directory for file operations
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  
+  # Claude Code specific options
+  append_system_prompt: ""  # Custom system prompt to append
+  max_thinking_tokens: 4096                   # Maximum thinking tokens
+  
+  # Tool configuration (Claude Code's native tools)
+  allowed_tools:
+    - "Read"           # Read files from filesystem
+    - "Write"          # Write files to filesystem  
+    - "Edit"           # Edit existing files
+    - "MultiEdit"      # Multiple edits in one operation
+    - "Bash"           # Execute shell commands
+    - "Grep"           # Search within files
+    - "Glob"           # Find files by pattern
+    - "LS"             # List directory contents
+    - "WebSearch"      # Search the web
+    - "WebFetch"       # Fetch web content
+    - "TodoWrite"      # Task management
+    - "NotebookEdit"   # Jupyter notebook editing
+    # MCP tools (if available)
+    - "mcp__ide__getDiagnostics"
+    - "mcp__ide__executeCode"
 ```
 
 **UI Configuration:**
@@ -385,17 +438,6 @@ ui:
   - `"terminal"`: Standard terminal display with basic formatting and sequential output
   - `"simple"`: Plain text output without any formatting or special display features
 - `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
-
-**Advanced Parameters:**
-```yaml
-# Global backend parameters
-backend_params:
-  temperature: 0.7
-  max_tokens: 2000
-  enable_web_search: true  # Web search capability (all backends)
-  enable_code_interpreter: true  # OpenAI only
-  enable_code_execution: true    # Gemini/Claude only
-```
 
 #### Interactive Multi-Turn Mode
 
@@ -477,9 +519,21 @@ uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "giv
 uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
 ```
 
-### 3. Research
+### 3. 🧠 Research
 ```bash
 uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
+```
+
+### 4. 💻 Development & Coding Tasks
+```bash
+# Single agent with comprehensive development tools
+uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Create a Flask web app with user authentication and database integration"
+
+# Multi-agent development team collaboration  
+uv run python -m massgen.cli --config massgen/configs/claude_code_flash2.5_gptoss.yaml "Debug and optimize this React application, then write comprehensive tests"
+
+# Quick coding task with claude_code backend
+uv run python -m massgen.cli --backend claude_code "Refactor this Python code to use async/await and add error handling"
 ```
 
 ---
@@ -500,15 +554,15 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to help us achieve these goals.
 
-### v0.0.5 Roadmap
+### v0.0.6 Roadmap
 
-Version 0.0.5 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
 
-- **Coding Agent Integration** (Required): Seamless integration of Claude Code CLI and Gemini CLI with coding-specific tools and workflows
-- **Enhanced Backend Features** (Optional): Improved error handling, health monitoring, and support for additional model providers
+- **Coding Agent Integration** (Required): Claude Code SDK ✅ completed, Gemini CLI ⏳ in progress with coding-specific tools and workflows
+- **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.5 roadmap](ROADMAP_v0.0.5.md).
+For detailed milestones and technical specifications, see the [full v0.0.6 roadmap](ROADMAP_v0.0.6.md).
 
 ---
 

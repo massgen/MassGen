@@ -45,11 +45,11 @@ class GrokBackend(ChatCompletionsBackend):
             # Use OpenAI client with xAI base URL
             client = openai.AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
-            # Extract parameters
-            model = kwargs.get("model", "grok-3-mini")
-            max_tokens = kwargs.get("max_tokens", None)
-            temperature = kwargs.get("temperature", None)
-            enable_web_search = kwargs.get("enable_web_search", False)
+            # Merge constructor config with stream kwargs (stream kwargs take priority)
+            all_params = {**self.config, **kwargs}
+            
+            # Extract framework-specific parameters
+            enable_web_search = all_params.get("enable_web_search", False)
 
             # Convert tools to Chat Completions format
             converted_tools = (
@@ -58,33 +58,34 @@ class GrokBackend(ChatCompletionsBackend):
 
             # Chat Completions API parameters
             api_params = {
-                "model": model,
                 "messages": grok_messages,
                 "tools": converted_tools,
-                "max_tokens": max_tokens,
-                "temperature": temperature,
                 "stream": True,
             }
 
+            # Direct passthrough of all parameters except those handled separately
+            excluded_params = {"enable_web_search", "agent_id", "session_id"}
+            for key, value in all_params.items():
+                if key not in excluded_params and value is not None:
+                    api_params[key] = value
+
+
             # Add Live Search parameters if enabled (Grok-specific)
             if enable_web_search:
-                search_params_kwargs = {"mode": "auto", "return_citations": True}
-
-                # Allow override of search parameters from backend params
-                max_results = kwargs.get("max_search_results")
-                if max_results is not None:
-                    search_params_kwargs["max_search_results"] = max_results
-
-                search_mode = kwargs.get("search_mode")
-                if search_mode is not None:
-                    search_params_kwargs["mode"] = search_mode
-
-                return_citations = kwargs.get("return_citations")
-                if return_citations is not None:
-                    search_params_kwargs["return_citations"] = return_citations
-
-                # Use extra_body to pass search_parameters to xAI API
-                api_params["extra_body"] = {"search_parameters": search_params_kwargs}
+                # Check for conflict with manually specified search_parameters
+                existing_extra = api_params.get("extra_body", {})
+                if isinstance(existing_extra, dict) and "search_parameters" in existing_extra:
+                    yield StreamChunk(
+                        type="error",
+                        error="Conflict: Cannot use both 'enable_web_search: true' and manual 'extra_body.search_parameters'. Use one or the other."
+                    )
+                    return
+                
+                # Merge search_parameters into existing extra_body
+                search_params = {"mode": "auto", "return_citations": True}
+                merged_extra = existing_extra.copy()
+                merged_extra["search_parameters"] = search_params
+                api_params["extra_body"] = merged_extra
 
             # Create stream
             stream = await client.chat.completions.create(**api_params)

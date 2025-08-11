@@ -1,5 +1,5 @@
 # Example Gemini configuration for MassGen
-# Usage: python -m massgen.cli --config example_gemini_config.yaml "Your question here"
+# Usage: uv run python -m massgen.cli --config example_gemini_config.yaml "Your question here"
 
 # Single agent configuration
 agent:

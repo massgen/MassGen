@@ -1,5 +1,5 @@
 # MassGen Three Agent Configuration
-# GPT-5, GPT-5-mini, and GPT-5-nano with builtin tools enabled
+# GPT-5, GPT-5-mini, and GPT-5-nano with reasoning, web search, and code execution enabled
 
 agents:
   - id: "gpt-5"
@@ -7,11 +7,12 @@ agents:
       type: "openai"
       model: "gpt-5"
       text: 
-        verbosity: "low"
-      # reasoning:
-      #   effort: "minimal"
-      enable_web_search: true # reasoning and enable_web_search cannot be used synchronically
-      # enable_code_execution: true
+        verbosity: "medium"
+      reasoning:
+        effort: "high"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
   - id: "gpt-5-mini"
@@ -19,11 +20,12 @@ agents:
       type: "openai"
       model: "gpt-5-mini"
       text: 
-        verbosity: "low"
-      # reasoning:
-      #   effort: "minimal"
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
       enable_web_search: true
-      #enable_code_interpreter: true
+      enable_code_interpreter: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
   - id: "gpt-5-nano"
@@ -31,11 +33,12 @@ agents:
       type: "openai"
       model: "gpt-5-nano"
       text: 
-        verbosity: "low"
-      # reasoning:
-      #   effort: "minimal"
+        verbosity: "medium"
+      reasoning:
+        effort: "low"
+        summary: "auto"
       enable_web_search: true
-      #enable_code_interpreter: true
+      enable_code_interpreter: true
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
 ui:

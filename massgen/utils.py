@@ -61,7 +61,7 @@ MODEL_MAPPINGS = {
         "grok-3-mini",
         "grok-3",
         "grok-4",
-    ],
+    ]
 }
 
 

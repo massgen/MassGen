@@ -1,6 +1,9 @@
 """
 Agent configuration for MassGen framework following input_cases_reference.md
 Simplified configuration focused on the proven binary decision approach.
+
+TODO: This file is outdated - check claude_code config and
+deprecated patterns. Update to reflect current backend architecture.
 """
 
 from dataclasses import dataclass, field
@@ -177,6 +180,70 @@ class AgentConfig:
 
         return cls(backend_params=backend_params)
 
+    @classmethod
+    def create_claude_code_config(
+        cls,
+        model: str = "claude-sonnet-4-20250514",
+        system_prompt: Optional[str] = None,
+        allowed_tools: Optional[list] = None,  # Legacy support
+        disallowed_tools: Optional[list] = None,  # Preferred approach
+        max_thinking_tokens: int = 8000,
+        cwd: Optional[str] = None,
+        **kwargs,
+    ) -> "AgentConfig":
+        """Create Claude Code Stream configuration using claude-code-sdk.
+
+        This backend provides native integration with ALL Claude Code built-in tools
+        by default, with security enforced through disallowed_tools. This gives maximum
+        power while maintaining safety.
+
+        Args:
+            model: Claude model name (default: claude-sonnet-4-20250514)
+            system_prompt: Custom system prompt for the agent
+            allowed_tools: [LEGACY] List of allowed tools (use disallowed_tools instead)
+            disallowed_tools: List of dangerous operations to block 
+                            (default: ["Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)", "Bash(chown*)"])
+            max_thinking_tokens: Maximum tokens for internal thinking (default: 8000)
+            cwd: Current working directory for file operations
+            **kwargs: Additional backend parameters
+
+        Examples:
+            # Maximum power configuration (recommended)
+            config = AgentConfig.create_claude_code_config()
+            
+            # Custom security restrictions
+            config = AgentConfig.create_claude_code_config(
+                disallowed_tools=["Bash(rm*)", "Bash(sudo*)", "WebSearch"]
+            )
+
+            # Development task with custom directory
+            config = AgentConfig.create_claude_code_config(
+                cwd="/path/to/project",
+                system_prompt="You are an expert developer assistant."
+            )
+
+            # Legacy allowed_tools approach (not recommended)
+            config = AgentConfig.create_claude_code_config(
+                allowed_tools=["Read", "Write", "Edit", "Bash"]
+            )
+        """
+        backend_params = {"model": model, **kwargs}
+
+        # Claude Code Stream specific parameters
+        if system_prompt:
+            backend_params["system_prompt"] = system_prompt
+        if allowed_tools:
+            # Legacy support - warn that disallowed_tools is preferred
+            backend_params["allowed_tools"] = allowed_tools
+        if disallowed_tools:
+            backend_params["disallowed_tools"] = disallowed_tools
+        if max_thinking_tokens != 8000:  # Only set if different from default
+            backend_params["max_thinking_tokens"] = max_thinking_tokens
+        if cwd:
+            backend_params["cwd"] = cwd
+
+        return cls(backend_params=backend_params)
+
     # =============================================================================
     # AGENT CUSTOMIZATION
     # =============================================================================
@@ -219,6 +286,9 @@ class AgentConfig:
             return cls.create_claude_config(model, enable_web_search=True)
         elif backend == "gemini":
             return cls.create_gemini_config(model, enable_web_search=True)
+        elif backend == "claude_code":
+            # Maximum power research config - all tools available
+            return cls.create_claude_code_config(model)
         else:
             raise ValueError(
                 f"Research configuration not available for backend: {backend}"
@@ -240,6 +310,9 @@ class AgentConfig:
             return cls.create_claude_config(model, enable_code_execution=True)
         elif backend == "gemini":
             return cls.create_gemini_config(model, enable_code_execution=True)
+        elif backend == "claude_code":
+            # Maximum power computational config - all tools available
+            return cls.create_claude_code_config(model)
         else:
             raise ValueError(
                 f"Computational configuration not available for backend: {backend}"
@@ -263,6 +336,9 @@ class AgentConfig:
             return cls.create_grok_config(model)
         elif backend == "gemini":
             return cls.create_gemini_config(model)
+        elif backend == "claude_code":
+            # Maximum power analytical config - all tools available
+            return cls.create_claude_code_config(model)
         else:
             raise ValueError(
                 f"Analytical configuration not available for backend: {backend}"
@@ -443,7 +519,7 @@ class AgentConfig:
         )
 
     def handle_case4_error_recovery(
-        self, existing_messages: list, clarification: str = None
+        self, existing_messages: list, clarification: Optional[str] = None
     ) -> Dict[str, Any]:
         """Handle Case 4: Error recovery after tool failure.
 
