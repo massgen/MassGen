@@ -122,3 +122,5 @@ def reset_conversation(self):
 3. Implement proper reset mechanisms for both types
 4. Add tests for both stateful and stateless scenarios
 5. Update documentation for backend developers
+
+TODO: Clean up the design - StreamChunk has grown complex with many optional fields for different reasoning types and provider-specific features

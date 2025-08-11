@@ -9,6 +9,7 @@ Supports multiple LLM providers with standardized StreamChunk interface:
 - Gemini (structured output for coordination)
 - Claude Code (claude-code-sdk streaming integration)
 TODO - Gemini CLI (command-line interface integration)
+TODO - Clean up StreamChunk design (too many optional fields for reasoning/provider features)
 """
 
 from .base import LLMBackend, StreamChunk, TokenUsage
