@@ -40,5 +40,4 @@ agent:
 # Display configuration
 display:
   type: "rich_terminal"
-  show_agent_details: true
-  show_token_usage: true
+  logging_enabled: true

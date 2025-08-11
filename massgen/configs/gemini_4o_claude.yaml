@@ -1,5 +1,5 @@
 # MassGen Three Agent Configuration
-# Gemini-2.5-flash, GPT-4o-mini, and Grok-3-mini with builtin tools enabled
+# Gemini-2.5-flash, GPT-4o, and Claude-3.5-Haiku with builtin tools enabled
 
 agents:
   - id: "gemini2.5flash"
@@ -7,7 +7,7 @@ agents:
       type: "gemini"
       model: "gemini-2.5-flash"
       enable_web_search: true
-      # enable_code_execution: true
+      # enable_code_execution: true  # Disabled by default - can preempt web search, resulting in weaker search capability
     # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
   - id: "gpt-4o"

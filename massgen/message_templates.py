@@ -180,7 +180,15 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
     # =============================================================================
 
     def get_new_answer_tool(self) -> Dict[str, Any]:
-        """Get new_answer tool definition."""
+        """Get new_answer tool definition.
+        
+        TODO: Consider extending with optional context parameters for stateful backends:
+        - cwd: Working directory for Claude Code sessions
+        - session_id: Backend session identifier for continuity
+        - model: Model used to generate the answer
+        - tools_used: List of tools actually utilized
+        This would enable better context preservation in multi-iteration workflows.
+        """
         if "new_answer_tool" in self._template_overrides:
             return self._template_overrides["new_answer_tool"]
 

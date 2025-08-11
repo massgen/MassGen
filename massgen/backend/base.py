@@ -13,13 +13,10 @@ from dataclasses import dataclass
 class StreamChunk:
     """Standardized chunk format for streaming responses."""
 
-    type: str  # "content", "tool_calls", "builtin_tool_results", "complete_message", "complete_response", "done", "error", "agent_status", "reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done"
+    type: str  # "content", "tool_calls", "complete_message", "complete_response", "done", "error", "agent_status", "reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done", "backend_status"
     content: Optional[str] = None
     tool_calls: Optional[List[Dict[str, Any]]] = (
         None  # User-defined function tools (need execution)
-    )
-    builtin_tool_results: Optional[List[Dict[str, Any]]] = (
-        None  # Provider builtin tools (already executed)
     )
     complete_message: Optional[Dict[str, Any]] = None  # Complete assistant message
     response: Optional[Dict[str, Any]] = None  # Raw Responses API response
@@ -187,3 +184,33 @@ class LLMBackend(ABC):
         """
         # Default implementation assumes Chat Completions format
         return tool_result_message.get("content", "")
+
+    def is_stateful(self) -> bool:
+        """
+        Check if this backend maintains conversation state across requests.
+
+        Returns:
+            True if backend is stateful (maintains context), False if stateless
+
+        Stateless backends require full conversation history with each request.
+        Stateful backends maintain context internally and only need new messages.
+        """
+        return False
+
+    def clear_history(self) -> None:
+        """
+        Clear conversation history while maintaining session.
+        
+        For stateless backends, this is a no-op.
+        For stateful backends, this clears conversation history but keeps session.
+        """
+        pass  # Default implementation for stateless backends
+
+    def reset_state(self) -> None:
+        """
+        Reset backend state for stateful backends.
+        
+        For stateless backends, this is a no-op.
+        For stateful backends, this clears conversation history and session state.
+        """
+        pass  # Default implementation for stateless backends

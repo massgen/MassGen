@@ -588,7 +588,6 @@ class ChatCompletionsBackend(LLMBackend):
                         "query": {
                             "type": "string",
                             "description": "The search query to send to the web"
-           
                         }
                         },
                         "required": ["query"]

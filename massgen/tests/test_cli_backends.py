@@ -4,6 +4,9 @@ Test script for CLI backends - Claude Code CLI and Gemini CLI integration.
 
 This script tests the basic functionality of CLI backends without requiring
 the actual CLI tools to be installed (mocked for testing).
+
+TODO: This file is outdated - ClaudeCodeCLIBackend was removed, only SDK-based ClaudeCodeBackend remains.
+Update tests to reflect current backend architecture.
 """
 
 import asyncio
@@ -16,7 +19,7 @@ project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 try:
-    from massgen.backend.claude_code_cli import ClaudeCodeCLIBackend
+    # from massgen.backend.claude_code_cli import ClaudeCodeCLIBackend  # File removed
     from massgen.backend.gemini_cli import GeminiCLIBackend
     from massgen.backend.cli_base import CLIBackend
 except ImportError as e:
@@ -79,35 +82,11 @@ async def test_cli_base_functionality():
 
 
 def test_claude_code_cli_command_building():
-    """Test Claude Code CLI command building (without executing)."""
-    print("🧪 Testing Claude Code CLI command building...")
+    """Test Claude Code CLI command building (without executing) - SKIPPED: File removed."""
+    print("🧪 Testing Claude Code CLI command building... SKIPPED (file removed)")
+    print("✅ Claude Code CLI command building test skipped")
     
-    # Mock the shutil.which check
-    import massgen.backend.claude_code_cli
-    original_which = massgen.backend.claude_code_cli.shutil.which
-    massgen.backend.claude_code_cli.shutil.which = lambda x: "/usr/bin/claude"
-    
-    try:
-        backend = ClaudeCodeCLIBackend(model="sonnet")
-        
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": "What is 2+2?"}
-        ]
-        tools = [{"function": {"name": "test_tool", "description": "A test tool"}}]
-        
-        command = backend._build_command(messages, tools)
-        
-        assert "claude" in command[0], "Should use claude CLI"
-        assert "-p" in command, "Should use print mode"
-        assert "--output-format" in command, "Should request JSON output"
-        assert "json" in command, "Should specify JSON format"
-        
-        print("✅ Claude Code CLI command building test passed")
-        
-    finally:
-        # Restore original function
-        massgen.backend.claude_code_cli.shutil.which = original_which
+    # NOTE: ClaudeCodeCLIBackend was removed, only ClaudeCodeBackend (SDK-based) remains
 
 
 def test_gemini_cli_command_building():
@@ -223,9 +202,8 @@ async def main():
         print("  • Gemini CLI: npm install -g @google/gemini-cli")
         print()
         print("Usage examples:")
-        print("  # Claude Code CLI")
-        print("  uv run python -m massgen.cli --backend claude-code-cli --model sonnet 'What is 2+2?'")
-        print("  uv run python -m massgen.cli --config massgen/configs/claude_code_cli.yaml 'Debug this code'")
+        print("  # Claude Code (SDK-based)")
+        print("  uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 'What is 2+2?'")
         print()
         print("  # Gemini CLI")
         print("  uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro 'Explain quantum computing'")

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Real test of ClaudeCodeStreamBackend with actual Claude Code API calls.
+Real test of ClaudeCodeBackend with actual Claude Code API calls.
 This test outputs the actual stream chunks to verify functionality.
 """
 
 import asyncio
 import os
-from massgen.backend.claude_code_cli_stream import ClaudeCodeStreamBackend
+from massgen.backend.claude_code import ClaudeCodeBackend
 
 
 async def test_real_stream_with_tools():
@@ -18,11 +18,11 @@ async def test_real_stream_with_tools():
         print("Set your API key: export ANTHROPIC_API_KEY=your-key-here")
         return
     
-    print("🚀 Testing ClaudeCodeStreamBackend with real Claude Code API")
+    print("🚀 Testing ClaudeCodeBackend with real Claude Code API")
     print("=" * 60)
     
     # Initialize backend
-    backend = ClaudeCodeStreamBackend()
+    backend = ClaudeCodeBackend()
     print(f"✅ Backend initialized: {backend.get_provider_name()}")
     print(f"📊 Supported tools: {len(backend.get_supported_builtin_tools())} tools")
     
@@ -146,7 +146,7 @@ async def test_with_workflow_tools():
     print("\n" + "=" * 60)
     print("🛠️  Testing with workflow tools...")
     
-    backend = ClaudeCodeStreamBackend()
+    backend = ClaudeCodeBackend()
     
     # Define workflow tools
     workflow_tools = [
@@ -245,7 +245,7 @@ async def test_with_workflow_tools():
 
 async def main():
     """Run all real tests."""
-    print("🧪 ClaudeCodeStreamBackend Real API Tests")
+    print("🧪 ClaudeCodeBackend Real API Tests")
     print("=" * 60)
     
     await test_real_stream_with_tools()

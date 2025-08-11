@@ -94,7 +94,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.5 Roadmap](#v005-roadmap)
+- [v0.0.6 Roadmap](#v006-roadmap)
 </details>
 
 <details open>
@@ -213,7 +213,7 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-The system currently supports multiple model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**, and **CLI interfaces** for Claude Code and Gemini CLI. 
+The system currently supports multiple model providers with advanced capabilities: **Anthropic Claude**, **Claude Code**, **Google Gemini**, **OpenAI**, **xAI Grok**. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
@@ -225,12 +225,10 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | Backend | Live Search | Code Execution | File Operations | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------------|
 | **Claude API** | ✅ | ✅ | ❌ | Web search, code interpreter |
-| **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
-| **Grok API** | ✅ | ❌ | ❌ | Web search only |
+| **Claude Code** | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools** |
 | **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
-| **Claude Code CLI** | ✅ | ✅ | ✅ | **Advanced coding, debugging, file ops** |
-| **Claude Code Stream** | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools** |
-| **Gemini CLI** | ✅ | ✅ | ✅ | **Multimodal, reasoning, MCP integration** |
+| **Grok API** | ✅ | ❌ | ❌ | Web search only |
+| **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
 
 ### 4. 🏃 Run MassGen
 
@@ -242,23 +240,18 @@ uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?
 uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 ```
-
-**Advanced backends**:
-```bash
-# Claude Code Stream - Native Claude Code SDK with comprehensive dev tools
-uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Can I use claude-3-5-haiku for claude code?"
-```
-
-**CLI-based backends** (requires CLI tools installed):
-```bash
-# Claude Code CLI - Advanced coding and file operations
-uv run python -m massgen.cli --backend claude-code-cli --model sonnet "Debug this Python script"
-
-# Gemini CLI - Multimodal reasoning with MCP integration  
-uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro "Analyze this code and suggest improvements"
-```
-
 All supported models can be found [here](massgen/utils.py).
+
+**CLI-based backends**:
+```bash
+# Claude Code - Native Claude Code SDK with comprehensive dev tools
+uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku for claude code?"
+uv run python -m massgen.cli --backend claude-code "Debug this Python script"
+```
+
+<!-- # Gemini CLI - Multimodal reasoning with MCP integration  
+uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro "Analyze this code and suggest improvements" -->
+`--backend` is required for this type of backends.
 
 #### Multiple Agents from Config
 ```bash
@@ -266,7 +259,7 @@ All supported models can be found [here](massgen/utils.py).
 uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
 
 # Mixed API and CLI backends
-uv run python -m massgen.cli --config cli_backends_mixed.yaml "Complex coding task requiring multiple perspectives"
+uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
@@ -276,8 +269,8 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `claude_code_stream`, `gemini-cli`). Optional because we can infer backend type through model.|
-| `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`). Optional because we can infer backend type through model.|
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
@@ -296,7 +289,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code_stream" #Type of backend 
+    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -310,7 +303,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code_stream" #Type of backend
+      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -399,31 +392,17 @@ backend:
   enable_code_interpreter: true      # Code interpreter capability - can be used with reasoning
 ```
 
-#### Claude Code CLI
+#### Claude Code
 
 ```yaml
 backend:
-  type: "claude-code-cli"
-  model: "TODO"                    # Options: TODO
-  api_key: "<optional_key>"          # API key (optional if logged in via CLI)
-  max_turns: 5                       # Maximum interaction turns
-  verbose: false                     # Enable verbose CLI output
-  timeout: 300                       # Command timeout in seconds
-```
-
-#### Claude Code Stream
-
-```yaml
-backend:
-  type: "claude_code_stream"
-  model: "claude-sonnet-4-20250514"  # Model name (claude-sonnet-4-20250514, claude-3-5-sonnet-20241022, etc.)
+  type: "claude_code"
+  cwd: "claude_code_workspace"  # Working directory for file operations
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   
-  # Claude Code Stream specific options
-  system_prompt: "You are a helpful AI assistant..."  # Custom system prompt
-  max_turns: 3                       # Maximum conversation turns (null for unlimited)
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 4096                   # Maximum response length
+  # Claude Code specific options
+  append_system_prompt: ""  # Custom system prompt to append
+  max_thinking_tokens: 4096                   # Maximum thinking tokens
   
   # Tool configuration (Claude Code's native tools)
   allowed_tools:
@@ -442,17 +421,6 @@ backend:
     # MCP tools (if available)
     - "mcp__ide__getDiagnostics"
     - "mcp__ide__executeCode"
-```
-
-#### Gemini CLI
-
-```yaml
-backend:
-  type: "gemini-cli"
-  model: "gemini-2.5-pro"            # Options: gemini-2.5-pro, gemini-2.5-flash
-  api_key: "<optional_key>"          # API key (optional if logged in via CLI)
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  timeout: 300                       # Command timeout in seconds
 ```
 
 **UI Configuration:**
@@ -559,13 +527,13 @@ uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How
 ### 4. 💻 Development & Coding Tasks
 ```bash
 # Single agent with comprehensive development tools
-uv run python -m massgen.cli --config massgen/configs/claude_code_stream_single.yaml "Create a Flask web app with user authentication and database integration"
+uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Create a Flask web app with user authentication and database integration"
 
 # Multi-agent development team collaboration  
-uv run python -m massgen.cli --config massgen/configs/claude_code_stream_team.yaml "Debug and optimize this React application, then write comprehensive tests"
+uv run python -m massgen.cli --config massgen/configs/claude_code_flash2.5_gptoss.yaml "Debug and optimize this React application, then write comprehensive tests"
 
-# Quick coding task with claude_code_stream backend
-uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Refactor this Python code to use async/await and add error handling"
+# Quick coding task with claude_code backend
+uv run python -m massgen.cli --backend claude_code "Refactor this Python code to use async/await and add error handling"
 ```
 
 ---
@@ -586,15 +554,15 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to help us achieve these goals.
 
-### v0.0.5 Roadmap
+### v0.0.6 Roadmap
 
-Version 0.0.5 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
 
-- **Coding Agent Integration** (Required): Seamless integration of Claude Code CLI and Gemini CLI with coding-specific tools and workflows
-- **Enhanced Backend Features** (Optional): Improved error handling, health monitoring, and support for additional model providers
+- **Coding Agent Integration** (Required): Claude Code SDK ✅ completed, Gemini CLI ⏳ in progress with coding-specific tools and workflows
+- **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.5 roadmap](ROADMAP_v0.0.5.md).
+For detailed milestones and technical specifications, see the [full v0.0.6 roadmap](ROADMAP_v0.0.6.md).
 
 ---
 

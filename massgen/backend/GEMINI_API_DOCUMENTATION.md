@@ -355,7 +355,6 @@ client.models.generate_content(...)
 - Full flexibility but comes with major limitations
 
 **🚨 Live API Restrictions (NOT Recommended for MassGen):**
-**🚨 Live API Restrictions (NOT Recommended for MassGen):**
 - **Status**: Preview/experimental - unstable for production
 - **Session Limits**: 3 free, 50-1000 paid (too restrictive)
 - **Real-time focus**: WebSocket-based, designed for audio/video
@@ -363,7 +362,6 @@ client.models.generate_content(...)
 - **Availability**: Not guaranteed, capacity varies
 - **Complexity**: Requires WebSocket implementation
 
-### Recommendation for MassGen Backend
 ### Recommendation for MassGen Backend
 **✅ Use Regular API with `code_execution + grounding`:**
 - Stable, production-ready
@@ -377,7 +375,6 @@ client.models.generate_content(...)
 - Preview status unsuitable for production
 - Unnecessary complexity for text-based coordination
 
-## Implementation Status for MassGen
 ## Implementation Status for MassGen
 
 **✅ COMPLETED**: GeminiBackend class implemented with:
