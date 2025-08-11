@@ -3,6 +3,9 @@ MassGen Orchestrator Agent - Chat interface that manages sub-agents internally.
 
 The orchestrator presents a unified chat interface to users while coordinating
 multiple sub-agents using the proven binary decision framework behind the scenes.
+
+TODOs:
+- Move CLI's coordinate_with_context logic to orchestrator and simplify CLI to just use orchestrator
 """
 
 import asyncio
