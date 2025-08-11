@@ -563,8 +563,8 @@ We welcome community contributions to help us achieve these goals.
 
 Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
 
-- **Coding Agent Integration** (Required): Seamless integration of Claude Code CLI and Gemini CLI with coding-specific tools and workflows
-- **Enhanced Backend Features** (Optional): Improved error handling, health monitoring, and support for additional model providers
+- **Coding Agent Integration** (Required): Claude Code SDK ✅ completed, Gemini CLI ⏳ in progress with coding-specific tools and workflows
+- **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
 For detailed milestones and technical specifications, see the [full v0.0.6 roadmap](ROADMAP_v0.0.6.md).
