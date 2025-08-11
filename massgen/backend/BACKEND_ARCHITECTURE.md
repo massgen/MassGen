@@ -20,6 +20,7 @@ The MassGen backend system supports two distinct architectural patterns for AI m
 **Implementation Pattern:**
 ```python
 # Each request includes full conversation history
+# NOTE: Documentation uses .generate() for clarity, actual code uses .stream_with_tools()
 response = backend.generate(
     messages=[
         {"role": "user", "content": "Previous context..."},
@@ -43,6 +44,7 @@ response = backend.generate(
 **Implementation Pattern:**
 ```python
 # Only current request needed, context maintained internally
+# NOTE: Documentation uses .generate() for clarity, actual code uses .stream_with_tools()
 response = backend.generate(message="Current request...")
 ```
 
@@ -76,9 +78,11 @@ Adjust message sending based on backend type:
 def send_message(self, message: str):
     if self.backend.is_stateful:
         # Send only current message
+        # NOTE: Documentation uses .generate() for clarity, actual code uses .stream_with_tools()
         response = self.backend.generate(message)
     else:
         # Send full conversation history
+        # NOTE: Documentation uses .generate() for clarity, actual code uses .stream_with_tools()
         response = self.backend.generate(self.get_full_context())
 ```
 
@@ -86,6 +90,7 @@ def send_message(self, message: str):
 Handle resets differently for each backend type:
 
 ```python
+# NOTE: Methods shown are conceptual examples, not current implementation
 def reset_conversation(self):
     if self.backend.is_stateful:
         # Clear backend's internal state
