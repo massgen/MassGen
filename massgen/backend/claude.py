@@ -219,11 +219,14 @@ class ClaudeBackend(LLMBackend):
                 api_params["tools"] = combined_tools
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {"enable_web_search", "enable_code_execution"}
+            excluded_params = {"enable_web_search", "enable_code_execution", "agent_id", "session_id"}
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
                     api_params[key] = value
 
+            # Claude API requires max_tokens - add default if not provided
+            if "max_tokens" not in api_params:
+                api_params["max_tokens"] = 4096
 
             # Set up beta features and create stream
             if enable_code_execution:
@@ -369,17 +372,10 @@ class ClaudeBackend(LLMBackend):
                                             content=f"✅ [Code Execution] Completed\n",
                                         )
 
-                                        # Yield builtin tool result immediately
-                                        builtin_result = {
-                                            "id": tool_id,
-                                            "tool_type": "code_execution",
-                                            "status": "completed",
-                                            "code": code,
-                                            "input": parsed_input,
-                                        }
+                                        # Yield tool result as content
                                         yield StreamChunk(
-                                            type="builtin_tool_results",
-                                            builtin_tool_results=[builtin_result],
+                                            type="content",
+                                            content=f"🔧 Code Execution [Completed]: {code}",
                                         )
 
                                     elif tool_name == "web_search":
@@ -394,17 +390,10 @@ class ClaudeBackend(LLMBackend):
                                             content=f"✅ [Web Search] Completed\n",
                                         )
 
-                                        # Yield builtin tool result immediately
-                                        builtin_result = {
-                                            "id": tool_id,
-                                            "tool_type": "web_search",
-                                            "status": "completed",
-                                            "query": query,
-                                            "input": parsed_input,
-                                        }
+                                        # Yield tool result as content
                                         yield StreamChunk(
-                                            type="builtin_tool_results",
-                                            builtin_tool_results=[builtin_result],
+                                            type="content",
+                                            content=f"🔧 Web Search [Completed]: {query}",
                                         )
 
                                     # Mark this tool as processed so we don't duplicate it later
@@ -422,51 +411,28 @@ class ClaudeBackend(LLMBackend):
 
                         # Handle any completed tool uses
                         if current_tool_uses:
-                            # Separate server-side tools from user-defined tools
-                            builtin_tool_results = []
+                            # Only handle user-defined tools (builtin tools are now handled as content during streaming)
                             user_tool_calls = []
 
                             for tool_use in current_tool_uses.values():
                                 tool_name = tool_use.get("name", "")
                                 is_server_side = tool_use.get("server_side", False)
 
-                                # Parse accumulated JSON input
-                                tool_input = tool_use.get("input", "")
-                                try:
-                                    if tool_input:
-                                        parsed_input = json.loads(tool_input)
-                                    else:
-                                        parsed_input = {}
-                                except json.JSONDecodeError:
-                                    parsed_input = {"raw_input": tool_input}
-
-                                if is_server_side or tool_name in [
+                                # Only process user-defined tools that need external execution
+                                if not is_server_side and tool_name not in [
                                     "web_search",
                                     "code_execution",
                                 ]:
-                                    # Convert server-side tools to builtin_tool_results
-                                    builtin_result = {
-                                        "id": tool_use["id"],
-                                        "tool_type": tool_name,
-                                        "status": "completed",
-                                        "input": parsed_input,
-                                    }
+                                    # Parse accumulated JSON input
+                                    tool_input = tool_use.get("input", "")
+                                    try:
+                                        if tool_input:
+                                            parsed_input = json.loads(tool_input)
+                                        else:
+                                            parsed_input = {}
+                                    except json.JSONDecodeError:
+                                        parsed_input = {"raw_input": tool_input}
 
-                                    # Add tool-specific data
-                                    if tool_name == "code_execution":
-                                        builtin_result["code"] = parsed_input.get(
-                                            "code", ""
-                                        )
-                                        # Note: actual execution results come via content_block events
-                                    elif tool_name == "web_search":
-                                        builtin_result["query"] = parsed_input.get(
-                                            "query", ""
-                                        )
-                                        # Note: search results come via content_block events
-
-                                    builtin_tool_results.append(builtin_result)
-                                else:
-                                    # User-defined tools that need external execution
                                     user_tool_calls.append(
                                         {
                                             "id": tool_use["id"],
@@ -477,21 +443,6 @@ class ClaudeBackend(LLMBackend):
                                             },
                                         }
                                     )
-
-                            # Only yield builtin tool results that weren't already processed during content_block_stop
-                            unprocessed_builtin_results = []
-                            for result in builtin_tool_results:
-                                tool_id = result.get("id")
-                                # Check if this tool was already processed during streaming
-                                tool_data = current_tool_uses.get(tool_id, {})
-                                if not tool_data.get("processed"):
-                                    unprocessed_builtin_results.append(result)
-
-                            if unprocessed_builtin_results:
-                                yield StreamChunk(
-                                    type="builtin_tool_results",
-                                    builtin_tool_results=unprocessed_builtin_results,
-                                )
 
                             # Yield user tool calls if any
                             if user_tool_calls:

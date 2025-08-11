@@ -3,6 +3,9 @@ MassGen Orchestrator Agent - Chat interface that manages sub-agents internally.
 
 The orchestrator presents a unified chat interface to users while coordinating
 multiple sub-agents using the proven binary decision framework behind the scenes.
+
+TODOs:
+- Move CLI's coordinate_with_context logic to orchestrator and simplify CLI to just use orchestrator
 """
 
 import asyncio
@@ -606,6 +609,8 @@ class Orchestrator(ChatAgent):
                             summary_index=getattr(chunk, "summary_index", None)
                         )
                         yield ("reasoning", reasoning_chunk)
+                    elif chunk.type == "backend_status":
+                        pass
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
@@ -1058,6 +1063,17 @@ class Orchestrator(ChatAgent):
                 )
                 # Use the same format as main coordination for consistency
                 yield reasoning_chunk
+            elif chunk.type == "backend_status":
+                import json
+                status_json = json.loads(chunk.content)
+                cwd = status_json["cwd"]
+                session_id = status_json["session_id"]
+                content = f"""Final Temp Working directory: {cwd}.
+Final Session ID: {session_id}.
+"""
+
+                yield StreamChunk(type="content", content=content, source=selected_agent_id)
+
             elif chunk.type == "done":
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":

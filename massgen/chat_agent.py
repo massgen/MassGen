@@ -71,7 +71,7 @@ class ChatAgent(ABC):
         pass
 
     @abstractmethod
-    def reset(self) -> None:
+    async def reset(self) -> None:
         """Reset agent state for new conversation."""
         pass
 
@@ -228,16 +228,27 @@ class SingleAgent(ChatAgent):
                 msg for msg in self.conversation_history if msg.get("role") == "system"
             ]
             self.conversation_history = system_messages.copy()
+            # Clear backend history while maintaining session
+            if self.backend.is_stateful():
+                await self.backend.clear_history()
 
         if reset_chat:
             # Reset conversation history to the provided messages
             self.conversation_history = messages.copy()
+            # Reset backend state completely
+            if self.backend.is_stateful():
+                await self.backend.reset_state()
             backend_messages = self.conversation_history.copy()
         else:
             # Regular conversation - append new messages to agent's history
             self.conversation_history.extend(messages)
-            backend_messages = self.conversation_history.copy()
-            
+            # Handle stateful vs stateless backends differently
+            if self.backend.is_stateful():
+                # Stateful: only send new messages, backend maintains context
+                backend_messages = messages.copy()
+            else:
+                # Stateless: send full conversation history
+                backend_messages = self.conversation_history.copy()
         
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
@@ -245,10 +256,15 @@ class SingleAgent(ChatAgent):
             tools=tools,  # Use provided tools (for MassGen workflow)
             agent_id=self.agent_id,
             session_id=self.session_id,
+            **self._get_backend_params(),
         )
 
         async for chunk in self._process_stream(backend_stream, tools):
             yield chunk
+
+    def _get_backend_params(self) -> Dict[str, Any]:
+        """Get additional backend parameters. Override in subclasses."""
+        return {}
 
     def get_status(self) -> Dict[str, Any]:
         """Get current agent status."""
@@ -260,9 +276,13 @@ class SingleAgent(ChatAgent):
             "conversation_length": len(self.conversation_history),
         }
 
-    def reset(self) -> None:
+    async def reset(self) -> None:
         """Reset conversation for new chat."""
         self.conversation_history.clear()
+
+        # Reset stateful backend if needed
+        if self.backend.is_stateful():
+            await self.backend.reset_state()
 
         # Re-add system message if it exists
         if self.system_message:
@@ -298,6 +318,13 @@ class ConfigurableAgent(SingleAgent):
     This bridges the gap between SingleAgent and the MassGen system by supporting
     all the advanced configuration options (web search, code execution, etc.)
     while maintaining the simple chat interface.
+    
+    TODO: Consider merging with SingleAgent. The main difference is:
+    - SingleAgent: backend parameters passed directly to constructor/methods
+    - ConfigurableAgent: backend parameters come from AgentConfig object
+    
+    Could be unified by making SingleAgent accept an optional config parameter
+    and using _get_backend_params() pattern for all parameter sources.
     """
 
     def __init__(
@@ -324,40 +351,9 @@ class ConfigurableAgent(SingleAgent):
 
         # ConfigurableAgent relies on backend_params for model configuration
 
-    async def chat(
-        self,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]] = None,
-        reset_chat: bool = False,
-        clear_history: bool = False,
-    ) -> AsyncGenerator[StreamChunk, None]:
-        """Process messages with full AgentConfig capabilities."""
-        if clear_history:
-            # Clear history but keep system message if it exists
-            system_messages = [
-                msg for msg in self.conversation_history if msg.get("role") == "system"
-            ]
-            self.conversation_history = system_messages.copy()
-
-        if reset_chat:
-            # Reset conversation history to the provided messages
-            self.conversation_history = messages.copy()
-            backend_messages = self.conversation_history.copy()
-        else:
-            # Regular conversation - append new messages to agent's history
-            self.conversation_history.extend(messages)
-            backend_messages = self.conversation_history.copy()
-
-        # Create backend stream with config parameters and process it
-        backend_params = self.config.get_backend_params()
-        backend_stream = self.backend.stream_with_tools(
-            messages=backend_messages,
-            tools=tools,  # Use provided tools (for MassGen workflow)
-            **backend_params,
-        )
-
-        async for chunk in self._process_stream(backend_stream, tools):
-            yield chunk
+    def _get_backend_params(self) -> Dict[str, Any]:
+        """Get backend parameters from config."""
+        return self.config.get_backend_params()
 
     def get_status(self) -> Dict[str, Any]:
         """Get current agent status with config details."""

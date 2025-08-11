@@ -246,7 +246,7 @@ uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 **Advanced backends**:
 ```bash
 # Claude Code Stream - Native Claude Code SDK with comprehensive dev tools
-uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Can I use claude-3-5-haiku for claude code?"
+uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 "Can I use claude-3-5-haiku for claude code?"
 ```
 
 **CLI-based backends** (requires CLI tools installed):
@@ -276,7 +276,7 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `claude_code_stream`, `gemini-cli`). Optional because we can infer backend type through model.|
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `gemini`, `grok`, `openai`, `claude-code-cli`, `claude_code`, `gemini-cli`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gpt-4o-mini`, `claude-sonnet-4-20250514`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
@@ -296,7 +296,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code_stream" #Type of backend 
+    type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -310,7 +310,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code_stream" #Type of backend
+      type: "chatcompletion" | "claude" | "gemini" | "grok" | "openai" | "claude_code" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -415,7 +415,7 @@ backend:
 
 ```yaml
 backend:
-  type: "claude_code_stream"
+  type: "claude_code"
   model: "claude-sonnet-4-20250514"  # Model name (claude-sonnet-4-20250514, claude-3-5-sonnet-20241022, etc.)
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   
@@ -559,13 +559,13 @@ uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How
 ### 4. 💻 Development & Coding Tasks
 ```bash
 # Single agent with comprehensive development tools
-uv run python -m massgen.cli --config massgen/configs/claude_code_stream_single.yaml "Create a Flask web app with user authentication and database integration"
+uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Create a Flask web app with user authentication and database integration"
 
 # Multi-agent development team collaboration  
-uv run python -m massgen.cli --config massgen/configs/claude_code_stream_team.yaml "Debug and optimize this React application, then write comprehensive tests"
+uv run python -m massgen.cli --config massgen/configs/claude_code_team.yaml "Debug and optimize this React application, then write comprehensive tests"
 
-# Quick coding task with claude_code_stream backend
-uv run python -m massgen.cli --backend claude_code_stream --model claude-sonnet-4-20250514 "Refactor this Python code to use async/await and add error handling"
+# Quick coding task with claude_code backend
+uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 "Refactor this Python code to use async/await and add error handling"
 ```
 
 ---

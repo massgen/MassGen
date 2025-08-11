@@ -252,7 +252,7 @@ class ChatCompletionsBackend(LLMBackend):
                     api_params["tools"] = converted_tools
 
                 # Direct passthrough of all parameters except those handled separately
-                excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url"}
+                excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id"}
                 for key, value in all_params.items():
                     if key not in excluded_params and value is not None:
                         api_params[key] = value
