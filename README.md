@@ -94,7 +94,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.5 Roadmap](#v005-roadmap)
+- [v0.0.6 Roadmap](#v006-roadmap)
 </details>
 
 <details open>
@@ -213,7 +213,7 @@ Make sure you set up the API key for the model you want to use.
 
 #### Models
 
-The system currently supports multiple model providers with advanced reasoning capabilities: **Anthropic Claude**, **Google Gemini**, **OpenAI**, **xAI Grok**, and **CLI interfaces** for Claude Code and Gemini CLI. 
+The system currently supports multiple model providers with advanced reasoning capabilities: **Anthropic Claude**,  **Claude CLI interfaces**, **Google Gemini**, **OpenAI**, **xAI Grok** for Claude Code and Gemini CLI. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
@@ -228,9 +228,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
 | **Grok API** | ✅ | ❌ | ❌ | Web search only |
 | **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
-| **Claude Code CLI** | ✅ | ✅ | ✅ | **Advanced coding, debugging, file ops** |
 | **Claude Code Stream** | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools** |
-| **Gemini CLI** | ✅ | ✅ | ✅ | **Multimodal, reasoning, MCP integration** |
 
 ### 4. 🏃 Run MassGen
 
@@ -399,18 +397,6 @@ backend:
   enable_code_interpreter: true      # Code interpreter capability - can be used with reasoning
 ```
 
-#### Claude Code CLI
-
-```yaml
-backend:
-  type: "claude-code-cli"
-  model: "TODO"                    # Options: TODO
-  api_key: "<optional_key>"          # API key (optional if logged in via CLI)
-  max_turns: 5                       # Maximum interaction turns
-  verbose: false                     # Enable verbose CLI output
-  timeout: 300                       # Command timeout in seconds
-```
-
 #### Claude Code Stream
 
 ```yaml
@@ -442,17 +428,6 @@ backend:
     # MCP tools (if available)
     - "mcp__ide__getDiagnostics"
     - "mcp__ide__executeCode"
-```
-
-#### Gemini CLI
-
-```yaml
-backend:
-  type: "gemini-cli"
-  model: "gemini-2.5-pro"            # Options: gemini-2.5-pro, gemini-2.5-flash
-  api_key: "<optional_key>"          # API key (optional if logged in via CLI)
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  timeout: 300                       # Command timeout in seconds
 ```
 
 **UI Configuration:**
@@ -586,15 +561,15 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to help us achieve these goals.
 
-### v0.0.5 Roadmap
+### v0.0.6 Roadmap
 
-Version 0.0.5 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
 
 - **Coding Agent Integration** (Required): Seamless integration of Claude Code CLI and Gemini CLI with coding-specific tools and workflows
 - **Enhanced Backend Features** (Optional): Improved error handling, health monitoring, and support for additional model providers
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.5 roadmap](ROADMAP_v0.0.5.md).
+For detailed milestones and technical specifications, see the [full v0.0.6 roadmap](ROADMAP_v0.0.6.md).
 
 ---
 
