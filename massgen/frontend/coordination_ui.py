@@ -74,6 +74,25 @@ class CoordinationUI:
                 if hasattr(self, summary_active_key):
                     setattr(self, summary_active_key, False)
             return summary_delta
+        
+    def _process_reasoning_content(self, chunk_type: str, reasoning_delta: str, source: str) -> str:
+        """Process reasoning summary content using display's shared logic."""
+        if self.display and hasattr(self.display, 'process_reasoning_content'):
+            return self.display.process_reasoning_content(chunk_type, reasoning_delta, source)
+        else:
+            # Fallback logic if no display available
+            if chunk_type == "reasoning":
+                reasoning_active_key = f"_reasoning_active_{source}"
+                if not getattr(self, reasoning_active_key, False):
+                    setattr(self, reasoning_active_key, True)
+                    return f"🧠 [Reasoning Started] {reasoning_delta}"
+                return reasoning_delta
+            elif chunk_type == "reasoning_done":
+                reasoning_active_key = f"_reasoning_active_{source}"
+                if hasattr(self, reasoning_active_key):
+                    setattr(self, reasoning_active_key, False)
+                return reasoning_delta
+
 
     def __post_init__(self):
         """Post-initialization setup."""
@@ -198,12 +217,24 @@ class CoordinationUI:
                             # Stream reasoning delta as thinking content
                             reasoning_delta = getattr(chunk, "reasoning_delta", "")
                             if reasoning_delta:
-                                reasoning_content = reasoning_delta
+                                # reasoning_content = reasoning_delta
+                                reasoning_content = self._process_reasoning_content(chunk_type, reasoning_delta, source)
                         elif chunk_type == "reasoning_done":
                             # Complete reasoning text
                             reasoning_text = getattr(chunk, "reasoning_text", "")
                             if reasoning_text:
                                 reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
+                            else:
+                                reasoning_content = f"\n🧠 [Reasoning Complete]\n"
+
+                             # Reset flag using helper method
+                            self._process_reasoning_content(chunk_type, reasoning_content, source)
+                            
+                            # Mark summary as complete - next summary can get a prefix
+                            reasoning_active_key = f"_reasoning_active"
+                            if hasattr(self, reasoning_active_key):
+                                delattr(self, reasoning_active_key)
+
                         elif chunk_type == "reasoning_summary":
                             # Stream reasoning summary delta
                             summary_delta = getattr(chunk, "reasoning_summary_delta", "")
@@ -284,12 +315,24 @@ class CoordinationUI:
                                 # Stream reasoning delta as thinking content
                                 reasoning_delta = getattr(chunk, "reasoning_delta", "")
                                 if reasoning_delta:
-                                    reasoning_content = reasoning_delta
+                                    # reasoning_content = reasoning_delta
+                                    reasoning_content = self._process_reasoning_content(chunk_type, reasoning_delta, source)
                             elif chunk_type == "reasoning_done":
-                                # Complete reasoning step
+                                # Complete reasoning text
                                 reasoning_text = getattr(chunk, "reasoning_text", "")
                                 if reasoning_text:
+                                    reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
+                                else:
                                     reasoning_content = f"\n🧠 [Reasoning Complete]\n"
+
+                                # Reset flag using helper method
+                                self._process_reasoning_content(chunk_type, reasoning_content, source)
+                                
+                                # Mark summary as complete - next summary can get a prefix
+                                reasoning_active_key = f"_reasoning_active"
+                                if hasattr(self, reasoning_active_key):
+                                    delattr(self, reasoning_active_key)
+                                
                             elif chunk_type == "reasoning_summary":
                                 # Stream reasoning summary delta
                                 summary_delta = getattr(chunk, "reasoning_summary_delta", "")
@@ -557,12 +600,23 @@ class CoordinationUI:
                             # Stream reasoning delta as thinking content
                             reasoning_delta = getattr(chunk, "reasoning_delta", "")
                             if reasoning_delta:
-                                reasoning_content = reasoning_delta
+                                # reasoning_content = reasoning_delta
+                                reasoning_content = self._process_reasoning_content(chunk_type, reasoning_delta, source)
                         elif chunk_type == "reasoning_done":
                             # Complete reasoning text
                             reasoning_text = getattr(chunk, "reasoning_text", "")
                             if reasoning_text:
                                 reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
+                            else:
+                                reasoning_content = f"\n🧠 [Reasoning Complete]\n"
+
+                             # Reset flag using helper method
+                            self._process_reasoning_content(chunk_type, reasoning_content, source)
+                            
+                            # Mark summary as complete - next summary can get a prefix
+                            reasoning_active_key = f"_reasoning_active"
+                            if hasattr(self, reasoning_active_key):
+                                delattr(self, reasoning_active_key)
                         elif chunk_type == "reasoning_summary":
                             # Stream reasoning summary delta
                             summary_delta = getattr(chunk, "reasoning_summary_delta", "")
@@ -643,12 +697,24 @@ class CoordinationUI:
                                 # Stream reasoning delta as thinking content
                                 reasoning_delta = getattr(chunk, "reasoning_delta", "")
                                 if reasoning_delta:
-                                    reasoning_content = reasoning_delta
+                                    # reasoning_content = reasoning_delta
+                                    reasoning_content = self._process_reasoning_content(chunk_type, reasoning_delta, source)
                             elif chunk_type == "reasoning_done":
-                                # Complete reasoning step
+                                # Complete reasoning text
                                 reasoning_text = getattr(chunk, "reasoning_text", "")
                                 if reasoning_text:
+                                    reasoning_content = f"\n🧠 [Reasoning Complete]\n{reasoning_text}\n"
+                                else:
                                     reasoning_content = f"\n🧠 [Reasoning Complete]\n"
+
+                                # Reset flag using helper method
+                                self._process_reasoning_content(chunk_type, reasoning_content, source)
+                                
+                                # Mark summary as complete - next summary can get a prefix
+                                reasoning_active_key = f"_reasoning_active"
+                                if hasattr(self, reasoning_active_key):
+                                    delattr(self, reasoning_active_key)
+                            
                             elif chunk_type == "reasoning_summary":
                                 # Stream reasoning summary delta
                                 summary_delta = getattr(chunk, "reasoning_summary_delta", "")
