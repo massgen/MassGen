@@ -1,0 +1,12 @@
+agent:
+  id: "zai_glm45_agent"
+  backend:
+    type: "zai"
+    model: "glm-4.5"
+    base_url: "https://api.z.ai/api/paas/v4/"
+    temperature: 0.95
+    top_p: 0.7
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

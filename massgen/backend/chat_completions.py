@@ -81,6 +81,16 @@ class ChatCompletionsBackend(LLMBackend):
                             content_chunk = delta.content
                             content += content_chunk
                             yield StreamChunk(type="content", content=content_chunk)
+
+                        # Provider-specific reasoning/thinking streams (non-standard OpenAI fields)
+                        if getattr(delta, "reasoning_content", None):
+                            thinking_delta = getattr(delta, "reasoning_content")
+                            if thinking_delta:
+                                yield StreamChunk(
+                                    type="reasoning",
+                                    content=thinking_delta,
+                                    reasoning_delta=thinking_delta,
+                                )
                         
                         # Tool calls streaming (OpenAI-style)
                         if getattr(delta, "tool_calls", None):
