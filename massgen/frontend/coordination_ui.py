@@ -67,7 +67,7 @@ class CoordinationUI:
                 summary_active_key = f"_summary_active_{source}"
                 if not getattr(self, summary_active_key, False):
                     setattr(self, summary_active_key, True)
-                    return f"📋 [Reasoning Summary] {summary_delta}"
+                    return f"📋 [Reasoning Summary]\n{summary_delta}\n"
                 return summary_delta
             elif chunk_type == "reasoning_summary_done":
                 summary_active_key = f"_summary_active_{source}"
@@ -85,7 +85,7 @@ class CoordinationUI:
                 reasoning_active_key = f"_reasoning_active_{source}"
                 if not getattr(self, reasoning_active_key, False):
                     setattr(self, reasoning_active_key, True)
-                    return f"🧠 [Reasoning Started] {reasoning_delta}"
+                    return f"🧠 [Reasoning Started]\n{reasoning_delta}\n"
                 return reasoning_delta
             elif chunk_type == "reasoning_done":
                 reasoning_active_key = f"_reasoning_active_{source}"

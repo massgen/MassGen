@@ -102,7 +102,7 @@ class BaseDisplay(ABC):
             if not hasattr(self, reasoning_active_key) or not getattr(self, reasoning_active_key, False):
                 # Start of new reasoning - add prefix and mark as active
                 setattr(self, reasoning_active_key, True)
-                return f"🧠 [Reasoning Started] {content}"
+                return f"🧠 [Reasoning Started]\n{content}\n"
             else:
                 # Continuing existing reasoning - no prefix
                 return content
@@ -121,7 +121,7 @@ class BaseDisplay(ABC):
             if not hasattr(self, summary_active_key) or not getattr(self, summary_active_key, False):
                 # Start of new summary - add prefix and mark as active
                 setattr(self, summary_active_key, True)
-                return f"📋 [Reasoning Summary] {content}"
+                return f"📋 [Reasoning Summary]\n{content}\n"
             else:
                 # Continuing existing summary - no prefix
                 return content
