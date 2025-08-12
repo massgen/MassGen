@@ -35,6 +35,7 @@ from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.chat_completions import ChatCompletionsBackend
 from .backend.claude_code import ClaudeCodeBackend
+from .backend.gemini_cli import GeminiCLIBackend
 from .chat_agent import SingleAgent, ConfigurableAgent
 from .agent_config import AgentConfig
 from .orchestrator import Orchestrator
@@ -180,6 +181,15 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             )
         
         return ClaudeCodeBackend(**kwargs)
+    
+    elif backend_type == "gemini_cli":
+        api_key = (
+            kwargs.get("api_key")
+            or os.getenv("GOOGLE_API_KEY")
+            or os.getenv("GEMINI_API_KEY")
+        )
+        # API key is optional for Gemini CLI
+        return GeminiCLIBackend(api_key=api_key, **kwargs)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -223,6 +233,8 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             agent_config = AgentConfig.create_gemini_config(**backend_params)
         elif backend_type_lower == "chatcompletion":
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
+        elif backend_type_lower == "gemini_cli":
+            agent_config = AgentConfig.create_gemini_config(**backend_params)
         else:
             agent_config = AgentConfig(backend_params=backend_config)
 
@@ -592,7 +604,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code", "gemini_cli"],
         help="Backend type for quick setup",
     )
 
