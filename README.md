@@ -94,7 +94,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.6 Roadmap](#v006-roadmap)
+- [v0.0.7 Roadmap](#v007-roadmap)
 </details>
 
 <details open>
@@ -178,11 +178,6 @@ uv venv
 ```bash
 # Claude Code CLI - Advanced coding assistant
 npm install -g @anthropic-ai/claude-code
-
-# Gemini CLI - Multimodal AI agent  
-npm install -g @google/gemini-cli
-# OR
-brew install gemini-cli
 ```
 
 ### 2. 🔐 API Configuration
@@ -198,6 +193,7 @@ ANTHROPIC_API_KEY=your-anthropic-key-here
 GEMINI_API_KEY=your-gemini-key-here
 OPENAI_API_KEY=your-openai-key-here
 XAI_API_KEY=your-xai-key-here
+ZAI_API_KEY=your-zai-key-here
 ```
 
 Make sure you set up the API key for the model you want to use.
@@ -208,12 +204,13 @@ Make sure you set up the API key for the model you want to use.
  - [Gemini](https://ai.google.dev/gemini-api/docs)
  - [Grok](https://docs.x.ai/docs/overview)
  - [OpenAI](https://platform.openai.com/api-keys)
+ - [Z AI](https://docs.z.ai/guides/overview/quick-start)
 
 ### 3. 🧩 Supported Models and Tools
 
 #### Models
 
-The system currently supports multiple model providers with advanced capabilities: **Anthropic Claude**, **Claude Code**, **Google Gemini**, **OpenAI**, **xAI Grok**. 
+The system currently supports multiple model providers with advanced capabilities: **Anthropic Claude**, **Claude Code**, **Google Gemini**, **OpenAI**, **xAI Grok**, **Z AI**. 
 More providers and local inference of open-weight models (using vllm or sglang) are welcome to be added.
 
 #### Tools
@@ -229,6 +226,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
 | **Grok API** | ✅ | ❌ | ❌ | Web search only |
 | **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
+| **ZAI API** | ❌ | ❌ | ❌ | - |
 
 ### 4. 🏃 Run MassGen
 
@@ -239,6 +237,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model glm-4.5 "Which AI won IMO in 2025?"
 ```
 All supported models can be found [here](massgen/utils.py).
 
@@ -249,8 +248,6 @@ uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku f
 uv run python -m massgen.cli --backend claude-code "Debug this Python script"
 ```
 
-<!-- # Gemini CLI - Multimodal reasoning with MCP integration  
-uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro "Analyze this code and suggest improvements" -->
 `--backend` is required for this type of backends.
 
 #### Multiple Agents from Config
@@ -269,7 +266,7 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`). Optional because we can infer backend type through model.|
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `zai`). Optional because we can infer backend type through model.|
 | `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
@@ -289,7 +286,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend 
+    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -303,7 +300,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend
+      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -421,6 +418,18 @@ backend:
     # MCP tools (if available)
     - "mcp__ide__getDiagnostics"
     - "mcp__ide__executeCode"
+```
+
+#### ZAI
+
+```yaml
+backend:
+  type: "zai"
+  model: "glm-4.5"  # Model name
+  base_url: "https://api.z.ai/api/paas/v4/" # Base URL for API endpoint
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  top_p: 0.7                    # Nucleus sampling cutoff; keeps smallest set of tokens with cumulative probability ≥ top_p
 ```
 
 **UI Configuration:**
@@ -554,15 +563,15 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to help us achieve these goals.
 
-### v0.0.6 Roadmap
+### v0.0.7 Roadmap
 
-Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration with local inference engines for open-weight models. Key enhancements include:
 
-- **Coding Agent Integration** (Required): Claude Code SDK ✅ completed, Gemini CLI ⏳ in progress with coding-specific tools and workflows
+- **Local Model Integration** (Required): 🚀 Support for backends like LM Studio/vllm/sglang to run open-weight models locally
 - **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.6 roadmap](ROADMAP_v0.0.6.md).
+For detailed milestones and technical specifications, see the [full v0.0.7 roadmap](ROADMAP_v0.0.7.md).
 
 ---
 
@@ -578,7 +587,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-<div align="center">
+<div align="center"> 
 
 **⭐ Star this repo if you find it useful! ⭐**
 

@@ -2588,7 +2588,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     # Process reasoning content with shared logic
                     processed_content = self.process_reasoning_content(
                         chunk_type, content, source)
-
+                    
                     # Accumulate content
                     presentation_content += processed_content
 
@@ -2610,7 +2610,13 @@ class RichTerminalDisplay(TerminalDisplay):
                             processed_content, end="", highlight=False, markup=False)
                 else:
                     # Handle reasoning chunks with no content (like reasoning_summary_done)
-                    self.process_reasoning_content(chunk_type, "", source)
+                    processed_content = self.process_reasoning_content(chunk_type, "", source)
+                    # Accumulate content
+                    presentation_content += processed_content
+                    # Main presentation content with simple output
+                    # Use markup=False to prevent Rich from interpreting brackets as markup
+                    self.console.print(
+                        processed_content, end="", highlight=False, markup=False)
 
                 # Handle orchestrator query completion signals
                 if chunk_type == "done":

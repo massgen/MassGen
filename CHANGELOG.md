@@ -5,6 +5,39 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.6] - 2025-08-13
+
+### Added
+- **GLM-4.5 Model Support**: Integration with ZhipuAI's GLM-4.5 model family
+  - Added GLM-4.5 backend support in `chat_completions.py`
+  - New configuration file `zai_glm45.yaml` for GLM-4.5 agent setup
+  - Updated `zai_coding_team.yaml` with GLM-4.5 integration
+  - Added GLM-4.5 model mappings and environment variable support
+- **Enhanced Reasoning Display**: Improved reasoning presentation for GLM models
+  - Added reasoning start and completion indicators in frontend displays
+  - Enhanced coordination UI to show reasoning progress
+  - Better visual formatting for reasoning states in terminal display
+
+### Fixed
+- **Claude Code Backend**: Updated default allowed tools configuration
+  - Fixed default tools setup in `claude_code.py` backend
+
+### Changed
+- **Documentation Updates**: Updated README.md with GLM-4.5 support information
+  - Added GLM-4.5 to supported models list
+  - Updated environment variables documentation for ZhipuAI integration
+  - Enhanced model comparison and configuration examples
+- **Configuration Management**: Enhanced agent configuration system
+  - Updated `agent_config.py` with GLM-4.5 support
+  - Improved CLI integration for GLM models
+  - Better model parameter handling in utils.py
+
+### Technical Details
+- **Commits**: 6 major commits including merge pull requests #90 and #94
+- **Files Modified**: 12+ files across backend, frontend, configuration, and documentation
+- **New Dependencies**: ZhipuAI GLM-4.5 model integration
+- **Contributors**: @Stanislas0 @qidanrui @sonichi @Leezekun @voidcenter
+
 ## [0.0.5] - 2025-08-11
 
 ### Added
