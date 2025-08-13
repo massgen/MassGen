@@ -231,6 +231,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
 | **Grok API** | ✅ | ❌ | ❌ | Web search only |
 | **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
+| **ZAI API** | ❌ | ❌ | ❌ | - |
 
 ### 4. 🏃 Run MassGen
 
@@ -292,7 +293,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend 
+    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -306,7 +307,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" #Type of backend
+      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -424,6 +425,18 @@ backend:
     # MCP tools (if available)
     - "mcp__ide__getDiagnostics"
     - "mcp__ide__executeCode"
+```
+
+#### ZAI
+
+```yaml
+backend:
+  type: "zai"
+  model: "glm-4.5"  # Model name
+  base_url: "https://api.z.ai/api/paas/v4/" # Base URL for API endpoint
+  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  top_p: 0.7                    # Nucleus sampling cutoff; keeps smallest set of tokens with cumulative probability ≥ top_p
 ```
 
 **UI Configuration:**
@@ -557,9 +570,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to help us achieve these goals.
 
-### v0.0.6 Roadmap
+### v0.0.7 Roadmap
 
-Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.7 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
 
 - **Coding Agent Integration** (Required): Claude Code SDK ✅ completed, Gemini CLI ⏳ in progress with coding-specific tools and workflows
 - **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
