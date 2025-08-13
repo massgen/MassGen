@@ -78,12 +78,23 @@ class ChatCompletionsBackend(LLMBackend):
 
                         # Plain text content
                         if getattr(delta, "content", None):
+                            # handle reasoning first
+                            reasoning_active_key = f"_reasoning_active"
+                            if hasattr(self, reasoning_active_key):
+                                if getattr(self, reasoning_active_key) == True:
+                                    setattr(self, reasoning_active_key, False)
+                                    yield StreamChunk(
+                                        type="reasoning_done",
+                                        content=""
+                                    )
                             content_chunk = delta.content
                             content += content_chunk
                             yield StreamChunk(type="content", content=content_chunk)
 
                         # Provider-specific reasoning/thinking streams (non-standard OpenAI fields)
                         if getattr(delta, "reasoning_content", None):
+                            reasoning_active_key = f"_reasoning_active"
+                            setattr(self, reasoning_active_key, True)
                             thinking_delta = getattr(delta, "reasoning_content")
                             if thinking_delta:
                                 yield StreamChunk(
@@ -94,6 +105,16 @@ class ChatCompletionsBackend(LLMBackend):
                         
                         # Tool calls streaming (OpenAI-style)
                         if getattr(delta, "tool_calls", None):
+                            # handle reasoning first
+                            reasoning_active_key = f"_reasoning_active"
+                            if hasattr(self, reasoning_active_key):
+                                if getattr(self, reasoning_active_key) == True:
+                                    setattr(self, reasoning_active_key, False)
+                                    yield StreamChunk(
+                                        type="reasoning_done",
+                                        content=""
+                                    )
+
                             for tool_call_delta in delta.tool_calls:
                                 index = getattr(tool_call_delta, "index", 0)
 
@@ -128,6 +149,16 @@ class ChatCompletionsBackend(LLMBackend):
 
                     # Handle finish reason
                     if getattr(choice, "finish_reason", None):
+                        # handle reasoning first
+                        reasoning_active_key = f"_reasoning_active"
+                        if hasattr(self, reasoning_active_key):
+                            if getattr(self, reasoning_active_key) == True:
+                                setattr(self, reasoning_active_key, False)
+                                yield StreamChunk(
+                                    type="reasoning_done",
+                                    content=""
+                                )
+
                         if choice.finish_reason == "tool_calls" and current_tool_calls:
 
                             final_tool_calls = []
