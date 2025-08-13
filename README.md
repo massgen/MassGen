@@ -178,11 +178,6 @@ uv venv
 ```bash
 # Claude Code CLI - Advanced coding assistant
 npm install -g @anthropic-ai/claude-code
-
-# Gemini CLI - Multimodal AI agent  
-npm install -g @google/gemini-cli
-# OR
-brew install gemini-cli
 ```
 
 ### 2. 🔐 API Configuration
@@ -253,8 +248,6 @@ uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku f
 uv run python -m massgen.cli --backend claude-code "Debug this Python script"
 ```
 
-<!-- # Gemini CLI - Multimodal reasoning with MCP integration  
-uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro "Analyze this code and suggest improvements" -->
 `--backend` is required for this type of backends.
 
 #### Multiple Agents from Config
@@ -572,9 +565,9 @@ We welcome community contributions to help us achieve these goals.
 
 ### v0.0.7 Roadmap
 
-Version 0.0.7 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration with local inference engines for open-weight models. Key enhancements include:
 
-- **Coding Agent Integration** (Required): Claude Code SDK ✅ completed, Gemini CLI ⏳ in progress with coding-specific tools and workflows
+- **Local Model Integration** (Required): 🚀 Support for backends like LM Studio/vllm/sglang to run open-weight models locally
 - **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
@@ -594,7 +587,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-<div align="center">
+<div align="center"> 
 
 **⭐ Star this repo if you find it useful! ⭐**
 
