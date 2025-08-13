@@ -557,9 +557,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to help us achieve these goals.
 
-### v0.0.6 Roadmap
+### v0.0.7 Roadmap
 
-Version 0.0.6 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
+Version 0.0.7 focuses primarily on **Coding Agent Integration**, introducing Claude Code CLI and Gemini CLI as powerful coding agents. Key enhancements include:
 
 - **Coding Agent Integration** (Required): Claude Code SDK ✅ completed, Gemini CLI ⏳ in progress with coding-specific tools and workflows
 - **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
