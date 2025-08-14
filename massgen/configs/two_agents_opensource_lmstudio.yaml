@@ -19,10 +19,10 @@ agents:
       - Clear reasoning and explanation
       - Comprehensive coverage of the topic
 
-  - id: "lmstudio"
+  - id: "Qwen3-4b"
     backend:
       type: "lmstudio"
-      model: "qwen/qwen3-4b-mlx"
+      model: "qwen/qwen3-4b-2507"
       # api_key: "lm-studio"
   
 ui:
