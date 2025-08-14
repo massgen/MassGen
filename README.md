@@ -1,3 +1,5 @@
+[![MSeeP.ai Security Assessment Badge](https://mseep.net/pr/leezekun-massgen-badge.png)](https://mseep.ai/app/leezekun-massgen)
+
 <p align="center">
   <img src="assets/logo.png" alt="MassGen Logo" width="360" />
 </p>
