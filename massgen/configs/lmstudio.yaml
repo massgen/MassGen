@@ -1,6 +1,6 @@
 # MassGen Single Agent Configuration for LM Studio (local OpenAI-compatible server)
 agent:
-  id: "lmstudio"
+  id: "Qwen-4b"
   backend:
     type: "lmstudio"
     model: "qwen/qwen3-4b"  # Replace with the model name LM Studio exposes
