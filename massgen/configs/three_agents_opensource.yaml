@@ -2,25 +2,25 @@
 # 3 GPT-OSS-120B models
 
 agents:
-  # Cerebras AI  
-  - id: "gpt-oss-120b-1"
+  - id: "gpt-oss-1" # Cerebras AI  
     backend:
       type: "chatcompletion"
       model: "gpt-oss-120b"
       base_url: "https://api.cerebras.ai/v1"
       # api_key: "cerebras_api_key"
-  - id: "gpt-oss-120b-2"
+  - id: "qwen"
     backend:
       type: "chatcompletion"
-      model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1"
-      # api_key: "cerebras_api_key"
-  - id: "gpt-oss-120b-3"
+
+      model: "Qwen/Qwen3-4B-fast"
+      base_url: "https://api.studio.nebius.ai/v1"
+      # api_key: "Nebius_api_key"
+  - id: "gpt-oss-2"   
     backend:
       type: "chatcompletion"
-      model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1"
-      # api_key: "cerebras_api_key"
+      model: "accounts/fireworks/models/gpt-oss-20b"
+      base_url: "https://api.fireworks.ai/inference/v1"
+      # api_key: "Fireworks_api_key"
 ui:
   display_type: "rich_terminal"
   logging_enabled: true

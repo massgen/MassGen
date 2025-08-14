@@ -51,6 +51,7 @@ from .backend.response import ResponseBackend
 from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
+from .backend.lmstudio import LMStudioBackend
 from .chat_agent import (
     ChatAgent,
     SingleAgent,
@@ -73,6 +74,7 @@ __all__ = [
     "ClaudeBackend",
     "GeminiBackend",
     "GrokBackend",
+    "LMStudioBackend",
     # Agents
     "ChatAgent",
     "SingleAgent",
