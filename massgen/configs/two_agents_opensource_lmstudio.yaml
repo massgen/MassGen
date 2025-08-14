@@ -1,16 +1,28 @@
 agents:
 
-  - id: "GLM_nebius"
+  - id: "GPT-5"
     backend:
-      type: "chatcompletion"
-      model: "zai-org/GLM-4.5-Air"
-      base_url: "https://api.studio.nebius.ai/v1"
-      # api_key: "Nebius_api_key"
+      type: "openai"
+      model: "gpt-5"
+      text:
+        verbosity: "high"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
+    system_message: |
+      You are a knowledgeable primary agent who provides comprehensive, 
+      well-researched responses. Focus on:
+      - Thorough analysis and research
+      - Accurate and detailed information
+      - Clear reasoning and explanation
+      - Comprehensive coverage of the topic
 
   - id: "lmstudio"
     backend:
       type: "lmstudio"
-      model: "qwen/qwen3-4b"
+      model: "qwen/qwen3-4b-mlx"
       # api_key: "lm-studio"
   
 ui:
