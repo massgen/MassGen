@@ -1,0 +1,25 @@
+agents:
+  - id: "glm-4.5"
+    backend:
+      type: "zai"
+      model: "glm-4.5"
+      base_url: "https://api.z.ai/api/paas/v4/"
+
+  - id: "gemini-2.5-flash"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      enable_web_search: true
+
+  - id: "claude-3.5-haiku"
+    backend:
+      type: "claude"
+      model: "claude-3-5-haiku-20241022"
+      enable_web_search: true
+      enable_code_execution: true
+
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+

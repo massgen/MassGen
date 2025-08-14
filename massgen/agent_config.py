@@ -200,6 +200,24 @@ class AgentConfig:
         return cls(backend_params=backend_params)
 
     @classmethod
+    def create_zai_config(
+        cls,
+        model: str = "glm-4.5",
+        base_url: str = "https://api.z.ai/api/paas/v4/",
+        **kwargs,
+    ) -> "AgentConfig":
+        """Create ZAI configuration (OpenAI Chat Completions compatible).
+
+        Args:
+            model: ZAI model name (e.g., "glm-4.5")
+            base_url: ZAI OpenAI-compatible API base URL
+            **kwargs: Additional backend parameters (e.g., temperature, top_p)
+        """
+        backend_params = {"model": model, "base_url": base_url, **kwargs}
+
+        return cls(backend_params=backend_params)
+
+    @classmethod
     def create_claude_code_config(
         cls,
         model: str = "claude-sonnet-4-20250514",

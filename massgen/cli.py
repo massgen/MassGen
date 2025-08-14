@@ -170,6 +170,34 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         return GeminiBackend(api_key=api_key)
 
     elif backend_type == "chatcompletion":
+        api_key = kwargs.get("api_key")
+        base_url = kwargs.get("base_url")
+        
+        # Determine API key based on base URL if not explicitly provided
+        if not api_key:
+            if base_url and "cerebras.ai" in base_url:
+                api_key = os.getenv("CEREBRAS_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
+                    )
+            elif base_url and "z.ai" in base_url:
+                api_key = os.getenv("ZAI_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "ZAI API key not found. Set ZAI_API_KEY or provide in config."
+                    )
+        
+        return ChatCompletionsBackend(api_key=api_key)
+
+    elif backend_type == "zai":
+        # ZAI uses OpenAI-compatible Chat Completions at a custom base_url
+        api_key = kwargs.get("api_key") or os.getenv("ZAI_API_KEY")
+        if not api_key:
+            raise ConfigurationError(
+                "ZAI API key not found. Set ZAI_API_KEY or provide in config."
+            )
+        return ChatCompletionsBackend(api_key=api_key)
       
         # ChatCompletionsBackend now handles provider-specific API key detection internally
         # Just pass through all kwargs including api_key and base_url
@@ -234,6 +262,8 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             agent_config = AgentConfig.create_grok_config(**backend_params)
         elif backend_type_lower == "gemini":
             agent_config = AgentConfig.create_gemini_config(**backend_params)
+        elif backend_type_lower == "zai":
+            agent_config = AgentConfig.create_zai_config(**backend_params)
         elif backend_type_lower == "chatcompletion":
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         elif backend_type_lower == "lmstudio":
@@ -619,7 +649,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code","lmstudio"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code", "zai","lmstudio"],
         help="Backend type for quick setup",
     )
 

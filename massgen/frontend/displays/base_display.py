@@ -95,14 +95,33 @@ class BaseDisplay(ABC):
         Returns:
             Processed content with prefix if needed
         """
-        if chunk_type == "reasoning_summary":
+        if chunk_type == "reasoning":
+            # Track if we're in an active reasoning for this source
+            reasoning_active_key = f"_reasoning_active_{source}"
+            
+            if not hasattr(self, reasoning_active_key) or not getattr(self, reasoning_active_key, False):
+                # Start of new reasoning - add prefix and mark as active
+                setattr(self, reasoning_active_key, True)
+                return f"🧠 [Reasoning Started]\n{content}\n"
+            else:
+                # Continuing existing reasoning - no prefix
+                return content
+                
+        elif chunk_type == "reasoning_done":
+            # End of reasoning - reset flag
+            reasoning_active_key = f"_reasoning_active_{source}"
+            if hasattr(self, reasoning_active_key):
+                setattr(self, reasoning_active_key, False)
+            return f"\n🧠 [Reasoning Complete]\n"
+                
+        elif chunk_type == "reasoning_summary":
             # Track if we're in an active summary for this source
             summary_active_key = f"_summary_active_{source}"
             
             if not hasattr(self, summary_active_key) or not getattr(self, summary_active_key, False):
                 # Start of new summary - add prefix and mark as active
                 setattr(self, summary_active_key, True)
-                return f"📋 [Reasoning Summary] {content}"
+                return f"📋 [Reasoning Summary]\n{content}\n"
             else:
                 # Continuing existing summary - no prefix
                 return content

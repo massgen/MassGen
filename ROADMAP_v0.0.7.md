@@ -1,22 +1,26 @@
-# MassGen v0.0.6 Roadmap
+# MassGen v0.0.7 Roadmap
 
 ## Overview
 
-MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary goal. Building on the solid foundation of existing backends and multi-turn conversation support, this version primarily aims to deliver multiple Claude Code CLI agent integration and Gemini CLI integration, with additional enhancements as optional features.
+Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration with local inference engines for open-weight models. Key enhancements include:
+
+- **Local Model Integration** (Required): 🚀 Support for backends like LM Studio/vllm/sglang to run open-weight models locally
+- **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
+- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Coding Agent Integration (REQUIRED)
-**Goal**: Implement multiple Claude Code CLI coding agents and Gemini CLI coding agents
+### 🎯 Milestone 1: Local Model Integration (REQUIRED)
+**Goal**: Enable integration with local inference engines for open-weight models
 
-#### 1.1 Core Coding Agent Implementation (REQUIRED)
-- [ ] Implement Gemini CLI backend integration (IN PROGRESS: `gemini_cli.py` exists but needs completion)
-- [x] ~~Add coding-specific tool and workflow support~~ (Completed: Claude Code SDK integration)
-- [x] ~~Create coding agent configuration templates~~ (Completed: `claude_code_flash2.5.yaml`, `claude_code_flash2.5_gptoss.yaml`)
+#### 1.1 Core Local Model Implementation (REQUIRED)
+- [ ] Implement LM Studio backend integration
+- [ ] Create unified interface for local model backends
 
-#### 1.2 Coding Agent Testing & Validation (REQUIRED)
-- [x] ~~Test multi-agent coordination with coding agents~~ (Completed: Test infrastructure in place)
-- [x] ~~Ensure backward compatibility with existing configurations~~ (Completed: All existing backends maintained)
+#### 1.2 Local Model Testing & Validation (REQUIRED)
+- [ ] Test local model backends with popular open-weight models
+- [ ] Validate multi-agent coordination with mixed local/cloud agents
+- [ ] Create documentation for local model setup
 
 ### 🎯 Milestone 2: Enhanced Backend Features (OPTIONAL)
 **Goal**: Improve and extend the backend system for production use
@@ -67,7 +71,7 @@ MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary
 
 ## Key Technical Priorities
 
-1. **Coding Agent Integration** (REQUIRED): Claude Code CLI and Gemini CLI implementation
+1. **Local Model Integration** (REQUIRED): Support for LM Studio backends
 2. **Backend Reliability** (OPTIONAL): Robust error handling and failover mechanisms
 3. **User Experience** (OPTIONAL): Enhanced CLI interface and conversation management
 4. **Production Features** (OPTIONAL): Monitoring, analytics, and deployment readiness
@@ -75,9 +79,9 @@ MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
-- [ ] Coding agents (Claude Code CLI, Gemini CLI) integrate seamlessly (Claude Code ✅, Gemini CLI ⏳)
-- [x] ~~Coding agent workflows and tools function correctly~~ (Completed: Claude Code SDK with full tool support)
-- [x] ~~All existing functionality continues to work (backward compatibility)~~ (Completed)
+- [ ] Local model backends (LM Studio) integrate seamlessly
+- [ ] Local model workflows function correctly with existing agent coordination
+- [ ] All existing functionality continues to work (backward compatibility)
 
 ### Functional Requirements (OPTIONAL)
 - [ ] All backends work reliably with comprehensive error handling
@@ -85,17 +89,17 @@ MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary
 - [ ] Conversation save/load and export features work seamlessly
 
 ### Performance Requirements (REQUIRED)
-- [ ] Coding agents maintain <2s response times
-- [ ] Memory usage remains efficient for coding workflows
+- [ ] Local models maintain reasonable response times based on hardware
+- [ ] Memory usage remains efficient for local model inference
 
 ### Performance Requirements (OPTIONAL)  
 - [ ] Backend health checks complete in <500ms
 - [ ] Configuration validation completes instantly
 
 ### Quality Requirements (REQUIRED)
-- [x] ~~95%+ test coverage for coding agent features~~ (Completed: Test infrastructure for Claude Code integration)
-- [x] ~~Zero regressions in existing multi-turn and coordination behavior~~ (Completed: All existing functionality preserved)
-- [x] ~~Comprehensive documentation for coding agent setup and usage~~ (Completed: Backend documentation updates, architecture docs)
+- [ ] Test coverage for local model integration features
+- [ ] Zero regressions in existing multi-turn and coordination behavior
+- [ ] Comprehensive documentation for local model setup and usage
 
 ### Quality Requirements (OPTIONAL)
 - [ ] Comprehensive documentation with production deployment guides
@@ -104,21 +108,21 @@ MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary
 ## Dependencies & Risks
 
 ### Dependencies
-- **Existing Backends**: OpenAI, Claude, Gemini, and Grok backend foundation
+- **Existing Backends**: OpenAI, Claude, Gemini, Grok, Claude Code and ZAI backend foundation
 - **Multi-Turn Architecture**: Current conversation context system
 - **Configuration System**: YAML/JSON configuration management
 - **Test Infrastructure**: Existing comprehensive test suite
 
 ### Risks & Mitigations
 1. **Backend Reliability**: *Mitigation*: Comprehensive error handling and health monitoring
-2. **Coding Agent Integration Complexity**: *Mitigation*: Dedicated testing and validation frameworks
-3. **Configuration Complexity**: *Mitigation*: Validation tools and interactive setup wizard
+2. **Local Model Integration Complexity**: *Mitigation*: Support multiple backends with fallback options
+3. **Hardware Requirements**: *Mitigation*: Clear documentation on minimum requirements and optimization guides
 4. **Backward Compatibility**: *Mitigation*: Extensive regression testing
-5. **Production Deployment**: *Mitigation*: Clear deployment guides and monitoring tools
+5. **Performance Variability**: *Mitigation*: Adaptive timeout and resource management for local models
 
-## Post-v0.0.6 Considerations
+## Post-v0.0.7 Considerations
 
-### Future Enhancements (v0.0.6+)
+### Future Enhancements (v0.0.7+)
 - **Web Interface**: Browser-based conversation interface
 - **API Server**: RESTful API for third-party integrations
 - **Advanced Analytics**: Conversation insights and optimization suggestions
@@ -134,9 +138,9 @@ MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary
 
 | Week | Focus | Key Deliverables | Status |
 |------|-------|------------------|--------|
-| 1 | Coding agent integration | Claude Code CLI, Gemini CLI implementation and testing | 🔄 **PARTIALLY COMPLETED** (Claude Code ✅, Gemini CLI ⏳) |
-| 2 | Backend enhancements (optional) | Error handling, health checks, additional providers | ✅ **PARTIALLY COMPLETED** |
-| 3 | Advanced features (optional) | CLI features, monitoring, production readiness | ⏳ **IN PROGRESS** |
+| 1 | Local model backend design | Architecture for LM Studio integration | ⏳ **PENDING** |
+| 2 | Local model implementation | Core backend implementations and testing | ⏳ **PENDING** |
+| 3 | Backend enhancements (optional) | Error handling, health checks, additional features | ⏳ **PENDING** |
 | 4 | Release preparation | Documentation, testing, final validation | ⏳ **PENDING** |
 
 ## Getting Started
@@ -148,11 +152,11 @@ MassGen v0.0.6 continues focusing on **Coding Agent Integration** as the primary
 4. Run existing backend tests to understand current capabilities
 
 ### For Users
-- v0.0.6 will be fully backward compatible with existing configurations
-- New features will enhance existing functionality without breaking changes
-- All current backends (OpenAI, Claude, Gemini, Grok) will continue to work with improvements
-- Enhanced documentation and production deployment guides will be provided
+- v0.0.7 will be fully backward compatible with existing configurations
+- Local model support will complement existing cloud-based backends
+- All current backends (OpenAI, Claude, Gemini, Grok, Claude Code, ZAI) will continue to work
+- Comprehensive documentation for local model setup and optimization will be provided
 
 ---
 
-*This roadmap represents our commitment to making MassGen the most capable and user-friendly multi-agent coordination system available.*
+*This roadmap represents our commitment to making MassGen accessible with local model support while maintaining the power of cloud-based AI systems.*

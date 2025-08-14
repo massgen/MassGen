@@ -589,10 +589,11 @@ class ClaudeCodeBackend(LLMBackend):
         """
         cwd_path = options_kwargs.get("cwd", os.getcwd())
         permission_mode = options_kwargs.get("permission_mode", "acceptEdits")
+        allowed_tools = options_kwargs.get("allowed_tools", self.get_supported_builtin_tools())
         
         # Filter out parameters handled separately or not for ClaudeCodeOptions
         excluded_params = {
-            "cwd", "permission_mode", "type", "agent_id", "session_id", "api_key"
+            "cwd", "permission_mode", "type", "agent_id", "session_id", "api_key", "allowed_tools"
         }
         
         # Handle cwd - create directory if it doesn't exist and ensure absolute path
@@ -617,6 +618,7 @@ class ClaudeCodeBackend(LLMBackend):
             cwd=cwd_option,
             resume=self.get_current_session_id(),
             permission_mode=permission_mode,
+            allowed_tools=allowed_tools,
             **{k: v for k, v in options_kwargs.items() if k not in excluded_params}
         )
 
