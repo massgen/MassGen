@@ -201,7 +201,6 @@ cp .env.example .env
  - [Gemini](https://ai.google.dev/gemini-api/docs)
  - [Grok](https://docs.x.ai/docs/overview)
  - [OpenAI](https://platform.openai.com/api-keys)
- - [Together AI](https://api.together.xyz/settings/api-keys)
  - [Z AI](https://docs.z.ai/guides/overview/quick-start)
 
 ### 3. 🧩 Supported Models and Tools
