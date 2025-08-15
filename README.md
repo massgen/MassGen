@@ -188,28 +188,20 @@ cmd /c %USERPROFILE%/.lmstudio/bin/lms.exe bootstrap
 
 ### 2. 🔐 API Configuration
 
-Create a `.env` file in the `massgen` directory with your API keys:
+Using the template file `.env.example` to create a `.env` file in the `massgen` directory with your API keys. Note that only the API keys of the models used by your MassGen agent team is needed.
 
 ```bash
 # Copy example configuration
 cp .env.example .env
-
-# Edit with your API keys
-ANTHROPIC_API_KEY=your-anthropic-key-here
-GEMINI_API_KEY=your-gemini-key-here
-OPENAI_API_KEY=your-openai-key-here
-XAI_API_KEY=your-xai-key-here
-ZAI_API_KEY=your-zai-key-here
 ```
 
-Make sure you set up the API key for the model you want to use.
-
 **Useful links to get API keys:**
- - [Cerabras](https://inference-docs.cerebras.ai/introduction)
+ - [Cerebras](https://inference-docs.cerebras.ai/introduction)
  - [Claude](https://docs.anthropic.com/en/api/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
  - [Grok](https://docs.x.ai/docs/overview)
  - [OpenAI](https://platform.openai.com/api-keys)
+ - [Together AI](https://api.together.xyz/settings/api-keys)
  - [Z AI](https://docs.z.ai/guides/overview/quick-start)
 
 ### 3. 🧩 Supported Models and Tools
@@ -219,18 +211,20 @@ Make sure you set up the API key for the model you want to use.
 The system currently supports multiple model providers with advanced capabilities:
 
 **API-based Models:**
-- **Anthropic Claude**: Claude Sonnet 4, Claude Haiku 3.5
-- **Claude Code**: Native Claude Code SDK with comprehensive dev tools
-- **Google Gemini**: Gemini 2.5 Flash, Gemini 2.0 Flash Thinking, Gemini 1.5 Pro
-- **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano), GPT-4o series
-- **xAI Grok**: Grok-3, Grok-3-mini
-- **Z AI**: GLM-4.5
 - **Cerebras AI**: GPT-OSS-120B
+- **Claude**: Claude Sonnet 4, Claude Haiku 3.5
+- **Claude Code**: Native Claude Code SDK with comprehensive dev tools
+- **Gemini**: Gemini 2.5 Flash, Gemini 2.0 Flash Thinking, Gemini 1.5 Pro
+- **Grok**: Grok-3, Grok-3-mini
+- **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano), GPT-4o series
 - **Together AI**, **Fireworks AI**, **Groq**, **Nebius AI Studio**, **OpenRouter**: Various open-source models
+- **Z AI**: GLM-4.5
 
 **Local Model Support (NEW in v0.0.7):**
 - **LM Studio**: Run open-weight models locally with automatic server management
+  - Automatic LM Studio CLI installation
   - Auto-download and loading of models
+  - Zero-cost usage reporting
   - Support for Qwen, LLaMA, Mistral, and other open-weight models
 
 More providers and local inference engines (vllm, sglang) are welcome to be added.
