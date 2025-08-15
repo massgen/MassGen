@@ -620,6 +620,7 @@ Environment Variables:
     XAI_API_KEY         - Required for Grok backend
     ANTHROPIC_API_KEY   - Required for Claude backend
     GOOGLE_API_KEY      - Required for Gemini backend (or GEMINI_API_KEY)
+    ZAI_API_KEY         - Required for ZAI backend 
   
   OpenAI-Compatible Providers (chatcompletion backend):
     CEREBRAS_API_KEY    - For Cerebras AI (cerebras.ai)
