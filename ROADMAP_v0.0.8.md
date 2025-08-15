@@ -2,11 +2,11 @@
 
 ## Overview
 
-Version 0.0.8 focuses primarily on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code instances and other models. Key enhancements include:
+Version 0.0.8 focuses primarily on **Coding Agent Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
 
-- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code backends and other models
-- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code instances to access each other's context
-- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-model communication
+- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
+- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
+- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
 ## Key Milestones
@@ -128,9 +128,9 @@ Version 0.0.8 focuses primarily on **Claude Code Context Sharing**, enabling sea
 4. **Performance Impact**: *Mitigation*: Implement efficient caching and lazy loading strategies
 5. **Context Size Limitations**: *Mitigation*: Smart context pruning and summarization techniques
 
-## Post-v0.0.7 Considerations
+## Post-v0.0.8 Considerations
 
-### Future Enhancements (v0.0.7+)
+### Future Enhancements (v0.0.8+)
 - **Web Interface**: Browser-based conversation interface
 - **API Server**: RESTful API for third-party integrations
 - **Advanced Analytics**: Conversation insights and optimization suggestions
