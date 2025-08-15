@@ -230,9 +230,7 @@ The system currently supports multiple model providers with advanced capabilitie
 
 **Local Model Support (NEW in v0.0.7):**
 - **LM Studio**: Run open-weight models locally with automatic server management
-  - Automatic LM Studio CLI installation
   - Auto-download and loading of models
-  - Zero-cost usage reporting
   - Support for Qwen, LLaMA, Mistral, and other open-weight models
 
 More providers and local inference engines (vllm, sglang) are welcome to be added.
