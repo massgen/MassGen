@@ -1,0 +1,26 @@
+agents:
+  - id: "gpt-oss-1" # Cerebras AI  
+    backend:
+      type: "chatcompletion"
+      model: "gpt-oss-120b"
+      base_url: "https://api.cerebras.ai/v1"
+      # api_key: "cerebras_api_key"
+
+  - id: "zai_glm45_agent"
+    backend:
+      type: "zai"
+      model: "glm-4.5-air"
+      base_url: "https://api.z.ai/api/paas/v4/"
+      temperature: 0.7
+      top_p: 0.7
+
+  - id: "Qwen3-4b"
+    backend:
+      type: "lmstudio"
+      model: "qwen/qwen3-4b-2507"
+      # api_key: "lm-studio"
+  
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+  

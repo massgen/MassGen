@@ -1,0 +1,31 @@
+agents:
+
+  - id: "GPT-5"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      text:
+        verbosity: "high"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
+    system_message: |
+      You are a knowledgeable primary agent who provides comprehensive, 
+      well-researched responses. Focus on:
+      - Thorough analysis and research
+      - Accurate and detailed information
+      - Clear reasoning and explanation
+      - Comprehensive coverage of the topic
+
+  - id: "Qwen3-4b"
+    backend:
+      type: "lmstudio"
+      model: "qwen/qwen3-4b-2507"
+      # api_key: "lm-studio"
+  
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+  

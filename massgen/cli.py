@@ -34,6 +34,7 @@ from .backend.grok import GrokBackend
 from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.chat_completions import ChatCompletionsBackend
+from .backend.lmstudio import LMStudioBackend
 from .backend.claude_code import ClaudeCodeBackend
 from .chat_agent import SingleAgent, ConfigurableAgent
 from .agent_config import AgentConfig
@@ -112,7 +113,23 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
 
 
 def create_backend(backend_type: str, **kwargs) -> Any:
-    """Create backend instance from type and parameters."""
+    """Create backend instance from type and parameters.
+    
+    Supported backend types:
+    - openai: OpenAI API (requires OPENAI_API_KEY)
+    - grok: xAI Grok (requires XAI_API_KEY)
+    - claude: Anthropic Claude (requires ANTHROPIC_API_KEY)
+    - gemini: Google Gemini (requires GOOGLE_API_KEY or GEMINI_API_KEY)
+    - chatcompletion: OpenAI-compatible providers (auto-detects API key based on base_url)
+    
+    For chatcompletion backend, the following providers are auto-detected:
+    - Cerebras AI (cerebras.ai) -> CEREBRAS_API_KEY
+    - Together AI (together.ai/together.xyz) -> TOGETHER_API_KEY
+    - Fireworks AI (fireworks.ai) -> FIREWORKS_API_KEY
+    - Groq (groq.com) -> GROQ_API_KEY
+    - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
+    - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
+    """
     backend_type = backend_type.lower()
 
     if backend_type == "openai":
@@ -181,6 +198,14 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 "ZAI API key not found. Set ZAI_API_KEY or provide in config."
             )
         return ChatCompletionsBackend(api_key=api_key)
+      
+        # ChatCompletionsBackend now handles provider-specific API key detection internally
+        # Just pass through all kwargs including api_key and base_url
+        return ChatCompletionsBackend(**kwargs)
+
+    elif backend_type == "lmstudio":
+        # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
+        return LMStudioBackend(**kwargs)
     
     elif backend_type == "claude_code":
         # ClaudeCodeBackend using claude-code-sdk-python
@@ -195,6 +220,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             )
         
         return ClaudeCodeBackend(**kwargs)
+
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -240,6 +266,8 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             agent_config = AgentConfig.create_zai_config(**backend_params)
         elif backend_type_lower == "chatcompletion":
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
+        elif backend_type_lower == "lmstudio":
+            agent_config = AgentConfig.create_lmstudio_config(**backend_params)
         else:
             agent_config = AgentConfig(backend_params=backend_config)
 
@@ -587,10 +615,21 @@ Examples:
   python -m massgen.cli --create-samples
 
 Environment Variables:
-  OPENAI_API_KEY      - Required for OpenAI backend
-  XAI_API_KEY         - Required for Grok backend  
-  ANTHROPIC_API_KEY   - Required for Claude backend
-  CEREBRAS_API_KEY    - Required for CEREBRAS CLOUD API (chatcompletion backend)
+    OPENAI_API_KEY      - Required for OpenAI backend
+    XAI_API_KEY         - Required for Grok backend
+    ANTHROPIC_API_KEY   - Required for Claude backend
+    GOOGLE_API_KEY      - Required for Gemini backend (or GEMINI_API_KEY)
+    ZAI_API_KEY         - Required for ZAI backend 
+  
+    CEREBRAS_API_KEY    - For Cerebras AI (cerebras.ai)
+    TOGETHER_API_KEY    - For Together AI (together.ai, together.xyz)
+    FIREWORKS_API_KEY   - For Fireworks AI (fireworks.ai)
+    GROQ_API_KEY        - For Groq (groq.com)
+    NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
+    OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
+    
+  Note: The chatcompletion backend auto-detects the provider from the base_url
+        and uses the appropriate environment variable for API key.
         """,
     )
 
@@ -609,7 +648,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code", "zai"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code", "zai","lmstudio"],
         help="Backend type for quick setup",
     )
 

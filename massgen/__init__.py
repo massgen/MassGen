@@ -51,6 +51,7 @@ from .backend.response import ResponseBackend
 from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
+from .backend.lmstudio import LMStudioBackend
 from .chat_agent import (
     ChatAgent,
     SingleAgent,
@@ -64,7 +65,7 @@ from .orchestrator import Orchestrator, create_orchestrator
 from .message_templates import MessageTemplates, get_templates
 from .agent_config import AgentConfig
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 __author__ = "MassGen Contributors"
 
 __all__ = [
@@ -73,6 +74,7 @@ __all__ = [
     "ClaudeBackend",
     "GeminiBackend",
     "GrokBackend",
+    "LMStudioBackend",
     # Agents
     "ChatAgent",
     "SingleAgent",

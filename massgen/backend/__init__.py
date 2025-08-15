@@ -17,6 +17,7 @@ from .base import LLMBackend, StreamChunk, TokenUsage
 from .chat_completions import ChatCompletionsBackend
 from .response import ResponseBackend
 from .grok import GrokBackend
+from .lmstudio import LMStudioBackend
 from .claude import ClaudeBackend
 from .gemini import GeminiBackend
 from .cli_base import CLIBackend
@@ -31,6 +32,7 @@ __all__ = [
     "ChatCompletionsBackend",
     "ResponseBackend",
     "GrokBackend",
+    "LMStudioBackend",
     "ClaudeBackend",
     "GeminiBackend",
     "CLIBackend",

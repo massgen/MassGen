@@ -3,21 +3,80 @@ from __future__ import annotations
 """
 Base class for backends using OpenAI Chat Completions API format.
 Handles common message processing, tool conversion, and streaming patterns.
+
+Supported Providers and Environment Variables:
+- OpenAI: OPENAI_API_KEY
+- Cerebras AI: CEREBRAS_API_KEY
+- Together AI: TOGETHER_API_KEY
+- Fireworks AI: FIREWORKS_API_KEY
+- Groq: GROQ_API_KEY
+- Nebius AI Studio: NEBIUS_API_KEY
+- OpenRouter: OPENROUTER_API_KEY
+- ZAI: ZAI_API_KEY
 """
 
-from typing import Dict, List, Any, AsyncGenerator, Optional
+
+# Standard library imports
+import asyncio
+import os
+from dataclasses import dataclass
+from typing import Dict, List, Any, AsyncGenerator, Optional, Tuple
+from urllib.parse import urlparse
+
+# Third-party imports
+import openai
+from openai import AsyncOpenAI
+import logging
+
+# Local imports
+
 from .base import LLMBackend, StreamChunk
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 
 class ChatCompletionsBackend(LLMBackend):
     """Complete OpenAI-compatible Chat Completions API backend.
     
-    Can be used directly with any OpenAI-compatible provider by setting base_url.
-    Supports Cerebras AI and other compatible providers.
+    Can be used directly with any OpenAI-compatible provider by setting provider name.
+    Supports Cerebras AI, Together AI, Fireworks AI, DeepInfra, and other compatible providers.
+    
+    Environment Variables:
+        Provider-specific API keys are automatically detected based on provider name.
+        See ProviderRegistry.PROVIDERS for the complete list.
+    
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
+
+    def get_provider_name(self) -> str:
+        """Get the name of this provider."""
+        # Check if provider name was explicitly set in config
+        if 'provider' in self.config:
+            return self.config['provider']
+        elif 'provider_name' in self.config:
+            return self.config['provider_name']
+        
+        # Try to infer from base_url
+        base_url = self.config.get('base_url', '')
+        if 'openai.com' in base_url:
+            return 'OpenAI'
+        elif 'cerebras.ai' in base_url:
+            return 'Cerebras AI'
+        elif 'together.ai' in base_url:
+            return 'Together AI'
+        elif 'fireworks.ai' in base_url:
+            return 'Fireworks AI'
+        elif 'groq.com' in base_url:
+            return 'Groq'
+        elif 'openrouter.ai' in base_url:
+            return 'OpenRouter'
+        elif 'z.ai' in base_url:
+            return 'ZAI'
+        else:
+            return 'ChatCompletion'
 
     def convert_tools_to_chat_completions_format(
         self, tools: List[Dict[str, Any]]
@@ -257,8 +316,8 @@ class ChatCompletionsBackend(LLMBackend):
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
-            """Stream response using OpenAI-compatible Chat Completions API."""
-            try:  
+        """Stream response using OpenAI-compatible Chat Completions API."""
+        try:  
 
                 import openai
 
@@ -293,7 +352,7 @@ class ChatCompletionsBackend(LLMBackend):
                     api_params["tools"] = converted_tools
 
                 # Direct passthrough of all parameters except those handled separately
-                excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id"}
+                excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id", "type"}
                 for key, value in all_params.items():
                     if key not in excluded_params and value is not None:
                         api_params[key] = value
@@ -339,12 +398,9 @@ class ChatCompletionsBackend(LLMBackend):
                 ):
                     yield chunk
 
-            except Exception as e:
+        except Exception as e:
                 yield StreamChunk(type="error", error=f"Chat Completions API error: {str(e)}")
 
-    def get_provider_name(self) -> str:
-        """Get the name of this provider."""
-        return "ChatCompletions"
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (rough approximation)."""

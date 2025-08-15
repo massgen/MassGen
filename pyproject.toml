@@ -33,6 +33,7 @@ dependencies = [
     "anthropic==0.49.0",
     "nest-asyncio==1.6.0",
     "cerebras-cloud-sdk==1.46.0",
+    "lmstudio==1.4.1",
     "wcwidth>=0.2.5",
     "google-genai>=1.27.0",
     "python-dotenv>=1.0.0",
