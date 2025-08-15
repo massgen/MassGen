@@ -600,7 +600,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 ### Recent Achievements (v0.0.7)
 
 ✅ **Local Model Support**: Successfully integrated LM Studio for running open-weight models locally, with automatic server management and zero-cost usage
+
 ✅ **Extended Provider Support**: Added support for Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
+
 ✅ **Enhanced Backend Stability**: Improved error handling and configuration management across all backends
 
 ### Key Future Enhancements:
