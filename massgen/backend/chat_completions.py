@@ -12,6 +12,7 @@ Supported Providers and Environment Variables:
 - Groq: GROQ_API_KEY
 - Nebius AI Studio: NEBIUS_API_KEY
 - OpenRouter: OPENROUTER_API_KEY
+- ZAI: ZAI_API_KEY
 """
 
 

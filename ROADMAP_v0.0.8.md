@@ -1,47 +1,51 @@
-# MassGen v0.0.7 Roadmap
+# MassGen v0.0.8 Roadmap
 
 ## Overview
 
-Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration with local inference engines for open-weight models. Key enhancements include:
+Version 0.0.8 focuses primarily on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code instances and other models. Key enhancements include:
 
-- **Local Model Integration** (Required): 🚀 Support for backends like LM Studio/vllm/sglang to run open-weight models locally
-- **Enhanced Backend Features** (Optional): 🔄 Improved error handling, health monitoring, and backend stability enhancements
+- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code backends and other models
+- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code instances to access each other's context
+- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-model communication
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Local Model Integration (REQUIRED)
-**Goal**: Enable integration with local inference engines for open-weight models
+### 🎯 Milestone 1: Claude Code Context Sharing (REQUIRED)
+**Goal**: Enable seamless context sharing between Claude Code instances and other models
 
-#### 1.1 Core Local Model Implementation (REQUIRED)
-- [ ] Implement LM Studio backend integration
-- [ ] Create unified interface for local model backends
+#### 1.1 Core Context Sharing Implementation (REQUIRED)
+- [ ] Implement context extraction from Claude Code backends
+- [ ] Create unified context sharing protocol for cross-model communication
+- [ ] Enable bidirectional context synchronization between Claude Code instances
+- [ ] Implement context transformation for non-Claude backends
 
-#### 1.2 Local Model Testing & Validation (REQUIRED)
-- [ ] Test local model backends with popular open-weight models
-- [ ] Validate multi-agent coordination with mixed local/cloud agents
-- [ ] Create documentation for local model setup
+#### 1.2 Context Sharing Testing & Validation (REQUIRED)
+- [ ] Test context sharing between two Claude Code instances
+- [ ] Validate context transmission from Claude Code to other models (GPT, Gemini, etc.)
+- [ ] Test multi-agent coordination with shared context
+- [ ] Create documentation for context sharing configuration
 
 ### 🎯 Milestone 2: Enhanced Backend Features (OPTIONAL)
 **Goal**: Improve and extend the backend system for production use
 
-#### 2.1 Backend Stability & Performance
-- [x] ~~Add comprehensive error handling and recovery for backends~~ (Completed: Improved error handling across all backends)
-- [x] ~~Implement backend health checks and monitoring~~ (Completed: Client existence validation added)
-- [ ] Add connection pooling and request optimization
-- [ ] Implement automatic retry mechanisms with exponential backoff
+#### 2.1 Context Management & Performance
+- [ ] Implement context state persistence across conversation turns
+- [ ] Add context size optimization and compression
+- [ ] Create context caching mechanism for improved performance
+- [ ] Implement context versioning and rollback capabilities
 
-#### 2.2 Extended Backend Support  
-- [ ] Add support for additional model providers
-- [ ] Add local model backend support
-- [ ] Implement backend load balancing and routing
-- [ ] Create backend configuration validation and testing
+#### 2.2 Enhanced Backend Communication  
+- [ ] Create shared context store for multi-agent systems
+- [ ] Implement context event streaming between agents
+- [ ] Add context-aware message routing
+- [ ] Create context synchronization protocols
 
-#### 2.3 Backend Management
-- [ ] Add backend switching and fallback mechanisms
-- [ ] Implement cost tracking and usage analytics
-- [ ] Add backend performance metrics and logging
-- [ ] Create backend configuration templates and documentation
+#### 2.3 Context-Aware Backend Management
+- [ ] Add context-aware backend switching mechanisms
+- [ ] Implement context usage tracking and analytics
+- [ ] Add context performance metrics and logging
+- [ ] Create context sharing configuration templates
 
 ### 🎯 Milestone 3: Advanced CLI & Production Features (OPTIONAL)
 **Goal**: Add advanced CLI features and production readiness capabilities
@@ -71,16 +75,17 @@ Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration
 
 ## Key Technical Priorities
 
-1. **Local Model Integration** (REQUIRED): Support for LM Studio backends
-2. **Backend Reliability** (OPTIONAL): Robust error handling and failover mechanisms
-3. **User Experience** (OPTIONAL): Enhanced CLI interface and conversation management
-4. **Production Features** (OPTIONAL): Monitoring, analytics, and deployment readiness
+1. **Claude Code Context Sharing** (REQUIRED): Enable context transmission between Claude Code and other models
+2. **Multi-Claude Synchronization** (REQUIRED): Allow multiple Claude Code instances to share context
+3. **Context Management** (OPTIONAL): Robust context persistence and optimization
+4. **User Experience** (OPTIONAL): Enhanced CLI interface and conversation management
 
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
-- [ ] Local model backends (LM Studio) integrate seamlessly
-- [ ] Local model workflows function correctly with existing agent coordination
+- [ ] Claude Code backends can share context with other models
+- [ ] Multiple Claude Code instances can access each other's context
+- [ ] Context sharing maintains conversation coherence
 - [ ] All existing functionality continues to work (backward compatibility)
 
 ### Functional Requirements (OPTIONAL)
@@ -89,17 +94,19 @@ Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration
 - [ ] Conversation save/load and export features work seamlessly
 
 ### Performance Requirements (REQUIRED)
-- [ ] Local models maintain reasonable response times based on hardware
-- [ ] Memory usage remains efficient for local model inference
+- [ ] Context sharing adds minimal latency (<100ms overhead)
+- [ ] Memory usage remains efficient with shared context storage
+- [ ] Context synchronization completes within conversation turn timeouts
 
 ### Performance Requirements (OPTIONAL)  
 - [ ] Backend health checks complete in <500ms
 - [ ] Configuration validation completes instantly
 
 ### Quality Requirements (REQUIRED)
-- [ ] Test coverage for local model integration features
+- [ ] Test coverage for context sharing features
 - [ ] Zero regressions in existing multi-turn and coordination behavior
-- [ ] Comprehensive documentation for local model setup and usage
+- [ ] Comprehensive documentation for context sharing configuration
+- [ ] Context integrity validation and error handling
 
 ### Quality Requirements (OPTIONAL)
 - [ ] Comprehensive documentation with production deployment guides
@@ -108,17 +115,18 @@ Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration
 ## Dependencies & Risks
 
 ### Dependencies
-- **Existing Backends**: OpenAI, Claude, Gemini, Grok, Claude Code and ZAI backend foundation
+- **Claude Code Backend**: Existing Claude Code integration with stateful conversation management
+- **Existing Backends**: OpenAI, Claude, Gemini, Grok, LM Studio, and ZAI backend foundation
 - **Multi-Turn Architecture**: Current conversation context system
+- **Orchestrator**: Multi-agent coordination and message routing
 - **Configuration System**: YAML/JSON configuration management
-- **Test Infrastructure**: Existing comprehensive test suite
 
 ### Risks & Mitigations
-1. **Backend Reliability**: *Mitigation*: Comprehensive error handling and health monitoring
-2. **Local Model Integration Complexity**: *Mitigation*: Support multiple backends with fallback options
-3. **Hardware Requirements**: *Mitigation*: Clear documentation on minimum requirements and optimization guides
-4. **Backward Compatibility**: *Mitigation*: Extensive regression testing
-5. **Performance Variability**: *Mitigation*: Adaptive timeout and resource management for local models
+1. **Context Synchronization Complexity**: *Mitigation*: Implement robust conflict resolution and versioning
+2. **Claude Code API Limitations**: *Mitigation*: Design flexible context extraction and injection mechanisms
+3. **Cross-Model Compatibility**: *Mitigation*: Create context transformation layers for different model formats
+4. **Performance Impact**: *Mitigation*: Implement efficient caching and lazy loading strategies
+5. **Context Size Limitations**: *Mitigation*: Smart context pruning and summarization techniques
 
 ## Post-v0.0.7 Considerations
 
@@ -138,25 +146,27 @@ Version 0.0.7 focuses primarily on **Local Model Support**, enabling integration
 
 | Week | Focus | Key Deliverables | Status |
 |------|-------|------------------|--------|
-| 1 | Local model backend design | Architecture for LM Studio integration | ⏳ **PENDING** |
-| 2 | Local model implementation | Core backend implementations and testing | ⏳ **PENDING** |
-| 3 | Backend enhancements (optional) | Error handling, health checks, additional features | ⏳ **PENDING** |
-| 4 | Release preparation | Documentation, testing, final validation | ⏳ **PENDING** |
+| 1 | Context sharing design | Architecture for Claude Code context sharing | ⏳ **PENDING** |
+| 2 | Core implementation | Context extraction and synchronization mechanisms | ⏳ **PENDING** |
+| 3 | Cross-model integration | Context transformation and routing implementation | ⏳ **PENDING** |
+| 4 | Testing & release | Documentation, comprehensive testing, validation | ⏳ **PENDING** |
 
 ## Getting Started
 
 ### For Contributors
-1. Review existing backend implementations in `massgen/backend/`
-2. Check the current multi-turn conversation system in `massgen/orchestrator.py`
-3. Examine the comprehensive test suite in `massgen/tests/`
-4. Run existing backend tests to understand current capabilities
+1. Review Claude Code backend implementation in `massgen/backend/claude_code.py`
+2. Understand current session management and context handling
+3. Check the orchestrator's message routing in `massgen/orchestrator.py`
+4. Examine existing multi-agent coordination patterns
+5. Run Claude Code backend tests to understand current capabilities
 
 ### For Users
-- v0.0.7 will be fully backward compatible with existing configurations
-- Local model support will complement existing cloud-based backends
-- All current backends (OpenAI, Claude, Gemini, Grok, Claude Code, ZAI) will continue to work
-- Comprehensive documentation for local model setup and optimization will be provided
+- v0.0.8 will be fully backward compatible with existing configurations
+- Context sharing will enhance multi-agent collaboration capabilities
+- All current backends (OpenAI, Claude, Gemini, Grok, Claude Code, LM Studio, ZAI) will continue to work
+- New context sharing features will be opt-in with clear configuration options
+- Comprehensive documentation for context sharing setup will be provided
 
 ---
 
-*This roadmap represents our commitment to making MassGen accessible with local model support while maintaining the power of cloud-based AI systems.*
+*This roadmap represents our commitment to enhancing MassGen's multi-agent collaboration through advanced context sharing capabilities, enabling more coherent and context-aware conversations across different AI models.*

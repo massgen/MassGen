@@ -5,6 +5,51 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2025-08-15
+
+### Added
+- **Local Model Support**: Complete integration with LM Studio for running open-weight models locally
+  - New `lmstudio.py` backend with automatic server management
+  - Auto-installation of LM Studio CLI across macOS, Linux, and Windows
+  - Automatic model downloading and loading capabilities
+  - Zero-cost reporting for local model usage
+- **Extended Provider Support**: Enhanced ChatCompletionsBackend to support multiple providers
+  - Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter
+  - Provider-specific environment variable detection
+  - Automatic provider name inference from base URLs
+- **New Configuration Files**: Added configurations for local and hybrid model setups
+  - `lmstudio.yaml`: Single agent configuration for LM Studio
+  - `two_agents_opensource_lmstudio.yaml`: Hybrid setup with GPT-5 and local Qwen model
+  - `gpt5nano_glm_qwen.yaml`: Three-agent setup combining Cerebras, ZAI GLM-4.5, and local Qwen
+  - Updated `three_agents_opensource.yaml` for open-source model combinations
+
+### Fixed
+- **Backend Stability**: Improved error handling across all backend systems
+  - Fixed API key resolution and client initialization
+  - Enhanced provider name detection and configuration
+  - Resolved streaming issues in ChatCompletionsBackend
+- **Documentation**: Corrected references and updated model naming conventions
+  - Fixed GPT model references in documentation diagrams
+  - Updated case study file naming consistency
+
+### Changed
+- **Backend Architecture**: Refactored ChatCompletionsBackend for better extensibility
+  - Improved provider registry and configuration management
+  - Enhanced logging and debugging capabilities
+  - Streamlined message processing and tool handling
+- **Dependencies**: Added new requirements for local model support
+  - Added `lmstudio==1.4.1` for LM Studio Python SDK integration
+- **Documentation Updates**: Enhanced documentation for local model usage
+  - Updated environment variables documentation
+  - Added setup instructions for LM Studio integration
+  - Improved backend configuration examples
+
+### Technical Details
+- **Commits**: 16 commits including merge pull requests #80 and #100
+- **Files Modified**: 17+ files across backend, configuration, documentation, and CLI modules
+- **New Dependencies**: LM Studio SDK (`lmstudio==1.4.1`)
+- **Contributors**: @qidanrui @sonichi @Leezekun @praneeth999 @voidcenter
+
 ## [0.0.6] - 2025-08-13
 
 ### Added
