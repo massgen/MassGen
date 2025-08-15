@@ -617,11 +617,11 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.8 Roadmap
 
-Version 0.0.8 focuses primarily on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code instances and other models. Key enhancements include:
+Version 0.0.8 focuses primarily on **Coding Agent Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
 
-- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code backends and other models
-- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code instances to access each other's context
-- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-model communication
+- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
+- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
+- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
 For detailed milestones and technical specifications, see the [full v0.0.8 roadmap](ROADMAP_v0.0.8.md).
