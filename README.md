@@ -556,12 +556,12 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 ### Key Future Enhancements:
 
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy.
--   **Expanded Model, Tool & Agent Integration:** Adding support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents.
+-   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents.
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management.
 -   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation.
 -   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem.
 
-We welcome community contributions to help us achieve these goals.
+We welcome community contributions to achieve these goals.
 
 ### v0.0.7 Roadmap
 
