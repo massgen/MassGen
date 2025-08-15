@@ -10,7 +10,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Local Model Support**: Complete integration with LM Studio for running open-weight models locally
   - New `lmstudio.py` backend with automatic server management
-  - Auto-installation of LM Studio CLI across macOS, Linux, and Windows
   - Automatic model downloading and loading capabilities
   - Zero-cost reporting for local model usage
 - **Extended Provider Support**: Enhanced ChatCompletionsBackend to support multiple providers
