@@ -75,7 +75,7 @@ class ChatCompletionsBackend(LLMBackend):
         elif 'z.ai' in base_url:
             return 'ZAI'
         else:
-            return 'LMStudio'
+            return 'ChatCompletion'
 
     def convert_tools_to_chat_completions_format(
         self, tools: List[Dict[str, Any]]
