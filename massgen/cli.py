@@ -615,14 +615,12 @@ Examples:
   python -m massgen.cli --create-samples
 
 Environment Variables:
-  Core Providers:
     OPENAI_API_KEY      - Required for OpenAI backend
     XAI_API_KEY         - Required for Grok backend
     ANTHROPIC_API_KEY   - Required for Claude backend
     GOOGLE_API_KEY      - Required for Gemini backend (or GEMINI_API_KEY)
     ZAI_API_KEY         - Required for ZAI backend 
   
-  OpenAI-Compatible Providers (chatcompletion backend):
     CEREBRAS_API_KEY    - For Cerebras AI (cerebras.ai)
     TOGETHER_API_KEY    - For Together AI (together.ai, together.xyz)
     FIREWORKS_API_KEY   - For Fireworks AI (fireworks.ai)
