@@ -174,14 +174,16 @@ pip install uv
 uv venv
 ```
 
-**Optional Tools** (for enhanced capabilities):
+**Optional CLI Tools** (for enhanced capabilities):
 ```bash
 # Claude Code CLI - Advanced coding assistant
 npm install -g @anthropic-ai/claude-code
 
-# LM Studio - Local model inference (auto-installed when needed)
-# The LM Studio backend will automatically download and install LM Studio CLI
-# when you first use a local model configuration
+# LM Studio - Local model inference
+# For MacOS/Linux
+sudo ~/.lmstudio/bin/lms bootstrap
+# For Windows
+cmd /c %USERPROFILE%/.lmstudio/bin/lms.exe bootstrap
 ```
 
 ### 2. 🔐 API Configuration
@@ -288,7 +290,7 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Compare differe
 # Mixed API and CLI backends
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 
-# Hybrid local and cloud models (NEW in v0.0.7)
+# Hybrid local and API-based models (NEW in v0.0.7)
 uv run python -m massgen.cli --config two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
 uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distributed system architecture"
 ```
@@ -320,7 +322,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" #Type of backend 
+    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -334,7 +336,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" #Type of backend
+      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -472,9 +474,6 @@ backend:
 backend:
   type: "lmstudio"
   model: "qwen2.5-7b-instruct"       # Model to load in LM Studio
-  server_port: 1234                  # Port for LM Studio server (default: 1234)
-  auto_start: true                   # Auto-start LM Studio server
-  auto_load_model: true              # Auto-download and load model
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
   max_tokens: 2000                   # Maximum response length
 ```
