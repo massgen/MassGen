@@ -597,7 +597,7 @@ class ClaudeCodeBackend(LLMBackend):
         
         # Filter out parameters handled separately or not for ClaudeCodeOptions
         excluded_params = {
-            "cwd", "permission_mode", "type", "agent_id", "session_id", "api_key", "allowed_tools"
+            "cwd", "permission_mode", "type", "agent_id", "session_id", "api_key", "allowed_tools", "_agents_cwds"
         }
         
         # Handle cwd - create directory if it doesn't exist and ensure absolute path
@@ -750,14 +750,15 @@ class ClaudeCodeBackend(LLMBackend):
             agent_dirs_info = "\n--- Other Agents' Working Directories ---\n"
             agent_dirs_info += "IMPORTANT: Before providing new_answer or vote, you MUST explore and execute code in other agents' working directories:\n"
             for anon_agent_id, cwd in anonymous_agent_cwds.items():
-                agent_dirs_info += f"- {anon_agent_id}: {cwd}\n"
+                agent_dirs_info += f"- {anon_agent_id}: {os.path.join(os.getcwd(), cwd)}\n"
             agent_dirs_info += "\nYou MUST:\n"
             agent_dirs_info += "1. Use the LS tool to explore ALL other agents' working directories\n"
-            agent_dirs_info += "2. Use the Read tool to examine any code files they created\n"
+            agent_dirs_info += "2. Use the Read tool to examine any code files they created. You also should examine all other files.\n"
             agent_dirs_info += "3. Use the Bash tool to execute their code if applicable\n"
             agent_dirs_info += "4. Use the Grep tool to search for specific implementations\n"
             agent_dirs_info += "5. Consider and incorporate ALL work done by other agents in your response\n"
-            agent_dirs_info += "\nOnly after thoroughly reviewing and executing other agents' work should you provide your new_answer or vote.\n"
+            agent_dirs_info += "\nOnly after thoroughly seeing <CURRENT ANSWERS from the agents>, reviewing and executing other agents' work should you provide your new_answer or vote.\n"
+            agent_dirs_info += "\nNOTE: You must provide at least one original answer before voting. After submiting your first answer, you may choose to either provide additional answers or vote on existing solutions.\n"
             user_contents.append(agent_dirs_info)
         
         if user_contents:
