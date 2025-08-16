@@ -64,6 +64,8 @@ If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
 Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
 Note that each time you must use at least one tool.
 
+IMPORTANT: If you are a Claude Code agent with access to other agents' working directories, you MUST explore and execute their code before making your decision. The system will provide you with the working directories of other agents.
+
 *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
 """
 

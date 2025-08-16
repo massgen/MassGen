@@ -80,6 +80,7 @@ class ClaudeCodeBackend(LLMBackend):
                 - allowed_tools: List of allowed tools
                 - max_thinking_tokens: Maximum thinking tokens
                 - cwd: Current working directory
+                - other_agents_cwds: Dict mapping agent_id to their working directories
 
         Note:
             Authentication is validated on first use. If neither API key nor
@@ -99,6 +100,9 @@ class ClaudeCodeBackend(LLMBackend):
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
+        
+        # Store other agents' working directories (will be anonymized during coordination)
+        self._agents_cwds: Dict[str, str] = kwargs.get("_agents_cwds", {})
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -339,7 +343,7 @@ class ClaudeCodeBackend(LLMBackend):
         # Start with base system prompt
         if base_system:
             system_parts.append(base_system)
-
+        
         # Add workflow tools information if present
         if tools:
             workflow_tools = [
@@ -640,7 +644,8 @@ class ClaudeCodeBackend(LLMBackend):
 
     async def stream_with_tools(
             self, messages: List[Dict[str, Any]],
-            tools: List[Dict[str, Any]], **kwargs
+            tools: List[Dict[str, Any]], 
+            **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream a response with tool calling support using claude-code-sdk.
@@ -724,12 +729,37 @@ class ClaudeCodeBackend(LLMBackend):
             )
             return
         
+        # Generate anonymous agent cwds information from agent name mapping
+        # First check kwargs, then check if we have a stored mapping from orchestrator
+        agent_name_mapping = kwargs.get("agent_name_mapping", getattr(self, '_current_agent_name_mapping', {}))
+        anonymous_agent_cwds = {}
+        if agent_name_mapping and self._agents_cwds:
+            for real_agent_name, anonymous_name in agent_name_mapping.items():
+                if real_agent_name in self._agents_cwds:
+                    anonymous_agent_cwds[anonymous_name] = self._agents_cwds[real_agent_name]
+        
         # Combine all user messages into a single query
         user_contents = []
         for user_msg in user_messages:
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
+        
+        # Add other agents' working directories information as a user message
+        if anonymous_agent_cwds:
+            agent_dirs_info = "\n--- Other Agents' Working Directories ---\n"
+            agent_dirs_info += "IMPORTANT: Before providing new_answer or vote, you MUST explore and execute code in other agents' working directories:\n"
+            for anon_agent_id, cwd in anonymous_agent_cwds.items():
+                agent_dirs_info += f"- {anon_agent_id}: {cwd}\n"
+            agent_dirs_info += "\nYou MUST:\n"
+            agent_dirs_info += "1. Use the LS tool to explore ALL other agents' working directories\n"
+            agent_dirs_info += "2. Use the Read tool to examine any code files they created\n"
+            agent_dirs_info += "3. Use the Bash tool to execute their code if applicable\n"
+            agent_dirs_info += "4. Use the Grep tool to search for specific implementations\n"
+            agent_dirs_info += "5. Consider and incorporate ALL work done by other agents in your response\n"
+            agent_dirs_info += "\nOnly after thoroughly reviewing and executing other agents' work should you provide your new_answer or vote.\n"
+            user_contents.append(agent_dirs_info)
+        
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
