@@ -1064,7 +1064,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         if hasattr(self, "question"):
             header_text.append(
-                f"\n💡 Question: {self.question[:80]}{'...' if len(self.question) > 80 else ''}",
+                f"\n💡 Question: {self.question}",
                 style=self.colors["info"],
             )
 

@@ -239,6 +239,20 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     if not agent_entries:
         raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
 
+    # First pass: collect all Claude Code agents' working directories
+    all_agent_cwds = {}
+    for i, agent_data in enumerate(agent_entries, start=1):
+        backend_config = agent_data.get("backend", {})
+        backend_type = backend_config.get("type") or (
+            get_backend_type_from_model(backend_config["model"])
+            if "model" in backend_config else None
+        )
+        agent_id = agent_data.get("id", f"agent{i}")
+        
+        # Collect working directory if it's a Claude Code agent
+        if backend_type and backend_type.lower() == "claude_code" and "cwd" in backend_config:
+            all_agent_cwds[agent_id] = backend_config["cwd"]
+
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
 
@@ -249,6 +263,10 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
         )
         if not backend_type:
             raise ConfigurationError("Backend type must be specified or inferrable from model")
+        
+        # Add all agents' cwds to Claude Code backend configs
+        if backend_type and backend_type.lower() == "claude_code" and all_agent_cwds:
+            backend_config["_agents_cwds"] = all_agent_cwds.copy()
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}

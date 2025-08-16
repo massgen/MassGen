@@ -517,6 +517,19 @@ class Orchestrator(ChatAgent):
 
         # Clear restart pending flag at the beginning of agent execution
         self.agent_states[agent_id].restart_pending = False
+        
+        # Create agent name mapping for Claude Code agents (real_name -> anonymous_name)
+        agent_name_mapping = {}
+        if answers:
+            # Use the same mapping as format_current_answers_with_summaries
+            sorted_agent_ids = sorted(answers.keys())
+            for i, real_agent_id in enumerate(sorted_agent_ids, 1):
+                agent_name_mapping[real_agent_id] = f"agent{i}"
+        else:
+            # No answers yet, map all agents
+            sorted_agent_ids = sorted(self.agents.keys())
+            for i, real_agent_id in enumerate(sorted_agent_ids, 1):
+                agent_name_mapping[real_agent_id] = f"agent{i}"
 
         try:
             # Build conversation with context support
@@ -559,6 +572,11 @@ class Orchestrator(ChatAgent):
                     )
                     yield ("done", None)
                     return
+
+                # Set agent_name_mapping on Claude Code backends before calling chat
+                if hasattr(agent, 'backend') and hasattr(agent.backend, '_agents_cwds'):
+                    # This is a Claude Code backend, set the current agent_name_mapping
+                    agent.backend._current_agent_name_mapping = agent_name_mapping
 
                 # Stream agent response with workflow tools
                 if attempt == 0:
