@@ -301,13 +301,15 @@ class Orchestrator(ChatAgent):
             yield chunk
 
         # Determine final agent based on votes
-        current_answers = {
+        # TIMEOUT AGENTS EXCLUSION: Only active agents can be selected as final presenter
+        # This ensures that timeout agents cannot win the coordination even if they received votes
+        active_answers_for_selection = {
             aid: state.answer
             for aid, state in self.agent_states.items()
-            if state.answer
+            if state.answer and not state.is_killed
         }
         self._selected_agent = self._determine_final_agent_from_votes(
-            votes, current_answers
+            votes, active_answers_for_selection
         )
 
         # Present final answer
@@ -335,17 +337,33 @@ class Orchestrator(ChatAgent):
         active_streams = {}
         active_tasks = {}  # Track active tasks to prevent duplicate task creation
 
-        # Stream agent outputs in real-time until all have voted
-        while not all(state.has_voted for state in self.agent_states.values()):
+        # Stream agent outputs in real-time until all active agents have voted
+        while not all(state.has_voted for aid, state in self.agent_states.items() 
+                     if not self.agent_states[aid].is_killed):
             # Check for orchestrator timeout - stop spawning new agents
             if self.is_orchestrator_timeout:
                 break
             # Start any agents that aren't running and haven't voted yet
-            current_answers = {
+            # TIMEOUT AGENTS HANDLING:
+            # - Timeout agents' answers are included in context for active agents to consider
+            # - Active agents can see timeout answers when making decisions
+            # - BUT timeout agents cannot be voted for or selected as final presenter
+            # - This allows leveraging timeout agents' partial work while ensuring only active agents participate
+            
+            # Collect answers from active agents (for voting targets and final selection)
+            active_answers = {
                 aid: state.answer
                 for aid, state in self.agent_states.items()
-                if state.answer
+                if state.answer and not state.is_killed
             }
+            # Collect answers from timeout agents (for context only)
+            timeout_answers = {
+                aid: state.answer
+                for aid, state in self.agent_states.items()
+                if state.answer and state.is_killed
+            }
+            # Combine for agent context (active agents can see all answers for informed decisions)
+            all_answers_for_context = {**active_answers, **timeout_answers}
             for agent_id in self.agents.keys():
                 if (
                     agent_id not in active_streams
@@ -355,7 +373,8 @@ class Orchestrator(ChatAgent):
                     active_streams[agent_id] = self._stream_agent_execution(
                         agent_id,
                         self.current_task,
-                        current_answers,
+                        all_answers_for_context,  # Include timeout answers for context
+                        active_answers,  # Only active answers for voting validation
                         conversation_context,
                     )
 
@@ -589,11 +608,16 @@ class Orchestrator(ChatAgent):
         self,
         agent_id: str,
         task: str,
-        answers: Dict[str, str],
+        answers_for_context: Dict[str, str],
+        answers_for_voting: Dict[str, str],
         conversation_context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[tuple, None]:
         """
         Stream agent execution with real-time content and final result.
+
+        Args:
+            answers_for_context: All answers (active + timeout) for agent context building
+            answers_for_voting: Only active agent answers for voting validation
 
         Yields:
             ("content", str): Real-time agent output (source attribution added by caller)
@@ -627,15 +651,15 @@ class Orchestrator(ChatAgent):
                     conversation_history=conversation_context.get(
                         "conversation_history", []
                     ),
-                    agent_summaries=answers,
-                    valid_agent_ids=list(answers.keys()) if answers else None,
+                    agent_summaries=answers_for_context,
+                    valid_agent_ids=list(answers_for_voting.keys()) if answers_for_voting else None,
                 )
             else:
                 # Fallback to standard conversation building
                 conversation = self.message_templates.build_initial_conversation(
                     task=task,
-                    agent_summaries=answers,
-                    valid_agent_ids=list(answers.keys()) if answers else None,
+                    agent_summaries=answers_for_context,
+                    valid_agent_ids=list(answers_for_voting.keys()) if answers_for_voting else None,
                 )
 
             # Clean startup without redundant messages
@@ -739,10 +763,10 @@ class Orchestrator(ChatAgent):
 
                                 # Convert anonymous agent ID to real agent ID for display
                                 real_agent_id = agent_voted_for
-                                if answers:  # Only do mapping if answers exist
+                                if answers_for_voting:  # Only do mapping if answers exist
                                     agent_mapping = {}
                                     for i, real_id in enumerate(
-                                        sorted(answers.keys()), 1
+                                        sorted(answers_for_voting.keys()), 1
                                     ):
                                         agent_mapping[f"agent{i}"] = real_id
                                     real_agent_id = agent_mapping.get(
@@ -847,7 +871,7 @@ class Orchestrator(ChatAgent):
 
                             workflow_tool_found = True
                             # Vote for existing answer (requires existing answers)
-                            if not answers:
+                            if not answers_for_voting:
                                 # Invalid - can't vote when no answers exist
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
@@ -878,7 +902,7 @@ class Orchestrator(ChatAgent):
                             # Convert anonymous agent ID back to real agent ID
                             agent_mapping = {}
                             for i, real_agent_id in enumerate(
-                                sorted(answers.keys()), 1
+                                sorted(answers_for_voting.keys()), 1
                             ):
                                 agent_mapping[f"agent{i}"] = real_agent_id
 
@@ -886,8 +910,8 @@ class Orchestrator(ChatAgent):
                                 voted_agent_anon, voted_agent_anon
                             )
 
-                            # Handle invalid agent_id
-                            if voted_agent not in answers:
+                            # Handle invalid agent_id - only active agents can be voted for
+                            if voted_agent not in answers_for_voting:
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
                                         yield (
@@ -900,12 +924,12 @@ class Orchestrator(ChatAgent):
                                     reverse_mapping = {
                                         real_id: f"agent{i}"
                                         for i, real_id in enumerate(
-                                            sorted(answers.keys()), 1
+                                            sorted(answers_for_voting.keys()), 1
                                         )
                                     }
                                     valid_anon_agents = [
                                         reverse_mapping[real_id]
-                                        for real_id in answers.keys()
+                                        for real_id in answers_for_voting.keys()
                                     ]
                                     error_msg = f"Invalid agent_id '{voted_agent_anon}'. Valid agents: {', '.join(valid_anon_agents)}"
                                     # Send tool error result back to agent
@@ -942,8 +966,8 @@ class Orchestrator(ChatAgent):
                             # Agent provided new answer
                             content = tool_args.get("content", response_text.strip())
 
-                            # Check for duplicate answer
-                            for existing_agent_id, existing_content in answers.items():
+                            # Check for duplicate answer among all existing answers (context + voting)
+                            for existing_agent_id, existing_content in answers_for_context.items():
                                 if content.strip() == existing_content.strip():
                                     if attempt < max_attempts - 1:
                                         if self._check_restart_pending(agent_id):
@@ -1066,11 +1090,24 @@ class Orchestrator(ChatAgent):
             source=self.orchestrator_id,
         )
         
-        # Count available answers and active agents
-        available_answers = {
+        # Collect all answers from both active and timeout agents
+        all_answers = {
+            aid: state.answer
+            for aid, state in self.agent_states.items()
+            if state.answer
+        }
+        
+        # Separate active and timeout agents
+        active_answers = {
             aid: state.answer
             for aid, state in self.agent_states.items()
             if state.answer and not state.is_killed
+        }
+        
+        timeout_answers = {
+            aid: state.answer
+            for aid, state in self.agent_states.items()
+            if state.answer and state.is_killed
         }
         
         active_agents = [
@@ -1080,21 +1117,20 @@ class Orchestrator(ChatAgent):
         
         yield StreamChunk(
             type="content",
-            content=f"📊 Current state: {len(available_answers)} answers from {len(active_agents)} active agents\n",
+            content=f"📊 Current state: {len(active_answers)} active answers, {len(timeout_answers)} timeout answers\n",
             source=self.orchestrator_id,
         )
         
-        # If all agents timed out, generate fallback answer from available state
-        if len(available_answers) == 0:
+        # Case 1: All agents timed out - orchestrator generates comprehensive answer
+        if len(active_answers) == 0 and len(timeout_answers) > 0:
             yield StreamChunk(
                 type="content",
-                content="❌ No answers available from any agents. Generating generic fallback.\n",
+                content="🤖 All agents timed out. Orchestrator generating comprehensive answer from partial results...\n",
                 source=self.orchestrator_id,
             )
-            # Generate a simple fallback message
-            fallback_message = "I apologize, but all agents timed out before providing answers. Please try again with a simpler request or increase timeout limits."
-            self.add_to_history("assistant", fallback_message)
-            yield StreamChunk(type="content", content=fallback_message)
+            # Orchestrator generates final presentation from all timeout answers
+            async for chunk in self._orchestrator_generate_presentation(all_answers):
+                yield chunk
             yield StreamChunk(
                 type="content",
                 content=f"\n\n---\n*⚠️ Generated fallback due to timeout ({self.timeout_reason})*\n*No successful agent coordination*",
@@ -1103,14 +1139,33 @@ class Orchestrator(ChatAgent):
             yield StreamChunk(type="done")
             return
         
-        # Generate fallback answer from current votes and answers
+        # Case 2: No answers at all - provide generic fallback
+        elif len(all_answers) == 0:
+            yield StreamChunk(
+                type="content",
+                content="❌ No answers available from any agents.\n",
+                source=self.orchestrator_id,
+            )
+            fallback_message = "I apologize, but no agents provided answers before timeout. Please try again with a simpler request or increase timeout limits."
+            self.add_to_history("assistant", fallback_message)
+            yield StreamChunk(type="content", content=fallback_message)
+            yield StreamChunk(
+                type="content",
+                content=f"\n\n---\n*❌ No agent coordination possible due to timeout*",
+            )
+            self.workflow_phase = "presenting"
+            yield StreamChunk(type="done")
+            return
+            
+        # Case 3: Some agents are active - let the best active agent generate final answer
+        # considering ALL agents' answers (including timeout agents)
         current_votes = {
             aid: state.votes for aid, state in self.agent_states.items() 
             if state.votes and not state.is_killed
         }
         
-        # Determine best available agent
-        self._selected_agent = self._determine_final_agent_from_votes(current_votes, available_answers)
+        # Determine best available agent (only from active agents)
+        self._selected_agent = self._determine_final_agent_from_votes(current_votes, active_answers)
         
         yield StreamChunk(
             type="content",
@@ -1118,25 +1173,28 @@ class Orchestrator(ChatAgent):
             source=self.orchestrator_id,
         )
         
-        if self._selected_agent and available_answers.get(self._selected_agent):
+        if self._selected_agent and active_answers.get(self._selected_agent):
             yield StreamChunk(
                 type="content",
                 content=f"🏆 Selected Agent: {self._selected_agent} (from {len(current_votes)} votes)\n",
                 source=self.orchestrator_id,
             )
             
-            final_answer = available_answers[self._selected_agent]
-            self.add_to_history("assistant", final_answer)
+            # Get vote results for presentation context
+            vote_results = self._get_vote_results()
             
-            yield StreamChunk(type="content", content=final_answer)
+            # Let the selected agent generate final presentation considering ALL answers
+            async for chunk in self.get_final_presentation(self._selected_agent, vote_results):
+                yield chunk
+                
             yield StreamChunk(
                 type="content",
-                content=f"\n\n---\n*⚠️ Generated from partial coordination due to timeout ({self.timeout_reason})*\n*Coordinated by {len(active_agents)} agents via MassGen framework*",
+                content=f"\n\n---\n*⚠️ Generated from partial coordination due to timeout ({self.timeout_reason})*\n*Coordinated by {len(active_agents)} active agents and {len(timeout_answers)} timeout agents via MassGen framework*",
             )
         else:
-            # Last resort: use first available answer
-            fallback_agent = next(iter(available_answers))
-            fallback_answer = available_answers[fallback_agent]
+            # Last resort: use first available active answer
+            fallback_agent = next(iter(active_answers))
+            fallback_answer = active_answers[fallback_agent]
             
             yield StreamChunk(
                 type="content",
@@ -1153,6 +1211,43 @@ class Orchestrator(ChatAgent):
         
         self.workflow_phase = "presenting"
         yield StreamChunk(type="done")
+
+    async def _orchestrator_generate_presentation(
+        self, timeout_answers: Dict[str, str]
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Orchestrator generates final presentation from timeout agents' answers."""
+        # Build a comprehensive summary from all timeout answers
+        summary_parts = []
+        summary_parts.append("Based on the partial results from all agents before timeout:\n")
+        
+        for agent_id, answer in timeout_answers.items():
+            summary_parts.append(f"\n**{agent_id}**: {answer}\n")
+        
+        summary_parts.append("\n**Orchestrator Summary**:\n")
+        
+        # Simple aggregation - in production, this could use an LLM to synthesize
+        if len(timeout_answers) == 1:
+            # Single agent - use its answer
+            single_answer = next(iter(timeout_answers.values()))
+            summary_parts.append(single_answer)
+        else:
+            # Multiple agents - create a combined summary
+            summary_parts.append("Multiple perspectives were provided by the agents before timeout. ")
+            summary_parts.append("Here are the key insights from each agent's partial response:\n")
+            
+            for i, (agent_id, answer) in enumerate(timeout_answers.items(), 1):
+                # Extract first 200 chars as summary
+                summary = answer[:200] + "..." if len(answer) > 200 else answer
+                summary_parts.append(f"\n{i}. {agent_id}: {summary}")
+                
+        final_summary = "".join(summary_parts)
+        self.add_to_history("assistant", final_summary)
+        
+        yield StreamChunk(
+            type="content",
+            content=final_summary,
+            source=self.orchestrator_id
+        )
 
     def _determine_final_agent_from_votes(
         self, votes: Dict[str, Dict], agent_answers: Dict[str, str]
