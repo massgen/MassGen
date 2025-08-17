@@ -1,0 +1,29 @@
+# MassGen Fast Configuration with Conservative Timeouts
+# For cost-conscious users who want to prevent runaway usage
+
+# Conservative timeout settings to prevent excessive token usage
+timeout_settings:
+  orchestrator_timeout_seconds: 600   # 10 minutes max coordination
+  orchestrator_max_tokens: 75000      # 75k tokens total limit
+  agent_timeout_seconds: 120          # 2 minutes per agent
+  agent_max_tokens: 20000             # 20k tokens per agent
+  enable_timeout_fallback: true       # Always generate an answer
+
+agents:
+  - id: "fast_agent1"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      enable_web_search: true
+    system_message: "You are a concise AI assistant. Provide brief, accurate responses."
+
+  - id: "fast_agent2"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      enable_web_search: true
+    system_message: "You are a practical AI assistant focused on actionable insights."
+
+ui:
+  display_type: "simple"
+  logging_enabled: true

@@ -239,6 +239,11 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     if not agent_entries:
         raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
 
+    # Load timeout settings from config
+    timeout_settings = config.get("timeout_settings", {})
+    from .agent_config import TimeoutConfig
+    timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
+
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
 
@@ -273,6 +278,9 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
         agent_config.custom_system_instruction = agent_data.get("system_message")
+        
+        # Apply timeout configuration from YAML
+        agent_config.timeout_config = timeout_config
 
         agent = ConfigurableAgent(config=agent_config, backend=backend)
         agents[agent.config.agent_id] = agent
@@ -611,6 +619,10 @@ Examples:
   # Interactive mode
   python -m massgen.cli --config config.yaml
   
+  # Timeout control examples
+  python -m massgen.cli --config config.yaml --agent-timeout 120 --agent-max-tokens 20000 "Quick question"
+  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 --disable-timeout-fallback "Complex task"
+  
   # Create sample configurations
   python -m massgen.cli --create-samples
 
@@ -671,6 +683,34 @@ Environment Variables:
         "--no-display", action="store_true", help="Disable visual coordination display"
     )
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
+    
+    # Timeout options
+    timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
+    timeout_group.add_argument(
+        "--orchestrator-timeout", 
+        type=int, 
+        help="Maximum time for orchestrator coordination in seconds (default: 1800)"
+    )
+    timeout_group.add_argument(
+        "--orchestrator-max-tokens", 
+        type=int, 
+        help="Maximum tokens for orchestrator before timeout (default: 200000)"
+    )
+    timeout_group.add_argument(
+        "--agent-timeout", 
+        type=int, 
+        help="Maximum execution time per agent in seconds (default: 300)"
+    )
+    timeout_group.add_argument(
+        "--agent-max-tokens", 
+        type=int, 
+        help="Maximum tokens per agent before timeout (default: 50000)"
+    )
+    timeout_group.add_argument(
+        "--disable-timeout-fallback", 
+        action="store_true", 
+        help="Disable timeout fallback answer generation"
+    )
 
     args = parser.parse_args()
 
@@ -705,6 +745,22 @@ Environment Variables:
             ui_config["display_type"] = "simple"
         if args.no_logs:
             ui_config["logging_enabled"] = False
+            
+        # Apply timeout overrides from CLI arguments
+        timeout_settings = config.get("timeout_settings", {})
+        if args.orchestrator_timeout is not None:
+            timeout_settings["orchestrator_timeout_seconds"] = args.orchestrator_timeout
+        if args.orchestrator_max_tokens is not None:
+            timeout_settings["orchestrator_max_tokens"] = args.orchestrator_max_tokens
+        if args.agent_timeout is not None:
+            timeout_settings["agent_timeout_seconds"] = args.agent_timeout
+        if args.agent_max_tokens is not None:
+            timeout_settings["agent_max_tokens"] = args.agent_max_tokens
+        if args.disable_timeout_fallback:
+            timeout_settings["enable_timeout_fallback"] = False
+            
+        # Update config with timeout settings
+        config["timeout_settings"] = timeout_settings
 
         # Create agents
         agents = create_agents_from_config(config)

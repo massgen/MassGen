@@ -318,7 +318,7 @@ class ChatCompletionsBackend(LLMBackend):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI-compatible Chat Completions API."""
         try:  
-
+                
                 import openai
 
                 # Merge constructor config with stream kwargs (stream kwargs take priority)
@@ -388,6 +388,7 @@ class ChatCompletionsBackend(LLMBackend):
                     if "tools" not in api_params:
                         api_params["tools"] = []
                     api_params["tools"].extend(provider_tools)
+
 
                 # create stream
                 stream = await client.chat.completions.create(**api_params)

@@ -14,6 +14,24 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class TimeoutConfig:
+    """Configuration for timeout and resource limits in MassGen.
+    
+    Args:
+        orchestrator_timeout_seconds: Maximum time for orchestrator coordination (default: 1800s = 30min)
+        orchestrator_max_tokens: Maximum tokens for orchestrator before timeout (default: 200000)
+        agent_timeout_seconds: Maximum execution time per agent (default: 300s = 5min)
+        agent_max_tokens: Maximum tokens per agent before timeout (default: 50000)
+        enable_timeout_fallback: Generate answer on timeout (default: True)
+    """
+    orchestrator_timeout_seconds: int = 1800  # 30 minutes
+    orchestrator_max_tokens: int = 200000     # 200k tokens
+    agent_timeout_seconds: int = 300          # 5 minutes
+    agent_max_tokens: int = 50000             # 50k tokens per agent
+    enable_timeout_fallback: bool = True      # Generate answer on timeout
+
+
+@dataclass
 class AgentConfig:
     """Configuration for MassGen agents using the proven binary decision framework.
 
@@ -25,6 +43,7 @@ class AgentConfig:
         message_templates: Custom message templates (None=default)
         agent_id: Optional agent identifier for this configuration
         custom_system_instruction: Additional system instruction prepended to evaluation message
+        timeout_config: Timeout and resource limit configuration
     """
 
     # Core backend configuration (includes tool enablement)
@@ -36,6 +55,9 @@ class AgentConfig:
     # Agent customization
     agent_id: Optional[str] = None
     custom_system_instruction: Optional[str] = None
+    
+    # Timeout and resource limits
+    timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
     @classmethod
     def create_chatcompletion_config(
@@ -588,6 +610,13 @@ class AgentConfig:
             "backend_params": self.backend_params,
             "agent_id": self.agent_id,
             "custom_system_instruction": self.custom_system_instruction,
+            "timeout_config": {
+                "orchestrator_timeout_seconds": self.timeout_config.orchestrator_timeout_seconds,
+                "orchestrator_max_tokens": self.timeout_config.orchestrator_max_tokens,
+                "agent_timeout_seconds": self.timeout_config.agent_timeout_seconds,
+                "agent_max_tokens": self.timeout_config.agent_max_tokens,
+                "enable_timeout_fallback": self.timeout_config.enable_timeout_fallback,
+            }
         }
 
         # Handle message_templates serialization
@@ -614,6 +643,12 @@ class AgentConfig:
         agent_id = data.get("agent_id")
         custom_system_instruction = data.get("custom_system_instruction")
 
+        # Handle timeout_config
+        timeout_config = TimeoutConfig()
+        timeout_data = data.get("timeout_config", {})
+        if timeout_data:
+            timeout_config = TimeoutConfig(**timeout_data)
+
         # Handle message_templates
         message_templates = None
         template_data = data.get("message_templates")
@@ -627,6 +662,7 @@ class AgentConfig:
             message_templates=message_templates,
             agent_id=agent_id,
             custom_system_instruction=custom_system_instruction,
+            timeout_config=timeout_config,
         )
 
 
