@@ -594,7 +594,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Local Model Support**: Successfully integrated LM Studio for running open-weight models locally, with automatic server management and zero-cost usage
 
-✅ **Extended Provider Support**: Added support for Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
+✅ **Extended Provider Support**: Added support for Cerebras AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, and Together AI.
 
 ✅ **Enhanced Backend Stability**: Improved error handling and configuration management across all backends
 
