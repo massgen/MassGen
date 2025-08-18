@@ -1055,7 +1055,21 @@ class CoordinationUI:
                     
                     if selected_agent == "Unknown" or selected_agent is None:
                         if orchestrator_timeout:
-                            event = f"🎯 FINAL: None selected → orchestrator timeout (no agents completed voting in time) → [buffering...]"
+                            # Even with timeout, try to select agent from available votes
+                            if vote_counts:
+                                # Find agent with most votes
+                                max_votes = max(vote_counts.values())
+                                tied_agents = [agent for agent, count in vote_counts.items() if count == max_votes]
+                                # Use first tied agent (following orchestrator's tie-breaking logic)
+                                timeout_selected_agent = tied_agents[0] if tied_agents else None
+                                if timeout_selected_agent:
+                                    vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_counts.items()])
+                                    tie_info = " (tie-broken by registration order)" if len(tied_agents) > 1 else ""
+                                    event = f"🎯 FINAL: {timeout_selected_agent} selected from partial votes ({vote_summary}{tie_info}) → orchestrator timeout → [buffering...]"
+                                else:
+                                    event = f"🎯 FINAL: None selected → orchestrator timeout (no agents completed voting in time) → [buffering...]"
+                            else:
+                                event = f"🎯 FINAL: None selected → orchestrator timeout (no agents completed voting in time) → [buffering...]"
                         else:
                             event = f"🎯 FINAL: None selected → [buffering...]"
                     elif vote_counts:
