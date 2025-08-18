@@ -105,7 +105,11 @@ class AzureOpenAIBackend(LLMBackend):
                 api_params["tool_choice"] = "none"
             
             # Add other parameters (excluding model since we already set it)
-            excluded_params = {"model", "messages", "stream", "tools", "agent_id", "session_id", "type"}
+            # Filter out unsupported Azure OpenAI parameters
+            excluded_params = {
+                "model", "messages", "stream", "tools", "agent_id", "session_id", "type",
+                "enable_web_search", "enable_code_interpreter", "web_search", "code_interpreter"
+            }
             for key, value in kwargs.items():
                 if key not in excluded_params and value is not None:
                     api_params[key] = value
