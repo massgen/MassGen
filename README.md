@@ -214,13 +214,13 @@ cp .env.example .env
 The system currently supports multiple model providers with advanced capabilities:
 
 **API-based Models:**
-- **Cerebras AI**: GPT-OSS-120B
-- **Claude**: Claude Sonnet 4, Claude Haiku 3.5
+- **Cerebras AI**: GPT-OSS-120B...
+- **Claude**: Claude Haiku 3.5, Claude Sonnet 4, Claude Opus 4...
 - **Claude Code**: Native Claude Code SDK with comprehensive dev tools
-- **Gemini**: Gemini 2.5 Flash, Gemini 2.0 Flash Thinking, Gemini 1.5 Pro
-- **Grok**: Grok-3, Grok-3-mini
-- **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano), GPT-4o series
-- **Together AI**, **Fireworks AI**, **Groq**, **Nebius AI Studio**, **OpenRouter**: Various open-source models
+- **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
+- **Grok**: Grok-4, Grok-3, Grok-3-mini...
+- **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano)...
+- **Together AI**, **Fireworks AI**, **Groq**, **Nebius AI Studio**, **OpenRouter**: LLaMA, Mistral, Qwen...
 - **Z AI**: GLM-4.5
 
 **Local Model Support (NEW in v0.0.7):**
@@ -228,7 +228,7 @@ The system currently supports multiple model providers with advanced capabilitie
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
   - Zero-cost usage reporting
-  - Support for Qwen, LLaMA, Mistral, and other open-weight models
+  - Support for LLaMA, Mistral, Qwen and other open-weight models
 
 More providers and local inference engines (vllm, sglang) are welcome to be added.
 
@@ -254,11 +254,12 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 **API-based backends:**
 ```bash
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model glm-4.5 "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "How hard is IMO?"
 ```
+
+All the models with a default backend can be found [here](massgen/utils.py).
 
 **Local models (NEW in v0.0.7):**
 ```bash
@@ -266,13 +267,11 @@ uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --config lmstudio.yaml "Explain quantum computing"
 ```
 
-All supported models can be found [here](massgen/utils.py).
-
 **CLI-based backends**:
 ```bash
 # Claude Code - Native Claude Code SDK with comprehensive dev tools
 uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku for claude code?"
-uv run python -m massgen.cli --backend claude-code "Debug this Python script"
+uv run python -m massgen.cli --backend claude_code "Debug this Python script"
 ```
 
 `--backend` is required for this type of backends.
@@ -297,8 +296,8 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `zai`). Optional because we can infer backend type through model.|
-| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `zai`). Optional for [models with default backends](massgen/utils.py).|
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
@@ -407,7 +406,7 @@ backend:
 ```yaml
 backend:
   type: "openai"
-  model: "gpt-5"                     # Model name
+  model: "gpt-5-mini"                # Model name
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0, GPT-5 series models and GPT o-series models don't support this)
   max_tokens: 2500                   # Maximum response length (GPT-5 series models and GPT o-series models don't support this)
@@ -615,13 +614,19 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - Optimized message display formatting and synchronization
 - Better handling of concurrent agent outputs
 
-### Previous Achievements (v0.0.7)
+### Previous Achievements (v0.0.3-v0.0.7)
 
-✅ **Local Model Support**: Successfully integrated LM Studio for running open-weight models locally, with automatic server management and zero-cost usage
+✅ **Foundation Architecture**: Complete multi-agent orchestration system with async streaming, builtin tools (code execution, web search), and multi-backend support
 
-✅ **Extended Provider Support**: Added support for Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
+✅ **GPT-5 Series Integration**: Support for OpenAI's GPT-5, GPT-5-mini, GPT-5-nano with advanced reasoning parameters and verbosity control
 
-✅ **Enhanced Backend Stability**: Improved error handling and configuration management across all backends
+✅ **Claude Code Integration**: Native Claude Code backend with streaming capabilities, tool support, and stateful conversation management
+
+✅ **GLM-4.5 Model Support**: Integration with ZhipuAI's GLM-4.5 model family with enhanced reasoning display and coordination UI
+
+✅ **Local Model Support**: Complete LM Studio integration for running open-weight models locally with automatic server management and zero-cost usage
+
+✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
 
 ### Key Future Enhancements:
 
