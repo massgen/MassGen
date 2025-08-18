@@ -14,7 +14,7 @@ agents:
   - id: "claude-3.5-haiku"
     backend:
       type: "claude"
-      model: "claude-3-5-haiku-20241022"
+      model: "claude-3-5-haiku-20250107"
       enable_web_search: true
       enable_code_execution: true
 

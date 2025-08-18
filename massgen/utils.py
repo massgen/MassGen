@@ -1,7 +1,3 @@
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Union, Optional, Dict, List
-
 MODEL_MAPPINGS = {
     "openai": [
         # GPT-5 variants
@@ -11,11 +7,10 @@ MODEL_MAPPINGS = {
         # GPT-4.1 variants
         "gpt-4.1",
         "gpt-4.1-mini",
+        "gpt-4.1-nano",
         # GPT-4o variants
         "gpt-4o-mini",
         "gpt-4o",
-        # o1
-        "o1",  # -> o1-2024-12-17
         # o3
         "o3",
         "o3-low",
@@ -35,23 +30,15 @@ MODEL_MAPPINGS = {
     "claude": [
         # Claude 4 variants
         "claude-opus-4-1-20250805",
-        "claude-opus-4-20250514",
+        "claude-opus-4-20250514", 
+        "claude-sonnet-4-20250514",
         # Claude 3.5 variants
         "claude-3-5-sonnet-latest",
         "claude-3-5-haiku-latest",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
+        "claude-3-5-sonnet-20250114",
+        "claude-3-5-haiku-20250107",
         # Claude 3 variants
-        "claude-3-sonnet-20240229",
         "claude-3-opus-20240229",
-        "claude-3-haiku-20240307",
-        # Claude 2 variants
-        "claude-2.1",
-        "claude-2.0",
-        # Claude instant
-        "claude-instant-1.2",
-        # Sonnet 4
-        "claude-sonnet-4-20250514",
     ],
     "gemini": [
         "gemini-2.5-flash",
