@@ -34,7 +34,7 @@ async def test_orchestrator_timeout():
     )
     agent_config.timeout_config = timeout_config
     
-    # Mock backend for testing
+    # Claude code backend for testing
     try:
         backend = ClaudeCodeBackend()
         agent = SingleAgent(backend=backend, system_message="You are a helpful assistant.")
