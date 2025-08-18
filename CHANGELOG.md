@@ -15,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test suite for timeout mechanisms in `test_timeout.py`
   - Timeout indicators in Rich Terminal Display showing remaining time
 - **Enhanced Display Features**: Improved visual feedback and user experience
-  - Real-time timeout countdown display in coordination UI
   - Optimized message display formatting for better readability
   - Enhanced status indicators for timeout warnings and fallback notifications
   - Improved coordination UI with better multi-agent status tracking
