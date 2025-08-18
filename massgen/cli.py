@@ -239,11 +239,6 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     if not agent_entries:
         raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
 
-    # Load timeout settings from config
-    timeout_settings = config.get("timeout_settings", {})
-    from .agent_config import TimeoutConfig
-    timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
-
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
 
@@ -279,8 +274,7 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
         agent_config.custom_system_instruction = agent_data.get("system_message")
         
-        # Apply timeout configuration from YAML
-        agent_config.timeout_config = timeout_config
+        # Timeout configuration will be applied to orchestrator instead of individual agents
 
         agent = ConfigurableAgent(config=agent_config, backend=backend)
         agents[agent.config.agent_id] = agent
@@ -311,6 +305,7 @@ async def run_question_with_history(
     agents: Dict[str, SingleAgent],
     ui_config: Dict[str, Any],
     history: List[Dict[str, Any]],
+    **kwargs
 ) -> str:
     """Run MassGen with a question and conversation history."""
     # Build messages including history
@@ -351,7 +346,12 @@ async def run_question_with_history(
 
     else:
         # Multi-agent mode with history
-        orchestrator = Orchestrator(agents=agents)
+        # Create orchestrator config with timeout settings
+        timeout_config = kwargs.get("timeout_config")
+        orchestrator_config = AgentConfig()
+        if timeout_config:
+            orchestrator_config.timeout_config = timeout_config
+        orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
@@ -387,7 +387,7 @@ async def run_question_with_history(
 
 
 async def run_single_question(
-    question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]
+    question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs
 ) -> str:
     """Run MassGen with a single question."""
     # Check if we should use orchestrator for single agents (default: False for backward compatibility)
@@ -423,7 +423,12 @@ async def run_single_question(
 
     else:
         # Multi-agent mode
-        orchestrator = Orchestrator(agents=agents)
+        # Create orchestrator config with timeout settings
+        timeout_config = kwargs.get("timeout_config")
+        orchestrator_config = AgentConfig()
+        if timeout_config:
+            orchestrator_config.timeout_config = timeout_config
+        orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
@@ -449,7 +454,7 @@ def print_help_messages():
 
 
 async def run_interactive_mode(
-    agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]
+    agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs
 ):
     """Run MassGen in interactive mode with conversation history."""
     print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
@@ -570,7 +575,7 @@ async def run_interactive_mode(
                 print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}", flush=True)
 
                 response = await run_question_with_history(
-                    question, agents, ui_config, conversation_history
+                    question, agents, ui_config, conversation_history, **kwargs
                 )
 
                 if response:
@@ -620,8 +625,7 @@ Examples:
   python -m massgen.cli --config config.yaml
   
   # Timeout control examples
-  python -m massgen.cli --config config.yaml --agent-timeout 120 --agent-max-tokens 20000 "Quick question"
-  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 --disable-timeout-fallback "Complex task"
+  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 "Complex task"
   
   # Create sample configurations
   python -m massgen.cli --create-samples
@@ -691,26 +695,6 @@ Environment Variables:
         type=int, 
         help="Maximum time for orchestrator coordination in seconds (default: 1800)"
     )
-    timeout_group.add_argument(
-        "--orchestrator-max-tokens", 
-        type=int, 
-        help="Maximum tokens for orchestrator before timeout (default: 200000)"
-    )
-    timeout_group.add_argument(
-        "--agent-timeout", 
-        type=int, 
-        help="Maximum execution time per agent in seconds (default: 300)"
-    )
-    timeout_group.add_argument(
-        "--agent-max-tokens", 
-        type=int, 
-        help="Maximum tokens per agent before timeout (default: 50000)"
-    )
-    timeout_group.add_argument(
-        "--disable-timeout-fallback", 
-        action="store_true", 
-        help="Disable timeout fallback answer generation"
-    )
 
     args = parser.parse_args()
 
@@ -750,14 +734,6 @@ Environment Variables:
         timeout_settings = config.get("timeout_settings", {})
         if args.orchestrator_timeout is not None:
             timeout_settings["orchestrator_timeout_seconds"] = args.orchestrator_timeout
-        if args.orchestrator_max_tokens is not None:
-            timeout_settings["orchestrator_max_tokens"] = args.orchestrator_max_tokens
-        if args.agent_timeout is not None:
-            timeout_settings["agent_timeout_seconds"] = args.agent_timeout
-        if args.agent_max_tokens is not None:
-            timeout_settings["agent_max_tokens"] = args.agent_max_tokens
-        if args.disable_timeout_fallback:
-            timeout_settings["enable_timeout_fallback"] = False
             
         # Update config with timeout settings
         config["timeout_settings"] = timeout_settings
@@ -768,14 +744,23 @@ Environment Variables:
         if not agents:
             raise ConfigurationError("No agents configured")
 
+        # Create timeout config from settings and put it in kwargs
+        timeout_settings = config.get("timeout_settings", {})
+        print(f"🔧 DEBUG: timeout_settings from config: {timeout_settings}")
+        from .agent_config import TimeoutConfig
+        timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
+        print(f"🔧 DEBUG: created timeout_config: {timeout_config.orchestrator_timeout_seconds}s")
+        
+        kwargs = {"timeout_config": timeout_config}
+
         # Run mode based on whether question was provided
         if args.question:
-            response = await run_single_question(args.question, agents, ui_config)
+            response = await run_single_question(args.question, agents, ui_config, **kwargs)
             # if response:
             #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
             #     print(f"{response}", flush=True)
         else:
-            await run_interactive_mode(agents, ui_config)
+            await run_interactive_mode(agents, ui_config, **kwargs)
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)

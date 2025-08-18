@@ -15,20 +15,12 @@ if TYPE_CHECKING:
 
 @dataclass
 class TimeoutConfig:
-    """Configuration for timeout and resource limits in MassGen.
+    """Configuration for timeout settings in MassGen.
     
     Args:
         orchestrator_timeout_seconds: Maximum time for orchestrator coordination (default: 1800s = 30min)
-        orchestrator_max_tokens: Maximum tokens for orchestrator before timeout (default: 200000)
-        agent_timeout_seconds: Maximum execution time per agent (default: 300s = 5min)
-        agent_max_tokens: Maximum tokens per agent before timeout (default: 50000)
-        enable_timeout_fallback: Generate answer on timeout (default: True)
     """
     orchestrator_timeout_seconds: int = 1800  # 30 minutes
-    orchestrator_max_tokens: int = 200000     # 200k tokens
-    agent_timeout_seconds: int = 300          # 5 minutes
-    agent_max_tokens: int = 50000             # 50k tokens per agent
-    enable_timeout_fallback: bool = True      # Generate answer on timeout
 
 
 @dataclass
@@ -612,10 +604,6 @@ class AgentConfig:
             "custom_system_instruction": self.custom_system_instruction,
             "timeout_config": {
                 "orchestrator_timeout_seconds": self.timeout_config.orchestrator_timeout_seconds,
-                "orchestrator_max_tokens": self.timeout_config.orchestrator_max_tokens,
-                "agent_timeout_seconds": self.timeout_config.agent_timeout_seconds,
-                "agent_max_tokens": self.timeout_config.agent_max_tokens,
-                "enable_timeout_fallback": self.timeout_config.enable_timeout_fallback,
             }
         }
 

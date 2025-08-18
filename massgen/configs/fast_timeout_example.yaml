@@ -3,26 +3,34 @@
 
 # Conservative timeout settings to prevent excessive token usage
 timeout_settings:
-  orchestrator_timeout_seconds: 600   # 10 minutes max coordination
-  orchestrator_max_tokens: 75000      # 75k tokens total limit
-  agent_timeout_seconds: 120          # 2 minutes per agent
-  agent_max_tokens: 20000             # 20k tokens per agent
-  enable_timeout_fallback: true       # Always generate an answer
+  orchestrator_timeout_seconds: 45   # 45 seconds max coordination
 
 agents:
-  - id: "fast_agent1"
+  - id: "fast-gpt-5-1"
     backend:
       type: "openai"
       model: "gpt-5"
+      text: 
+        verbosity: "medium"
+      reasoning:
+        effort: "high"
+        summary: "auto"
       enable_web_search: true
-    system_message: "You are a concise AI assistant. Provide brief, accurate responses."
+      enable_code_interpreter: true
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
+  - id: "fast-gpt-5-2"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      text: 
+        verbosity: "medium"
+      reasoning:
+        effort: "high"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
+    # system_message: "You are a helpful AI assistant with web search and code execution capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
-  - id: "fast_agent2"
-    backend:
-      type: "openai"
-      model: "gpt-5"
-      enable_web_search: true
-    system_message: "You are a practical AI assistant focused on actionable insights."
 
 ui:
   display_type: "simple"
