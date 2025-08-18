@@ -326,10 +326,24 @@ class ChatCompletionsBackend(LLMBackend):
             # Get base_url from config or use OpenAI default
             base_url = all_params.get("base_url", "https://api.openai.com/v1")
                 
-            client = openai.AsyncOpenAI(
-                api_key=self.api_key,
-                base_url=base_url
-            )
+            # Handle Azure OpenAI API version if present
+            client_kwargs = {
+                "api_key": self.api_key,
+                "base_url": base_url
+            }
+            
+            # For Azure OpenAI, we need to handle API version differently
+            if "api_version" in all_params and all_params["api_version"]:
+                # Azure OpenAI requires api-version in query params
+                # We'll handle this by appending it to the base_url
+                api_version = all_params["api_version"]
+                if "?" in base_url:
+                    base_url_with_version = f"{base_url}&api-version={api_version}"
+                else:
+                    base_url_with_version = f"{base_url}?api-version={api_version}"
+                client_kwargs["base_url"] = base_url_with_version
+            
+            client = openai.AsyncOpenAI(**client_kwargs)
                 
             # Extract framework-specific parameters
             enable_web_search = all_params.get("enable_web_search", False)
@@ -351,11 +365,10 @@ class ChatCompletionsBackend(LLMBackend):
                 api_params["tools"] = converted_tools
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id", "type"}
+            excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id", "type", "api_version"}
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
                     api_params[key] = value
-
 
             # Add provider tools (web search, code interpreter) if enabled
             provider_tools = []
@@ -387,7 +400,6 @@ class ChatCompletionsBackend(LLMBackend):
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(provider_tools)
-
 
             # create stream
             stream = await client.chat.completions.create(**api_params)

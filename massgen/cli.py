@@ -36,6 +36,7 @@ from .backend.gemini import GeminiBackend
 from .backend.chat_completions import ChatCompletionsBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.claude_code import ClaudeCodeBackend
+from .backend.azure_openai import AzureOpenAIBackend
 from .chat_agent import SingleAgent, ConfigurableAgent
 from .agent_config import AgentConfig, TimeoutConfig
 from .orchestrator import Orchestrator
@@ -221,6 +222,18 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         
         return ClaudeCodeBackend(**kwargs)
 
+    elif backend_type == "azure_openai":
+        api_key = kwargs.get("api_key") or os.getenv("AZURE_OPENAI_API_KEY")
+        endpoint = kwargs.get("base_url") or os.getenv("AZURE_OPENAI_ENDPOINT")
+        if not api_key:
+            raise ConfigurationError(
+                "Azure OpenAI API key not found. Set AZURE_OPENAI_API_KEY or provide in config."
+            )
+        if not endpoint:
+            raise ConfigurationError(
+                "Azure OpenAI endpoint not found. Set AZURE_OPENAI_ENDPOINT or provide base_url in config."
+            )
+        return AzureOpenAIBackend(**kwargs)
 
     else:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
@@ -664,7 +677,7 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "claude_code", "zai","lmstudio"],
+        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "azure_openai", "claude_code", "zai","lmstudio"],
         help="Backend type for quick setup",
     )
 
