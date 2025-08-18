@@ -317,90 +317,89 @@ class ChatCompletionsBackend(LLMBackend):
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI-compatible Chat Completions API."""
-        try:  
+        try:       
+            import openai
+
+            # Merge constructor config with stream kwargs (stream kwargs take priority)
+            all_params = {**self.config, **kwargs}
                 
-                import openai
-
-                # Merge constructor config with stream kwargs (stream kwargs take priority)
-                all_params = {**self.config, **kwargs}
+            # Get base_url from config or use OpenAI default
+            base_url = all_params.get("base_url", "https://api.openai.com/v1")
                 
-                # Get base_url from config or use OpenAI default
-                base_url = all_params.get("base_url", "https://api.openai.com/v1")
+            client = openai.AsyncOpenAI(
+                api_key=self.api_key,
+                base_url=base_url
+            )
                 
-                client = openai.AsyncOpenAI(
-                    api_key=self.api_key,
-                    base_url=base_url
-                )
-                
-                # Extract framework-specific parameters
-                enable_web_search = all_params.get("enable_web_search", False)
-                enable_code_interpreter = all_params.get("enable_code_interpreter", False)
+            # Extract framework-specific parameters
+            enable_web_search = all_params.get("enable_web_search", False)
+            enable_code_interpreter = all_params.get("enable_code_interpreter", False)
 
-                # Convert tools to Chat Completions format
-                converted_tools = (
-                    self.convert_tools_to_chat_completions_format(tools) if tools else None
-                )
+            # Convert tools to Chat Completions format
+            converted_tools = (
+                self.convert_tools_to_chat_completions_format(tools) if tools else None
+            )
 
-                # Chat Completions API parameters
-                api_params = {
-                    "messages": messages,
-                    "stream": True,
-                }
+            # Chat Completions API parameters
+            api_params = {
+                "messages": messages,
+                "stream": True,
+            }
 
-                # Add tools if provided
-                if converted_tools:
-                    api_params["tools"] = converted_tools
+            # Add tools if provided
+            if converted_tools:
+                api_params["tools"] = converted_tools
 
-                # Direct passthrough of all parameters except those handled separately
-                excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id", "type"}
-                for key, value in all_params.items():
-                    if key not in excluded_params and value is not None:
-                        api_params[key] = value
+            # Direct passthrough of all parameters except those handled separately
+            excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id", "type"}
+            for key, value in all_params.items():
+                if key not in excluded_params and value is not None:
+                    api_params[key] = value
 
 
-                # Add provider tools (web search, code interpreter) if enabled
-                provider_tools = []
-                if enable_web_search:
-                    provider_tools.append({
-                        "type": "function",
-                        "function": {
-                        "name": "web_search",
-                        "description": "Search the web for current or factual information",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "The search query to send to the web"
-                            }
-                            },
-                            "required": ["query"]
+            # Add provider tools (web search, code interpreter) if enabled
+            provider_tools = []
+            if enable_web_search:
+                provider_tools.append({
+                    "type": "function",
+                    "function": {
+                    "name": "web_search",
+                    "description": "Search the web for current or factual information",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query to send to the web"
                         }
-                        }
-                    })
+                        },
+                        "required": ["query"]
+                    }
+                    }
+                })
 
-                if enable_code_interpreter:
-                    provider_tools.append(
-                        {"type": "code_interpreter", "container": {"type": "auto"}}
-                    )
+            if enable_code_interpreter:
+                provider_tools.append(
+                    {"type": "code_interpreter", "container": {"type": "auto"}}
+                )
 
-                if provider_tools:
-                    if "tools" not in api_params:
-                        api_params["tools"] = []
-                    api_params["tools"].extend(provider_tools)
+            if provider_tools:
+                if "tools" not in api_params:
+                    api_params["tools"] = []
+                api_params["tools"].extend(provider_tools)
 
 
-                # create stream
-                stream = await client.chat.completions.create(**api_params)
+            # create stream
+            stream = await client.chat.completions.create(**api_params)
 
-                # Use existing streaming handler with enhanced error handling
-                async for chunk in self.handle_chat_completions_stream(
-                    stream, enable_web_search
-                ):
-                    yield chunk
+            # Use existing streaming handler with enhanced error handling
+            async for chunk in self.handle_chat_completions_stream(
+                stream, enable_web_search
+            ):
+                yield chunk
 
         except Exception as e:
-                yield StreamChunk(type="error", error=f"Chat Completions API error: {str(e)}")
+            yield StreamChunk(type="error", error=f"Chat Completions API error: {str(e)}")
 
 
     def estimate_tokens(self, text: str) -> int:
