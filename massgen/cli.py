@@ -37,7 +37,7 @@ from .backend.chat_completions import ChatCompletionsBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.claude_code import ClaudeCodeBackend
 from .chat_agent import SingleAgent, ConfigurableAgent
-from .agent_config import AgentConfig
+from .agent_config import AgentConfig, TimeoutConfig
 from .orchestrator import Orchestrator
 from .frontend.coordination_ui import CoordinationUI
 
@@ -746,7 +746,6 @@ Environment Variables:
 
         # Create timeout config from settings and put it in kwargs
         timeout_settings = config.get("timeout_settings", {})
-        from .agent_config import TimeoutConfig
         timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
         
         kwargs = {"timeout_config": timeout_config}
