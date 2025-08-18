@@ -1037,6 +1037,7 @@ class Orchestrator(ChatAgent):
 
     async def _handle_orchestrator_timeout(self) -> AsyncGenerator[StreamChunk, None]:
         """Handle orchestrator timeout by jumping directly to get_final_presentation."""
+        # Output orchestrator timeout message first
         yield StreamChunk(
             type="content",
             content=f"\n⚠️ **Orchestrator Timeout**: {self.timeout_reason}\n",
@@ -1056,11 +1057,11 @@ class Orchestrator(ChatAgent):
             source=self.orchestrator_id,
         )
         
-        # If no answers available, provide fallback
+        # If no answers available, provide fallback with timeout explanation
         if len(available_answers) == 0:
             yield StreamChunk(
                 type="content",
-                content="❌ No answers available from any agents. Please try again with a simpler request or increase timeout limits.\n",
+                content="❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n",
                 source=self.orchestrator_id,
             )
             self.workflow_phase = "presenting"
@@ -1079,7 +1080,7 @@ class Orchestrator(ChatAgent):
         vote_results = self._get_vote_results()
         yield StreamChunk(
             type="content",
-            content=f"🎯 Jumping to final presentation with {self._selected_agent}\n",
+            content=f"🎯 Jumping to final presentation with {self._selected_agent} (selected despite timeout)\n",
             source=self.orchestrator_id,
         )
         

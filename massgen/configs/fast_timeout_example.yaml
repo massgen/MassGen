@@ -33,5 +33,5 @@ agents:
 
 
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

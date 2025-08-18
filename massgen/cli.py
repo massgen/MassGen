@@ -746,10 +746,8 @@ Environment Variables:
 
         # Create timeout config from settings and put it in kwargs
         timeout_settings = config.get("timeout_settings", {})
-        print(f"🔧 DEBUG: timeout_settings from config: {timeout_settings}")
         from .agent_config import TimeoutConfig
         timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
-        print(f"🔧 DEBUG: created timeout_config: {timeout_config.orchestrator_timeout_seconds}s")
         
         kwargs = {"timeout_config": timeout_config}
 
