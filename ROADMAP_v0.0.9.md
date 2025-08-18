@@ -8,6 +8,13 @@ Version 0.0.9 focuses on **Model Context Protocol (MCP) Integration**, enabling 
 - **MCP Support for Claude Backend** (Required): 🔧 Enable MCP protocol support in Claude Backend
 - **MCP Tool Integration** (Required): 🔗 Seamless integration with MCP-compatible tools and servers
 
+## Key Technical Priorities
+
+1. **MCP Protocol Implementation** (REQUIRED): Full MCP support in Claude Code and Claude Backend
+2. **Tool Integration** (REQUIRED): Seamless integration with MCP-compatible tools
+3. **MCP Management** (OPTIONAL): Advanced MCP server and tool management capabilities
+4. **User Experience** (OPTIONAL): Enhanced CLI interface for MCP configuration and monitoring
+
 ## Key Milestones
 
 ### 🎯 Milestone 1: MCP Core Implementation (REQUIRED)
@@ -78,13 +85,6 @@ Version 0.0.9 focuses on **Model Context Protocol (MCP) Integration**, enabling 
 - [ ] MCP security and authentication management
 - [ ] MCP deployment best practices guide
 
-## Key Technical Priorities
-
-1. **MCP Protocol Implementation** (REQUIRED): Full MCP support in Claude Code and Claude Backend
-2. **Tool Integration** (REQUIRED): Seamless integration with MCP-compatible tools
-3. **MCP Management** (OPTIONAL): Advanced MCP server and tool management capabilities
-4. **User Experience** (OPTIONAL): Enhanced CLI interface for MCP configuration and monitoring
-
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
@@ -93,24 +93,24 @@ Version 0.0.9 focuses on **Model Context Protocol (MCP) Integration**, enabling 
 - [ ] MCP tools can be invoked from both backends
 - [ ] All existing functionality continues to work (backward compatibility)
 
-### Functional Requirements (OPTIONAL)
-- [ ] MCP server auto-discovery and management
-- [ ] Advanced MCP tool orchestration capabilities
-- [ ] MCP debugging and monitoring tools
-
 ### Performance Requirements (REQUIRED)
 - [ ] MCP connections are stable and resilient
 - [ ] Tool responses are processed efficiently
-
-### Performance Requirements (OPTIONAL)  
-- [ ] MCP server connection pooling for improved performance
-- [ ] MCP tool caching for frequently used tools
 
 ### Quality Requirements (REQUIRED)
 - [ ] Test coverage for MCP integration
 - [ ] Zero regressions in existing functionality
 - [ ] Comprehensive MCP configuration documentation
 - [ ] Proper MCP error handling and recovery
+
+### Functional Requirements (OPTIONAL)
+- [ ] MCP server auto-discovery and management
+- [ ] Advanced MCP tool orchestration capabilities
+- [ ] MCP debugging and monitoring tools
+
+### Performance Requirements (OPTIONAL)  
+- [ ] MCP server connection pooling for improved performance
+- [ ] MCP tool caching for frequently used tools
 
 ### Quality Requirements (OPTIONAL)
 - [ ] MCP best practices guide
