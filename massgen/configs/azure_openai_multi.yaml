@@ -11,13 +11,13 @@ agents:
       enable_code_interpreter: false
     system_message: "You are an expert AI assistant powered by Azure OpenAI GPT-4. Focus on providing comprehensive and accurate responses."
 
-  - id: "openai_gpt4o"
+  - id: "azure_gpt5"
     backend:
-      type: "openai"
-      model: "gpt-4o"
+      type: "azure_openai"
+      model: "gpt-5-chat"  # Your Azure OpenAI deployment name for GPT-5-chat
       enable_web_search: false
       enable_code_interpreter: false
-    system_message: "You are an expert AI assistant powered by OpenAI GPT-4o. Collaborate with other agents to provide the best possible solution."
+    system_message: "You are an expert AI assistant powered by Azure OpenAI GPT-5-chat. Collaborate with other agents to provide the best possible solution."
 
 # Display configuration
 ui:
