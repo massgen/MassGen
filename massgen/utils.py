@@ -27,6 +27,23 @@ MODEL_MAPPINGS = {
         "o4-mini-medium",
         "o4-mini-high",
     ],
+    "azure_openai": [
+        # Azure OpenAI deployment names (these are user-defined)
+        # Common patterns for GPT models
+        "gpt-4",
+        "gpt-4-32k",
+        "gpt-4-turbo",
+        "gpt-4-turbo-preview",
+        "gpt-35-turbo",
+        "gpt-35-turbo-16k",
+        # GPT-4o variants
+        "gpt-4o",
+        "gpt-4o-mini",
+        # GPT-5 variants (when available on Azure)
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
+    ],
     "claude": [
         # Claude 4 variants
         "claude-opus-4-1-20250805",
@@ -64,7 +81,7 @@ def get_backend_type_from_model(model: str) -> str:
         model: The model name (e.g., "gpt-4", "gemini-pro", "grok-1")
 
     Returns:
-        Agent type string ("openai", "gemini", "grok")
+        Agent type string ("openai", "azure_openai", "gemini", "grok", etc.)
     """
     if not model:
         return "openai"  # Default to OpenAI

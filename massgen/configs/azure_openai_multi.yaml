@@ -1,0 +1,33 @@
+# Azure OpenAI Multi-Agent Configuration
+# Usage: uv run python -m massgen.cli --config azure_openai_multi.yaml "Your question here"
+
+# Multiple agents configuration
+agents:
+  - id: "azure_gpt4"
+    backend:
+      type: "azure_openai"
+      model: "gpt-4.1"  # Your Azure OpenAI deployment name for GPT-4.1
+      enable_web_search: true
+      enable_code_interpreter: true
+    system_message: "You are an expert AI assistant powered by Azure OpenAI GPT-4. Focus on providing comprehensive and accurate responses."
+
+  - id: "azure_gpt35_turbo"
+    backend:
+      type: "azure_openai"
+      model: "gpt-35-turbo"  # Your Azure OpenAI deployment name for GPT-3.5
+      enable_web_search: true
+      enable_code_interpreter: true
+    system_message: "You are a helpful AI assistant powered by Azure OpenAI GPT-3.5. Provide clear and concise responses."
+
+  - id: "openai_gpt4o"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      enable_web_search: true
+      enable_code_interpreter: true
+    system_message: "You are an expert AI assistant powered by OpenAI GPT-4o. Collaborate with other agents to provide the best possible solution."
+
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
