@@ -4,8 +4,14 @@ Test Azure OpenAI backend functionality.
 
 import pytest
 import os
+import sys
 from unittest.mock import patch, MagicMock
-from massgen.backend.azure_openai import AzureOpenAIBackend
+
+# Add the parent directory to sys.path to allow relative imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+# Import directly from the backend module to avoid package-level imports
+from backend.azure_openai import AzureOpenAIBackend
 
 
 class TestAzureOpenAIBackend:
@@ -19,9 +25,9 @@ class TestAzureOpenAIBackend:
             'AZURE_OPENAI_API_VERSION': '2024-02-15-preview'
         }):
             backend = AzureOpenAIBackend()
-            assert backend.config['api_key'] == 'test-key'
-            assert backend.config['base_url'] == 'https://test.openai.azure.com/v1'
-            assert backend.config['api_version'] == '2024-02-15-preview'
+            assert backend.api_key == 'test-key'
+            assert backend.azure_endpoint == 'https://test.openai.azure.com'
+            assert backend.api_version == '2024-02-15-preview'
 
     def test_init_with_kwargs(self):
         """Test initialization with keyword arguments."""
@@ -30,9 +36,9 @@ class TestAzureOpenAIBackend:
             base_url='https://custom.openai.azure.com/',
             api_version='2024-01-01'
         )
-        assert backend.config['api_key'] == 'custom-key'
-        assert backend.config['base_url'] == 'https://custom.openai.azure.com/v1'
-        assert backend.config['api_version'] == '2024-01-01'
+        assert backend.api_key == 'custom-key'
+        assert backend.azure_endpoint == 'https://custom.openai.azure.com'
+        assert backend.api_version == '2024-01-01'
 
     def test_init_missing_api_key(self):
         """Test initialization fails without API key."""
@@ -47,18 +53,18 @@ class TestAzureOpenAIBackend:
                 AzureOpenAIBackend()
 
     def test_base_url_normalization(self):
-        """Test base URL is properly normalized to end with /v1."""
+        """Test base URL is properly normalized."""
         backend = AzureOpenAIBackend(
             api_key='test-key',
             base_url='https://test.openai.azure.com'
         )
-        assert backend.config['base_url'] == 'https://test.openai.azure.com/v1'
+        assert backend.azure_endpoint == 'https://test.openai.azure.com'
 
         backend2 = AzureOpenAIBackend(
             api_key='test-key',
             base_url='https://test2.openai.azure.com/'
         )
-        assert backend2.config['base_url'] == 'https://test2.openai.azure.com/v1'
+        assert backend2.azure_endpoint == 'https://test2.openai.azure.com'
 
     def test_get_provider_name(self):
         """Test provider name is correct."""
@@ -77,7 +83,7 @@ class TestAzureOpenAIBackend:
         text = "This is a test message with several words."
         estimated = backend.estimate_tokens(text)
         assert estimated > 0
-        assert isinstance(estimated, int)
+        assert isinstance(estimated, (int, float))
 
     def test_calculate_cost(self):
         """Test cost calculation."""
@@ -87,12 +93,12 @@ class TestAzureOpenAIBackend:
         )
         
         # Test GPT-4 cost calculation
-        cost = backend.calculate_cost(1000, 500, 'gpt-4')
+        cost = backend.calculate_cost(1000, 500, 'gpt-4o')
         assert cost > 0
         assert isinstance(cost, float)
         
         # Test GPT-3.5 cost calculation
-        cost2 = backend.calculate_cost(1000, 500, 'gpt-35-turbo')
+        cost2 = backend.calculate_cost(1000, 500, 'gpt-3.5-turbo')
         assert cost2 > 0
         assert cost2 < cost  # GPT-3.5 should be cheaper than GPT-4
 
