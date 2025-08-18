@@ -1198,9 +1198,11 @@ class Orchestrator(ChatAgent):
         )
 
         # Use agent's chat method with proper system message (reset chat for clean presentation)
+        presentation_content = ""
         async for chunk in agent.chat(presentation_messages, reset_chat=True):
             # Use the same streaming approach as regular coordination
             if chunk.type == "content" and chunk.content:
+                presentation_content += chunk.content
                 yield StreamChunk(
                     type="content", content=chunk.content, source=selected_agent_id
                 )
@@ -1252,8 +1254,35 @@ Final Session ID: {session_id}.
             # Pass through other chunk types as-is but with source
             else:
                 if hasattr(chunk, "source"):
-                    chunk.source = selected_agent_id
-                yield chunk
+                    yield StreamChunk(
+                        type=chunk.type,
+                        content=getattr(chunk, "content", ""),
+                        source=selected_agent_id,
+                        **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]}
+                    )
+                else:
+                    yield StreamChunk(
+                        type=chunk.type,
+                        content=getattr(chunk, "content", ""),
+                        source=selected_agent_id,
+                        **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]}
+                    )
+
+        # If no content was generated, use the stored answer as fallback
+        if not presentation_content.strip():
+            stored_answer = self.agent_states[selected_agent_id].answer
+            if stored_answer:
+                yield StreamChunk(
+                    type="content", 
+                    content=f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}", 
+                    source=selected_agent_id
+                )
+            else:
+                yield StreamChunk(
+                    type="content", 
+                    content="\n❌ No content generated for final presentation and no stored answer available.", 
+                    source=selected_agent_id
+                )
 
     def _get_vote_results(self) -> Dict[str, Any]:
         """Get current vote results and statistics."""
