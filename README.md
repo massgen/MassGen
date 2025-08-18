@@ -88,8 +88,9 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
-- [Recent Achievements](#recent-achievements-v008)
-- [Previous Achievements](#previous-achievements-v007)
+- Recent Achievements
+  - [v0.0.8](#recent-achievements-v008)
+  - [v0.0.7](#previous-achievements-v007)
 - [Key Future Enhancements](#key-future-enhancements)
   - Model Context Protocol (MCP) Integration
   - Advanced Agent Collaboration
@@ -608,11 +609,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Timeout Management System**: Timeout capabilities for better control and time management
 - Orchestrator-level timeout with graceful fallback
-- Real-time timeout countdown display in coordination UI
 - Enhanced error messages and warnings for timeout scenarios
 
 ✅ **Enhanced Display Features**: Improved visual feedback and user experience
-- Real-time timeout indicators showing remaining time
 - Optimized message display formatting and synchronization
 - Better handling of concurrent agent outputs
 
