@@ -2569,6 +2569,9 @@ class RichTerminalDisplay(TerminalDisplay):
 
         presentation_content = ""
         chunk_count = 0
+        
+        # Initialize the final presentation file
+        presentation_file_path = self._initialize_final_presentation_file(selected_agent)
 
         try:
             # Enhanced streaming with orchestrator query awareness
@@ -2591,6 +2594,9 @@ class RichTerminalDisplay(TerminalDisplay):
                     
                     # Accumulate content
                     presentation_content += processed_content
+                    
+                    # Save chunk to file as it arrives
+                    self._append_to_final_presentation_file(presentation_file_path, processed_content)
 
                     # Enhanced formatting for orchestrator query responses
                     if chunk_type == "status":
@@ -2613,6 +2619,8 @@ class RichTerminalDisplay(TerminalDisplay):
                     processed_content = self.process_reasoning_content(chunk_type, "", source)
                     # Accumulate content
                     presentation_content += processed_content
+                    # Save chunk to file as it arrives
+                    self._append_to_final_presentation_file(presentation_file_path, processed_content)
                     # Main presentation content with simple output
                     # Use markup=False to prevent Rich from interpreting brackets as markup
                     self.console.print(
@@ -2667,6 +2675,9 @@ class RichTerminalDisplay(TerminalDisplay):
             self._stored_final_presentation = presentation_content
             self._stored_presentation_agent = selected_agent
             self._stored_vote_results = vote_results
+
+        # Finalize the file
+        self._finalize_final_presentation_file(presentation_file_path)
 
         # Restart live display if needed
         if was_live:
@@ -2725,9 +2736,19 @@ class RichTerminalDisplay(TerminalDisplay):
                 f"🏆 Selected agent: {selected_agent}", style=self.colors["success"]
             )
         else:
-            selected_agent_text = Text(
-                "No agent selected", style=self.colors["warning"]
-            )
+            # Check if this is due to orchestrator timeout
+            is_timeout = False
+            if hasattr(self, "orchestrator") and self.orchestrator:
+                is_timeout = getattr(self.orchestrator, 'is_orchestrator_timeout', False)
+            
+            if is_timeout:
+                selected_agent_text = Text()
+                selected_agent_text.append("No agent selected\n", style=self.colors["warning"])
+                selected_agent_text.append("The orchestrator timed out before any agent could complete voting or provide an answer.", style=self.colors["warning"])
+            else:
+                selected_agent_text = Text(
+                    "No agent selected", style=self.colors["warning"]
+                )
 
         final_panel = Panel(
             Align.center(selected_agent_text),
@@ -3073,6 +3094,82 @@ class RichTerminalDisplay(TerminalDisplay):
             box=ROUNDED,
         )
         self.console.print(completion_panel)
+        
+        # Save final presentation to text file
+        self._save_final_presentation_to_file(selected_agent, presentation_content)
+
+    def _save_final_presentation_to_file(self, selected_agent: str, presentation_content: str):
+        """Save the final presentation content to a text file in agent_outputs directory."""
+        try:
+            # Create filename with timestamp
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"final_presentation_{selected_agent}_{timestamp}.txt"
+            file_path = Path(self.output_dir) / filename
+            
+            # Write the final presentation content
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(f"=== FINAL PRESENTATION FROM {selected_agent.upper()} ===\n")
+                f.write(f"Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 60 + "\n\n")
+                f.write(presentation_content)
+                f.write("\n\n" + "=" * 60 + "\n")
+                f.write("End of Final Presentation\n")
+            
+            # Also create a symlink to the latest presentation
+            latest_link = Path(self.output_dir) / f"final_presentation_{selected_agent}_latest.txt"
+            if latest_link.exists():
+                latest_link.unlink()
+            latest_link.symlink_to(filename)
+            
+        except Exception as e:
+            # Handle file write errors gracefully
+            pass
+
+    def _initialize_final_presentation_file(self, selected_agent: str) -> Path:
+        """Initialize a new final presentation file and return the file path."""
+        try:
+            # Create filename with timestamp
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"final_presentation_{selected_agent}_{timestamp}.txt"
+            file_path = Path(self.output_dir) / filename
+            
+            # Write the initial header
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(f"=== FINAL PRESENTATION FROM {selected_agent.upper()} ===\n")
+                f.write(f"Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 60 + "\n\n")
+            
+            # Also create a symlink to the latest presentation
+            latest_link = Path(self.output_dir) / f"final_presentation_{selected_agent}_latest.txt"
+            if latest_link.exists():
+                latest_link.unlink()
+            latest_link.symlink_to(filename)
+            
+            return file_path
+        except Exception as e:
+            # Handle file write errors gracefully
+            return None
+
+    def _append_to_final_presentation_file(self, file_path: Path, content: str):
+        """Append content to the final presentation file."""
+        try:
+            if file_path and file_path.exists():
+                with open(file_path, "a", encoding="utf-8") as f:
+                    f.write(content)
+        except Exception as e:
+            # Handle file write errors gracefully
+            pass
+
+    def _finalize_final_presentation_file(self, file_path: Path):
+        """Add closing content to the final presentation file."""
+        try:
+            if file_path and file_path.exists():
+                with open(file_path, "a", encoding="utf-8") as f:
+                    f.write("\n\n" + "=" * 60 + "\n")
+                    f.write("End of Final Presentation\n")
+        except Exception as e:
+            # Handle file write errors gracefully
+            pass
 
     def _show_orchestrator_final_presentation(
         self, selected_agent: str, vote_results: Dict[str, Any] = None

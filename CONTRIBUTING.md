@@ -96,9 +96,9 @@ We welcome contributions in these areas:
 
 ### Development Workflow
 
-> **Important**: Our next version is v0.0.7. If you want to contribute, please contribute to the `dev/v0.0.8` branch.
+> **Important**: Our next version is v0.0.9. If you want to contribute, please contribute to the `dev/v0.0.9` branch.
 
-1. **Fork the repository** and create a feature branch from `dev/v0.0.8`
+1. **Fork the repository** and create a feature branch from `dev/v0.0.9`
 2. **Set up the development environment** following the setup instructions above
 3. **Make your changes** following the existing code style and patterns
 4. **Add tests** for new functionality

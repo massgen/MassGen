@@ -88,13 +88,17 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
+- Recent Achievements
+  - [v0.0.8](#recent-achievements-v008)
+  - [v0.0.7](#previous-achievements-v007)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Model Context Protocol (MCP) Integration
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.8 Roadmap](#v008-roadmap)
+- [v0.0.9 Roadmap](#v009-roadmap)
 </details>
 
 <details open>
@@ -485,6 +489,17 @@ ui:
   - `"simple"`: Plain text output without any formatting or special display features
 - `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
 
+**Time Control Configuration:**
+
+Configure timeout settings to control how long MassGen's orchestrator can run:
+
+```yaml
+timeout_settings:
+  orchestrator_timeout_seconds: 30   # Maximum time for orchestration
+```
+
+- `orchestrator_timeout_seconds`: Sets the maximum time allowed for the orchestration phase
+
 #### Interactive Multi-Turn Mode
 
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
@@ -590,7 +605,17 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.7)
+### Recent Achievements (v0.0.8)
+
+✅ **Timeout Management System**: Timeout capabilities for better control and time management
+- Orchestrator-level timeout with graceful fallback
+- Enhanced error messages and warnings for timeout scenarios
+
+✅ **Enhanced Display Features**: Improved visual feedback and user experience
+- Optimized message display formatting and synchronization
+- Better handling of concurrent agent outputs
+
+### Previous Achievements (v0.0.7)
 
 ✅ **Local Model Support**: Successfully integrated LM Studio for running open-weight models locally, with automatic server management and zero-cost usage
 
@@ -600,24 +625,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Key Future Enhancements:
 
--   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy.
--   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents.
--   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management.
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation.
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem.
+-   **Model Context Protocol (MCP) Integration:** Enabling Claude Code and Claude Backend to support MCP for enhanced tool capabilities (v0.0.9)
+-   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
+-   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
+-   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
+-   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
+-   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.8 Roadmap
+### v0.0.9 Roadmap
 
-Version 0.0.8 focuses primarily on **Coding Agent Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
+Version 0.0.9 focuses on **Model Context Protocol (MCP) Integration**, enabling Claude Code and Claude Backend to support MCP for enhanced tool capabilities and interoperability. Key enhancements include:
 
-- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
-- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
-- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
-- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
+- **MCP Support for Claude Code** (Required): 🔧 Enable MCP protocol support in Claude Code backend
+- **MCP Support for Claude Backend** (Required): 🔧 Enable MCP protocol support in Claude Backend
+- **MCP Tool Integration** (Required): 🔗 Seamless integration with MCP-compatible tools and servers
+- **Advanced MCP Features** (Optional): Tool management, authentication, and orchestration patterns
 
-For detailed milestones and technical specifications, see the [full v0.0.8 roadmap](ROADMAP_v0.0.8.md).
+For detailed milestones and technical specifications, see the [full v0.0.9 roadmap](ROADMAP_v0.0.9.md).
 
 ---
 

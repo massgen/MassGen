@@ -988,7 +988,7 @@ class CoordinationUI:
             pass
 
         # Handle coordination events (provided answer, votes)
-        elif any(marker in content for marker in ["✅", "🗳️", "🔄", "❌"]):
+        elif any(marker in content for marker in ["✅", "🗳️", "🔄", "❌", "⚠️"]):
             clean_line = content.replace("**", "").replace("##", "").strip()
             if clean_line and not any(
                 skip in clean_line
@@ -1050,7 +1050,29 @@ class CoordinationUI:
 
                 # Only create final event for first chunk to avoid spam
                 if self._answer_buffer == clean_content:  # First chunk
-                    if vote_counts:
+                    # Check if orchestrator timed out
+                    orchestrator_timeout = getattr(self.orchestrator, 'is_orchestrator_timeout', False)
+                    
+                    if selected_agent == "Unknown" or selected_agent is None:
+                        if orchestrator_timeout:
+                            # Even with timeout, try to select agent from available votes
+                            if vote_counts:
+                                # Find agent with most votes
+                                max_votes = max(vote_counts.values())
+                                tied_agents = [agent for agent, count in vote_counts.items() if count == max_votes]
+                                # Use first tied agent (following orchestrator's tie-breaking logic)
+                                timeout_selected_agent = tied_agents[0] if tied_agents else None
+                                if timeout_selected_agent:
+                                    vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_counts.items()])
+                                    tie_info = " (tie-broken by registration order)" if len(tied_agents) > 1 else ""
+                                    event = f"🎯 FINAL: {timeout_selected_agent} selected from partial votes ({vote_summary}{tie_info}) → orchestrator timeout → [buffering...]"
+                                else:
+                                    event = f"🎯 FINAL: None selected → orchestrator timeout (no agents completed voting in time) → [buffering...]"
+                            else:
+                                event = f"🎯 FINAL: None selected → orchestrator timeout (no agents completed voting in time) → [buffering...]"
+                        else:
+                            event = f"🎯 FINAL: None selected → [buffering...]"
+                    elif vote_counts:
                         vote_summary = ", ".join(
                             [
                                 f"{agent}: {count} vote{'s' if count != 1 else ''}"
@@ -1060,9 +1082,11 @@ class CoordinationUI:
                         tie_info = (
                             " (tie-broken by registration order)" if is_tie else ""
                         )
-                        event = f"🎯 FINAL: {selected_agent} selected ({vote_summary}{tie_info}) → [buffering...]"
+                        timeout_info = " (despite timeout)" if orchestrator_timeout else ""
+                        event = f"🎯 FINAL: {selected_agent} selected ({vote_summary}{tie_info}){timeout_info} → [buffering...]"
                     else:
-                        event = f"🎯 FINAL: {selected_agent} selected → [buffering...]"
+                        timeout_info = " (despite timeout)" if orchestrator_timeout else ""
+                        event = f"🎯 FINAL: {selected_agent} selected{timeout_info} → [buffering...]"
 
                     self.display.add_orchestrator_event(event)
                     if self.logger:

@@ -5,6 +5,54 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8] - 2025-08-18
+
+### Added
+- **Timeout Management System**: Timeout capabilities for better control and time management
+  - New `TimeoutConfig` class for configuring timeout settings at different levels
+  - Orchestrator-level timeout with graceful fallback
+  - Added `fast_timeout_example.yaml` configuration demonstrating conservative timeout settings
+  - Test suite for timeout mechanisms in `test_timeout.py`
+  - Timeout indicators in Rich Terminal Display showing remaining time
+- **Enhanced Display Features**: Improved visual feedback and user experience
+  - Real-time timeout countdown display in coordination UI
+  - Optimized message display formatting for better readability
+  - Enhanced status indicators for timeout warnings and fallback notifications
+  - Improved coordination UI with better multi-agent status tracking
+
+### Fixed
+- **Display Optimization**: Multiple improvements to message rendering
+  - Fixed message display synchronization issues
+  - Optimized terminal display refresh rates
+  - Improved handling of concurrent agent outputs
+  - Better formatting for multi-line responses
+- **Configuration Management**: Enhanced robustness of configuration loading
+  - Fixed import ordering issues in CLI module
+  - Improved error handling for missing configurations
+  - Better validation of timeout settings
+
+### Changed
+- **Orchestrator Architecture**: Simplified and enhanced timeout implementation
+  - Refactored timeout handling to be more efficient and maintainable
+  - Improved graceful degradation when timeouts occur
+  - Better integration with frontend displays for timeout notifications
+  - Enhanced error messages for timeout scenarios
+- **Code Cleanup**: Removed deprecated configurations and improved code organization
+  - Removed obsolete `two_agents_claude_code` configuration
+  - Cleaned up unused imports and redundant code
+  - Reformatted files for better consistency
+- **CLI Enhancements**: Improved command-line interface functionality
+  - Better timeout configuration parsing
+  - Enhanced error reporting for timeout scenarios
+  - Improved help documentation for timeout settings
+
+### Technical Details
+- **Commits**: 18 commits including various optimizations and bug fixes
+- **Files Modified**: 13+ files across orchestrator, frontend, configuration, and test modules
+- **Key Features**: Timeout management system with graceful fallback, enhanced display optimizations
+- **New Configuration**: `fast_timeout_example.yaml` for time-conscious usage
+- **Contributors**: @qidanrui @Leezekun @sonichi @voidcenter
+
 ## [0.0.7] - 2025-08-15
 
 ### Added
