@@ -28,7 +28,7 @@ class AgentState:
         votes: Dictionary storing vote data for this agent
         restart_pending: Whether the agent should gracefully restart due to new answers
         is_killed: Whether this agent has been killed due to timeout/limits
-        timeout_reason: Reason for timeout/kill (if applicable)
+        timeout_reason: Reason for timeout (if applicable)
     """
 
     answer: Optional[str] = None
