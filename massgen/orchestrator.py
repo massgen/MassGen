@@ -237,9 +237,6 @@ class Orchestrator(ChatAgent):
         self._active_streams = {}
         self._active_tasks = {}
 
-        # import pdb
-        # pdb.set_trace()
-
         timeout_seconds = self.config.timeout_config.orchestrator_timeout_seconds
         
         try:
