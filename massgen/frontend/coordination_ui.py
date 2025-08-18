@@ -988,7 +988,7 @@ class CoordinationUI:
             pass
 
         # Handle coordination events (provided answer, votes)
-        elif any(marker in content for marker in ["✅", "🗳️", "🔄", "❌"]):
+        elif any(marker in content for marker in ["✅", "🗳️", "🔄", "❌", "⚠️"]):
             clean_line = content.replace("**", "").replace("##", "").strip()
             if clean_line and not any(
                 skip in clean_line

@@ -2736,9 +2736,19 @@ class RichTerminalDisplay(TerminalDisplay):
                 f"🏆 Selected agent: {selected_agent}", style=self.colors["success"]
             )
         else:
-            selected_agent_text = Text(
-                "No agent selected", style=self.colors["warning"]
-            )
+            # Check if this is due to orchestrator timeout
+            is_timeout = False
+            if hasattr(self, "orchestrator") and self.orchestrator:
+                is_timeout = getattr(self.orchestrator, 'is_orchestrator_timeout', False)
+            
+            if is_timeout:
+                selected_agent_text = Text()
+                selected_agent_text.append("No agent selected\n", style=self.colors["warning"])
+                selected_agent_text.append("The orchestrator timed out before any agent could complete voting or provide an answer.", style=self.colors["warning"])
+            else:
+                selected_agent_text = Text(
+                    "No agent selected", style=self.colors["warning"]
+                )
 
         final_panel = Panel(
             Align.center(selected_agent_text),

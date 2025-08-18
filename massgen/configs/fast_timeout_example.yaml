@@ -3,7 +3,7 @@
 
 # Conservative timeout settings to prevent excessive token usage
 timeout_settings:
-  orchestrator_timeout_seconds: 45   # 45 seconds max coordination
+  orchestrator_timeout_seconds: 30   # 45 seconds max coordination
 
 agents:
   - id: "fast-gpt-5-1"
