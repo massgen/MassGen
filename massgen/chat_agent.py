@@ -251,7 +251,6 @@ class SingleAgent(ChatAgent):
             else:
                 # Stateless: send full conversation history
                 backend_messages = self.conversation_history.copy()
-        
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
             messages=backend_messages,

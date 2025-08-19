@@ -37,7 +37,7 @@ from .backend.chat_completions import ChatCompletionsBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.claude_code import ClaudeCodeBackend
 from .chat_agent import SingleAgent, ConfigurableAgent
-from .agent_config import AgentConfig
+from .agent_config import AgentConfig, TimeoutConfig
 from .orchestrator import Orchestrator
 from .frontend.coordination_ui import CoordinationUI
 
@@ -239,20 +239,6 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
     if not agent_entries:
         raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
 
-    # First pass: collect all Claude Code agents' working directories
-    all_agent_cwds = {}
-    for i, agent_data in enumerate(agent_entries, start=1):
-        backend_config = agent_data.get("backend", {})
-        backend_type = backend_config.get("type") or (
-            get_backend_type_from_model(backend_config["model"])
-            if "model" in backend_config else None
-        )
-        agent_id = agent_data.get("id", f"agent{i}")
-        
-        # Collect working directory if it's a Claude Code agent
-        if backend_type and backend_type.lower() == "claude_code" and "cwd" in backend_config:
-            all_agent_cwds[agent_id] = backend_config["cwd"]
-
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
 
@@ -263,10 +249,6 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
         )
         if not backend_type:
             raise ConfigurationError("Backend type must be specified or inferrable from model")
-        
-        # Add all agents' cwds to Claude Code backend configs
-        if backend_type and backend_type.lower() == "claude_code" and all_agent_cwds:
-            backend_config["_agents_cwds"] = all_agent_cwds.copy()
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}
@@ -291,6 +273,8 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
         agent_config.custom_system_instruction = agent_data.get("system_message")
+        
+        # Timeout configuration will be applied to orchestrator instead of individual agents
 
         agent = ConfigurableAgent(config=agent_config, backend=backend)
         agents[agent.config.agent_id] = agent
@@ -321,6 +305,7 @@ async def run_question_with_history(
     agents: Dict[str, SingleAgent],
     ui_config: Dict[str, Any],
     history: List[Dict[str, Any]],
+    **kwargs
 ) -> str:
     """Run MassGen with a question and conversation history."""
     # Build messages including history
@@ -361,7 +346,12 @@ async def run_question_with_history(
 
     else:
         # Multi-agent mode with history
-        orchestrator = Orchestrator(agents=agents)
+        # Create orchestrator config with timeout settings
+        timeout_config = kwargs.get("timeout_config")
+        orchestrator_config = AgentConfig()
+        if timeout_config:
+            orchestrator_config.timeout_config = timeout_config
+        orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
@@ -397,7 +387,7 @@ async def run_question_with_history(
 
 
 async def run_single_question(
-    question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]
+    question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs
 ) -> str:
     """Run MassGen with a single question."""
     # Check if we should use orchestrator for single agents (default: False for backward compatibility)
@@ -433,7 +423,12 @@ async def run_single_question(
 
     else:
         # Multi-agent mode
-        orchestrator = Orchestrator(agents=agents)
+        # Create orchestrator config with timeout settings
+        timeout_config = kwargs.get("timeout_config")
+        orchestrator_config = AgentConfig()
+        if timeout_config:
+            orchestrator_config.timeout_config = timeout_config
+        orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
@@ -459,7 +454,7 @@ def print_help_messages():
 
 
 async def run_interactive_mode(
-    agents: Dict[str, SingleAgent], ui_config: Dict[str, Any]
+    agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs
 ):
     """Run MassGen in interactive mode with conversation history."""
     print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
@@ -580,7 +575,7 @@ async def run_interactive_mode(
                 print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}", flush=True)
 
                 response = await run_question_with_history(
-                    question, agents, ui_config, conversation_history
+                    question, agents, ui_config, conversation_history, **kwargs
                 )
 
                 if response:
@@ -628,6 +623,9 @@ Examples:
   
   # Interactive mode
   python -m massgen.cli --config config.yaml
+  
+  # Timeout control examples
+  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 "Complex task"
   
   # Create sample configurations
   python -m massgen.cli --create-samples
@@ -689,6 +687,14 @@ Environment Variables:
         "--no-display", action="store_true", help="Disable visual coordination display"
     )
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
+    
+    # Timeout options
+    timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
+    timeout_group.add_argument(
+        "--orchestrator-timeout", 
+        type=int, 
+        help="Maximum time for orchestrator coordination in seconds (default: 1800)"
+    )
 
     args = parser.parse_args()
 
@@ -723,6 +729,14 @@ Environment Variables:
             ui_config["display_type"] = "simple"
         if args.no_logs:
             ui_config["logging_enabled"] = False
+            
+        # Apply timeout overrides from CLI arguments
+        timeout_settings = config.get("timeout_settings", {})
+        if args.orchestrator_timeout is not None:
+            timeout_settings["orchestrator_timeout_seconds"] = args.orchestrator_timeout
+            
+        # Update config with timeout settings
+        config["timeout_settings"] = timeout_settings
 
         # Create agents
         agents = create_agents_from_config(config)
@@ -730,14 +744,20 @@ Environment Variables:
         if not agents:
             raise ConfigurationError("No agents configured")
 
+        # Create timeout config from settings and put it in kwargs
+        timeout_settings = config.get("timeout_settings", {})
+        timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
+        
+        kwargs = {"timeout_config": timeout_config}
+
         # Run mode based on whether question was provided
         if args.question:
-            response = await run_single_question(args.question, agents, ui_config)
+            response = await run_single_question(args.question, agents, ui_config, **kwargs)
             # if response:
             #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
             #     print(f"{response}", flush=True)
         else:
-            await run_interactive_mode(agents, ui_config)
+            await run_interactive_mode(agents, ui_config, **kwargs)
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)

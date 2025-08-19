@@ -98,7 +98,7 @@ class StdioTransport(MCPTransport):
             if self.env:
                 process_env = os.environ.copy()
                 process_env.update(self.env)
-            
+
             self.process = await asyncio.create_subprocess_exec(
                 *self.command,
                 stdin=asyncio.subprocess.PIPE,

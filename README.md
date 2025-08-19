@@ -88,13 +88,17 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
+- Recent Achievements
+  - [v0.0.8](#recent-achievements-v008)
+  - [v0.0.7](#previous-achievements-v007)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Model Context Protocol (MCP) Integration
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.8 Roadmap](#v008-roadmap)
+- [v0.0.9 Roadmap](#v009-roadmap)
 </details>
 
 <details open>
@@ -210,13 +214,13 @@ cp .env.example .env
 The system currently supports multiple model providers with advanced capabilities:
 
 **API-based Models:**
-- **Cerebras AI**: GPT-OSS-120B
-- **Claude**: Claude Sonnet 4, Claude Haiku 3.5
+- **Cerebras AI**: GPT-OSS-120B...
+- **Claude**: Claude Haiku 3.5, Claude Sonnet 4, Claude Opus 4...
 - **Claude Code**: Native Claude Code SDK with comprehensive dev tools
-- **Gemini**: Gemini 2.5 Flash, Gemini 2.0 Flash Thinking, Gemini 1.5 Pro
-- **Grok**: Grok-3, Grok-3-mini
-- **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano), GPT-4o series
-- **Together AI**, **Fireworks AI**, **Groq**, **Nebius AI Studio**, **OpenRouter**: Various open-source models
+- **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
+- **Grok**: Grok-4, Grok-3, Grok-3-mini...
+- **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano)...
+- **Together AI**, **Fireworks AI**, **Groq**, **Nebius AI Studio**, **OpenRouter**: LLaMA, Mistral, Qwen...
 - **Z AI**: GLM-4.5
 
 **Local Model Support (NEW in v0.0.7):**
@@ -224,7 +228,7 @@ The system currently supports multiple model providers with advanced capabilitie
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
   - Zero-cost usage reporting
-  - Support for Qwen, LLaMA, Mistral, and other open-weight models
+  - Support for LLaMA, Mistral, Qwen and other open-weight models
 
 More providers and local inference engines (vllm, sglang) are welcome to be added.
 
@@ -250,11 +254,12 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 **API-based backends:**
 ```bash
 uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model glm-4.5 "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "How hard is IMO?"
 ```
+
+All the models with a default backend can be found [here](massgen/utils.py).
 
 **Local models (NEW in v0.0.7):**
 ```bash
@@ -262,13 +267,11 @@ uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --config lmstudio.yaml "Explain quantum computing"
 ```
 
-All supported models can be found [here](massgen/utils.py).
-
 **CLI-based backends**:
 ```bash
 # Claude Code - Native Claude Code SDK with comprehensive dev tools
 uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku for claude code?"
-uv run python -m massgen.cli --backend claude-code "Debug this Python script"
+uv run python -m massgen.cli --backend claude_code "Debug this Python script"
 ```
 
 `--backend` is required for this type of backends.
@@ -293,8 +296,8 @@ All available quick configuration files can be found [here](massgen/configs).
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `zai`). Optional because we can infer backend type through model.|
-| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `zai`). Optional for [models with default backends](massgen/utils.py).|
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
@@ -403,7 +406,7 @@ backend:
 ```yaml
 backend:
   type: "openai"
-  model: "gpt-5"                     # Model name
+  model: "gpt-5-mini"                # Model name
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0, GPT-5 series models and GPT o-series models don't support this)
   max_tokens: 2500                   # Maximum response length (GPT-5 series models and GPT o-series models don't support this)
@@ -484,6 +487,17 @@ ui:
   - `"terminal"`: Standard terminal display with basic formatting and sequential output
   - `"simple"`: Plain text output without any formatting or special display features
 - `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
+
+**Time Control Configuration:**
+
+Configure timeout settings to control how long MassGen's orchestrator can run:
+
+```yaml
+timeout_settings:
+  orchestrator_timeout_seconds: 30   # Maximum time for orchestration
+```
+
+- `orchestrator_timeout_seconds`: Sets the maximum time allowed for the orchestration phase
 
 #### Interactive Multi-Turn Mode
 
@@ -590,34 +604,51 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.7)
+### Recent Achievements (v0.0.8)
 
-✅ **Local Model Support**: Successfully integrated LM Studio for running open-weight models locally, with automatic server management and zero-cost usage
+✅ **Timeout Management System**: Timeout capabilities for better control and time management
+- Orchestrator-level timeout with graceful fallback
+- Enhanced error messages and warnings for timeout scenarios
 
-✅ **Extended Provider Support**: Added support for Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
+✅ **Enhanced Display Features**: Improved visual feedback and user experience
+- Optimized message display formatting and synchronization
+- Better handling of concurrent agent outputs
 
-✅ **Enhanced Backend Stability**: Improved error handling and configuration management across all backends
+### Previous Achievements (v0.0.3-v0.0.7)
+
+✅ **Foundation Architecture**: Complete multi-agent orchestration system with async streaming, builtin tools (code execution, web search), and multi-backend support
+
+✅ **GPT-5 Series Integration**: Support for OpenAI's GPT-5, GPT-5-mini, GPT-5-nano with advanced reasoning parameters and verbosity control
+
+✅ **Claude Code Integration**: Native Claude Code backend with streaming capabilities, tool support, and stateful conversation management
+
+✅ **GLM-4.5 Model Support**: Integration with ZhipuAI's GLM-4.5 model family with enhanced reasoning display and coordination UI
+
+✅ **Local Model Support**: Complete LM Studio integration for running open-weight models locally with automatic server management and zero-cost usage
+
+✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
 
 ### Key Future Enhancements:
 
--   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy.
--   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents.
--   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management.
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation.
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem.
+-   **Model Context Protocol (MCP) Integration:** Enabling Claude Code and Claude Backend to support MCP for enhanced tool capabilities (v0.0.9)
+-   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
+-   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
+-   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
+-   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
+-   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.8 Roadmap
+### v0.0.9 Roadmap
 
-Version 0.0.8 focuses primarily on **Coding Agent Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
+Version 0.0.9 focuses on **Model Context Protocol (MCP) Integration**, enabling Claude Code and Claude Backend to support MCP for enhanced tool capabilities and interoperability. Key enhancements include:
 
-- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
-- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
-- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
-- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
+- **MCP Support for Claude Code** (Required): 🔧 Enable MCP protocol support in Claude Code backend
+- **MCP Support for Claude Backend** (Required): 🔧 Enable MCP protocol support in Claude Backend
+- **MCP Tool Integration** (Required): 🔗 Seamless integration with MCP-compatible tools and servers
+- **Advanced MCP Features** (Optional): Tool management, authentication, and orchestration patterns
 
-For detailed milestones and technical specifications, see the [full v0.0.8 roadmap](ROADMAP_v0.0.8.md).
+For detailed milestones and technical specifications, see the [full v0.0.9 roadmap](ROADMAP_v0.0.9.md).
 
 ---
 
