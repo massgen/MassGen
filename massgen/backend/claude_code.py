@@ -753,15 +753,15 @@ class ClaudeCodeBackend(LLMBackend):
                     "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
                     "Bash(chown*)"
                 ]
-                    # Create client with the enhanced system prompt
-                    client = self.create_client(
                 # Simplified approach: Create client without complex system prompt
                 # The workflow tools will be handled through message content instead
                 client = self.create_client(**all_params)
 
-        if not client._transport:
+        # Ensure client connection
         try:
             await client.connect()
+        except Exception as e:
+            yield StreamChunk(
                 type="error",
                 error=f"Failed to connect to Claude Code: {str(e)}",
                 source="claude_code"
