@@ -4,6 +4,7 @@ MCP transport layer implementations.
 
 import asyncio
 import json
+import os
 import uuid
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
@@ -82,21 +83,29 @@ class MCPTransport(ABC):
 class StdioTransport(MCPTransport):
     """MCP transport using stdio (subprocess communication)."""
 
-    def __init__(self, command: List[str], cwd: Optional[str] = None):
+    def __init__(self, command: List[str], cwd: Optional[str] = None, env: Optional[Dict[str, str]] = None):
         self.command = command
         self.cwd = cwd
+        self.env = env
         self.process: Optional[asyncio.subprocess.Process] = None
         self._connected = False
 
     async def connect(self) -> None:
         """Start MCP server process and establish stdio connection."""
         try:
+            # Prepare environment
+            process_env = None
+            if self.env:
+                process_env = os.environ.copy()
+                process_env.update(self.env)
+            
             self.process = await asyncio.create_subprocess_exec(
                 *self.command,
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=self.cwd
+                cwd=self.cwd,
+                env=process_env
             )
             self._connected = True
             

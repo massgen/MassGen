@@ -350,7 +350,6 @@ class ClaudeCodeBackend(LLMBackend):
         """Initialize MCP server connections."""
         if not MCP_AVAILABLE or not self.mcp_servers:
             return
-            
         # Convert mcp_servers from dict format (YAML) to list format if needed
         server_configs = []
         if isinstance(self.mcp_servers, dict):
@@ -369,6 +368,8 @@ class ClaudeCodeBackend(LLMBackend):
         for server_config in server_configs:
             server_name = server_config.get("name", "unnamed")
             try:
+                import pdb
+                pdb.set_trace()
                 client = MCPClient(server_config)
                 await client.connect()
                 self.mcp_clients[server_name] = client

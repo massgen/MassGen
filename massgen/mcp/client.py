@@ -67,6 +67,7 @@ class MCPClient:
             command = config.get("command", [])
             args = config.get("args", [])
             cwd = config.get("cwd")
+            env = config.get("env")
             
             # Handle different command formats
             if isinstance(command, str):
@@ -78,7 +79,7 @@ class MCPClient:
             else:
                 full_command = args
                 
-            return StdioTransport(full_command, cwd)
+            return StdioTransport(full_command, cwd, env)
             
         elif transport_type == "http":
             url = config["url"]
@@ -95,6 +96,7 @@ class MCPClient:
 
     async def connect(self) -> None:
         """Connect to MCP server and discover capabilities."""
+
         await self.transport.connect()
         
         # Discover available tools, resources, and prompts
