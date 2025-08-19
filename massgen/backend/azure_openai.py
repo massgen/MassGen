@@ -11,7 +11,7 @@ from .base import LLMBackend, StreamChunk
 
 # Import Azure OpenAI client
 try:
-    from openai import AzureOpenAI
+    from openai import AsyncAzureOpenAI
     AZURE_OPENAI_AVAILABLE = True
 except ImportError:
     AZURE_OPENAI_AVAILABLE = False
@@ -54,7 +54,7 @@ class AzureOpenAIBackend(LLMBackend):
             self.azure_endpoint = self.azure_endpoint[:-1]
         
         # Initialize Azure OpenAI client
-        self.client = AzureOpenAI(
+        self.client = AsyncAzureOpenAI(
             api_version=self.api_version,
             azure_endpoint=self.azure_endpoint,
             api_key=self.api_key,
@@ -114,15 +114,15 @@ class AzureOpenAIBackend(LLMBackend):
                 if key not in excluded_params and value is not None:
                     api_params[key] = value
             
-            # Create streaming response (Azure OpenAI client is synchronous)
-            stream = self.client.chat.completions.create(**api_params)
+            # Create streaming response (now properly async)
+            stream = await self.client.chat.completions.create(**api_params)
             
             # Process streaming response with content accumulation
             accumulated_content = ""
             complete_response = ""  # Keep track of the complete response
             last_yield_type = None
             
-            for chunk in stream:
+            async for chunk in stream:
                 converted = self._convert_chunk_to_stream_chunk(chunk)
                 
                 # Accumulate content chunks
