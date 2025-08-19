@@ -47,7 +47,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import uuid
+import warnings
+import atexit
 from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from claude_code_sdk import (  # type: ignore
@@ -94,11 +97,94 @@ class ClaudeCodeBackend(LLMBackend):
         # Set API key in environment for SDK if provided
         if self.api_key:
             os.environ["ANTHROPIC_API_KEY"] = self.api_key
+        
+        # Set git-bash path for Windows compatibility
+        if sys.platform == "win32" and not os.environ.get("CLAUDE_CODE_GIT_BASH_PATH"):
+            import shutil
+            bash_path = shutil.which("bash")
+            if bash_path:
+                os.environ["CLAUDE_CODE_GIT_BASH_PATH"] = bash_path
+                print(f"[ClaudeCodeBackend] Set CLAUDE_CODE_GIT_BASH_PATH={bash_path}")
+        
+        # Comprehensive Windows subprocess cleanup warning suppression
+        if sys.platform == "win32":
+            self._setup_windows_subprocess_cleanup_suppression()
 
         # Single ClaudeSDKClient for this backend instance
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
+
+    def _setup_windows_subprocess_cleanup_suppression(self):
+        """Comprehensive Windows subprocess cleanup warning suppression."""
+        # All warning filters
+        warnings.filterwarnings("ignore", message="unclosed transport")
+        warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
+        warnings.filterwarnings("ignore", message="Exception ignored in")
+        warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
+        warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
+        warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
+        warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
+        
+        # Patch asyncio transport destructors to be silent
+        try:
+            import asyncio.base_subprocess
+            import asyncio.proactor_events
+            
+            # Store originals
+            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, '__del__', None)
+            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, '__del__', None)
+            
+            def silent_subprocess_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_subprocess_del:
+                            original_subprocess_del(self)
+                except Exception:
+                    pass
+            
+            def silent_pipe_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_pipe_del:
+                            original_pipe_del(self)
+                except Exception:
+                    pass
+            
+            # Apply patches
+            if original_subprocess_del:
+                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
+            if original_pipe_del:
+                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
+        except Exception:
+            pass  # If patching fails, fall back to warning filters only
+        
+        # Setup exit handler for stderr suppression
+        original_stderr = sys.stderr
+        
+        def suppress_exit_warnings():
+            try:
+                sys.stderr = open(os.devnull, 'w')
+                import time
+                time.sleep(0.3)
+            except Exception:
+                pass
+            finally:
+                try:
+                    if sys.stderr != original_stderr:
+                        sys.stderr.close()
+                    sys.stderr = original_stderr
+                except Exception:
+                    pass
+        
+        atexit.register(suppress_exit_warnings)
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -667,32 +753,20 @@ class ClaudeCodeBackend(LLMBackend):
                     "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
                     "Bash(chown*)"
                 ]
-                # Extract system message from messages for append mode
-                system_msg = next(
-                    (msg for msg in messages if msg.get("role") == "system"), None)
-                if system_msg:
-                    system_content = system_msg.get('content', '')  # noqa: E128
-                else:
-                    system_content = ''   
-                # Build system prompt with tools information             
-                workflow_system_prompt = (
-                    self._build_system_prompt_with_workflow_tools(
-                        tools or [], system_content))
-                # Handle different system prompt mode
-                if all_params.get("system_prompt"):
-                    # Create client with system_prompt
-                    client = self.create_client(
-                        system_prompt=workflow_system_prompt,
-                        **all_params)
-                else:
                     # Create client with the enhanced system prompt
                     client = self.create_client(
-                        append_system_prompt=workflow_system_prompt,
-                        **all_params)
+                # Simplified approach: Create client without complex system prompt
+                # The workflow tools will be handled through message content instead
+                client = self.create_client(**all_params)
 
-        # Connect client if not already connected
         if not client._transport:
+        try:
             await client.connect()
+                type="error",
+                error=f"Failed to connect to Claude Code: {str(e)}",
+                source="claude_code"
+            )
+            return
 
         # Format the messages for Claude Code
         if not messages:
@@ -730,6 +804,49 @@ class ClaudeCodeBackend(LLMBackend):
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
+        
+        # Add workflow instructions if we have workflow tools
+        if tools:
+            workflow_tools = [
+                t for t in tools
+                if t.get("function", {}).get("name") in ["new_answer", "vote"]]
+            if workflow_tools:
+                workflow_instructions = """
+IMPORTANT: If this is a multi-agent coordination task, you MUST provide a JSON response at the end in this format:
+
+For submitting an answer:
+```json
+{"tool_name": "new_answer", "arguments": {"content": "your answer here"}}
+```
+
+For voting on an agent's answer:
+```json
+{"tool_name": "vote", "arguments": {"agent_id": "agent_name", "reason": "why you chose this"}}
+```
+
+Place the JSON block at the very end of your response after your analysis."""
+                user_contents.append(workflow_instructions)
+        
+        # Generate anonymous agent cwds information from agent name mapping
+        # Note: This would be populated by orchestrator if needed for multi-agent coordination
+        anonymous_agent_cwds = {}
+        
+        # Add other agents' working directories information as a user message
+        if anonymous_agent_cwds:
+            agent_dirs_info = "\n--- Other Agents' Working Directories ---\n"
+            agent_dirs_info += "IMPORTANT: Before providing new_answer or vote, you MUST explore and execute code in other agents' working directories:\n"
+            for anon_agent_id, cwd in anonymous_agent_cwds.items():
+                agent_dirs_info += f"- {anon_agent_id}: {os.path.join(os.getcwd(), cwd)}\n"
+            agent_dirs_info += "\nYou MUST:\n"
+            agent_dirs_info += "1. Use the LS tool to explore ALL other agents' working directories\n"
+            agent_dirs_info += "2. Use the Read tool to examine any code files they created. You also should examine all other files.\n"
+            agent_dirs_info += "3. Use the Bash tool to execute their code if applicable\n"
+            agent_dirs_info += "4. Use the Grep tool to search for specific implementations\n"
+            agent_dirs_info += "5. Consider and incorporate ALL work done by other agents in your response\n"
+            agent_dirs_info += "\nOnly after thoroughly seeing <CURRENT ANSWERS from the agents>, reviewing and executing other agents' work should you provide your new_answer or vote.\n"
+            agent_dirs_info += "\nNOTE: You must provide at least one original answer before voting. After submiting your first answer, you may choose to either provide additional answers or vote on existing solutions.\n"
+            user_contents.append(agent_dirs_info)
+        
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
@@ -833,9 +950,17 @@ class ClaudeCodeBackend(LLMBackend):
                     break
 
         except Exception as e:
+            error_msg = str(e)
+            
+            # Provide helpful Windows-specific guidance
+            if "git-bash" in error_msg.lower() or "bash.exe" in error_msg.lower():
+                error_msg += "\n\nWindows Setup Required:\n1. Install Git Bash: https://git-scm.com/downloads/win\n2. Ensure git-bash is in PATH, or set: CLAUDE_CODE_GIT_BASH_PATH=C:\\Program Files\\Git\\bin\\bash.exe"
+            elif "exit code 1" in error_msg and "win32" in str(sys.platform):
+                error_msg += "\n\nThis may indicate missing git-bash on Windows. Please install Git Bash from https://git-scm.com/downloads/win"
+                
             yield StreamChunk(
                 type="error",
-                error=f"Claude Code streaming error: {str(e)}",
+                error=f"Claude Code streaming error: {error_msg}",
                 source="claude_code"
             )
 
@@ -879,7 +1004,19 @@ class ClaudeCodeBackend(LLMBackend):
         """
         if self._client is not None:
             try:
-                await self._client.disconnect()
+                # Suppress warnings during disconnect
+                if sys.platform == "win32":
+                    import warnings
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        await self._client.disconnect()
+                else:
+                    await self._client.disconnect()
+                    
+                # Give Windows more time to properly cleanup subprocess connections
+                if sys.platform == "win32":
+                    import asyncio
+                    await asyncio.sleep(0.5)  # Increased from 0.1 to 0.5
             except Exception:
                 pass  # Ignore cleanup errors
             finally:
