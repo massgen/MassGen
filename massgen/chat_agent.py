@@ -319,11 +319,11 @@ class ConfigurableAgent(SingleAgent):
     This bridges the gap between SingleAgent and the MassGen system by supporting
     all the advanced configuration options (web search, code execution, etc.)
     while maintaining the simple chat interface.
-    
+
     TODO: Consider merging with SingleAgent. The main difference is:
     - SingleAgent: backend parameters passed directly to constructor/methods
     - ConfigurableAgent: backend parameters come from AgentConfig object
-    
+
     Could be unified by making SingleAgent accept an optional config parameter
     and using _get_backend_params() pattern for all parameter sources.
     """

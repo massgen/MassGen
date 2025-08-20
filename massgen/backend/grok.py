@@ -47,7 +47,7 @@ class GrokBackend(ChatCompletionsBackend):
 
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
-            
+
             # Extract framework-specific parameters
             enable_web_search = all_params.get("enable_web_search", False)
 
@@ -69,18 +69,20 @@ class GrokBackend(ChatCompletionsBackend):
                 if key not in excluded_params and value is not None:
                     api_params[key] = value
 
-
             # Add Live Search parameters if enabled (Grok-specific)
             if enable_web_search:
                 # Check for conflict with manually specified search_parameters
                 existing_extra = api_params.get("extra_body", {})
-                if isinstance(existing_extra, dict) and "search_parameters" in existing_extra:
+                if (
+                    isinstance(existing_extra, dict)
+                    and "search_parameters" in existing_extra
+                ):
                     yield StreamChunk(
                         type="error",
-                        error="Conflict: Cannot use both 'enable_web_search: true' and manual 'extra_body.search_parameters'. Use one or the other."
+                        error="Conflict: Cannot use both 'enable_web_search: true' and manual 'extra_body.search_parameters'. Use one or the other.",
                     )
                     return
-                
+
                 # Merge search_parameters into existing extra_body
                 search_params = {"mode": "auto", "return_citations": True}
                 merged_extra = existing_extra.copy()

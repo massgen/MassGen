@@ -16,10 +16,11 @@ if TYPE_CHECKING:
 @dataclass
 class TimeoutConfig:
     """Configuration for timeout settings in MassGen.
-    
+
     Args:
         orchestrator_timeout_seconds: Maximum time for orchestrator coordination (default: 1800s = 30min)
     """
+
     orchestrator_timeout_seconds: int = 1800  # 30 minutes
 
 
@@ -47,7 +48,7 @@ class AgentConfig:
     # Agent customization
     agent_id: Optional[str] = None
     custom_system_instruction: Optional[str] = None
-    
+
     # Timeout and resource limits
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
@@ -86,7 +87,7 @@ class AgentConfig:
             backend_params["enable_code_interpreter"] = True
 
         return cls(backend_params=backend_params)
-    
+
     @classmethod
     def create_openai_config(
         cls,
@@ -252,7 +253,7 @@ class AgentConfig:
             model: Claude model name (default: claude-sonnet-4-20250514)
             system_prompt: Custom system prompt for the agent
             allowed_tools: [LEGACY] List of allowed tools (use disallowed_tools instead)
-            disallowed_tools: List of dangerous operations to block 
+            disallowed_tools: List of dangerous operations to block
                             (default: ["Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)", "Bash(chown*)"])
             max_thinking_tokens: Maximum tokens for internal thinking (default: 8000)
             cwd: Current working directory for file operations
@@ -261,7 +262,7 @@ class AgentConfig:
         Examples:
             # Maximum power configuration (recommended)
             config = AgentConfig.create_claude_code_config()
-            
+
             # Custom security restrictions
             config = AgentConfig.create_claude_code_config(
                 disallowed_tools=["Bash(rm*)", "Bash(sudo*)", "WebSearch"]
@@ -457,9 +458,9 @@ class AgentConfig:
         # Add custom system instruction if provided
         if self.custom_system_instruction:
             base_system = conversation["system_message"]
-            conversation["system_message"] = (
-                f"{self.custom_system_instruction}\n\n{base_system}"
-            )
+            conversation[
+                "system_message"
+            ] = f"{self.custom_system_instruction}\n\n{base_system}"
 
         # Add backend configuration
         conversation.update(
@@ -604,7 +605,7 @@ class AgentConfig:
             "custom_system_instruction": self.custom_system_instruction,
             "timeout_config": {
                 "orchestrator_timeout_seconds": self.timeout_config.orchestrator_timeout_seconds,
-            }
+            },
         }
 
         # Handle message_templates serialization

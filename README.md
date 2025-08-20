@@ -89,16 +89,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.8](#recent-achievements-v008)
-  - [v0.0.7](#previous-achievements-v007)
+  - [v0.0.9](#recent-achievements-v009)
+  - [v0.0.3 - v0.0.8](#previous-achievements-v003-v008)
 - [Key Future Enhancements](#key-future-enhancements)
-  - Model Context Protocol (MCP) Integration
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.9 Roadmap](#v009-roadmap)
+- [v0.0.10 Roadmap](#v0010-roadmap)
 </details>
 
 <details open>
@@ -238,14 +237,14 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | File Operations | Advanced Features |
-|---------|:-----------:|:--------------:|:---------------:|:-----------------|
-| **Claude API** | ✅ | ✅ | ❌ | Web search, code interpreter |
-| **Claude Code** | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools** |
-| **Gemini API** | ✅ | ✅ | ❌ | Web search, code execution |
-| **Grok API** | ✅ | ❌ | ❌ | Web search only |
-| **OpenAI API** | ✅ | ✅ | ❌ | Web search, code interpreter |
-| **ZAI API** | ❌ | ❌ | ❌ | - |
+| Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
+| **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
+| **Gemini API** | ✅ | ✅ | ❌ | ❌ | Web search, code execution |
+| **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
+| **OpenAI API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
+| **ZAI API** | ❌ | ❌ | ❌ | ❌ | - |
 
 ### 4. 🏃 Run MassGen
 
@@ -284,12 +283,18 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Compare differe
 # Mixed API and CLI backends
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 
+# MCP-enabled configurations (NEW in v0.0.9)
+uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
+uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
+
 # Hybrid local and API-based models (NEW in v0.0.7)
 uv run python -m massgen.cli --config two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
 uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distributed system architecture"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
+
+See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md)
 
 #### CLI Configuration Parameters
 
@@ -430,6 +435,14 @@ backend:
   # Claude Code specific options
   append_system_prompt: ""  # Custom system prompt to append
   max_thinking_tokens: 4096                   # Maximum thinking tokens
+
+  # MCP (Model Context Protocol) servers configuration
+  mcp_servers:
+    # Discord integration server
+    discord:
+      type: "stdio"                    # Communication type: stdio (standard input/output)
+      command: "npx"                    # Command to execute: Node Package Execute
+      args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_TOKEN"]  # Arguments: -y (auto-confirm), mcp-discord package, config with Discord bot token
   
   # Tool configuration (Claude Code's native tools)
   allowed_tools:
@@ -445,9 +458,9 @@ backend:
     - "WebFetch"       # Fetch web content
     - "TodoWrite"      # Task management
     - "NotebookEdit"   # Jupyter notebook editing
-    # MCP tools (if available)
-    - "mcp__ide__getDiagnostics"
-    - "mcp__ide__executeCode"
+    # MCP tools (if available), MCP tools will be auto-discovered from the server
+    - "mcp__discord__discord_login"
+    - "mcp__discord__discord_readmessages"
 ```
 
 #### ZAI
@@ -604,7 +617,18 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.8)
+### Recent Achievements (v0.0.9)
+
+✅ **MCP (Model Context Protocol) Support for Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
+- New MCP module with client implementation and transport layer
+- Support for MCP-based tool integration in Claude Code backend
+- Exception handling and transport management for MCP connections
+
+✅ **Multi-Agent MCP Examples**: New configuration files demonstrating MCP integration
+- Discord and Twitter integration via MCP
+- Multi-agent setups with MCP-enabled tools
+
+### Previous Achievements (v0.0.3-v0.0.8)
 
 ✅ **Timeout Management System**: Timeout capabilities for better control and time management
 - Orchestrator-level timeout with graceful fallback
@@ -613,8 +637,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 ✅ **Enhanced Display Features**: Improved visual feedback and user experience
 - Optimized message display formatting and synchronization
 - Better handling of concurrent agent outputs
-
-### Previous Achievements (v0.0.3-v0.0.7)
 
 ✅ **Foundation Architecture**: Complete multi-agent orchestration system with async streaming, builtin tools (code execution, web search), and multi-backend support
 
@@ -630,7 +652,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Key Future Enhancements:
 
--   **Model Context Protocol (MCP) Integration:** Enabling Claude Code and Claude Backend to support MCP for enhanced tool capabilities (v0.0.9)
+-   **Claude Code Context Sharing:** Enabling seamless context transmission between Claude Code agents and other models (v0.0.10)
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
@@ -639,16 +661,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.9 Roadmap
+### v0.0.10 Roadmap
 
-Version 0.0.9 focuses on **Model Context Protocol (MCP) Integration**, enabling Claude Code and Claude Backend to support MCP for enhanced tool capabilities and interoperability. Key enhancements include:
+Version 0.0.10 focuses on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
 
-- **MCP Support for Claude Code** (Required): 🔧 Enable MCP protocol support in Claude Code backend
-- **MCP Support for Claude Backend** (Required): 🔧 Enable MCP protocol support in Claude Backend
-- **MCP Tool Integration** (Required): 🔗 Seamless integration with MCP-compatible tools and servers
-- **Advanced MCP Features** (Optional): Tool management, authentication, and orchestration patterns
+- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
+- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
+- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
+- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.9 roadmap](ROADMAP_v0.0.9.md).
+For detailed milestones and technical specifications, see the [full v0.0.10 roadmap](ROADMAP_v0.0.10.md).
 
 ---
 

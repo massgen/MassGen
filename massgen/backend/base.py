@@ -15,19 +15,21 @@ class StreamChunk:
 
     type: str  # "content", "tool_calls", "complete_message", "complete_response", "done", "error", "agent_status", "reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done", "backend_status"
     content: Optional[str] = None
-    tool_calls: Optional[List[Dict[str, Any]]] = (
-        None  # User-defined function tools (need execution)
-    )
+    tool_calls: Optional[
+        List[Dict[str, Any]]
+    ] = None  # User-defined function tools (need execution)
     complete_message: Optional[Dict[str, Any]] = None  # Complete assistant message
     response: Optional[Dict[str, Any]] = None  # Raw Responses API response
     error: Optional[str] = None
     source: Optional[str] = None  # Source identifier (e.g., agent_id, "orchestrator")
     status: Optional[str] = None  # For agent status updates
-    
+
     # Reasoning-related fields
     reasoning_delta: Optional[str] = None  # Delta text from reasoning stream
     reasoning_text: Optional[str] = None  # Complete reasoning text
-    reasoning_summary_delta: Optional[str] = None  # Delta text from reasoning summary stream
+    reasoning_summary_delta: Optional[
+        str
+    ] = None  # Delta text from reasoning summary stream
     reasoning_summary_text: Optional[str] = None  # Complete reasoning summary text
     item_id: Optional[str] = None  # Reasoning item ID
     content_index: Optional[int] = None  # Reasoning content index
@@ -200,7 +202,7 @@ class LLMBackend(ABC):
     def clear_history(self) -> None:
         """
         Clear conversation history while maintaining session.
-        
+
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history but keeps session.
         """
@@ -209,7 +211,7 @@ class LLMBackend(ABC):
     def reset_state(self) -> None:
         """
         Reset backend state for stateful backends.
-        
+
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history and session state.
         """
