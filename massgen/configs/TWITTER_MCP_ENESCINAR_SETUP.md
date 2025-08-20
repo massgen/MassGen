@@ -21,7 +21,7 @@ You'll need four credentials from Twitter:
 ## Configuration
 
 ### 1. Update the Configuration File
-Edit `claude_code_twitter_enescinar.yaml` and replace the placeholder values with your actual credentials:
+Edit `claude_code_twitter_example.yaml` and replace the placeholder values with your actual credentials:
 
 ```yaml
 env:
@@ -54,7 +54,7 @@ To use this configuration with MassGen:
 
 ```bash
 # Run with the EnesCinr Twitter MCP configuration
-python -m massgen.api --config massgen/configs/claude_code_twitter_enescinar.yaml
+python -m massgen.api --config massgen/configs/claude_code_twitter_example.yaml "YOUR QUESTION"
 ```
 
 ## Troubleshooting
@@ -75,22 +75,6 @@ python -m massgen.api --config massgen/configs/claude_code_twitter_enescinar.yam
    - The server will be automatically downloaded via npx
    - Ensure you have Node.js and npm installed
    - Check internet connectivity
-
-### Logs
-Check MCP server logs for debugging:
-- macOS: `~/Library/Logs/Claude/mcp-server-twitter.log`
-- Windows: `%APPDATA%\Claude\logs\mcp-server-twitter.log`
-
-## API Limits
-
-### Free Tier (Essential)
-- 500,000 tweets per month (read)
-- 1,500 tweets per month (post)
-- Rate limits apply
-
-### Paid Tiers
-- Basic: $100/month - Higher limits
-- Pro: Custom pricing - Enterprise features
 
 ## References
 - GitHub Repository: https://github.com/EnesCinr/twitter-mcp
