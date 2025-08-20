@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `geminicode_gpt5nano_claude.yaml`: Gemini Code with GPT-5-nano and Claude
   - `glm_gemini_claude.yaml`: GLM-4.5, Gemini, and Claude three-agent setup
 - **Roadmap Documentation**: Added comprehensive roadmap for version 0.0.10
-  - Focus on Claude Code context sharing between agents
+  - Focused on Claude Code context sharing between agents
   - Multi-agent context synchronization planning
   - Enhanced backend features and CLI improvements roadmap
 
