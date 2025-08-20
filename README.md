@@ -433,6 +433,14 @@ backend:
   # Claude Code specific options
   append_system_prompt: ""  # Custom system prompt to append
   max_thinking_tokens: 4096                   # Maximum thinking tokens
+
+  # MCP (Model Context Protocol) servers configuration
+  mcp_servers:
+    # Discord integration server
+    discord:
+      type: "stdio"                    # Communication type: stdio (standard input/output)
+      command: "npx"                    # Command to execute: Node Package Execute
+      args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_TOKEN"]  # Arguments: -y (auto-confirm), mcp-discord package, config with Discord bot token
   
   # Tool configuration (Claude Code's native tools)
   allowed_tools:
@@ -448,9 +456,9 @@ backend:
     - "WebFetch"       # Fetch web content
     - "TodoWrite"      # Task management
     - "NotebookEdit"   # Jupyter notebook editing
-    # MCP tools (if available)
-    - "mcp__ide__getDiagnostics"
-    - "mcp__ide__executeCode"
+    # MCP tools (if available), MCP tools will be auto-discovered from the server
+    - "mcp__discord__discord_login"
+    - "mcp__discord__discord_readmessages"
 ```
 
 #### ZAI
