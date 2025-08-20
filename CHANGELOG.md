@@ -5,6 +5,52 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9] - 2025-08-20
+
+### Added
+- **MCP (Model Context Protocol) Support in Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
+  - New `mcp` module with client implementation and transport layer
+  - MCP client for connecting to external tool servers
+  - Exception handling and transport management for MCP connections
+  - Support for MCP-based tool integration in Claude Code backend
+- **Multi-Agent MCP Examples**: New configuration files demonstrating MCP integration
+  - `claude_code_discord_mcp_example.yaml`: Discord integration via MCP
+  - `claude_code_twitter_mcp_example.yaml`: Twitter integration via MCP
+  - `gpt5mini_claude_code_discord_mcp_example.yaml`: Multi-agent Discord setup with GPT-5-mini and Claude Code
+  - `claude_code_twitter_enescinar.yaml`: Twitter-specific configuration example
+- **Enhanced Multi-Agent Configurations**: New agent combinations and model support
+  - `gemini_4o_claude.yaml`: Gemini and Claude multi-agent setup
+  - `gemini_gpt5nano_claude.yaml`: Three-agent configuration with Gemini, GPT-5-nano, and Claude
+  - `geminicode_4o_claude.yaml`: Gemini Code with Claude integration
+  - `geminicode_gpt5nano_claude.yaml`: Gemini Code with GPT-5-nano and Claude
+  - `glm_gemini_claude.yaml`: GLM-4.5, Gemini, and Claude three-agent setup
+- **Roadmap Documentation**: Added comprehensive roadmap for version 0.0.10
+  - Focus on Claude Code context sharing between agents
+  - Multi-agent context synchronization planning
+  - Enhanced backend features and CLI improvements roadmap
+
+### Fixed
+- **Configuration Management**: Enhanced configuration files for better multi-agent support
+  - Updated agent configuration handling for MCP integration
+  - Improved error handling in configuration loading
+
+### Changed
+- **Backend Enhancements**: Updates to support MCP integration
+  - Enhanced Claude Code backend with MCP tool support
+  - Improved chat completions backend for better compatibility
+  - Updated CLI for handling MCP-based configurations
+- **Documentation Updates**: Enhanced project documentation
+  - Updated README with MCP integration information
+  - Added CONTRIBUTING.md guidelines
+  - Updated environment variable examples in .env.example
+
+### Technical Details
+- **Commits**: 5 commits including MCP integration and multi-agent examples
+- **Files Modified**: 30+ files across backend, MCP module, configurations, and documentation
+- **New Module**: Complete MCP (Model Context Protocol) implementation
+- **New Dependencies**: MCP client libraries for tool server integration
+- **Contributors**: @qidanrui @sonichi @Leezekun @voidcenter
+
 ## [0.0.8] - 2025-08-18
 
 ### Added
