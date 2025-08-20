@@ -504,7 +504,7 @@
                         <li><strong>Siloed Thinking:</strong> Single models miss diverse perspectives</li>
                         <li><strong>Limited Context:</strong> No peer review or validation</li>
                         <li><strong>Sequential Processing:</strong> Linear, not parallel exploration</li>
-                        <li><strong>Fixed Approach:</strong> Can't adapt mid-task from external insights</li>
+                        <li><strong>Fixed Approach:</strong> Limited mid-task adaptation to new information</li>
                     </ul>
                 </div>
                 <div style="text-align: center;">
@@ -519,7 +519,7 @@
         <!-- Slide 3: The Solution - Multi-Agent Collaboration -->
         <div class="slide">
             <div class="icon">🤝</div>
-            <h2>The Multi-Agent Solution</h2>
+            <h2>The Promise of Multi-Agent Collaboration</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
                 <div>
                     <ul style="font-size: 1.6em;">
@@ -531,8 +531,11 @@
                 </div>
                 <div style="text-align: center;">
                     <img src="https://docs.ag2.ai/latest/docs/blog/2025-04-16-Reasoning/img/cognition.jpg" alt="Cognition and Reasoning Process" style="width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
-                    <div style="margin-top: 15px; font-size: 1.2em; color: #2c3e50; font-style: italic;">
-                        The Complexity of Collaborative Reasoning
+                    <div style="margin-top: 15px; font-size: 1.1em; color: #2c3e50;">
+                        <div style="font-style: italic; margin-bottom: 10px;">The Promise of Collaborative Reasoning</div>
+                        <div style="font-size: 0.9em; color: #3498db;">
+                            📖 <a href="https://root.massgen.ai" style="color: #3498db; text-decoration: none;">Read our article: "Myth of Reasoning"</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -566,7 +569,8 @@
             </div>
             <div style="text-align: center; margin-top: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #f39c12; border-radius: 8px;">
                 <strong style="font-size: 1.4em; color: #f39c12;">+15% Performance Boost</strong><br>
-                <span style="color: #856404;">Multi-agent "study group" approach consistently outperforms single agent</span>
+                <span style="color: #856404;">Multi-agent "study group" approach outperforms single agent</span><br><br>
+                <span style="color: #666; font-style: italic;">"The exploration of the art and science of multi-agent collaboration has just started."</span>
             </div>
         </div>
 
@@ -649,14 +653,13 @@
         <!-- Slide 7: Tech Deep Dive - Async Streaming Architecture -->
         <div class="slide">
             <div class="icon">⚙️</div>
-            <h2>Tech Deep Dive: Async Streaming & Dynamic Restart</h2>
+            <h2>Tech Deep Dive: Async Streaming & Dynamic Scheduling</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
                 <div>
                     <ul style="font-size: 1.4em;">
                         <li><strong>🔄 AsyncGenerator Pattern:</strong> Real-time streaming from 5+ agents simultaneously</li>
                         <li><strong>⚡ Dynamic Task Management:</strong> Agents start/stop based on voting status</li>
-                        <li><strong>🧵 StreamChunk Protocol:</strong> Unified message format with reasoning/content/tool_calls</li>
-                        <li><strong>🔁 Graceful Restart:</strong> Agents restart when peers provide new answers</li>
+                        <li><strong>🔁 Graceful Restart & Wrap-up:</strong> Dynamic wrapping-up as part of scheduling</li>
                     </ul>
                 </div>
                 <div style="text-align: center;">
@@ -703,9 +706,9 @@
                         <path d="M 190 280 Q 240 300 290 280" stroke="#e74c3c" stroke-width="2" fill="none" marker-end="url(#arrowhead-red)"/>
                         <path d="M 190 280 Q 340 320 390 280" stroke="#e74c3c" stroke-width="2" fill="none" marker-end="url(#arrowhead-red)"/>
                         
-                        <text x="90" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restart_pending</text>
-                        <text x="290" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restart_pending</text>
-                        <text x="390" y="340" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restart_pending</text>
+                        <text x="90" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restarting</text>
+                        <text x="290" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restarting</text>
+                        <text x="390" y="340" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restarting</text>
                         
                         <!-- Arrow markers -->
                         <defs>
@@ -731,7 +734,7 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
                 <div>
                     <ul style="font-size: 1.4em;">
-                        <li><strong>🎭 Unified Interface:</strong> Single ChatAgent protocol for 8+ different backends</li>
+                        <li><strong>🎭 Unified Interface:</strong> Standardized ChatAgent protocol for 8+ different backends</li>
                         <li><strong>🛠️ Tool Integration:</strong> Web search, code execution across different APIs</li>
                         <li><strong>⚙️ StreamChunk Normalization:</strong> Convert diverse response formats to common protocol</li>
                         <li><strong>🔀 Backend-Specific Workarounds:</strong> Each provider has unique limitations</li>
@@ -739,7 +742,7 @@
                 </div>
                 <div>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 15px;">
-                        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #2c3e50;">Real Backend Challenges:</div>
+                        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #2c3e50;">Backend Challenges:</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
                             <div style="background: #fff3cd; padding: 10px; border-radius: 8px; text-align: center;">
                                 <div style="font-weight: bold; color: #f39c12;">Claude Code CLI</div>
@@ -760,7 +763,7 @@
                         </div>
                         <div style="margin-top: 15px; background: #e8f5e8; padding: 10px; border-radius: 8px; text-align: center;">
                             <div style="font-weight: bold; color: #27ae60;">🎯 Our Solution:</div>
-                            <div style="font-size: 0.9em; color: #2d5a3d;">Binary Decision Framework</div>
+                            <div style="font-size: 0.9em; color: #2d5a3d;">Binary Decision Framework (Explained in the next slide)</div>
                         </div>
                     </div>
                     <div style="margin-top: 15px; font-size: 1em; color: #7f8c8d; text-align: center;">
@@ -885,7 +888,7 @@
                     <div style="color: #bdc3c7;">•</div>
                     <div><strong style="color: #e74c3c;">150+</strong> Commits</div>
                     <div style="color: #bdc3c7;">•</div>
-                    <div><strong style="color: #e74c3c;">Active</strong> Development</div>
+                    <div><strong style="color: #e74c3c;">14 Days</strong> Foundation→Expansion</div>
                 </div>
             </div>
         </div>
@@ -955,7 +958,7 @@
                 </div>
                 <div style="text-align: center; padding: 20px; background: rgba(52, 152, 219, 0.1); border-radius: 15px;">
                     <h3 style="color: #3498db; margin-bottom: 15px;">🛠️ Advanced Tools</h3>
-                    <div style="font-size: 1.1em;">Web Search, Code Execution, File Operations</div>
+                    <div style="font-size: 1.1em;">Web Search, Code Execution, File Operations, MCP</div>
                 </div>
             </div>
         </div>
