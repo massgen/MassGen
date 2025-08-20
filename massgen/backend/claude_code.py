@@ -114,6 +114,8 @@ class ClaudeCodeBackend(LLMBackend):
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
+        self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
+        self._system_prompt_mode: bool = False  # Track system prompt mode for Windows
 
     def _setup_windows_subprocess_cleanup_suppression(self):
         """Comprehensive Windows subprocess cleanup warning suppression."""
@@ -753,13 +755,88 @@ class ClaudeCodeBackend(LLMBackend):
                     "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
                     "Bash(chown*)"
                 ]
-                # Simplified approach: Create client without complex system prompt
-                # The workflow tools will be handled through message content instead
-                client = self.create_client(**all_params)
+                
+                # Extract system message from messages for append mode
+                system_msg = next(
+                    (msg for msg in messages if msg.get("role") == "system"), None
+                )
+                if system_msg:
+                    system_content = system_msg.get("content", "")  # noqa: E128
+                else:
+                    system_content = ""
+                # Build system prompt with tools information
+                workflow_system_prompt = self._build_system_prompt_with_workflow_tools(
+                    tools or [], system_content
+                )
+                
+                # Windows-specific handling: detect complex prompts that cause subprocess hang
+                if sys.platform == "win32" and len(workflow_system_prompt) > 200:
+                    # Windows with complex prompt: use post-connection delivery to avoid hang
+                    print(f"[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
+                    clean_params = {k: v for k, v in all_params.items() 
+                                  if k not in ["system_prompt", "append_system_prompt"]}
+                    client = self.create_client(**clean_params)
+                    self._pending_system_prompt = workflow_system_prompt
+                    self._original_system_mode = all_params.get("system_prompt", False)
+                else:
+                    # Original approach for Mac/Linux and Windows with simple prompts
+                    try:
+                        if all_params.get("system_prompt"):
+                            client = self.create_client(
+                                system_prompt=workflow_system_prompt, **all_params
+                            )
+                        else:
+                            client = self.create_client(
+                                append_system_prompt=workflow_system_prompt, **all_params
+                            )
+                        self._pending_system_prompt = None
+                        
+                    except Exception as create_error:
+                        # Fallback for unexpected failures
+                        if sys.platform == "win32":
+                            print(f"[ClaudeCodeBackend] Windows client creation failed, using post-connection delivery: {create_error}")
+                            clean_params = {k: v for k, v in all_params.items() 
+                                          if k not in ["system_prompt", "append_system_prompt"]}
+                            client = self.create_client(**clean_params)
+                            self._pending_system_prompt = workflow_system_prompt
+                            self._original_system_mode = all_params.get("system_prompt", False)
+                        else:
+                            # On Mac/Linux, re-raise the error since this shouldn't happen
+                            raise create_error
 
         # Ensure client connection
         try:
             await client.connect()
+            
+            # If we have a pending system prompt, deliver it at system level using /system command
+            if hasattr(self, '_pending_system_prompt') and self._pending_system_prompt:
+                try:
+                    # Use Claude Code's native /system command for proper system-level delivery
+                    system_command = f"/system {self._pending_system_prompt}"
+                    await client.query(system_command)
+                    
+                    # Consume the system response
+                    async for response in client.receive_response():
+                        if hasattr(response, 'subtype') and response.subtype == 'init':
+                            # This is the system initialization response
+                            break
+                    
+                    yield StreamChunk(
+                        type="content",
+                        content=f"[SYSTEM] Applied system instructions at system level\n",
+                        source="claude_code"
+                    )
+                    
+                    # Clear the pending prompt
+                    self._pending_system_prompt = None
+                    
+                except Exception as sys_e:
+                    yield StreamChunk(
+                        type="content",
+                        content=f"[SYSTEM] Warning: System-level delivery failed: {str(sys_e)}\n",
+                        source="claude_code"
+                    )
+                    
         except Exception as e:
             yield StreamChunk(
                 type="error",
@@ -800,32 +877,15 @@ class ClaudeCodeBackend(LLMBackend):
         
         # Combine all user messages into a single query
         user_contents = []
+        
+        # Note: System prompts now delivered at proper system level for all platforms
+        # Mac/Linux: via client creation parameters  
+        # Windows: via post-connection /system command
+        
         for user_msg in user_messages:
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
-        
-        # Add workflow instructions if we have workflow tools
-        if tools:
-            workflow_tools = [
-                t for t in tools
-                if t.get("function", {}).get("name") in ["new_answer", "vote"]]
-            if workflow_tools:
-                workflow_instructions = """
-IMPORTANT: If this is a multi-agent coordination task, you MUST provide a JSON response at the end in this format:
-
-For submitting an answer:
-```json
-{"tool_name": "new_answer", "arguments": {"content": "your answer here"}}
-```
-
-For voting on an agent's answer:
-```json
-{"tool_name": "vote", "arguments": {"agent_id": "agent_name", "reason": "why you chose this"}}
-```
-
-Place the JSON block at the very end of your response after your analysis."""
-                user_contents.append(workflow_instructions)
         
         # Generate anonymous agent cwds information from agent name mapping
         # Note: This would be populated by orchestrator if needed for multi-agent coordination
