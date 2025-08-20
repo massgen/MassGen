@@ -47,7 +47,7 @@ Two agents were deployed with different capabilities:
 4. Use generated URL to invite bot to your server
 
 #### 3. Configure MassGen YAML File
-Create or modify a configuration file (e.g., `gpt5mini_claude_code_discord_mcp.yaml`):
+Create or modify a configuration file (e.g., `gpt5mini_claude_code_discord_mcp_example.yaml`):
 
 ```yaml
 agents:
@@ -57,30 +57,37 @@ agents:
       cwd: "claude_code_workspace_discord_mcp"
       permission_mode: "bypassPermissions"
       
-      # Discord MCP server configuration
+      # Discord MCP server 
       mcp_servers:
         discord:
           type: "stdio"
           command: "npx"
-          args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_BOT_TOKEN"]
-      
+          args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_TOKEN"]
+
       allowed_tools:
         - "Read"
         - "Write"
         - "Bash"
         - "LS"
         - "WebSearch"
-        # MCP Discord tools will be auto-discovered
+        # MCP tools will be auto-discovered from the server
+    system_message: |
+      You are a helpful assistant with access to built-in tools and MCP servers. Before using any tools, check if the task is already completed by previous steps or agents. Only use tools for unfinished tasks. Never duplicate actions, especially communications (messages, emails) or workspace modifications (file edits, Discord/Slack posts). For these critical operations, first provide the content as your answer, then execute the tools only during final presentation.
+      IMPORTANT: you should synthesize the provided answers by other agents, then provide your own answer.
 
-  - id: "gpt-5-mini"
+  - id: "gpt-5"
     backend:
       type: "openai"
-      model: "gpt-5-mini"
+      model: "gpt-5"
+      text: 
+        verbosity: "medium"
       reasoning:
         effort: "medium"
         summary: "auto"
       enable_web_search: true
-      enable_code_interpreter: true
+    system_message: |
+      You are a helpful AI assistant with web search and code execution capabilities. You should always complete tasks that you can do. If you cannot complete a task, just omit it.  
+      IMPORTANT: you should synthesize the provided answers by other agents, then provide your own answer.
 
 ui:
   display_type: "rich_terminal"
@@ -93,128 +100,11 @@ Run MassGen with the configuration:
 ```bash
 uv run python -m massgen.cli --config gpt5mini_claude_code_discord_mcp_example.yaml \
   "Task: Social Media Monitoring  
-   Step 1: Twitter Search & Data Collection - Search for the 5 most recent news of multi-agent framework MassGen
+   Step 1: Twitter Search & Data Collection - Search for the 5 most recent news of multi agent scaling system MassGen
    Step 2: Discord Information Extraction - Extract the latest 5 messages from Discord channel #general (YOUR_CHANNEL_ID)
    Step 3: Create a comprehensive report synthesizing the information
    Step 4: Store the report as Massgen_Report.md"
 ```
-
-## Execution Analysis
-
-### Agent 1: Claude Code with Discord MCP
-
-#### Capabilities Demonstrated
-- **Direct Discord Access**: Successfully connected to Discord channel using MCP
-- **Real-time Data Extraction**: Retrieved 10 messages from the specified channel
-- **Tool Integration**: Used multiple tools in sequence:
-  - `TodoWrite`: Task management and tracking
-  - `WebSearch`: Twitter/X information gathering
-  - `mcp__discord__discord_read_messages`: Direct Discord API access
-  - `Write`: Report generation and file creation
-
-#### Execution Timeline
-1. **19:33:28**: Created initial todo list with 4 tasks
-2. **19:33:37**: Initiated web search for MassGen news
-3. **19:35:00**: Successfully extracted Discord messages using MCP
-4. **19:35:55**: Generated and saved comprehensive report
-5. **19:36:01**: Marked all tasks as completed
-
-#### Key Findings from Claude Code
-- **Twitter/X**: No direct MassGen mentions found, but identified related multi-agent framework discussions
-- **Discord**: Successfully retrieved actual messages including:
-  - Version announcements (v0.0.7, v0.0.8)
-  - Community enthusiasm ("MassGen is the best Multi-Agent framework in the world")
-  - Bot monitoring updates
-- **Report Quality**: Comprehensive with all required sections
-
-### Agent 2: GPT-5-mini
-
-#### Capabilities and Limitations
-- **Web Search**: Can search public web for Twitter/news items
-- **No Discord Access**: Cannot directly access Discord API without credentials
-- **Request for Help**: Asked user for Discord bot credentials or message exports
-
-#### Response Pattern
-The GPT-5-mini agent provided a detailed explanation of:
-- What it can do (web search for public information)
-- What it cannot do (access private Discord channels)
-- Multiple options for obtaining Discord data:
-  1. Bot token provision (not recommended for security)
-  2. Manual message export from user
-  3. Server-side message export
-
-## Agent Collaboration Timeline Analysis
-
-### Phase 1: Initial Attempts (11:08 - 11:10)
-
-#### Claude Code's Initial Search (11:08:51)
-```
-[11:08:51] [TOOL] 🔧 WebSearch({'query': 'MassGen multi agent scaling system framework 2025'})
-```
-**Result**: Found GitHub repository and general information, but **missed Chi Wang's LinkedIn profile**
-
-#### GPT-5's Initial Search (11:09:01)
-```
-[11:09:01] [THINKING] 🔍 [Provider Tool: Web Search] Starting search...
-[11:09:14] [THINKING] 🔍 [Search Query] 'MassGen multi-agent scaling system'
-```
-**Result**: Initially couldn't find specific MassGen information
-
-### Phase 2: Critical Discovery by GPT-5 (11:10:47)
-
-#### GPT-5's Breakthrough Search
-```
-[11:10:47] [THINKING] 🔍 [Search Query] 'MassGen GitHub multi-agent'
-[11:11:06] [THINKING] 🔍 [Search Query] 'site:x.com Chi Wang MassGen'
-```
-
-**Key Finding**:
-```
-Links: [{"title":"Chi Wang - Founder of AutoGen (Now AG2) | Senior Staff Research Scientist, Google DeepMind | LinkedIn","url":"https://www.linkedin.com/in/chi-wang-49b15b16/"}]
-```
-
-This was the **pivotal moment** - GPT-5 found Chi Wang's LinkedIn profile, which Claude Code had completely missed. This information became crucial for the final comprehensive report.
-
-### Phase 3: Information Synthesis (11:11 - 11:14)
-
-#### GPT-5's Comprehensive Findings (11:11:15 - 11:14:20)
-GPT-5 compiled:
-- LinkedIn post by Chi Wang (Aug 16, 2025)
-- LinkedIn post in Chinese about MassGen
-- Medium articles (Day 32 and Day 35) about Berkeley Summit
-- Specific dates and author information
-
-#### Claude Code's Discord Success (11:10:44)
-```
-[11:10:44] [TOOL] 🔧 mcp__discord__discord_read_messages({'channelId': '1407359282659459095', 'limit': 10})
-```
-Successfully retrieved real Discord messages including:
-- Version announcements (v0.0.7, v0.0.8)
-- Community sentiment: "MassGen is the best Multi-Agent framework in the world"
-
-## Critical Analysis: The MCP Advantage
-
-### 1. Data Completeness
-
-| Aspect | Claude Code (with MCP) | GPT-5-mini (without MCP) |
-|--------|------------------------|--------------------------|
-| Twitter Search | ✅ Partial (no direct mentions found) | ⚠️ Could search but needed permission |
-| Discord Access | ✅ Full access to channel messages | ❌ No access without credentials |
-| Report Generation | ✅ Complete with actual data | ❌ Could only offer template |
-| Task Completion | ✅ 100% autonomous | ❌ Required user intervention |
-
-### 2. Information Quality Comparison
-
-#### Claude Code's Report
-- **Actual Discord messages** with timestamps, authors, and message IDs
-- **Real community sentiment** extracted from live messages
-- **Version announcements** directly from developers
-- **Comprehensive synthesis** of available data
-
-#### GPT-5-mini's Limitations
-- Could only explain the process
-- Required manual intervention for Discord data
-- Would produce incomplete report without user assistance
 
 ## Technical Implementation Details
 
@@ -255,156 +145,6 @@ Forum & Reactions:
    - Discord API has rate limits
    - Implement delays for bulk operations
    - Monitor API usage
-
-## Critical Discovery: GPT-5 Finds Chi Wang's LinkedIn
-
-### Timeline of the Pivotal Information Exchange
-
-#### 11:08-11:10: Both Agents Struggle Initially
-
-**Claude Code's Initial Search (11:08:51)**:
-```
-[11:08:51] [TOOL] 🔧 WebSearch({'query': 'MassGen multi agent scaling system framework 2025'})
-```
-Result: Found GitHub and general info, but **NO Chi Wang LinkedIn information**
-
-**GPT-5's Early Searches (11:09:01-11:10:16)**:
-```
-[11:09:14] [THINKING] The search results aren't showing "MassGen."
-[11:10:16] [THINKING] Maybe I should try "MassGen X.com" or "Leezekun MassGen GitHub"
-```
-
-#### 11:10:47: GPT-5's Breakthrough Discovery
-
-**The Critical Search**:
-```
-[11:10:47] [THINKING] 🔍 [Search Query] 'MassGen GitHub multi-agent'
-```
-
-**GPT-5 Finds Chi Wang's LinkedIn**:
-```
-Links: [{"title":"Chi Wang - Founder of AutoGen (Now AG2) | 
-Senior Staff Research Scientist, Google DeepMind | LinkedIn",
-"url":"https://www.linkedin.com/in/chi-wang-49b15b16/"}]
-```
-
-#### 11:14:20: GPT-5 Reports Chi Wang's LinkedIn Post
-
-**GPT-5's Report Includes**:
-```markdown
-3) LinkedIn post by Chi Wang: 
-Announces MassGen as an early‑stage open‑source project for 
-next‑gen multi‑agent scaling; calls for contributors and 
-points to an AG2 Discord channel (#massgen).
-```
-
-#### 11:20:53: Claude Code Incorporates Chi Wang Information
-
-**Claude Code's Enhanced Final Report**:
-```markdown
-1. **Berkeley RDI's Agentic AI Summit Presentation (August 2, 2025)**
-   - Chi Wang from Google DeepMind introduced "MassGen: 
-     Frontier Multi-Agent Scaling in Open Source"
-   - Demonstrated running 10,000 agents in parallel
-```
-
-## Report Evolution: Before and After Chi Wang's LinkedIn Discovery
-
-### Claude Code's Initial Report (WITHOUT Chi Wang's LinkedIn)
-
-**What Claude Code Had Initially**:
-```markdown
-## Section 1: News Activity Summary
-
-### Latest MassGen Developments (2025)
-
-1. **MassGen v0.0.9 Release - MCP Integration**
-   - Latest version introduces Message Collection Protocol
-   - Enables advanced data retrieval from Discord and Twitter
-
-2. **Berkeley Agentic AI Summit 2025 Presentation**
-   - MassGen featured at prestigious AI conference
-   - Video recording of background context available
-```
-
-**Problems**:
-- ❌ No mention of Chi Wang or his credentials
-- ❌ No LinkedIn sources
-- ❌ Missing project leadership information
-- ❌ Lacks authoritative backing from Google DeepMind
-
-### GPT-5's Critical Contribution
-
-**What GPT-5 Found**:
-```markdown
-Chi Wang LinkedIn Profile:
-- Founder of AutoGen (Now AG2)
-- Senior Staff Research Scientist, Google DeepMind
-- Called for contributors to join AG2 Discord #massgen channel
-```
-
-### Claude Code's Final Report (AFTER Incorporating Chi Wang's LinkedIn)
-
-**Enhanced Version with Chi Wang Information**:
-```markdown
-1. **Berkeley RDI's Agentic AI Summit Presentation (August 2, 2025)**
-   - Chi Wang from Google DeepMind introduced "MassGen: 
-     Frontier Multi-Agent Scaling in Open Source"
-   - Demonstrated running 10,000 agents in parallel at the summit
-   - Over 2,000 attendees witnessed the demo at UC Berkeley
-
-5. **LinkedIn Announcement by Chi Wang (August 2025)**
-   - Official announcement as early-stage open-source project
-   - Call for contributors to join AG2 Discord channel (#massgen)
-   - Positioning as next-gen multi-agent scaling framework
-   - Emphasis on cross-model synergy and collaborative reasoning
-```
-
-### The Transformation Impact
-
-| Aspect | Before GPT-5's Input | After GPT-5's Input | Impact |
-|--------|---------------------|--------------------|---------|
-| **Project Credibility** | Unknown leadership | Google DeepMind backing | +100% Authority |
-| **News Sources** | 0 LinkedIn mentions | 2 LinkedIn posts | +2 Primary Sources |
-| **Author Attribution** | Anonymous project | Chi Wang identified | Clear Leadership |
-| **Community Direction** | Vague Discord mention | AG2 #massgen channel | Specific Community |
-| **Academic Weight** | Conference mention | DeepMind researcher presenting | Scientific Validation |
-
-## Multi-Agent Synthesis: The Complete Picture
-
-### What Each Agent Brought to the Table
-
-#### Claude Code (with MCP)
-**Unique Contributions**:
-- ✅ Real Discord messages via MCP
-- ✅ Community sentiment: "MassGen is the best Multi-Agent framework in the world"
-- ✅ Version announcements (v0.0.7, v0.0.8)
-- ✅ Message IDs and timestamps
-
-**Limitations**:
-- ❌ Missed Chi Wang's LinkedIn entirely
-- ❌ No author attribution for project
-- ❌ Limited context about leadership
-
-#### GPT-5 (without MCP)
-**Unique Contributions**:
-- ✅ Chi Wang's LinkedIn profile and credentials
-- ✅ Google DeepMind connection
-- ✅ Specific dates for LinkedIn posts
-- ✅ Medium articles about Berkeley Summit
-
-**Limitations**:
-- ❌ No Discord access
-- ❌ Could only provide placeholders for Discord data
-
-### The Synthesized Result
-
-The final report combined:
-1. **GPT-5's Chi Wang discovery** → Established project credibility
-2. **Claude Code's Discord data** → Provided community validation
-3. **Combined timeline** → Created coherent narrative
-
-**Key Enhancement**: Chi Wang's LinkedIn information transformed the report from an anonymous project summary to an authoritative document backed by a Google DeepMind researcher.
 
 ## Timeline Analysis: How GPT-5's News Discovery Transformed Claude Code's Report
 
@@ -533,7 +273,7 @@ Links: [{"title":"Chi Wang - Founder of AutoGen (Now AG2) | Senior Staff Researc
 | News Metric | Initial Claude Code | After GPT-5's News | Impact |
 |------------|-------------------|-------------------|---------|
 | **Total News Items** | 4 vague items | 5 specific news items | +25% Complete |
-| **LinkedIn News** | 0 posts | 2 posts (Chi Wang + Chinese) | +2 Primary Sources |
+| **LinkedIn News** | 0 posts | 2 posts (Chi Wang) | +1 Primary Sources |
 | **Official Announcements** | 0 | 1 (Chi Wang's LinkedIn) | Found THE announcement |
 | **News Sources** | GitHub, web | GitHub, web, LinkedIn | +33% Source Diversity |
 | **Task Completion** | 80% (4/5 news) | 100% (5/5 news) | Fully Satisfied |
@@ -556,7 +296,6 @@ Links: [{"title":"Chi Wang - Founder of AutoGen (Now AG2) | Senior Staff Researc
 #### GPT-5 (No MCP Access)
 **Critical Discoveries**:
 - Chi Wang's LinkedIn: "Founder of AutoGen (Now AG2) | Senior Staff Research Scientist, Google DeepMind"
-- Chinese LinkedIn post about MassGen
 - Medium articles with summit details
 
 **But Couldn't Access**:
@@ -565,49 +304,12 @@ Links: [{"title":"Chi Wang - Founder of AutoGen (Now AG2) | Senior Staff Researc
 
 ### The Synthesized Result
 
-The final report at 11:21:45 seamlessly combined:
+The report at 11:21:45 seamlessly combined:
 1. **GPT-5's Chi Wang LinkedIn discovery** → Established project authority
 2. **Claude Code's Discord MCP data** → Provided community validation
 3. **Combined information** → Created comprehensive, credible report
 
 **Key Insight**: The Chi Wang LinkedIn information discovered by GPT-5 fundamentally transformed Claude Code's report from an anonymous project summary to an authoritative document backed by a Google DeepMind researcher.
-
-## Lessons Learned
-
-### 1. Complementary Capabilities Beat Individual Strengths
-
-**The Chi Wang LinkedIn Discovery proves that**:
-- GPT-5's inability to use MCP was offset by superior web search
-- Claude Code's MCP access was incomplete without broader context
-- The combination created a report neither could produce alone
-
-### 2. Information Flow Between Agents Creates Value
-
-**The Timeline Shows**:
-- 11:08-11:10: Both agents had incomplete pictures
-- 11:10:47: GPT-5 finds Chi Wang's LinkedIn
-- 11:20:53: Claude Code incorporates this into final report
-- Result: Authoritative document with full attribution
-
-### 3. MCP as a Game Changer
-The Model Context Protocol transforms agent capabilities from "information processors" to "active participants" in digital ecosystems. The ability to directly interact with Discord APIs eliminated the need for:
-- Manual data exports
-- Credential sharing in chat
-- User intervention for basic tasks
-
-### 2. Multi-Agent Complementarity
-While GPT-5-mini couldn't access Discord, it correctly identified:
-- Task requirements and constraints
-- Security best practices (not accepting tokens in chat)
-- Alternative approaches for data access
-
-This shows how agents with different capabilities can still contribute to understanding task requirements even when they cannot execute them.
-
-### 3. The Importance of Synthesis
-Neither Twitter search nor Discord messages alone provided the complete picture. The synthesized report revealed:
-- **Gap Analysis**: Strong technical development but weak social media presence
-- **Community Health**: Active Discord contradicts limited Twitter visibility
-- **Strategic Opportunities**: Clear action items emerged from combined data
 
 ## Conclusion: The Power of Multi-Agent Information Synthesis
 
@@ -648,17 +350,6 @@ The most significant finding wasn't Claude Code's MCP-enabled Discord access—i
    - Just as MassGen enables multiple agents to collaborate for superior results
    - Our case demonstrated that agent collaboration (despite limitations) beats individual excellence
    - The synthesis exceeded the sum of its parts
-
-### Implications for Organizations
-
-For teams implementing MassGen or similar multi-agent frameworks:
-
-- **Don't fixate on technical features** (like MCP access)
-- **Focus on complementary agent capabilities** that fill each other's gaps
-- **Enable information exchange** between agents as a priority
-- **Value synthesis** over individual agent performance
-
-**The ultimate insight**: GPT-5's inability to use MCP became irrelevant when it found the missing LinkedIn NEWS that Claude Code overlooked. This proves that in multi-agent systems, **comprehensive information gathering through diverse search strategies is more valuable than any single technical capability**.
 
 ### The MassGen Success Story in Action
 
