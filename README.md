@@ -90,7 +90,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 - Recent Achievements
   - [v0.0.9](#recent-achievements-v009)
-  - [v0.0.8](#recent-achievements-v008)
+  - [v0.0.3 - v0.0.8](#previous-achievements-v003-v008)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration

@@ -17,7 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `claude_code_discord_mcp_example.yaml`: Discord integration via MCP
   - `claude_code_twitter_mcp_example.yaml`: Twitter integration via MCP
   - `gpt5mini_claude_code_discord_mcp_example.yaml`: Multi-agent Discord setup with GPT-5-mini and Claude Code
-  - `claude_code_twitter_enescinar.yaml`: Twitter-specific configuration example
 - **Roadmap Documentation**: Added comprehensive roadmap for version 0.0.10
   - Focused on Claude Code context sharing between agents
   - Multi-agent context synchronization planning
@@ -29,19 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Improved error handling in configuration loading
 - **Backend Enhancements**: Updates to support MCP integration
   - Enhanced Claude Code backend with MCP tool support
-  - Improved chat completions backend for better compatibility
   - Updated CLI for handling MCP-based configurations
 - **Documentation Updates**: Enhanced project documentation
   - Updated README with MCP integration information
   - Added CONTRIBUTING.md guidelines
-  - Updated environment variable examples in .env.example
 
 ### Technical Details
 - **Commits**: 5 commits including MCP integration and multi-agent examples
 - **Files Modified**: 30+ files across backend, MCP module, configurations, and documentation
-- **New Module**: Complete MCP (Model Context Protocol) implementation
+- **New Module**: MCP (Model Context Protocol) implementation for Claude Code Agent
 - **New Dependencies**: MCP client libraries for tool server integration
-- **Contributors**: @qidanrui @sonichi @Leezekun @voidcenter
+- **Contributors**: @qidanrui @sonichi @Leezekun @voidcenter @JeffreyCh0 @stellaxiang
 
 ## [0.0.8] - 2025-08-18
 
