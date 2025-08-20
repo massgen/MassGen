@@ -12,7 +12,8 @@ from massgen.backend.claude_code import ClaudeCodeBackend
 import asyncio
 import os
 import sys
-sys.path.insert(0, '/workspaces/MassGen')
+
+sys.path.insert(0, "/workspaces/MassGen")
 
 
 async def test_claude_code_with_orchestrator():
@@ -26,8 +27,7 @@ async def test_claude_code_with_orchestrator():
 
     print(f"✅ Backend initialized: {backend.get_provider_name()}")
     print(f"📊 Stateful backend: {backend.is_stateful()}")
-    print(
-        f"🛠️  Supported tools: {len(backend.get_supported_builtin_tools())} tools")
+    print(f"🛠️  Supported tools: {len(backend.get_supported_builtin_tools())} tools")
 
     # Create agent configuration
     agent_config = AgentConfig(
@@ -35,14 +35,11 @@ async def test_claude_code_with_orchestrator():
         # custom_system_instruction="You are a helpful AI assistant. Provide clear, accurate answers.",
         backend_params={
             "model": "claude-sonnet-4-20250514",
-        }
+        },
     )
 
     # Create configurable agent
-    agent = ConfigurableAgent(
-        config=agent_config,
-        backend=backend
-    )
+    agent = ConfigurableAgent(config=agent_config, backend=backend)
 
     print(f"✅ Agent created: {agent.agent_id}")
     print(f"📋 Agent status: {agent.get_status()}")
@@ -52,10 +49,7 @@ async def test_claude_code_with_orchestrator():
     print(f"✅ Orchestrator created with {len(orchestrator.agents)} agent(s)")
 
     # Create coordination UI
-    ui = CoordinationUI(
-        display_type="rich_terminal",
-        logging_enabled=True
-    )
+    ui = CoordinationUI(display_type="rich_terminal", logging_enabled=True)
     print(f"✅ Coordination UI created: {ui.display_type}")
 
     # Test question
@@ -91,6 +85,7 @@ async def test_claude_code_with_orchestrator():
     except Exception as e:
         print(f"❌ Error during orchestrator test: {e}")
         import traceback
+
         traceback.print_exc()
         return
 
@@ -113,7 +108,7 @@ async def test_stateful_behavior():
     config = AgentConfig(
         agent_id="stateful_agent",
         custom_system_instruction="You are a helpful assistant. Remember our conversation context.",
-        backend_params={"model": "claude-sonnet-4-20250514"}
+        backend_params={"model": "claude-sonnet-4-20250514"},
     )
     agent = ConfigurableAgent(config=config, backend=backend)
 
@@ -122,9 +117,11 @@ async def test_stateful_behavior():
 
     # Test conversation continuity
     messages1 = [
-        {"role": "user", "content": "My favorite color is blue. Please remember this."}]
+        {"role": "user", "content": "My favorite color is blue. Please remember this."}
+    ]
     messages2 = [
-        {"role": "user", "content": "What did I just tell you about my favorite color?"}]
+        {"role": "user", "content": "What did I just tell you about my favorite color?"}
+    ]
 
     try:
         print("\n📝 Turn 1: Setting context...")
@@ -133,8 +130,7 @@ async def test_stateful_behavior():
             if chunk.type == "content" and chunk.content:
                 response1 += chunk.content
 
-        print(
-            f"✅ Turn 1 completed. Session: {backend.get_current_session_id()}")
+        print(f"✅ Turn 1 completed. Session: {backend.get_current_session_id()}")
         print(f"📄 Response 1 preview: {response1[:100]}...")
 
         print("\n📝 Turn 2: Testing memory...")
@@ -143,8 +139,7 @@ async def test_stateful_behavior():
             if chunk.type == "content" and chunk.content:
                 response2 += chunk.content
 
-        print(
-            f"✅ Turn 2 completed. Session: {backend.get_current_session_id()}")
+        print(f"✅ Turn 2 completed. Session: {backend.get_current_session_id()}")
         print(f"📄 Response 2 preview: {response2[:100]}...")
 
         # Check if context was maintained
@@ -158,6 +153,7 @@ async def test_stateful_behavior():
     except Exception as e:
         print(f"❌ Error during stateful test: {e}")
         import traceback
+
         traceback.print_exc()
         return
 

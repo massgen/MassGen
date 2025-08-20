@@ -256,7 +256,9 @@ class TerminalDisplay(BaseDisplay):
         if selected_agent:
             print(f"✅ Selected by: {selected_agent}")
         if vote_results:
-            vote_summary = ", ".join([f"{agent}: {votes}" for agent, votes in vote_results.items()])
+            vote_summary = ", ".join(
+                [f"{agent}: {votes}" for agent, votes in vote_results.items()]
+            )
             print(f"🗳️ Vote results: {vote_summary}")
         print("=" * 60)
 

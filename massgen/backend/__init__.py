@@ -21,8 +21,10 @@ from .lmstudio import LMStudioBackend
 from .claude import ClaudeBackend
 from .gemini import GeminiBackend
 from .cli_base import CLIBackend
+
 # from .claude_code_cli import ClaudeCodeCLIBackend  # File removed
 from .claude_code import ClaudeCodeBackend
+
 # from .gemini_cli import GeminiCLIBackend
 
 __all__ = [
