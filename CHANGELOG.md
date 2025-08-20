@@ -23,12 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Multi-agent context synchronization planning
   - Enhanced backend features and CLI improvements roadmap
 
-### Fixed
+### Changed
 - **Configuration Management**: Enhanced configuration files for better multi-agent support
   - Updated agent configuration handling for MCP integration
   - Improved error handling in configuration loading
-
-### Changed
 - **Backend Enhancements**: Updates to support MCP integration
   - Enhanced Claude Code backend with MCP tool support
   - Improved chat completions backend for better compatibility
