@@ -18,14 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `claude_code_twitter_mcp_example.yaml`: Twitter integration via MCP
   - `gpt5mini_claude_code_discord_mcp_example.yaml`: Multi-agent Discord setup with GPT-5-mini and Claude Code
   - `claude_code_twitter_enescinar.yaml`: Twitter-specific configuration example
-- **Enhanced Multi-Agent Configurations**: New agent combinations and model support
-  - `gemini_4o_claude.yaml`: Gemini and Claude multi-agent setup
-  - `gemini_gpt5nano_claude.yaml`: Three-agent configuration with Gemini, GPT-5-nano, and Claude
-  - `geminicode_4o_claude.yaml`: Gemini Code with Claude integration
-  - `geminicode_gpt5nano_claude.yaml`: Gemini Code with GPT-5-nano and Claude
-  - `glm_gemini_claude.yaml`: GLM-4.5, Gemini, and Claude three-agent setup
 - **Roadmap Documentation**: Added comprehensive roadmap for version 0.0.10
-  - Focus on Claude Code context sharing between agents
+  - Focused on Claude Code context sharing between agents
   - Multi-agent context synchronization planning
   - Enhanced backend features and CLI improvements roadmap
 
