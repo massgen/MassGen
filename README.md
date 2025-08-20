@@ -90,7 +90,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 - Recent Achievements
   - [v0.0.9](#recent-achievements-v009)
-  - [v0.0.8](#previous-achievements-v008)
+  - [v0.0.8](#recent-achievements-v008)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
@@ -623,7 +623,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - Three-agent configurations with Gemini, GPT-5-nano, and Claude
 - GLM-4.5, Gemini, and Claude three-agent setup
 
-### Previous Achievements (v0.0.8)
+### Recent Achievements (v0.0.8)
 
 ✅ **Timeout Management System**: Timeout capabilities for better control and time management
 - Orchestrator-level timeout with graceful fallback
