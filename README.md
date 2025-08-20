@@ -284,8 +284,8 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Compare differe
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 
 # MCP-enabled configurations (NEW in v0.0.9)
-uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord message"
-uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search 3 latest twitter of massgen_ai"
+uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
+uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
 
 # Hybrid local and API-based models (NEW in v0.0.7)
 uv run python -m massgen.cli --config two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
