@@ -293,6 +293,7 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
+
 See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md)
 
 #### CLI Configuration Parameters
