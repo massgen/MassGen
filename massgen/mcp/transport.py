@@ -16,6 +16,7 @@ from .exceptions import MCPConnectionError, MCPTimeoutError, MCPProtocolError
 @dataclass
 class MCPMessage:
     """MCP JSON-RPC message structure."""
+
     jsonrpc: str = "2.0"
     id: Optional[str] = None
     method: Optional[str] = None
@@ -47,7 +48,7 @@ class MCPMessage:
             method=data.get("method"),
             params=data.get("params"),
             result=data.get("result"),
-            error=data.get("error")
+            error=data.get("error"),
         )
 
 
@@ -83,7 +84,12 @@ class MCPTransport(ABC):
 class StdioTransport(MCPTransport):
     """MCP transport using stdio (subprocess communication)."""
 
-    def __init__(self, command: List[str], cwd: Optional[str] = None, env: Optional[Dict[str, str]] = None):
+    def __init__(
+        self,
+        command: List[str],
+        cwd: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
+    ):
         self.command = command
         self.cwd = cwd
         self.env = env
@@ -105,33 +111,27 @@ class StdioTransport(MCPTransport):
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
                 cwd=self.cwd,
-                env=process_env
+                env=process_env,
             )
             self._connected = True
-            
+
             # Send initialize request
             init_message = MCPMessage(
                 id=str(uuid.uuid4()),
                 method="initialize",
                 params={
                     "protocolVersion": "2024-11-05",
-                    "capabilities": {
-                        "roots": {"listChanged": True},
-                        "sampling": {}
-                    },
-                    "clientInfo": {
-                        "name": "massgen",
-                        "version": "0.0.8"
-                    }
-                }
+                    "capabilities": {"roots": {"listChanged": True}, "sampling": {}},
+                    "clientInfo": {"name": "massgen", "version": "0.0.8"},
+                },
             )
             await self.send_message(init_message)
-            
+
             # Wait for initialize response
             response = await self.receive_message()
             if response and response.error:
                 raise MCPConnectionError(f"Initialize failed: {response.error}")
-                
+
         except Exception as e:
             self._connected = False
             raise MCPConnectionError(f"Failed to connect to MCP server: {e}")
@@ -160,7 +160,7 @@ class StdioTransport(MCPTransport):
         """Send JSON-RPC message via stdin."""
         if not self.process or not self.process.stdin:
             raise MCPConnectionError("Not connected to MCP server")
-            
+
         try:
             json_data = json.dumps(message.to_dict()) + "\n"
             self.process.stdin.write(json_data.encode())
@@ -172,19 +172,16 @@ class StdioTransport(MCPTransport):
         """Receive JSON-RPC message from stdout."""
         if not self.process or not self.process.stdout:
             raise MCPConnectionError("Not connected to MCP server")
-            
+
         try:
-            line = await asyncio.wait_for(
-                self.process.stdout.readline(), 
-                timeout=30.0
-            )
-            
+            line = await asyncio.wait_for(self.process.stdout.readline(), timeout=30.0)
+
             if not line:
                 return None
-                
+
             data = json.loads(line.decode().strip())
             return MCPMessage.from_dict(data)
-            
+
         except asyncio.TimeoutError:
             raise MCPTimeoutError("Timeout waiting for MCP server response")
         except json.JSONDecodeError as e:
@@ -199,33 +196,33 @@ class StdioTransport(MCPTransport):
 
 class HTTPTransport(MCPTransport):
     """MCP transport using HTTP with Server-Sent Events."""
-    
+
     def __init__(self, url: str, headers: Optional[Dict[str, str]] = None):
         self.url = url
         self.headers = headers or {}
         self._connected = False
         # TODO: Implement HTTP transport using aiohttp
-        
+
     async def connect(self) -> None:
         """Establish HTTP connection to MCP server."""
         # TODO: Implement HTTP connection
         raise NotImplementedError("HTTP transport not yet implemented")
-        
+
     async def disconnect(self) -> None:
         """Close HTTP connection."""
         # TODO: Implement HTTP disconnection
         pass
-        
+
     async def send_message(self, message: MCPMessage) -> None:
         """Send message via HTTP POST."""
         # TODO: Implement HTTP message sending
         raise NotImplementedError("HTTP transport not yet implemented")
-        
+
     async def receive_message(self) -> Optional[MCPMessage]:
         """Receive message via Server-Sent Events."""
         # TODO: Implement SSE message receiving
         raise NotImplementedError("HTTP transport not yet implemented")
-        
+
     def is_connected(self) -> bool:
         """Check HTTP connection status."""
         return self._connected

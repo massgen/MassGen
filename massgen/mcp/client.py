@@ -14,6 +14,7 @@ from .exceptions import MCPError, MCPConnectionError, MCPServerError
 @dataclass
 class MCPTool:
     """MCP tool definition."""
+
     name: str
     description: str
     inputSchema: Dict[str, Any]
@@ -22,6 +23,7 @@ class MCPTool:
 @dataclass
 class MCPResource:
     """MCP resource definition."""
+
     uri: str
     name: str
     description: Optional[str] = None
@@ -31,6 +33,7 @@ class MCPResource:
 @dataclass
 class MCPPrompt:
     """MCP prompt template definition."""
+
     name: str
     description: str
     arguments: Optional[List[Dict[str, Any]]] = None
@@ -42,7 +45,7 @@ class MCPClient:
     def __init__(self, server_config: Dict[str, Any]):
         """
         Initialize MCP client.
-        
+
         Args:
             server_config: Server configuration dict with keys:
                 - name: Server name
@@ -62,13 +65,13 @@ class MCPClient:
     def _create_transport(self, config: Dict[str, Any]) -> MCPTransport:
         """Create appropriate transport based on config."""
         transport_type = config.get("type", "stdio")
-        
+
         if transport_type == "stdio":
             command = config.get("command", [])
             args = config.get("args", [])
             cwd = config.get("cwd")
             env = config.get("env")
-            
+
             # Handle different command formats
             if isinstance(command, str):
                 # Single command string + args list
@@ -78,14 +81,14 @@ class MCPClient:
                 full_command = command + args
             else:
                 full_command = args
-                
+
             return StdioTransport(full_command, cwd, env)
-            
+
         elif transport_type == "http":
             url = config["url"]
             headers = config.get("headers", {})
             return HTTPTransport(url, headers)
-            
+
         else:
             raise ValueError(f"Unsupported transport type: {transport_type}")
 
@@ -98,7 +101,7 @@ class MCPClient:
         """Connect to MCP server and discover capabilities."""
 
         await self.transport.connect()
-        
+
         # Discover available tools, resources, and prompts
         await self._discover_capabilities()
 
@@ -116,7 +119,7 @@ class MCPClient:
                     tool = MCPTool(
                         name=tool_data["name"],
                         description=tool_data.get("description", ""),
-                        inputSchema=tool_data.get("inputSchema", {})
+                        inputSchema=tool_data.get("inputSchema", {}),
                     )
                     self.tools[tool.name] = tool
 
@@ -129,7 +132,7 @@ class MCPClient:
                             uri=resource_data["uri"],
                             name=resource_data["name"],
                             description=resource_data.get("description"),
-                            mimeType=resource_data.get("mimeType")
+                            mimeType=resource_data.get("mimeType"),
                         )
                         self.resources[resource.uri] = resource
             except MCPServerError:
@@ -144,27 +147,25 @@ class MCPClient:
                         prompt = MCPPrompt(
                             name=prompt_data["name"],
                             description=prompt_data.get("description", ""),
-                            arguments=prompt_data.get("arguments")
+                            arguments=prompt_data.get("arguments"),
                         )
                         self.prompts[prompt.name] = prompt
             except MCPServerError:
                 # Prompts not supported by this server
                 pass
-                
+
         except Exception as e:
             raise MCPConnectionError(f"Failed to discover server capabilities: {e}")
 
-    async def _send_request(self, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+    async def _send_request(
+        self, method: str, params: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """Send JSON-RPC request and wait for response."""
         request_id = self._next_request_id()
-        request = MCPMessage(
-            id=request_id,
-            method=method,
-            params=params
-        )
-        
+        request = MCPMessage(id=request_id, method=method, params=params)
+
         await self.transport.send_message(request)
-        
+
         # Wait for response
         while True:
             response = await self.transport.receive_message()
@@ -172,7 +173,7 @@ class MCPClient:
                 if response.error:
                     raise MCPServerError(
                         response.error.get("message", "Unknown error"),
-                        response.error.get("code")
+                        response.error.get("code"),
                     )
                 return response.result
             # Ignore other messages or handle notifications
@@ -180,51 +181,50 @@ class MCPClient:
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """
         Call an MCP tool.
-        
+
         Args:
             tool_name: Name of the tool to call
             arguments: Tool arguments
-            
+
         Returns:
             Tool execution result
         """
         if tool_name not in self.tools:
             raise MCPError(f"Tool '{tool_name}' not available on server '{self.name}'")
-            
-        return await self._send_request("tools/call", {
-            "name": tool_name,
-            "arguments": arguments
-        })
+
+        return await self._send_request(
+            "tools/call", {"name": tool_name, "arguments": arguments}
+        )
 
     async def get_resource(self, uri: str) -> Any:
         """
         Get resource content by URI.
-        
+
         Args:
             uri: Resource URI
-            
+
         Returns:
             Resource content
         """
-        return await self._send_request("resources/read", {
-            "uri": uri
-        })
+        return await self._send_request("resources/read", {"uri": uri})
 
-    async def get_prompt(self, name: str, arguments: Optional[Dict[str, Any]] = None) -> Any:
+    async def get_prompt(
+        self, name: str, arguments: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """
         Get prompt template.
-        
+
         Args:
             name: Prompt name
             arguments: Prompt arguments
-            
+
         Returns:
             Prompt content
         """
         params = {"name": name}
         if arguments:
             params["arguments"] = arguments
-            
+
         return await self._send_request("prompts/get", params)
 
     def get_available_tools(self) -> List[str]:

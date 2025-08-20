@@ -30,7 +30,7 @@ except ImportError as e:
 
 class MockCLIBackend(CLIBackend):
     """Mock CLI backend for testing purposes."""
-    
+
     def __init__(self, cli_command: str, mock_output: str = "Mock response", **kwargs):
         self.mock_output = mock_output
         # Skip the actual CLI tool check
@@ -39,23 +39,20 @@ class MockCLIBackend(CLIBackend):
         self.timeout = kwargs.get("timeout", 300)
         self.config = kwargs
         from massgen.backend.base import TokenUsage
+
         self.token_usage = TokenUsage()
-    
+
     def _build_command(self, messages, tools, **kwargs):
         return ["echo", "mock command"]
-    
+
     def _parse_output(self, output):
-        return {
-            "content": self.mock_output,
-            "tool_calls": [],
-            "raw_response": output
-        }
-    
+        return {"content": self.mock_output, "tool_calls": [], "raw_response": output}
+
     async def _execute_cli_command(self, command):
         """Mock command execution."""
         await asyncio.sleep(0.1)  # Simulate some delay
         return self.mock_output
-    
+
     def get_cost_per_token(self):
         """Mock cost per token."""
         return {"input": 0.001, "output": 0.002}
@@ -64,20 +61,20 @@ class MockCLIBackend(CLIBackend):
 async def test_cli_base_functionality():
     """Test the CLI base class functionality."""
     print("🧪 Testing CLI base functionality...")
-    
+
     backend = MockCLIBackend("mock-cli", "Hello from mock CLI!")
-    
+
     messages = [{"role": "user", "content": "Test message"}]
     tools = []
-    
+
     chunks = []
     async for chunk in backend.stream_with_tools(messages, tools):
         chunks.append(chunk)
-    
+
     assert len(chunks) > 0, "Should produce at least one chunk"
     assert any(chunk.type == "content" for chunk in chunks), "Should have content chunk"
     assert any(chunk.type == "done" for chunk in chunks), "Should have done chunk"
-    
+
     print("✅ CLI base functionality test passed")
 
 
@@ -85,34 +82,33 @@ def test_claude_code_cli_command_building():
     """Test Claude Code CLI command building (without executing) - SKIPPED: File removed."""
     print("🧪 Testing Claude Code CLI command building... SKIPPED (file removed)")
     print("✅ Claude Code CLI command building test skipped")
-    
+
     # NOTE: ClaudeCodeCLIBackend was removed, only ClaudeCodeBackend (SDK-based) remains
 
 
 def test_gemini_cli_command_building():
     """Test Gemini CLI command building (without executing)."""
     print("🧪 Testing Gemini CLI command building...")
-    
+
     # Mock the shutil.which check
     import massgen.backend.gemini_cli
+
     original_which = massgen.backend.gemini_cli.shutil.which
     massgen.backend.gemini_cli.shutil.which = lambda x: "/usr/bin/gemini"
-    
+
     try:
         backend = GeminiCLIBackend(model="gemini-2.5-pro")
-        
-        messages = [
-            {"role": "user", "content": "What is the capital of France?"}
-        ]
+
+        messages = [{"role": "user", "content": "What is the capital of France?"}]
         tools = []
-        
+
         command = backend._build_command(messages, tools)
-        
+
         assert "timeout" in command[0], "Should use timeout command"
         assert "gemini" in command, "Should use gemini CLI"
-        
+
         print("✅ Gemini CLI command building test passed")
-        
+
     finally:
         # Restore original function
         massgen.backend.gemini_cli.shutil.which = original_which
@@ -121,19 +117,19 @@ def test_gemini_cli_command_building():
 def test_configuration_files():
     """Test that configuration files are valid."""
     print("🧪 Testing configuration files...")
-    
+
     import yaml
-    
+
     config_files = [
         "massgen/configs/claude_code_cli.yaml",
-        "massgen/configs/gemini_cli.yaml", 
-        "massgen/configs/cli_backends_mixed.yaml"
+        "massgen/configs/gemini_cli.yaml",
+        "massgen/configs/cli_backends_mixed.yaml",
     ]
-    
+
     for config_file in config_files:
         if Path(config_file).exists():
             try:
-                with open(config_file, 'r') as f:
+                with open(config_file, "r") as f:
                     config = yaml.safe_load(f)
                 assert config is not None, f"Config {config_file} should not be empty"
                 print(f"✅ {config_file} is valid")
@@ -147,52 +143,51 @@ def test_configuration_files():
 async def test_end_to_end_mock():
     """Test end-to-end functionality with mocked CLI execution."""
     print("🧪 Testing end-to-end with mock execution...")
-    
+
     # Test Claude Code CLI mock
     claude_backend = MockCLIBackend(
-        "claude", 
-        '{"response": "4", "reasoning": "2+2 equals 4"}'
+        "claude", '{"response": "4", "reasoning": "2+2 equals 4"}'
     )
-    
+
     messages = [{"role": "user", "content": "What is 2+2?"}]
     tools = []
-    
+
     chunks = []
     async for chunk in claude_backend.stream_with_tools(messages, tools):
         chunks.append(chunk)
         print(f"  📝 Chunk: {chunk.type} - {chunk.content}")
-    
+
     assert len(chunks) >= 3, "Should have content, complete_message, and done chunks"
-    
+
     print("✅ End-to-end mock test passed")
 
 
 async def main():
     """Run all tests."""
     print("🚀 Starting CLI backend tests...\n")
-    
+
     try:
         # Test basic functionality
         await test_cli_base_functionality()
         print()
-        
+
         # Test command building
         test_claude_code_cli_command_building()
         print()
-        
+
         test_gemini_cli_command_building()
         print()
-        
+
         # Test configuration files
         test_configuration_files()
         print()
-        
+
         # Test end-to-end mock
         await test_end_to_end_mock()
         print()
-        
+
         print("🎉 All CLI backend tests passed!")
-        
+
         # Show usage information
         print("\n📋 Usage Information:")
         print("CLI backends are now available in MassGen!")
@@ -203,18 +198,27 @@ async def main():
         print()
         print("Usage examples:")
         print("  # Claude Code (SDK-based)")
-        print("  uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 'What is 2+2?'")
+        print(
+            "  uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 'What is 2+2?'"
+        )
         print()
         print("  # Gemini CLI")
-        print("  uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro 'Explain quantum computing'")
-        print("  uv run python -m massgen.cli --config massgen/configs/gemini_cli.yaml 'Analyze this data'")
+        print(
+            "  uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro 'Explain quantum computing'"
+        )
+        print(
+            "  uv run python -m massgen.cli --config massgen/configs/gemini_cli.yaml 'Analyze this data'"
+        )
         print()
         print("  # Mixed CLI backends")
-        print("  uv run python -m massgen.cli --config massgen/configs/cli_backends_mixed.yaml 'Complex question'")
-        
+        print(
+            "  uv run python -m massgen.cli --config massgen/configs/cli_backends_mixed.yaml 'Complex question'"
+        )
+
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

@@ -473,9 +473,9 @@ def process_message(
 
                             # Also update with accumulated arguments if available
                             if current_function_call and current_function_arguments:
-                                current_function_call["arguments"] = (
-                                    current_function_arguments
-                                )
+                                current_function_call[
+                                    "arguments"
+                                ] = current_function_arguments
 
                             # Reset tracking
                             current_function_call = None
