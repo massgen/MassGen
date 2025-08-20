@@ -609,7 +609,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Recent Achievements (v0.0.9)
 
-✅ **MCP (Model Context Protocol) Support**: Integration with MCP for advanced tool capabilities in Claude Code Agent
+✅ **MCP (Model Context Protocol) Support for Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
 - New MCP module with client implementation and transport layer
 - Support for MCP-based tool integration in Claude Code backend
 - Exception handling and transport management for MCP connections
@@ -618,12 +618,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - Discord and Twitter integration via MCP
 - Multi-agent setups with MCP-enabled tools
 
-✅ **Enhanced Multi-Agent Configurations**: New agent combinations and model support
-- Gemini and Claude multi-agent setups
-- Three-agent configurations with Gemini, GPT-5-nano, and Claude
-- GLM-4.5, Gemini, and Claude three-agent setup
-
-### Previous Achievements (v0.0.8)
+### Previous Achievements (v0.0.3-v0.0.8)
 
 ✅ **Timeout Management System**: Timeout capabilities for better control and time management
 - Orchestrator-level timeout with graceful fallback
@@ -632,8 +627,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 ✅ **Enhanced Display Features**: Improved visual feedback and user experience
 - Optimized message display formatting and synchronization
 - Better handling of concurrent agent outputs
-
-### Previous Achievements (v0.0.3-v0.0.7)
 
 ✅ **Foundation Architecture**: Complete multi-agent orchestration system with async streaming, builtin tools (code execution, web search), and multi-backend support
 
