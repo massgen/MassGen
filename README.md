@@ -279,7 +279,7 @@ uv run python -m massgen.cli --backend claude_code "Debug this Python script"
 #### Multiple Agents from Config
 ```bash
 # Use configuration file
-uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
+uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
 
 # Mixed API and CLI backends
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
