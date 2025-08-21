@@ -199,7 +199,6 @@ cp .env.example .env
 ```
 
 **Useful links to get API keys:**
- - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
  - [Cerebras](https://inference-docs.cerebras.ai/introduction)
  - [Claude](https://docs.anthropic.com/en/api/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
@@ -214,9 +213,8 @@ cp .env.example .env
 The system currently supports multiple model providers with advanced capabilities:
 
 **API-based Models:**
-- **Azure OpenAI**: GPT-4, GPT-4o, GPT-3.5-turbo, GPT-5 series (when available)
-- **Cerebras AI**: GPT-OSS-120B
-- **Claude**: Claude Sonnet 4, Claude Haiku 3.5
+- **Cerebras AI**: GPT-OSS-120B...
+- **Claude**: Claude Haiku 3.5, Claude Sonnet 4, Claude Opus 4...
 - **Claude Code**: Native Claude Code SDK with comprehensive dev tools
 - **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
 - **Grok**: Grok-4, Grok-3, Grok-3-mini...
@@ -241,7 +239,6 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 | Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
-| **Azure OpenAI** | ❌  | ✅ | ❌ | ❌ | Web search, code interpreter, Azure deployment management |
 | **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ❌ | ❌ | Web search, code execution |
@@ -259,11 +256,6 @@ uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?
 uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "How hard is IMO?"
-uv run python -m massgen.cli --model glm-4.5 "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
-
-# Azure OpenAI (requires environment variables)
-uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "Which AI won IMO in 2025?"
 ```
 
 All the models with a default backend can be found [here](massgen/utils.py).
@@ -291,10 +283,6 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Compare differe
 # Mixed API and CLI backends
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 
-# Azure OpenAI configurations
-uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine learning?"
-uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
-
 # MCP-enabled configurations (NEW in v0.0.9)
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
@@ -313,8 +301,8 @@ See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md)
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `azure_openai`, `zai`). Optional because we can infer backend type through model.|
-| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). See all [supported models](massgen/utils.py). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `zai`). Optional for [models with default backends](massgen/utils.py).|
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
@@ -333,7 +321,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "azure_openai" | "zai" | "lmstudio" #Type of backend 
+    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -347,7 +335,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "azure_openai" | "zai" | "lmstudio" #Type of backend
+      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -416,21 +404,6 @@ backend:
   #   search_parameters:
   #     mode: "auto"                 # Search strategy (see Grok API docs for valid values)
   #     return_citations: true       # Include search result citations 
-```
-
-#### Azure OpenAI
-
-```yaml
-backend:
-  type: "azure_openai"
-  model: "gpt-4.1"                     # Azure OpenAI deployment name
-  base_url: "https://your-resource.openai.azure.com/"  # Azure OpenAI endpoint
-  api_key: "<optional_key>"          # API key for backend. Uses AZURE_OPENAI_API_KEY env var by default.
-  api_version: "2024-02-15-preview" # Azure OpenAI API version
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500                   # Maximum response length
-  enable_web_search: true            # Web search capability
-  enable_code_interpreter: true      # Code interpreter capability
 ```
 
 #### OpenAI

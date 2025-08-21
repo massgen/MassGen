@@ -27,14 +27,6 @@ from .claude_code import ClaudeCodeBackend
 
 # from .gemini_cli import GeminiCLIBackend
 
-# Azure OpenAI backend (optional)
-try:
-    from .azure_openai import AzureOpenAIBackend
-    AZURE_OPENAI_AVAILABLE = True
-except ImportError:
-    AZURE_OPENAI_AVAILABLE = False
-    AzureOpenAIBackend = None
-
 __all__ = [
     "LLMBackend",
     "StreamChunk",
@@ -49,7 +41,3 @@ __all__ = [
     "ClaudeCodeBackend",
     # "GeminiCLIBackend",
 ]
-
-# Add Azure OpenAI if available
-if AZURE_OPENAI_AVAILABLE:
-    __all__.append("AzureOpenAIBackend")
