@@ -42,6 +42,8 @@ dependencies = [
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
     "claude-code-sdk>=0.0.19",
+    "paper-search-mcp>=0.1.3",
+    "mcp>=0.9.0",
 ]
 
 [project.optional-dependencies]

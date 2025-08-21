@@ -9,11 +9,21 @@ from .client import MCPClient
 from .transport import StdioTransport, HTTPTransport
 from .exceptions import MCPError, MCPConnectionError, MCPTimeoutError
 
+# Try to import SDK-based client
+try:
+    from .client_sdk import MCPClientSDK
+    MCP_SDK_AVAILABLE = True
+except ImportError:
+    MCPClientSDK = None
+    MCP_SDK_AVAILABLE = False
+
 __all__ = [
     "MCPClient",
+    "MCPClientSDK",
     "StdioTransport",
     "HTTPTransport",
     "MCPError",
     "MCPConnectionError",
     "MCPTimeoutError",
+    "MCP_SDK_AVAILABLE",
 ]

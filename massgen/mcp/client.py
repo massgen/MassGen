@@ -112,8 +112,8 @@ class MCPClient:
     async def _discover_capabilities(self) -> None:
         """Discover server capabilities (tools, resources, prompts)."""
         try:
-            # List tools
-            tools_response = await self._send_request("tools/list")
+            # List tools - send empty params for paginated request
+            tools_response = await self._send_request("tools/list", {})
             if tools_response.get("tools"):
                 for tool_data in tools_response["tools"]:
                     tool = MCPTool(
@@ -123,9 +123,9 @@ class MCPClient:
                     )
                     self.tools[tool.name] = tool
 
-            # List resources
+            # List resources - send empty params for paginated request
             try:
-                resources_response = await self._send_request("resources/list")
+                resources_response = await self._send_request("resources/list", {})
                 if resources_response.get("resources"):
                     for resource_data in resources_response["resources"]:
                         resource = MCPResource(
@@ -139,9 +139,9 @@ class MCPClient:
                 # Resources not supported by this server
                 pass
 
-            # List prompts
+            # List prompts - send empty params for paginated request
             try:
-                prompts_response = await self._send_request("prompts/list")
+                prompts_response = await self._send_request("prompts/list", {})
                 if prompts_response.get("prompts"):
                     for prompt_data in prompts_response["prompts"]:
                         prompt = MCPPrompt(
