@@ -975,7 +975,7 @@ class ClaudeCodeBackend(LLMBackend):
             **{k: v for k, v in options_kwargs.items() if k not in excluded_params},
         )
 
-    async def create_client(self, **options_kwargs) -> ClaudeSDKClient:
+    def create_client(self, **options_kwargs) -> ClaudeSDKClient:
         """Create ClaudeSDKClient with configurable parameters.
 
         Args:
@@ -989,10 +989,6 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Create ClaudeSDKClient with configured options
         self._client = ClaudeSDKClient(options)
-
-        # Initialize MCP servers once when creating client
-        if not self._mcp_initialized:
-            await self._init_mcp_servers()
 
         return self._client
 
@@ -1033,7 +1029,6 @@ class ClaudeCodeBackend(LLMBackend):
                     (msg for msg in messages if msg.get("role") == "system"), None
                 )
                 if system_msg:
-                    system_content = system_msg.get("content", "")  # noqa: E128
                     system_content = system_msg.get("content", "")  # noqa: E128
                 else:
                     system_content = ""
@@ -1077,10 +1072,13 @@ class ClaudeCodeBackend(LLMBackend):
                             # On Mac/Linux, re-raise the error since this shouldn't happen
                             raise create_error
 
+        # Initialize MCP servers once when connecting
+        if not self._mcp_initialized:
+            await self._init_mcp_servers()
+
         # Ensure client connection
         try:
-            if not client._transport:
-                await client.connect()
+            await client.connect()
 
             # If we have a pending system prompt, deliver it at system level using /system command
             if hasattr(self, '_pending_system_prompt') and self._pending_system_prompt:
