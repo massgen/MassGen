@@ -561,9 +561,11 @@ class MassAgent(ABC):
                         ):
                             working_messages.extend([function_call, function_output])
                     else:  # Renew the conversation
-                        working_status, working_messages, all_tools = (
-                            self._get_curr_messages_and_tools(task)
-                        )
+                        (
+                            working_status,
+                            working_messages,
+                            all_tools,
+                        ) = self._get_curr_messages_and_tools(task)
                 else:
                     # No function calls - check if we should continue or stop
                     if self.state.status == "voted":
@@ -573,9 +575,11 @@ class MassAgent(ABC):
                         # Check if there is any update from other agents that are unseen by this agent
                         if has_update and working_status != "initial":
                             # The vote option has changed, thus we need to renew the conversation within the loop
-                            working_status, working_messages, all_tools = (
-                                self._get_curr_messages_and_tools(task)
-                            )
+                            (
+                                working_status,
+                                working_messages,
+                                all_tools,
+                            ) = self._get_curr_messages_and_tools(task)
                         else:  # Continue the current conversation and prompting checkin
                             working_messages.append(
                                 {

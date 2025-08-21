@@ -115,14 +115,14 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
 
 def create_backend(backend_type: str, **kwargs) -> Any:
     """Create backend instance from type and parameters.
-    
+
     Supported backend types:
     - openai: OpenAI API (requires OPENAI_API_KEY)
     - grok: xAI Grok (requires XAI_API_KEY)
     - claude: Anthropic Claude (requires ANTHROPIC_API_KEY)
     - gemini: Google Gemini (requires GOOGLE_API_KEY or GEMINI_API_KEY)
     - chatcompletion: OpenAI-compatible providers (auto-detects API key based on base_url)
-    
+
     For chatcompletion backend, the following providers are auto-detected:
     - Cerebras AI (cerebras.ai) -> CEREBRAS_API_KEY
     - Together AI (together.ai/together.xyz) -> TOGETHER_API_KEY
@@ -137,8 +137,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ConfigurationError(
-                "OpenAI API key not found. Set OPENAI_API_KEY or provide "
-                "in config."
+                "OpenAI API key not found. Set OPENAI_API_KEY or provide " "in config."
             )
         return ResponseBackend(api_key=api_key)
 
@@ -173,7 +172,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     elif backend_type == "chatcompletion":
         api_key = kwargs.get("api_key")
         base_url = kwargs.get("base_url")
-        
+
         # Determine API key based on base URL if not explicitly provided
         if not api_key:
             if base_url and "cerebras.ai" in base_url:
@@ -188,7 +187,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                     raise ConfigurationError(
                         "ZAI API key not found. Set ZAI_API_KEY or provide in config."
                     )
-        
+
         return ChatCompletionsBackend(api_key=api_key)
 
     elif backend_type == "zai":
@@ -199,7 +198,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 "ZAI API key not found. Set ZAI_API_KEY or provide in config."
             )
         return ChatCompletionsBackend(api_key=api_key)
-      
+
         # ChatCompletionsBackend now handles provider-specific API key detection internally
         # Just pass through all kwargs including api_key and base_url
         return ChatCompletionsBackend(**kwargs)
@@ -207,11 +206,11 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     elif backend_type == "lmstudio":
         # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
         return LMStudioBackend(**kwargs)
-    
+
     elif backend_type == "claude_code":
         # ClaudeCodeBackend using claude-code-sdk-python
         # Authentication handled by backend (API key or subscription)
-        
+
         # Validate claude-code-sdk availability
         try:
             import claude_code_sdk
@@ -219,7 +218,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError(
                 "claude-code-sdk not found. Install with: pip install claude-code-sdk"
             )
-        
+
         return ClaudeCodeBackend(**kwargs)
 
     elif backend_type == "azure_openai":
@@ -239,18 +238,18 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-
 def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration."""
     agents = {}
 
     agent_entries = (
-        [config["agent"]] if "agent" in config else
-        config.get("agents", None)
+        [config["agent"]] if "agent" in config else config.get("agents", None)
     )
 
     if not agent_entries:
-        raise ConfigurationError("Configuration must contain either 'agent' or 'agents' section")
+        raise ConfigurationError(
+            "Configuration must contain either 'agent' or 'agents' section"
+        )
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
@@ -258,10 +257,13 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
         # Infer backend type from model if not explicitly provided
         backend_type = backend_config.get("type") or (
             get_backend_type_from_model(backend_config["model"])
-            if "model" in backend_config else None
+            if "model" in backend_config
+            else None
         )
         if not backend_type:
-            raise ConfigurationError("Backend type must be specified or inferrable from model")
+            raise ConfigurationError(
+                "Backend type must be specified or inferrable from model"
+            )
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}
@@ -286,7 +288,7 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
         agent_config.custom_system_instruction = agent_data.get("system_message")
-        
+
         # Timeout configuration will be applied to orchestrator instead of individual agents
 
         agent = ConfigurableAgent(config=agent_config, backend=backend)
@@ -296,13 +298,16 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
 
 
 def create_simple_config(
-    backend_type: str, model: str, system_message: Optional[str] = None, base_url: Optional[str] = None
+    backend_type: str,
+    model: str,
+    system_message: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Create a simple single-agent configuration."""
     backend_config = {"type": backend_type, "model": model}
     if base_url:
         backend_config["base_url"] = base_url
-    
+
     return {
         "agent": {
             "id": "agent1",
@@ -318,7 +323,7 @@ async def run_question_with_history(
     agents: Dict[str, SingleAgent],
     ui_config: Dict[str, Any],
     history: List[Dict[str, Any]],
-    **kwargs
+    **kwargs,
 ) -> str:
     """Run MassGen with a question and conversation history."""
     # Build messages including history
@@ -617,6 +622,7 @@ async def run_interactive_mode(
     except KeyboardInterrupt:
         print("\n👋 Goodbye!")
 
+
 async def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -692,7 +698,9 @@ Environment Variables:
         "--system-message", type=str, help="System message for quick setup"
     )
     parser.add_argument(
-        "--base-url", type=str, help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)"
+        "--base-url",
+        type=str,
+        help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)",
     )
 
     # UI options
@@ -700,13 +708,15 @@ Environment Variables:
         "--no-display", action="store_true", help="Disable visual coordination display"
     )
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
-    
+
     # Timeout options
-    timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
+    timeout_group = parser.add_argument_group(
+        "timeout settings", "Override timeout settings from config"
+    )
     timeout_group.add_argument(
-        "--orchestrator-timeout", 
-        type=int, 
-        help="Maximum time for orchestrator coordination in seconds (default: 1800)"
+        "--orchestrator-timeout",
+        type=int,
+        help="Maximum time for orchestrator coordination in seconds (default: 1800)",
     )
 
     args = parser.parse_args()
@@ -733,7 +743,10 @@ Environment Variables:
             else:
                 system_message = None
             config = create_simple_config(
-                backend_type=backend, model=model, system_message=system_message, base_url=args.base_url
+                backend_type=backend,
+                model=model,
+                system_message=system_message,
+                base_url=args.base_url,
             )
 
         # Apply command-line overrides
@@ -742,12 +755,12 @@ Environment Variables:
             ui_config["display_type"] = "simple"
         if args.no_logs:
             ui_config["logging_enabled"] = False
-            
+
         # Apply timeout overrides from CLI arguments
         timeout_settings = config.get("timeout_settings", {})
         if args.orchestrator_timeout is not None:
             timeout_settings["orchestrator_timeout_seconds"] = args.orchestrator_timeout
-            
+
         # Update config with timeout settings
         config["timeout_settings"] = timeout_settings
 
@@ -759,13 +772,17 @@ Environment Variables:
 
         # Create timeout config from settings and put it in kwargs
         timeout_settings = config.get("timeout_settings", {})
-        timeout_config = TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
-        
+        timeout_config = (
+            TimeoutConfig(**timeout_settings) if timeout_settings else TimeoutConfig()
+        )
+
         kwargs = {"timeout_config": timeout_config}
 
         # Run mode based on whether question was provided
         if args.question:
-            response = await run_single_question(args.question, agents, ui_config, **kwargs)
+            response = await run_single_question(
+                args.question, agents, ui_config, **kwargs
+            )
             # if response:
             #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
             #     print(f"{response}", flush=True)

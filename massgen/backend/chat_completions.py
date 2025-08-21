@@ -38,14 +38,14 @@ logger = logging.getLogger(__name__)
 
 class ChatCompletionsBackend(LLMBackend):
     """Complete OpenAI-compatible Chat Completions API backend.
-    
+
     Can be used directly with any OpenAI-compatible provider by setting provider name.
     Supports Cerebras AI, Together AI, Fireworks AI, DeepInfra, and other compatible providers.
-    
+
     Environment Variables:
         Provider-specific API keys are automatically detected based on provider name.
         See ProviderRegistry.PROVIDERS for the complete list.
-    
+
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -54,29 +54,29 @@ class ChatCompletionsBackend(LLMBackend):
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         # Check if provider name was explicitly set in config
-        if 'provider' in self.config:
-            return self.config['provider']
-        elif 'provider_name' in self.config:
-            return self.config['provider_name']
-        
+        if "provider" in self.config:
+            return self.config["provider"]
+        elif "provider_name" in self.config:
+            return self.config["provider_name"]
+
         # Try to infer from base_url
-        base_url = self.config.get('base_url', '')
-        if 'openai.com' in base_url:
-            return 'OpenAI'
-        elif 'cerebras.ai' in base_url:
-            return 'Cerebras AI'
-        elif 'together.ai' in base_url:
-            return 'Together AI'
-        elif 'fireworks.ai' in base_url:
-            return 'Fireworks AI'
-        elif 'groq.com' in base_url:
-            return 'Groq'
-        elif 'openrouter.ai' in base_url:
-            return 'OpenRouter'
-        elif 'z.ai' in base_url:
-            return 'ZAI'
+        base_url = self.config.get("base_url", "")
+        if "openai.com" in base_url:
+            return "OpenAI"
+        elif "cerebras.ai" in base_url:
+            return "Cerebras AI"
+        elif "together.ai" in base_url:
+            return "Together AI"
+        elif "fireworks.ai" in base_url:
+            return "Fireworks AI"
+        elif "groq.com" in base_url:
+            return "Groq"
+        elif "openrouter.ai" in base_url:
+            return "OpenRouter"
+        elif "z.ai" in base_url:
+            return "ZAI"
         else:
-            return 'ChatCompletion'
+            return "ChatCompletion"
 
     def convert_tools_to_chat_completions_format(
         self, tools: List[Dict[str, Any]]
@@ -142,10 +142,7 @@ class ChatCompletionsBackend(LLMBackend):
                             if hasattr(self, reasoning_active_key):
                                 if getattr(self, reasoning_active_key) == True:
                                     setattr(self, reasoning_active_key, False)
-                                    yield StreamChunk(
-                                        type="reasoning_done",
-                                        content=""
-                                    )
+                                    yield StreamChunk(type="reasoning_done", content="")
                             content_chunk = delta.content
                             content += content_chunk
                             yield StreamChunk(type="content", content=content_chunk)
@@ -161,7 +158,7 @@ class ChatCompletionsBackend(LLMBackend):
                                     content=thinking_delta,
                                     reasoning_delta=thinking_delta,
                                 )
-                        
+
                         # Tool calls streaming (OpenAI-style)
                         if getattr(delta, "tool_calls", None):
                             # handle reasoning first
@@ -169,10 +166,7 @@ class ChatCompletionsBackend(LLMBackend):
                             if hasattr(self, reasoning_active_key):
                                 if getattr(self, reasoning_active_key) == True:
                                     setattr(self, reasoning_active_key, False)
-                                    yield StreamChunk(
-                                        type="reasoning_done",
-                                        content=""
-                                    )
+                                    yield StreamChunk(type="reasoning_done", content="")
 
                             for tool_call_delta in delta.tool_calls:
                                 index = getattr(tool_call_delta, "index", 0)
@@ -201,7 +195,9 @@ class ChatCompletionsBackend(LLMBackend):
                                         ] = tool_call_delta.function.name
 
                                     # Accumulate arguments (as string chunks)
-                                    if getattr(tool_call_delta.function, "arguments", None):
+                                    if getattr(
+                                        tool_call_delta.function, "arguments", None
+                                    ):
                                         current_tool_calls[index]["function"][
                                             "arguments"
                                         ] += tool_call_delta.function.arguments
@@ -213,10 +209,7 @@ class ChatCompletionsBackend(LLMBackend):
                         if hasattr(self, reasoning_active_key):
                             if getattr(self, reasoning_active_key) == True:
                                 setattr(self, reasoning_active_key, False)
-                                yield StreamChunk(
-                                    type="reasoning_done",
-                                    content=""
-                                )
+                                yield StreamChunk(type="reasoning_done", content="")
 
                         if choice.finish_reason == "tool_calls" and current_tool_calls:
 
@@ -312,25 +305,21 @@ class ChatCompletionsBackend(LLMBackend):
         # Fallback in case stream ends without finish_reason
         yield StreamChunk(type="done")
 
-
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI-compatible Chat Completions API."""
-        try:       
+        try:
             import openai
 
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
-                
+
             # Get base_url from config or use OpenAI default
             base_url = all_params.get("base_url", "https://api.openai.com/v1")
-                
-            client = openai.AsyncOpenAI(
-                api_key=self.api_key,
-                base_url=base_url
-            )
-                
+
+            client = openai.AsyncOpenAI(api_key=self.api_key, base_url=base_url)
+
             # Extract framework-specific parameters
             enable_web_search = all_params.get("enable_web_search", False)
             enable_code_interpreter = all_params.get("enable_code_interpreter", False)
@@ -351,7 +340,14 @@ class ChatCompletionsBackend(LLMBackend):
                 api_params["tools"] = converted_tools
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {"enable_web_search", "enable_code_interpreter", "base_url", "agent_id", "session_id", "type"}
+            excluded_params = {
+                "enable_web_search",
+                "enable_code_interpreter",
+                "base_url",
+                "agent_id",
+                "session_id",
+                "type",
+            }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
                     api_params[key] = value
@@ -359,23 +355,25 @@ class ChatCompletionsBackend(LLMBackend):
             # Add provider tools (web search, code interpreter) if enabled
             provider_tools = []
             if enable_web_search:
-                provider_tools.append({
-                    "type": "function",
-                    "function": {
-                    "name": "web_search",
-                    "description": "Search the web for current or factual information",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                        "query": {
-                            "type": "string",
-                            "description": "The search query to send to the web"
-                        }
+                provider_tools.append(
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "web_search",
+                            "description": "Search the web for current or factual information",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "query": {
+                                        "type": "string",
+                                        "description": "The search query to send to the web",
+                                    }
+                                },
+                                "required": ["query"],
+                            },
                         },
-                        "required": ["query"]
                     }
-                    }
-                })
+                )
 
             if enable_code_interpreter:
                 provider_tools.append(
@@ -397,8 +395,9 @@ class ChatCompletionsBackend(LLMBackend):
                 yield chunk
 
         except Exception as e:
-            yield StreamChunk(type="error", error=f"Chat Completions API error: {str(e)}")
-
+            yield StreamChunk(
+                type="error", error=f"Chat Completions API error: {str(e)}"
+            )
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (rough approximation)."""
@@ -410,7 +409,7 @@ class ChatCompletionsBackend(LLMBackend):
     ) -> float:
         """Calculate cost for token usage based on OpenAI pricing (default fallback)."""
         model_lower = model.lower()
-        
+
         # OpenAI GPT-4o pricing (most common)
         if "gpt-4o" in model_lower:
             if "mini" in model_lower:
@@ -448,6 +447,7 @@ class ChatCompletionsBackend(LLMBackend):
         if isinstance(arguments, str):
             try:
                 import json
+
                 return json.loads(arguments) if arguments.strip() else {}
             except json.JSONDecodeError:
                 return {}

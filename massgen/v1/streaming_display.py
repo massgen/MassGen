@@ -47,9 +47,9 @@ class MultiRegionDisplay:
         self._agent_vote_targets: Dict[int, Optional[int]] = {}
         self._agent_chat_rounds: Dict[int, int] = {}
         self._agent_update_counts: Dict[int, int] = {}  # Track update history count
-        self._agent_votes_cast: Dict[int, int] = (
-            {}
-        )  # Track number of votes cast by each agent
+        self._agent_votes_cast: Dict[
+            int, int
+        ] = {}  # Track number of votes cast by each agent
 
         # Simplified, consistent border tracking
         self._display_cache = None  # Single cache object for all dimensions

@@ -31,7 +31,7 @@ MODEL_MAPPINGS = {
     "claude": [
         # Claude 4 variants
         "claude-opus-4-1-20250805",
-        "claude-opus-4-20250514", 
+        "claude-opus-4-20250514",
         "claude-sonnet-4-20250514",
         # Claude 3.5 variants
         "claude-3-5-sonnet-latest",
@@ -54,7 +54,6 @@ MODEL_MAPPINGS = {
         "glm-4.5",
         "glm-4.5-air",
     ],
-
 }
 
 

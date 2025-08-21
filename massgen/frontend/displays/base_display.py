@@ -84,52 +84,58 @@ class BaseDisplay(ABC):
         """Get all orchestrator events."""
         return self.orchestrator_events.copy()
 
-    def process_reasoning_content(self, chunk_type: str, content: str, source: str) -> str:
+    def process_reasoning_content(
+        self, chunk_type: str, content: str, source: str
+    ) -> str:
         """Process reasoning content and add prefixes as needed.
-        
+
         Args:
             chunk_type: Type of the chunk (e.g., "reasoning_summary")
             content: The content to process
             source: The source agent/component
-            
+
         Returns:
             Processed content with prefix if needed
         """
         if chunk_type == "reasoning":
             # Track if we're in an active reasoning for this source
             reasoning_active_key = f"_reasoning_active_{source}"
-            
-            if not hasattr(self, reasoning_active_key) or not getattr(self, reasoning_active_key, False):
+
+            if not hasattr(self, reasoning_active_key) or not getattr(
+                self, reasoning_active_key, False
+            ):
                 # Start of new reasoning - add prefix and mark as active
                 setattr(self, reasoning_active_key, True)
                 return f"🧠 [Reasoning Started]\n{content}\n"
             else:
                 # Continuing existing reasoning - no prefix
                 return content
-                
+
         elif chunk_type == "reasoning_done":
             # End of reasoning - reset flag
             reasoning_active_key = f"_reasoning_active_{source}"
             if hasattr(self, reasoning_active_key):
                 setattr(self, reasoning_active_key, False)
             return f"\n🧠 [Reasoning Complete]\n"
-                
+
         elif chunk_type == "reasoning_summary":
             # Track if we're in an active summary for this source
             summary_active_key = f"_summary_active_{source}"
-            
-            if not hasattr(self, summary_active_key) or not getattr(self, summary_active_key, False):
+
+            if not hasattr(self, summary_active_key) or not getattr(
+                self, summary_active_key, False
+            ):
                 # Start of new summary - add prefix and mark as active
                 setattr(self, summary_active_key, True)
                 return f"📋 [Reasoning Summary]\n{content}\n"
             else:
                 # Continuing existing summary - no prefix
                 return content
-                
+
         elif chunk_type == "reasoning_summary_done":
             # End of reasoning summary - reset flag
             summary_active_key = f"_summary_active_{source}"
             if hasattr(self, summary_active_key):
                 setattr(self, summary_active_key, False)
-                
+
         return content
