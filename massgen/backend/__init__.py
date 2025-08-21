@@ -30,6 +30,7 @@ from .claude_code import ClaudeCodeBackend
 # Azure OpenAI backend (optional)
 try:
     from .azure_openai import AzureOpenAIBackend
+
     AZURE_OPENAI_AVAILABLE = True
 except ImportError:
     AZURE_OPENAI_AVAILABLE = False

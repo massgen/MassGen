@@ -317,12 +317,9 @@ class ChatCompletionsBackend(LLMBackend):
 
             # Get base_url from config or use OpenAI default
             base_url = all_params.get("base_url", "https://api.openai.com/v1")
-                
-            client = openai.AsyncOpenAI(
-                api_key=self.api_key,
-                base_url=base_url
-            )
-                
+
+            client = openai.AsyncOpenAI(api_key=self.api_key, base_url=base_url)
+
             # Extract framework-specific parameters
             enable_web_search = all_params.get("enable_web_search", False)
             enable_code_interpreter = all_params.get("enable_code_interpreter", False)

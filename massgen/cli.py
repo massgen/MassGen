@@ -683,7 +683,17 @@ Environment Variables:
     config_group.add_argument(
         "--backend",
         type=str,
-        choices=["chatcompletion", "claude", "gemini", "grok", "openai", "azure_openai", "claude_code", "zai","lmstudio"],
+        choices=[
+            "chatcompletion",
+            "claude",
+            "gemini",
+            "grok",
+            "openai",
+            "azure_openai",
+            "claude_code",
+            "zai",
+            "lmstudio",
+        ],
         help="Backend type for quick setup",
     )
 

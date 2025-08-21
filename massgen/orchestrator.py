@@ -1258,14 +1258,22 @@ Final Session ID: {session_id}.
                         type=chunk.type,
                         content=getattr(chunk, "content", ""),
                         source=selected_agent_id,
-                        **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]}
+                        **{
+                            k: v
+                            for k, v in chunk.__dict__.items()
+                            if k not in ["type", "content", "source"]
+                        },
                     )
                 else:
                     yield StreamChunk(
                         type=chunk.type,
                         content=getattr(chunk, "content", ""),
                         source=selected_agent_id,
-                        **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]}
+                        **{
+                            k: v
+                            for k, v in chunk.__dict__.items()
+                            if k not in ["type", "content", "source"]
+                        },
                     )
 
         # If no content was generated, use the stored answer as fallback
@@ -1273,15 +1281,15 @@ Final Session ID: {session_id}.
             stored_answer = self.agent_states[selected_agent_id].answer
             if stored_answer:
                 yield StreamChunk(
-                    type="content", 
-                    content=f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}", 
-                    source=selected_agent_id
+                    type="content",
+                    content=f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}",
+                    source=selected_agent_id,
                 )
             else:
                 yield StreamChunk(
-                    type="content", 
-                    content="\n❌ No content generated for final presentation and no stored answer available.", 
-                    source=selected_agent_id
+                    type="content",
+                    content="\n❌ No content generated for final presentation and no stored answer available.",
+                    source=selected_agent_id,
                 )
 
     def _get_vote_results(self) -> Dict[str, Any]:

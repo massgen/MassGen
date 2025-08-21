@@ -281,7 +281,7 @@ class AgentConfig:
             "type": "azure_openai",
             "model": deployment_name,  # For Azure OpenAI, model is the deployment name
             "api_version": api_version,
-            **kwargs
+            **kwargs,
         }
 
         # Add Azure-specific parameters if provided
