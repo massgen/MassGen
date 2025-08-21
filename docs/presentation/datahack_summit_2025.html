@@ -204,11 +204,10 @@
             padding: 20px;
             border-radius: 10px;
             font-family: 'Courier New', monospace;
+            width: 95%;
+            max-width: 1200px;
             font-size: 1.1em;
-            margin: 20px 0;
-            max-width: 900px;
-            margin-left: auto;
-            margin-right: auto;
+            margin: 20px auto;
         }
 
         .highlight {
@@ -942,7 +941,6 @@
                 
                 # 3. Run single agent (quick test)<br>
                 uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
-                uv run python -m massgen.cli --config single_flash2.5.yaml "Summarize latest news of github.com/Leezekun/MassGen"
                 
                 # 4. Run multi-agent collaboration<br>
                 uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
