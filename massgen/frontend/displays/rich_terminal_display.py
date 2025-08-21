@@ -1525,7 +1525,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 # Add option to show final presentation if it's stored
                 if self._stored_final_presentation and self._stored_presentation_agent:
                     options_text.append(
-                        f"  f: Show final presentation from Selected Agent ({agent_id})\n",
+                        f"  f: Show final presentation from Selected Agent ({self._stored_presentation_agent})\n",
                         style=self.colors["success"],
                     )
 
