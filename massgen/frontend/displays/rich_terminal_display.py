@@ -2291,7 +2291,7 @@ class RichTerminalDisplay(TerminalDisplay):
             if has_emoji:
                 # Format with newline and timestamp when emojis are present
                 formatted_content = (
-                    f"\n[{timestamp}] [{content_type.upper()}] {content}\n"
+                    f"\n[{timestamp}] {content}\n"
                 )
             else:
                 # Regular format without extra newline
