@@ -1032,8 +1032,6 @@ class ClaudeCodeBackend(LLMBackend):
                 system_msg = next(
                     (msg for msg in messages if msg.get("role") == "system"), None
                 )
-                    (msg for msg in messages if msg.get("role") == "system"), None
-                )
                 if system_msg:
                     system_content = system_msg.get("content", "")  # noqa: E128
                     system_content = system_msg.get("content", "")  # noqa: E128
