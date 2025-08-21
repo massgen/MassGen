@@ -1,0 +1,21 @@
+# Azure OpenAI Single Agent Configuration
+# Usage: uv run python -m massgen.cli --config azure_openai_single.yaml "Your question here"
+
+# Single agent configuration
+agent:
+  id: "azure_gpt4_agent"
+  backend:
+    type: "azure_openai"
+    model: "gpt-4.1"  # This should be your Azure OpenAI deployment name
+    # Optional: override environment variables
+    # base_url: "https://your-resource.openai.azure.com/"
+    # api_key: "your-api-key"
+    # api_version: "2024-02-15-preview"
+    # enable_web_search: true
+    # enable_code_interpreter: true
+  system_message: "You are a helpful AI assistant powered by Azure OpenAI."
+
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
