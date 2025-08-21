@@ -252,10 +252,11 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **API-based backends:**
 ```bash
-uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "How hard is IMO?"
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest "When is your knowledge up to"
+uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"
+uv run python -m massgen.cli --model grok-3-mini "When is your knowledge up to"
+uv run python -m massgen.cli --model gpt-5-nano "When is your knowledge up to"
+uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "When is your knowledge up to"
 ```
 
 All the models with a default backend can be found [here](massgen/utils.py).
@@ -517,7 +518,7 @@ timeout_settings:
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
 
 ```bash
-# Start interactive mode with a single agent
+# Start interactive mode with a single agent (no tool enabled by default)
 uv run python -m massgen.cli --model gpt-5-mini
 
 # Start interactive mode with configuration file
