@@ -942,9 +942,10 @@
                 
                 # 3. Run single agent (quick test)<br>
                 uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
+                uv run python -m massgen.cli --config single_flash2.5.yaml "Summarize latest news of github.com/Leezekun/MassGen"
                 
                 # 4. Run multi-agent collaboration<br>
-                uv run python -m massgen.cli --config three_agents_default.yaml "Report recent news of MassGen"
+                uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
                 <div style="text-align: center; padding: 20px; background: rgba(46, 204, 113, 0.1); border-radius: 15px;">
