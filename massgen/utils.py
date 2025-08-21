@@ -2,7 +2,6 @@ MODEL_MAPPINGS = {
     "openai": [
         # GPT-5 variants
         "gpt-5",
-        "gpt-5-chat",
         "gpt-5-mini",
         "gpt-5-nano",
         # GPT-4.1 variants
