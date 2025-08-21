@@ -975,7 +975,7 @@ class ClaudeCodeBackend(LLMBackend):
             **{k: v for k, v in options_kwargs.items() if k not in excluded_params},
         )
 
-    def create_client(self, **options_kwargs) -> ClaudeSDKClient:
+    async def create_client(self, **options_kwargs) -> ClaudeSDKClient:
         """Create ClaudeSDKClient with configurable parameters.
 
         Args:
@@ -989,6 +989,10 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Create ClaudeSDKClient with configured options
         self._client = ClaudeSDKClient(options)
+
+        # Initialize MCP servers once when creating client
+        if not self._mcp_initialized:
+            await self._init_mcp_servers()
 
         return self._client
 
@@ -1043,18 +1047,18 @@ class ClaudeCodeBackend(LLMBackend):
                     print(f"[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
                     clean_params = {k: v for k, v in all_params.items() 
                                   if k not in ["system_prompt", "append_system_prompt"]}
-                    client = self.create_client(**clean_params)
+                    client = await self.create_client(**clean_params)
                     self._pending_system_prompt = workflow_system_prompt
                     self._original_system_mode = all_params.get("system_prompt", False)
                 else:
                     # Original approach for Mac/Linux and Windows with simple prompts
                     try:
                         if all_params.get("system_prompt"):
-                            client = self.create_client(
+                            client = await self.create_client(
                                 system_prompt=workflow_system_prompt, **all_params
                             )
                         else:
-                            client = self.create_client(
+                            client = await self.create_client(
                                 append_system_prompt=workflow_system_prompt, **all_params
                             )
                         self._pending_system_prompt = None
@@ -1065,7 +1069,7 @@ class ClaudeCodeBackend(LLMBackend):
                             print(f"[ClaudeCodeBackend] Windows client creation failed, using post-connection delivery: {create_error}")
                             clean_params = {k: v for k, v in all_params.items() 
                                           if k not in ["system_prompt", "append_system_prompt"]}
-                            client = self.create_client(**clean_params)
+                            client = await self.create_client(**clean_params)
                             self._pending_system_prompt = workflow_system_prompt
                             self._original_system_mode = all_params.get("system_prompt", False)
                         else:
