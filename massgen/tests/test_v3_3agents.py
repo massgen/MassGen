@@ -29,7 +29,7 @@ from massgen.frontend.coordination_ui import coordinate_with_terminal_ui
 
 async def three_agent_example():
     """Demonstrate three agent coordination with multi-region UI."""
-    
+
     print("🎯 MassGen: Three Agent Coordination")
     print("=" * 50)
 

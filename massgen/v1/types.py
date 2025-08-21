@@ -94,9 +94,9 @@ class AgentState:
     updated_answers: List[AnswerRecord] = field(
         default_factory=list
     )  # a list of answer records
-    curr_vote: Optional[VoteRecord] = (
-        None  # Which agent's solution this agent voted for
-    )
+    curr_vote: Optional[
+        VoteRecord
+    ] = None  # Which agent's solution this agent voted for
     cast_votes: List[VoteRecord] = field(default_factory=list)  # a list of vote records
     seen_updates_timestamps: Dict[int, float] = field(
         default_factory=dict

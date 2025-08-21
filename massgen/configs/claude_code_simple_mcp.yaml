@@ -1,0 +1,35 @@
+agent:
+  id: "claude_code_simple_mcp"
+  backend:
+    type: "claude_code"
+    cwd: "claude_code_simple_mcp_workspace"
+    permission_mode: "bypassPermissions"
+    
+    # Simple MCP server for testing
+    mcp_servers:
+      test:
+        type: "stdio"
+        command: "python3"
+        args: ["../mcp_servers/simple_test_server.py"]
+        
+    allowed_tools:
+      - "Read"
+      - "Write"
+      - "Bash"
+      - "LS"
+      - "WebSearch"
+      # MCP tools auto-discovered
+      
+  system_message: |
+    You are testing MCP integration with Claude Code.
+    
+    You have access to a simple MCP test server with these tools:
+    - mcp__test__echo: Echo back text
+    - mcp__test__add_numbers: Add two numbers
+    - mcp__test__get_current_time: Get current timestamp
+    
+    Please test these MCP tools to verify the integration is working.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
