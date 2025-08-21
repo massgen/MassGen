@@ -166,7 +166,8 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError(
                 "Gemini API key not found. Set GOOGLE_API_KEY or provide in config."
             )
-        return GeminiBackend(api_key=api_key)
+        # Pass through all backend params (model, tool flags, mcp settings, etc.)
+        return GeminiBackend(api_key=api_key, **{k: v for k, v in kwargs.items() if k != "type"})
 
     elif backend_type == "chatcompletion":
         api_key = kwargs.get("api_key")

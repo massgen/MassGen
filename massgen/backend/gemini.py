@@ -21,6 +21,7 @@ TECHNICAL SOLUTION:
 import os
 import json
 import enum
+import logging
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
 
@@ -29,6 +30,17 @@ try:
 except ImportError:
     BaseModel = None
     Field = None
+
+# MCP integration imports
+try:
+    from ..mcp_tools import MultiMCPClient, MCPError, MCPConnectionError
+except ImportError:  # MCP not installed; only error if mcp_servers are used
+    MultiMCPClient = None  # type: ignore[assignment]
+    MCPError = ImportError  # type: ignore[assignment]
+    MCPConnectionError = ImportError  # type: ignore[assignment]
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 
 class VoteOption(enum.Enum):
@@ -80,9 +92,9 @@ class CoordinationResponse(BaseModel):
 
 
 class GeminiBackend(LLMBackend):
-    """Google Gemini backend using structured output for coordination."""
+    """Google Gemini backend using structured output for coordination and MCP tool integration."""
 
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
+    def __init__(self, api_key: Optional[str] = None, mcp_servers: Optional[List[Dict[str, Any]]] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         self.api_key = (
             api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -90,10 +102,73 @@ class GeminiBackend(LLMBackend):
         self.search_count = 0
         self.code_execution_count = 0
 
+        # MCP integration (SDK sessions only; manual mode removed)
+        self.mcp_servers = mcp_servers or []
+        self._mcp_client: Optional[MultiMCPClient] = None
+        self._mcp_initialized = False
+
         if BaseModel is None:
             raise ImportError(
                 "pydantic is required for Gemini backend. Install with: pip install pydantic"
             )
+
+    def _normalize_mcp_servers(self) -> List[Dict[str, Any]]:
+        """Validate and normalize mcp_servers into a list of dicts."""
+        servers = self.mcp_servers
+        if not servers:
+            return []
+        if isinstance(servers, dict):
+            return [servers]
+        if not isinstance(servers, list):
+            raise ValueError(f"mcp_servers must be a list or dict, got {type(servers).__name__}")
+        normalized: List[Dict[str, Any]] = []
+        for idx, entry in enumerate(servers):
+            if not isinstance(entry, dict):
+                raise ValueError(f"MCP server configuration at index {idx} must be a dictionary, got {type(entry).__name__}")
+            normalized.append(entry)
+        return normalized
+
+    async def _setup_mcp_tools(self) -> None:
+        """Initialize MCP client (sessions only)."""
+        if not self.mcp_servers or self._mcp_initialized:
+            return
+
+        if MultiMCPClient is None:
+            raise ImportError("MCP support is not installed but mcp_servers were provided. Install MCP dependencies.")
+
+        try:
+            normalized_servers = self._normalize_mcp_servers()
+            logger.info(f"Setting up MCP sessions with {len(normalized_servers)} servers")
+            self._mcp_client = await MultiMCPClient.create_and_connect(
+                normalized_servers,
+                timeout_seconds=30
+            )
+
+            self._mcp_initialized = True
+            logger.info("Successfully initialized MCP sessions")
+
+        except Exception as e:
+            logger.warning(f"Failed to setup MCP sessions: {e}")
+            self._mcp_client = None
+
+    # Manual MCP tool declaration conversion removed (sessions only)
+
+    # Manual MCP tool execution removed (sessions only)
+
+    def _detect_tool_types(self, tools: List[Dict[str, Any]]) -> Dict[str, List[str]]:
+        """Categorize tools into coordination and other types (MCP manual mode removed)."""
+        coordination_tools: List[str] = []
+        other_tools: List[str] = []
+        if not tools:
+            return {"coordination": coordination_tools, "other": other_tools}
+        for tool in tools:
+            if tool.get("type") == "function":
+                name = tool.get("function", {}).get("name") or tool.get("name", "")
+                if name in ["vote", "new_answer"]:
+                    coordination_tools.append(name)
+                else:
+                    other_tools.append(name)
+        return {"coordination": coordination_tools, "other": other_tools}
 
     def detect_coordination_tools(self, tools: List[Dict[str, Any]]) -> bool:
         """Detect if tools contain vote/new_answer coordination tools."""
@@ -241,7 +316,7 @@ Make your decision and include the JSON at the very end of your response."""
             vote_data = structured_response.get("vote_data", {})
             return [
                 {
-                    "id": f"vote_{hash(str(vote_data)) % 10000}",
+                    "id": f"vote_{abs(hash(str(vote_data))) % 10000 + 1}",
                     "type": "function",
                     "function": {
                         "name": "vote",
@@ -257,7 +332,7 @@ Make your decision and include the JSON at the very end of your response."""
             answer_data = structured_response.get("answer_data", {})
             return [
                 {
-                    "id": f"new_answer_{hash(str(answer_data)) % 10000}",
+                    "id": f"new_answer_{abs(hash(str(answer_data))) % 10000 + 1}",
                     "type": "function",
                     "function": {
                         "name": "new_answer",
@@ -271,9 +346,12 @@ Make your decision and include the JSON at the very end of your response."""
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using Gemini API with structured output for coordination."""
+        """Stream response using Gemini API with structured output for coordination and MCP tool support."""
         try:
             from google import genai
+
+            # Setup MCP tools if not already initialized
+            await self._setup_mcp_tools()
 
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
@@ -282,8 +360,13 @@ Make your decision and include the JSON at the very end of your response."""
             enable_web_search = all_params.get("enable_web_search", False)
             enable_code_execution = all_params.get("enable_code_execution", False)
 
-            # Check if this is a coordination request
-            is_coordination = self.detect_coordination_tools(tools)
+            # Always use SDK MCP sessions when mcp_servers are configured
+            using_sdk_mcp = bool(self.mcp_servers)
+
+            # Analyze tool types
+            tool_types = self._detect_tool_types(tools)
+            is_coordination = len(tool_types.get("coordination", [])) > 0
+
             valid_agent_ids = None
 
             if is_coordination:
@@ -301,17 +384,22 @@ Make your decision and include the JSON at the very end of your response."""
                                 valid_agent_ids = agent_id_param["enum"]
                             break
 
-            # Build content string from messages
+            # Build content string from messages (include tool results for multi-turn tool calling)
             conversation_content = ""
             system_message = ""
 
             for msg in messages:
-                if msg.get("role") == "system":
+                role = msg.get("role")
+                if role == "system":
                     system_message = msg.get("content", "")
-                elif msg.get("role") == "user":
+                elif role == "user":
                     conversation_content += f"User: {msg.get('content', '')}\n"
-                elif msg.get("role") == "assistant":
+                elif role == "assistant":
                     conversation_content += f"Assistant: {msg.get('content', '')}\n"
+                elif role == "tool":
+                    # Ensure tool outputs are visible to the model on the next turn
+                    tool_output = msg.get("content", "")
+                    conversation_content += f"Tool Result: {tool_output}\n"
 
             # For coordination requests, modify the prompt to use structured output
             if is_coordination:
@@ -328,41 +416,43 @@ Make your decision and include the JSON at the very end of your response."""
             # Use google-genai package
             client = genai.Client(api_key=self.api_key)
 
-            # Setup builtin tools
+            # Setup builtin tools (only when not using SDK MCP sessions)
             builtin_tools = []
-            if enable_web_search:
-                try:
-                    from google.genai import types
+            if not using_sdk_mcp:
+                if enable_web_search:
+                    try:
+                        from google.genai import types
 
-                    grounding_tool = types.Tool(google_search=types.GoogleSearch())
-                    builtin_tools.append(grounding_tool)
-                except ImportError:
-                    yield StreamChunk(
-                        type="content",
-                        content="\n⚠️  Web search requires google.genai.types\n",
-                    )
+                        grounding_tool = types.Tool(google_search=types.GoogleSearch())
+                        builtin_tools.append(grounding_tool)
+                    except ImportError:
+                        yield StreamChunk(
+                            type="content",
+                            content="\n⚠️  Web search requires google.genai.types\n",
+                        )
 
-            if enable_code_execution:
-                try:
-                    from google.genai import types
+                if enable_code_execution:
+                    try:
+                        from google.genai import types
 
-                    code_tool = types.Tool(code_execution=types.ToolCodeExecution())
-                    builtin_tools.append(code_tool)
-                except ImportError:
-                    yield StreamChunk(
-                        type="content",
-                        content="\n⚠️  Code execution requires google.genai.types\n",
-                    )
+                        code_tool = types.Tool(code_execution=types.ToolCodeExecution())
+                        builtin_tools.append(code_tool)
+                    except ImportError:
+                        yield StreamChunk(
+                            type="content",
+                            content="\n⚠️  Code execution requires google.genai.types\n",
+                        )
+
+            # Manual MCP function declarations removed
 
             # Build config with direct parameter passthrough
             config = {}
 
             # Direct passthrough of all parameters except those handled separately
             excluded_params = {
-                "enable_web_search",
-                "enable_code_execution",
-                "agent_id",
-                "session_id",
+                "enable_web_search", "enable_code_execution", "agent_id", "session_id",
+                # MCP-specific parameters that should not be passed to Gemini
+                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto"
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
@@ -374,77 +464,139 @@ Make your decision and include the JSON at the very end of your response."""
                     else:
                         config[key] = value
 
-            # Add builtin tools to config
-            if builtin_tools:
-                config["tools"] = builtin_tools
+            # Setup tools configuration (builtins only when not using sessions)
+            all_tools = []
 
-            # For coordination requests, use JSON response format (may conflict with builtin tools)
-            if is_coordination and not builtin_tools:
-                config["response_mime_type"] = "application/json"
-                config["response_schema"] = CoordinationResponse.model_json_schema()
-            elif is_coordination and builtin_tools:
-                # Cannot use structured output with builtin tools - fallback to text parsing
-                pass
+            # Branch 1: SDK auto-calling via MCP sessions (reuse existing MultiMCPClient sessions)
+            if using_sdk_mcp and self.mcp_servers:
+                if not self._mcp_client or not getattr(self._mcp_client, "is_connected", lambda: False)():
+                    # Ensure MultiMCPClient is connected and sessions are initialized
+                    try:
+                        # If MCP is not installed, this will raise ImportError earlier in _setup_mcp_tools
+                        self._mcp_client = await MultiMCPClient.create_and_connect(
+                            self.mcp_servers,
+                            timeout_seconds=30
+                        )
+                    except Exception as _e:
+                        yield StreamChunk(type="content", content="\n⚠️  MCP connection failed; continuing without MCP tools\n")
+                        using_sdk_mcp = False
+
+            # If not using SDK MCP, include builtin tools only
+            if not using_sdk_mcp:
+                all_tools.extend(builtin_tools)
+                if all_tools:
+                    config["tools"] = all_tools
+
+            # For coordination requests, use JSON response format (may conflict with tools/sessions)
+            if is_coordination:
+                # Only request JSON schema when no tools are present
+                if (not using_sdk_mcp) and (not all_tools):
+                    config["response_mime_type"] = "application/json"
+                    config["response_schema"] = CoordinationResponse.model_json_schema()
+                else:
+                    # Tools or sessions are present; fallback to text parsing
+                    pass
 
             # Use streaming for real-time response
             full_content_text = ""
             final_response = None
 
-            for chunk in client.models.generate_content_stream(
-                model=model_name, contents=full_content, config=config
-            ):
-                if hasattr(chunk, "text") and chunk.text:
-                    chunk_text = chunk.text
-                    full_content_text += chunk_text
-                    yield StreamChunk(type="content", content=chunk_text)
+            async def _stream_with_config(active_config: Dict[str, Any]):
+                nonlocal full_content_text, final_response
+                for chunk in client.models.generate_content_stream(
+                    model=model_name, contents=full_content, config=active_config
+                ):
+                    if hasattr(chunk, "text") and chunk.text:
+                        chunk_text = chunk.text
+                        full_content_text += chunk_text
+                        yield StreamChunk(type="content", content=chunk_text)
 
-                # Keep track of the final response for tool processing
-                if hasattr(chunk, "candidates"):
-                    final_response = chunk
+                    # Keep track of the final response for tool processing
+                    if hasattr(chunk, "candidates"):
+                        final_response = chunk
 
-                # Check for tools used in each chunk for real-time detection
-                if builtin_tools and hasattr(chunk, "candidates") and chunk.candidates:
-                    candidate = chunk.candidates[0]
+                    # Check for tools used in each chunk for real-time detection (manual MCP path only)
+                    if (not using_sdk_mcp) and builtin_tools and hasattr(chunk, "candidates") and chunk.candidates:
+                        candidate = chunk.candidates[0]
 
-                    # Check for code execution in this chunk
-                    if (
-                        enable_code_execution
-                        and hasattr(candidate, "content")
-                        and hasattr(candidate.content, "parts")
-                    ):
-                        for part in candidate.content.parts:
-                            if (
-                                hasattr(part, "executable_code")
-                                and part.executable_code
-                            ):
-                                code_content = getattr(
-                                    part.executable_code,
-                                    "code",
-                                    str(part.executable_code),
-                                )
-                                yield StreamChunk(
-                                    type="content",
-                                    content=f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n",
-                                )
-                            elif (
-                                hasattr(part, "code_execution_result")
-                                and part.code_execution_result
-                            ):
-                                result_content = getattr(
-                                    part.code_execution_result,
-                                    "output",
-                                    str(part.code_execution_result),
-                                )
-                                yield StreamChunk(
-                                    type="content",
-                                    content=f"📊 [Result] {result_content}\n",
-                                )
+                        # Check for code execution in this chunk
+                        if (
+                            enable_code_execution
+                            and hasattr(candidate, "content")
+                            and hasattr(candidate.content, "parts")
+                        ):
+                            for part in candidate.content.parts:
+                                if (
+                                    hasattr(part, "executable_code")
+                                    and part.executable_code
+                                ):
+                                    code_content = getattr(
+                                        part.executable_code,
+                                        "code",
+                                        str(part.executable_code),
+                                    )
+                                    yield StreamChunk(
+                                        type="content",
+                                        content=f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n",
+                                    )
+                                elif (
+                                    hasattr(part, "code_execution_result")
+                                    and part.code_execution_result
+                                ):
+                                    result_content = getattr(
+                                        part.code_execution_result,
+                                        "output",
+                                        str(part.code_execution_result),
+                                    )
+                                    yield StreamChunk(
+                                        type="content",
+                                        content=f"📊 [Result] {result_content}\n",
+                                    )
+
+            # Execute the request, supporting optional SDK MCP sessions
+            if using_sdk_mcp and self.mcp_servers:
+                # Reuse active sessions from MultiMCPClient
+                try:
+                    if not self._mcp_client:
+                        raise RuntimeError("MCP client not initialized")
+                    mcp_sessions = self._mcp_client.get_active_sessions()
+                    if not mcp_sessions:
+                        raise RuntimeError("No active MCP sessions available")
+
+                    # Apply sessions as tools, do not mix with builtin or function_declarations
+                    session_config = dict(config)
+                    session_config["tools"] = mcp_sessions
+
+                    # Use async non-streaming call with sessions (SDK supports auto-calling MCP here)
+                    response = await client.aio.models.generate_content(
+                        model=model_name, contents=full_content, config=session_config
+                    )
+                    if hasattr(response, "text") and response.text:
+                        full_content_text += response.text
+                        yield StreamChunk(type="content", content=response.text)
+                    # Track final response for any post-processing (builtins off in this mode)
+                    final_response = response
+                except Exception as e:
+                    # Continue without MCP tools
+                    yield StreamChunk(type="content", content=f"\n⚠️  MCP SDK session failed ({e}); continuing without MCP tools\n")
+                    # Build non-MCP configuration and stream
+                    manual_config = dict(config)
+                    if all_tools:
+                        manual_config["tools"] = all_tools
+                    async for schunk in _stream_with_config(manual_config):
+                        yield schunk
+            else:
+                # Non-MCP path (existing behavior)
+                async for schunk in _stream_with_config(config):
+                    yield schunk
 
             content = full_content_text
 
-            # Process coordination FIRST (before adding tool indicators that might confuse parsing)
-            tool_calls_detected = []
-            if is_coordination and content.strip():
+            # Process tool calls - only coordination tool calls (MCP manual mode removed)
+            tool_calls_detected: List[Dict[str, Any]] = []
+
+            # Then, process coordination tools if present
+            if is_coordination and content.strip() and not tool_calls_detected:
                 # For structured output mode, the entire content is JSON
                 structured_response = None
                 # Try multiple parsing strategies
@@ -469,7 +621,8 @@ Make your decision and include the JSON at the very end of your response."""
 
             # Process builtin tool results if any tools were used
             if (
-                builtin_tools
+                not using_sdk_mcp
+                and builtin_tools
                 and final_response
                 and hasattr(final_response, "candidates")
                 and final_response.candidates
@@ -643,3 +796,33 @@ Make your decision and include the JSON at the very end of your response."""
         self.search_count = 0
         self.code_execution_count = 0
         super().reset_token_usage()
+
+    async def cleanup_mcp(self):
+        """Cleanup MCP connections."""
+        if self._mcp_client:
+            try:
+                await self._mcp_client.disconnect()
+                logger.info("MCP client disconnected successfully")
+            except Exception as e:
+                logger.warning(f"Error disconnecting MCP client: {e}")
+            finally:
+                self._mcp_client = None
+                self._mcp_initialized = False
+
+    def get_mcp_tool_info(self) -> Dict[str, Any]:
+        """Get information about available MCP tools."""
+        return {
+            "initialized": self._mcp_initialized,
+            "server_count": len(self.mcp_servers),
+            # In session-only mode, tool listing is not exposed at backend level
+            "tool_count": 0,
+            "available_tools": []
+        }
+        
+    def create_tool_result_message(self, tool_call: Dict[str, Any], result: str) -> Dict[str, Any]:
+        """Create a tool result message for the agent."""
+        return {
+            "role": "tool",
+            "tool_call_id": tool_call.get("id", ""),
+            "content": result
+        }
