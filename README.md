@@ -287,6 +287,7 @@ uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding 
 # MCP-enabled configurations (NEW in v0.0.9)
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
+uv run python -m massgen.cli --config claude_code_paper_search_mcp.yaml "search 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in a md file"
 
 # Hybrid local and API-based models (NEW in v0.0.7)
 uv run python -m massgen.cli --config two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
@@ -295,7 +296,7 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 
 All available quick configuration files can be found [here](massgen/configs).
 
-See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md)
+See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | [paper-search-mcp](https://github.com/openags/paper-search-mcp)
 
 #### CLI Configuration Parameters
 
