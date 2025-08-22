@@ -12,3 +12,7 @@ cerebras-cloud-sdk==1.46.0
 lmstudio==1.4.1
 mcp>=1.12.0
 aiohttp>=3.8.0
+requests>=2.31.0
+typing-extensions>=4.0.0
+claude-code-sdk>=0.0.19
+paper-search-mcp>=0.1.3

@@ -315,7 +315,7 @@ class ResponseBackend(LLMBackend):
                                         code = item.get("code", "")
                                         outputs = item.get("outputs")
                                         content = (
-                                            f"🔧 Code Interpreter [{status.title()}]"
+                                            f"\n🔧 Code Interpreter [{status.title()}]"
                                         )
                                         if code:
                                             content += f": {code}"
@@ -328,19 +328,21 @@ class ResponseBackend(LLMBackend):
                                     elif item.get("type") == "web_search_call":
                                         # Web search result
                                         status = item.get("status", "unknown")
-                                        query = item.get("query", "")
+                                        # Query is in action.query, not directly in item
+                                        query = item.get("action", {}).get("query", "")
                                         results = item.get("results")
-                                        content = (
-                                            f"🔧 Web Search [{status.title()}]: {query}"
-                                        )
-                                        if results:
-                                            content += (
-                                                f" → Found {len(results)} results"
-                                            )
 
-                                        yield StreamChunk(
-                                            type="content", content=content
-                                        )
+                                        # Only show web search completion if query is present
+                                        if query:
+                                            content = f"\n🔧 Web Search [{status.title()}]: {query}"
+                                            if results:
+                                                content += (
+                                                    f" → Found {len(results)} results"
+                                                )
+
+                                            yield StreamChunk(
+                                                type="tool", content=content
+                                            )
 
                             # Yield the complete response for internal use
                             yield StreamChunk(

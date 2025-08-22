@@ -1525,7 +1525,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 # Add option to show final presentation if it's stored
                 if self._stored_final_presentation and self._stored_presentation_agent:
                     options_text.append(
-                        f"  f: Show final presentation from Selected Agent ({agent_id})\n",
+                        f"  f: Show final presentation from Selected Agent ({self._stored_presentation_agent})\n",
                         style=self.colors["success"],
                     )
 
@@ -2290,9 +2290,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
             if has_emoji:
                 # Format with newline and timestamp when emojis are present
-                formatted_content = (
-                    f"\n[{timestamp}] [{content_type.upper()}] {content}\n"
-                )
+                formatted_content = f"\n[{timestamp}] {content}\n"
             else:
                 # Regular format without extra newline
                 formatted_content = f"{content}"

@@ -64,7 +64,7 @@ def get_backend_type_from_model(model: str) -> str:
         model: The model name (e.g., "gpt-4", "gemini-pro", "grok-1")
 
     Returns:
-        Agent type string ("openai", "gemini", "grok")
+        Agent type string ("openai", "gemini", "grok", etc.)
     """
     if not model:
         return "openai"  # Default to OpenAI

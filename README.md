@@ -89,15 +89,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.9](#recent-achievements-v009)
-  - [v0.0.3 - v0.0.8](#previous-achievements-v003-v008)
+  - [v0.0.10](#recent-achievements-v0010)
+  - [v0.0.3 - v0.0.9](#previous-achievements-v003-v009)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.10 Roadmap](#v0010-roadmap)
+- [v0.0.11 Roadmap](#v0011-roadmap)
 </details>
 
 <details open>
@@ -199,6 +199,7 @@ cp .env.example .env
 ```
 
 **Useful links to get API keys:**
+ - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
  - [Cerebras](https://inference-docs.cerebras.ai/introduction)
  - [Claude](https://docs.anthropic.com/en/api/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
@@ -213,6 +214,7 @@ cp .env.example .env
 The system currently supports multiple model providers with advanced capabilities:
 
 **API-based Models:**
+- **Azure OpenAI** (NEW in v0.0.10): GPT-4, GPT-4o, GPT-3.5-turbo, GPT-4.1, GPT-5-chat
 - **Cerebras AI**: GPT-OSS-120B...
 - **Claude**: Claude Haiku 3.5, Claude Sonnet 4, Claude Opus 4...
 - **Claude Code**: Native Claude Code SDK with comprehensive dev tools
@@ -239,6 +241,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 | Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
 | **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ❌ | ❌ | Web search, code execution |
@@ -252,10 +255,15 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **API-based backends:**
 ```bash
-uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "How hard is IMO?"
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest "When is your knowledge up to"
+uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"
+uv run python -m massgen.cli --model grok-3-mini "When is your knowledge up to"
+uv run python -m massgen.cli --model gpt-5-nano "When is your knowledge up to"
+
+uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "When is your knowledge up to"
+
+# Azure OpenAI (NEW in v0.0.10, requires environment variables)
+uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "When is your knowledge up to"
 ```
 
 All the models with a default backend can be found [here](massgen/utils.py).
@@ -278,12 +286,17 @@ uv run python -m massgen.cli --backend claude_code "Debug this Python script"
 #### Multiple Agents from Config
 ```bash
 # Use configuration file
-uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
+uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
 
 # Mixed API and CLI backends
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 
+# Azure OpenAI configurations (NEW in v0.0.10)
+uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine learning?"
+uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
+
 # MCP-enabled configurations (NEW in v0.0.9)
+uv run python -m massgen.cli --config gpt5_claude_code_paper_search_mcp.yaml "search 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in a md file"
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
 
@@ -294,14 +307,14 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 
 All available quick configuration files can be found [here](massgen/configs).
 
-See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md)
+See MCP server setup guides: [paper-search-mcp](https://github.com/openags/paper-search-mcp) | [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | 
 
 #### CLI Configuration Parameters
 
 | Parameter          | Description |
 |-------------------|-------------|
 | `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `zai`). Optional for [models with default backends](massgen/utils.py).|
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `azure_openai`, `zai`). Optional for [models with default backends](massgen/utils.py).|
 | `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). `--config` and `--model` are mutually exclusive - use one or the other. |
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
@@ -321,7 +334,7 @@ Use the `agent` field to define a single agent with its backend and settings:
 agent: 
   id: "<agent_name>"
   backend:
-    type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend 
+    type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend 
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -335,7 +348,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
     backend: 
-      type: "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend
+      type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" |  "zai" | "lmstudio" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
     system_message: "..."    # System Message for Single Agent
@@ -404,6 +417,20 @@ backend:
   #   search_parameters:
   #     mode: "auto"                 # Search strategy (see Grok API docs for valid values)
   #     return_citations: true       # Include search result citations 
+```
+
+#### Azure OpenAI
+
+```yaml
+backend:
+  type: "azure_openai"
+  model: "gpt-4.1"                     # Azure OpenAI deployment name
+  base_url: "https://your-resource.openai.azure.com/"  # Azure OpenAI endpoint
+  api_key: "<optional_key>"          # API key for backend. Uses AZURE_OPENAI_API_KEY env var by default.
+  api_version: "2024-02-15-preview" # Azure OpenAI API version
+  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
+  max_tokens: 2500                   # Maximum response length
+  enable_code_interpreter: true      # Code interpreter capability
 ```
 
 #### OpenAI
@@ -517,7 +544,7 @@ timeout_settings:
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
 
 ```bash
-# Start interactive mode with a single agent
+# Start interactive mode with a single agent (no tool enabled by default)
 uv run python -m massgen.cli --model gpt-5-mini
 
 # Start interactive mode with configuration file
@@ -617,7 +644,28 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.9)
+### Recent Achievements (v0.0.10)
+
+✅ **Azure OpenAI Support**: Integration with Azure OpenAI services
+- New Azure OpenAI backend with async streaming capabilities
+- Support for Azure-hosted GPT-4.1 and GPT-5-chat models
+- Configuration examples for single and multi-agent Azure setups
+
+✅ **Enhanced Claude Code Backend**: Major refactoring and improvements
+- Simplified MCP (Model Context Protocol) integration
+- Removed redundant MCP components for cleaner architecture
+
+✅ **Final Presentation Support**: New orchestrator presentation capabilities for Azure OpenAI backend
+- Support for final answer presentation in multi-agent scenarios 
+- Fallback mechanisms for presentation generation
+- Test coverage for presentation functionality
+
+✅ **Improved Backend Architecture**: Significant refactoring of backend systems
+- Consolidated Azure OpenAI implementation using AsyncAzureOpenAI
+- Enhanced async support across all backends
+- Improved error handling and streaming capabilities
+
+### Previous Achievements (v0.0.3-v0.0.9)
 
 ✅ **MCP (Model Context Protocol) Support for Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
 - New MCP module with client implementation and transport layer
@@ -627,8 +675,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 ✅ **Multi-Agent MCP Examples**: New configuration files demonstrating MCP integration
 - Discord and Twitter integration via MCP
 - Multi-agent setups with MCP-enabled tools
-
-### Previous Achievements (v0.0.3-v0.0.8)
 
 ✅ **Timeout Management System**: Timeout capabilities for better control and time management
 - Orchestrator-level timeout with graceful fallback
@@ -652,7 +698,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Key Future Enhancements:
 
--   **Claude Code Context Sharing:** Enabling seamless context transmission between Claude Code agents and other models (v0.0.10)
+-   **Claude Code Context Sharing:** Enabling seamless Claude code agents context sharing and other models (v0.0.11)
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
@@ -661,16 +707,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.10 Roadmap
+### v0.0.11 Roadmap
 
-Version 0.0.10 focuses on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
+Version 0.0.11 focuses on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
 
 - **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
 - **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
 - **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.10 roadmap](ROADMAP_v0.0.10.md).
+For detailed milestones and technical specifications, see the [full v0.0.11 roadmap](ROADMAP_v0.0.11.md).
 
 ---
 

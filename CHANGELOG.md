@@ -5,39 +5,89 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.9] - 2025-08-20
+## [0.0.10] - 2025-08-22
 
 ### Added
-- **MCP (Model Context Protocol) Support in Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
-  - New `mcp` module with client implementation and transport layer
-  - MCP client for connecting to external tool servers
-  - Exception handling and transport management for MCP connections
-  - Support for MCP-based tool integration in Claude Code backend
-- **Multi-Agent MCP Examples**: New configuration files demonstrating MCP integration
-  - `claude_code_discord_mcp_example.yaml`: Discord integration via MCP
-  - `claude_code_twitter_mcp_example.yaml`: Twitter integration via MCP
-  - `gpt5mini_claude_code_discord_mcp_example.yaml`: Multi-agent Discord setup with GPT-5-mini and Claude Code
+- **Azure OpenAI Support**: Integration with Azure OpenAI services
+  - New `azure_openai.py` backend with async streaming capabilities
+  - Support for Azure-hosted GPT-4.1 and GPT-5-chat models
+  - Configuration examples for single and multi-agent Azure setups
+  - Test suite for Azure OpenAI functionality
+- **Enhanced Claude Code Backend**: Major refactoring and improvements
+  - Simplified MCP (Model Context Protocol) integration
+- **Final Presentation Support**: New orchestrator presentation capabilities
+  - Support for final answer presentation in multi-agent scenarios
+  - Fallback mechanisms for presentation generation
+  - Test coverage for presentation functionality
+
+### Fixed
+- **Claude Code MCP**: Cleaned up and simplified MCP implementation
+  - Removed redundant MCP server and transport modules
+- **Configuration Management**: Improved YAML configuration handling
+  - Fixed Azure OpenAI deployment configurations
+  - Updated model mappings for Azure services
+
+### Changed
+- **Backend Architecture**: Significant refactoring of backend systems
+  - Consolidated Azure OpenAI implementation using AsyncAzureOpenAI
+  - Improved error handling and streaming capabilities
+  - Enhanced async support across all backends
+- **Documentation Updates**: Enhanced project documentation
+  - Updated README with Azure OpenAI setup instructions
+  - Renamed roadmap from v0.0.10 to v0.0.11
+  - Improved presentation materials for DataHack Summit 2025
+- **Test Infrastructure**: Expanded test coverage
+  - Added comprehensive Azure OpenAI backend tests
+  - Integration tests for final presentation functionality
+  - Simplified test structure with better coverage
+
+### Removed
+- **Deprecated MCP Components**: Removed unused MCP modules
+  - Removed standalone MCP client, transport, and server implementations
+  - Cleaned up MCP test files and testing checklist
+  - Simplified Claude Code backend by removing redundant MCP code
+
+### Technical Details
+- **Commits**: 35+ commits including Azure OpenAI integration and Claude Code improvements
+- **Files Modified**: 30+ files across backend, configuration, tests, and documentation
+- **New Backend**: Azure OpenAI backend with full async support
+- **Contributors**: @qidanrui @Leezekun @sonichi and the MassGen team
+
+## [0.0.9] - 2025-08-22
+
+### Added
+- **Quick Start Guide**: Comprehensive quickstart documentation in README
+  - Streamlined setup instructions for new users
+  - Example configurations for getting started quickly
+  - Clear installation and usage steps
+- **Multi-Agent Configuration Examples**: New configuration files for various setups
+  - Paper search configuration with GPT-5 and Claude Code
+  - Multi-agent setups with different model combinations
 - **Roadmap Documentation**: Added comprehensive roadmap for version 0.0.10
   - Focused on Claude Code context sharing between agents
   - Multi-agent context synchronization planning
   - Enhanced backend features and CLI improvements roadmap
 
+### Fixed
+- **Web Search Processing**: Fixed bug in response handling for web search functionality
+  - Improved error handling in web search responses
+  - Better streaming of search results
+- **Rich Terminal Display**: Fixed rendering issues in terminal UI
+  - Resolved display formatting problems
+  - Improved message rendering consistency
+
 ### Changed
-- **Configuration Management**: Enhanced configuration files for better multi-agent support
-  - Updated agent configuration handling for MCP integration
-  - Improved error handling in configuration loading
-- **Backend Enhancements**: Updates to support MCP integration
-  - Enhanced Claude Code backend with MCP tool support
-  - Updated CLI for handling MCP-based configurations
+- **Claude Code Integration**: Optimized Claude Code implementation
+  - MCP (Model Context Protocol) integration
+  - Streamlined Claude Code backend configuration
 - **Documentation Updates**: Enhanced project documentation
-  - Updated README with MCP integration information
+  - Updated README with quickstart guide
   - Added CONTRIBUTING.md guidelines
+  - Improved configuration examples
 
 ### Technical Details
-- **Commits**: 5 commits including MCP integration and multi-agent examples
-- **Files Modified**: 30+ files across backend, MCP module, configurations, and documentation
-- **New Module**: MCP (Model Context Protocol) implementation for Claude Code Agent
-- **New Dependencies**: MCP client libraries for tool server integration
+- **Commits**: 10 commits including bug fixes, code cleanup, and documentation updates
+- **Files Modified**: Multiple files across backend, configurations, and documentation
 - **Contributors**: @qidanrui @sonichi @Leezekun @voidcenter @JeffreyCh0 @stellaxiang
 
 ## [0.0.8] - 2025-08-18
