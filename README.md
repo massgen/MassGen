@@ -89,6 +89,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
+  - [v0.0.10](#recent-achievements-v0010)
   - [v0.0.9](#recent-achievements-v009)
   - [v0.0.3 - v0.0.8](#previous-achievements-v003-v008)
 - [Key Future Enhancements](#key-future-enhancements)
@@ -97,7 +98,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.10 Roadmap](#v0010-roadmap)
+- [v0.0.11 Roadmap](#v0011-roadmap)
 </details>
 
 <details open>
@@ -214,7 +215,7 @@ cp .env.example .env
 The system currently supports multiple model providers with advanced capabilities:
 
 **API-based Models:**
-- **Azure OpenAI**: GPT-4, GPT-4o, GPT-3.5-turbo, GPT-5 series (when available)
+- **Azure OpenAI** (NEW in v0.0.10): GPT-4, GPT-4o, GPT-3.5-turbo, GPT-4.1, GPT-5-chat
 - **Cerebras AI**: GPT-OSS-120B
 - **Claude**: Claude Sonnet 4, Claude Haiku 3.5
 - **Claude Code**: Native Claude Code SDK with comprehensive dev tools
@@ -241,7 +242,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 | Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
-| **Azure OpenAI** | ❌ | ✅ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ✅ | ❌ | ❌ | Code interpreter, Azure deployment management |
 | **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ❌ | ❌ | Web search, code execution |
@@ -264,7 +265,7 @@ uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
 
 uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "When is your knowledge up to"
 
-# Azure OpenAI (requires environment variables)
+# Azure OpenAI (NEW in v0.0.10, requires environment variables)
 uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "Which AI won IMO in 2025?"
 ```
 
@@ -293,7 +294,7 @@ uv run python -m massgen.cli --config three_agents_default.yaml "Summarize lates
 # Mixed API and CLI backends
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
 
-# Azure OpenAI configurations
+# Azure OpenAI configurations (NEW in v0.0.10)
 uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine learning?"
 uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
 
@@ -647,6 +648,28 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
+### Recent Achievements (v0.0.10)
+
+✅ **Azure OpenAI Support**: Integration with Azure OpenAI services
+- New Azure OpenAI backend with async streaming capabilities
+- Support for Azure-hosted GPT-4.1 and GPT-5-chat models
+- Configuration examples for single and multi-agent Azure setups
+
+✅ **Enhanced Claude Code Backend**: Major refactoring and improvements
+- Simplified MCP (Model Context Protocol) integration
+- Improved Windows compatibility with git-bash detection
+- Removed redundant MCP components for cleaner architecture
+
+✅ **Final Presentation Support**: New orchestrator presentation capabilities
+- Support for final answer presentation in multi-agent scenarios
+- Fallback mechanisms for presentation generation
+- Test coverage for presentation functionality
+
+✅ **Improved Backend Architecture**: Significant refactoring of backend systems
+- Consolidated Azure OpenAI implementation using AsyncAzureOpenAI
+- Enhanced async support across all backends
+- Improved error handling and streaming capabilities
+
 ### Recent Achievements (v0.0.9)
 
 ✅ **MCP (Model Context Protocol) Support for Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
@@ -682,7 +705,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Key Future Enhancements:
 
--   **Claude Code Context Sharing:** Enabling seamless context transmission between Claude Code agents and other models (v0.0.10)
+-   **Claude Code Context Sharing:** Enabling seamless context transmission between Claude Code agents and other models (v0.0.11)
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
@@ -691,16 +714,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.10 Roadmap
+### v0.0.11 Roadmap
 
-Version 0.0.10 focuses on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
+Version 0.0.11 focuses on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
 
 - **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
 - **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
 - **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
 - **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.10 roadmap](ROADMAP_v0.0.10.md).
+For detailed milestones and technical specifications, see the [full v0.0.11 roadmap](ROADMAP_v0.0.11.md).
 
 ---
 
