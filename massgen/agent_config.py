@@ -233,6 +233,50 @@ class AgentConfig:
         return cls(backend_params=backend_params)
 
     @classmethod
+    def create_azure_openai_config(
+        cls,
+        deployment_name: str = "gpt-4",
+        endpoint: Optional[str] = None,
+        api_key: Optional[str] = None,
+        api_version: str = "2024-02-15-preview",
+        **kwargs,
+    ) -> "AgentConfig":
+        """Create Azure OpenAI configuration.
+
+        Args:
+            deployment_name: Azure OpenAI deployment name (e.g., "gpt-4", "gpt-35-turbo")
+            endpoint: Azure OpenAI endpoint URL (optional, uses AZURE_OPENAI_ENDPOINT env var)
+            api_key: Azure OpenAI API key (optional, uses AZURE_OPENAI_API_KEY env var)
+            api_version: Azure OpenAI API version (default: 2024-02-15-preview)
+            **kwargs: Additional backend parameters (e.g., temperature, max_tokens)
+
+        Examples:
+            # Basic configuration using environment variables
+            config = AgentConfig.create_azure_openai_config("gpt-4")
+
+            # Custom endpoint and API key
+            config = AgentConfig.create_azure_openai_config(
+                deployment_name="gpt-4-turbo",
+                endpoint="https://your-resource.openai.azure.com/",
+                api_key="your-api-key"
+            )
+        """
+        backend_params = {
+            "type": "azure_openai",
+            "model": deployment_name,  # For Azure OpenAI, model is the deployment name
+            "api_version": api_version,
+            **kwargs,
+        }
+
+        # Add Azure-specific parameters if provided
+        if endpoint:
+            backend_params["base_url"] = endpoint
+        if api_key:
+            backend_params["api_key"] = api_key
+
+        return cls(backend_params=backend_params)
+
+    @classmethod
     def create_claude_code_config(
         cls,
         model: str = "claude-sonnet-4-20250514",
