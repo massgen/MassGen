@@ -54,28 +54,12 @@ import atexit
 from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from claude_code_sdk import (  # type: ignore
-    ClaudeSDKClient,
-    ClaudeCodeOptions,
-    ResultMessage,
-    SystemMessage,
-    AssistantMessage,
-    UserMessage,
-    TextBlock,
-    ToolUseBlock,
-    ToolResultBlock,
+    ClaudeSDKClient, ClaudeCodeOptions, ResultMessage, SystemMessage,
+    AssistantMessage, UserMessage, TextBlock, ToolUseBlock, ToolResultBlock
 )
 
 
 from .base import LLMBackend, StreamChunk
-
-# Import MCP modules
-try:
-    from ..mcp import MCPClient, MCPError, MCPConnectionError
-
-    MCP_AVAILABLE = True
-except ImportError:
-    MCP_AVAILABLE = False
-    MCPClient = None
 
 
 class ClaudeCodeBackend(LLMBackend):
@@ -130,14 +114,6 @@ class ClaudeCodeBackend(LLMBackend):
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
-
-        # MCP integration
-        self.mcp_servers: List[Dict[str, Any]] = kwargs.get("mcp_servers", [])
-        self.mcp_clients: Dict[str, Any] = {}  # server_name -> MCPClient
-        self._mcp_tools_cache: Dict[str, Any] = {}  # cache discovered tools
-        self._mcp_initialized: bool = (
-            False  # track if MCP servers have been initialized
-        )
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
         self._system_prompt_mode: bool = False  # Track system prompt mode for Windows
@@ -221,7 +197,7 @@ class ClaudeCodeBackend(LLMBackend):
     def is_stateful(self) -> bool:
         """
         Claude Code backend is stateful - maintains conversation context.
-
+        
         Returns:
             True - Claude Code maintains server-side session state
         """
@@ -230,25 +206,25 @@ class ClaudeCodeBackend(LLMBackend):
     async def clear_history(self) -> None:
         """
         Clear Claude Code conversation history while preserving session.
-
+        
         Uses the /clear slash command to clear conversation history without
         destroying the session, working directory, or other session state.
         """
         if self._client is None:
             # No active session to clear
             return
-
+            
         try:
             # Send /clear command to clear history while preserving session
             await self._client.query("/clear")
-
+            
             # The /clear command should preserve:
             # - Session ID
             # - Working directory
             # - Tool availability
             # - Permission settings
             # While clearing only the conversation history
-
+            
         except Exception as e:
             # Fallback to full reset if /clear command fails
             print(f"Warning: /clear command failed ({e}), falling back to full reset")
@@ -257,7 +233,7 @@ class ClaudeCodeBackend(LLMBackend):
     async def reset_state(self) -> None:
         """
         Reset Claude Code backend state.
-
+        
         Properly disconnects and clears the current session and client connection to start fresh.
         """
         if self._client is not None:
@@ -272,11 +248,11 @@ class ClaudeCodeBackend(LLMBackend):
         """Estimate token count for text (approximation for Claude)."""
         # Claude tokenization approximation: ~3.5-4 characters per token
         # More accurate than 4:1 ratio, especially for code/structured text
-        return max(1, len(text.encode("utf-8")) // 4)
+        return max(1, len(text.encode('utf-8')) // 4)
 
     def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str, result_message=None
-    ) -> float:
+            self, input_tokens: int, output_tokens: int,
+            model: str, result_message=None) -> float:
         """Calculate cost for token usage.
 
         Prefers ResultMessage actual cost over estimation.
@@ -293,17 +269,12 @@ class ClaudeCodeBackend(LLMBackend):
         """
         # If we have a ResultMessage with actual cost, use that
         if result_message is not None:
-            if (
-                ResultMessage is not None
-                and isinstance(result_message, ResultMessage)
-                and result_message.total_cost_usd is not None
-            ):
+            if (ResultMessage is not None and isinstance(result_message, ResultMessage) and
+                    result_message.total_cost_usd is not None):
                 return result_message.total_cost_usd
             # Fallback: check if it has the expected attribute (for SDK compatibility)
-            elif (
-                hasattr(result_message, "total_cost_usd")
-                and result_message.total_cost_usd is not None
-            ):
+            elif (hasattr(result_message, 'total_cost_usd') and
+                    result_message.total_cost_usd is not None):
                 return result_message.total_cost_usd
 
         # Fallback: calculate estimated cost based on Claude pricing (2025)
@@ -311,30 +282,30 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Claude 4 pricing
         if "opus-4" in model_lower or "claude-4" in model_lower:
-            input_cost_per_token = 15.0 / 1_000_000  # $15 per million
+            input_cost_per_token = 15.0 / 1_000_000   # $15 per million
             output_cost_per_token = 75.0 / 1_000_000  # $75 per million
         # Claude Sonnet 4 pricing
         elif "sonnet-4" in model_lower:
-            input_cost_per_token = 15.0 / 1_000_000  # $15 per million
+            input_cost_per_token = 15.0 / 1_000_000   # $15 per million
             output_cost_per_token = 75.0 / 1_000_000  # $75 per million
         # Claude 3.5 Sonnet pricing
         elif "sonnet" in model_lower and "3.5" in model_lower:
-            input_cost_per_token = 3.0 / 1_000_000  # $3 per million
+            input_cost_per_token = 3.0 / 1_000_000    # $3 per million
             output_cost_per_token = 15.0 / 1_000_000  # $15 per million
         # Claude 3.5 Haiku pricing
         elif "haiku" in model_lower:
-            input_cost_per_token = 0.25 / 1_000_000  # $0.25 per million
+            input_cost_per_token = 0.25 / 1_000_000   # $0.25 per million
             output_cost_per_token = 1.25 / 1_000_000  # $1.25 per million
         else:
             # Default to Claude 3.5 Sonnet pricing
             input_cost_per_token = 3.0 / 1_000_000
             output_cost_per_token = 15.0 / 1_000_000
 
-        return (input_tokens * input_cost_per_token) + (
-            output_tokens * output_cost_per_token
-        )
+        return ((input_tokens * input_cost_per_token) +
+                (output_tokens * output_cost_per_token))
 
-    def update_token_usage_from_result_message(self, result_message) -> None:
+    def update_token_usage_from_result_message(
+            self, result_message) -> None:
         """Update token usage from Claude Code ResultMessage.
 
         Extracts actual token usage and cost data from Claude Code server
@@ -347,9 +318,8 @@ class ClaudeCodeBackend(LLMBackend):
         if ResultMessage is not None and not isinstance(result_message, ResultMessage):
             return
         # Fallback: check if it has the expected attributes (for SDK compatibility)
-        if not hasattr(result_message, "usage") or not hasattr(
-            result_message, "total_cost_usd"
-        ):
+        if (not hasattr(result_message, 'usage') or
+                not hasattr(result_message, 'total_cost_usd')):
             return
 
         # Extract usage information from ResultMessage
@@ -371,20 +341,17 @@ class ClaudeCodeBackend(LLMBackend):
             # Fallback: calculate cost if not provided
             input_tokens = (
                 result_message.usage.get("input_tokens", 0)
-                if result_message.usage
-                else 0
-            )
+                if result_message.usage else 0)
             output_tokens = (
                 result_message.usage.get("output_tokens", 0)
-                if result_message.usage
-                else 0
-            )
-            cost = self.calculate_cost(input_tokens, output_tokens, "", result_message)
+                if result_message.usage else 0)
+            cost = self.calculate_cost(
+                input_tokens, output_tokens, "", result_message)
             self.token_usage.estimated_cost += cost
 
     def update_token_usage(
-        self, messages: List[Dict[str, Any]], response_content: str, model: str
-    ):
+            self, messages: List[Dict[str, Any]], response_content: str,
+            model: str):
         """Update token usage tracking (fallback method).
 
         Only used when no ResultMessage available. Provides estimated token
@@ -413,8 +380,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Calculate estimated cost (no ResultMessage available)
         cost = self.calculate_cost(
-            input_tokens, output_tokens, model, result_message=None
-        )
+            input_tokens, output_tokens, model, result_message=None)
         self.token_usage.estimated_cost += cost
 
     def get_supported_builtin_tools(self) -> List[str]:
@@ -427,38 +393,12 @@ class ClaudeCodeBackend(LLMBackend):
         Returns:
             List of all tool names that Claude Code provides natively
         """
-        base_tools = [
-            "Read",
-            "Write",
-            "Edit",
-            "MultiEdit",
-            "Bash",
-            "Grep",
-            "Glob",
-            "LS",
-            "WebSearch",
-            "WebFetch",
-            "Task",
-            "TodoWrite",
-            "NotebookEdit",
-            "NotebookRead",
-            "mcp__ide__getDiagnostics",
-            "mcp__ide__executeCode",
-            "ExitPlanMode",
+        return [
+            "Read", "Write", "Edit", "MultiEdit", "Bash", "Grep", "Glob",
+            "LS", "WebSearch", "WebFetch", "Task", "TodoWrite",
+            "NotebookEdit", "NotebookRead", "mcp__ide__getDiagnostics",
+            "mcp__ide__executeCode", "ExitPlanMode"
         ]
-
-        # Add MCP tools if available
-        if MCP_AVAILABLE and self.mcp_clients:
-            for server_name, client in self.mcp_clients.items():
-                if client and hasattr(client, "get_available_tools"):
-                    mcp_tools = client.get_available_tools()
-                    # Prefix with server name to avoid conflicts
-                    prefixed_tools = [
-                        f"mcp__{server_name}__{tool}" for tool in mcp_tools
-                    ]
-                    base_tools.extend(prefixed_tools)
-
-        return base_tools
 
     def get_current_session_id(self) -> Optional[str]:
         """Get current session ID from server-side session management.
@@ -468,184 +408,10 @@ class ClaudeCodeBackend(LLMBackend):
         """
         return self._current_session_id
 
-    async def _init_mcp_servers(self) -> None:
-        """Initialize MCP server connections."""
-        if not MCP_AVAILABLE or not self.mcp_servers:
-            return
-        # Convert mcp_servers from dict format (YAML) to list format if needed
-        server_configs = []
-        if isinstance(self.mcp_servers, dict):
-            # YAML format: mcp_servers: { server_name: {config} }
-            for server_name, server_config in self.mcp_servers.items():
-                if isinstance(server_config, dict):
-                    config = server_config.copy()
-                    config["name"] = server_name
-                    server_configs.append(config)
-        elif isinstance(self.mcp_servers, list):
-            # Already in list format
-            server_configs = self.mcp_servers
-        else:
-            return
-
-        for server_config in server_configs:
-            server_name = server_config.get("name", "unnamed")
-            try:
-                client = MCPClient(server_config)
-                await client.connect()
-                self.mcp_clients[server_name] = client
-
-                # Cache tools for faster access
-                tools = client.get_available_tools()
-                for tool in tools:
-                    prefixed_name = f"mcp__{server_name}__{tool}"
-                    self._mcp_tools_cache[prefixed_name] = {
-                        "server_name": server_name,
-                        "tool_name": tool,
-                        "client": client,
-                    }
-
-                print(
-                    f"[ClaudeCode] Connected to MCP server '{server_name}' with {len(tools)} tools"
-                )
-
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] Failed to connect to MCP server '{server_name}': {e}"
-                )
-
-        self._mcp_initialized = True
-
-    async def _handle_mcp_tool_call(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle MCP tool call and return result."""
-        if not tool_name.startswith("mcp__"):
-            raise ValueError(f"Invalid MCP tool name: {tool_name}")
-
-        # Look up tool in cache
-        tool_info = self._mcp_tools_cache.get(tool_name)
-        if not tool_info:
-            return {"error": f"MCP tool '{tool_name}' not found", "success": False}
-
-        try:
-            client = tool_info["client"]
-            actual_tool_name = tool_info["tool_name"]
-
-            result = await client.call_tool(actual_tool_name, arguments)
-
-            return {"result": result, "success": True, "tool": tool_name}
-
-        except Exception as e:
-            return {
-                "error": f"MCP tool call failed: {str(e)}",
-                "success": False,
-                "tool": tool_name,
-            }
-
-    async def _test_mcp_connections(self) -> List[str]:
-        """Test MCP server connections and return list of failed server names."""
-        failed_servers = []
-
-        for server_name, client in self.mcp_clients.items():
-            try:
-                # Test connection by checking if client is connected
-                if not client.is_connected():
-                    failed_servers.append(server_name)
-                    continue
-
-                # Try a simple operation to verify connection is working
-                await client._send_request("tools/list")
-
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] MCP server '{server_name}' connection test failed: {e}"
-                )
-                failed_servers.append(server_name)
-
-        return failed_servers
-
-    async def _reconnect_failed_mcp_servers(self, failed_servers: List[str]) -> None:
-        """Reconnect failed MCP servers."""
-        if not failed_servers:
-            return
-
-        # Find server configs for failed servers
-        server_configs = []
-        if isinstance(self.mcp_servers, dict):
-            for server_name in failed_servers:
-                if server_name in self.mcp_servers:
-                    config = self.mcp_servers[server_name].copy()
-                    config["name"] = server_name
-                    server_configs.append(config)
-        elif isinstance(self.mcp_servers, list):
-            server_configs = [
-                config
-                for config in self.mcp_servers
-                if config.get("name") in failed_servers
-            ]
-
-        # Reconnect failed servers
-        for server_config in server_configs:
-            server_name = server_config.get("name", "unnamed")
-            try:
-                # Remove old client
-                if server_name in self.mcp_clients:
-                    try:
-                        await self.mcp_clients[server_name].disconnect()
-                    except Exception:
-                        pass  # Ignore cleanup errors
-                    del self.mcp_clients[server_name]
-
-                # Remove old tool cache entries
-                tools_to_remove = [
-                    tool
-                    for tool in self._mcp_tools_cache.keys()
-                    if tool.startswith(f"mcp__{server_name}__")
-                ]
-                for tool in tools_to_remove:
-                    del self._mcp_tools_cache[tool]
-
-                # Create new client and connect
-                client = MCPClient(server_config)
-                await client.connect()
-                self.mcp_clients[server_name] = client
-
-                # Update tool cache
-                tools = client.get_available_tools()
-                for tool in tools:
-                    prefixed_name = f"mcp__{server_name}__{tool}"
-                    self._mcp_tools_cache[prefixed_name] = {
-                        "server_name": server_name,
-                        "tool_name": tool,
-                        "client": client,
-                    }
-
-                print(
-                    f"[ClaudeCode] Reconnected to MCP server '{server_name}' with {len(tools)} tools"
-                )
-
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] Failed to reconnect to MCP server '{server_name}': {e}"
-                )
-
-    async def disconnect_mcp_servers(self) -> None:
-        """Disconnect all MCP servers."""
-        for server_name, client in self.mcp_clients.items():
-            try:
-                await client.disconnect()
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] Error disconnecting MCP server '{server_name}': {e}"
-                )
-
-        self.mcp_clients.clear()
-        self._mcp_tools_cache.clear()
-        self._mcp_initialized = False
 
     def _build_system_prompt_with_workflow_tools(
-        self, tools: List[Dict[str, Any]], base_system: Optional[str] = None
-    ) -> str:
+            self, tools: List[Dict[str, Any]],
+            base_system: Optional[str] = None) -> str:
         """Build system prompt that includes workflow tools information.
 
         Creates comprehensive system prompt that instructs Claude on tool
@@ -664,43 +430,23 @@ class ClaudeCodeBackend(LLMBackend):
         if base_system:
             system_parts.append(base_system)
 
-        # Add MCP tools information if available
-        if MCP_AVAILABLE and self.mcp_clients:
-            system_parts.append("\n--- Available MCP Tools ---")
-            for server_name, client in self.mcp_clients.items():
-                if client and hasattr(client, "tools"):
-                    system_parts.append(f"MCP Server '{server_name}':")
-                    for tool_name, tool_def in client.tools.items():
-                        prefixed_name = f"mcp__{server_name}__{tool_name}"
-                        description = (
-                            tool_def.description
-                            if hasattr(tool_def, "description")
-                            else "No description"
-                        )
-                        system_parts.append(f"  - {prefixed_name}: {description}")
-
         # Add workflow tools information if present
         if tools:
             workflow_tools = [
-                t
-                for t in tools
-                if t.get("function", {}).get("name") in ["new_answer", "vote"]
-            ]
+                t for t in tools
+                if t.get("function", {}).get("name") in ["new_answer", "vote"]]
             if workflow_tools:
                 system_parts.append("\n--- Available Tools ---")
                 for tool in workflow_tools:
                     name = tool.get("function", {}).get("name", "unknown")
-                    description = tool.get("function", {}).get(
-                        "description", "No description"
-                    )
+                    description = tool.get("function", {}).get("description", "No description")
                     system_parts.append(f"- {name}: {description}")
-
+                    
                     # Add usage examples for workflow tools
                     if name == "new_answer":
                         system_parts.append(
                             '    Usage: {"tool_name": "new_answer", '
-                            '"arguments": {"content": "your answer"}}'
-                        )
+                            '"arguments": {"content": "your answer"}}')
                     elif name == "vote":
                         # Extract valid agent IDs from enum if available
                         agent_id_enum = None
@@ -715,49 +461,44 @@ class ClaudeCodeBackend(LLMBackend):
                                 if "enum" in agent_id_param:
                                     agent_id_enum = agent_id_param["enum"]
                                 break
-
+                        
                         if agent_id_enum:
                             agent_list = ", ".join(agent_id_enum)
                             system_parts.append(
                                 f'    Usage: {{"tool_name": "vote", '
                                 f'"arguments": {{"agent_id": "agent1", '
-                                f'"reason": "explanation"}}}} // Choose agent_id from: {agent_list}'
-                            )
+                                f'"reason": "explanation"}}}} // Choose agent_id from: {agent_list}')
                         else:
                             system_parts.append(
                                 '    Usage: {"tool_name": "vote", '
                                 '"arguments": {"agent_id": "agent1", '
-                                '"reason": "explanation"}}'
-                            )
-
+                                '"reason": "explanation"}}')
+                        
                 system_parts.append("\n--- MassGen Workflow Instructions ---")
                 system_parts.append(
-                    "IMPORTANT: You must respond with a structured JSON decision at the end of your response."
-                )
+                    "IMPORTANT: You must respond with a structured JSON decision at the end of your response.")
                 system_parts.append(
                     "You must use the coordination tools (new_answer, vote) "
-                    "to participate in multi-agent workflows."
-                )
+                    "to participate in multi-agent workflows.")
                 # system_parts.append(
                 #     "Make sure to include the JSON in the exact format shown in the usage examples above.")
                 system_parts.append(
-                    "The JSON MUST be formatted as a strict JSON code block:"
-                )
-                system_parts.append("1. Start with ```json on one line")
-                system_parts.append("2. Include your JSON content (properly formatted)")
-                system_parts.append("3. End with ``` on one line")
+                    "The JSON MUST be formatted as a strict JSON code block:")
                 system_parts.append(
-                    'Example format:\n```json\n{"tool_name": "vote", "arguments": {"agent_id": "agent1", "reason": "explanation"}}\n```'
-                )
+                    "1. Start with ```json on one line")
                 system_parts.append(
-                    "The JSON block should be placed at the very end of your response, after your analysis."
-                )
+                    "2. Include your JSON content (properly formatted)")
+                system_parts.append(
+                    "3. End with ``` on one line")
+                system_parts.append(
+                    "Example format:\n```json\n{\"tool_name\": \"vote\", \"arguments\": {\"agent_id\": \"agent1\", \"reason\": \"explanation\"}}\n```")
+                system_parts.append(
+                    "The JSON block should be placed at the very end of your response, after your analysis.")
 
         return "\n".join(system_parts)
 
     def extract_structured_response(
-        self, response_text: str
-    ) -> Optional[Dict[str, Any]]:
+            self, response_text: str) -> Optional[Dict[str, Any]]:
         """Extract structured JSON response for Claude Code format.
 
         Looks for JSON in the format:
@@ -853,7 +594,8 @@ class ClaudeCodeBackend(LLMBackend):
         except Exception:
             return None
 
-    def _parse_workflow_tool_calls(self, text_content: str) -> List[Dict[str, Any]]:
+    def _parse_workflow_tool_calls(
+            self, text_content: str) -> List[Dict[str, Any]]:
         """Parse workflow tool calls from text content.
 
         Searches for JSON-formatted tool calls in the response text and
@@ -867,32 +609,34 @@ class ClaudeCodeBackend(LLMBackend):
             List of unique tool call dictionaries in standard format
         """
         tool_calls = []
-
+        
         # First try to extract structured JSON response
         structured_response = self.extract_structured_response(text_content)
-
+        
         if structured_response and isinstance(structured_response, dict):
             tool_name = structured_response.get("tool_name")
             arguments = structured_response.get("arguments", {})
-
+            
             if tool_name and isinstance(arguments, dict):
-                tool_calls.append(
-                    {
-                        "id": f"call_{uuid.uuid4().hex[:8]}",
-                        "type": "function",
-                        "function": {"name": tool_name, "arguments": arguments},
+                tool_calls.append({
+                    "id": f"call_{uuid.uuid4().hex[:8]}",
+                    "type": "function",
+                    "function": {
+                        "name": tool_name,
+                        "arguments": arguments
                     }
-                )
+                })
                 return tool_calls
-
+        
         # Fallback: Look for multiple JSON tool calls using regex patterns
         seen_calls = set()  # Track unique tool calls to prevent duplicates
-
+        
         # Look for JSON tool call patterns
         json_patterns = [
-            r'\{"tool_name":\s*"([^"]+)",\s*"arguments":\s*' r"(\{[^}]*\})\}",
+            r'\{"tool_name":\s*"([^"]+)",\s*"arguments":\s*'
+            r'(\{[^}]*\})\}',
             r'\{\s*"tool_name"\s*:\s*"([^"]+)"\s*,\s*"arguments"'
-            r"\s*:\s*(\{[^}]*\})\s*\}",
+            r'\s*:\s*(\{[^}]*\})\s*\}'
         ]
 
         for pattern in json_patterns:
@@ -901,21 +645,22 @@ class ClaudeCodeBackend(LLMBackend):
                 tool_name = match.group(1)
                 try:
                     arguments = json.loads(match.group(2))
-
+                    
                     # Create a unique identifier for this tool call
                     # Based on tool name and arguments content
                     call_signature = (tool_name, json.dumps(arguments, sort_keys=True))
-
+                    
                     # Only add if we haven't seen this exact call before
                     if call_signature not in seen_calls:
                         seen_calls.add(call_signature)
-                        tool_calls.append(
-                            {
-                                "id": f"call_{uuid.uuid4().hex[:8]}",
-                                "type": "function",
-                                "function": {"name": tool_name, "arguments": arguments},
+                        tool_calls.append({
+                            "id": f"call_{uuid.uuid4().hex[:8]}",
+                            "type": "function",
+                            "function": {
+                                "name": tool_name,
+                                "arguments": arguments
                             }
-                        )
+                        })
                 except json.JSONDecodeError:
                     continue
 
@@ -934,21 +679,13 @@ class ClaudeCodeBackend(LLMBackend):
         """
         cwd_path = options_kwargs.get("cwd", os.getcwd())
         permission_mode = options_kwargs.get("permission_mode", "acceptEdits")
-        allowed_tools = options_kwargs.get(
-            "allowed_tools", self.get_supported_builtin_tools()
-        )
-
+        allowed_tools = options_kwargs.get("allowed_tools", self.get_supported_builtin_tools())
+        
         # Filter out parameters handled separately or not for ClaudeCodeOptions
         excluded_params = {
-            "cwd",
-            "permission_mode",
-            "type",
-            "agent_id",
-            "session_id",
-            "api_key",
-            "allowed_tools",
+            "cwd", "permission_mode", "type", "agent_id", "session_id", "api_key", "allowed_tools"
         }
-
+        
         # Handle cwd - create directory if it doesn't exist and ensure absolute path
         cwd_option = None
         if cwd_path:
@@ -956,14 +693,14 @@ class ClaudeCodeBackend(LLMBackend):
             if not cwd_dir.is_absolute():
                 # Convert relative path to absolute path
                 cwd_dir = cwd_dir.resolve()
-
+            
             # Create directory if it doesn't exist
             cwd_dir.mkdir(parents=True, exist_ok=True)
-
+            
             # Ensure we return a valid absolute path
             cwd_option = cwd_dir
         self._cwd = str(cwd_option)
-
+        
         return ClaudeCodeOptions(
             # No model set by default - let Claude Code decide
             # No allowed_tools restriction - allow ALL tools for maximum
@@ -972,10 +709,10 @@ class ClaudeCodeBackend(LLMBackend):
             resume=self.get_current_session_id(),
             permission_mode=permission_mode,
             allowed_tools=allowed_tools,
-            **{k: v for k, v in options_kwargs.items() if k not in excluded_params},
+            **{k: v for k, v in options_kwargs.items() if k not in excluded_params}
         )
 
-    async def create_client(self, **options_kwargs) -> ClaudeSDKClient:
+    def create_client(self, **options_kwargs) -> ClaudeSDKClient:
         """Create ClaudeSDKClient with configurable parameters.
 
         Args:
@@ -989,15 +726,11 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Create ClaudeSDKClient with configured options
         self._client = ClaudeSDKClient(options)
-
-        # Initialize MCP servers once when creating client
-        if not self._mcp_initialized:
-            await self._init_mcp_servers()
-
         return self._client
 
     async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
+            self, messages: List[Dict[str, Any]],
+            tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream a response with tool calling support using claude-code-sdk.
@@ -1021,19 +754,15 @@ class ClaudeCodeBackend(LLMBackend):
             # Set default disallowed_tools if not provided
             if "disallowed_tools" not in all_params:
                 all_params["disallowed_tools"] = [
-                    "Bash(rm*)",
-                    "Bash(sudo*)",
-                    "Bash(su*)",
-                    "Bash(chmod*)",
-                    "Bash(chown*)",
+                    "Bash(rm*)", "Bash(sudo*)", "Bash(su*)", "Bash(chmod*)",
+                    "Bash(chown*)"
                 ]
                 
                 # Extract system message from messages for append mode
                 system_msg = next(
-                    (msg for msg in messages if msg.get("role") == "system"), None
-                )
+                    (msg for msg in messages if msg.get("role") == "system"), None)
                 if system_msg:
-                    system_content = system_msg.get("content", "")  # noqa: E128
+                    system_content = system_msg.get('content', '')  # noqa: E128
                 else:
                     system_content = ""
                 # Build system prompt with tools information
@@ -1135,30 +864,30 @@ class ClaudeCodeBackend(LLMBackend):
             yield StreamChunk(
                 type="error",
                 error="No messages provided to stream_with_tools",
-                source="claude_code",
+                source="claude_code"
             )
             return
-
+            
         # Validate messages - should only contain user messages for Claude Code
         user_messages = [msg for msg in messages if msg.get("role") == "user"]
         assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
-
+        
         if assistant_messages:
             yield StreamChunk(
                 type="error",
                 error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
-                source="claude_code",
+                source="claude_code"
             )
             return
-
+            
         if not user_messages:
             yield StreamChunk(
                 type="error",
                 error="No user messages found to send to Claude Code",
-                source="claude_code",
+                source="claude_code"
             )
             return
-
+        
         # Combine all user messages into a single query
         user_contents = []
         
@@ -1170,15 +899,16 @@ class ClaudeCodeBackend(LLMBackend):
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
-
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
             await client.query(combined_query)
         else:
             yield StreamChunk(
-                type="error", error="All user messages were empty", source="claude_code"
-            )
+                type="error",
+                error="All user messages were empty",
+                    source="claude_code"
+                )
             return
         # Stream response and convert to MassGen StreamChunks
         accumulated_content = ""
@@ -1193,7 +923,9 @@ class ClaudeCodeBackend(LLMBackend):
 
                             # Yield content chunk
                             yield StreamChunk(
-                                type="content", content=block.text, source="claude_code"
+                                type="content",
+                                content=block.text,
+                                source="claude_code"
                             )
 
                         elif isinstance(block, ToolUseBlock):
@@ -1201,7 +933,7 @@ class ClaudeCodeBackend(LLMBackend):
                             yield StreamChunk(
                                 type="content",
                                 content=f"🔧 {block.name}({block.input})",
-                                source="claude_code",
+                                source="claude_code"
                             )
 
                         elif isinstance(block, ToolResultBlock):
@@ -1212,18 +944,17 @@ class ClaudeCodeBackend(LLMBackend):
                             yield StreamChunk(
                                 type="content",
                                 content=f"🔧 Tool {status}: {block.content}",
-                                source="claude_code",
+                                source="claude_code"
                             )
 
                     # Parse workflow tool calls from accumulated content
-                    workflow_tool_calls = self._parse_workflow_tool_calls(
-                        accumulated_content
-                    )
+                    workflow_tool_calls = (
+                        self._parse_workflow_tool_calls(accumulated_content))
                     if workflow_tool_calls:
                         yield StreamChunk(
                             type="tool_calls",
                             tool_calls=workflow_tool_calls,
-                            source="claude_code",
+                            source="claude_code"
                         )
 
                     # Yield complete message
@@ -1231,9 +962,9 @@ class ClaudeCodeBackend(LLMBackend):
                         type="complete_message",
                         complete_message={
                             "role": "assistant",
-                            "content": accumulated_content,
+                            "content": accumulated_content
                         },
-                        source="claude_code",
+                        source="claude_code"
                     )
 
                 elif isinstance(message, SystemMessage):
@@ -1242,8 +973,8 @@ class ClaudeCodeBackend(LLMBackend):
                     yield StreamChunk(
                         type="backend_status",
                         status=message.subtype,
-                        content=json.dumps(message.data),
-                        source="claude_code",
+                        content=json.dumps(message.data), 
+                        source="claude_code"
                     )
 
                 elif isinstance(message, ResultMessage):
@@ -1261,9 +992,9 @@ class ClaudeCodeBackend(LLMBackend):
                             "duration_ms": message.duration_ms,
                             "cost_usd": message.total_cost_usd,
                             "usage": message.usage,
-                            "is_error": message.is_error,
+                            "is_error": message.is_error
                         },
-                        source="claude_code",
+                        source="claude_code"
                     )
 
                     # Final done signal
@@ -1298,25 +1029,24 @@ class ClaudeCodeBackend(LLMBackend):
         """
         if ResultMessage is not None and isinstance(message, ResultMessage):
             # ResultMessage contains definitive session information
-            if hasattr(message, "session_id") and message.session_id:
+            if hasattr(message, 'session_id') and message.session_id:
                 old_session_id = self._current_session_id
-                self._current_session_id = message.session_id
-
+                self._current_session_id = message.session_id                
+    
         elif SystemMessage is not None and isinstance(message, SystemMessage):
             # SystemMessage may contain session state updates
-            if hasattr(message, "data") and isinstance(message.data, dict):
+            if hasattr(message, 'data') and isinstance(message.data, dict):
                 # Extract session ID from system message data
-                if "session_id" in message.data and message.data["session_id"]:
+                if 'session_id' in message.data and message.data['session_id']:
                     old_session_id = self._current_session_id
-                    self._current_session_id = message.data["session_id"]
+                    self._current_session_id = message.data['session_id']
                     if old_session_id != self._current_session_id:
-                        print(
-                            f"[ClaudeCodeBackend] Session ID from SystemMessage: {old_session_id} → {self._current_session_id}"
-                        )
-
+                        print(f"[ClaudeCodeBackend] Session ID from SystemMessage: {old_session_id} → {self._current_session_id}")
+                
                 # Extract working directory from system message data
-                if "cwd" in message.data and message.data["cwd"]:
-                    self._cwd = message.data["cwd"]
+                if 'cwd' in message.data and message.data['cwd']:
+                    self._cwd = message.data['cwd']
+           
 
     async def disconnect(self):
         """Disconnect the ClaudeSDKClient and clean up resources.
@@ -1324,9 +1054,6 @@ class ClaudeCodeBackend(LLMBackend):
         Properly closes the connection and resets internal state.
         Should be called when the backend is no longer needed.
         """
-        # Disconnect MCP servers first
-        await self.disconnect_mcp_servers()
-
         if self._client is not None:
             try:
                 # Suppress warnings during disconnect
