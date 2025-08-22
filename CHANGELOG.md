@@ -15,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Test suite for Azure OpenAI functionality
 - **Enhanced Claude Code Backend**: Major refactoring and improvements
   - Simplified MCP (Model Context Protocol) integration
-  - Improved Windows compatibility with git-bash detection
 - **Final Presentation Support**: New orchestrator presentation capabilities
   - Support for final answer presentation in multi-agent scenarios
   - Fallback mechanisms for presentation generation
@@ -24,7 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Claude Code MCP**: Cleaned up and simplified MCP implementation
   - Removed redundant MCP server and transport modules
-  - Fixed Windows path detection for git-bash
 - **Configuration Management**: Improved YAML configuration handling
   - Fixed Azure OpenAI deployment configurations
   - Updated model mappings for Azure services

@@ -653,7 +653,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Enhanced Claude Code Backend**: Major refactoring and improvements
 - Simplified MCP (Model Context Protocol) integration
-- Improved Windows compatibility with git-bash detection
 - Removed redundant MCP components for cleaner architecture
 
 ✅ **Final Presentation Support**: New orchestrator presentation capabilities
