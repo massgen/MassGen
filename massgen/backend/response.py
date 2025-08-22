@@ -331,12 +331,10 @@ class ResponseBackend(LLMBackend):
                                         # Query is in action.query, not directly in item
                                         query = item.get("action", {}).get("query", "")
                                         results = item.get("results")
-                                        
+
                                         # Only show web search completion if query is present
                                         if query:
-                                            content = (
-                                                f"\n🔧 Web Search [{status.title()}]: {query}"
-                                            )
+                                            content = f"\n🔧 Web Search [{status.title()}]: {query}"
                                             if results:
                                                 content += (
                                                     f" → Found {len(results)} results"
