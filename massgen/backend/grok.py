@@ -100,6 +100,14 @@ class GrokBackend(ChatCompletionsBackend):
 
         except Exception as e:
             yield StreamChunk(type="error", error=f"Grok API error: {e}")
+        finally:
+            # Ensure the underlying HTTP client is properly closed to avoid event loop issues
+            try:
+                if hasattr(client, 'aclose'):
+                    await client.aclose()
+            except Exception:
+                # Suppress cleanup errors so we don't mask primary exceptions
+                pass
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
