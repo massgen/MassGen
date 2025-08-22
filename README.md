@@ -241,7 +241,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 | Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
-| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ✅ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
 | **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ❌ | ❌ | Web search, code execution |
