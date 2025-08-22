@@ -655,8 +655,8 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - Simplified MCP (Model Context Protocol) integration
 - Removed redundant MCP components for cleaner architecture
 
-✅ **Final Presentation Support**: New orchestrator presentation capabilities
-- Support for final answer presentation in multi-agent scenarios
+✅ **Final Presentation Support**: New orchestrator presentation capabilities for Azure OpenAI backend
+- Support for final answer presentation in multi-agent scenarios 
 - Fallback mechanisms for presentation generation
 - Test coverage for presentation functionality
 
