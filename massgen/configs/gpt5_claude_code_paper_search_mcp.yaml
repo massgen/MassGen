@@ -31,8 +31,7 @@ agents:
         # - mcp__paper_search__search_semantic_scholar
         # - mcp__paper_search__search_iacr
         
-    system_message: |
-      You are an AI research assistant integrated with the Paper Search MCP server.
+    append_system_message: |
       **IMPORTANT: you MUST consider and MUST synthesize the provided answer by other agents (even the searched paper list by other agents). Then provide your own answer.**
 
   - id: "gpt-5"
@@ -44,9 +43,9 @@ agents:
         summary: "auto"
       enable_web_search: true
       enable_code_interpreter: true
-    system_message: |
-      You are a helpful AI assistant with web search and code execution capabilities. You should always complete tasks that you can do. If you cannot complete a task, just omit it.  
-      **IMPORTANT: you should synthesize the provided answers by other agents, then provide your own answer.**
+    # system_message: |
+    #   You are a helpful AI assistant with web search and code execution capabilities. You should always complete tasks that you can do. If you cannot complete a task, just omit it.  
+    #   **IMPORTANT: you should synthesize the provided answers by other agents, then provide your own answer.**
 
 ui:
   display_type: "rich_terminal"
