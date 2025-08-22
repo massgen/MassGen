@@ -239,8 +239,6 @@ class AgentConfig:
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         api_version: str = "2024-02-15-preview",
-        enable_web_search: bool = False,
-        enable_code_interpreter: bool = False,
         **kwargs,
     ) -> "AgentConfig":
         """Create Azure OpenAI configuration.
@@ -264,18 +262,6 @@ class AgentConfig:
                 endpoint="https://your-resource.openai.azure.com/",
                 api_key="your-api-key"
             )
-
-            # With web search enabled
-            config = AgentConfig.create_azure_openai_config(
-                deployment_name="gpt-4",
-                enable_web_search=True
-            )
-
-            # With code interpreter enabled
-            config = AgentConfig.create_azure_openai_config(
-                deployment_name="gpt-35-turbo",
-                enable_code_interpreter=True
-            )
         """
         backend_params = {
             "type": "azure_openai",
@@ -289,12 +275,6 @@ class AgentConfig:
             backend_params["base_url"] = endpoint
         if api_key:
             backend_params["api_key"] = api_key
-
-        # Add tool enablement to backend_params
-        if enable_web_search:
-            backend_params["enable_web_search"] = True
-        if enable_code_interpreter:
-            backend_params["enable_code_interpreter"] = True
 
         return cls(backend_params=backend_params)
 
