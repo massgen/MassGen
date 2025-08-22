@@ -63,9 +63,10 @@
 
         .slide .subtitle {
             font-size: 1.4em;
-            color: #7f8c8d;
+            color: #2c3e50;
             text-align: center;
             margin-bottom: 40px;
+            font-weight: 600;
         }
 
         .slide .speaker-info {
@@ -204,11 +205,10 @@
             padding: 20px;
             border-radius: 10px;
             font-family: 'Courier New', monospace;
+            width: 95%;
+            max-width: 1200px;
             font-size: 1.1em;
-            margin: 20px 0;
-            max-width: 900px;
-            margin-left: auto;
-            margin-right: auto;
+            margin: 20px auto;
         }
 
         .highlight {
@@ -411,7 +411,7 @@
         }
 
         .cta-link:hover {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.5);
             transform: translateY(-3px);
         }
 
@@ -480,7 +480,6 @@
             <div class="datahack-logo">
                 <div style="font-size: 2em; color: #e74c3c; font-weight: bold;">📊 DataHack Summit 2025</div>
             </div>
-            <h1>MassGen</h1>
             <div style="display: flex; align-items: center; justify-content: center; gap: 40px; margin: 30px 0;">
                 <div>
                     <img src="https://github.com/Leezekun/MassGen/blob/main/assets/logo.png?raw=true" alt="MassGen Logo" style="width: 180px; height: 180px; object-fit: contain;">
@@ -504,7 +503,7 @@
                         <li><strong>Siloed Thinking:</strong> Single models miss diverse perspectives</li>
                         <li><strong>Limited Context:</strong> No peer review or validation</li>
                         <li><strong>Sequential Processing:</strong> Linear, not parallel exploration</li>
-                        <li><strong>Fixed Approach:</strong> Can't adapt mid-task from external insights</li>
+                        <li><strong>Fixed Approach:</strong> Limited mid-task adaptation to new information</li>
                     </ul>
                 </div>
                 <div style="text-align: center;">
@@ -519,7 +518,7 @@
         <!-- Slide 3: The Solution - Multi-Agent Collaboration -->
         <div class="slide">
             <div class="icon">🤝</div>
-            <h2>The Multi-Agent Solution</h2>
+            <h2>The Promise of Multi-Agent Collaboration</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
                 <div>
                     <ul style="font-size: 1.6em;">
@@ -531,8 +530,11 @@
                 </div>
                 <div style="text-align: center;">
                     <img src="https://docs.ag2.ai/latest/docs/blog/2025-04-16-Reasoning/img/cognition.jpg" alt="Cognition and Reasoning Process" style="width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
-                    <div style="margin-top: 15px; font-size: 1.2em; color: #2c3e50; font-style: italic;">
-                        The Complexity of Collaborative Reasoning
+                    <div style="margin-top: 15px; font-size: 1.1em; color: #2c3e50;">
+                        <div style="font-style: italic; margin-bottom: 10px;">The Promise of Collaborative Reasoning</div>
+                        <div style="font-size: 0.9em; color: #3498db;">
+                            📖 <a href="https://root.massgen.ai" style="color: #3498db; text-decoration: none;">Read our article: "Myth of Reasoning"</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -566,7 +568,8 @@
             </div>
             <div style="text-align: center; margin-top: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #f39c12; border-radius: 8px;">
                 <strong style="font-size: 1.4em; color: #f39c12;">+15% Performance Boost</strong><br>
-                <span style="color: #856404;">Multi-agent "study group" approach consistently outperforms single agent</span>
+                <span style="color: #856404;">Multi-agent "study group" approach outperforms single agent</span><br><br>
+                <span style="color: #666; font-style: italic;">"The exploration of the art & science of multi-agent collaboration has just started."</span>
             </div>
         </div>
 
@@ -630,11 +633,11 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
                 <div>
                     <ul style="font-size: 1.6em;">
-                        <li><strong>🤝 Cross-Model Synergy:</strong> Harness strengths from diverse models</li>
-                        <li><strong>⚡ Parallel Processing:</strong> Multiple agents tackle problems simultaneously</li>
-                        <li><strong>🔄 Iterative Refinement:</strong> Non-linear reasoning through cycles of improvement</li>
-                        <li><strong>👥 Intelligence Sharing:</strong> Agents share working summaries, tool results, and insights in real-time</li>
-                        <li><strong>🎯 Consensus Building:</strong> Natural convergence through collaboration</li>
+                        <li><strong>🤝 Cross-Model Synergy:</strong> Diverse AI models working together</li>
+                        <li><strong>⚡ Parallel Processing:</strong> Simultaneous problem-solving</li>
+                        <li><strong>🔄 Iterative Refinement:</strong> Continuous improvement cycles</li>
+                        <li><strong>👥 Real-time Sharing:</strong> Live collaboration between agents</li>
+                        <li><strong>🎯 Consensus Building:</strong> Natural convergence</li>
                     </ul>
                 </div>
                 <div style="text-align: center;">
@@ -649,14 +652,13 @@
         <!-- Slide 7: Tech Deep Dive - Async Streaming Architecture -->
         <div class="slide">
             <div class="icon">⚙️</div>
-            <h2>Tech Deep Dive: Async Streaming & Dynamic Restart</h2>
+            <h2>Tech Deep Dive: Async Streaming & Dynamic Scheduling</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
                 <div>
                     <ul style="font-size: 1.4em;">
-                        <li><strong>🔄 AsyncGenerator Pattern:</strong> Real-time streaming from 5+ agents simultaneously</li>
-                        <li><strong>⚡ Dynamic Task Management:</strong> Agents start/stop based on voting status</li>
-                        <li><strong>🧵 StreamChunk Protocol:</strong> Unified message format with reasoning/content/tool_calls</li>
-                        <li><strong>🔁 Graceful Restart:</strong> Agents restart when peers provide new answers</li>
+                        <li><strong>🔄 Async Streaming:</strong> Real-time from 5+ agents</li>
+                        <li><strong>⚡ Dynamic Scheduling:</strong> Smart start/stop coordination</li>
+                        <li><strong>🔁 Graceful Restarts:</strong> Seamless task transitions</li>
                     </ul>
                 </div>
                 <div style="text-align: center;">
@@ -703,9 +705,9 @@
                         <path d="M 190 280 Q 240 300 290 280" stroke="#e74c3c" stroke-width="2" fill="none" marker-end="url(#arrowhead-red)"/>
                         <path d="M 190 280 Q 340 320 390 280" stroke="#e74c3c" stroke-width="2" fill="none" marker-end="url(#arrowhead-red)"/>
                         
-                        <text x="90" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restart_pending</text>
-                        <text x="290" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restart_pending</text>
-                        <text x="390" y="340" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restart_pending</text>
+                        <text x="90" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restarting</text>
+                        <text x="290" y="310" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restarting</text>
+                        <text x="390" y="340" text-anchor="middle" font-family="Arial" font-size="13" fill="#e74c3c">restarting</text>
                         
                         <!-- Arrow markers -->
                         <defs>
@@ -731,15 +733,15 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
                 <div>
                     <ul style="font-size: 1.4em;">
-                        <li><strong>🎭 Unified Interface:</strong> Single ChatAgent protocol for 8+ different backends</li>
-                        <li><strong>🛠️ Tool Integration:</strong> Web search, code execution across different APIs</li>
-                        <li><strong>⚙️ StreamChunk Normalization:</strong> Convert diverse response formats to common protocol</li>
-                        <li><strong>🔀 Backend-Specific Workarounds:</strong> Each provider has unique limitations</li>
+                        <li><strong>🎭 Unified Interface:</strong> One protocol for 8+ backends</li>
+                        <li><strong>🛠️ Tool Integration:</strong> Search, code, MCP support</li>
+                        <li><strong>⚙️ Format Normalization:</strong> Common response protocol</li>
+                        <li><strong>🔀 Provider Workarounds:</strong> Handle unique limitations</li>
                     </ul>
                 </div>
                 <div>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 15px;">
-                        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #2c3e50;">Real Backend Challenges:</div>
+                        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #2c3e50;">Backend Challenges:</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
                             <div style="background: #fff3cd; padding: 10px; border-radius: 8px; text-align: center;">
                                 <div style="font-weight: bold; color: #f39c12;">Claude Code CLI</div>
@@ -751,7 +753,7 @@
                             </div>
                             <div style="background: #e1f5fe; padding: 10px; border-radius: 8px; text-align: center;">
                                 <div style="font-weight: bold; color: #0288d1;">GPT-5</div>
-                                <div style="font-size: 0.8em; color: #666;">Reasoning param conflicts</div>
+                                <div style="font-size: 0.8em; color: #666;">API change (reasoning, streaming etc.)</div>
                             </div>
                             <div style="background: #f3e5f5; padding: 10px; border-radius: 8px; text-align: center;">
                                 <div style="font-weight: bold; color: #7b1fa2;">Most Backends</div>
@@ -760,7 +762,7 @@
                         </div>
                         <div style="margin-top: 15px; background: #e8f5e8; padding: 10px; border-radius: 8px; text-align: center;">
                             <div style="font-weight: bold; color: #27ae60;">🎯 Our Solution:</div>
-                            <div style="font-size: 0.9em; color: #2d5a3d;">Binary Decision Framework</div>
+                            <div style="font-size: 0.9em; color: #2d5a3d;">Binary Decision Framework (Explained in the next slide)</div>
                         </div>
                     </div>
                     <div style="margin-top: 15px; font-size: 1em; color: #7f8c8d; text-align: center;">
@@ -854,10 +856,10 @@
             </div>
         </div>
 
-        <!-- Slide 10: Evolution from v0.0.1 to v0.0.8 -->
+        <!-- Slide 10: Evolution from v0.0.1 to v0.0.9 -->
         <div class="slide">
             <div class="icon">🚀</div>
-            <h2>MassGen Evolution: v0.0.1 → v0.0.8</h2>
+            <h2>MassGen Evolution: v0.0.1 → v0.0.9</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin: 50px 0; align-items: center; justify-items: center;">
                 <div style="background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 350px; text-align: center;">
                     <div style="font-size: 3em; margin-bottom: 20px;">🏗️</div>
@@ -868,24 +870,24 @@
                         Claude, Gemini, GPT/o, Grok
                     </div>
                 </div>
-                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 350px; text-align: center; position: relative;">
+                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 400px; text-align: center; position: relative;">
                     <div style="position: absolute; top: -15px; right: -15px; background: #f39c12; color: white; padding: 8px 20px; border-radius: 25px; font-size: 0.9em; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">LATEST</div>
                     <div style="font-size: 3em; margin-bottom: 20px;">🎯</div>
                     <h3 style="margin: 0 0 15px 0; font-size: 1.6em;">Expansion Era</h3>
-                    <div style="font-size: 1.1em; opacity: 0.9; margin-bottom: 25px;">v0.0.4 - v0.0.8</div>
+                    <div style="font-size: 1.1em; opacity: 0.9; margin-bottom: 25px;">v0.0.4 - v0.0.9</div>
                     <div style="font-size: 1.1em; line-height: 1.6;">
-                        Claude Code, GPT-5, GPT-OSS,<br>
-                        Local models, 8+ providers, Timeout
+                        Claude Code, GPT-5, MCP<br>
+                        GPT-OSS, Local models, 8+ providers
                     </div>
                 </div>
             </div>
             <div style="text-align: center; margin-top: 40px;">
                 <div style="display: inline-flex; gap: 40px; align-items: center; font-size: 1.3em; color: #2c3e50;">
-                    <div><strong style="color: #e74c3c;">7</strong> Major Releases</div>
+                    <div><strong style="color: #e74c3c;">8</strong> Major Releases</div>
                     <div style="color: #bdc3c7;">•</div>
                     <div><strong style="color: #e74c3c;">150+</strong> Commits</div>
                     <div style="color: #bdc3c7;">•</div>
-                    <div><strong style="color: #e74c3c;">Active</strong> Development</div>
+                    <div><strong style="color: #e74c3c;">14 Days</strong> Foundation→Expansion</div>
                 </div>
             </div>
         </div>
@@ -938,10 +940,10 @@
                 cp .env.example .env  # Add your API keys<br><br>
                 
                 # 3. Run single agent (quick test)<br>
-                uv run python -m massgen.cli --model gemini-2.5-flash "Compare renewable energy approaches"<br><br>
+                uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
                 
                 # 4. Run multi-agent collaboration<br>
-                uv run python -m massgen.cli --config three_agents_default.yaml "Complex research question"
+                uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
                 <div style="text-align: center; padding: 20px; background: rgba(46, 204, 113, 0.1); border-radius: 15px;">
@@ -955,7 +957,7 @@
                 </div>
                 <div style="text-align: center; padding: 20px; background: rgba(52, 152, 219, 0.1); border-radius: 15px;">
                     <h3 style="color: #3498db; margin-bottom: 15px;">🛠️ Advanced Tools</h3>
-                    <div style="font-size: 1.1em;">Web Search, Code Execution, File Operations</div>
+                    <div style="font-size: 1.1em;">Web Search, Code Execution, File Operations, MCP</div>
                 </div>
             </div>
         </div>
@@ -1147,14 +1149,14 @@
                     <strong>Build Scalable, Collaborative AI Systems</strong>
                 </div>
                 <div class="cta-links">
-                    <a href="https://github.com/Leezekun/MassGen" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">⭐ Star on GitHub</a>
-                    <a href="https://discord.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">💬 Join Discord</a>
-                    <a href="https://massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">🌐 Visit Website</a>
-                    <a href="https://case.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">📚 Case Studies</a>
+                    <a href="https://github.com/Leezekun/MassGen" class="cta-link" style="background: rgba(255,255,255,0.35); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.5);">⭐ Star on GitHub</a>
+                    <a href="https://discord.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.35); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.5);">💬 Join Discord</a>
+                    <a href="https://massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.35); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.5);">🌐 Visit Website</a>
+                    <a href="https://case.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.35); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.5);">📚 Case Studies</a>
                 </div>
                 <div style="margin-top: 30px;">
                     <div class="version-badge" style="background: linear-gradient(135deg, #e74c3c, #c0392b); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">
-                        🚀 v0.0.3→v0.0.8 Evolution | Gemini + GPT-5 + Local Models + Timeouts
+                        🚀 v0.0.3→v0.0.9 Evolution | Claude Code + MCP Integration + GPT-5 + Local Models
                     </div>
                 </div>
             </div>
@@ -1198,7 +1200,7 @@
             "Tech - Async Streaming",
             "Tech - Backend Challenges", 
             "Tech - Binary Decision Framework",
-            "Evolution - v0.0.1 to v0.0.8",
+            "Evolution - v0.0.1 to v0.0.9",
             "Demo - Live Examples",
             "Getting Started - 60 Seconds",
             "Vision - Exponential Intelligence",
