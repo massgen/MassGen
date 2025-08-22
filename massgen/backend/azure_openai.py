@@ -26,12 +26,11 @@ class AzureOpenAIBackend(LLMBackend):
 
         # Get Azure configuration from parameters or environment variables
         self.api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
-        
+
         if not self.api_key:
             raise ValueError(
                 "Azure OpenAI API key is required. Set AZURE_OPENAI_API_KEY environment variable or pass api_key parameter."
             )
-
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
