@@ -255,12 +255,14 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **API-based backends:**
 ```bash
-uv run python -m massgen.cli --model gemini-2.5-flash "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model grok-3-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-5-mini "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "How hard is IMO?"
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest "When is your knowledge up to"
+uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"
+uv run python -m massgen.cli --model grok-3-mini "When is your knowledge up to"
+uv run python -m massgen.cli --model gpt-5-nano "When is your knowledge up to"
 uv run python -m massgen.cli --model glm-4.5 "Which AI won IMO in 2025?"
 uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
+
+uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "When is your knowledge up to"
 
 # Azure OpenAI (requires environment variables)
 uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "Which AI won IMO in 2025?"
@@ -286,7 +288,7 @@ uv run python -m massgen.cli --backend claude_code "Debug this Python script"
 #### Multiple Agents from Config
 ```bash
 # Use configuration file
-uv run python -m massgen.cli --config three_agents_default.yaml "Compare different approaches to renewable energy"
+uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
 
 # Mixed API and CLI backends
 uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
@@ -296,6 +298,7 @@ uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine 
 uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
 
 # MCP-enabled configurations (NEW in v0.0.9)
+uv run python -m massgen.cli --config gpt5_claude_code_paper_search_mcp.yaml "search 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in a md file"
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
 
@@ -306,7 +309,7 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 
 All available quick configuration files can be found [here](massgen/configs).
 
-See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md)
+See MCP server setup guides: [paper-search-mcp](https://github.com/openags/paper-search-mcp) | [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | 
 
 #### CLI Configuration Parameters
 
@@ -544,7 +547,7 @@ timeout_settings:
 MassGen supports an interactive mode where you can have ongoing conversations with the system:
 
 ```bash
-# Start interactive mode with a single agent
+# Start interactive mode with a single agent (no tool enabled by default)
 uv run python -m massgen.cli --model gpt-5-mini
 
 # Start interactive mode with configuration file
