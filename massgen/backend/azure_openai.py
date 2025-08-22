@@ -9,14 +9,6 @@ import os
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
 
-# Import Azure OpenAI client
-try:
-    from openai import AsyncAzureOpenAI
-
-    AZURE_OPENAI_AVAILABLE = True
-except ImportError:
-    AZURE_OPENAI_AVAILABLE = False
-
 
 class AzureOpenAIBackend(LLMBackend):
     """Azure OpenAI backend using the official Azure OpenAI client.
@@ -30,46 +22,16 @@ class AzureOpenAIBackend(LLMBackend):
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
-        if not AZURE_OPENAI_AVAILABLE:
-            raise ImportError(
-                "Azure OpenAI client not available. Install with: pip install openai"
-            )
+        super().__init__(api_key, **kwargs)
 
         # Get Azure configuration from parameters or environment variables
         self.api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY")
-        self.azure_endpoint = (
-            kwargs.get("azure_endpoint")
-            or kwargs.get("base_url")
-            or os.getenv("AZURE_OPENAI_ENDPOINT")
-        )
-        self.api_version = kwargs.get("api_version") or os.getenv(
-            "AZURE_OPENAI_API_VERSION", "2024-12-01-preview"
-        )
-
-        # Store additional configuration
-        self.config = kwargs
-
-        # Validate required configuration
-        if not self.azure_endpoint:
-            raise ValueError(
-                "Azure OpenAI endpoint URL is required. Set AZURE_OPENAI_ENDPOINT environment variable or pass azure_endpoint/base_url parameter."
-            )
-
+        
         if not self.api_key:
             raise ValueError(
                 "Azure OpenAI API key is required. Set AZURE_OPENAI_API_KEY environment variable or pass api_key parameter."
             )
 
-        # Clean up endpoint URL
-        if self.azure_endpoint.endswith("/"):
-            self.azure_endpoint = self.azure_endpoint[:-1]
-
-        # Initialize Azure OpenAI client
-        self.client = AsyncAzureOpenAI(
-            api_version=self.api_version,
-            azure_endpoint=self.azure_endpoint,
-            api_key=self.api_key,
-        )
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -87,8 +49,48 @@ class AzureOpenAIBackend(LLMBackend):
             **kwargs: Additional parameters including model (deployment name)
         """
         try:
+            # Merge constructor config with stream kwargs (stream kwargs take priority)
+            all_params = {**self.config, **kwargs}
+
+            # Import Azure OpenAI client
+            from openai import AsyncAzureOpenAI
+
+            azure_endpoint = (
+                all_params.get("azure_endpoint")
+                or all_params.get("base_url")
+                or os.getenv("AZURE_OPENAI_ENDPOINT")
+            )
+            api_version = all_params.get("api_version") or os.getenv(
+                "AZURE_OPENAI_API_VERSION", "2024-12-01-preview"
+            )
+
+            # Validate required configuration
+            if not azure_endpoint:
+                raise ValueError(
+                    "Azure OpenAI endpoint URL is required. Set AZURE_OPENAI_ENDPOINT environment variable or pass azure_endpoint/base_url parameter."
+                )
+
+            if not api_version:
+                raise ValueError(
+                    "Azure OpenAI API version is required. Set AZURE_OPENAI_API_VERSION environment variable or pass api_version parameter."
+                )
+
+            # Clean up endpoint URL
+            if azure_endpoint.endswith("/"):
+                azure_endpoint = azure_endpoint[:-1]
+
+            # Initialize Azure OpenAI client
+            self.client = AsyncAzureOpenAI(
+                api_version=api_version,
+                azure_endpoint=azure_endpoint,
+                api_key=self.api_key,
+            )
+
+            # Extract provider tool settings
+            enable_code_interpreter = all_params.get("enable_code_interpreter", False)
+
             # Get deployment name from model parameter
-            deployment_name = kwargs.get("model")
+            deployment_name = all_params.get("model")
             if not deployment_name:
                 raise ValueError(
                     "Azure OpenAI requires a deployment name. Pass it as the 'model' parameter."
