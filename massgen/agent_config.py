@@ -248,8 +248,6 @@ class AgentConfig:
             endpoint: Azure OpenAI endpoint URL (optional, uses AZURE_OPENAI_ENDPOINT env var)
             api_key: Azure OpenAI API key (optional, uses AZURE_OPENAI_API_KEY env var)
             api_version: Azure OpenAI API version (default: 2024-02-15-preview)
-            enable_web_search: Enable web search via Responses API
-            enable_code_interpreter: Enable code execution for computational tasks
             **kwargs: Additional backend parameters (e.g., temperature, max_tokens)
 
         Examples:
