@@ -705,7 +705,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Key Future Enhancements:
 
--   **Claude Code Context Sharing:** Enabling seamless context transmission between Claude Code agents and other models (v0.0.11)
+-   **Claude Code Context Sharing:** Enabling seamless Claude code agents context sharing and other models (v0.0.11)
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
