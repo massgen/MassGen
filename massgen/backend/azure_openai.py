@@ -85,9 +85,6 @@ class AzureOpenAIBackend(LLMBackend):
                 api_key=self.api_key,
             )
 
-            # Extract provider tool settings
-            enable_code_interpreter = all_params.get("enable_code_interpreter", False)
-
             # Get deployment name from model parameter
             deployment_name = all_params.get("model")
             if not deployment_name:
@@ -139,11 +136,7 @@ class AzureOpenAIBackend(LLMBackend):
                 "tools",
                 "agent_id",
                 "session_id",
-                "type",
-                "enable_web_search",
-                "enable_code_interpreter",
-                "web_search",
-                "code_interpreter",
+                "type"
             }
             for key, value in kwargs.items():
                 if key not in excluded_params and value is not None:
