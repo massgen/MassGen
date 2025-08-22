@@ -31,8 +31,8 @@ agents:
         # - mcp__paper_search__search_semantic_scholar
         # - mcp__paper_search__search_iacr
         
-    append_system_message: |
-      **IMPORTANT: you MUST consider and MUST synthesize the provided answer by other agents (even the searched paper list by other agents). Then provide your own answer.**
+    # append_system_message: |
+    #   **IMPORTANT: you MUST consider and MUST synthesize the provided answer by other agents (even the searched paper list by other agents). Then provide your own answer.**
 
   - id: "gpt-5"
     backend:
