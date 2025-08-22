@@ -10,3 +10,7 @@ PyYAML>=6.0
 rich==14.1.0
 cerebras-cloud-sdk==1.46.0
 lmstudio==1.4.1
+requests>=2.31.0
+typing-extensions>=4.0.0
+claude-code-sdk>=0.0.19
+paper-search-mcp>=0.1.3

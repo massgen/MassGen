@@ -65,15 +65,6 @@ from claude_code_sdk import (  # type: ignore
 
 from .base import LLMBackend, StreamChunk
 
-# Import MCP modules
-try:
-    from ..mcp import MCPClient, MCPError, MCPConnectionError
-
-    MCP_AVAILABLE = True
-except ImportError:
-    MCP_AVAILABLE = False
-    MCPClient = None
-
 
 class ClaudeCodeBackend(LLMBackend):
     """Claude Code backend using claude-code-sdk-python.
@@ -115,14 +106,6 @@ class ClaudeCodeBackend(LLMBackend):
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
-
-        # MCP integration
-        self.mcp_servers: List[Dict[str, Any]] = kwargs.get("mcp_servers", [])
-        self.mcp_clients: Dict[str, Any] = {}  # server_name -> MCPClient
-        self._mcp_tools_cache: Dict[str, Any] = {}  # cache discovered tools
-        self._mcp_initialized: bool = (
-            False  # track if MCP servers have been initialized
-        )
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -337,7 +320,7 @@ class ClaudeCodeBackend(LLMBackend):
         Returns:
             List of all tool names that Claude Code provides natively
         """
-        base_tools = [
+        return [
             "Read",
             "Write",
             "Edit",
@@ -357,19 +340,6 @@ class ClaudeCodeBackend(LLMBackend):
             "ExitPlanMode",
         ]
 
-        # Add MCP tools if available
-        if MCP_AVAILABLE and self.mcp_clients:
-            for server_name, client in self.mcp_clients.items():
-                if client and hasattr(client, "get_available_tools"):
-                    mcp_tools = client.get_available_tools()
-                    # Prefix with server name to avoid conflicts
-                    prefixed_tools = [
-                        f"mcp__{server_name}__{tool}" for tool in mcp_tools
-                    ]
-                    base_tools.extend(prefixed_tools)
-
-        return base_tools
-
     def get_current_session_id(self) -> Optional[str]:
         """Get current session ID from server-side session management.
 
@@ -377,181 +347,6 @@ class ClaudeCodeBackend(LLMBackend):
             Current session ID if available, None otherwise
         """
         return self._current_session_id
-
-    async def _init_mcp_servers(self) -> None:
-        """Initialize MCP server connections."""
-        if not MCP_AVAILABLE or not self.mcp_servers:
-            return
-        # Convert mcp_servers from dict format (YAML) to list format if needed
-        server_configs = []
-        if isinstance(self.mcp_servers, dict):
-            # YAML format: mcp_servers: { server_name: {config} }
-            for server_name, server_config in self.mcp_servers.items():
-                if isinstance(server_config, dict):
-                    config = server_config.copy()
-                    config["name"] = server_name
-                    server_configs.append(config)
-        elif isinstance(self.mcp_servers, list):
-            # Already in list format
-            server_configs = self.mcp_servers
-        else:
-            return
-
-        for server_config in server_configs:
-            server_name = server_config.get("name", "unnamed")
-            try:
-                client = MCPClient(server_config)
-                await client.connect()
-                self.mcp_clients[server_name] = client
-
-                # Cache tools for faster access
-                tools = client.get_available_tools()
-                for tool in tools:
-                    prefixed_name = f"mcp__{server_name}__{tool}"
-                    self._mcp_tools_cache[prefixed_name] = {
-                        "server_name": server_name,
-                        "tool_name": tool,
-                        "client": client,
-                    }
-
-                print(
-                    f"[ClaudeCode] Connected to MCP server '{server_name}' with {len(tools)} tools"
-                )
-
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] Failed to connect to MCP server '{server_name}': {e}"
-                )
-
-        self._mcp_initialized = True
-
-    async def _handle_mcp_tool_call(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle MCP tool call and return result."""
-        if not tool_name.startswith("mcp__"):
-            raise ValueError(f"Invalid MCP tool name: {tool_name}")
-
-        # Look up tool in cache
-        tool_info = self._mcp_tools_cache.get(tool_name)
-        if not tool_info:
-            return {"error": f"MCP tool '{tool_name}' not found", "success": False}
-
-        try:
-            client = tool_info["client"]
-            actual_tool_name = tool_info["tool_name"]
-
-            result = await client.call_tool(actual_tool_name, arguments)
-
-            return {"result": result, "success": True, "tool": tool_name}
-
-        except Exception as e:
-            return {
-                "error": f"MCP tool call failed: {str(e)}",
-                "success": False,
-                "tool": tool_name,
-            }
-
-    async def _test_mcp_connections(self) -> List[str]:
-        """Test MCP server connections and return list of failed server names."""
-        failed_servers = []
-
-        for server_name, client in self.mcp_clients.items():
-            try:
-                # Test connection by checking if client is connected
-                if not client.is_connected():
-                    failed_servers.append(server_name)
-                    continue
-
-                # Try a simple operation to verify connection is working
-                await client._send_request("tools/list")
-
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] MCP server '{server_name}' connection test failed: {e}"
-                )
-                failed_servers.append(server_name)
-
-        return failed_servers
-
-    async def _reconnect_failed_mcp_servers(self, failed_servers: List[str]) -> None:
-        """Reconnect failed MCP servers."""
-        if not failed_servers:
-            return
-
-        # Find server configs for failed servers
-        server_configs = []
-        if isinstance(self.mcp_servers, dict):
-            for server_name in failed_servers:
-                if server_name in self.mcp_servers:
-                    config = self.mcp_servers[server_name].copy()
-                    config["name"] = server_name
-                    server_configs.append(config)
-        elif isinstance(self.mcp_servers, list):
-            server_configs = [
-                config
-                for config in self.mcp_servers
-                if config.get("name") in failed_servers
-            ]
-
-        # Reconnect failed servers
-        for server_config in server_configs:
-            server_name = server_config.get("name", "unnamed")
-            try:
-                # Remove old client
-                if server_name in self.mcp_clients:
-                    try:
-                        await self.mcp_clients[server_name].disconnect()
-                    except Exception:
-                        pass  # Ignore cleanup errors
-                    del self.mcp_clients[server_name]
-
-                # Remove old tool cache entries
-                tools_to_remove = [
-                    tool
-                    for tool in self._mcp_tools_cache.keys()
-                    if tool.startswith(f"mcp__{server_name}__")
-                ]
-                for tool in tools_to_remove:
-                    del self._mcp_tools_cache[tool]
-
-                # Create new client and connect
-                client = MCPClient(server_config)
-                await client.connect()
-                self.mcp_clients[server_name] = client
-
-                # Update tool cache
-                tools = client.get_available_tools()
-                for tool in tools:
-                    prefixed_name = f"mcp__{server_name}__{tool}"
-                    self._mcp_tools_cache[prefixed_name] = {
-                        "server_name": server_name,
-                        "tool_name": tool,
-                        "client": client,
-                    }
-
-                print(
-                    f"[ClaudeCode] Reconnected to MCP server '{server_name}' with {len(tools)} tools"
-                )
-
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] Failed to reconnect to MCP server '{server_name}': {e}"
-                )
-
-    async def disconnect_mcp_servers(self) -> None:
-        """Disconnect all MCP servers."""
-        for server_name, client in self.mcp_clients.items():
-            try:
-                await client.disconnect()
-            except Exception as e:
-                print(
-                    f"[ClaudeCode] Error disconnecting MCP server '{server_name}': {e}"
-                )
-
-        self.mcp_clients.clear()
-        self._mcp_tools_cache.clear()
-        self._mcp_initialized = False
 
     def _build_system_prompt_with_workflow_tools(
         self, tools: List[Dict[str, Any]], base_system: Optional[str] = None
@@ -573,21 +368,6 @@ class ClaudeCodeBackend(LLMBackend):
         # Start with base system prompt
         if base_system:
             system_parts.append(base_system)
-
-        # Add MCP tools information if available
-        if MCP_AVAILABLE and self.mcp_clients:
-            system_parts.append("\n--- Available MCP Tools ---")
-            for server_name, client in self.mcp_clients.items():
-                if client and hasattr(client, "tools"):
-                    system_parts.append(f"MCP Server '{server_name}':")
-                    for tool_name, tool_def in client.tools.items():
-                        prefixed_name = f"mcp__{server_name}__{tool_name}"
-                        description = (
-                            tool_def.description
-                            if hasattr(tool_def, "description")
-                            else "No description"
-                        )
-                        system_parts.append(f"  - {prefixed_name}: {description}")
 
         # Add workflow tools information if present
         if tools:
@@ -885,7 +665,7 @@ class ClaudeCodeBackend(LLMBackend):
             **{k: v for k, v in options_kwargs.items() if k not in excluded_params},
         )
 
-    async def create_client(self, **options_kwargs) -> ClaudeSDKClient:
+    def create_client(self, **options_kwargs) -> ClaudeSDKClient:
         """Create ClaudeSDKClient with configurable parameters.
 
         Args:
@@ -899,11 +679,6 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Create ClaudeSDKClient with configured options
         self._client = ClaudeSDKClient(options)
-
-        # Initialize MCP servers once when creating client
-        if not self._mcp_initialized:
-            await self._init_mcp_servers()
-
         return self._client
 
     async def stream_with_tools(
@@ -952,25 +727,18 @@ class ClaudeCodeBackend(LLMBackend):
                 # Handle different system prompt mode
                 if all_params.get("system_prompt"):
                     # Create client with system_prompt
-                    client = await self.create_client(
+                    client = self.create_client(
                         system_prompt=workflow_system_prompt, **all_params
                     )
                 else:
                     # Create client with the enhanced system prompt
-                    client = await self.create_client(
+                    client = self.create_client(
                         append_system_prompt=workflow_system_prompt, **all_params
                     )
 
         # Connect client if not already connected
         if not client._transport:
             await client.connect()
-
-        # Test MCP server connections and reconnect failed ones
-        if self._mcp_initialized and self.mcp_clients:
-            failed_servers = await self._test_mcp_connections()
-            if failed_servers:
-                print(f"[ClaudeCode] Reconnecting failed MCP servers: {failed_servers}")
-                await self._reconnect_failed_mcp_servers(failed_servers)
 
         # Format the messages for Claude Code
         if not messages:
@@ -1008,7 +776,6 @@ class ClaudeCodeBackend(LLMBackend):
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
-
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
@@ -1154,9 +921,6 @@ class ClaudeCodeBackend(LLMBackend):
         Properly closes the connection and resets internal state.
         Should be called when the backend is no longer needed.
         """
-        # Disconnect MCP servers first
-        await self.disconnect_mcp_servers()
-
         if self._client is not None:
             try:
                 await self._client.disconnect()
