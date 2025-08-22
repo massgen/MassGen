@@ -5,6 +5,56 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.10] - 2025-08-22
+
+### Added
+- **Azure OpenAI Support**: Integration with Azure OpenAI services
+  - New `azure_openai.py` backend with async streaming capabilities
+  - Support for Azure-hosted GPT-4.1 and GPT-5-chat models
+  - Configuration examples for single and multi-agent Azure setups
+  - Test suite for Azure OpenAI functionality
+- **Enhanced Claude Code Backend**: Major refactoring and improvements
+  - Simplified MCP (Model Context Protocol) integration
+  - Improved Windows compatibility with git-bash detection
+- **Final Presentation Support**: New orchestrator presentation capabilities
+  - Support for final answer presentation in multi-agent scenarios
+  - Fallback mechanisms for presentation generation
+  - Test coverage for presentation functionality
+
+### Fixed
+- **Claude Code MCP**: Cleaned up and simplified MCP implementation
+  - Removed redundant MCP server and transport modules
+  - Fixed Windows path detection for git-bash
+- **Configuration Management**: Improved YAML configuration handling
+  - Fixed Azure OpenAI deployment configurations
+  - Updated model mappings for Azure services
+
+### Changed
+- **Backend Architecture**: Significant refactoring of backend systems
+  - Consolidated Azure OpenAI implementation using AsyncAzureOpenAI
+  - Improved error handling and streaming capabilities
+  - Enhanced async support across all backends
+- **Documentation Updates**: Enhanced project documentation
+  - Updated README with Azure OpenAI setup instructions
+  - Renamed roadmap from v0.0.10 to v0.0.11
+  - Improved presentation materials for DataHack Summit 2025
+- **Test Infrastructure**: Expanded test coverage
+  - Added comprehensive Azure OpenAI backend tests
+  - Integration tests for final presentation functionality
+  - Simplified test structure with better coverage
+
+### Removed
+- **Deprecated MCP Components**: Removed unused MCP modules
+  - Removed standalone MCP client, transport, and server implementations
+  - Cleaned up MCP test files and testing checklist
+  - Simplified Claude Code backend by removing redundant MCP code
+
+### Technical Details
+- **Commits**: 35+ commits including Azure OpenAI integration and Claude Code improvements
+- **Files Modified**: 30+ files across backend, configuration, tests, and documentation
+- **New Backend**: Azure OpenAI backend with full async support
+- **Contributors**: @qidanrui @Leezekun @sonichi and the MassGen team
+
 ## [0.0.9] - 2025-08-22
 
 ### Added
