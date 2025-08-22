@@ -881,10 +881,6 @@ class ClaudeCodeBackend(LLMBackend):
                             # On Mac/Linux, re-raise the error since this shouldn't happen
                             raise create_error
 
-        # Initialize MCP servers once when connecting
-        if not self._mcp_initialized:
-            await self._init_mcp_servers()
-
         # Ensure client connection
         try:
             await client.connect()
@@ -925,13 +921,6 @@ class ClaudeCodeBackend(LLMBackend):
                 source="claude_code",
             )
             return
-
-        # Test MCP server connections and reconnect failed ones
-        if self._mcp_initialized and self.mcp_clients:
-            failed_servers = await self._test_mcp_connections()
-            if failed_servers:
-                print(f"[ClaudeCode] Reconnecting failed MCP servers: {failed_servers}")
-                await self._reconnect_failed_mcp_servers(failed_servers)
 
         # Format the messages for Claude Code
         if not messages:

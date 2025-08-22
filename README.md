@@ -90,8 +90,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 - Recent Achievements
   - [v0.0.10](#recent-achievements-v0010)
-  - [v0.0.9](#recent-achievements-v009)
-  - [v0.0.3 - v0.0.8](#previous-achievements-v003-v008)
+  - [v0.0.3 - v0.0.9](#previous-achievements-v003-v009)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
@@ -216,8 +215,8 @@ The system currently supports multiple model providers with advanced capabilitie
 
 **API-based Models:**
 - **Azure OpenAI** (NEW in v0.0.10): GPT-4, GPT-4o, GPT-3.5-turbo, GPT-4.1, GPT-5-chat
-- **Cerebras AI**: GPT-OSS-120B
-- **Claude**: Claude Sonnet 4, Claude Haiku 3.5
+- **Cerebras AI**: GPT-OSS-120B...
+- **Claude**: Claude Haiku 3.5, Claude Sonnet 4, Claude Opus 4...
 - **Claude Code**: Native Claude Code SDK with comprehensive dev tools
 - **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
 - **Grok**: Grok-4, Grok-3, Grok-3-mini...
@@ -260,13 +259,11 @@ uv run python -m massgen.cli --model claude-3-5-sonnet-latest "When is your know
 uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"
 uv run python -m massgen.cli --model grok-3-mini "When is your knowledge up to"
 uv run python -m massgen.cli --model gpt-5-nano "When is your knowledge up to"
-uv run python -m massgen.cli --model glm-4.5 "Which AI won IMO in 2025?"
-uv run python -m massgen.cli --model gpt-oss-120b "Which AI won IMO in 2025?"
 
 uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "When is your knowledge up to"
 
 # Azure OpenAI (NEW in v0.0.10, requires environment variables)
-uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "Which AI won IMO in 2025?"
+uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "When is your knowledge up to"
 ```
 
 All the models with a default backend can be found [here](massgen/utils.py).
@@ -670,7 +667,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - Enhanced async support across all backends
 - Improved error handling and streaming capabilities
 
-### Recent Achievements (v0.0.9)
+### Previous Achievements (v0.0.3-v0.0.9)
 
 ✅ **MCP (Model Context Protocol) Support for Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
 - New MCP module with client implementation and transport layer
@@ -680,8 +677,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 ✅ **Multi-Agent MCP Examples**: New configuration files demonstrating MCP integration
 - Discord and Twitter integration via MCP
 - Multi-agent setups with MCP-enabled tools
-
-### Previous Achievements (v0.0.3-v0.0.8)
 
 ✅ **Timeout Management System**: Timeout capabilities for better control and time management
 - Orchestrator-level timeout with graceful fallback
