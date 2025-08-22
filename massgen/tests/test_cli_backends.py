@@ -20,7 +20,7 @@ sys.path.insert(0, str(project_root))
 
 try:
     # from massgen.backend.claude_code_cli import ClaudeCodeCLIBackend  # File removed
-    from massgen.backend.gemini_cli import GeminiCLIBackend
+    from massgen.backend.gemini import GeminiBackend
     from massgen.backend.cli_base import CLIBackend
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -97,7 +97,7 @@ def test_gemini_cli_command_building():
     massgen.backend.gemini_cli.shutil.which = lambda x: "/usr/bin/gemini"
 
     try:
-        backend = GeminiCLIBackend(model="gemini-2.5-pro")
+        backend = GeminiBackend(model="gemini-2.5-pro")
 
         messages = [{"role": "user", "content": "What is the capital of France?"}]
         tools = []
