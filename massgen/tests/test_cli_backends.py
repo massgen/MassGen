@@ -86,34 +86,6 @@ def test_claude_code_cli_command_building():
     # NOTE: ClaudeCodeCLIBackend was removed, only ClaudeCodeBackend (SDK-based) remains
 
 
-def test_gemini_cli_command_building():
-    """Test Gemini CLI command building (without executing)."""
-    print("🧪 Testing Gemini CLI command building...")
-
-    # Mock the shutil.which check
-    import massgen.backend.gemini_cli
-
-    original_which = massgen.backend.gemini_cli.shutil.which
-    massgen.backend.gemini_cli.shutil.which = lambda x: "/usr/bin/gemini"
-
-    try:
-        backend = GeminiBackend(model="gemini-2.5-pro")
-
-        messages = [{"role": "user", "content": "What is the capital of France?"}]
-        tools = []
-
-        command = backend._build_command(messages, tools)
-
-        assert "timeout" in command[0], "Should use timeout command"
-        assert "gemini" in command, "Should use gemini CLI"
-
-        print("✅ Gemini CLI command building test passed")
-
-    finally:
-        # Restore original function
-        massgen.backend.gemini_cli.shutil.which = original_which
-
-
 def test_configuration_files():
     """Test that configuration files are valid."""
     print("🧪 Testing configuration files...")
@@ -122,7 +94,6 @@ def test_configuration_files():
 
     config_files = [
         "massgen/configs/claude_code_cli.yaml",
-        "massgen/configs/gemini_cli.yaml",
         "massgen/configs/cli_backends_mixed.yaml",
     ]
 
@@ -175,9 +146,6 @@ async def main():
         test_claude_code_cli_command_building()
         print()
 
-        test_gemini_cli_command_building()
-        print()
-
         # Test configuration files
         test_configuration_files()
         print()
@@ -200,14 +168,6 @@ async def main():
         print("  # Claude Code (SDK-based)")
         print(
             "  uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 'What is 2+2?'"
-        )
-        print()
-        print("  # Gemini CLI")
-        print(
-            "  uv run python -m massgen.cli --backend gemini-cli --model gemini-2.5-pro 'Explain quantum computing'"
-        )
-        print(
-            "  uv run python -m massgen.cli --config massgen/configs/gemini_cli.yaml 'Analyze this data'"
         )
         print()
         print("  # Mixed CLI backends")
