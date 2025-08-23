@@ -440,13 +440,18 @@ class CoordinationUI:
                 # Allow time for final presentation to be fully visible
                 time.sleep(1.5)
 
-            # Get the clean final answer from orchestrator's stored state (avoids token spacing issues)
+            # Get the final presentation content (synthesis) or fall back to stored answer
             orchestrator_final_answer = None
-            if (
+            
+            # First try to get the synthesized final presentation content
+            if hasattr(orchestrator, "_final_presentation_content") and orchestrator._final_presentation_content:
+                orchestrator_final_answer = orchestrator._final_presentation_content.strip()
+            elif (
                 selected_agent
                 and hasattr(orchestrator, "agent_states")
                 and selected_agent in orchestrator.agent_states
             ):
+                # Fall back to stored answer if no final presentation content
                 stored_answer = orchestrator.agent_states[selected_agent].answer
                 if stored_answer:
                     # Clean up the stored answer
@@ -481,7 +486,7 @@ class CoordinationUI:
 
             # Finalize session
             if self.logger:
-                session_info = self.logger.finalize_session(final_answer, success=True)
+                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -536,7 +541,7 @@ class CoordinationUI:
             print()
 
             if self.logger:
-                session_info = self.logger.finalize_session(final_answer, success=True)
+                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -893,7 +898,7 @@ class CoordinationUI:
 
             # Finalize session
             if self.logger:
-                session_info = self.logger.finalize_session(final_answer, success=True)
+                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -1060,6 +1065,10 @@ class CoordinationUI:
 
     async def _process_orchestrator_content(self, content: str):
         """Process content from orchestrator."""
+        # Skip system message debug content from display
+        if "🔍" in content and ("[SYSTEM_FULL]" in content or "[SYSTEM_PREVIEW]" in content):
+            return
+            
         # Handle final answer - merge with voting info
         if "Final Coordinated Answer" in content:
             # Don't create event yet - wait for actual answer content to merge
