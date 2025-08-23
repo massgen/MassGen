@@ -6,6 +6,13 @@ multiple sub-agents using the proven binary decision framework behind the scenes
 
 TODOs:
 - Move CLI's coordinate_with_context logic to orchestrator and simplify CLI to just use orchestrator
+- Implement orchestrator system message functionality to customize coordination behavior:
+  * Custom voting strategies (consensus, expertise-weighted, domain-specific)
+  * Message construction templates for sub-agent instructions
+  * Conflict resolution approaches (evidence-based, democratic, expert-priority)
+  * Workflow preferences (thorough vs fast, iterative vs single-pass)
+  * Domain-specific coordination (research teams, technical reviews, creative brainstorming)
+  * Dynamic agent selection based on task requirements and orchestrator instructions
 """
 
 import asyncio
@@ -1180,8 +1187,8 @@ class Orchestrator(ChatAgent):
             selected_agent_id=selected_agent_id,
         )
 
-        # Get agent's original system message if available
-        agent_system_message = getattr(agent, "system_message", None)
+        # Get agent's configurable system message using the standard interface
+        agent_system_message = agent.get_configurable_system_message()
         # Create conversation with system and user messages
         presentation_messages = [
             {
@@ -1438,7 +1445,34 @@ Final Session ID: {session_id}.
             "conversation_length": len(self.conversation_history),
         }
 
-    def reset(self) -> None:
+    def get_configurable_system_message(self) -> Optional[str]:
+        """
+        Get the configurable system message for the orchestrator.
+        
+        This can define how the orchestrator should coordinate agents, construct messages,
+        handle conflicts, make decisions, etc. For example:
+        - Custom voting strategies
+        - Message construction templates  
+        - Conflict resolution approaches
+        - Coordination workflow preferences
+        
+        Returns:
+            Orchestrator's configurable system message if available, None otherwise
+        """
+        if self.config and hasattr(self.config, 'get_configurable_system_message'):
+            return self.config.get_configurable_system_message()
+        elif self.config and hasattr(self.config, 'custom_system_instruction'):
+            return self.config.custom_system_instruction
+        elif self.config and self.config.backend_params:
+            # Check for backend-specific system prompts
+            backend_params = self.config.backend_params
+            if "system_prompt" in backend_params:
+                return backend_params["system_prompt"]
+            elif "append_system_prompt" in backend_params:
+                return backend_params["append_system_prompt"]
+        return None
+
+    async def reset(self) -> None:
         """Reset orchestrator state for new task."""
         self.conversation_history.clear()
         self.current_task = None
