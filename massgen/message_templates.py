@@ -267,15 +267,17 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
 
-        presentation_instructions = """You have been selected as the winning presenter in a coordination process. Your task is to present a polished, comprehensive final answer that incorporates the best insights from all participants.
+        presentation_instructions = """You have been selected as the winning presenter in a coordination process. 
 
-Consider:
-1. Your original response and how it can be refined
-2. Valuable insights from other agents' answers that should be incorporated  
-3. Feedback received through the voting process
-4. Ensuring clarity, completeness, and comprehensiveness for the final audience
+CRITICAL: You MUST create a synthesized final answer that combines insights from ALL participants. Do NOT simply repeat your original response.
 
-Present your final coordinated answer in the most helpful and complete way possible."""
+Required synthesis actions:
+1. Acknowledge what other agents contributed (mention them by name)
+2. Incorporate their unique findings, methods, or interpretations into your answer
+3. Address any gaps or limitations your original answer had
+4. Present a unified response that is better than any individual answer alone
+
+Your task is to present the best possible coordinated answer by combining everyone's strengths."""
 
         # Combine with original system message if provided
         if original_system_message:
