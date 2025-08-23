@@ -13,7 +13,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.grok_backend import GrokBackend
+from massgen.backend.grok import GrokBackend
 from massgen.chat_agent import SingleAgent
 
 
