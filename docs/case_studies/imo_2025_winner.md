@@ -1,6 +1,6 @@
-# MassGen Case Study: Collaborative Real-Time Information Research
+# MassGen Case Study: IMO AI Winners
 
-This case study demonstrates **MassGen**'s ability to achieve unanimous consensus on current events research, showcasing how agents can effectively collaborate to gather and verify real-time information through sophisticated web search and fact-checking. This case study was run on version v0.0.11.
+This case study demonstrates **MassGen**'s ability to do fact checking based on recent news and to achieve unanimous consensus on current events research, showcasing how agents can effectively collaborate to gather and verify real-time information through sophisticated web search and fact-checking. This case study was run on version v0.0.11. 
 
 ---
 
@@ -81,7 +81,7 @@ The voting process revealed remarkable consensus on research quality and informa
 
 ## Conclusion
 
-This case study showcases **MassGen**'s exceptional ability to collaborate on **real-time information research**, demonstrating how agents can perform **sophisticated fact-checking**, **source verification**, and **comprehensive information gathering**. The unanimous consensus reflects not just agreement, but a **shared understanding of research quality**, **factual accuracy**, and **information completeness**.
+This case study showcases **MassGen**'s exceptional ability to collaborate on **up-to-date information research**, demonstrating how agents can perform **sophisticated fact-checking**, **source verification**, and **comprehensive information gathering**. The unanimous consensus reflects not just agreement, but a **shared understanding of research quality**, **factual accuracy**, and **information completeness**.
 
 **Agent 1's response** earned recognition for its **thorough multi-source research**, **accurate fact distinction**, and **comprehensive coverage of all relevant AI systems**. This demonstrates **MassGen**'s strength in **current events research** where **factual accuracy** and **source credibility** are paramount, making it particularly valuable for **journalism**, **fact-checking**, **market research**, and any task requiring **real-time information synthesis** with high accuracy standards.
 
