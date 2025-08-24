@@ -22,6 +22,7 @@ Usage examples:
 import argparse
 import asyncio
 import json
+import logging
 import os
 import sys
 import yaml
@@ -81,6 +82,24 @@ class ConfigurationError(Exception):
     """Configuration error for CLI."""
 
     pass
+
+
+def setup_debug_logging():
+    """Configure logging for debug mode using loguru."""
+    from .logger_config import setup_logging
+    setup_logging(debug=True)
+    
+    # Also setup standard logging for libraries that don't use loguru
+    logging.basicConfig(
+        level=logging.WARNING,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    # Set debug level for specific modules
+    logging.getLogger("massgen").setLevel(logging.DEBUG)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)  # Reduce asyncio noise
+    logging.getLogger("urllib3").setLevel(logging.WARNING)  # Reduce urllib3 noise
 
 
 def load_config_file(config_path: str) -> Dict[str, Any]:
@@ -324,7 +343,7 @@ def create_simple_config(
             "backend": backend_config,
             "system_message": system_message or "You are a helpful AI assistant.",
         },
-        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
+        "ui": {"display_type": "simple", "logging_enabled": True},
     }
 
 
@@ -382,7 +401,7 @@ async def run_question_with_history(
         orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
+            display_type=ui_config.get("display_type", "simple"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -459,7 +478,7 @@ async def run_single_question(
         orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
+            display_type=ui_config.get("display_type", "simple"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -507,7 +526,7 @@ async def run_interactive_mode(
     else:
         mode = "Multi-Agent Coordination"
     print(f"   Mode: {mode}", flush=True)
-    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
+    print(f"   UI: {ui_config.get('display_type', 'simple')}", flush=True)
 
     print_help_messages()
 
@@ -728,6 +747,9 @@ Environment Variables:
         "--no-display", action="store_true", help="Disable visual coordination display"
     )
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable debug mode with verbose logging"
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group(
@@ -741,6 +763,13 @@ Environment Variables:
 
     args = parser.parse_args()
 
+    # Setup debug logging if requested
+    if args.debug:
+        setup_debug_logging()
+        from .logger_config import logger
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
+
     # Validate arguments
     if not args.backend:
         if not args.model and not args.config:
@@ -752,6 +781,9 @@ Environment Variables:
         # Load or create configuration
         if args.config:
             config = load_config_file(args.config)
+            if args.debug:
+                logger.debug(f"Loaded config from file: {args.config}")
+                logger.debug(f"Config content: {json.dumps(config, indent=2)}")
         else:
             model = args.model
             if args.backend:
@@ -768,6 +800,9 @@ Environment Variables:
                 system_message=system_message,
                 base_url=args.base_url,
             )
+            if args.debug:
+                logger.debug(f"Created simple config with backend: {backend}, model: {model}")
+                logger.debug(f"Config content: {json.dumps(config, indent=2)}")
 
         # Apply command-line overrides
         ui_config = config.get("ui", {})
@@ -775,6 +810,10 @@ Environment Variables:
             ui_config["display_type"] = "simple"
         if args.no_logs:
             ui_config["logging_enabled"] = False
+        if args.debug:
+            ui_config["debug"] = True
+            # Enable logging if debug is on
+            ui_config["logging_enabled"] = True
 
         # Apply timeout overrides from CLI arguments
         timeout_settings = config.get("timeout_settings", {})
@@ -785,10 +824,17 @@ Environment Variables:
         config["timeout_settings"] = timeout_settings
 
         # Create agents
+        if args.debug:
+            from .logger_config import logger
+            logger.debug("Creating agents from config...")
         agents = create_agents_from_config(config)
 
         if not agents:
             raise ConfigurationError("No agents configured")
+        
+        if args.debug:
+            from .logger_config import logger
+            logger.debug(f"Created {len(agents)} agent(s): {list(agents.keys())}")
 
         # Create timeout config from settings and put it in kwargs
         timeout_settings = config.get("timeout_settings", {})

@@ -64,6 +64,7 @@ from claude_code_sdk import (  # type: ignore
 
 
 from .base import LLMBackend, StreamChunk
+from ..logger_config import log_backend_activity, log_agent_message
 
 
 class ClaudeCodeBackend(LLMBackend):
@@ -731,6 +732,11 @@ class ClaudeCodeBackend(LLMBackend):
         Yields:
             StreamChunk objects with response content and metadata
         """
+        log_backend_activity(
+            "claude_code",
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0}
+        )
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
         # Check if we already have a client
@@ -821,6 +827,11 @@ class ClaudeCodeBackend(LLMBackend):
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
+            log_agent_message(
+                "claude_code",
+                "SEND",
+                {"query": combined_query[:200]}
+            )
             await client.query(combined_query)
         else:
             yield StreamChunk(
@@ -839,12 +850,22 @@ class ClaudeCodeBackend(LLMBackend):
                             accumulated_content += block.text
 
                             # Yield content chunk
+                            log_agent_message(
+                                "claude_code",
+                                "RECV",
+                                {"content": block.text}
+                            )
                             yield StreamChunk(
                                 type="content", content=block.text, source="claude_code"
                             )
 
                         elif isinstance(block, ToolUseBlock):
                             # Claude Code's builtin tool usage
+                            log_backend_activity(
+                                "claude_code",
+                                f"Builtin tool called: {block.name}",
+                                {"tool_id": block.id}
+                            )
                             yield StreamChunk(
                                 type="content",
                                 content=f"🔧 {block.name}({block.input})",

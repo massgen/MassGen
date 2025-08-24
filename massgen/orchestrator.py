@@ -23,6 +23,12 @@ from .message_templates import MessageTemplates
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
+from .logger_config import (
+    log_orchestrator_activity,
+    log_agent_message,
+    log_coordination_step,
+    log_tool_call
+)
 
 
 @dataclass
@@ -242,6 +248,12 @@ class Orchestrator(ChatAgent):
         self.total_tokens = 0
         self.is_orchestrator_timeout = False
         self.timeout_reason = None
+        
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            "Starting coordination with timeout",
+            {"timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds}
+        )
 
         # Track active coordination state for cleanup
         self._active_streams = {}
@@ -280,6 +292,11 @@ class Orchestrator(ChatAgent):
         self, conversation_context: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
+        log_coordination_step(
+            "Starting multi-agent coordination",
+            {"agents": list(self.agents.keys()), "has_context": conversation_context is not None}
+        )
+        
         yield StreamChunk(
             type="content",
             content="🚀 Starting multi-agent coordination...\n\n",
@@ -313,6 +330,11 @@ class Orchestrator(ChatAgent):
         }
         self._selected_agent = self._determine_final_agent_from_votes(
             votes, current_answers
+        )
+        
+        log_coordination_step(
+            "Final agent selected",
+            {"selected_agent": self._selected_agent, "votes": votes}
         )
 
         # Present final answer
@@ -613,6 +635,12 @@ class Orchestrator(ChatAgent):
             restart_pending is cleared at the beginning of execution.
         """
         agent = self.agents[agent_id]
+        
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            f"Starting agent execution: {agent_id}",
+            {"task": task if task else None, "has_answers": bool(answers)}
+        )
 
         # Initialize agent state
         self.agent_states[agent_id].is_killed = False
@@ -647,6 +675,13 @@ class Orchestrator(ChatAgent):
                     valid_agent_ids=list(answers.keys()) if answers else None,
                     base_system_message=agent_system_message,
                 )
+            
+            # Log the messages being sent to the agent
+            log_agent_message(
+                agent_id,
+                "SEND",
+                {"system": conversation["system_message"], "user": conversation["user_message"]}
+            )
 
             # Clean startup without redundant messages
 
@@ -702,6 +737,8 @@ class Orchestrator(ChatAgent):
                         response_text += chunk.content
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
+                        # Log received content
+                        log_agent_message(agent_id, "RECV", {"content": chunk.content})
                     elif chunk.type in [
                         "reasoning",
                         "reasoning_done",
@@ -743,9 +780,11 @@ class Orchestrator(ChatAgent):
                             if tool_name == "new_answer":
                                 content = tool_args.get("content", "")
                                 yield ("content", f'💡 Providing answer: "{content}"')
+                                log_tool_call(agent_id, "new_answer", {"content": content})
                             elif tool_name == "vote":
                                 agent_voted_for = tool_args.get("agent_id", "")
                                 reason = tool_args.get("reason", "")
+                                log_tool_call(agent_id, "vote", {"agent_id": agent_voted_for, "reason": reason})
 
                                 # Convert anonymous agent ID to real agent ID for display
                                 real_agent_id = agent_voted_for
@@ -765,6 +804,7 @@ class Orchestrator(ChatAgent):
                                 )
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
+                                log_tool_call(agent_id, tool_name, tool_args)
                     elif chunk.type == "error":
                         # Stream error information to user interface
                         error_msg = (
