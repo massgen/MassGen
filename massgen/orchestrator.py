@@ -163,6 +163,7 @@ class Orchestrator(ChatAgent):
         user_message = conversation_context.get("current_message")
 
         if not user_message:
+            log_stream_chunk("orchestrator", "error", "No user message found in conversation")
             yield StreamChunk(
                 type="error", error="No user message found in conversation"
             )
@@ -190,6 +191,7 @@ class Orchestrator(ChatAgent):
                 yield chunk
         else:
             # Already coordinating - provide status update
+            log_stream_chunk("orchestrator", "content", "🔄 Coordinating agents, please wait...")
             yield StreamChunk(
                 type="content", content="🔄 Coordinating agents, please wait..."
             )
@@ -302,6 +304,7 @@ class Orchestrator(ChatAgent):
             {"agents": list(self.agents.keys()), "has_context": conversation_context is not None}
         )
         
+        log_stream_chunk("orchestrator", "content", "🚀 Starting multi-agent coordination...\n\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content="🚀 Starting multi-agent coordination...\n\n",
@@ -315,6 +318,7 @@ class Orchestrator(ChatAgent):
             self.agent_states[agent_id].has_voted = False
             self.agent_states[agent_id].restart_pending = True
 
+        log_stream_chunk("orchestrator", "content", "## 📋 Agents Coordinating\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content="## 📋 Agents Coordinating\n",
@@ -457,6 +461,7 @@ class Orchestrator(ChatAgent):
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             answered_agents[agent_id] = result_data
                             reset_signal = True
+                            log_stream_chunk("orchestrator", "content", "✅ Answer provided\n", agent_id)
                             yield StreamChunk(
                                 type="content",
                                 content=f"✅ Answer provided\n",
@@ -469,6 +474,7 @@ class Orchestrator(ChatAgent):
                             if self.agent_states[agent_id].restart_pending:
                                 voted_for = result_data.get("agent_id", "<unknown>")
                                 reason = result_data.get("reason", "No reason provided")
+                                log_stream_chunk("orchestrator", "content", f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers", agent_id)
                                 yield StreamChunk(
                                     type="content",
                                     content=f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
@@ -477,6 +483,7 @@ class Orchestrator(ChatAgent):
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
                                 voted_agents[agent_id] = result_data
+                                log_stream_chunk("orchestrator", "content", f"✅ Vote recorded for [{result_data['agent_id']}]", agent_id)
                                 yield StreamChunk(
                                     type="content",
                                     content=f"✅ Vote recorded for [{result_data['agent_id']}]",
@@ -490,6 +497,7 @@ class Orchestrator(ChatAgent):
                             type="content", content=f"❌ {chunk_data}", source=agent_id
                         )
                         # Emit agent completion status for errors too
+                        log_stream_chunk("orchestrator", "agent_status", "completed", agent_id)
                         yield StreamChunk(
                             type="agent_status",
                             source=agent_id,
@@ -517,6 +525,7 @@ class Orchestrator(ChatAgent):
                         await self._close_agent_stream(agent_id, active_streams)
 
                 except Exception as e:
+                    log_stream_chunk("orchestrator", "content", f"❌ Stream error - {e}", agent_id)
                     yield StreamChunk(
                         type="content",
                         content=f"❌ Stream error - {e}",
@@ -1105,12 +1114,14 @@ class Orchestrator(ChatAgent):
 
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
         """Present the final coordinated answer."""
+        log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
         yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
 
         # Select the best agent based on current state
         if not self._selected_agent:
             self._selected_agent = self._determine_final_agent_from_states()
             if self._selected_agent:
+                log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
                 yield StreamChunk(
                     type="content",
                     content=f"🏆 Selected Agent: {self._selected_agent}\n",
@@ -1126,10 +1137,13 @@ class Orchestrator(ChatAgent):
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
 
+            log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
             yield StreamChunk(
                 type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n"
             )
+            log_stream_chunk("orchestrator", "content", final_answer)
             yield StreamChunk(type="content", content=final_answer)
+            log_stream_chunk("orchestrator", "content", f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*")
             yield StreamChunk(
                 type="content",
                 content=f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*",
@@ -1137,15 +1151,18 @@ class Orchestrator(ChatAgent):
         else:
             error_msg = "❌ Unable to provide coordinated answer - no successful agents"
             self.add_to_history("assistant", error_msg)
+            log_stream_chunk("orchestrator", "content", error_msg)
             yield StreamChunk(type="content", content=error_msg)
 
         # Update workflow phase
         self.workflow_phase = "presenting"
+        log_stream_chunk("orchestrator", "done", None)
         yield StreamChunk(type="done")
 
     async def _handle_orchestrator_timeout(self) -> AsyncGenerator[StreamChunk, None]:
         """Handle orchestrator timeout by jumping directly to get_final_presentation."""
         # Output orchestrator timeout message first
+        log_stream_chunk("orchestrator", "content", f"\n⚠️ **Orchestrator Timeout**: {self.timeout_reason}\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content=f"\n⚠️ **Orchestrator Timeout**: {self.timeout_reason}\n",
@@ -1159,6 +1176,7 @@ class Orchestrator(ChatAgent):
             if state.answer and not state.is_killed
         }
 
+        log_stream_chunk("orchestrator", "content", f"📊 Current state: {len(available_answers)} answers available\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content=f"📊 Current state: {len(available_answers)} answers available\n",
@@ -1167,12 +1185,14 @@ class Orchestrator(ChatAgent):
 
         # If no answers available, provide fallback with timeout explanation
         if len(available_answers) == 0:
+            log_stream_chunk("orchestrator", "content", "❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n", self.orchestrator_id)
             yield StreamChunk(
                 type="content",
                 content="❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n",
                 source=self.orchestrator_id,
             )
             self.workflow_phase = "presenting"
+            log_stream_chunk("orchestrator", "done", None)
             yield StreamChunk(type="done")
             return
 
@@ -1189,6 +1209,7 @@ class Orchestrator(ChatAgent):
 
         # Jump directly to get_final_presentation
         vote_results = self._get_vote_results()
+        log_stream_chunk("orchestrator", "content", f"🎯 Jumping to final presentation with {self._selected_agent} (selected despite timeout)\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content=f"🎯 Jumping to final presentation with {self._selected_agent} (selected despite timeout)\n",
@@ -1243,6 +1264,7 @@ class Orchestrator(ChatAgent):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Ask the winning agent to present their final answer with voting context."""
         if selected_agent_id not in self.agents:
+            log_stream_chunk("orchestrator", "error", f"Selected agent {selected_agent_id} not found")
             yield StreamChunk(
                 type="error", error=f"Selected agent {selected_agent_id} not found"
             )
@@ -1289,6 +1311,7 @@ class Orchestrator(ChatAgent):
             },
             {"role": "user", "content": presentation_content},
         ]
+        log_stream_chunk("orchestrator", "status", f"🎤  [{selected_agent_id}] presenting final answer\n")
         yield StreamChunk(
             type="status",
             content=f"🎤  [{selected_agent_id}] presenting final answer\n",
@@ -1300,6 +1323,7 @@ class Orchestrator(ChatAgent):
             # Use the same streaming approach as regular coordination
             if chunk.type == "content" and chunk.content:
                 presentation_content += chunk.content
+                log_stream_chunk("orchestrator", "content", chunk.content, selected_agent_id)
                 yield StreamChunk(
                     type="content", content=chunk.content, source=selected_agent_id
                 )
@@ -1327,6 +1351,7 @@ class Orchestrator(ChatAgent):
                     summary_index=getattr(chunk, "summary_index", None),
                 )
                 # Use the same format as main coordination for consistency
+                log_stream_chunk("orchestrator", chunk.type, chunk.content, selected_agent_id)
                 yield reasoning_chunk
             elif chunk.type == "backend_status":
                 import json
@@ -1338,19 +1363,23 @@ class Orchestrator(ChatAgent):
 Final Session ID: {session_id}.
 """
 
+                log_stream_chunk("orchestrator", "content", content, selected_agent_id)
                 yield StreamChunk(
                     type="content", content=content, source=selected_agent_id
                 )
 
             elif chunk.type == "done":
+                log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
+                log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
                 yield StreamChunk(
                     type="error", error=chunk.error, source=selected_agent_id
                 )
             # Pass through other chunk types as-is but with source
             else:
                 if hasattr(chunk, "source"):
+                    log_stream_chunk("orchestrator", chunk.type, getattr(chunk, "content", ""), selected_agent_id)
                     yield StreamChunk(
                         type=chunk.type,
                         content=getattr(chunk, "content", ""),
@@ -1362,6 +1391,7 @@ Final Session ID: {session_id}.
                         },
                     )
                 else:
+                    log_stream_chunk("orchestrator", chunk.type, getattr(chunk, "content", ""), selected_agent_id)
                     yield StreamChunk(
                         type=chunk.type,
                         content=getattr(chunk, "content", ""),
@@ -1382,6 +1412,7 @@ Final Session ID: {session_id}.
             stored_answer = self.agent_states[selected_agent_id].answer
             if stored_answer:
                 fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
+                log_stream_chunk("orchestrator", "content", fallback_content, selected_agent_id)
                 yield StreamChunk(
                     type="content",
                     content=fallback_content,
@@ -1389,6 +1420,7 @@ Final Session ID: {session_id}.
                 )
                 self._final_presentation_content = stored_answer
             else:
+                log_stream_chunk("orchestrator", "content", "\n❌ No content generated for final presentation and no stored answer available.", selected_agent_id)
                 yield StreamChunk(
                     type="content",
                     content="\n❌ No content generated for final presentation and no stored answer available.",
@@ -1486,16 +1518,19 @@ Final Session ID: {session_id}.
             conversation_context
             and len(conversation_context.get("conversation_history", [])) > 0
         ):
+            log_stream_chunk("orchestrator", "content", f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or coordinate a new task that takes our conversation history into account.")
             yield StreamChunk(
                 type="content",
                 content=f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or coordinate a new task that takes our conversation history into account.",
             )
         else:
+            log_stream_chunk("orchestrator", "content", f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.")
             yield StreamChunk(
                 type="content",
                 content=f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.",
             )
 
+        log_stream_chunk("orchestrator", "done", None)
         yield StreamChunk(type="done")
 
     # =============================================================================
