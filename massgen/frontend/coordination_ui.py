@@ -212,6 +212,13 @@ class CoordinationUI:
                     if source and status:
                         self.display.update_agent_status(source, status)
                     continue
+                
+                # Filter out debug chunks from display
+                elif chunk_type == "debug":
+                    # Log debug info but don't display it
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk_type)
+                    continue
 
                 # builtin_tool_results handling removed - now handled as simple content
 
@@ -635,6 +642,13 @@ class CoordinationUI:
                     status = getattr(chunk, "status", None)
                     if source and status:
                         self.display.update_agent_status(source, status)
+                    continue
+                
+                # Filter out debug chunks from display
+                elif chunk_type == "debug":
+                    # Log debug info but don't display it
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk_type)
                     continue
 
                 # builtin_tool_results handling removed - now handled as simple content
@@ -1065,10 +1079,6 @@ class CoordinationUI:
 
     async def _process_orchestrator_content(self, content: str):
         """Process content from orchestrator."""
-        # Skip system message debug content from display
-        if "🔍" in content and ("[SYSTEM_FULL]" in content or "[SYSTEM_PREVIEW]" in content):
-            return
-            
         # Handle final answer - merge with voting info
         if "Final Coordinated Answer" in content:
             # Don't create event yet - wait for actual answer content to merge

@@ -467,6 +467,12 @@ class Orchestrator(ChatAgent):
                         )
                         await self._close_agent_stream(agent_id, active_streams)
 
+                    elif chunk_type == "debug":
+                        # Debug information - forward as StreamChunk for logging
+                        yield StreamChunk(
+                            type="debug", content=chunk_data, source=agent_id
+                        )
+
                     elif chunk_type == "done":
                         # Stream completed - emit completion status for frontend
                         yield StreamChunk(
@@ -718,8 +724,8 @@ class Orchestrator(ChatAgent):
                     elif chunk.type == "backend_status":
                         pass
                     elif chunk.type == "debug":
-                        # Forward debug chunks (like system message logging) to coordination UI
-                        yield ("content", f"🔍 [{agent_id}] {chunk.content}\n")
+                        # Forward debug chunks
+                        yield ("debug", chunk.content)
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []

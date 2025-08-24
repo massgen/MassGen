@@ -2273,8 +2273,8 @@ class RichTerminalDisplay(TerminalDisplay):
         if agent_id not in self.agent_files:
             return
         
-        # Skip system message debug content from txt files
-        if "🔍" in content and ("[SYSTEM_FULL]" in content or "[SYSTEM_PREVIEW]" in content):
+        # Skip debug content from txt files
+        if content_type == "debug":
             return
 
         try:

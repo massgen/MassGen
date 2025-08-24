@@ -462,9 +462,6 @@ class ClaudeCodeBackend(LLMBackend):
                 # Show full system prompt in debug logging
                 debug_info += f"\n[SYSTEM_FULL] {system_prompt}"
                 
-            if messages:
-                msg_types = [f"{msg.get('role', 'unknown')}" for msg in messages]
-                debug_info += f"\n[MESSAGES] {' → '.join(msg_types)}"
                 
             # Yield a debug chunk that will be captured by the logging system
             yield StreamChunk(
