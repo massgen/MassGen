@@ -368,10 +368,17 @@ Present the best possible coordinated answer by combining the strengths from all
         task: str,
         agent_summaries: Optional[Dict[str, str]] = None,
         valid_agent_ids: Optional[List[str]] = None,
+        base_system_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Build complete initial conversation for MassGen evaluation."""
+        # Use agent's custom system message if provided, otherwise use default evaluation message
+        if base_system_message:
+            system_message = f"{base_system_message}\n\n{self.evaluation_system_message()}"
+        else:
+            system_message = self.evaluation_system_message()
+            
         return {
-            "system_message": self.evaluation_system_message(),
+            "system_message": system_message,
             "user_message": self.build_evaluation_message(task, agent_summaries),
             "tools": self.get_standard_tools(valid_agent_ids),
         }
@@ -382,10 +389,17 @@ Present the best possible coordinated answer by combining the strengths from all
         conversation_history: Optional[List[Dict[str, str]]] = None,
         agent_summaries: Optional[Dict[str, str]] = None,
         valid_agent_ids: Optional[List[str]] = None,
+        base_system_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Build complete conversation with conversation history context for MassGen evaluation."""
+        # Use agent's custom system message if provided, otherwise use default context-aware message
+        if base_system_message:
+            system_message = f"{base_system_message}\n\n{self.system_message_with_context(conversation_history)}"
+        else:
+            system_message = self.system_message_with_context(conversation_history)
+            
         return {
-            "system_message": self.system_message_with_context(conversation_history),
+            "system_message": system_message,
             "user_message": self.build_coordination_context(
                 current_task, conversation_history, agent_summaries
             ),

@@ -760,21 +760,18 @@ class ClaudeCodeBackend(LLMBackend):
             workflow_system_prompt = self._build_system_prompt_with_workflow_tools(
                 tools or [], system_content
             )
-            
             # Handle different system prompt mode
-            # if all_params.get("system_prompt"):
-            #     # Create client with system_prompt
-            #     client = self.create_client(
-            #         system_prompt=workflow_system_prompt, **all_params
-            #     )
-            # else:
-            #     # Create client with the enhanced system prompt
-            #     client = self.create_client(
-            #         append_system_prompt=workflow_system_prompt, **all_params
-            #     )
-            client = self.create_client(
-                append_system_prompt=workflow_system_prompt, **all_params
-            )
+            if all_params.get("system_prompt"):
+                # Create client with system_prompt
+                client = self.create_client(
+                    **{**all_params, "system_prompt": workflow_system_prompt}
+                )
+            else:
+                # Create client with the enhanced system prompt
+                client = self.create_client(
+                    **{**all_params, "append_system_prompt": workflow_system_prompt}
+                )
+
 
         # Connect client if not already connected
         if not client._transport:

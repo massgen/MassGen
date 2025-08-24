@@ -622,6 +622,9 @@ class Orchestrator(ChatAgent):
         self.agent_states[agent_id].restart_pending = False
 
         try:
+            # Get agent's custom system message if available
+            agent_system_message = agent.get_configurable_system_message()
+            
             # Build conversation with context support
             if conversation_context and conversation_context.get(
                 "conversation_history"
@@ -634,6 +637,7 @@ class Orchestrator(ChatAgent):
                     ),
                     agent_summaries=answers,
                     valid_agent_ids=list(answers.keys()) if answers else None,
+                    base_system_message=agent_system_message,
                 )
             else:
                 # Fallback to standard conversation building
@@ -641,6 +645,7 @@ class Orchestrator(ChatAgent):
                     task=task,
                     agent_summaries=answers,
                     valid_agent_ids=list(answers.keys()) if answers else None,
+                    base_system_message=agent_system_message,
                 )
 
             # Clean startup without redundant messages
