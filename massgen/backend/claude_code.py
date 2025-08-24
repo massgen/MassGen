@@ -674,6 +674,7 @@ class ClaudeCodeBackend(LLMBackend):
         Returns:
             ClaudeSDKClient instance
         """
+
         # Build options with all parameters
         options = self._build_claude_options(**options_kwargs)
 
@@ -712,7 +713,7 @@ class ClaudeCodeBackend(LLMBackend):
                     "Bash(chmod*)",
                     "Bash(chown*)",
                 ]
-            
+
             # Extract system message from messages for append mode (always do this)
             system_msg = next(
                 (msg for msg in messages if msg.get("role") == "system"), None
@@ -728,16 +729,19 @@ class ClaudeCodeBackend(LLMBackend):
             )
             
             # Handle different system prompt mode
-            if all_params.get("system_prompt"):
-                # Create client with system_prompt
-                client = self.create_client(
-                    system_prompt=workflow_system_prompt, **all_params
-                )
-            else:
-                # Create client with the enhanced system prompt
-                client = self.create_client(
-                    append_system_prompt=workflow_system_prompt, **all_params
-                )
+            # if all_params.get("system_prompt"):
+            #     # Create client with system_prompt
+            #     client = self.create_client(
+            #         system_prompt=workflow_system_prompt, **all_params
+            #     )
+            # else:
+            #     # Create client with the enhanced system prompt
+            #     client = self.create_client(
+            #         append_system_prompt=workflow_system_prompt, **all_params
+            #     )
+            client = self.create_client(
+                append_system_prompt=workflow_system_prompt, **all_params
+            )
 
         # Connect client if not already connected
         if not client._transport:
