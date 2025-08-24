@@ -15,6 +15,7 @@ Color Scheme for Debug Logging:
 """
 
 import sys
+import os
 from pathlib import Path
 from typing import Optional, Any
 from datetime import datetime
@@ -25,6 +26,25 @@ logger.remove()
 
 # Global debug flag
 _DEBUG_MODE = False
+
+# Global log session directory
+_LOG_SESSION_DIR = None
+
+
+def get_log_session_dir() -> Path:
+    """Get the current log session directory."""
+    global _LOG_SESSION_DIR
+    if _LOG_SESSION_DIR is None:
+        # Create main logs directory
+        log_base_dir = Path("massgen_logs")
+        log_base_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create timestamped session directory
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        _LOG_SESSION_DIR = log_base_dir / f"log_{timestamp}"
+        _LOG_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    
+    return _LOG_SESSION_DIR
 
 
 def setup_logging(debug: bool = False, log_file: Optional[str] = None):
@@ -71,13 +91,13 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
             diagnose=True
         )
         
-        # Also log to file in debug mode with timestamp
+        # Also log to file in debug mode
         if not log_file:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_file = f"massgen_debug_{timestamp}.log"
+            log_session_dir = get_log_session_dir()
+            log_file = log_session_dir / "massgen_debug.log"
         
         logger.add(
-            log_file,
+            str(log_file),
             format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
             level="DEBUG",
             rotation="100 MB",
@@ -100,11 +120,11 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
         
         # Always create log file in non-debug mode to capture INFO messages
         if not log_file:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_file = f"massgen_{timestamp}.log"
+            log_session_dir = get_log_session_dir()
+            log_file = log_session_dir / "massgen.log"
         
         logger.add(
-            log_file,
+            str(log_file),
             format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
             level="INFO",  # Capture INFO and above in file
             rotation="10 MB",
@@ -356,6 +376,7 @@ __all__ = [
     "logger",
     "setup_logging",
     "get_logger",
+    "get_log_session_dir",
     "log_orchestrator_activity",
     "log_agent_message",
     "log_orchestrator_agent_message",
