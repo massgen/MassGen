@@ -84,22 +84,6 @@ class ConfigurationError(Exception):
     pass
 
 
-def setup_debug_logging():
-    """Configure logging for debug mode using loguru."""
-    from .logger_config import setup_logging
-    setup_logging(debug=True)
-    
-    # Also setup standard logging for libraries that don't use loguru
-    logging.basicConfig(
-        level=logging.WARNING,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%H:%M:%S'
-    )
-    
-    # Set debug level for specific modules
-    logging.getLogger("massgen").setLevel(logging.DEBUG)
-    logging.getLogger("asyncio").setLevel(logging.WARNING)  # Reduce asyncio noise
-    logging.getLogger("urllib3").setLevel(logging.WARNING)  # Reduce urllib3 noise
 
 
 def load_config_file(config_path: str) -> Dict[str, Any]:
@@ -763,10 +747,11 @@ Environment Variables:
 
     args = parser.parse_args()
 
-    # Setup debug logging if requested
+    # Always setup logging (will save INFO to file, console output depends on debug flag)
+    from .logger_config import setup_logging, logger
+    setup_logging(debug=args.debug)
+    
     if args.debug:
-        setup_debug_logging()
-        from .logger_config import logger
         logger.info("Debug mode enabled")
         logger.debug(f"Command line arguments: {vars(args)}")
 

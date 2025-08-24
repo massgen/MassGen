@@ -90,25 +90,30 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
         
         logger.info("Debug logging enabled - logging to console and file: {}", log_file)
     else:
-        # Normal mode: only important messages
+        # Normal mode: only important messages to console, but all INFO+ to file
         logger.add(
             sys.stderr,
             format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
-            level="INFO",
-            colorize=True,
-            filter=lambda record: record["level"].no >= logger.level("INFO").no
+            level="WARNING",  # Only show WARNING and above on console in non-debug mode
+            colorize=True
         )
         
-        if log_file:
-            logger.add(
-                log_file,
-                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
-                level="INFO",
-                rotation="10 MB",
-                retention="3 days",
-                compression="zip",
-                enqueue=True
-            )
+        # Always create log file in non-debug mode to capture INFO messages
+        if not log_file:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_file = f"massgen_{timestamp}.log"
+        
+        logger.add(
+            log_file,
+            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
+            level="INFO",  # Capture INFO and above in file
+            rotation="10 MB",
+            retention="3 days",
+            compression="zip",
+            enqueue=True
+        )
+        
+        logger.info("Logging enabled - logging INFO+ to file: {}", log_file)
 
 
 def get_logger(name: str):
