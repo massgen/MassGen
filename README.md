@@ -460,6 +460,7 @@ backend:
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   
   # Claude Code specific options
+  system_prompt: "" # Custom system prompt to replace default
   append_system_prompt: ""  # Custom system prompt to append
   max_thinking_tokens: 4096                   # Maximum thinking tokens
 
