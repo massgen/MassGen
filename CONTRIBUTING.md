@@ -31,7 +31,6 @@ massgen/
 │   │   ├── simple_display.py
 │   │   └── terminal_display.py
 │   └── logging/            # Logging system
-│       └── realtime_logger.py
 ├── configs/                # Configuration files
 │   ├── *.yaml             # Various agent configurations
 │   └── README.md          # Configuration documentation

@@ -814,8 +814,8 @@ Environment Variables:
             ui_config["debug"] = True
             # Enable logging if debug is on
             ui_config["logging_enabled"] = True
-            # Force simple UI in debug mode
-            ui_config["display_type"] = "simple"
+            # # Force simple UI in debug mode
+            # ui_config["display_type"] = "simple"
 
         # Apply timeout overrides from CLI arguments
         timeout_settings = config.get("timeout_settings", {})
