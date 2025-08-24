@@ -16,6 +16,7 @@ Color Scheme for Debug Logging:
 
 import sys
 import os
+import inspect
 from pathlib import Path
 from typing import Optional, Any
 from datetime import datetime
@@ -98,22 +99,25 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
         
         logger.add(
             str(log_file),
-            format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+            format=custom_format,
             level="DEBUG",
             rotation="100 MB",
             retention="1 week",
             compression="zip",
             backtrace=True,
             diagnose=True,
-            enqueue=True  # Thread-safe logging
+            enqueue=True,  # Thread-safe logging
+            colorize=False  # Keep color codes in file
         )
         
         logger.info("Debug logging enabled - logging to console and file: {}", log_file)
     else:
         # Normal mode: only important messages to console, but all INFO+ to file
+        console_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+        
         logger.add(
             sys.stderr,
-            format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
+            format=console_format,
             level="WARNING",  # Only show WARNING and above on console in non-debug mode
             colorize=True
         )
@@ -123,14 +127,16 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
             log_session_dir = get_log_session_dir()
             log_file = log_session_dir / "massgen.log"
         
+        # Use the same format as console with color codes
         logger.add(
             str(log_file),
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
+            format=console_format,
             level="INFO",  # Capture INFO and above in file
             rotation="10 MB",
             retention="3 days",
             compression="zip",
-            enqueue=True
+            enqueue=True,
+            colorize=False  # Keep color codes in file
         )
         
         logger.info("Logging enabled - logging INFO+ to file: {}", log_file)
@@ -149,6 +155,28 @@ def get_logger(name: str):
     return logger.bind(name=name)
 
 
+def _get_caller_info():
+    """
+    Get the caller's line number and function name from the stack frame.
+    
+    Returns:
+        Tuple of (function_name, line_number where the logging function was called)
+    """
+    frame = inspect.currentframe()
+    # Stack frames:
+    # - frame: _get_caller_info (this function)
+    # - frame.f_back: log_orchestrator_agent_message or log_backend_agent_message
+    # - frame.f_back.f_back: the actual caller (e.g., _stream_agent_execution)
+    
+    if frame and frame.f_back and frame.f_back.f_back:
+        caller_frame = frame.f_back.f_back
+        function_name = caller_frame.f_code.co_name
+        # Get the line number where the logging function was called from within the caller
+        line_number = caller_frame.f_lineno
+        return function_name, line_number
+    return "unknown", 0
+
+
 def log_orchestrator_activity(orchestrator_id: str, activity: str, details: dict = None):
     """
     Log orchestrator activities for debugging.
@@ -158,7 +186,9 @@ def log_orchestrator_activity(orchestrator_id: str, activity: str, details: dict
         activity: Description of the activity
         details: Additional details as dictionary
     """
-    log = logger.bind(name=f"orchestrator.{orchestrator_id}")
+    # Get caller information
+    func_name, line_num = _get_caller_info()
+    log = logger.bind(name=f"orchestrator.{orchestrator_id}:{func_name}:{line_num}")
     if _DEBUG_MODE:
         # Use magenta color for orchestrator activities
         log.opt(colors=True).debug("<magenta>🎯 {}: {}</magenta>", activity, details or {})
@@ -202,12 +232,15 @@ def log_orchestrator_agent_message(agent_id: str, direction: str, message: dict,
         message: Message content as dictionary
         backend_name: Optional name of the backend provider
     """
+    # Get caller information
+    func_name, line_num = _get_caller_info()
+    
     # Build a descriptive name with orchestrator prefix
     if backend_name:
-        log_name = f"orchestrator→{agent_id}.{backend_name}"
+        log_name = f"orchestrator→{agent_id}.{backend_name}:{func_name}:{line_num}"
         log = logger.bind(name=log_name)
     else:
-        log_name = f"orchestrator→{agent_id}"
+        log_name = f"orchestrator→{agent_id}:{func_name}:{line_num}"
         log = logger.bind(name=log_name)
     
     if _DEBUG_MODE:
@@ -231,12 +264,15 @@ def log_backend_agent_message(agent_id: str, direction: str, message: dict, back
         message: Message content as dictionary
         backend_name: Optional name of the backend provider
     """
+    # Get caller information
+    func_name, line_num = _get_caller_info()
+    
     # Build a descriptive name with backend prefix
     if backend_name:
-        log_name = f"backend.{backend_name}→{agent_id}"
+        log_name = f"backend.{backend_name}→{agent_id}:{func_name}:{line_num}"
         log = logger.bind(name=log_name)
     else:
-        log_name = f"backend→{agent_id}"
+        log_name = f"backend→{agent_id}:{func_name}:{line_num}"
         log = logger.bind(name=log_name)
     
     if _DEBUG_MODE:
@@ -260,13 +296,16 @@ def log_backend_activity(backend_name: str, activity: str, details: dict = None,
         details: Additional details as dictionary
         agent_id: Optional ID of the agent using this backend
     """
+    # Get caller information
+    func_name, line_num = _get_caller_info()
+    
     # Build a descriptive name with both agent ID and backend
     if agent_id:
         log_name = f"{agent_id}.{backend_name}"
-        log = logger.bind(name=log_name)
+        log = logger.bind(name=f"{log_name}:{func_name}:{line_num}")
     else:
         log_name = backend_name
-        log = logger.bind(name=f"backend.{backend_name}")
+        log = logger.bind(name=f"backend.{backend_name}:{func_name}:{line_num}")
     
     if _DEBUG_MODE:
         # Use yellow color for backend activities
@@ -325,12 +364,27 @@ def log_stream_chunk(source: str, chunk_type: str, content: Any = None, agent_id
         content: Content of the chunk
         agent_id: Optional agent ID for context
     """
+    # Get caller information from the actual caller (not this function)
+    frame = inspect.currentframe()
+    # Stack frames:
+    # - frame: log_stream_chunk (this function)
+    # - frame.f_back: the actual caller (e.g., _present_final_answer)
+    
+    if frame and frame.f_back:
+        caller_frame = frame.f_back
+        function_name = caller_frame.f_code.co_name
+        line_number = caller_frame.f_lineno
+    else:
+        function_name = "unknown"
+        line_number = 0
+    
     if agent_id:
         log_name = f"{source}.{agent_id}"
     else:
         log_name = source
     
-    log = logger.bind(name=log_name)
+    # Create a custom logger that will show the source name instead of module path
+    log = logger.bind(name=f"{log_name}:{function_name}:{line_number}")
     
     # Always log stream chunks at INFO level (will go to file)
     # Format content based on type
