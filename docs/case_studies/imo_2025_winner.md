@@ -1,72 +1,88 @@
-# MassGen Case Study: IMO 2025 AI Winners
+# MassGen Case Study: Collaborative Real-Time Information Research
 
-This case study demonstrates MassGen's ability to achieve unanimous consensus through strategic vote switching, where agents recognize and reward superior detail and structure in responses to current events queries. This case study was run on version v0.0.3.
+This case study demonstrates **MassGen**'s ability to achieve unanimous consensus on current events research, showcasing how agents can effectively collaborate to gather and verify real-time information through sophisticated web search and fact-checking. This case study was run on version v0.0.11.
 
-**Command:**
-```
+---
+
+## Command
+
+```bash
 uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Which AI won IMO 2025?"
 ```
 
-**Prompt:** Which AI won IMO 2025?
+**Prompt:**  
+`Which AI won IMO 2025?`
 
-**Agents:**
-* Agent 1: gemini2.5flash
-* Agent 2: gpt-4o (Designated Winner)
-* Agent 3: claude-3-5-haiku
+---
+
+## Agents
+
+- **Agent 1**: gemini-2.5-flash (**Designated Representative Agent**)  
+- **Agent 2**: gpt-4o  
+- **Agent 3**: claude-3-5-haiku
 
 **Watch the recorded demo:**
 
-[![MassGen Case Study](https://img.youtube.com/vi/JxoJoHpdWjc/0.jpg)](https://www.youtube.com/watch?v=JxoJoHpdWjc)
+[![MassGen Case Study](https://img.youtube.com/vi/QgZJ-KnsuVc/0.jpg)](https://www.youtube.com/watch?v=QgZJ-KnsuVc)
 
-**Duration:** 141.0s | 735 chunks | 15 events
+---
 
 ## The Collaborative Process
 
-### Initial Response Diversity
+### Research Approaches and Information Gathering
 
-Each agent approached the recent AI achievement query with different levels of detail and research depth:
+Each agent demonstrated distinct research methodologies and information verification strategies:
 
-* **Agent 1 (gemini2.5flash)** provided accurate foundational information, correctly identifying that both Google's Gemini Deep Think and OpenAI's experimental model achieved gold medal scores. However, its initial response lacked specific performance metrics and structural organization.
+- **Agent 1 (gemini-2.5-flash)** conducted comprehensive multi-query web searches, performing five separate searches including "AI won IMO 2025," "IMO 2025 results AI," and "International Mathematical Olympiad 2025 AI winner." The agent demonstrated sophisticated fact-checking by distinguishing between official recognition and independent verification.
 
-* **Agent 2 (gpt-4o)** conducted comprehensive web research and delivered a well-structured response with specific details: both models solved "five out of six problems" and achieved gold medal-level performance, with clear distinctions between official participation (Google) and independent verification (OpenAI).
+- **Agent 2 (gpt-4o)** took a focused approach with a single targeted search for "IMO 2025 AI winner," providing clear documentation of sources and emphasizing the historic nature of the achievement with proper context about official participation versus evaluation.
 
-* **Agent 3 (claude-3-5-haiku)** performed extensive research with detailed background context, providing rich information about IMO structure, grading processes, and broader implications, but with less concise organization.
+- **Agent 3 (claude-3-5-haiku)** performed initial broad research on general IMO 2025 results before pivoting to AI-specific queries, demonstrating adaptive research methodology and providing extensive contextual analysis about the significance of the breakthrough.
 
-### The Strategic Vote Switch
+---
 
-The voting pattern revealed a sophisticated recognition of quality and comprehensiveness:
+### Information Quality Assessment and Accuracy
 
-**Initial Position:**
-- Agent 1 initially voted for itself, citing accuracy in differentiating evaluation methods
-- All agents provided accurate information, creating potential for close competition
+A defining feature of this session was the agents' sophisticated evaluation of factual accuracy and completeness:
 
-**The Decisive Shift:**
-- **Agent 1** switched its vote to Agent 2, explicitly stating: *"Both agents provide accurate information. Agent 2 offers slightly more detail regarding the performance metrics (number of problems solved and score), which makes it a more comprehensive answer."*
-- **Agent 3** also voted for Agent 2, praising its *"more structured and concise overview"* and *"clear, balanced manner"*
-- **Agent 2** voted for itself, citing its *"clear and concise comparison between Google's and OpenAI's AI models' performances"*
+- **Comprehensive Coverage**: Agent 1's response was consistently praised for being _"most comprehensive, accurately listing all three AI systems that achieved gold-medal level performance"_ including Google DeepMind's Gemini Deep Think, OpenAI's experimental model, and the third system, Harmonic.
 
-This resulted in a unanimous 3-0 consensus for Agent 2.
+- **Source Verification**: Multiple agents noted the importance of _"correctly distinguishing between official recognition and independent verification based on search results,"_ showing sophisticated understanding of information credibility.
 
-### Quality Recognition Factors
+- **Contextual Analysis**: Agent 3's detailed research was appreciated for providing _"specific details about the scoring and the breakthrough in AI mathematical reasoning"_ and going _"beyond just stating the results."_
 
-The agents specifically recognized Agent 2's superior qualities:
+---
 
-1. **Specific Performance Metrics:** "Five out of six problems" rather than just "gold medal scores"
-2. **Clear Structural Organization:** Bullet-pointed comparison format with distinct sections for each company
-3. **Balanced Coverage:** Equal treatment of both Google's and OpenAI's achievements
-4. **Concise Presentation:** Streamlined information delivery without sacrificing accuracy
-5. **Contextual Details:** Inclusion of verification methods and participation status
+## The Voting Pattern: Unanimous Research Excellence
 
-## The Final Answer
+The voting process revealed remarkable consensus on research quality and information accuracy:
 
-**Agent 2** presented the final response, featuring:
+- **Self-Assessment**: Agent 1 voted for itself twice, citing comprehensive coverage and accurate distinction between different types of AI participation.
 
-- **Precise Achievement Details:** Both models solved exactly 5 out of 6 IMO problems
-- **Clear Differentiation:** Google's official participation vs. OpenAI's independent verification
-- **Structural Clarity:** Well-organized bullet points for each company's achievement
-- **Verification Context:** Explanation of how results were validated by IMO judges and former medalists
-- **Broader Significance:** Positioned as a milestone in AI's complex problem-solving capabilities
+- **Cross-Agent Recognition**: Agent 2 voted for Agent 1, noting it _"provided a comprehensive answer including the names of the AI models, their accomplishments, and context on the significance of the achievement."_
+
+- **Research Quality Validation**: Agent 3 voted for Agent 1, praising it as providing _"the most comprehensive and detailed account of the AI performance at IMO 2025"_ with context about the achievement's significance.
+
+- **Final Unanimous Decision**: All three agents ultimately voted for Agent 1, achieving **perfect consensus (3 out of 3 votes).**
+
+---
+
+## The Final Answer: Research Excellence
+
+**Agent 1** was selected to present the final answer, featuring:
+
+- **Comprehensive Coverage**: Identification of all three AI systems that achieved gold-medal performance (Google DeepMind's Gemini Deep Think, OpenAI's experimental model, and Harmonic)
+- **Accurate Distinctions**: Clear differentiation between official IMO recognition and independent verification processes
+- **Technical Precision**: Specific scoring details (35 out of 42 points, solving 5 out of 6 problems)
+- **Historical Context**: Recognition of this as the first official AI participation in IMO history
+- **Methodological Insight**: Description of natural-language reasoning approaches and competition time constraints
+
+---
 
 ## Conclusion
 
-This case study exemplifies MassGen's effectiveness in recognizing and promoting superior response quality through strategic vote switching. Rather than agents simply defending their own answers, the system demonstrated sophisticated quality assessment where Agent 1 specifically acknowledged that Agent 2's additional detail about performance metrics made it "more comprehensive." The unanimous consensus emerged from agents recognizing concrete improvements in structure, specificity, and presentation. This showcases MassGen's strength in achieving quality-driven consensus on current events queries, where accuracy is baseline but comprehensiveness and clarity determine the winning response. The system successfully balanced factual accuracy with presentation quality, resulting in a final answer that was both informative and well-organized for optimal user understanding.
+This case study showcases **MassGen**'s exceptional ability to collaborate on **real-time information research**, demonstrating how agents can perform **sophisticated fact-checking**, **source verification**, and **comprehensive information gathering**. The unanimous consensus reflects not just agreement, but a **shared understanding of research quality**, **factual accuracy**, and **information completeness**.
+
+**Agent 1's response** earned recognition for its **thorough multi-source research**, **accurate fact distinction**, and **comprehensive coverage of all relevant AI systems**. This demonstrates **MassGen**'s strength in **current events research** where **factual accuracy** and **source credibility** are paramount, making it particularly valuable for **journalism**, **fact-checking**, **market research**, and any task requiring **real-time information synthesis** with high accuracy standards.
+
+The case also highlights the system's ability to handle **rapidly evolving topics** where information may be scattered across multiple sources and requires careful verification and contextualization.
