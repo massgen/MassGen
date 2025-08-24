@@ -297,6 +297,7 @@ uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine 
 uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
 
 # MCP-enabled configurations (NEW in v0.0.9)
+uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "Browse https://github.com/Leezekun/MassGen and generate reports with screenshots"
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
 
@@ -307,7 +308,7 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 
 All available quick configuration files can be found [here](massgen/configs).
 
-See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | 
+See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | [Playwright MCP](massgen/configs/PLAYWRIGHT_MCP_SETUP.md) | 
 
 #### CLI Configuration Parameters
 
@@ -471,6 +472,18 @@ backend:
       type: "stdio"                    # Communication type: stdio (standard input/output)
       command: "npx"                    # Command to execute: Node Package Execute
       args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_TOKEN"]  # Arguments: -y (auto-confirm), mcp-discord package, config with Discord bot token
+    
+    # Playwright web automation server
+    playwright:
+      type: "stdio"                    # Communication type: stdio (standard input/output)
+      command: "npx"                    # Command to execute: Node Package Execute
+      args: [
+        "@playwright/mcp@latest",
+        "--browser=chrome",              # Use Chrome browser
+        "--caps=vision,pdf",             # Enable vision and PDF capabilities
+        "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
+        "--save-trace"                 # Save Playwright traces for debugging
+      ]
   
   # Tool configuration (Claude Code's native tools)
   allowed_tools:
@@ -489,6 +502,7 @@ backend:
     # MCP tools (if available), MCP tools will be auto-discovered from the server
     - "mcp__discord__discord_login"
     - "mcp__discord__discord_readmessages"
+    - "mcp__playwright"
 ```
 
 #### ZAI
@@ -635,6 +649,18 @@ uv run python -m massgen.cli --config massgen/configs/claude_code_flash2.5_gptos
 
 # Quick coding task with claude_code backend
 uv run python -m massgen.cli --backend claude_code "Refactor this Python code to use async/await and add error handling"
+```
+
+### 5. 🌐 Web Automation & Browser Tasks
+```bash
+# Multi-agent web automation with Playwright MCP
+uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "browse https://github.com/Leezekun/MassGen and suggest improvement. Include screenshots and suggestions in a PDF."
+
+# Web scraping and analysis
+uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
+
+# E-commerce testing automation
+uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Test the checkout flow on an e-commerce site and generate a detailed test report"
 ```
 
 ---
