@@ -58,13 +58,20 @@ class MessageTemplates:
         # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
         # For any time-sensitive requests, use the search tool (if available) rather than relying on prior knowledge."""
 
-        return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
+        # BACKUP - Original evaluation message (pre-synthesis-encouragement update):
+        # return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
+        #
+        # If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
+        # Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
+        #
+        # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
+
+        return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well?
 
 If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
 Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
 
-*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
-"""
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
     # =============================================================================
     # USER MESSAGE TEMPLATES
@@ -267,21 +274,24 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
 
-        presentation_instructions = """You have been selected as the winning presenter in a coordination process. Your task is to present a polished, comprehensive final answer that incorporates the best insights from all participants.
+        # BACKUP - Original final presentation message (pre-explicit-synthesis update):
+        # presentation_instructions = """You have been selected as the winning presenter in a coordination process. Your task is to present a polished, comprehensive final answer that incorporates the best insights from all participants.
+        #
+        # Consider:
+        # 1. Your original response and how it can be refined
+        # 2. Valuable insights from other agents' answers that should be incorporated  
+        # 3. Feedback received through the voting process
+        # 4. Ensuring clarity, completeness, and comprehensiveness for the final audience
+        #
+        # Present your final coordinated answer in the most helpful and complete way possible."""
 
-Consider:
-1. Your original response and how it can be refined
-2. Valuable insights from other agents' answers that should be incorporated  
-3. Feedback received through the voting process
-4. Ensuring clarity, completeness, and comprehensiveness for the final audience
-
-Present your final coordinated answer in the most helpful and complete way possible."""
+        presentation_instructions = """You have been selected as the winning presenter in a coordination process.
+Present the best possible coordinated answer by combining the strengths from all participants."""
 
         # Combine with original system message if provided
         if original_system_message:
             return f"""{original_system_message}
 
-COORDINATION CONTEXT:
 {presentation_instructions}"""
         else:
             return presentation_instructions

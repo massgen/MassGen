@@ -111,6 +111,7 @@ class Orchestrator(ChatAgent):
         # Internal coordination state
         self._coordination_messages: List[Dict[str, str]] = []
         self._selected_agent: Optional[str] = None
+        self._final_presentation_content: Optional[str] = None
 
         # Timeout and resource tracking
         self.total_tokens: int = 0
@@ -466,6 +467,12 @@ class Orchestrator(ChatAgent):
                         )
                         await self._close_agent_stream(agent_id, active_streams)
 
+                    elif chunk_type == "debug":
+                        # Debug information - forward as StreamChunk for logging
+                        yield StreamChunk(
+                            type="debug", content=chunk_data, source=agent_id
+                        )
+
                     elif chunk_type == "done":
                         # Stream completed - emit completion status for frontend
                         yield StreamChunk(
@@ -716,6 +723,9 @@ class Orchestrator(ChatAgent):
                         yield ("reasoning", reasoning_chunk)
                     elif chunk.type == "backend_status":
                         pass
+                    elif chunk.type == "debug":
+                        # Forward debug chunks
+                        yield ("debug", chunk.content)
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
@@ -1283,15 +1293,21 @@ Final Session ID: {session_id}.
                         },
                     )
 
-        # If no content was generated, use the stored answer as fallback
-        if not presentation_content.strip():
+        # Store the final presentation content for logging
+        if presentation_content.strip():
+            # Store the synthesized final answer
+            self._final_presentation_content = presentation_content.strip()
+        else:
+            # If no content was generated, use the stored answer as fallback
             stored_answer = self.agent_states[selected_agent_id].answer
             if stored_answer:
+                fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
                 yield StreamChunk(
                     type="content",
-                    content=f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}",
+                    content=fallback_content,
                     source=selected_agent_id,
                 )
+                self._final_presentation_content = stored_answer
             else:
                 yield StreamChunk(
                     type="content",
@@ -1428,6 +1444,7 @@ Final Session ID: {session_id}.
             "workflow_phase": self.workflow_phase,
             "current_task": self.current_task,
             "selected_agent": self._selected_agent,
+            "final_presentation_content": self._final_presentation_content,
             "vote_results": vote_results,
             "agents": {
                 aid: {
@@ -1479,6 +1496,7 @@ Final Session ID: {session_id}.
         self.workflow_phase = "idle"
         self._coordination_messages.clear()
         self._selected_agent = None
+        self._final_presentation_content = None
 
         # Reset agent states
         for state in self.agent_states.values():

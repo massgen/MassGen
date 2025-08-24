@@ -22,8 +22,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.claude_backend import ClaudeBackend
-from massgen.backend.base import StreamChunk
+from massgen.backend.claude import ClaudeBackend
 
 
 async def test_claude_basic_streaming():

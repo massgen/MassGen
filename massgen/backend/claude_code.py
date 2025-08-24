@@ -377,7 +377,7 @@ class ClaudeCodeBackend(LLMBackend):
                 if t.get("function", {}).get("name") in ["new_answer", "vote"]
             ]
             if workflow_tools:
-                system_parts.append("\n--- Available Tools ---")
+                system_parts.append("\n--- Coordination Actions ---")
                 for tool in workflow_tools:
                     name = tool.get("function", {}).get("name", "unknown")
                     description = tool.get("function", {}).get(
@@ -389,7 +389,7 @@ class ClaudeCodeBackend(LLMBackend):
                     if name == "new_answer":
                         system_parts.append(
                             '    Usage: {"tool_name": "new_answer", '
-                            '"arguments": {"content": "your answer"}}'
+                            '"arguments": {"content": "your improved answer. If any builtin tools like search or code execution were used, include how they are used here."}}'
                         )
                     elif name == "vote":
                         # Extract valid agent IDs from enum if available
@@ -420,7 +420,7 @@ class ClaudeCodeBackend(LLMBackend):
                                 '"reason": "explanation"}}'
                             )
 
-                system_parts.append("\n--- MassGen Workflow Instructions ---")
+                system_parts.append("\n--- MassGen Coordination Instructions ---")
                 system_parts.append(
                     "IMPORTANT: You must respond with a structured JSON decision at the end of your response."
                 )
@@ -444,6 +444,39 @@ class ClaudeCodeBackend(LLMBackend):
                 )
 
         return "\n".join(system_parts)
+
+    async def _log_backend_input(self, messages, system_prompt, tools, kwargs):
+        """Log backend inputs using StreamChunk for visibility (enabled by default)."""
+        # Enable by default, but allow disabling via environment variable
+        if os.getenv('MASSGEN_LOG_BACKENDS', '1') == '0':
+            return
+            
+        try:
+            # Create debug info using the logging approach that works in MassGen
+            reset_mode = "🔄 RESET" if kwargs.get('reset_chat') else "💬 CONTINUE"  
+            tools_info = f"🔧 {len(tools)} tools" if tools else "🚫 No tools"
+            
+            debug_info = f"[BACKEND] {reset_mode} | {tools_info} | Session: {self._current_session_id}"
+            
+            if system_prompt and len(system_prompt) > 0:
+                # Show full system prompt in debug logging
+                debug_info += f"\n[SYSTEM_FULL] {system_prompt}"
+                
+                
+            # Yield a debug chunk that will be captured by the logging system
+            yield StreamChunk(
+                type="debug",
+                content=debug_info,
+                source="claude_code_backend"
+            )
+                
+        except Exception as e:
+            # Log the error but don't break backend execution
+            yield StreamChunk(
+                type="debug",
+                content=f"[BACKEND_LOG_ERROR] {str(e)}",
+                source="claude_code_backend"
+            )
 
     def extract_structured_response(
         self, response_text: str
@@ -746,6 +779,11 @@ class ClaudeCodeBackend(LLMBackend):
         # Connect client if not already connected
         if not client._transport:
             await client.connect()
+
+        # Log backend inputs when we have workflow_system_prompt available
+        if 'workflow_system_prompt' in locals():
+            async for debug_chunk in self._log_backend_input(messages, workflow_system_prompt, tools, kwargs):
+                yield debug_chunk
 
         # Format the messages for Claude Code
         if not messages:
