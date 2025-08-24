@@ -303,6 +303,10 @@ uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Sear
 # Hybrid local and API-based models (NEW in v0.0.7)
 uv run python -m massgen.cli --config two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
 uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distributed system architecture"
+
+# Debug mode for troubleshooting
+uv run python -m massgen.cli --debug --model claude-3-5-sonnet-latest "Test simple query"
+uv run python -m massgen.cli --debug --config three_agents_default.yaml "Debug multi-agent coordination"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
@@ -319,6 +323,7 @@ See MCP server setup guides: [paper-search-mcp](https://github.com/openags/paper
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
+| `--debug`          | Enable debug mode with verbose logging. Shows detailed orchestrator activities, agent messages, backend operations, and tool calls. Debug logs are saved to `agent_outputs/massgen_debug.log`. |
 | `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
 
 #### Configuration File Format
