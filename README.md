@@ -297,6 +297,7 @@ uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different
 
 # MCP-enabled configurations (NEW in v0.0.9)
 uv run python -m massgen.cli --config gpt5_claude_code_paper_search_mcp.yaml "search 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in a md file"
+uv run python -m massgen.cli --config gemini_claude_code_paper_search_mcp.yaml "search 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in your answer"
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
 
