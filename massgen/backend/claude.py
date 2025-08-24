@@ -25,6 +25,7 @@ import os
 import json
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
 
 
 class ClaudeBackend(LLMBackend):
@@ -169,6 +170,16 @@ class ClaudeBackend(LLMBackend):
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using Claude's Messages API with full multi-tool support."""
+        # Extract agent_id for logging
+        agent_id = kwargs.get('agent_id', None)
+        
+        log_backend_activity(
+            "claude",
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id
+        )
+        
         try:
             import anthropic
 
@@ -232,6 +243,14 @@ class ClaudeBackend(LLMBackend):
             # Claude API requires max_tokens - add default if not provided
             if "max_tokens" not in api_params:
                 api_params["max_tokens"] = 4096
+            
+            # Log messages being sent
+            log_backend_agent_message(
+                agent_id or "default",
+                "SEND",
+                {"messages": converted_messages, "tools": len(combined_tools) if combined_tools else 0},
+                backend_name="claude"
+            )
 
             # Set up beta features and create stream
             if enable_code_execution:
@@ -334,7 +353,7 @@ class ClaudeBackend(LLMBackend):
                                     agent_id or "default",
                                     "RECV",
                                     {"content": text_chunk},
-                                    backend_name=self.get_provider_name()
+                                    backend_name="claude"
                                 )
                                 log_stream_chunk("backend.claude", "content", text_chunk, agent_id)
                                 yield StreamChunk(type="content", content=text_chunk)
@@ -386,7 +405,7 @@ class ClaudeBackend(LLMBackend):
 
                                         # Yield tool result as content
                                         tool_result_msg = f"🔧 Code Execution [Completed]: {code}"
-                                        log_stream_chunk("backend.claude", "content", tool_result_msg, agent_id)
+                                        log_stream_chunk("backend.claude", "code_execution", code, agent_id)
                                         yield StreamChunk(
                                             type="content",
                                             content=tool_result_msg,
@@ -406,7 +425,7 @@ class ClaudeBackend(LLMBackend):
 
                                         # Yield tool result as content
                                         tool_result_msg = f"🔧 Web Search [Completed]: {query}"
-                                        log_stream_chunk("backend.claude", "content", tool_result_msg, agent_id)
+                                        log_stream_chunk("backend.claude", "web_search", query, agent_id)
                                         yield StreamChunk(
                                             type="content",
                                             content=tool_result_msg,
@@ -474,6 +493,7 @@ class ClaudeBackend(LLMBackend):
                             }
                             if user_tool_calls:
                                 complete_message["tool_calls"] = user_tool_calls
+                            log_stream_chunk("backend.claude", "complete_message", complete_message, agent_id)
                             yield StreamChunk(
                                 type="complete_message",
                                 complete_message=complete_message,
@@ -484,6 +504,7 @@ class ClaudeBackend(LLMBackend):
                                 "role": "assistant",
                                 "content": content.strip(),
                             }
+                            log_stream_chunk("backend.claude", "complete_message", complete_message, agent_id)
                             yield StreamChunk(
                                 type="complete_message",
                                 complete_message=complete_message,
