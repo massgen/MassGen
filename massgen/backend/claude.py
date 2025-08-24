@@ -330,6 +330,13 @@ class ClaudeBackend(LLMBackend):
                                 # Text content
                                 text_chunk = event.delta.text
                                 content += text_chunk
+                                log_backend_agent_message(
+                                    agent_id or "default",
+                                    "RECV",
+                                    {"content": text_chunk},
+                                    backend_name=self.get_provider_name()
+                                )
+                                log_stream_chunk("backend.claude", "content", text_chunk, agent_id)
                                 yield StreamChunk(type="content", content=text_chunk)
 
                             elif event.delta.type == "input_json_delta":
@@ -378,9 +385,11 @@ class ClaudeBackend(LLMBackend):
                                         )
 
                                         # Yield tool result as content
+                                        tool_result_msg = f"🔧 Code Execution [Completed]: {code}"
+                                        log_stream_chunk("backend.claude", "content", tool_result_msg, agent_id)
                                         yield StreamChunk(
                                             type="content",
-                                            content=f"🔧 Code Execution [Completed]: {code}",
+                                            content=tool_result_msg,
                                         )
 
                                     elif tool_name == "web_search":
@@ -396,9 +405,11 @@ class ClaudeBackend(LLMBackend):
                                         )
 
                                         # Yield tool result as content
+                                        tool_result_msg = f"🔧 Web Search [Completed]: {query}"
+                                        log_stream_chunk("backend.claude", "content", tool_result_msg, agent_id)
                                         yield StreamChunk(
                                             type="content",
-                                            content=f"🔧 Web Search [Completed]: {query}",
+                                            content=tool_result_msg,
                                         )
 
                                     # Mark this tool as processed so we don't duplicate it later
@@ -451,6 +462,7 @@ class ClaudeBackend(LLMBackend):
 
                             # Yield user tool calls if any
                             if user_tool_calls:
+                                log_stream_chunk("backend.claude", "tool_calls", user_tool_calls, agent_id)
                                 yield StreamChunk(
                                     type="tool_calls", tool_calls=user_tool_calls
                                 )
@@ -484,17 +496,22 @@ class ClaudeBackend(LLMBackend):
                         if enable_code_execution:
                             self.code_session_hours += 0.083  # 5 min minimum session
 
+                        log_stream_chunk("backend.claude", "done", None, agent_id)
                         yield StreamChunk(type="done")
                         return
 
                 except Exception as event_error:
+                    error_msg = f"Event processing error: {event_error}"
+                    log_stream_chunk("backend.claude", "error", error_msg, agent_id)
                     yield StreamChunk(
-                        type="error", error=f"Event processing error: {event_error}"
+                        type="error", error=error_msg
                     )
                     continue
 
         except Exception as e:
-            yield StreamChunk(type="error", error=f"Claude API error: {e}")
+            error_msg = f"Claude API error: {e}"
+            log_stream_chunk("backend.claude", "error", error_msg, agent_id)
+            yield StreamChunk(type="error", error=error_msg)
         finally:
             # Ensure the underlying HTTP client is properly closed to avoid event loop issues
             try:
