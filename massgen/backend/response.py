@@ -221,6 +221,7 @@ class ResponseBackend(LLMBackend):
                         chunk.type == "response.reasoning_summary_text.delta"
                         and hasattr(chunk, "delta")
                     ):
+                        log_stream_chunk("backend.response", "reasoning_summary", chunk.delta, agent_id)
                         # Stream reasoning summary as it develops
                         yield StreamChunk(
                             type="reasoning_summary",
@@ -230,6 +231,7 @@ class ResponseBackend(LLMBackend):
                             summary_index=getattr(chunk, "summary_index", None),
                         )
                     elif chunk.type == "response.reasoning_summary_text.done":
+                        log_stream_chunk("backend.response", "reasoning_summary_done", summary_text, agent_id)
                         # Complete reasoning summary finished
                         summary_text = getattr(chunk, "text", "")
                         yield StreamChunk(
@@ -361,6 +363,7 @@ class ResponseBackend(LLMBackend):
                                         if outputs:
                                             content += f" → {outputs}"
 
+                                        log_stream_chunk("backend.response", "code_interpreter_result", content, agent_id)
                                         yield StreamChunk(
                                             type="content", content=content
                                         )
@@ -378,7 +381,7 @@ class ResponseBackend(LLMBackend):
                                                 content += (
                                                     f" → Found {len(results)} results"
                                                 )
-
+                                            log_stream_chunk("backend.response", "web_search_result", content, agent_id)
                                             yield StreamChunk(
                                                 type="tool", content=content
                                             )
