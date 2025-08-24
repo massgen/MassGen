@@ -525,7 +525,7 @@ class Orchestrator(ChatAgent):
                         await self._close_agent_stream(agent_id, active_streams)
 
                 except Exception as e:
-                    log_stream_chunk("orchestrator", "content", f"❌ Stream error - {e}", agent_id)
+                    log_stream_chunk("orchestrator", "error", f"❌ Stream error - {e}", agent_id)
                     yield StreamChunk(
                         type="content",
                         content=f"❌ Stream error - {e}",
@@ -1151,7 +1151,7 @@ class Orchestrator(ChatAgent):
         else:
             error_msg = "❌ Unable to provide coordinated answer - no successful agents"
             self.add_to_history("assistant", error_msg)
-            log_stream_chunk("orchestrator", "content", error_msg)
+            log_stream_chunk("orchestrator", "error", error_msg)
             yield StreamChunk(type="content", content=error_msg)
 
         # Update workflow phase
@@ -1185,7 +1185,7 @@ class Orchestrator(ChatAgent):
 
         # If no answers available, provide fallback with timeout explanation
         if len(available_answers) == 0:
-            log_stream_chunk("orchestrator", "content", "❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n", self.orchestrator_id)
+            log_stream_chunk("orchestrator", "error", "❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n", self.orchestrator_id)
             yield StreamChunk(
                 type="content",
                 content="❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n",
@@ -1420,7 +1420,7 @@ Final Session ID: {session_id}.
                 )
                 self._final_presentation_content = stored_answer
             else:
-                log_stream_chunk("orchestrator", "content", "\n❌ No content generated for final presentation and no stored answer available.", selected_agent_id)
+                log_stream_chunk("orchestrator", "error", "\n❌ No content generated for final presentation and no stored answer available.", selected_agent_id)
                 yield StreamChunk(
                     type="content",
                     content="\n❌ No content generated for final presentation and no stored answer available.",

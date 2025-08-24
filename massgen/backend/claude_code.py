@@ -794,6 +794,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Format the messages for Claude Code
         if not messages:
+            log_stream_chunk("backend.claude_code", "error", "No messages provided to stream_with_tools", agent_id)
             # No messages to process - yield error
             yield StreamChunk(
                 type="error",
@@ -807,6 +808,7 @@ class ClaudeCodeBackend(LLMBackend):
         assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
 
         if assistant_messages:
+            log_stream_chunk("backend.claude_code", "error", "Claude Code backend cannot accept assistant messages - it maintains its own conversation history", agent_id)
             yield StreamChunk(
                 type="error",
                 error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
@@ -815,6 +817,7 @@ class ClaudeCodeBackend(LLMBackend):
             return
 
         if not user_messages:
+            log_stream_chunk("backend.claude_code", "error", "No user messages found to send to Claude Code", agent_id)
             yield StreamChunk(
                 type="error",
                 error="No user messages found to send to Claude Code",
@@ -839,6 +842,7 @@ class ClaudeCodeBackend(LLMBackend):
             )
             await client.query(combined_query)
         else:
+            log_stream_chunk("backend.claude_code", "error", "All user messages were empty", agent_id)
             yield StreamChunk(
                 type="error", error="All user messages were empty", source="claude_code"
             )
