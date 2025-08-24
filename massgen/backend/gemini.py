@@ -58,16 +58,6 @@ except ImportError:  # MCP not installed or import failed within mcp_tools
 logger = logging.getLogger(__name__)
 
 
-class VoteOption(enum.Enum):
-    """Vote options for agent selection."""
-
-    AGENT1 = "agent1"
-    AGENT2 = "agent2"
-    AGENT3 = "agent3"
-    AGENT4 = "agent4"
-    AGENT5 = "agent5"
-
-
 class ActionType(enum.Enum):
     """Action types for structured output."""
 
