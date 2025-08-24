@@ -8,7 +8,20 @@ import socket
 import urllib.parse
 from pathlib import Path
 import ipaddress
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional, Set, Union
+
+
+def _normalize_security_level(level: str) -> str:
+    """
+    Normalize security level to a valid value.
+
+    Args:
+        level: Security level string
+
+    Returns:
+        Normalized security level, defaults to "strict" for unknown values
+    """
+    return level if level in {"strict", "moderate", "permissive"} else "strict"
 
 
 def prepare_command(
@@ -108,11 +121,15 @@ def prepare_command(
         # Unknown levels fall back to strict
         return base_strict
 
-    allowed = {name.lower() for name in (allowed_executables or _default_allowed(security_level))}
+    # Normalize security level for consistency
+    normalized_level = _normalize_security_level(security_level)
+    allowed = {name.lower() for name in (allowed_executables or _default_allowed(normalized_level))}
 
     # Extract executable path and name robustly
     executable_path = Path(parts[0])
     # Basic traversal check (works for both relative and absolute)
+    # Note: This is intentionally strict to prevent directory traversal attacks
+    # Legitimate paths like /usr/bin/../bin/python should use /usr/bin/python instead
     if any(part == ".." for part in executable_path.parts):
         raise ValueError("MCP command path cannot contain parent directory components ('..')")
 
@@ -180,6 +197,7 @@ def validate_url(
     hostname = parsed.hostname.lower()
 
     # Explicit allowlist for hostnames overrides most checks (still validate scheme/port)
+    # WARNING: Ensure allowed_hostnames contains only trusted hostnames as this bypasses IP validation
     if allowed_hostnames and hostname in {h.lower() for h in allowed_hostnames}:
         pass
     else:
@@ -188,13 +206,13 @@ def validate_url(
             raise ValueError(f"Hostname not allowed for security reasons: {hostname}")
 
         # Try to interpret hostname as an IP address (IPv4/IPv6)
-        ip_obj: Optional[ipaddress._BaseAddress]
+        ip_obj: Optional[Union[ipaddress.IPv4Address, ipaddress.IPv6Address]]
         try:
             ip_obj = ipaddress.ip_address(hostname)
         except ValueError:
             ip_obj = None
 
-        def _is_forbidden_ip(ip: ipaddress._BaseAddress) -> bool:
+        def _is_forbidden_ip(ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]) -> bool:
             if allow_private_ips:
                 return False
             return (
@@ -276,23 +294,25 @@ def validate_environment_variables(
 
     validated_env: Dict[str, str] = {}
 
+    # Normalize security level for consistency
+    normalized_level = _normalize_security_level(level)
+
     # Defaults tuned per level
     default_deny: Set[str] = {
         'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'PYTHONPATH',
         'PWD', 'OLDPWD'
     }
     # In strict mode, also block these commonly sensitive variables
-    if level == "strict":
+    if normalized_level == "strict":
         default_deny |= {'PATH', 'HOME', 'USER', 'USERNAME', 'SHELL'}
-    elif level == "moderate":
+    elif normalized_level == "moderate":
         # Allow PATH and HOME by default in moderate/permissive
         default_deny |= set()
-    elif level == "permissive":
+    elif normalized_level == "permissive":
         default_deny |= set()
-    else:
-        default_deny |= {'PATH', 'HOME'}  # Unknown level fallback
 
-    denylist_active = {v.upper() for v in (denied_vars or set())} or default_deny
+    # Fix logic issue: if denied_vars is explicitly set to empty set, respect that choice
+    denylist_active = {v.upper() for v in (denied_vars if denied_vars is not None else default_deny)}
     allowlist_active = {v.upper() for v in (allowed_vars or set())}
 
     for key, value in env.items():
@@ -316,17 +336,24 @@ def validate_environment_variables(
                 raise ValueError(f"Environment variable '{key}' is not allowed for security reasons")
 
         # Check for dangerous patterns in values
-        dangerous_patterns = ['$(', '`', '${', '||', '&&', ';', '|']
+        dangerous_patterns = ['$(', '`', '||', '&&', ';', '|']
         for pattern in dangerous_patterns:
             if pattern in value:
                 raise ValueError(f"Environment variable '{key}' contains dangerous pattern: {pattern}")
+        
+        # Special check for ${...} - allow only simple environment variable references
+        if '${' in value:
+            # Allow patterns like ${VARIABLE_NAME} but block complex expressions
+            import re
+            if not re.match(r'^[^$]*\$\{[A-Z_][A-Z0-9_]*\}[^$]*$', value):
+                raise ValueError(f"Environment variable '{key}' contains dangerous pattern: ${{")
 
         validated_env[key] = value
 
     return validated_env
 
 
-def validate_server_config(config: dict) -> dict:
+def validate_server_security(config: dict) -> dict:
     """
     Validate and sanitize MCP server configuration with comprehensive security checks.
 
@@ -435,14 +462,21 @@ def validate_server_config(config: dict) -> dict:
         if "url" not in validated_config:
             raise ValueError(f"{transport_type} server configuration must include 'url'")
 
+        # Prepare optional allowlist for hostnames if provided
+        allowed_hostnames_cfg = security_cfg.get("allowed_hostnames")
+        allowed_hostnames = None
+        if isinstance(allowed_hostnames_cfg, (list, set, tuple)):
+            # Keep only string-like entries and normalize to strings
+            allowed_hostnames = {str(h) for h in allowed_hostnames_cfg if isinstance(h, (str, bytes))}
+
         # Use enhanced URL validation
         validate_url(
             validated_config["url"],
             resolve_dns=bool(security_cfg.get("resolve_dns", False)),
             allow_private_ips=bool(security_cfg.get("allow_private_ips", False)),
             allow_localhost=bool(security_cfg.get("allow_localhost", False)),
+            allowed_hostnames=allowed_hostnames,
         )
-
         # Validate headers if present
         if "headers" in validated_config:
             headers = validated_config["headers"]
@@ -464,6 +498,14 @@ def validate_server_config(config: dict) -> dict:
                 raise ValueError("Timeout must be a positive number")
             if timeout > 300:  # 5 minutes max
                 raise ValueError(f"Timeout too large: {timeout} > 300 seconds")
+
+        # Validate http_read_timeout if present
+        if "http_read_timeout" in validated_config:
+            http_read_timeout = validated_config["http_read_timeout"]
+            if not isinstance(http_read_timeout, (int, float)) or http_read_timeout <= 0:
+                raise ValueError("http_read_timeout must be a positive number")
+            if http_read_timeout > 300:  # 5 minutes max
+                raise ValueError(f"http_read_timeout too large: {http_read_timeout} > 300 seconds")
 
     else:
         # List supported transport types for better error messages
@@ -505,7 +547,6 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
         raise ValueError(f"Server name too long: {len(server_name)} > 50 characters")
 
     # Remove any existing mcp__ prefix to avoid double-prefixing
-    original_tool_name = tool_name
     if tool_name.startswith("mcp__"):
         tool_name = tool_name[5:]
         # Re-extract server and tool parts if double-prefixed
@@ -517,7 +558,7 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
     # Reserved tool names that shouldn't be used
     reserved_names = {
         'connect', 'disconnect', 'list', 'help', 'version', 'status',
-        'health', 'ping', 'echo', 'test', 'debug', 'admin', 'system',
+        'health', 'ping', 'debug', 'admin', 'system',
         'config', 'settings', 'auth', 'login', 'logout', 'exit', 'quit'
     }
 
@@ -582,17 +623,16 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             raise ValueError(f"Tool arguments too large: ~{current_size} > {max_size} bytes")
 
     def _size_for_primitive(value: Any) -> int:
-        # Rough JSON-like size estimation
+        # Rough JSON-like size estimation for preventing extremely large payloads
+        # Note: This is an approximation and may not account for all JSON encoding overhead
         if value is None:
             return 4  # null
         if isinstance(value, bool):
-            return 4 if value else 5
+            return 4 if value else 5  # true/false
         if isinstance(value, (int, float)):
             return len(str(value))
-        if isinstance(value, str):
-            # Account for quotes
+        if isinstance(value, str): 
             return len(value) + 2
-        # Fallback to string conversion with quotes
         return len(str(value)) + 2
 
     def _validate_value(value: Any, depth: int = 0) -> Any:
@@ -600,38 +640,34 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             raise ValueError(f"Tool arguments nested too deeply: {depth} > {max_depth}")
 
         if isinstance(value, dict):
-            if len(value) > 100:  # Reasonable limit on dict size
+            if len(value) > 100: 
                 raise ValueError(f"Dictionary too large: {len(value)} > 100 keys")
-            # Account for braces
             _add_size(2)
             validated: Dict[str, Any] = {}
             first = True
             for k, v in value.items():
                 if not isinstance(k, str):
                     k = str(k)
-                # Comma between items
                 if not first:
                     _add_size(1)
                 first = False
-                # Key size with quotes and colon
                 _add_size(_size_for_primitive(k) + 1)
                 validated[k] = _validate_value(v, depth + 1)
             return validated
 
         elif isinstance(value, list):
-            if len(value) > 1000:  # Reasonable limit on list size
+            if len(value) > 1000:  
                 raise ValueError(f"List too large: {len(value)} > 1000 items")
-            # Account for brackets
             _add_size(2)
             validated_list = []
             for idx, item in enumerate(value):
                 if idx > 0:
-                    _add_size(1)  # comma
+                    _add_size(1)  
                 validated_list.append(_validate_value(item, depth + 1))
             return validated_list
 
         elif isinstance(value, str):
-            if len(value) > 10000:  # Reasonable limit on string size
+            if len(value) > 10000:  
                 raise ValueError(f"String too long: {len(value)} > 10000 characters")
             _add_size(_size_for_primitive(value))
             return value
@@ -641,12 +677,10 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             return value
 
         else:
-            # Convert other types to string with size limit
             str_value = str(value)
             if len(str_value) > 1000:
                 raise ValueError(f"Value too large when converted to string: {len(str_value)} > 1000")
             _add_size(_size_for_primitive(str_value))
             return str_value
-
-    # Validate while streaming size estimation (early termination on overflow)
+        
     return _validate_value(arguments)

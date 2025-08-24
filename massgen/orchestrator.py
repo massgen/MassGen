@@ -9,6 +9,7 @@ TODOs:
 """
 
 import asyncio
+import json
 import time
 import logging
 from typing import Dict, List, Optional, Any, AsyncGenerator
@@ -100,13 +101,10 @@ class Orchestrator(ChatAgent):
         self.workflow_tools = self.message_templates.get_standard_tools(
             list(agents.keys())
         )
-        
-        # MCP manual discovery removed; backend handles MCP sessions directly
-
         # MassGen-specific state
         self.current_task: Optional[str] = None
         self.workflow_phase: str = "idle"  # idle, coordinating, presenting
-
+        
         # Internal coordination state
         self._coordination_messages: List[Dict[str, str]] = []
         self._selected_agent: Optional[str] = None
@@ -643,7 +641,7 @@ class Orchestrator(ChatAgent):
             # Clean startup without redundant messages
 
             # Build proper conversation messages with system + user messages
-            max_attempts = 3
+            max_attempts = 5  # Increased from 3 to 5 for better MCP fallback handling
             conversation_messages = [
                 {"role": "system", "content": conversation["system_message"]},
                 {"role": "user", "content": conversation["user_message"]},
@@ -1165,6 +1163,14 @@ class Orchestrator(ChatAgent):
             )
             return
 
+        # Prevent duplicate final presentation when already started (e.g., timeout path + UI call)
+        if getattr(self, "_final_presentation_started", False):
+            # Skip duplicate invocation; signal completion to downstream consumers
+            yield StreamChunk(type="done", source=selected_agent_id)
+            return
+        # Mark as started
+        self._final_presentation_started = True
+
         agent = self.agents[selected_agent_id]
 
         # Prepare context about the voting
@@ -1246,8 +1252,6 @@ class Orchestrator(ChatAgent):
                 # Use the same format as main coordination for consistency
                 yield reasoning_chunk
             elif chunk.type == "backend_status":
-                import json
-
                 status_json = json.loads(chunk.content)
                 cwd = status_json["cwd"]
                 session_id = status_json["session_id"]
@@ -1477,6 +1481,8 @@ Final Session ID: {session_id}.
         # Clear coordination state
         self._active_streams = {}
         self._active_tasks = {}
+        # Reset final presentation guard flags
+        self._final_presentation_started = False
 
 
 # =============================================================================

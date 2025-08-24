@@ -14,11 +14,12 @@ Features:
 from .client import MCPClient, MultiMCPClient
 from .exceptions import (
     MCPError, MCPConnectionError, MCPServerError,
-    MCPValidationError, MCPTimeoutError, MCPAuthenticationError
+    MCPValidationError, MCPTimeoutError, MCPAuthenticationError,
+    MCPConfigurationError, MCPResourceError,
+    handle_mcp_error, format_error_chain
 )
-from .security import prepare_command, validate_server_config, sanitize_tool_name
-
-# Import official MCP types for external use
+from .security import prepare_command, sanitize_tool_name
+from .config_validator import MCPConfigValidator, validate_mcp_integration
 from mcp import types as mcp_types
 
 __all__ = [
@@ -36,9 +37,18 @@ __all__ = [
     "MCPValidationError",
     "MCPTimeoutError",
     "MCPAuthenticationError",
+    "MCPConfigurationError",
+    "MCPResourceError",
+
+    # Utility functions
+    "handle_mcp_error",
+    "format_error_chain",
 
     # Security utilities
     "prepare_command",
-    "validate_server_config",
     "sanitize_tool_name",
+
+    # Configuration validation
+    "MCPConfigValidator",
+    "validate_mcp_integration",
 ]

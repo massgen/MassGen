@@ -22,6 +22,8 @@ import os
 import json
 import enum
 import logging
+import asyncio
+import re
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
 
@@ -32,12 +34,25 @@ except ImportError:
     Field = None
 
 # MCP integration imports
+
 try:
     from ..mcp_tools import MultiMCPClient, MCPError, MCPConnectionError
-except ImportError:  # MCP not installed; only error if mcp_servers are used
+    from ..mcp_tools.config_validator import MCPConfigValidator
+    from ..mcp_tools.exceptions import (
+        MCPConfigurationError,
+        MCPValidationError,
+        MCPTimeoutError,
+        MCPServerError,
+    )
+except ImportError:  # MCP not installed or import failed within mcp_tools
     MultiMCPClient = None  # type: ignore[assignment]
     MCPError = ImportError  # type: ignore[assignment]
     MCPConnectionError = ImportError  # type: ignore[assignment]
+    MCPConfigValidator = None  # type: ignore[assignment]
+    MCPConfigurationError = ImportError  # type: ignore[assignment]
+    MCPValidationError = ImportError  # type: ignore[assignment]
+    MCPTimeoutError = ImportError  # type: ignore[assignment]
+    MCPServerError = ImportError  # type: ignore[assignment]
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -94,7 +109,7 @@ class CoordinationResponse(BaseModel):
 class GeminiBackend(LLMBackend):
     """Google Gemini backend using structured output for coordination and MCP tool integration."""
 
-    def __init__(self, api_key: Optional[str] = None, mcp_servers: Optional[List[Dict[str, Any]]] = None, **kwargs):
+    def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         self.api_key = (
             api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -102,10 +117,16 @@ class GeminiBackend(LLMBackend):
         self.search_count = 0
         self.code_execution_count = 0
 
-        # MCP integration (SDK sessions only; manual mode removed)
-        self.mcp_servers = mcp_servers or []
+        # MCP integration
+        self.mcp_servers = kwargs.pop("mcp_servers", [])
         self._mcp_client: Optional[MultiMCPClient] = None
         self._mcp_initialized = False
+
+        # MCP tool execution monitoring
+        self._mcp_tool_calls_count = 0
+        self._mcp_tool_failures = 0
+        self._mcp_tool_successes = 0
+        self._mcp_connection_retries = 0
 
         if BaseModel is None:
             raise ImportError(
@@ -120,11 +141,15 @@ class GeminiBackend(LLMBackend):
         if isinstance(servers, dict):
             return [servers]
         if not isinstance(servers, list):
-            raise ValueError(f"mcp_servers must be a list or dict, got {type(servers).__name__}")
+            raise ValueError(
+                f"mcp_servers must be a list or dict, got {type(servers).__name__}"
+            )
         normalized: List[Dict[str, Any]] = []
         for idx, entry in enumerate(servers):
             if not isinstance(entry, dict):
-                raise ValueError(f"MCP server configuration at index {idx} must be a dictionary, got {type(entry).__name__}")
+                raise ValueError(
+                    f"MCP server configuration at index {idx} must be a dictionary, got {type(entry).__name__}"
+                )
             normalized.append(entry)
         return normalized
 
@@ -134,41 +159,103 @@ class GeminiBackend(LLMBackend):
             return
 
         if MultiMCPClient is None:
-            raise ImportError("MCP support is not installed but mcp_servers were provided. Install MCP dependencies.")
+            reason = "MCP import failed - MultiMCPClient not available"
+            logger.warning(
+                "MCP support import failed (%s). mcp_servers were provided; falling back to workflow tools without MCP. Ensure the 'mcp' package is installed and compatible with this codebase.",
+                reason,
+            )
+            # Clear MCP servers to prevent further attempts
+            self.mcp_servers = []
+            return
 
         try:
+            # Validate MCP configuration before initialization
+            if MCPConfigValidator is not None:
+                try:
+                    backend_config = {"mcp_servers": self.mcp_servers}
+                    # Use the comprehensive validator class for enhanced validation
+                    validator = MCPConfigValidator()
+                    validated_config = validator.validate_backend_mcp_config(
+                        backend_config
+                    )
+                    self.mcp_servers = validated_config.get(
+                        "mcp_servers", self.mcp_servers
+                    )
+                    logger.debug(
+                        f"MCP configuration validation passed for {len(self.mcp_servers)} servers"
+                    )
+
+                    # Log validated server names for debugging
+                    if logger.isEnabledFor(logging.DEBUG):
+                        server_names = [
+                            server.get("name", "unnamed") for server in self.mcp_servers
+                        ]
+                        logger.debug(
+                            f"Validated MCP servers: {', '.join(server_names)}"
+                        )
+                except MCPConfigurationError as e:
+                    logger.error(
+                        f"MCP configuration validation failed: {e.original_message}"
+                    )
+                    raise RuntimeError(
+                        f"Invalid MCP configuration: {e.original_message}"
+                    ) from e
+                except MCPValidationError as e:
+                    logger.error(f"MCP validation failed: {e.original_message}")
+                    raise RuntimeError(
+                        f"MCP validation error: {e.original_message}"
+                    ) from e
+                except Exception as e:
+                    if isinstance(e, (ImportError, AttributeError)):
+                        logger.debug(f"MCP validation not available: {e}")
+                    else:
+                        logger.warning(f"MCP validation error: {e}")
+                        raise RuntimeError(
+                            f"MCP configuration validation failed: {e}"
+                        ) from e
+            else:
+                logger.debug(
+                    "MCP validation not available, proceeding without validation"
+                )
+
             normalized_servers = self._normalize_mcp_servers()
-            logger.info(f"Setting up MCP sessions with {len(normalized_servers)} servers")
+            logger.info(
+                f"Setting up MCP sessions with {len(normalized_servers)} servers"
+            )
             self._mcp_client = await MultiMCPClient.create_and_connect(
-                normalized_servers,
-                timeout_seconds=30
+                normalized_servers, timeout_seconds=30
             )
 
             self._mcp_initialized = True
             logger.info("Successfully initialized MCP sessions")
 
         except Exception as e:
-            logger.warning(f"Failed to setup MCP sessions: {e}")
-            self._mcp_client = None
-
-    # Manual MCP tool declaration conversion removed (sessions only)
-
-    # Manual MCP tool execution removed (sessions only)
-
-    def _detect_tool_types(self, tools: List[Dict[str, Any]]) -> Dict[str, List[str]]:
-        """Categorize tools into coordination and other types (MCP manual mode removed)."""
-        coordination_tools: List[str] = []
-        other_tools: List[str] = []
-        if not tools:
-            return {"coordination": coordination_tools, "other": other_tools}
-        for tool in tools:
-            if tool.get("type") == "function":
-                name = tool.get("function", {}).get("name") or tool.get("name", "")
-                if name in ["vote", "new_answer"]:
-                    coordination_tools.append(name)
-                else:
-                    other_tools.append(name)
-        return {"coordination": coordination_tools, "other": other_tools}
+            # Enhanced error handling for different MCP error types
+            if isinstance(e, RuntimeError) and "MCP configuration" in str(e):
+                raise
+            elif isinstance(e, MCPConnectionError):
+                logger.error(f"MCP connection failed during setup: {e}")
+                self._mcp_client = None
+                raise RuntimeError(f"Failed to establish MCP connections: {e}") from e
+            elif isinstance(e, MCPTimeoutError):
+                logger.error(f"MCP connection timed out during setup: {e}")
+                self._mcp_client = None
+                raise RuntimeError(f"MCP connection timeout: {e}") from e
+            elif isinstance(e, MCPServerError):
+                logger.error(f"MCP server error during setup: {e}")
+                self._mcp_client = None
+                raise RuntimeError(f"MCP server error: {e}") from e
+            elif isinstance(e, MCPError):
+                logger.warning(f"MCP error during setup: {e}")
+                self._mcp_client = None
+                return
+            elif "MCP" in str(type(e).__name__):
+                logger.warning(f"Unknown MCP-specific error during setup: {e}")
+                self._mcp_client = None
+                return
+            else:
+                logger.warning(f"Failed to setup MCP sessions: {e}")
+                self._mcp_client = None
 
     def detect_coordination_tools(self, tools: List[Dict[str, Any]]) -> bool:
         """Detect if tools contain vote/new_answer coordination tools."""
@@ -202,7 +289,7 @@ If you want to VOTE for an existing agent's answer:
   "action_type": "vote",
   "vote_data": {{
     "action": "vote",
-    "agent_id": "agent1",  // Choose from: {agent_list or 'agent1, agent2, agent3, etc.'}
+    "agent_id": "agent1",  // Choose from: {agent_list or "agent1, agent2, agent3, etc."}
     "reason": "Brief reason for your vote"
   }}
 }}
@@ -223,8 +310,6 @@ Make your decision and include the JSON at the very end of your response."""
     ) -> Optional[Dict[str, Any]]:
         """Extract structured JSON response from model output."""
         try:
-            import re
-
             # Strategy 0: Look for JSON inside markdown code blocks first
             markdown_json_pattern = r"```json\s*(\{.*?\})\s*```"
             markdown_matches = re.findall(
@@ -343,6 +428,90 @@ Make your decision and include the JSON at the very end of your response."""
 
         return []
 
+    @staticmethod
+    def _get_mcp_error_info(error: Exception) -> tuple[str, str, str]:
+        """Get standardized MCP error information.
+        
+        Returns:
+            tuple: (log_type, user_message, error_category)
+        """
+        error_mappings = {
+            MCPConnectionError: ("connection error", "MCP connection failed", "connection"),
+            MCPTimeoutError: ("timeout error", "MCP session timeout", "timeout"),
+            MCPServerError: ("server error", "MCP server error", "server"),
+            MCPError: ("MCP error", "MCP error", "general"),
+        }
+        
+        return error_mappings.get(
+            type(error), ("unexpected error", "MCP connection failed", "unknown")
+        )
+
+    def _log_mcp_error(self, error: Exception, context: str) -> None:
+        """Log MCP errors with specific error type messaging."""
+        log_type, _, _ = self._get_mcp_error_info(error)
+        logger.warning(f"MCP {log_type} during {context}: {error}")
+
+    async def _handle_mcp_retry_error(
+        self, error: Exception, retry_count: int, max_retries: int
+    ) -> tuple[bool, AsyncGenerator[StreamChunk, None]]:
+        """Handle MCP retry errors with specific messaging and fallback logic.
+
+        Returns:
+            tuple: (should_continue_retrying, error_chunks_generator)
+        """
+        log_type, user_message, _ = self._get_mcp_error_info(error)
+        
+        # Log the retry attempt
+        logger.warning(f"MCP {log_type} on attempt {retry_count}: {error}")
+
+        # Check if we've exhausted retries
+        if retry_count >= max_retries:
+
+            async def error_chunks():
+                yield StreamChunk(
+                    type="content",
+                    content=f"\n⚠️  {user_message} after {max_retries} attempts; falling back to workflow tools\n",
+                )
+
+            return False, error_chunks()
+
+        # Continue retrying
+        async def empty_chunks():
+            return
+            yield  # Make this a generator
+
+        return True, empty_chunks()
+
+    async def _handle_mcp_error_and_fallback(
+        self,
+        error: Exception,
+        config: Dict[str, Any],
+        all_tools: List,
+        _stream_with_config,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
+        self._mcp_tool_failures += 1
+        
+        log_type, user_message, _ = self._get_mcp_error_info(error)
+        
+        # Log with specific error type
+        logger.warning(
+            f"MCP tool call #{self._mcp_tool_calls_count} failed - {log_type}: {error}"
+        )
+
+        # Yield user-friendly error message
+        yield StreamChunk(
+            type="content",
+            content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
+        )
+
+        # Build non-MCP configuration and stream fallback
+        manual_config = dict(config)
+        if all_tools:
+            manual_config["tools"] = all_tools
+        async for schunk in _stream_with_config(manual_config):
+            yield schunk
+
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
@@ -364,8 +533,7 @@ Make your decision and include the JSON at the very end of your response."""
             using_sdk_mcp = bool(self.mcp_servers)
 
             # Analyze tool types
-            tool_types = self._detect_tool_types(tools)
-            is_coordination = len(tool_types.get("coordination", [])) > 0
+            is_coordination = self.detect_coordination_tools(tools)
 
             valid_agent_ids = None
 
@@ -443,8 +611,6 @@ Make your decision and include the JSON at the very end of your response."""
                             content="\n⚠️  Code execution requires google.genai.types\n",
                         )
 
-            # Manual MCP function declarations removed
-
             # Build config with direct parameter passthrough
             config = {}
 
@@ -452,7 +618,7 @@ Make your decision and include the JSON at the very end of your response."""
             excluded_params = {
                 "enable_web_search", "enable_code_execution", "agent_id", "session_id",
                 # MCP-specific parameters that should not be passed to Gemini
-                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto"
+                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto", "type"
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
@@ -469,19 +635,60 @@ Make your decision and include the JSON at the very end of your response."""
 
             # Branch 1: SDK auto-calling via MCP sessions (reuse existing MultiMCPClient sessions)
             if using_sdk_mcp and self.mcp_servers:
-                if not self._mcp_client or not getattr(self._mcp_client, "is_connected", lambda: False)():
-                    # Ensure MultiMCPClient is connected and sessions are initialized
-                    try:
-                        # If MCP is not installed, this will raise ImportError earlier in _setup_mcp_tools
-                        self._mcp_client = await MultiMCPClient.create_and_connect(
-                            self.mcp_servers,
-                            timeout_seconds=30
-                        )
-                    except Exception as _e:
-                        yield StreamChunk(type="content", content="\n⚠️  MCP connection failed; continuing without MCP tools\n")
-                        using_sdk_mcp = False
+                if (
+                    not self._mcp_client
+                    or not getattr(self._mcp_client, "is_connected", lambda: False)()
+                ):
+                    # Retry MCP connection up to 5 times before falling back
+                    max_mcp_retries = 5
+                    mcp_connected = False
 
-            # If not using SDK MCP, include builtin tools only
+                    for retry_count in range(1, max_mcp_retries + 1):
+                        try:
+                            # Track retry attempts
+                            self._mcp_connection_retries = retry_count
+
+                            if retry_count > 1:
+                                logger.info(
+                                    f"MCP connection retry {retry_count}/{max_mcp_retries}"
+                                )
+                                # Brief delay between retries
+                                await asyncio.sleep(
+                                    0.5 * retry_count
+                                )  # Progressive backoff
+
+                            self._mcp_client = await MultiMCPClient.create_and_connect(
+                                self.mcp_servers, timeout_seconds=30
+                            )
+                            mcp_connected = True
+                            logger.info(
+                                f"MCP connection successful on attempt {retry_count}"
+                            )
+                            break
+
+                        except (
+                            MCPConnectionError,
+                            MCPTimeoutError,
+                            MCPServerError,
+                            MCPError,
+                            Exception,
+                        ) as e:
+                            (
+                                should_continue,
+                                error_chunks,
+                            ) = await self._handle_mcp_retry_error(
+                                e, retry_count, max_mcp_retries
+                            )
+                            if not should_continue:
+                                async for chunk in error_chunks:
+                                    yield chunk
+                                using_sdk_mcp = False
+
+                    # If all retries failed, ensure we fall back gracefully
+                    if not mcp_connected:
+                        using_sdk_mcp = False
+                        self._mcp_client = None
+
             if not using_sdk_mcp:
                 all_tools.extend(builtin_tools)
                 if all_tools:
@@ -506,7 +713,26 @@ Make your decision and include the JSON at the very end of your response."""
                 for chunk in client.models.generate_content_stream(
                     model=model_name, contents=full_content, config=active_config
                 ):
-                    if hasattr(chunk, "text") and chunk.text:
+                    # Prefer extracting text from candidates to avoid SDK warnings about non-text parts
+                    emitted_text = ""
+                    if hasattr(chunk, "candidates") and chunk.candidates:
+                        try:
+                            for candidate in chunk.candidates:
+                                if hasattr(candidate, "content") and hasattr(
+                                    candidate.content, "parts"
+                                ):
+                                    for part in candidate.content.parts:
+                                        if hasattr(part, "text") and part.text:
+                                            emitted_text += part.text
+                        except Exception:
+                            # Ignore parsing issues and fall back below if needed
+                            pass
+
+                    if emitted_text:
+                        full_content_text += emitted_text
+                        yield StreamChunk(type="content", content=emitted_text)
+                    elif hasattr(chunk, "text") and chunk.text:
+                        # Fallback only when no candidates/parts available
                         chunk_text = chunk.text
                         full_content_text += chunk_text
                         yield StreamChunk(type="content", content=chunk_text)
@@ -516,7 +742,12 @@ Make your decision and include the JSON at the very end of your response."""
                         final_response = chunk
 
                     # Check for tools used in each chunk for real-time detection (manual MCP path only)
-                    if (not using_sdk_mcp) and builtin_tools and hasattr(chunk, "candidates") and chunk.candidates:
+                    if (
+                        (not using_sdk_mcp)
+                        and builtin_tools
+                        and hasattr(chunk, "candidates")
+                        and chunk.candidates
+                    ):
                         candidate = chunk.candidates[0]
 
                         # Check for code execution in this chunk
@@ -567,24 +798,60 @@ Make your decision and include the JSON at the very end of your response."""
                     session_config = dict(config)
                     session_config["tools"] = mcp_sessions
 
+                    # Track MCP tool usage attempt
+                    self._mcp_tool_calls_count += 1
+                    logger.debug(
+                        f"MCP tool call #{self._mcp_tool_calls_count} initiated"
+                    )
+
                     # Use async non-streaming call with sessions (SDK supports auto-calling MCP here)
                     response = await client.aio.models.generate_content(
                         model=model_name, contents=full_content, config=session_config
                     )
-                    if hasattr(response, "text") and response.text:
-                        full_content_text += response.text
-                        yield StreamChunk(type="content", content=response.text)
+
+                    # Track successful MCP tool execution
+                    self._mcp_tool_successes += 1
+                    logger.debug(
+                        f"MCP tool call #{self._mcp_tool_calls_count} succeeded"
+                    )
+
+                    # Assemble text from candidates to avoid SDK warnings about non-text parts
+                    assembled_text = ""
+                    if hasattr(response, "candidates") and response.candidates:
+                        try:
+                            for candidate in response.candidates:
+                                if hasattr(candidate, "content") and hasattr(
+                                    candidate.content, "parts"
+                                ):
+                                    for part in candidate.content.parts:
+                                        if hasattr(part, "text") and part.text:
+                                            assembled_text += part.text
+                        except Exception:
+                            assembled_text = ""
+
+                    if assembled_text:
+                        full_content_text += assembled_text
+                        yield StreamChunk(type="content", content=assembled_text)
+
+                    # Add MCP usage indicator
+                    yield StreamChunk(
+                        type="content",
+                        content="🔧 [MCP Tools] Session-based tools used\n",
+                    )
+
                     # Track final response for any post-processing (builtins off in this mode)
                     final_response = response
-                except Exception as e:
-                    # Continue without MCP tools
-                    yield StreamChunk(type="content", content=f"\n⚠️  MCP SDK session failed ({e}); continuing without MCP tools\n")
-                    # Build non-MCP configuration and stream
-                    manual_config = dict(config)
-                    if all_tools:
-                        manual_config["tools"] = all_tools
-                    async for schunk in _stream_with_config(manual_config):
-                        yield schunk
+                except (
+                    MCPConnectionError,
+                    MCPTimeoutError,
+                    MCPServerError,
+                    MCPError,
+                    Exception,
+                ) as e:
+                    async for chunk in self._handle_mcp_error_and_fallback(
+                        e, config, all_tools, _stream_with_config
+                    ):
+                        yield chunk
             else:
                 # Non-MCP path (existing behavior)
                 async for schunk in _stream_with_config(config):
@@ -795,6 +1062,11 @@ Make your decision and include the JSON at the very end of your response."""
         """Reset tool usage tracking."""
         self.search_count = 0
         self.code_execution_count = 0
+        # Reset MCP monitoring metrics
+        self._mcp_tool_calls_count = 0
+        self._mcp_tool_failures = 0
+        self._mcp_tool_successes = 0
+        self._mcp_connection_retries = 0
         super().reset_token_usage()
 
     async def cleanup_mcp(self):
@@ -803,26 +1075,14 @@ Make your decision and include the JSON at the very end of your response."""
             try:
                 await self._mcp_client.disconnect()
                 logger.info("MCP client disconnected successfully")
-            except Exception as e:
-                logger.warning(f"Error disconnecting MCP client: {e}")
+            except (
+                MCPConnectionError,
+                MCPTimeoutError,
+                MCPServerError,
+                MCPError,
+                Exception,
+            ) as e:
+                self._log_mcp_error(e, "disconnect")
             finally:
                 self._mcp_client = None
                 self._mcp_initialized = False
-
-    def get_mcp_tool_info(self) -> Dict[str, Any]:
-        """Get information about available MCP tools."""
-        return {
-            "initialized": self._mcp_initialized,
-            "server_count": len(self.mcp_servers),
-            # In session-only mode, tool listing is not exposed at backend level
-            "tool_count": 0,
-            "available_tools": []
-        }
-        
-    def create_tool_result_message(self, tool_call: Dict[str, Any], result: str) -> Dict[str, Any]:
-        """Create a tool result message for the agent."""
-        return {
-            "role": "tool",
-            "tool_call_id": tool_call.get("id", ""),
-            "content": result
-        }

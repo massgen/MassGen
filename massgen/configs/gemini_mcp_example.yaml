@@ -1,6 +1,6 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config configs/gemini_mcp_example.yaml "whats the weather of london"
+#   uv run python -m massgen.cli --config configs/gemini_mcp_example.yaml "whats the weather of Tokyo"
 
 agents:
   - id: "gemini2.5flash_mcp_weather"
