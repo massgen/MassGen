@@ -231,9 +231,9 @@ class ResponseBackend(LLMBackend):
                             summary_index=getattr(chunk, "summary_index", None),
                         )
                     elif chunk.type == "response.reasoning_summary_text.done":
-                        log_stream_chunk("backend.response", "reasoning_summary_done", summary_text, agent_id)
                         # Complete reasoning summary finished
                         summary_text = getattr(chunk, "text", "")
+                        log_stream_chunk("backend.response", "reasoning_summary_done", summary_text, agent_id)
                         yield StreamChunk(
                             type="reasoning_summary_done",
                             content=f"\n📋 [Reasoning Summary Complete]\n",
