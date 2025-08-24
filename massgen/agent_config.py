@@ -6,6 +6,7 @@ TODO: This file is outdated - check claude_code config and
 deprecated patterns. Update to reflect current backend architecture.
 """
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Any, TYPE_CHECKING
 
@@ -47,10 +48,38 @@ class AgentConfig:
 
     # Agent customization
     agent_id: Optional[str] = None
-    custom_system_instruction: Optional[str] = None
+    _custom_system_instruction: Optional[str] = field(default=None, init=False)
 
     # Timeout and resource limits
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
+
+    @property
+    def custom_system_instruction(self) -> Optional[str]:
+        """
+        DEPRECATED: Use backend-specific system prompt parameters instead.
+        
+        For Claude Code: use append_system_prompt or system_prompt in backend_params
+        For other backends: use their respective system prompt parameters
+        """
+        if self._custom_system_instruction is not None:
+            warnings.warn(
+                "custom_system_instruction is deprecated. Use backend-specific "
+                "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
+                DeprecationWarning,
+                stacklevel=2
+            )
+        return self._custom_system_instruction
+    
+    @custom_system_instruction.setter
+    def custom_system_instruction(self, value: Optional[str]) -> None:
+        if value is not None:
+            warnings.warn(
+                "custom_system_instruction is deprecated. Use backend-specific "
+                "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
+                DeprecationWarning,
+                stacklevel=2
+            )
+        self._custom_system_instruction = value
 
     @classmethod
     def create_chatcompletion_config(

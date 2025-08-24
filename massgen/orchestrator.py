@@ -6,6 +6,13 @@ multiple sub-agents using the proven binary decision framework behind the scenes
 
 TODOs:
 - Move CLI's coordinate_with_context logic to orchestrator and simplify CLI to just use orchestrator
+- Implement orchestrator system message functionality to customize coordination behavior:
+  * Custom voting strategies (consensus, expertise-weighted, domain-specific)
+  * Message construction templates for sub-agent instructions
+  * Conflict resolution approaches (evidence-based, democratic, expert-priority)
+  * Workflow preferences (thorough vs fast, iterative vs single-pass)
+  * Domain-specific coordination (research teams, technical reviews, creative brainstorming)
+  * Dynamic agent selection based on task requirements and orchestrator instructions
 """
 
 import asyncio
@@ -104,6 +111,7 @@ class Orchestrator(ChatAgent):
         # Internal coordination state
         self._coordination_messages: List[Dict[str, str]] = []
         self._selected_agent: Optional[str] = None
+        self._final_presentation_content: Optional[str] = None
 
         # Timeout and resource tracking
         self.total_tokens: int = 0
@@ -459,6 +467,12 @@ class Orchestrator(ChatAgent):
                         )
                         await self._close_agent_stream(agent_id, active_streams)
 
+                    elif chunk_type == "debug":
+                        # Debug information - forward as StreamChunk for logging
+                        yield StreamChunk(
+                            type="debug", content=chunk_data, source=agent_id
+                        )
+
                     elif chunk_type == "done":
                         # Stream completed - emit completion status for frontend
                         yield StreamChunk(
@@ -608,6 +622,9 @@ class Orchestrator(ChatAgent):
         self.agent_states[agent_id].restart_pending = False
 
         try:
+            # Get agent's custom system message if available
+            agent_system_message = agent.get_configurable_system_message()
+            
             # Build conversation with context support
             if conversation_context and conversation_context.get(
                 "conversation_history"
@@ -620,6 +637,7 @@ class Orchestrator(ChatAgent):
                     ),
                     agent_summaries=answers,
                     valid_agent_ids=list(answers.keys()) if answers else None,
+                    base_system_message=agent_system_message,
                 )
             else:
                 # Fallback to standard conversation building
@@ -627,6 +645,7 @@ class Orchestrator(ChatAgent):
                     task=task,
                     agent_summaries=answers,
                     valid_agent_ids=list(answers.keys()) if answers else None,
+                    base_system_message=agent_system_message,
                 )
 
             # Clean startup without redundant messages
@@ -709,6 +728,9 @@ class Orchestrator(ChatAgent):
                         yield ("reasoning", reasoning_chunk)
                     elif chunk.type == "backend_status":
                         pass
+                    elif chunk.type == "debug":
+                        # Forward debug chunks
+                        yield ("debug", chunk.content)
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
@@ -1180,8 +1202,8 @@ class Orchestrator(ChatAgent):
             selected_agent_id=selected_agent_id,
         )
 
-        # Get agent's original system message if available
-        agent_system_message = getattr(agent, "system_message", None)
+        # Get agent's configurable system message using the standard interface
+        agent_system_message = agent.get_configurable_system_message()
         # Create conversation with system and user messages
         presentation_messages = [
             {
@@ -1276,15 +1298,21 @@ Final Session ID: {session_id}.
                         },
                     )
 
-        # If no content was generated, use the stored answer as fallback
-        if not presentation_content.strip():
+        # Store the final presentation content for logging
+        if presentation_content.strip():
+            # Store the synthesized final answer
+            self._final_presentation_content = presentation_content.strip()
+        else:
+            # If no content was generated, use the stored answer as fallback
             stored_answer = self.agent_states[selected_agent_id].answer
             if stored_answer:
+                fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
                 yield StreamChunk(
                     type="content",
-                    content=f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}",
+                    content=fallback_content,
                     source=selected_agent_id,
                 )
+                self._final_presentation_content = stored_answer
             else:
                 yield StreamChunk(
                     type="content",
@@ -1421,6 +1449,7 @@ Final Session ID: {session_id}.
             "workflow_phase": self.workflow_phase,
             "current_task": self.current_task,
             "selected_agent": self._selected_agent,
+            "final_presentation_content": self._final_presentation_content,
             "vote_results": vote_results,
             "agents": {
                 aid: {
@@ -1438,13 +1467,41 @@ Final Session ID: {session_id}.
             "conversation_length": len(self.conversation_history),
         }
 
-    def reset(self) -> None:
+    def get_configurable_system_message(self) -> Optional[str]:
+        """
+        Get the configurable system message for the orchestrator.
+        
+        This can define how the orchestrator should coordinate agents, construct messages,
+        handle conflicts, make decisions, etc. For example:
+        - Custom voting strategies
+        - Message construction templates  
+        - Conflict resolution approaches
+        - Coordination workflow preferences
+        
+        Returns:
+            Orchestrator's configurable system message if available, None otherwise
+        """
+        if self.config and hasattr(self.config, 'get_configurable_system_message'):
+            return self.config.get_configurable_system_message()
+        elif self.config and hasattr(self.config, 'custom_system_instruction'):
+            return self.config.custom_system_instruction
+        elif self.config and self.config.backend_params:
+            # Check for backend-specific system prompts
+            backend_params = self.config.backend_params
+            if "system_prompt" in backend_params:
+                return backend_params["system_prompt"]
+            elif "append_system_prompt" in backend_params:
+                return backend_params["append_system_prompt"]
+        return None
+
+    async def reset(self) -> None:
         """Reset orchestrator state for new task."""
         self.conversation_history.clear()
         self.current_task = None
         self.workflow_phase = "idle"
         self._coordination_messages.clear()
         self._selected_agent = None
+        self._final_presentation_content = None
 
         # Reset agent states
         for state in self.agent_states.values():
