@@ -25,9 +25,11 @@ from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
 from .logger_config import (
     log_orchestrator_activity,
-    log_agent_message,
+    log_orchestrator_agent_message,
     log_coordination_step,
-    log_tool_call
+    log_tool_call,
+    log_stream_chunk,
+    logger  # Import logger directly for INFO logging
 )
 
 
@@ -252,7 +254,10 @@ class Orchestrator(ChatAgent):
         log_orchestrator_activity(
             self.orchestrator_id,
             "Starting coordination with timeout",
-            {"timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds}
+            {
+                "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
+                "agents": list(self.agents.keys())
+            }
         )
 
         # Track active coordination state for cleanup
@@ -423,17 +428,20 @@ class Orchestrator(ChatAgent):
 
                     if chunk_type == "content":
                         # Stream agent content in real-time with source info
+                        log_stream_chunk("orchestrator", "content", chunk_data, agent_id)
                         yield StreamChunk(
                             type="content", content=chunk_data, source=agent_id
                         )
 
                     elif chunk_type == "reasoning":
                         # Stream reasoning content with proper attribution
+                        log_stream_chunk("orchestrator", "reasoning", chunk_data, agent_id)
                         yield chunk_data  # chunk_data is already a StreamChunk with source
 
                     elif chunk_type == "result":
                         # Agent completed with result
                         result_type, result_data = chunk_data
+                        log_stream_chunk("orchestrator", f"result.{result_type}", result_data, agent_id)
 
                         # Emit agent completion status immediately upon result
                         yield StreamChunk(
@@ -477,6 +485,7 @@ class Orchestrator(ChatAgent):
 
                     elif chunk_type == "error":
                         # Agent error
+                        log_stream_chunk("orchestrator", "error", chunk_data, agent_id)
                         yield StreamChunk(
                             type="content", content=f"❌ {chunk_data}", source=agent_id
                         )
@@ -491,12 +500,14 @@ class Orchestrator(ChatAgent):
 
                     elif chunk_type == "debug":
                         # Debug information - forward as StreamChunk for logging
+                        log_stream_chunk("orchestrator", "debug", chunk_data, agent_id)
                         yield StreamChunk(
                             type="debug", content=chunk_data, source=agent_id
                         )
 
                     elif chunk_type == "done":
                         # Stream completed - emit completion status for frontend
+                        log_stream_chunk("orchestrator", "done", None, agent_id)
                         yield StreamChunk(
                             type="agent_status",
                             source=agent_id,
@@ -636,10 +647,21 @@ class Orchestrator(ChatAgent):
         """
         agent = self.agents[agent_id]
         
+        # Get backend name for logging
+        backend_name = None
+        if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+            backend_name = agent.backend.get_provider_name()
+        
         log_orchestrator_activity(
             self.orchestrator_id,
             f"Starting agent execution: {agent_id}",
-            {"task": task if task else None, "has_answers": bool(answers)}
+            {
+                "agent_id": agent_id,
+                "backend": backend_name,
+                "task": task if task else None,  # Full task for debug logging
+                "has_answers": bool(answers),
+                "num_answers": len(answers) if answers else 0
+            }
         )
 
         # Initialize agent state
@@ -676,11 +698,16 @@ class Orchestrator(ChatAgent):
                     base_system_message=agent_system_message,
                 )
             
-            # Log the messages being sent to the agent
-            log_agent_message(
+            # Log the messages being sent to the agent with backend info
+            backend_name = None
+            if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                backend_name = agent.backend.get_provider_name()
+            
+            log_orchestrator_agent_message(
                 agent_id,
                 "SEND",
-                {"system": conversation["system_message"], "user": conversation["user_message"]}
+                {"system": conversation["system_message"], "user": conversation["user_message"]},
+                backend_name=backend_name
             )
 
             # Clean startup without redundant messages
@@ -738,7 +765,10 @@ class Orchestrator(ChatAgent):
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
                         # Log received content
-                        log_agent_message(agent_id, "RECV", {"content": chunk.content})
+                        backend_name = None
+                        if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                            backend_name = agent.backend.get_provider_name()
+                        log_orchestrator_agent_message(agent_id, "RECV", {"content": chunk.content}, backend_name=backend_name)
                     elif chunk.type in [
                         "reasoning",
                         "reasoning_done",
@@ -773,6 +803,11 @@ class Orchestrator(ChatAgent):
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                         tool_calls.extend(chunk_tool_calls)
                         # Stream tool calls to show agent actions
+                        # Get backend name for logging
+                        backend_name = None
+                        if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                            backend_name = agent.backend.get_provider_name()
+                        
                         for tool_call in chunk_tool_calls:
                             tool_name = agent.backend.extract_tool_name(tool_call)
                             tool_args = agent.backend.extract_tool_arguments(tool_call)
@@ -780,11 +815,11 @@ class Orchestrator(ChatAgent):
                             if tool_name == "new_answer":
                                 content = tool_args.get("content", "")
                                 yield ("content", f'💡 Providing answer: "{content}"')
-                                log_tool_call(agent_id, "new_answer", {"content": content})
+                                log_tool_call(agent_id, "new_answer", {"content": content}, None, backend_name)  # Full content for debug logging
                             elif tool_name == "vote":
                                 agent_voted_for = tool_args.get("agent_id", "")
                                 reason = tool_args.get("reason", "")
-                                log_tool_call(agent_id, "vote", {"agent_id": agent_voted_for, "reason": reason})
+                                log_tool_call(agent_id, "vote", {"agent_id": agent_voted_for, "reason": reason}, None, backend_name)  # Full reason for debug logging
 
                                 # Convert anonymous agent ID to real agent ID for display
                                 real_agent_id = agent_voted_for
@@ -804,7 +839,7 @@ class Orchestrator(ChatAgent):
                                 )
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
-                                log_tool_call(agent_id, tool_name, tool_args)
+                                log_tool_call(agent_id, tool_name, tool_args, None, backend_name)
                     elif chunk.type == "error":
                         # Stream error information to user interface
                         error_msg = (
