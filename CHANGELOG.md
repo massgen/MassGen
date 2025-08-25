@@ -7,77 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.11] - 2025-08-25
 
-### Added
-- **Custom System Messages**: Enhanced system message configuration for agents and orchestrator
-  - Configurable system messages for individual agents and orchestrator coordination
-  - Support for custom voting strategies and conflict resolution approaches
-  - Domain-specific coordination templates and workflow preferences
-  - Backend-specific system prompt customization (system_prompt, append_system_prompt)
-- **Playwright Automation Support**: New browser automation capabilities
-  - Multi-agent configuration for Playwright-based automation tasks
-  - Example configuration: `multi_agent_playwright_automation.yaml`
-  - Integration with automated testing and web scraping workflows
-- **Columbia Presentation**: New presentation materials for academic demonstrations
-  - Interactive HTML presentation in `docs/presentation/columbia.html`
-  - Enhanced presentation capabilities for research and educational contexts
-- **Debug Logging Improvements**: Enhanced backend debugging and visibility
-  - Backend input/output logging with StreamChunk debug messages
-  - Session tracking and tool usage visibility
-  - Configurable debug logging via MASSGEN_LOG_BACKENDS environment variable
-  - Improved error reporting and troubleshooting capabilities
+### Known Issues
+- **System Message Handling in Multi-Agent Coordination**: Critical issues affecting Claude Code agents
+  - **Lost System Messages During Final Presentation** (`orchestrator.py:1183`)
+    - Claude Code agents lose domain expertise during final presentation
+    - ConfigurableAgent doesn't properly expose system messages via `agent.system_message`
+  - **Backend Ignores System Messages** (`claude_code.py:754-762`)
+    - Claude Code backend filters out system messages from presentation_messages
+    - Only processes user messages, causing loss of agent expertise context
+    - System message handling only works during initial client creation, not with `reset_chat=True`
+  - **Ambiguous Configuration Sources**
+    - Multiple conflicting system message sources: `custom_system_instruction`, `system_prompt`, `append_system_prompt`
+    - Backend parameters silently override AgentConfig settings
+    - Unclear precedence and behavior documentation
+  - **Architecture Violations**
+    - Orchestrator contains Claude Code-specific implementation details
+    - Tight coupling prevents easy addition of new backends
+    - Violates separation of concerns principle
 
 ### Fixed
-- **Claude Code Backend**: Multiple critical improvements and bug fixes
-  - Fixed multiple values error for system_prompt parameter in create_client()
-  - Improved system message handling and extraction
-  - Better coordination action descriptions ("Coordination Actions" instead of "Available Tools")
+- **Custom System Message Support**: Enhanced system message configuration and preservation
+  - Added `base_system_message` parameter to conversation builders for agent's custom system message
+  - Orchestrator now passes agent's `get_configurable_system_message()` to conversation builders
+  - Custom system messages properly combined with MassGen coordination instructions instead of being overwritten
+  - Backend-specific system prompt customization (system_prompt, append_system_prompt)
+- **Claude Code Backend Enhancements**: Improved integration and configuration
+  - Better system message handling and extraction
   - Enhanced JSON structured response parsing
-- **Async Resource Management**: Fixed async context manager issues
-  - Proper async resource cleanup with aclose() method
-  - Resolved event loop closure errors in backend operations
-- **Final Presentation**: Improved final answer synthesis
-  - Better handling of presentation content generation
-  - Fallback mechanisms for stored answers
-  - Enhanced presentation context and session tracking
-- **Configuration Issues**: Fixed various configuration problems
-  - Removed deprecated MCP paper search configurations
-  - Updated Gemini and Claude integration configurations
-  - Fixed system message passing in multi-agent setups
+  - Improved coordination action descriptions
+- **Final Presentation & Agent Logic**: Enhanced multi-agent coordination (#135)
+  - Improved final presentation handling for Claude Code agents
+  - Better coordination between agents during final answer selection
+  - Enhanced CLI presentation logic
+  - Agent configuration improvements for workflow coordination
+- **Evaluation Message Enhancement**: Improved synthesis instructions
+  - Changed to "digest existing answers, combine their strengths, and do additional work to address their weaknesses"
+  - Added "well" qualifier to evaluation questions
+  - More explicit guidance for agents to synthesize and improve upon existing answers
 
 ### Changed
-- **Orchestrator Enhancements**: Major improvements to coordination system
-  - Added configurable system message support for orchestrator
-  - Improved coordination instructions and workflow management
-  - Better final presentation content tracking and storage
-  - Enhanced agent state management and context passing
-- **Backend Architecture**: Refined backend implementations
-  - Standardized get_configurable_system_message() across all agents
-  - Improved debug logging across all backend types
-  - Better separation of coordination actions from regular tools
-  - Enhanced builtin tool usage reporting in final answers
-- **Message Templates**: Updated coordination and instruction templates
-  - Clearer coordination action descriptions
-  - Improved instruction formatting for multi-agent workflows
-  - Better context preservation in conversation history
 - **Documentation Updates**: Enhanced project documentation
   - Renamed roadmap from v0.0.11 to v0.0.12 for future planning
   - Updated README with latest features and improvements
   - Improved CONTRIBUTING guidelines
   - Enhanced configuration examples and best practices
 
+### Added
+- **New Configuration Files**: Introduced additional YAML configuration files
+  - Added `multi_agent_playwright_automation.yaml` for browser automation workflows
+
 ### Removed
-- **Deprecated Configurations**: Cleaned up obsolete configuration files
+- **Deprecated Configurations**: Cleaned up configuration files
   - Removed `gemini_claude_code_paper_search_mcp.yaml`
   - Removed `gpt5_claude_code_paper_search_mcp.yaml`
-  - Cleaned up deprecated MCP paper search integrations
-- **Gemini CLI Tests**: Removed obsolete Gemini CLI related tests
+- **Gemini CLI Tests**: Removed Gemini CLI related tests
 
 ### Technical Details
 - **Commits**: 25+ commits including bug fixes, feature additions, and improvements
 - **Files Modified**: 35+ files across backend, orchestrator, frontend, configuration, and documentation
-- **Key Features**: Custom system messages, Playwright automation, enhanced debugging, improved coordination
 - **New Configuration**: `multi_agent_playwright_automation.yaml` for browser automation workflows
-- **Contributors**: @qidanrui @Leezekun @sonichi @voidcenter @Daucloud and the MassGen team
+- **Contributors**: @qidanrui @Leezekun @sonichi @voidcenter @Daucloud @Henry-811 and the MassGen team
 
 ## [0.0.10] - 2025-08-22
 
