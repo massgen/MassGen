@@ -673,28 +673,36 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Recent Achievements (v0.0.11)
 
-✅ **Custom System Messages**: Enhanced system message configuration for agents and orchestrator
-- Configurable system messages for individual agents and orchestrator coordination
-- Support for custom voting strategies and conflict resolution approaches
-- Domain-specific coordination templates and workflow preferences
+✅ **Custom System Messages**: Enhanced system message configuration and preservation
+- Added `base_system_message` parameter to conversation builders for agent's custom system message
+- Orchestrator now passes agent's `get_configurable_system_message()` to conversation builders
+- Custom system messages properly combined with MassGen coordination instructions instead of being overwritten
 - Backend-specific system prompt customization (system_prompt, append_system_prompt)
 
-✅ **Playwright Automation Support**: New browser automation capabilities
-- Multi-agent configuration for Playwright-based automation tasks
-- Example configuration: `multi_agent_playwright_automation.yaml`
-- Integration with automated testing and web scraping workflows
-
-✅ **Debug Logging Improvements**: Enhanced backend debugging and visibility
-- Backend input/output logging with StreamChunk debug messages
-- Session tracking and tool usage visibility
-- Configurable debug logging via MASSGEN_LOG_BACKENDS environment variable
-- Improved error reporting and troubleshooting capabilities
-
-✅ **Claude Code Backend Enhancements**: Multiple critical improvements and bug fixes
-- Fixed system message handling and extraction
-- Better coordination action descriptions
+✅ **Claude Code Backend Enhancements**: Improved integration and configuration
+- Better system message handling and extraction
 - Enhanced JSON structured response parsing
-- Improved async resource management with proper cleanup
+- Improved coordination action descriptions
+
+✅ **Final Presentation & Agent Logic**: Enhanced multi-agent coordination
+- Improved final presentation handling for Claude Code agents
+- Better coordination between agents during final answer selection
+- Enhanced CLI presentation logic
+- Agent configuration improvements for workflow coordination
+
+✅ **Evaluation Message Enhancement**: Improved synthesis instructions
+- Changed to "digest existing answers, combine their strengths, and do additional work to address their weaknesses"
+- Added "well" qualifier to evaluation questions
+- More explicit guidance for agents to synthesize and improve upon existing answers
+
+✅ **New Configuration Files**: Introduced additional YAML configuration files
+- Added `multi_agent_playwright_automation.yaml` for browser automation workflows
+
+✅ **Documentation Updates**: Enhanced project documentation
+- Renamed roadmap from v0.0.11 to v0.0.12 for future planning
+- Updated README with latest features and improvements
+- Improved CONTRIBUTING guidelines
+- Enhanced configuration examples and best practices
 
 ### Previous Achievements (v0.0.3-v0.0.10)
 
