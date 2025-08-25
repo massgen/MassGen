@@ -89,15 +89,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.10](#recent-achievements-v0010)
-  - [v0.0.3 - v0.0.9](#previous-achievements-v003-v009)
+  - [v0.0.11](#recent-achievements-v0011)
+  - [v0.0.3 - v0.0.10](#previous-achievements-v003-v0010)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.11 Roadmap](#v0011-roadmap)
+- [v0.0.12 Roadmap](#v0012-roadmap)
 </details>
 
 <details open>
@@ -297,7 +297,6 @@ uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine 
 uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
 
 # MCP-enabled configurations (NEW in v0.0.9)
-
 uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "Browse https://github.com/Leezekun/MassGen and generate reports with screenshots"
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
@@ -672,30 +671,39 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.10)
+### Recent Achievements (v0.0.11)
 
-✅ **Azure OpenAI Support**: Integration with Azure OpenAI services
+✅ **Custom System Messages**: Enhanced system message configuration for agents and orchestrator
+- Configurable system messages for individual agents and orchestrator coordination
+- Support for custom voting strategies and conflict resolution approaches
+- Domain-specific coordination templates and workflow preferences
+- Backend-specific system prompt customization (system_prompt, append_system_prompt)
+
+✅ **Playwright Automation Support**: New browser automation capabilities
+- Multi-agent configuration for Playwright-based automation tasks
+- Example configuration: `multi_agent_playwright_automation.yaml`
+- Integration with automated testing and web scraping workflows
+
+✅ **Debug Logging Improvements**: Enhanced backend debugging and visibility
+- Backend input/output logging with StreamChunk debug messages
+- Session tracking and tool usage visibility
+- Configurable debug logging via MASSGEN_LOG_BACKENDS environment variable
+- Improved error reporting and troubleshooting capabilities
+
+✅ **Claude Code Backend Enhancements**: Multiple critical improvements and bug fixes
+- Fixed system message handling and extraction
+- Better coordination action descriptions
+- Enhanced JSON structured response parsing
+- Improved async resource management with proper cleanup
+
+### Previous Achievements (v0.0.3-v0.0.10)
+
+✅ **Azure OpenAI Support (v0.0.10)**: Integration with Azure OpenAI services
 - New Azure OpenAI backend with async streaming capabilities
 - Support for Azure-hosted GPT-4.1 and GPT-5-chat models
 - Configuration examples for single and multi-agent Azure setups
 
-✅ **Enhanced Claude Code Backend**: Major refactoring and improvements
-- Simplified MCP (Model Context Protocol) integration
-- Removed redundant MCP components for cleaner architecture
-
-✅ **Final Presentation Support**: New orchestrator presentation capabilities for Azure OpenAI backend
-- Support for final answer presentation in multi-agent scenarios 
-- Fallback mechanisms for presentation generation
-- Test coverage for presentation functionality
-
-✅ **Improved Backend Architecture**: Significant refactoring of backend systems
-- Consolidated Azure OpenAI implementation using AsyncAzureOpenAI
-- Enhanced async support across all backends
-- Improved error handling and streaming capabilities
-
-### Previous Achievements (v0.0.3-v0.0.9)
-
-✅ **MCP (Model Context Protocol) Support for Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
+✅ **MCP (Model Context Protocol) Support for Claude Code Agent (v0.0.9)**: Integration with MCP for advanced tool capabilities in Claude Code Agent
 - New MCP module with client implementation and transport layer
 - Support for MCP-based tool integration in Claude Code backend
 - Exception handling and transport management for MCP connections
@@ -726,25 +734,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Key Future Enhancements:
 
--   **Claude Code Context Sharing:** Enabling seamless Claude code agents context sharing and other models (v0.0.11)
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
 -   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
 -   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Claude Code Context Sharing:** Enabling seamless Claude code agents context sharing and other models (planned for v0.0.12)
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.11 Roadmap
+### v0.0.12 Roadmap
 
-Version 0.0.11 focuses on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
+Version 0.0.12 will focus on **Claude Code Context Sharing** and further enhancements. Key planned features include:
 
-- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
-- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
-- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
-- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
+- **Claude Code Context Integration**: 🔗 Enable context sharing between Claude Code agents and other agents
+- **Multi-Agent Context Synchronization**: 🔄 Allow multiple Claude Code agents to access each other's context
+- **Enhanced Backend Features**: 📊 Improved context management, state persistence, and cross-agent communication
+- **Advanced CLI Features**: Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.11 roadmap](ROADMAP_v0.0.11.md).
+For detailed milestones and technical specifications, see the [full v0.0.12 roadmap](ROADMAP_v0.0.12.md).
 
 ---
 
