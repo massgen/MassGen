@@ -297,6 +297,7 @@ uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine 
 uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
 
 # MCP-enabled configurations (NEW in v0.0.9)
+
 uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "Browse https://github.com/Leezekun/MassGen and generate reports with screenshots"
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
