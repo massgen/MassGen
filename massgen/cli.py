@@ -287,7 +287,17 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
             agent_config = AgentConfig(backend_params=backend_config)
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
-        agent_config.custom_system_instruction = agent_data.get("system_message")
+        
+        # Route system_message to backend-specific system prompt parameter
+        system_msg = agent_data.get("system_message")
+        if system_msg:
+            if backend_type_lower == "claude_code":
+                # For Claude Code, use append_system_prompt to preserve Claude Code capabilities
+                agent_config.backend_params["append_system_prompt"] = system_msg
+            else:
+                # For other backends, fall back to deprecated custom_system_instruction
+                # TODO: Add backend-specific routing for other backends
+                agent_config.custom_system_instruction = system_msg
 
         # Timeout configuration will be applied to orchestrator instead of individual agents
 

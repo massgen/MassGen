@@ -2272,6 +2272,10 @@ class RichTerminalDisplay(TerminalDisplay):
         """Write content to agent's individual txt file."""
         if agent_id not in self.agent_files:
             return
+        
+        # Skip debug content from txt files
+        if content_type == "debug":
+            return
 
         try:
             file_path = self.agent_files[agent_id]

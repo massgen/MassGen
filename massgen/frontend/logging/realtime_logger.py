@@ -84,6 +84,7 @@ class RealtimeLogger:
                 "tool": "",
                 "presentation": "",
                 "other": "",
+                "debug": "",
                 "first_timestamp": datetime.now().isoformat(),
                 "last_timestamp": datetime.now().isoformat(),
             }
@@ -91,7 +92,7 @@ class RealtimeLogger:
         # Aggregate content by type
         content_type = (
             chunk_type
-            if chunk_type in ["thinking", "tool", "presentation"]
+            if chunk_type in ["thinking", "tool", "presentation", "debug"]
             else "other"
         )
         self._content_buffers[source_key][content_type] += content
@@ -111,6 +112,7 @@ class RealtimeLogger:
                 "tool_calls": buffer["tool"].strip(),
                 "presentation": buffer["presentation"].strip(),
                 "other_content": buffer["other"].strip(),
+                "debug_content": buffer["debug"].strip(),
                 "first_timestamp": buffer["first_timestamp"],
                 "last_timestamp": buffer["last_timestamp"],
             }

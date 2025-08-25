@@ -42,7 +42,6 @@ dependencies = [
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
     "claude-code-sdk>=0.0.19",
-    "paper-search-mcp>=0.1.3",
 ]
 
 [project.optional-dependencies]
@@ -156,7 +155,7 @@ ignore_errors = true
 [tool.pytest.ini_options]
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
-testpaths = ["tests"]
+testpaths = ["massgen/tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -165,6 +164,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
 ]
+asyncio_mode = "auto"
 
 # Coverage configuration
 [tool.coverage.run]

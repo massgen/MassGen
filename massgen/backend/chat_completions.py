@@ -398,6 +398,14 @@ class ChatCompletionsBackend(LLMBackend):
             yield StreamChunk(
                 type="error", error=f"Chat Completions API error: {str(e)}"
             )
+        finally:
+            # Ensure the underlying HTTP client is properly closed to avoid event loop issues
+            try:
+                if hasattr(client, 'aclose'):
+                    await client.aclose()
+            except Exception:
+                # Suppress cleanup errors so we don't mask primary exceptions
+                pass
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (rough approximation)."""

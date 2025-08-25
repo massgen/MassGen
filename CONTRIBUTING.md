@@ -16,27 +16,43 @@ massgen/
 ├── message_templates.py     # Message template system
 ├── utils.py                 # Helper functions and model registry
 ├── backend/                 # Model-specific implementations
+│   ├── __init__.py
 │   ├── base.py             # Base backend interface
 │   ├── chat_completions.py # Chat completion utilities
 │   ├── response.py         # Response handling
 │   ├── claude.py           # Anthropic Claude backend
+│   ├── claude_code.py      # Claude Code CLI backend
+│   ├── cli_base.py         # Base CLI backend interface
 │   ├── gemini.py           # Google Gemini backend
 │   ├── grok.py             # xAI Grok backend
-│   └── openai.py           # OpenAI backend (in chat_completions.py)
+│   ├── azure_openai.py     # Azure OpenAI backend
+│   ├── lmstudio.py         # LMStudio backend
+│   └── *.md                # Backend documentation files
 ├── frontend/               # User interface components
+│   ├── __init__.py
 │   ├── coordination_ui.py  # Main UI coordination
 │   ├── displays/           # Display implementations
+│   │   ├── __init__.py
 │   │   ├── base_display.py
 │   │   ├── rich_terminal_display.py
 │   │   ├── simple_display.py
 │   │   └── terminal_display.py
 │   └── logging/            # Logging system
+│       ├── __init__.py
 │       └── realtime_logger.py
 ├── configs/                # Configuration files
-│   ├── *.yaml             # Various agent configurations
-│   └── README.md          # Configuration documentation
-└── tests/                  # Test files
-    └── *.py               # Test implementations
+│   ├── *.yaml             # 38+ agent configuration templates
+│   └── *.md               # Configuration documentation
+├── tests/                  # Test suite
+│   ├── __init__.py
+│   ├── test_*.py          # Unit and integration tests
+│   ├── *.sh               # Test scripts
+│   └── *.md               # Test documentation
+└── v1/                     # Legacy v1 implementation
+    ├── README.md
+    ├── *.py               # Legacy modules
+    ├── backends/          # Legacy backends
+    └── examples/          # Legacy configuration examples
 ```
 
 ### Adding New Model Backends
@@ -96,9 +112,9 @@ We welcome contributions in these areas:
 
 ### Development Workflow
 
-> **Important**: Our next version is v0.0.11. If you want to contribute, please contribute to the `dev/v0.0.11` branch.
+> **Important**: Our next version is v0.0.12. If you want to contribute, please contribute to the `dev/v0.0.12` branch.
 
-1. **Fork the repository** and create a feature branch from `dev/v0.0.11`
+1. **Fork the repository** and create a feature branch from `dev/v0.0.12`
 2. **Set up the development environment** following the setup instructions above
 3. **Make your changes** following the existing code style and patterns
 4. **Add tests** for new functionality

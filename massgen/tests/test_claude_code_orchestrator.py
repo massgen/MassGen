@@ -107,8 +107,10 @@ async def test_stateful_behavior():
     backend = ClaudeCodeBackend(model="claude-sonnet-4-20250514")
     config = AgentConfig(
         agent_id="stateful_agent",
-        custom_system_instruction="You are a helpful assistant. Remember our conversation context.",
-        backend_params={"model": "claude-sonnet-4-20250514"},
+        backend_params={
+            "model": "claude-sonnet-4-20250514",
+            "append_system_prompt": "You are a helpful assistant. Remember our conversation context.",
+        },
     )
     agent = ConfigurableAgent(config=config, backend=backend)
 

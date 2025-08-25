@@ -89,15 +89,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.10](#recent-achievements-v0010)
-  - [v0.0.3 - v0.0.9](#previous-achievements-v003-v009)
+  - [v0.0.11](#recent-achievements-v0011)
+  - [v0.0.3 - v0.0.10](#previous-achievements-v003-v0010)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integration
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.11 Roadmap](#v0011-roadmap)
+- [v0.0.12 Roadmap](#v0012-roadmap)
 </details>
 
 <details open>
@@ -277,8 +277,8 @@ uv run python -m massgen.cli --config lmstudio.yaml "Explain quantum computing"
 **CLI-based backends**:
 ```bash
 # Claude Code - Native Claude Code SDK with comprehensive dev tools
-uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku for claude code?"
-uv run python -m massgen.cli --backend claude_code "Debug this Python script"
+uv run python -m massgen.cli --backend claude_code --model sonnet "Can I use claude-3-5-haiku for claude code?"
+uv run python -m massgen.cli --backend claude_code --model sonnet "Debug this Python script"
 ```
 
 `--backend` is required for this type of backends.
@@ -289,15 +289,15 @@ uv run python -m massgen.cli --backend claude_code "Debug this Python script"
 uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
 
 # Mixed API and CLI backends
-uv run python -m massgen.cli --config claude_code_flash2.5.yaml "Complex coding task requiring multiple perspectives"
+uv run python -m massgen.cli --config claude_code_flash2.5.yaml "find 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in markdown"
+uv run python -m massgen.cli --config claude_code_gpt5nano.yaml "find 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in markdown"
 
 # Azure OpenAI configurations (NEW in v0.0.10)
 uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine learning?"
 uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
 
 # MCP-enabled configurations (NEW in v0.0.9)
-uv run python -m massgen.cli --config gpt5_claude_code_paper_search_mcp.yaml "search 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in a md file"
-uv run python -m massgen.cli --config gemini_claude_code_paper_search_mcp.yaml "search 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in your answer"
+uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "Browse https://github.com/Leezekun/MassGen and generate reports with screenshots"
 uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
 uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
 
@@ -308,7 +308,7 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 
 All available quick configuration files can be found [here](massgen/configs).
 
-See MCP server setup guides: [paper-search-mcp](https://github.com/openags/paper-search-mcp) | [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | 
+See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | [Playwright MCP](massgen/configs/PLAYWRIGHT_MCP_SETUP.md) | 
 
 #### CLI Configuration Parameters
 
@@ -461,6 +461,7 @@ backend:
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   
   # Claude Code specific options
+  system_prompt: "" # Custom system prompt to replace default
   append_system_prompt: ""  # Custom system prompt to append
   max_thinking_tokens: 4096                   # Maximum thinking tokens
 
@@ -471,6 +472,18 @@ backend:
       type: "stdio"                    # Communication type: stdio (standard input/output)
       command: "npx"                    # Command to execute: Node Package Execute
       args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_TOKEN"]  # Arguments: -y (auto-confirm), mcp-discord package, config with Discord bot token
+    
+    # Playwright web automation server
+    playwright:
+      type: "stdio"                    # Communication type: stdio (standard input/output)
+      command: "npx"                    # Command to execute: Node Package Execute
+      args: [
+        "@playwright/mcp@latest",
+        "--browser=chrome",              # Use Chrome browser
+        "--caps=vision,pdf",             # Enable vision and PDF capabilities
+        "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
+        "--save-trace"                 # Save Playwright traces for debugging
+      ]
   
   # Tool configuration (Claude Code's native tools)
   allowed_tools:
@@ -489,6 +502,7 @@ backend:
     # MCP tools (if available), MCP tools will be auto-discovered from the server
     - "mcp__discord__discord_login"
     - "mcp__discord__discord_readmessages"
+    - "mcp__playwright"
 ```
 
 #### ZAI
@@ -637,6 +651,18 @@ uv run python -m massgen.cli --config massgen/configs/claude_code_flash2.5_gptos
 uv run python -m massgen.cli --backend claude_code "Refactor this Python code to use async/await and add error handling"
 ```
 
+### 5. 🌐 Web Automation & Browser Tasks
+```bash
+# Multi-agent web automation with Playwright MCP
+uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "browse https://github.com/Leezekun/MassGen and suggest improvement. Include screenshots and suggestions in a PDF."
+
+# Web scraping and analysis
+uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
+
+# E-commerce testing automation
+uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Test the checkout flow on an e-commerce site and generate a detailed test report"
+```
+
 ---
 
 ## 🗺️ Roadmap
@@ -645,30 +671,47 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.10)
+### Recent Achievements (v0.0.11)
 
-✅ **Azure OpenAI Support**: Integration with Azure OpenAI services
+✅ **Custom System Messages**: Enhanced system message configuration and preservation
+- Added `base_system_message` parameter to conversation builders for agent's custom system message
+- Orchestrator now passes agent's `get_configurable_system_message()` to conversation builders
+- Custom system messages properly combined with MassGen coordination instructions instead of being overwritten
+- Backend-specific system prompt customization (system_prompt, append_system_prompt)
+
+✅ **Claude Code Backend Enhancements**: Improved integration and configuration
+- Better system message handling and extraction
+- Enhanced JSON structured response parsing
+- Improved coordination action descriptions
+
+✅ **Final Presentation & Agent Logic**: Enhanced multi-agent coordination
+- Improved final presentation handling for Claude Code agents
+- Better coordination between agents during final answer selection
+- Enhanced CLI presentation logic
+- Agent configuration improvements for workflow coordination
+
+✅ **Evaluation Message Enhancement**: Improved synthesis instructions
+- Changed to "digest existing answers, combine their strengths, and do additional work to address their weaknesses"
+- Added "well" qualifier to evaluation questions
+- More explicit guidance for agents to synthesize and improve upon existing answers
+
+✅ **New Configuration Files**: Introduced additional YAML configuration files
+- Added `multi_agent_playwright_automation.yaml` for browser automation workflows
+
+✅ **Documentation Updates**: Enhanced project documentation
+- Renamed roadmap from v0.0.11 to v0.0.12 for future planning
+- Updated README with latest features and improvements
+- Improved CONTRIBUTING guidelines
+- Enhanced configuration examples and best practices
+
+### Previous Achievements (v0.0.3-v0.0.10)
+
+✅ **Azure OpenAI Support (v0.0.10)**: Integration with Azure OpenAI services
 - New Azure OpenAI backend with async streaming capabilities
 - Support for Azure-hosted GPT-4.1 and GPT-5-chat models
 - Configuration examples for single and multi-agent Azure setups
 
-✅ **Enhanced Claude Code Backend**: Major refactoring and improvements
-- Simplified MCP (Model Context Protocol) integration
-- Removed redundant MCP components for cleaner architecture
-
-✅ **Final Presentation Support**: New orchestrator presentation capabilities for Azure OpenAI backend
-- Support for final answer presentation in multi-agent scenarios 
-- Fallback mechanisms for presentation generation
-- Test coverage for presentation functionality
-
-✅ **Improved Backend Architecture**: Significant refactoring of backend systems
-- Consolidated Azure OpenAI implementation using AsyncAzureOpenAI
-- Enhanced async support across all backends
-- Improved error handling and streaming capabilities
-
-### Previous Achievements (v0.0.3-v0.0.9)
-
-✅ **MCP (Model Context Protocol) Support for Claude Code Agent**: Integration with MCP for advanced tool capabilities in Claude Code Agent
+✅ **MCP (Model Context Protocol) Support for Claude Code Agent (v0.0.9)**: Integration with MCP for advanced tool capabilities in Claude Code Agent
 - New MCP module with client implementation and transport layer
 - Support for MCP-based tool integration in Claude Code backend
 - Exception handling and transport management for MCP connections
@@ -699,25 +742,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Key Future Enhancements:
 
--   **Claude Code Context Sharing:** Enabling seamless Claude code agents context sharing and other models (v0.0.11)
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
 -   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
 -   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Claude Code Context Sharing:** Enabling seamless Claude code agents context sharing and other models (planned for v0.0.12)
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.11 Roadmap
+### v0.0.12 Roadmap
 
-Version 0.0.11 focuses on **Claude Code Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
+Version 0.0.12 will focus on **Claude Code Context Sharing** and further enhancements. Key planned features include:
 
-- **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
-- **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
-- **Enhanced Backend Features** (Optional): 📊 Improved context management, state persistence, and cross-agent communication
-- **Advanced CLI Features** (Optional): Conversation save/load functionality, templates, export formats, and better multi-turn display
+- **Claude Code Context Integration**: 🔗 Enable context sharing between Claude Code agents and other agents
+- **Multi-Agent Context Synchronization**: 🔄 Allow multiple Claude Code agents to access each other's context
+- **Enhanced Backend Features**: 📊 Improved context management, state persistence, and cross-agent communication
+- **Advanced CLI Features**: Conversation save/load functionality, templates, export formats, and better multi-turn display
 
-For detailed milestones and technical specifications, see the [full v0.0.11 roadmap](ROADMAP_v0.0.11.md).
+For detailed milestones and technical specifications, see the [full v0.0.12 roadmap](ROADMAP_v0.0.12.md).
 
 ---
 
