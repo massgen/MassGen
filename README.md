@@ -277,8 +277,8 @@ uv run python -m massgen.cli --config lmstudio.yaml "Explain quantum computing"
 **CLI-based backends**:
 ```bash
 # Claude Code - Native Claude Code SDK with comprehensive dev tools
-uv run python -m massgen.cli --backend claude_code "Can I use claude-3-5-haiku for claude code?"
-uv run python -m massgen.cli --backend claude_code "Debug this Python script"
+uv run python -m massgen.cli --backend claude_code --model sonnet "Can I use claude-3-5-haiku for claude code?"
+uv run python -m massgen.cli --backend claude_code --model sonnet "Debug this Python script"
 ```
 
 `--backend` is required for this type of backends.
