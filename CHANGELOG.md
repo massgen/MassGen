@@ -5,6 +5,80 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.11] - 2025-08-25
+
+### Added
+- **Custom System Messages**: Enhanced system message configuration for agents and orchestrator
+  - Configurable system messages for individual agents and orchestrator coordination
+  - Support for custom voting strategies and conflict resolution approaches
+  - Domain-specific coordination templates and workflow preferences
+  - Backend-specific system prompt customization (system_prompt, append_system_prompt)
+- **Playwright Automation Support**: New browser automation capabilities
+  - Multi-agent configuration for Playwright-based automation tasks
+  - Example configuration: `multi_agent_playwright_automation.yaml`
+  - Integration with automated testing and web scraping workflows
+- **Columbia Presentation**: New presentation materials for academic demonstrations
+  - Interactive HTML presentation in `docs/presentation/columbia.html`
+  - Enhanced presentation capabilities for research and educational contexts
+- **Debug Logging Improvements**: Enhanced backend debugging and visibility
+  - Backend input/output logging with StreamChunk debug messages
+  - Session tracking and tool usage visibility
+  - Configurable debug logging via MASSGEN_LOG_BACKENDS environment variable
+  - Improved error reporting and troubleshooting capabilities
+
+### Fixed
+- **Claude Code Backend**: Multiple critical improvements and bug fixes
+  - Fixed multiple values error for system_prompt parameter in create_client()
+  - Improved system message handling and extraction
+  - Better coordination action descriptions ("Coordination Actions" instead of "Available Tools")
+  - Enhanced JSON structured response parsing
+- **Async Resource Management**: Fixed async context manager issues
+  - Proper async resource cleanup with aclose() method
+  - Resolved event loop closure errors in backend operations
+- **Final Presentation**: Improved final answer synthesis
+  - Better handling of presentation content generation
+  - Fallback mechanisms for stored answers
+  - Enhanced presentation context and session tracking
+- **Configuration Issues**: Fixed various configuration problems
+  - Removed deprecated MCP paper search configurations
+  - Updated Gemini and Claude integration configurations
+  - Fixed system message passing in multi-agent setups
+
+### Changed
+- **Orchestrator Enhancements**: Major improvements to coordination system
+  - Added configurable system message support for orchestrator
+  - Improved coordination instructions and workflow management
+  - Better final presentation content tracking and storage
+  - Enhanced agent state management and context passing
+- **Backend Architecture**: Refined backend implementations
+  - Standardized get_configurable_system_message() across all agents
+  - Improved debug logging across all backend types
+  - Better separation of coordination actions from regular tools
+  - Enhanced builtin tool usage reporting in final answers
+- **Message Templates**: Updated coordination and instruction templates
+  - Clearer coordination action descriptions
+  - Improved instruction formatting for multi-agent workflows
+  - Better context preservation in conversation history
+- **Documentation Updates**: Enhanced project documentation
+  - Renamed roadmap from v0.0.11 to v0.0.12 for future planning
+  - Updated README with latest features and improvements
+  - Improved CONTRIBUTING guidelines
+  - Enhanced configuration examples and best practices
+
+### Removed
+- **Deprecated Configurations**: Cleaned up obsolete configuration files
+  - Removed `gemini_claude_code_paper_search_mcp.yaml`
+  - Removed `gpt5_claude_code_paper_search_mcp.yaml`
+  - Cleaned up deprecated MCP paper search integrations
+- **Gemini CLI Tests**: Removed obsolete Gemini CLI related tests
+
+### Technical Details
+- **Commits**: 25+ commits including bug fixes, feature additions, and improvements
+- **Files Modified**: 35+ files across backend, orchestrator, frontend, configuration, and documentation
+- **Key Features**: Custom system messages, Playwright automation, enhanced debugging, improved coordination
+- **New Configuration**: `multi_agent_playwright_automation.yaml` for browser automation workflows
+- **Contributors**: @qidanrui @Leezekun @sonichi @voidcenter @Daucloud and the MassGen team
+
 ## [0.0.10] - 2025-08-22
 
 ### Added

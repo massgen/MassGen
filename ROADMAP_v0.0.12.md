@@ -1,8 +1,8 @@
-# MassGen v0.0.11 Roadmap
+# MassGen v0.0.12 Roadmap
 
 ## Overview
 
-Version 0.0.11 focuses primarily on **Coding Agent Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
+Version 0.0.12 focuses primarily on **Coding Agent Context Sharing**, enabling seamless context transmission between Claude Code agents and other agents. Key enhancements include:
 
 - **Claude Code Context Integration** (Required): 🔗 Enable context sharing between Claude Code agents and other agents
 - **Multi-Agent Context Synchronization** (Required): 🔄 Allow multiple Claude Code agents to access each other's context
@@ -128,9 +128,9 @@ Version 0.0.11 focuses primarily on **Coding Agent Context Sharing**, enabling s
 4. **Performance Impact**: *Mitigation*: Implement efficient caching and lazy loading strategies
 5. **Context Size Limitations**: *Mitigation*: Smart context pruning and summarization techniques
 
-## Post-v0.0.11 Considerations
+## Post-v0.0.12 Considerations
 
-### Future Enhancements (v0.0.11+)
+### Future Enhancements (v0.0.12+)
 - **Web Interface**: Browser-based conversation interface
 - **API Server**: RESTful API for third-party integrations
 - **Advanced Analytics**: Conversation insights and optimization suggestions
@@ -161,7 +161,7 @@ Version 0.0.11 focuses primarily on **Coding Agent Context Sharing**, enabling s
 5. Run Claude Code backend tests to understand current capabilities
 
 ### For Users
-- v0.0.11 will be fully backward compatible with existing configurations
+- v0.0.12 will be fully backward compatible with existing configurations
 - Context sharing will enhance multi-agent collaboration capabilities
 - All current backends (OpenAI, Claude, Gemini, Grok, Claude Code, LM Studio, ZAI) will continue to work
 - New context sharing features will be opt-in with clear configuration options
