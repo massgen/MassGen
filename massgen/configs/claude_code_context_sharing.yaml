@@ -3,48 +3,18 @@
 # This allows agents to share their working directories for collaborative problem solving
 
 agents:
-  - agent_id: "claude_code_1"
-    backend: "claude_code"
-    config:
-      model: "claude-sonnet-4-20250514"  # Using the default Claude Code model
-      cwd: "claude_code_workspace/agent_1"  # Initial working directory for agent 1
-      system_prompt: |
-        You are a skilled software engineer working collaboratively with other agents.
-        Focus on implementing clean, maintainable code.
-        Share your work context with other agents for effective collaboration.
-      
-  - agent_id: "claude_code_2"
-    backend: "claude_code"
-    config:
-      model: "claude-sonnet-4-20250514"
-      cwd: "claude_code_workspace/agent_2"  # Initial working directory for agent 2
-      system_prompt: |
-        You are a code reviewer and testing specialist.
-        Review code created by other agents and suggest improvements.
-        Build upon the work of other agents when necessary.
-        
-  - agent_id: "claude_code_3"
-    backend: "claude_code"
-    config:
-      model: "claude-sonnet-4-20250514"
-      cwd: "claude_code_workspace/agent_3"  # Initial working directory for agent 3
-      system_prompt: |
-        You are a documentation and optimization expert.
-        Improve and document the code created by other agents.
-        Ensure the final solution is well-documented and optimized.
-
+    - id: "claude_code_agent1"
+      backend:
+        type: "claude_code"
+        cwd: "claude_code_workspace1" # Initial working directory for agent 1
+    - id: "claude_code_agent"
+      backend:
+        type: "claude_code"
+        cwd: "claude_code_workspace2"
 # Orchestrator configuration with context sharing enabled
-orchestrator:
-  snapshot_storage: "claude_code_snapshots"  # Directory to store workspace snapshots
-  agent_temporary_workspace: "claude_code_temp_workspaces"  # Directory for temporary agent workspaces
-  timeout_config:
-    orchestrator_timeout_seconds: 600  # 10 minutes total timeout
-    agent_timeout_seconds: 300  # 5 minutes per agent
-  message_templates:
-    system_prompt: |
-      You are coordinating a team of Claude Code agents with shared workspace context.
-      Each agent can see the work of others through anonymized workspace directories.
-      Ensure effective collaboration while respecting each agent's specialization.
+# orchestrator:
+#   snapshot_storage: "claude_code_snapshots"  # Directory to store workspace snapshots
+#   agent_temporary_workspace: "claude_code_temp_workspaces"  # Directory for temporary agent workspaces
 
 # Usage example:
 # uv run python -m massgen.cli --config claude_code_context_sharing.yaml "Create a Python web scraper with tests and documentation"
@@ -56,3 +26,7 @@ orchestrator:
 # 4. Agent 2 reviews and adds tests
 # 5. Agent 3 gets both agents' work and adds documentation
 # 6. All workspaces are preserved for debugging and analysis
+
+ui:
+  type: "simple"
+  logging_enabled: true

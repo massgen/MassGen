@@ -398,6 +398,8 @@ class ClaudeCodeBackend(LLMBackend):
                     if name == "new_answer":
                         # Add reference to temporary workspace if available
                         if self._temporary_cwd:
+                            import pdb
+                            pdb.set_trace()
                             system_parts.append(
                                 f"    Context: You have access to shared workspace at: {self._temporary_cwd}"
                             )
@@ -414,6 +416,8 @@ class ClaudeCodeBackend(LLMBackend):
                     elif name == "vote":
                         # Add reference to temporary workspace if available for voting context
                         if self._temporary_cwd:
+                            import pdb
+                            pdb.set_trace()
                             system_parts.append(
                                 f"    Context: You can review other agents' work at: {self._temporary_cwd}"
                             )
@@ -850,6 +854,7 @@ class ClaudeCodeBackend(LLMBackend):
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
+        
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
@@ -859,6 +864,9 @@ class ClaudeCodeBackend(LLMBackend):
                 type="error", error="All user messages were empty", source="claude_code"
             )
             return
+        
+        import pdb
+        pdb.set_trace()
         # Stream response and convert to MassGen StreamChunks
         accumulated_content = ""
         try:

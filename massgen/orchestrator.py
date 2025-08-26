@@ -83,8 +83,8 @@ class Orchestrator(ChatAgent):
         orchestrator_id: str = "orchestrator",
         session_id: Optional[str] = None,
         config: Optional[AgentConfig] = None,
-        snapshot_storage: Optional[str] = None,
-        agent_temporary_workspace: Optional[str] = None,
+        snapshot_storage: Optional[str] = "claude_code_snapshots",
+        agent_temporary_workspace: Optional[str] = "claude_code_temp_workspaces",
     ):
         """
         Initialize MassGen orchestrator.
@@ -431,7 +431,7 @@ class Orchestrator(ChatAgent):
 
                     # Save snapshot of Claude Code agent's workspace
                     await self._save_claude_code_snapshot(agent_id)
-                    
+
                     chunk_type, chunk_data = await task
 
                     if chunk_type == "content":

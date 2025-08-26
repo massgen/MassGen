@@ -324,7 +324,7 @@ def create_simple_config(
             "backend": backend_config,
             "system_message": system_message or "You are a helpful AI assistant.",
         },
-        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
+        "ui": {"display_type": "simple", "logging_enabled": True},
     }
 
 
@@ -392,7 +392,7 @@ async def run_question_with_history(
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
+            display_type=ui_config.get("display_type", "simple"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -479,7 +479,7 @@ async def run_single_question(
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
+            display_type=ui_config.get("display_type", "simple"),
             logging_enabled=ui_config.get("logging_enabled", True),
         )
 
@@ -527,7 +527,7 @@ async def run_interactive_mode(
     else:
         mode = "Multi-Agent Coordination"
     print(f"   Mode: {mode}", flush=True)
-    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
+    print(f"   UI: {ui_config.get('display_type', 'simple')}", flush=True)
 
     print_help_messages()
 
@@ -817,6 +817,10 @@ Environment Variables:
         )
 
         kwargs = {"timeout_config": timeout_config}
+        
+        # # Add orchestrator configuration if present
+        # if "orchestrator" in config:
+        #     kwargs["orchestrator"] = config["orchestrator"]
 
         # Run mode based on whether question was provided
         if args.question:
