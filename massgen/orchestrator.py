@@ -151,7 +151,7 @@ class Orchestrator(ChatAgent):
             self._agent_temporary_workspace = agent_temporary_workspace
             workspace_path = Path(self._agent_temporary_workspace)
             workspace_path.mkdir(parents=True, exist_ok=True)
-            # Create workspace directories and anonymized ID mappings for each claude_code agent
+            # Create workspace directories for each claude_code agent
             for agent_id, agent in self.agents.items():
                 if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
                     provider_name = agent.backend.get_provider_name()
@@ -560,7 +560,7 @@ class Orchestrator(ChatAgent):
         await self._save_all_claude_code_snapshots()
 
     async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
-        """Restore all snapshots to an agent's workspace with anonymization.
+        """Restore all snapshots to an agent's workspace using anonymous IDs.
         
         Args:
             agent_id: ID of the Claude Code agent receiving the context
@@ -584,21 +584,28 @@ class Orchestrator(ChatAgent):
         # Get agent's workspace directory
         workspace_dir = Path(self._agent_temporary_workspace) / agent_id
         
-        # Clear existing workspace content
+        # Clear existing workspace content completely
         if workspace_dir.exists():
             shutil.rmtree(workspace_dir)
         workspace_dir.mkdir(parents=True, exist_ok=True)
         
-        # Copy all snapshots to workspace with anonymized names
+        # Create anonymous mapping for agent IDs (same logic as in message_templates.py)
+        # This ensures consistency with the anonymous IDs shown to agents
+        agent_mapping = {}
+        sorted_agent_ids = sorted(self.agents.keys())
+        for i, real_agent_id in enumerate(sorted_agent_ids, 1):
+            agent_mapping[real_agent_id] = f"agent{i}"
+        
+        # Copy all snapshots to workspace using anonymous IDs as folder names
         snapshot_base = Path(self._snapshot_storage)
         for source_agent_id in self.agents.keys():
             source_snapshot = snapshot_base / source_agent_id
             if source_snapshot.exists() and source_snapshot.is_dir():
-                # Get anonymized agent ID
-                # anon_id = self._agent_id_mapping.get(source_agent_id, source_agent_id)
-                dest_dir = workspace_dir / source_agent_id
+                # Use anonymous ID for destination directory name
+                anon_id = agent_mapping[source_agent_id]
+                dest_dir = workspace_dir / anon_id
                 
-                # Copy snapshot content to anonymized directory
+                # Copy snapshot content to directory with anonymous name
                 if list(source_snapshot.iterdir()):  # Only copy if not empty
                     shutil.copytree(source_snapshot, dest_dir, dirs_exist_ok=True)
         
