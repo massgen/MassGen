@@ -398,8 +398,6 @@ class ClaudeCodeBackend(LLMBackend):
                     if name == "new_answer":
                         # Add reference to temporary workspace if available
                         if self._temporary_cwd:
-                            import pdb
-                            pdb.set_trace()
                             system_parts.append(
                                 f"    Context: You have access to shared workspace at: {self._temporary_cwd}"
                             )
@@ -416,8 +414,6 @@ class ClaudeCodeBackend(LLMBackend):
                     elif name == "vote":
                         # Add reference to temporary workspace if available for voting context
                         if self._temporary_cwd:
-                            import pdb
-                            pdb.set_trace()
                             system_parts.append(
                                 f"    Context: You can review other agents' work at: {self._temporary_cwd}"
                             )
@@ -865,8 +861,6 @@ class ClaudeCodeBackend(LLMBackend):
             )
             return
         
-        import pdb
-        pdb.set_trace()
         # Stream response and convert to MassGen StreamChunks
         accumulated_content = ""
         try:

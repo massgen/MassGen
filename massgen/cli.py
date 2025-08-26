@@ -818,9 +818,9 @@ Environment Variables:
 
         kwargs = {"timeout_config": timeout_config}
         
-        # # Add orchestrator configuration if present
-        # if "orchestrator" in config:
-        #     kwargs["orchestrator"] = config["orchestrator"]
+        # Add orchestrator configuration if present
+        if "orchestrator" in config:
+            kwargs["orchestrator"] = config["orchestrator"]
 
         # Run mode based on whether question was provided
         if args.question:

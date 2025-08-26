@@ -83,8 +83,8 @@ class Orchestrator(ChatAgent):
         orchestrator_id: str = "orchestrator",
         session_id: Optional[str] = None,
         config: Optional[AgentConfig] = None,
-        snapshot_storage: Optional[str] = "claude_code_snapshots",
-        agent_temporary_workspace: Optional[str] = "claude_code_temp_workspaces",
+        snapshot_storage: Optional[str] = None,
+        agent_temporary_workspace: Optional[str] = None,
     ):
         """
         Initialize MassGen orchestrator.
@@ -134,23 +134,28 @@ class Orchestrator(ChatAgent):
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
         
         # Create snapshot storage and workspace directories if specified
-        if self._snapshot_storage:
+        if snapshot_storage:
+            self._snapshot_storage = snapshot_storage
             snapshot_path = Path(self._snapshot_storage)
             snapshot_path.mkdir(parents=True, exist_ok=True)
             # Create directories for each claude_code agent
             for agent_id, agent in self.agents.items():
-                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
-                    if agent.backend.get_provider_name() == 'claude_code':
-                        agent_dir = snapshot_path / agent_id
-                        agent_dir.mkdir(parents=True, exist_ok=True)
+                if hasattr(agent, 'backend'):
+                    if hasattr(agent.backend, 'get_provider_name'):
+                        provider_name = agent.backend.get_provider_name()
+                        if provider_name == 'claude_code':
+                            agent_dir = snapshot_path / agent_id
+                            agent_dir.mkdir(parents=True, exist_ok=True)
                         
-        if self._agent_temporary_workspace:
+        if agent_temporary_workspace:
+            self._agent_temporary_workspace = agent_temporary_workspace
             workspace_path = Path(self._agent_temporary_workspace)
             workspace_path.mkdir(parents=True, exist_ok=True)
             # Create workspace directories and anonymized ID mappings for each claude_code agent
             for agent_id, agent in self.agents.items():
                 if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
-                    if agent.backend.get_provider_name() == 'claude_code':
+                    provider_name = agent.backend.get_provider_name()
+                    if provider_name == 'claude_code':
                         agent_workspace = workspace_path / agent_id
                         agent_workspace.mkdir(parents=True, exist_ok=True)
 
@@ -590,8 +595,8 @@ class Orchestrator(ChatAgent):
             source_snapshot = snapshot_base / source_agent_id
             if source_snapshot.exists() and source_snapshot.is_dir():
                 # Get anonymized agent ID
-                anon_id = self._agent_id_mapping.get(source_agent_id, source_agent_id)
-                dest_dir = workspace_dir / anon_id
+                # anon_id = self._agent_id_mapping.get(source_agent_id, source_agent_id)
+                dest_dir = workspace_dir / source_agent_id
                 
                 # Copy snapshot content to anonymized directory
                 if list(source_snapshot.iterdir()):  # Only copy if not empty
@@ -749,7 +754,7 @@ class Orchestrator(ChatAgent):
 
         # Clear restart pending flag at the beginning of agent execution
         self.agent_states[agent_id].restart_pending = False
-        
+
         # Restore snapshots to workspace for Claude Code agents
         workspace_path = await self._restore_snapshots_to_workspace(agent_id)
         if workspace_path and hasattr(agent.backend, 'set_temporary_cwd'):
