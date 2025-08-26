@@ -398,14 +398,21 @@ class ClaudeCodeBackend(LLMBackend):
                     if name == "new_answer":
                         # Add reference to temporary workspace if available
                         if self._temporary_cwd:
+                            absolute_temp_path = os.path.join(os.getcwd(), self._temporary_cwd)
                             system_parts.append(
-                                f"    Context: You have access to shared workspace at: {self._temporary_cwd}"
+                                f"    Context: You have access to a reference workspace at: {absolute_temp_path}"
                             )
                             system_parts.append(
-                                "    The workspace contains work from other agents (with anonymized IDs like agent_1, agent_2, etc.)"
+                                "    This workspace contains work from yourself and other agents for REFERENCE ONLY."
                             )
                             system_parts.append(
-                                "    Please reference and build upon their work when providing your answer."
+                                "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
+                            )
+                            system_parts.append(
+                                "    When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well."
+                            )
+                            system_parts.append(
+                                f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory: {self._cwd}"
                             )
                         system_parts.append(
                             '    Usage: {"tool_name": "new_answer", '
@@ -414,11 +421,18 @@ class ClaudeCodeBackend(LLMBackend):
                     elif name == "vote":
                         # Add reference to temporary workspace if available for voting context
                         if self._temporary_cwd:
+                            absolute_temp_path = os.path.join(os.getcwd(), self._temporary_cwd)
                             system_parts.append(
-                                f"    Context: You can review other agents' work at: {self._temporary_cwd}"
+                                f"    Context: You can review other agents' work at: {absolute_temp_path}"
                             )
                             system_parts.append(
-                                "    Each agent's work is in a directory named agent_1, agent_2, etc."
+                                "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
+                            )
+                            system_parts.append(
+                                "    When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well."
+                            )
+                            system_parts.append(
+                                f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory: {self._cwd}"
                             )
                             system_parts.append(
                                 "    Use this context to make an informed voting decision."
