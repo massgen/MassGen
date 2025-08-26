@@ -17,6 +17,8 @@ TODOs:
 
 import asyncio
 import time
+import shutil
+from pathlib import Path
 from typing import Dict, List, Optional, Any, AsyncGenerator
 from dataclasses import dataclass, field
 from .message_templates import MessageTemplates
@@ -81,6 +83,8 @@ class Orchestrator(ChatAgent):
         orchestrator_id: str = "orchestrator",
         session_id: Optional[str] = None,
         config: Optional[AgentConfig] = None,
+        snapshot_storage: Optional[str] = None,
+        agent_temporary_workspace: Optional[str] = None,
     ):
         """
         Initialize MassGen orchestrator.
@@ -90,6 +94,8 @@ class Orchestrator(ChatAgent):
             orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
             session_id: Optional session identifier
             config: Optional AgentConfig for customizing orchestrator behavior
+            snapshot_storage: Optional path to store agent workspace snapshots
+            agent_temporary_workspace: Optional path for agent temporary workspaces
         """
         super().__init__(session_id)
         self.orchestrator_id = orchestrator_id
@@ -122,6 +128,31 @@ class Orchestrator(ChatAgent):
         # Coordination state tracking for cleanup
         self._active_streams: Dict = {}
         self._active_tasks: Dict = {}
+        
+        # Context sharing for Claude Code agents
+        self._snapshot_storage: Optional[str] = snapshot_storage
+        self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
+        
+        # Create snapshot storage and workspace directories if specified
+        if self._snapshot_storage:
+            snapshot_path = Path(self._snapshot_storage)
+            snapshot_path.mkdir(parents=True, exist_ok=True)
+            # Create directories for each claude_code agent
+            for agent_id, agent in self.agents.items():
+                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                    if agent.backend.get_provider_name() == 'claude_code':
+                        agent_dir = snapshot_path / agent_id
+                        agent_dir.mkdir(parents=True, exist_ok=True)
+                        
+        if self._agent_temporary_workspace:
+            workspace_path = Path(self._agent_temporary_workspace)
+            workspace_path.mkdir(parents=True, exist_ok=True)
+            # Create workspace directories and anonymized ID mappings for each claude_code agent
+            for agent_id, agent in self.agents.items():
+                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                    if agent.backend.get_provider_name() == 'claude_code':
+                        agent_workspace = workspace_path / agent_id
+                        agent_workspace.mkdir(parents=True, exist_ok=True)
 
     async def chat(
         self,
@@ -397,6 +428,10 @@ class Orchestrator(ChatAgent):
                 del active_tasks[agent_id]
 
                 try:
+
+                    # Save snapshot of Claude Code agent's workspace
+                    await self._save_claude_code_snapshot(agent_id)
+                    
                     chunk_type, chunk_data = await task
 
                     if chunk_type == "content":
@@ -515,7 +550,101 @@ class Orchestrator(ChatAgent):
             task.cancel()
         for agent_id in list(active_streams.keys()):
             await self._close_agent_stream(agent_id, active_streams)
+        
+        # Save snapshots for all Claude Code agents after coordination completes
+        await self._save_all_claude_code_snapshots()
 
+    async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
+        """Restore all snapshots to an agent's workspace with anonymization.
+        
+        Args:
+            agent_id: ID of the Claude Code agent receiving the context
+            
+        Returns:
+            Path to the agent's workspace directory if successful, None otherwise
+        """
+        if not self._agent_temporary_workspace or not self._snapshot_storage:
+            return None
+            
+        agent = self.agents.get(agent_id)
+        if not agent:
+            return None
+            
+        # Check if this is a Claude Code agent
+        if not (hasattr(agent, 'backend') and 
+                hasattr(agent.backend, 'get_provider_name') and
+                agent.backend.get_provider_name() == 'claude_code'):
+            return None
+            
+        # Get agent's workspace directory
+        workspace_dir = Path(self._agent_temporary_workspace) / agent_id
+        
+        # Clear existing workspace content
+        if workspace_dir.exists():
+            shutil.rmtree(workspace_dir)
+        workspace_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Copy all snapshots to workspace with anonymized names
+        snapshot_base = Path(self._snapshot_storage)
+        for source_agent_id in self.agents.keys():
+            source_snapshot = snapshot_base / source_agent_id
+            if source_snapshot.exists() and source_snapshot.is_dir():
+                # Get anonymized agent ID
+                anon_id = self._agent_id_mapping.get(source_agent_id, source_agent_id)
+                dest_dir = workspace_dir / anon_id
+                
+                # Copy snapshot content to anonymized directory
+                if list(source_snapshot.iterdir()):  # Only copy if not empty
+                    shutil.copytree(source_snapshot, dest_dir, dirs_exist_ok=True)
+        
+        return str(workspace_dir)
+    
+    async def _save_all_claude_code_snapshots(self) -> None:
+        """Save snapshots for all Claude Code agents."""
+        if not self._snapshot_storage:
+            return
+            
+        for agent_id in self.agents.keys():
+            await self._save_claude_code_snapshot(agent_id)
+    
+    async def _save_claude_code_snapshot(self, agent_id: str) -> None:
+        """Save a snapshot of Claude Code agent's working directory.
+        
+        Args:
+            agent_id: ID of the Claude Code agent
+        """
+        if not self._snapshot_storage:
+            return
+            
+        agent = self.agents.get(agent_id)
+        if not agent:
+            return
+            
+        # Check if this is a Claude Code agent
+        if not (hasattr(agent, 'backend') and 
+                hasattr(agent.backend, 'get_provider_name') and
+                agent.backend.get_provider_name() == 'claude_code'):
+            return
+            
+        # Get the working directory from the backend
+        if hasattr(agent.backend, '_cwd') and agent.backend._cwd:
+            source_dir = Path(agent.backend._cwd)
+            if source_dir.exists() and source_dir.is_dir():
+                # Destination directory for this agent's snapshots
+                dest_dir = Path(self._snapshot_storage) / agent_id
+                
+                # Clear existing snapshot and copy new one
+                if dest_dir.exists():
+                    shutil.rmtree(dest_dir)
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Copy all contents from source to destination
+                for item in source_dir.iterdir():
+                    if item.is_file():
+                        shutil.copy2(item, dest_dir / item.name)
+                    elif item.is_dir():
+                        shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
+    
     async def _close_agent_stream(
         self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
     ) -> None:
@@ -620,6 +749,12 @@ class Orchestrator(ChatAgent):
 
         # Clear restart pending flag at the beginning of agent execution
         self.agent_states[agent_id].restart_pending = False
+        
+        # Restore snapshots to workspace for Claude Code agents
+        workspace_path = await self._restore_snapshots_to_workspace(agent_id)
+        if workspace_path and hasattr(agent.backend, 'set_temporary_cwd'):
+            # Set the temporary workspace path for context sharing
+            agent.backend.set_temporary_cwd(workspace_path)
 
         try:
             # Get agent's custom system message if available
@@ -1532,6 +1667,8 @@ def create_orchestrator(
     orchestrator_id: str = "orchestrator",
     session_id: Optional[str] = None,
     config: Optional[AgentConfig] = None,
+    snapshot_storage: Optional[str] = None,
+    agent_temporary_workspace: Optional[str] = None,
 ) -> Orchestrator:
     """
     Create a MassGen orchestrator with sub-agents.
@@ -1541,6 +1678,8 @@ def create_orchestrator(
         orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
         session_id: Optional session ID
         config: Optional AgentConfig for orchestrator customization
+        snapshot_storage: Optional path to store agent workspace snapshots (for Claude Code context sharing)
+        agent_temporary_workspace: Optional path for agent temporary workspaces (for Claude Code context sharing)
 
     Returns:
         Configured Orchestrator
@@ -1552,4 +1691,6 @@ def create_orchestrator(
         orchestrator_id=orchestrator_id,
         session_id=session_id,
         config=config,
+        snapshot_storage=snapshot_storage,
+        agent_temporary_workspace=agent_temporary_workspace,
     )

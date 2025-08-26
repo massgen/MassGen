@@ -106,6 +106,7 @@ class ClaudeCodeBackend(LLMBackend):
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
+        self._temporary_cwd: Optional[str] = None  # Temporary workspace for context sharing
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -119,6 +120,14 @@ class ClaudeCodeBackend(LLMBackend):
             True - Claude Code maintains server-side session state
         """
         return True
+    
+    def set_temporary_cwd(self, temporary_cwd: str) -> None:
+        """Set the temporary working directory for context sharing.
+        
+        Args:
+            temporary_cwd: Path to temporary workspace containing shared context from other agents
+        """
+        self._temporary_cwd = temporary_cwd
 
     async def clear_history(self) -> None:
         """
@@ -387,11 +396,34 @@ class ClaudeCodeBackend(LLMBackend):
 
                     # Add usage examples for workflow tools
                     if name == "new_answer":
+                        # Add reference to temporary workspace if available
+                        if self._temporary_cwd:
+                            system_parts.append(
+                                f"    Context: You have access to shared workspace at: {self._temporary_cwd}"
+                            )
+                            system_parts.append(
+                                "    The workspace contains work from other agents (with anonymized IDs like agent_1, agent_2, etc.)"
+                            )
+                            system_parts.append(
+                                "    Please reference and build upon their work when providing your answer."
+                            )
                         system_parts.append(
                             '    Usage: {"tool_name": "new_answer", '
                             '"arguments": {"content": "your improved answer. If any builtin tools were used, mention how they are used here."}}'
                         )
                     elif name == "vote":
+                        # Add reference to temporary workspace if available for voting context
+                        if self._temporary_cwd:
+                            system_parts.append(
+                                f"    Context: You can review other agents' work at: {self._temporary_cwd}"
+                            )
+                            system_parts.append(
+                                "    Each agent's work is in a directory named agent_1, agent_2, etc."
+                            )
+                            system_parts.append(
+                                "    Use this context to make an informed voting decision."
+                            )
+                        
                         # Extract valid agent IDs from enum if available
                         agent_id_enum = None
                         for t in tools:
