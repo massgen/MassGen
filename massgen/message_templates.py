@@ -66,7 +66,7 @@ class MessageTemplates:
         #
         # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
-        return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well?
+        return f"""You are evaluating answers from multiple agents for final response to a message. Different agents may have different builtin tools and capabilities. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well?
 
 If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
 Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
@@ -208,7 +208,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
                     "properties": {
                         "content": {
                             "type": "string",
-                            "description": "Your improved answer. If any builtin tools like search or code execution were used, include how they are used here.",
+                            "description": "Your improved answer. If any builtin tools like search or code execution were used, mention how they are used here.",
                         }
                     },
                     "required": ["content"],
