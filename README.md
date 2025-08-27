@@ -89,6 +89,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
+  - [v0.0.12](#recent-achievements-v0012)
   - [v0.0.11](#recent-achievements-v0011)
   - [v0.0.3 - v0.0.10](#previous-achievements-v003-v0010)
 - [Key Future Enhancements](#key-future-enhancements)
@@ -97,7 +98,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.12 Roadmap](#v0012-roadmap)
+- [v0.0.13 Roadmap](#v0013-roadmap)
 </details>
 
 <details open>
@@ -281,7 +282,7 @@ uv run python -m massgen.cli --backend claude_code --model sonnet "Can I use cla
 uv run python -m massgen.cli --backend claude_code --model sonnet "Debug this Python script"
 ```
 
-`--backend` is required for this type of backends.
+`--backend` is required for CLI-based backends. Note: `--model` parameter is required but ignored for Claude Code backend (uses Claude's latest model automatically).
 
 #### Multiple Agents from Config
 ```bash
@@ -671,7 +672,19 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.11)
+### Recent Achievements (v0.0.12)
+
+**🚀 Enhanced Agent Context Sharing & Orchestration**
+- **Context Preservation**: Claude Code agents now share workspace snapshots between coordination phases, enabling agents to build upon each other's work more effectively
+- **Advanced Orchestrator**: Configurable system messages, improved timeout handling, and enhanced final presentation workflow with workspace context
+- **Better Coordination**: Improved voting mechanisms, agent restart procedures, and anonymous agent reference consistency
+
+**📚 Comprehensive Documentation**
+- **CLAUDE.md**: Complete architecture overview with development commands, backend setup instructions, and configuration examples
+- **Enhanced README**: Updated with current features, improved setup instructions, and better organization of project resources
+- **Developer Experience**: Enhanced contributor guidelines and project structure documentation
+
+### Previous Achievements (v0.0.11)
 
 ✅ **Custom System Messages**: Enhanced system message configuration and preservation
 - Added `base_system_message` parameter to conversation builders for agent's custom system message
@@ -751,16 +764,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.12 Roadmap
+### v0.0.13 Roadmap
 
-Version 0.0.12 will focus on **Claude Code Context Sharing** and further enhancements. Key planned features include:
+Version 0.0.13 will focus on **Enhanced Logging System**, **Windows Platform Support**, and **Bug Fixes**. Key planned features include:
 
-- **Claude Code Context Integration**: 🔗 Enable context sharing between Claude Code agents and other agents
-- **Multi-Agent Context Synchronization**: 🔄 Allow multiple Claude Code agents to access each other's context
-- **Enhanced Backend Features**: 📊 Improved context management, state persistence, and cross-agent communication
-- **Advanced CLI Features**: Conversation save/load functionality, templates, export formats, and better multi-turn display
+- **Advanced Logging System**: 📊 Enhanced session logging, better debugging capabilities, and improved log management
+- **Windows Platform Support**: 🪟 Full Windows compatibility with platform-specific implementations and cross-platform tools
+- **Bug Fixes & Minor Improvements**: 🐛 Address various minor issues, CLI parameter handling, and backend stability improvements
+- **Enhanced Multi-Agent Synthesis**: 🤝 Enable agents to revise and improve their answers based on seeing other agents' work
 
-For detailed milestones and technical specifications, see the [full v0.0.12 roadmap](ROADMAP_v0.0.12.md).
+For detailed milestones and technical specifications, see the [full v0.0.13 roadmap](ROADMAP_v0.0.13.md).
 
 ---
 
