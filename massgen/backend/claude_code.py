@@ -876,7 +876,7 @@ class ClaudeCodeBackend(LLMBackend):
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
-        
+                
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)

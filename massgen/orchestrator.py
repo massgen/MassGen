@@ -16,6 +16,7 @@ TODOs:
 """
 
 import asyncio
+import os
 import time
 import shutil
 from pathlib import Path
@@ -1324,15 +1325,15 @@ class Orchestrator(ChatAgent):
         
         # Restore workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work
-        workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
-        if workspace_path and hasattr(agent, 'backend'):
+        temp_workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
+        if temp_workspace_path and hasattr(agent, 'backend'):
             if hasattr(agent.backend, 'set_temporary_cwd'):
                 # Set the temporary workspace for context sharing
-                agent.backend.set_temporary_cwd(workspace_path)
+                agent.backend.set_temporary_cwd(temp_workspace_path)
                 # Log workspace restoration for visibility
                 yield StreamChunk(
                     type="debug",
-                    content=f"Restored workspace context for final presentation: {workspace_path}",
+                    content=f"Restored workspace context for final presentation: {temp_workspace_path}",
                     source=selected_agent_id
                 )
 
@@ -1372,13 +1373,17 @@ class Orchestrator(ChatAgent):
         )
         
         # Add workspace context information to system message if workspace was restored
-        if workspace_path:
-            workspace_context = f"""
-Note: You have access to workspace context from the coordination phase at: {workspace_path}
-This workspace contains all work done during coordination, including:
-- Your own work from the coordination phase
-- Work from other agents (in anonymized folders: agent1/, agent2/, etc.)
-You can reference and use any files, code, or content from this workspace to support your final presentation."""
+        if temp_workspace_path:
+            workspace_context_parts = []
+            absolute_temp_path = os.path.join(os.getcwd(), temp_workspace_path)
+            workspace_context_parts.append(f"    Context: You have access to a reference workspace at: {absolute_temp_path}")
+            workspace_context_parts.append("    This reference workspace contains work from yourself and other agents for REFERENCE ONLY.")
+            workspace_context_parts.append("    CRITICAL: You should READ documents or EXECUTE code from the reference workspace to understand other agents' work.")
+            workspace_context_parts.append("    When you READ or EXECUTE content from the reference workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the reference workspace as well.")
+            workspace_context_parts.append(f"    You also can look in your working directory for your most updated information.")
+            workspace_context_parts.append(f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.")
+            
+            workspace_context = "\n".join(workspace_context_parts)
             base_system_message = f"{base_system_message}\n\n{workspace_context}"
         
         # Create conversation with system and user messages
