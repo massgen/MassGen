@@ -406,6 +406,12 @@ class ClaudeCodeBackend(LLMBackend):
                                 "    This workspace contains work from yourself and other agents for REFERENCE ONLY."
                             )
                             system_parts.append(
+                                "    CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace."
+                            )
+                            system_parts.append(
+                                f"    DO NOT look in your working directory ({self._cwd}) for agent information - it's exclusively for creating YOUR OWN new work."
+                            )
+                            system_parts.append(
                                 "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
                             )
                             system_parts.append(
@@ -423,7 +429,13 @@ class ClaudeCodeBackend(LLMBackend):
                         if self._temporary_cwd:
                             absolute_temp_path = os.path.join(os.getcwd(), self._temporary_cwd)
                             system_parts.append(
-                                f"    Context: You can review other agents' work at: {absolute_temp_path}"
+                                f"    Context: You can review all agents' work (including your own) at: {absolute_temp_path}"
+                            )
+                            system_parts.append(
+                                "    CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace."
+                            )
+                            system_parts.append(
+                                f"    DO NOT look in your working directory ({self._cwd}) for agent information - it's exclusively for creating YOUR OWN new work."
                             )
                             system_parts.append(
                                 "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."

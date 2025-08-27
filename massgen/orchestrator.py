@@ -1321,6 +1321,20 @@ class Orchestrator(ChatAgent):
             return
 
         agent = self.agents[selected_agent_id]
+        
+        # Restore workspace to preserve context from coordination phase
+        # This allows the agent to reference and access previous work
+        workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
+        if workspace_path and hasattr(agent, 'backend'):
+            if hasattr(agent.backend, 'set_temporary_cwd'):
+                # Set the temporary workspace for context sharing
+                agent.backend.set_temporary_cwd(workspace_path)
+                # Log workspace restoration for visibility
+                yield StreamChunk(
+                    type="debug",
+                    content=f"Restored workspace context for final presentation: {workspace_path}",
+                    source=selected_agent_id
+                )
 
         # Prepare context about the voting
         vote_counts = vote_results.get("vote_counts", {})
@@ -1351,13 +1365,27 @@ class Orchestrator(ChatAgent):
 
         # Get agent's configurable system message using the standard interface
         agent_system_message = agent.get_configurable_system_message()
+        
+        # Build system message with workspace context if available
+        base_system_message = self.message_templates.final_presentation_system_message(
+            agent_system_message
+        )
+        
+        # Add workspace context information to system message if workspace was restored
+        if workspace_path:
+            workspace_context = f"""
+Note: You have access to workspace context from the coordination phase at: {workspace_path}
+This workspace contains all work done during coordination, including:
+- Your own work from the coordination phase
+- Work from other agents (in anonymized folders: agent1/, agent2/, etc.)
+You can reference and use any files, code, or content from this workspace to support your final presentation."""
+            base_system_message = f"{base_system_message}\n\n{workspace_context}"
+        
         # Create conversation with system and user messages
         presentation_messages = [
             {
                 "role": "system",
-                "content": self.message_templates.final_presentation_system_message(
-                    agent_system_message
-                ),
+                "content": base_system_message,
             },
             {"role": "user", "content": presentation_content},
         ]
