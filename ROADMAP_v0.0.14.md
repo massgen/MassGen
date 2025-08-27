@@ -1,8 +1,9 @@
-# MassGen v0.0.13 Roadmap
+# MassGen v0.0.14 Roadmap
 
 ## Overview
+TODO: Update before merge
 
-Version 0.0.13 focuses on **Enhanced Logging System**, **Windows Platform Support**, and **Bug Fixes & Minor Improvements**. Key enhancements include:
+Version 0.0.14 focuses on **Enhanced Logging System**, **Windows Platform Support**, and **Bug Fixes & Minor Improvements**. Key enhancements include:
 
 - **Advanced Logging System** (Required): 📊 Enhanced session logging, better debugging capabilities, and improved log management
 - **Windows Platform Support** (Required): 🪟 Full Windows compatibility with platform-specific implementations and cross-platform tools
