@@ -379,7 +379,17 @@ async def run_question_with_history(
         orchestrator_config = AgentConfig()
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
-        orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
+        
+        # Get context sharing parameters from kwargs (if present in config)
+        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
+        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
+        
+        orchestrator = Orchestrator(
+            agents=agents, 
+            config=orchestrator_config,
+            snapshot_storage=snapshot_storage,
+            agent_temporary_workspace=agent_temporary_workspace
+        )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
@@ -456,7 +466,17 @@ async def run_single_question(
         orchestrator_config = AgentConfig()
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
-        orchestrator = Orchestrator(agents=agents, config=orchestrator_config)
+        
+        # Get context sharing parameters from kwargs (if present in config)
+        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
+        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
+        
+        orchestrator = Orchestrator(
+            agents=agents, 
+            config=orchestrator_config,
+            snapshot_storage=snapshot_storage,
+            agent_temporary_workspace=agent_temporary_workspace
+        )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
@@ -797,6 +817,10 @@ Environment Variables:
         )
 
         kwargs = {"timeout_config": timeout_config}
+        
+        # Add orchestrator configuration if present
+        if "orchestrator" in config:
+            kwargs["orchestrator"] = config["orchestrator"]
 
         # Run mode based on whether question was provided
         if args.question:
