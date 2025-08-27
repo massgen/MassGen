@@ -30,6 +30,10 @@ agents:
       #   - "mcp__ide__getDiagnostics"
       #   - "mcp__ide__executeCode"
 
+orchestrator:
+    snapshot_storage: "claude_code_snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "claude_code_temp_workspaces"  # Directory for temporary agent workspaces
+
 # UI Configuration
 ui:
   type: "simple"

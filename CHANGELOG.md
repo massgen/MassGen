@@ -5,6 +5,94 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.12] - 2025-08-27
+
+### Added
+- **Enhanced Claude Code Agent Context Sharing**: Improved multiple Claude Code agent coordination with workspace sharing
+  - New workspace snapshot stored in orchestrator's space for better context management
+  - New temporary working directory for each agent, stored in orchestrator's space
+  - Claude Code agents can now share context by referencing their own temporary working directory in the orchestrator's workspace
+  - Anonymous agent context mapping when referencing temporary directories
+  - Improved context preservation across agent coordination cycles
+
+- **Advanced Orchestrator Configurations**: Enhanced orchestrator configurations
+  - Configurable system message support for orchestrator
+  - New snapshot and temporary workspace settings for better context management
+
+### Changed
+- **Documentation Updates**: documentation improvements
+  - Updated README with current features and usage examples
+  - Improved configuration examples and setup instructions
+
+### Technical Details
+- **Commits**: 10+ commits including context sharing enhancements, workspace management, and configuration improvements
+- **Files Modified**: 20+ files across orchestrator, backend, configuration, and documentation
+- **New Features**: Enhanced Claude Code agent workspace sharing with temporary working directories and snapshot mechanisms
+- **Contributors**: @qidanrui @sonichi @Henry-811 @JeffreyCh0 @voidcenter and the MassGen team
+
+## [0.0.11] - 2025-08-25
+
+### Known Issues
+- **System Message Handling in Multi-Agent Coordination**: Critical issues affecting Claude Code agents
+  - **Lost System Messages During Final Presentation** (`orchestrator.py:1183`)
+    - Claude Code agents lose domain expertise during final presentation
+    - ConfigurableAgent doesn't properly expose system messages via `agent.system_message`
+  - **Backend Ignores System Messages** (`claude_code.py:754-762`)
+    - Claude Code backend filters out system messages from presentation_messages
+    - Only processes user messages, causing loss of agent expertise context
+    - System message handling only works during initial client creation, not with `reset_chat=True`
+  - **Ambiguous Configuration Sources**
+    - Multiple conflicting system message sources: `custom_system_instruction`, `system_prompt`, `append_system_prompt`
+    - Backend parameters silently override AgentConfig settings
+    - Unclear precedence and behavior documentation
+  - **Architecture Violations**
+    - Orchestrator contains Claude Code-specific implementation details
+    - Tight coupling prevents easy addition of new backends
+    - Violates separation of concerns principle
+
+### Fixed
+- **Custom System Message Support**: Enhanced system message configuration and preservation
+  - Added `base_system_message` parameter to conversation builders for agent's custom system message
+  - Orchestrator now passes agent's `get_configurable_system_message()` to conversation builders
+  - Custom system messages properly combined with MassGen coordination instructions instead of being overwritten
+  - Backend-specific system prompt customization (system_prompt, append_system_prompt)
+- **Claude Code Backend Enhancements**: Improved integration and configuration
+  - Better system message handling and extraction
+  - Enhanced JSON structured response parsing
+  - Improved coordination action descriptions
+- **Final Presentation & Agent Logic**: Enhanced multi-agent coordination (#135)
+  - Improved final presentation handling for Claude Code agents
+  - Better coordination between agents during final answer selection
+  - Enhanced CLI presentation logic
+  - Agent configuration improvements for workflow coordination
+- **Evaluation Message Enhancement**: Improved synthesis instructions
+  - Changed to "digest existing answers, combine their strengths, and do additional work to address their weaknesses"
+  - Added "well" qualifier to evaluation questions
+  - More explicit guidance for agents to synthesize and improve upon existing answers
+
+### Changed
+- **Documentation Updates**: Enhanced project documentation
+  - Renamed roadmap from v0.0.11 to v0.0.12 for future planning
+  - Updated README with latest features and improvements
+  - Improved CONTRIBUTING guidelines
+  - Enhanced configuration examples and best practices
+
+### Added
+- **New Configuration Files**: Introduced additional YAML configuration files
+  - Added `multi_agent_playwright_automation.yaml` for browser automation workflows
+
+### Removed
+- **Deprecated Configurations**: Cleaned up configuration files
+  - Removed `gemini_claude_code_paper_search_mcp.yaml`
+  - Removed `gpt5_claude_code_paper_search_mcp.yaml`
+- **Gemini CLI Tests**: Removed Gemini CLI related tests
+
+### Technical Details
+- **Commits**: 25+ commits including bug fixes, feature additions, and improvements
+- **Files Modified**: 35+ files across backend, orchestrator, frontend, configuration, and documentation
+- **New Configuration**: `multi_agent_playwright_automation.yaml` for browser automation workflows
+- **Contributors**: @qidanrui @Leezekun @sonichi @voidcenter @Daucloud @Henry-811 and the MassGen team
+
 ## [0.0.10] - 2025-08-22
 
 ### Added
