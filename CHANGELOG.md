@@ -5,6 +5,31 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.12] - 2025-08-27
+
+### Added
+- **Enhanced Claude Code Agent Context Sharing**: Improved multiple Claude Code agent coordination with workspace sharing
+  - New workspace snapshot stored in orchestrator's space for better context management
+  - New temporary working directory for each agent, stored in orchestrator's space
+  - Claude Code agents can now share context by referencing their own temporary working directory in the orchestrator's workspace
+  - Anonymous agent context mapping when referencing temporary directories
+  - Improved context preservation across agent coordination cycles
+
+- **Advanced Orchestrator Configurations**: Enhanced orchestrator configurations
+  - Configurable system message support for orchestrator
+  - New snapshot and temporary workspace settings for better context management
+
+### Changed
+- **Documentation Updates**: documentation improvements
+  - Updated README with current features and usage examples
+  - Improved configuration examples and setup instructions
+
+### Technical Details
+- **Commits**: 10+ commits including context sharing enhancements, workspace management, and configuration improvements
+- **Files Modified**: 20+ files across orchestrator, backend, configuration, and documentation
+- **New Features**: Enhanced Claude Code agent workspace sharing with temporary working directories and snapshot mechanisms
+- **Contributors**: @qidanrui @sonichi @Henry-811 @JeffreyCh0 @voidcenter and the MassGen team
+
 ## [0.0.11] - 2025-08-25
 
 ### Known Issues
