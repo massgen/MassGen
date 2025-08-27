@@ -1,0 +1,13 @@
+# MassGen Web Interface Requirements
+# Core web framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+websockets>=12.0
+python-multipart>=0.0.6
+
+# Optional multimedia processing
+Pillow>=10.0.0
+librosa>=0.10.0
+
+# Development tools  
+python-dotenv>=1.0.0

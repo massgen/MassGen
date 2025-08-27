@@ -206,3 +206,6 @@ mass_coordination*
 uv.lock
 
 claude_code*/
+massgen-web/node_modules/*
+CLAUDE.md
+

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="240" viewBox="0 0 900 240" role="img" aria-label="MassGen typography with orbital accents">
+  <defs>
+    <linearGradient id="gradC" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <text x="40" y="170" font-family="Arial, Helvetica, sans-serif" font-size="120" font-weight="700" fill="url(#gradC)">Mass</text>
+  <text x="360" y="170" font-family="Arial, Helvetica, sans-serif" font-size="120" font-weight="700" fill="url(#gradC)">Gen</text>
+  <!-- orbitals for a techy vibe -->
+  <circle cx="112" cy="70" r="6" fill="#374151" />
+  <circle cx="180" cy="40" r="6" fill="#374151" />
+  <path d="M112,70 C140,40 200,40 240,70" stroke="#374151" stroke-width="2" fill="none" />
+  <circle cx="420" cy="60" r="5" fill="#374151" />
+  <circle cx="468" cy="40" r="5" fill="#374151" />
+  <path d="M420,60 C440,30 520,20 560,60" stroke="#374151" stroke-width="2" fill="none" />
+</svg>
