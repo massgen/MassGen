@@ -5,6 +5,65 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.12] - 2025-08-27
+
+### Added
+- **Enhanced Agent Context Sharing**: Improved multi-agent coordination with workspace sharing
+  - Claude Code agents can now share workspace snapshots between coordination phases
+  - Anonymous agent context mapping for consistent cross-agent references
+  - Workspace restoration system for final presentation phase
+  - Improved context preservation across agent coordination cycles
+
+- **Advanced Orchestrator Features**: Enhanced orchestrator capabilities and configuration
+  - Configurable system message support for orchestrators
+  - Improved timeout handling and graceful degradation
+  - Enhanced final presentation workflow with workspace context
+  - Better agent state management during coordination
+
+- **Comprehensive Project Documentation**: Created detailed development guidance
+  - New CLAUDE.md file with complete architecture overview
+  - Development commands and configuration examples
+  - Backend-specific setup instructions and usage patterns
+  - Enhanced contributor guidelines and project structure documentation
+
+### Fixed
+- **Multi-Agent Coordination Logic**: Improved agent interaction patterns
+  - Fixed restart mechanism when agents provide new answers
+  - Enhanced vote validation and agent ID mapping
+  - Improved anonymous agent reference consistency
+  - Better error handling during agent coordination cycles
+
+- **Configuration System**: Enhanced YAML configuration processing
+  - Updated configuration templates with corrected agent IDs and settings
+  - Improved orchestrator configuration with snapshot and workspace settings
+  - Fixed tool permission and backend parameter handling
+
+### Changed
+- **Backend Architecture**: Significant improvements to backend systems
+  - Enhanced Claude Code backend with better session management
+  - Improved async/await patterns across all backends
+  - Better tool call processing and result handling
+  - Enhanced streaming capabilities with proper chunk processing
+
+- **Agent Coordination Workflow**: Refined multi-agent interaction patterns
+  - Improved voting mechanisms with better tie-breaking
+  - Enhanced agent restart and recovery procedures  
+  - Better context sharing between coordination and presentation phases
+  - More robust timeout and error handling
+
+- **Documentation Updates**: Comprehensive documentation improvements
+  - Updated README with current features and usage examples
+  - Improved configuration examples and setup instructions
+  - Enhanced architecture documentation and development guides
+  - Better organization of project resources and examples
+
+### Technical Details
+- **Enhanced Context Sharing**: Claude Code agents can now share workspace context between coordination phases
+- **Performance Improvements**: Enhanced workspace sharing and context preservation mechanisms
+- **Documentation**: Added comprehensive CLAUDE.md with architecture overview and development commands
+- **Configuration**: Improved YAML configuration system with better orchestrator support
+- **Contributors**: Enhanced multi-agent collaboration capabilities
+
 ## [0.0.11] - 2025-08-25
 
 ### Known Issues
