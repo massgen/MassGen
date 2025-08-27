@@ -22,20 +22,12 @@ Version 0.0.13 focuses on **Enhanced Logging System**, **Windows Platform Suppor
 **Goal**: Implement comprehensive logging, debugging, and monitoring capabilities
 
 #### 1.1 Enhanced Session Logging (REQUIRED)
-- [ ] Implement structured session logging with JSON format
-- [ ] Add detailed agent performance metrics and timing
+- [ ] Implement structured session logging with loguru
 - [ ] Create comprehensive error logging with stack traces
-- [ ] Implement log rotation and cleanup mechanisms
-- [ ] Add configurable log verbosity levels (DEBUG, INFO, WARN, ERROR)
-
-#### 1.2 Real-time Monitoring & Debugging (REQUIRED)
+- [ ] Add configurable log verbosity levels (DEBUG, INFO)
 - [ ] Add real-time log streaming capabilities
-- [ ] Implement agent state monitoring dashboard
-- [ ] Create debugging tools for multi-agent coordination
-- [ ] Add performance profiling and bottleneck identification
-- [ ] Implement log search and filtering capabilities
 
-#### 1.3 Log Analysis & Insights (OPTIONAL)
+#### 1.2 Log Analysis & Insights (OPTIONAL)
 - [ ] Create log analysis tools for coordination patterns
 - [ ] Add session replay capabilities for debugging
 - [ ] Implement automated error pattern detection
@@ -66,31 +58,7 @@ Version 0.0.13 focuses on **Enhanced Logging System**, **Windows Platform Suppor
 - [ ] Add Windows CI/CD pipeline for continuous testing
 - [ ] Create Windows-specific deployment and distribution packages
 
-### 🎯 Milestone 3: Bug Fixes & Minor Improvements (REQUIRED)
-**Goal**: Address known issues and improve overall system reliability and usability
-
-#### 3.1 CLI Parameter Handling (REQUIRED)
-- [ ] Fix `--model` parameter handling for Claude Code backend (required but ignored)
-- [ ] Improve parameter validation and error messages
-- [ ] Add better help documentation for CLI parameters
-- [ ] Fix configuration file parameter precedence issues
-- [ ] Implement parameter auto-completion for better UX
-
-#### 3.2 Backend Stability Improvements (REQUIRED)
-- [ ] Fix missing `await` statements in async backend operations
-- [ ] Improve error handling and recovery mechanisms
-- [ ] Add better timeout handling for long-running operations
-- [ ] Fix message filtering and processing edge cases
-- [ ] Improve streaming and chunked response handling
-
-#### 3.3 Configuration & Setup Improvements (REQUIRED)
-- [ ] Fix YAML configuration parsing edge cases
-- [ ] Improve agent ID mapping and anonymous reference consistency
-- [ ] Add configuration validation and helpful error messages
-- [ ] Fix environment variable loading and precedence
-- [ ] Improve default configuration templates
-
-### 🎯 Milestone 4: Enhanced Multi-Agent Synthesis (OPTIONAL)
+### 🎯 Milestone 3: Enhanced Multi-Agent Synthesis (OPTIONAL)
 **Goal**: Enable agents to iteratively improve answers based on other agents' work
 
 #### 4.1 Answer Revision Mechanism (OPTIONAL)
