@@ -930,7 +930,7 @@ class ClaudeCodeBackend(LLMBackend):
                 print(f"[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
                 clean_params = {k: v for k, v in all_params.items() 
                                 if k not in ["system_prompt", "append_system_prompt"]}
-                client = await self.create_client(**clean_params)
+                client = self.create_client(**clean_params)
                 self._pending_system_prompt = workflow_system_prompt
 
             else:
@@ -954,7 +954,7 @@ class ClaudeCodeBackend(LLMBackend):
                     if sys.platform == "win32":
                         clean_params = {k: v for k, v in all_params.items() 
                                         if k not in ["system_prompt", "append_system_prompt"]}
-                        client = await self.create_client(**clean_params)
+                        client = self.create_client(**clean_params)
                         self._pending_system_prompt = workflow_system_prompt
                     else:
                         # On Mac/Linux, re-raise the error since this shouldn't happen
