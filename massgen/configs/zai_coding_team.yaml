@@ -3,7 +3,7 @@
 agents:
   - id: "architecture_glm45"
     backend:
-      type: "zai"
+      type: "chatcompletion"
       model: "glm-4.5"
       base_url: "https://api.z.ai/api/paas/v4/"
       temperature: 0.95
@@ -31,7 +31,7 @@ agents:
 
   - id: "implementation_glm45"
     backend:
-      type: "zai"
+      type: "chatcompletion"
       model: "glm-4.5"
       base_url: "https://api.z.ai/api/paas/v4/"
       temperature: 0.95
@@ -58,7 +58,7 @@ agents:
 
   - id: "review_glm45_air"
     backend:
-      type: "zai"
+      type: "chatcompletion"
       model: "glm-4.5-air"
       base_url: "https://api.z.ai/api/paas/v4/"
       temperature: 0.95
@@ -84,7 +84,7 @@ agents:
 
   - id: "perf_reliability_glm45_air"
     backend:
-      type: "zai"
+      type: "chatcompletion"
       model: "glm-4.5-air"
       base_url: "https://api.z.ai/api/paas/v4/"
       temperature: 0.95

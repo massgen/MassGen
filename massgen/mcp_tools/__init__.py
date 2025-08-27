@@ -12,6 +12,7 @@ Features:
 """
 
 from .client import MCPClient, MultiMCPClient
+from .circuit_breaker import MCPCircuitBreaker, CircuitBreakerConfig
 from .exceptions import (
     MCPError, MCPConnectionError, MCPServerError,
     MCPValidationError, MCPTimeoutError, MCPAuthenticationError,
@@ -26,6 +27,10 @@ __all__ = [
     # Core client classes
     "MCPClient",
     "MultiMCPClient",
+
+    # Circuit breaker
+    "MCPCircuitBreaker",
+    "CircuitBreakerConfig",
 
     # Official MCP types
     "mcp_types",

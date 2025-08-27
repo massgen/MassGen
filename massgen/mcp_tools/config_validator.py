@@ -3,6 +3,7 @@ Configuration validation for MCP tools integration.Provides comprehensive valida
 backend integration settings, and orchestrator coordination parameters.
 """
 
+
 import logging
 from typing import Dict, Any
 from .exceptions import MCPConfigurationError, MCPValidationError
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class MCPConfigValidator:
-    """Comprehensive validator for MCP configurations."""
+    
     
     @classmethod
     def validate_server_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -36,7 +37,6 @@ class MCPConfigValidator:
                 str(e),
                 context={"config": config, "validation_source": "security_validator"}
             ) from e
-    
     
     @classmethod
     def validate_backend_mcp_config(cls, backend_config: Dict[str, Any]) -> Dict[str, Any]:
@@ -95,8 +95,42 @@ class MCPConfigValidator:
                 context={"duplicates": duplicates, "all_names": server_names}
             )
         
+        # Validate tool filtering parameters if present
         validated_config = backend_config.copy()
         validated_config["mcp_servers"] = validated_servers
+        
+        # Validate allowed_tools parameter
+        allowed_tools = backend_config.get("allowed_tools")
+        if allowed_tools is not None:
+            if not isinstance(allowed_tools, list):
+                raise MCPConfigurationError(
+                    "allowed_tools must be a list of strings",
+                    context={"type": type(allowed_tools).__name__, "value": allowed_tools}
+                )
+            for i, tool_name in enumerate(allowed_tools):
+                if not isinstance(tool_name, str):
+                    raise MCPConfigurationError(
+                        f"allowed_tools[{i}] must be a string, got {type(tool_name).__name__}",
+                        context={"index": i, "value": tool_name}
+                    )
+            validated_config["allowed_tools"] = allowed_tools
+        
+        # Validate exclude_tools parameter
+        exclude_tools = backend_config.get("exclude_tools")
+        if exclude_tools is not None:
+            if not isinstance(exclude_tools, list):
+                raise MCPConfigurationError(
+                    "exclude_tools must be a list of strings",
+                    context={"type": type(exclude_tools).__name__, "value": exclude_tools}
+                )
+            for i, tool_name in enumerate(exclude_tools):
+                if not isinstance(tool_name, str):
+                    raise MCPConfigurationError(
+                        f"exclude_tools[{i}] must be a string, got {type(tool_name).__name__}",
+                        context={"index": i, "value": tool_name}
+                    )
+            validated_config["exclude_tools"] = exclude_tools
+        
         return validated_config
     
     @classmethod
@@ -113,7 +147,6 @@ class MCPConfigValidator:
         agents = orchestrator_config.get("agents", [])
         validated_config = orchestrator_config.copy()
         
-       
         if isinstance(agents, dict):
             # Handle dict format with backend-level mcp_servers
             validated_agents = {}
@@ -128,7 +161,7 @@ class MCPConfigValidator:
                 else:
                     validated_agents[agent_id] = agent_config
             validated_config["agents"] = validated_agents
-        
+            
         elif isinstance(agents, list):
             # Handle list format with backend.mcp_servers nesting
             validated_list = []
@@ -143,7 +176,7 @@ class MCPConfigValidator:
                 else:
                     validated_list.append(agent_config)
             validated_config["agents"] = validated_list
-        
+            
         else:
             raise MCPConfigurationError("Agents configuration must be a dictionary or list")
         

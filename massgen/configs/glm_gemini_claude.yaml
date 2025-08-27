@@ -1,7 +1,7 @@
 agents:
   - id: "glm-4.5"
     backend:
-      type: "zai"
+      type: "chatcompletion"
       model: "glm-4.5"
       base_url: "https://api.z.ai/api/paas/v4/"
 

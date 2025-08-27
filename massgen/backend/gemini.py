@@ -109,6 +109,8 @@ class GeminiBackend(LLMBackend):
 
         # MCP integration
         self.mcp_servers = kwargs.pop("mcp_servers", [])
+        self.allowed_tools = kwargs.pop("allowed_tools", None)
+        self.exclude_tools = kwargs.pop("exclude_tools", None)
         self._mcp_client: Optional[MultiMCPClient] = None
         self._mcp_initialized = False
 
@@ -160,9 +162,19 @@ class GeminiBackend(LLMBackend):
 
         try:
             # Validate MCP configuration before initialization
+            validated_config = {
+                "mcp_servers": self.mcp_servers,
+                "allowed_tools": self.allowed_tools,
+                "exclude_tools": self.exclude_tools
+            }
+            
             if MCPConfigValidator is not None:
                 try:
-                    backend_config = {"mcp_servers": self.mcp_servers}
+                    backend_config = {
+                        "mcp_servers": self.mcp_servers,
+                        "allowed_tools": self.allowed_tools,
+                        "exclude_tools": self.exclude_tools
+                    }
                     # Use the comprehensive validator class for enhanced validation
                     validator = MCPConfigValidator()
                     validated_config = validator.validate_backend_mcp_config(
@@ -187,19 +199,23 @@ class GeminiBackend(LLMBackend):
                     logger.error(
                         f"MCP configuration validation failed: {e.original_message}"
                     )
+                    self._mcp_client = None  # Clear client state for consistency
                     raise RuntimeError(
                         f"Invalid MCP configuration: {e.original_message}"
                     ) from e
                 except MCPValidationError as e:
                     logger.error(f"MCP validation failed: {e.original_message}")
+                    self._mcp_client = None  # Clear client state for consistency
                     raise RuntimeError(
                         f"MCP validation error: {e.original_message}"
                     ) from e
                 except Exception as e:
                     if isinstance(e, (ImportError, AttributeError)):
                         logger.debug(f"MCP validation not available: {e}")
+                        # Don't clear client for import errors - validation just unavailable
                     else:
                         logger.warning(f"MCP validation error: {e}")
+                        self._mcp_client = None  # Clear client state for consistency
                         raise RuntimeError(
                             f"MCP configuration validation failed: {e}"
                         ) from e
@@ -212,8 +228,21 @@ class GeminiBackend(LLMBackend):
             logger.info(
                 f"Setting up MCP sessions with {len(normalized_servers)} servers"
             )
+            # Extract tool filtering parameters from validated config
+            allowed_tools = validated_config.get("allowed_tools")
+            exclude_tools = validated_config.get("exclude_tools")
+            
+            # Log tool filtering if configured
+            if allowed_tools:
+                logger.info(f"MCP tool filtering - allowed tools: {allowed_tools}")
+            if exclude_tools:
+                logger.info(f"MCP tool filtering - excluding: {exclude_tools}")
+            
             self._mcp_client = await MultiMCPClient.create_and_connect(
-                normalized_servers, timeout_seconds=30
+                normalized_servers,
+                timeout_seconds=30,
+                allowed_tools=allowed_tools,
+                exclude_tools=exclude_tools
             )
 
             self._mcp_initialized = True
@@ -239,10 +268,7 @@ class GeminiBackend(LLMBackend):
                 logger.warning(f"MCP error during setup: {e}")
                 self._mcp_client = None
                 return
-            elif "MCP" in str(type(e).__name__):
-                logger.warning(f"Unknown MCP-specific error during setup: {e}")
-                self._mcp_client = None
-                return
+            
             else:
                 logger.warning(f"Failed to setup MCP sessions: {e}")
                 self._mcp_client = None
@@ -418,28 +444,26 @@ Make your decision and include the JSON at the very end of your response."""
 
         return []
 
-    @staticmethod
-    def _get_mcp_error_info(error: Exception) -> tuple[str, str, str]:
-        """Get standardized MCP error information.
-        
-        Returns:
-            tuple: (log_type, user_message, error_category)
-        """
-        error_mappings = {
-            MCPConnectionError: ("connection error", "MCP connection failed", "connection"),
-            MCPTimeoutError: ("timeout error", "MCP session timeout", "timeout"),
-            MCPServerError: ("server error", "MCP server error", "server"),
-            MCPError: ("MCP error", "MCP error", "general"),
-        }
-        
-        return error_mappings.get(
-            type(error), ("unexpected error", "MCP connection failed", "unknown")
-        )
+    def _mcp_error_details(self, error: Exception, context: Optional[str] = None, *, log: bool = False) -> tuple[str, str, str]:
+        """Return standardized MCP error info and optionally log.
 
-    def _log_mcp_error(self, error: Exception, context: str) -> None:
-        """Log MCP errors with specific error type messaging."""
-        log_type, _, _ = self._get_mcp_error_info(error)
-        logger.warning(f"MCP {log_type} during {context}: {error}")
+        Returns a tuple of (log_type, user_message, error_category).
+        """
+        if isinstance(error, MCPConnectionError):
+            details = ("connection error", "MCP connection failed", "connection")
+        elif isinstance(error, MCPTimeoutError):
+            details = ("timeout error", "MCP session timeout", "timeout")
+        elif isinstance(error, MCPServerError):
+            details = ("server error", "MCP server error", "server")
+        elif isinstance(error, MCPError):
+            details = ("MCP error", "MCP error", "general")
+        else:
+            details = ("unexpected error", "MCP connection failed", "unknown")
+
+        if log and context:
+            logger.warning(f"MCP {details[0]} during {context}: {error}")
+
+        return details
 
     async def _handle_mcp_retry_error(
         self, error: Exception, retry_count: int, max_retries: int
@@ -449,7 +473,7 @@ Make your decision and include the JSON at the very end of your response."""
         Returns:
             tuple: (should_continue_retrying, error_chunks_generator)
         """
-        log_type, user_message, _ = self._get_mcp_error_info(error)
+        log_type, user_message, _ = self._mcp_error_details(error)
         
         # Log the retry attempt
         logger.warning(f"MCP {log_type} on attempt {retry_count}: {error}")
@@ -482,7 +506,7 @@ Make your decision and include the JSON at the very end of your response."""
         """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
         self._mcp_tool_failures += 1
         
-        log_type, user_message, _ = self._get_mcp_error_info(error)
+        log_type, user_message, _ = self._mcp_error_details(error)
         
         # Log with specific error type
         logger.warning(
@@ -573,7 +597,7 @@ Make your decision and include the JSON at the very end of your response."""
 
             # Use google-genai package
             client = genai.Client(api_key=self.api_key)
-
+            
             # Setup builtin tools (only when not using SDK MCP sessions)
             builtin_tools = []
             if not using_sdk_mcp:
@@ -647,8 +671,28 @@ Make your decision and include the JSON at the very end of your response."""
                                     0.5 * retry_count
                                 )  # Progressive backoff
 
+                            # Get validated config for tool filtering parameters
+                            backend_config = {"mcp_servers": self.mcp_servers}
+                            if MCPConfigValidator is not None:
+                                try:
+                                    validator = MCPConfigValidator()
+                                    validated_config_retry = validator.validate_backend_mcp_config(
+                                        backend_config
+                                    )
+                                    allowed_tools_retry = validated_config_retry.get("allowed_tools")
+                                    exclude_tools_retry = validated_config_retry.get("exclude_tools")
+                                except Exception:
+                                    allowed_tools_retry = None
+                                    exclude_tools_retry = None
+                            else:
+                                allowed_tools_retry = None
+                                exclude_tools_retry = None
+                            
                             self._mcp_client = await MultiMCPClient.create_and_connect(
-                                self.mcp_servers, timeout_seconds=30
+                                self.mcp_servers,
+                                timeout_seconds=30,
+                                allowed_tools=allowed_tools_retry,
+                                exclude_tools=exclude_tools_retry
                             )
                             mcp_connected = True
                             logger.info(
@@ -1072,7 +1116,7 @@ Make your decision and include the JSON at the very end of your response."""
                 MCPError,
                 Exception,
             ) as e:
-                self._log_mcp_error(e, "disconnect")
+                self._mcp_error_details(e, "disconnect", log=True)
             finally:
                 self._mcp_client = None
                 self._mcp_initialized = False

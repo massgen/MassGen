@@ -1,7 +1,7 @@
 agent:
   id: "zai_glm45_agent"
   backend:
-    type: "zai"
+    type: "chatcompletion"
     model: "glm-4.5"
     base_url: "https://api.z.ai/api/paas/v4/"
     temperature: 0.95

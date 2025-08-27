@@ -108,36 +108,68 @@ class LMStudioBackend(ChatCompletionsBackend):
         except Exception as e:
             raise Exception(f"Failed to start LM Studio server: {e}")
 
-        # Check if model exists locally
+        # Ensure specified model is available and loaded
         model_name = kwargs.get("model", "")
         if model_name:
+            self._ensure_model_available(model_name)
+
+    def _ensure_model_available(self, model_name: str) -> None:
+        """
+        Ensure a specific model is downloaded and loaded in LM Studio.to prevent unnecessary reloading of already loaded models.
+
+        Args:
+            model_name: Name/key of the model to ensure is available
+        """
+        # First, ensure model is downloaded locally
+        try:
+            downloaded_models = lms.list_downloaded_models()
+            if model_name not in downloaded_models:
+                print(f"Model '{model_name}' not found locally. Downloading...")
+                subprocess.run(["lms", "get", model_name], check=True)
+                print(f"Model '{model_name}' downloaded successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Warning: Could not check/download model '{model_name}': {e}")
+            return
+
+        # Then ensure model is loaded with retry logic
+        self._load_model_with_retry(model_name)
+
+    def _load_model_with_retry(self, model_name: str, max_retries: int = 3, retry_delay: int = 2) -> None:
+        """
+        Load a model with retry logic to handle transient failures.
+
+        Args:
+            model_name: Name/key of the model to load
+            max_retries: Maximum number of loading attempts
+            retry_delay: Delay between retry attempts in seconds
+        """
+        for attempt in range(max_retries):
             try:
-                # List available models using lms list
-                downloaded = lms.list_downloaded_models()
+                # Check if model is already loaded before attempting to load it
+                loaded_models = lms.list_loaded_models()
 
-                # Check if model is in the list
-                if model_name not in downloaded:
-                    print(f"Model '{model_name}' not found locally. Downloading...")
-                    # Download the model using lms get
-                    subprocess.run(["lms", "get", model_name], check=True)
-                    print(f"Model '{model_name}' downloaded successfully.")
+                if model_name in loaded_models:
+                    print(f"Model '{model_name}' is already loaded and ready.")
+                    return
+                else:
+                    # this prevents reloading already loaded models
+                    print(f"Loading model '{model_name}'... (attempt {attempt + 1}/{max_retries})")
 
-            except subprocess.CalledProcessError as e:
-                print(f"Warning: Could not check/download/load model: {e}")
+                    # Get the model instance - lms.llm() loads only if not already loaded
+                    # Setting TTL to 1 hour to prevent premature unloading due to inactivity
+                    model = lms.llm(model_name, ttl=3600)
 
-            try:
-                # List available models using lms list
-                loaded = lms.list_loaded_models()
-
-                # Check if model is in the list
-                if model_name not in loaded:
-                    print(f"Model '{model_name}' not loaded. Loading...")
-                    # Download the model using lms get
-                    subprocess.run(["lms", "load", model_name], check=True)
                     print(f"Model '{model_name}' loaded successfully.")
+                    return
 
-            except subprocess.CalledProcessError as e:
-                print(f"Warning: Could not check/download/load model: {e}")
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"Warning: Model loading attempt {attempt + 1} failed: {e}")
+                    print(f"Retrying in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    print(f"Error: Could not load model '{model_name}' after {max_retries} attempts: {e}")
+                    print("Continuing without explicit model loading - will use whatever is currently loaded.")
 
     def end_lmstudio_server(self):
         """Stop the LM Studio server after receiving all chunks."""

@@ -18,6 +18,7 @@ from .security import (
     validate_tool_arguments
 )
 from .config_validator import MCPConfigValidator
+from .circuit_breaker import MCPCircuitBreaker
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import get_default_environment, stdio_client
 from mcp.client.streamable_http import streamablehttp_client
@@ -86,7 +87,7 @@ class MCPClient:
         server_config: Dict[str, Any],
         *,
         timeout_seconds: int = 30,
-        include_tools: Optional[List[str]] = None,
+        allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
     ):
         """
@@ -101,14 +102,14 @@ class MCPClient:
                 - args: Additional command arguments (for stdio)
                 - headers: HTTP headers (for streamable-http)
             timeout_seconds: Timeout for operations in seconds
-            include_tools: Optional list of tool names to include (if None, includes all)
+            allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
         """
         # Validate and sanitize configuration
         self.config = MCPConfigValidator.validate_server_config(server_config)
         self.name = self.config["name"]
         self.timeout_seconds = timeout_seconds
-        self.include_tools = include_tools
+        self.allowed_tools = allowed_tools
         self.exclude_tools = exclude_tools
         self.use_official_library = True
         self.tools: Dict[str, mcp_types.Tool] = {}
@@ -159,7 +160,6 @@ class MCPClient:
                         timeout_seconds=5.0
                     )
 
-            # Atomic state transition
             if self._connection_state != ConnectionState.DISCONNECTED:
                 raise MCPConnectionError(
                     f"Invalid state for connection: {self._connection_state}",
@@ -374,8 +374,9 @@ class MCPClient:
                 self.tools.clear()
                 self.resources.clear()
                 self.prompts.clear()
+                self.allowed_tools = None
 
-                # Mark cleanup as done
+                
                 self._cleanup_done = True
                 logger.debug(f"Cleanup completed for MCPClient {self.name}")
 
@@ -411,7 +412,7 @@ class MCPClient:
         if not self.session:
             raise MCPConnectionError("No active session")
 
-        # List tools
+        
         try:
             available_tools = await self.session.list_tools()
 
@@ -419,7 +420,7 @@ class MCPClient:
             for tool in available_tools.tools:
                 if self.exclude_tools and tool.name in self.exclude_tools:
                     continue
-                if self.include_tools is None or tool.name in self.include_tools:
+                if self.allowed_tools is None or tool.name in self.allowed_tools:
                     # Use the official MCP Tool type directly
                     self.tools[tool.name] = tool
         except Exception as e:
@@ -458,7 +459,6 @@ class MCPClient:
                 self.prompts[prompt.name] = prompt
             logger.debug(f"Discovered {len(self.prompts)} prompts for {self.name}")
         except (MCPConnectionError, MCPTimeoutError):
-            # Re-raise connection/timeout errors as they indicate serious problems
             raise
         except Exception as e:
             # Categorize error types for better handling
@@ -691,7 +691,7 @@ class MultiMCPClient:
         server_configs: List[Dict[str, Any]],
         *,
         timeout_seconds: int = 30,
-        include_tools: Optional[List[str]] = None,
+        allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
     ):
         """
@@ -700,13 +700,13 @@ class MultiMCPClient:
         Args:
             server_configs: List of server configuration dictionaries
             timeout_seconds: Timeout for operations in seconds
-            include_tools: Optional list of tool names to include (if None, includes all)
+            allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
         """
         self.server_configs = [MCPConfigValidator.validate_server_config(config) for config in server_configs]
         
         self.timeout_seconds = timeout_seconds
-        self.include_tools = include_tools
+        self.allowed_tools = allowed_tools
         self.exclude_tools = exclude_tools
 
         # Client management
@@ -723,10 +723,7 @@ class MultiMCPClient:
         self._cleanup_done = False
 
         # Circuit breaker for failing servers
-        self._server_failure_counts: Dict[str, int] = {}
-        self._server_last_failure: Dict[str, float] = {}
-        self._max_failures = 3
-        self._failure_reset_time = 300  # 5 minutes
+        self._circuit_breaker = MCPCircuitBreaker()
 
     async def connect(self) -> None:
         """Connect to all MCP servers and discover capabilities."""
@@ -750,7 +747,7 @@ class MultiMCPClient:
             server_name = server_config["name"]
 
             # Check circuit breaker
-            if self._should_skip_server(server_name):
+            if self._circuit_breaker.should_skip_server(server_name):
                 logger.warning(f"Skipping server {server_name} due to circuit breaker (too many recent failures)")
                 return server_name, None
 
@@ -759,7 +756,7 @@ class MultiMCPClient:
                 client = MCPClient(
                     server_config,
                     timeout_seconds=self.timeout_seconds,
-                    include_tools=self.include_tools,
+                    allowed_tools=self.allowed_tools,
                     exclude_tools=self.exclude_tools,
                 )
 
@@ -768,13 +765,12 @@ class MultiMCPClient:
                 logger.info(f"Successfully connected to MCP server: {server_name}")
 
                 # Reset failure count on successful connection
-                self._server_failure_counts.pop(server_name, None)
-                self._server_last_failure.pop(server_name, None)
+                self._circuit_breaker.record_success(server_name)
 
                 return server_name, client
             except Exception as e:
                 logger.error(f"Failed to connect to MCP server {server_name}: {e}")
-                self._record_server_failure(server_name)
+                self._circuit_breaker.record_failure(server_name)
                 return server_name, None
 
         # Execute all connections in parallel
@@ -834,48 +830,6 @@ class MultiMCPClient:
         logger.info(f"MultiMCP client initialized with {len(self.clients)} servers, "
                    f"{len(self.tools)} tools, {len(self.resources)} resources, {len(self.prompts)} prompts")
 
-    def _should_skip_server(self, server_name: str) -> bool:
-        """Check if server should be skipped due to circuit breaker."""
-        import time
-
-        failure_count = self._server_failure_counts.get(server_name, 0)
-        if failure_count < self._max_failures:
-            return False
-
-        last_failure = self._server_last_failure.get(server_name, 0)
-        current_time = time.monotonic()
-
-        # Calculate backoff time with exponential backoff (capped at max)
-        backoff_time = min(
-            self._failure_reset_time * (2 ** (failure_count - self._max_failures)),
-            self._failure_reset_time * 8  # Cap at 8x base time
-        )
-
-        if current_time - last_failure > backoff_time:
-            # Reset failure count after backoff period
-            self._server_failure_counts.pop(server_name, None)
-            self._server_last_failure.pop(server_name, None)
-            logger.info(f"Circuit breaker reset for server {server_name} after {backoff_time:.1f}s")
-            return False
-
-        return True
-
-    def _record_server_failure(self, server_name: str) -> None:
-        """Record a server failure for circuit breaker."""
-        import time
-
-        current_time = time.monotonic()
-        self._server_failure_counts[server_name] = self._server_failure_counts.get(server_name, 0) + 1
-        self._server_last_failure[server_name] = current_time
-
-        failure_count = self._server_failure_counts[server_name]
-        if failure_count >= self._max_failures:
-            backoff_time = min(
-                self._failure_reset_time * (2 ** (failure_count - self._max_failures)),
-                self._failure_reset_time * 8
-            )
-            logger.warning(f"Server {server_name} has failed {failure_count} times, "
-                          f"will be skipped for {backoff_time:.1f} seconds")
 
     async def disconnect(self) -> None:
         """Disconnect from all MCP servers."""
@@ -1149,7 +1103,7 @@ class MultiMCPClient:
         server_configs: List[Dict[str, Any]],
         *,
         timeout_seconds: int = 30,
-        include_tools: Optional[List[str]] = None,
+        allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
     ) -> "MultiMCPClient":
         """
@@ -1158,7 +1112,7 @@ class MultiMCPClient:
         Args:
             server_configs: List of server configuration dictionaries
             timeout_seconds: Timeout for operations in seconds
-            include_tools: Optional list of tool names to include
+            allowed_tools: Optional list of tool names to include
             exclude_tools: Optional list of tool names to exclude
 
         Returns:
@@ -1167,7 +1121,7 @@ class MultiMCPClient:
         client = cls(
             server_configs,
             timeout_seconds=timeout_seconds,
-            include_tools=include_tools,
+            allowed_tools=allowed_tools,
             exclude_tools=exclude_tools,
         )
         await client.connect()
