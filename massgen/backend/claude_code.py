@@ -123,7 +123,80 @@ class ClaudeCodeBackend(LLMBackend):
         self._cwd: Optional[str] = None
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
-        self._system_prompt_mode: bool = False  # Track system prompt mode for Windows
+
+    def _setup_windows_subprocess_cleanup_suppression(self):
+        """Comprehensive Windows subprocess cleanup warning suppression."""
+        # All warning filters
+        warnings.filterwarnings("ignore", message="unclosed transport")
+        warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
+        warnings.filterwarnings("ignore", message="Exception ignored in")
+        warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
+        warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
+        warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
+        warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
+
+        # Patch asyncio transport destructors to be silent
+        try:
+            import asyncio.base_subprocess
+            import asyncio.proactor_events
+
+            # Store originals
+            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, '__del__', None)
+            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, '__del__', None)
+
+            def silent_subprocess_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_subprocess_del:
+                            original_subprocess_del(self)
+                except Exception:
+                    pass
+
+            def silent_pipe_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_pipe_del:
+                            original_pipe_del(self)
+                except Exception:
+                    pass
+
+            # Apply patches
+            if original_subprocess_del:
+                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
+            if original_pipe_del:
+                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
+        except Exception:
+            pass  # If patching fails, fall back to warning filters only
+
+        # Setup exit handler for stderr suppression
+        original_stderr = sys.stderr
+
+        def suppress_exit_warnings():
+            try:
+                sys.stderr = open(os.devnull, 'w')
+                import time
+                time.sleep(0.3)
+            except Exception:
+                pass
+            finally:
+                try:
+                    if sys.stderr != original_stderr:
+                        sys.stderr.close()
+                    sys.stderr = original_stderr
+                except Exception:
+                    pass
+
+        atexit.register(suppress_exit_warnings)
+
+
+        self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
 
     def _setup_windows_subprocess_cleanup_suppression(self):
         """Comprehensive Windows subprocess cleanup warning suppression."""
@@ -859,7 +932,6 @@ class ClaudeCodeBackend(LLMBackend):
                                 if k not in ["system_prompt", "append_system_prompt"]}
                 client = await self.create_client(**clean_params)
                 self._pending_system_prompt = workflow_system_prompt
-                self._original_system_mode = all_params.get("system_prompt", False)
 
             else:
                     # Original approach for Mac/Linux and Windows with simple prompts
@@ -884,7 +956,6 @@ class ClaudeCodeBackend(LLMBackend):
                                         if k not in ["system_prompt", "append_system_prompt"]}
                         client = await self.create_client(**clean_params)
                         self._pending_system_prompt = workflow_system_prompt
-                        self._original_system_mode = all_params.get("system_prompt", False)
                     else:
                         # On Mac/Linux, re-raise the error since this shouldn't happen
                         raise create_error
