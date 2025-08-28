@@ -1,135 +1,158 @@
 # MassGen v0.0.14 Roadmap
 
 ## Overview
-TODO: Update before merge
 
-Version 0.0.14 focuses on **Enhanced Logging System**, **Windows Platform Support**, and **Bug Fixes & Minor Improvements**. Key enhancements include:
+Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling seamless connection to external tools and services through the MCP standard. Key enhancements include:
 
-- **Advanced Logging System** (Required): 📊 Enhanced session logging, better debugging capabilities, and improved log management
-- **Windows Platform Support** (Required): 🪟 Full Windows compatibility with platform-specific implementations and cross-platform tools
-- **Bug Fixes & Minor Improvements** (Required): 🐛 Address various minor issues, CLI parameter handling, and backend stability improvements
-- **Enhanced Multi-Agent Synthesis** (Optional): 🤝 Enable agents to revise and improve their answers based on seeing other agents' work
+- **MCP Core Infrastructure** (Required): 🔌 Official MCP library integration with multi-server support
+- **MCP Tools Ecosystem** (Required): 🛠️ Tool discovery, execution, and management
+- **Enhanced Security & Reliability** (Required): 🔒 Command sanitization, circuit breakers, and fault tolerance
+- **MCP Server Examples** (Required): 📚 Discord, Twitter/X, and custom MCP server integrations
 
 ## Key Technical Priorities
 
-1. **Advanced Logging System** (REQUIRED): Comprehensive logging, debugging, and monitoring capabilities
-2. **Windows Platform Support** (REQUIRED): Cross-platform compatibility with Windows-specific implementations
-3. **Bug Fixes & Stability** (REQUIRED): Address known issues and improve overall system reliability
-4. **Multi-Agent Synthesis** (OPTIONAL): Enable iterative answer improvement based on other agents' work
+1. **MCP Core Integration** (REQUIRED): Full Model Context Protocol support with official library
+2. **Multi-Server Architecture** (REQUIRED): Support for multiple simultaneous MCP server connections
+3. **Security & Reliability** (OPTIONAL): Enhanced security measures and fault-tolerant design
+4. **MCP Tools Ecosystem** (OPTIONAL): Comprehensive tool discovery, validation, and execution
+5. **Developer Experience** (OPTIONAL): MCP server development tools and debugging utilities
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Advanced Logging System (REQUIRED)
-**Goal**: Implement comprehensive logging, debugging, and monitoring capabilities
+### 🎯 Milestone 1: MCP Core Infrastructure (REQUIRED)
+**Goal**: Implement official Model Context Protocol support with robust architecture
 
-#### 1.1 Enhanced Session Logging (REQUIRED)
-- [ ] Implement structured session logging with loguru
-- [ ] Create comprehensive error logging with stack traces
-- [ ] Add configurable log verbosity levels (DEBUG, INFO)
-- [ ] Add real-time log streaming capabilities
+#### 1.1 Core MCP Client Implementation (REQUIRED)
+- [ ] Integrate official `mcp` Python package
+- [ ] Implement `MCPClient` class with async/await support
+- [ ] Create `MultiMCPClient` for managing multiple servers
 
-#### 1.2 Log Analysis & Insights (OPTIONAL)
-- [ ] Create log analysis tools for coordination patterns
-- [ ] Add session replay capabilities for debugging
-- [ ] Implement automated error pattern detection
-- [ ] Create performance optimization suggestions
-- [ ] Add log export in multiple formats (JSON, CSV, HTML)
+#### 1.2 Transport Layer Support (REQUIRED)
+- [ ] Implement stdio transport for local MCP servers
+- [ ] Add streamable-http transport for remote servers
+- [ ] Create transport abstraction layer
+- [ ] Add connection retry and timeout handling
+- [ ] Implement keepalive and health checking
 
-### 🎯 Milestone 2: Windows Platform Support (REQUIRED)
-**Goal**: Achieve full cross-platform compatibility with Windows-specific implementations
+### 🎯 Milestone 2: Security & Reliability Framework (OPTIONAL)
+**Goal**: Implement comprehensive security measures and fault-tolerant design
 
-#### 2.1 Windows-Specific Implementations (REQUIRED)
-- [ ] Fix Windows-specific system prompt handling in Claude Code backend
-- [ ] Resolve subprocess management and Unicode encoding issues
-- [ ] Implement Windows-compatible path handling across all components
-- [ ] Add Windows batch files for test execution and development workflows
-- [ ] Fix Windows-specific async/await patterns and event loop handling
+#### 2.1 Security Implementation (OPTIONAL)
+- [ ] Implement command sanitization in `security.py`
+- [ ] Add tool name validation and sanitization
+- [ ] Create secure credential management for MCP servers
+- [ ] Implement permission-based tool access control
+- [ ] Add input validation for all MCP operations
 
-#### 2.2 Cross-Platform Tool Ecosystem (REQUIRED)
-- [ ] Ensure all CLI tools work seamlessly on Windows, macOS, and Linux
-- [ ] Add Windows-specific installation and setup documentation
-- [ ] Implement cross-platform file system operations
-- [ ] Add Windows-specific error handling and troubleshooting guides
-- [ ] Create Windows-compatible development environment setup
+#### 2.2 Circuit Breaker Pattern (OPTIONAL)
+- [ ] Implement `MCPCircuitBreaker` class
+- [ ] Add configurable failure thresholds
+- [ ] Create automatic recovery mechanisms
+- [ ] Implement exponential backoff for retries
+- [ ] Add circuit breaker metrics and monitoring
 
-#### 2.3 Windows Testing & Validation (REQUIRED)
-- [ ] Add comprehensive Windows-specific test suite
-- [ ] Test all backends and configurations on Windows
-- [ ] Validate multi-agent coordination on Windows platform
-- [ ] Add Windows CI/CD pipeline for continuous testing
-- [ ] Create Windows-specific deployment and distribution packages
+#### 2.3 Error Handling System (OPTIONAL)
+- [ ] Create comprehensive exception hierarchy
+- [ ] Implement `MCPError` base class and specialized exceptions
+- [ ] Add detailed error messages and debugging information
+- [ ] Create error recovery strategies
+- [ ] Implement graceful degradation when MCP servers fail
 
-### 🎯 Milestone 3: Enhanced Multi-Agent Synthesis (OPTIONAL)
-**Goal**: Enable agents to iteratively improve answers based on other agents' work
+### 🎯 Milestone 3: MCP Tools Ecosystem (OPTIONAL)
+**Goal**: Build comprehensive tool discovery, validation, and execution framework
 
-#### 4.1 Answer Revision Mechanism (OPTIONAL)
-- [ ] Implement agent answer revision after seeing other agents' work
-- [ ] Add synthesis capabilities to combine strengths from multiple answers
-- [ ] Enable iterative refinement cycles before final voting
-- [ ] Create revision scoring and quality assessment
-- [ ] Add revision history tracking and rollback
+#### 3.1 Tool Discovery & Management (OPTIONAL)
+- [ ] Implement automatic tool discovery from MCP servers
+- [ ] Create tool caching and refresh mechanisms
+- [ ] Add tool validation and schema verification
+- [ ] Implement tool permission management
+- [ ] Create tool usage analytics and monitoring
 
-#### 4.2 Collaborative Improvement Workflow (OPTIONAL)
-- [ ] Design mandatory revision rounds before voting
-- [ ] Implement synthesis-first, vote-second workflow
-- [ ] Add collaborative editing capabilities between agents
-- [ ] Create answer improvement suggestions system
-- [ ] Enable agents to build upon each other's work incrementally
+#### 3.2 Backend Integration (OPTIONAL)
+- [ ] Integrate MCP support in Claude Code backend
+- [ ] Add MCP capabilities to Gemini backend
+- [ ] Implement MCP in GPT-5 backend
+- [ ] Create common MCP utilities in `backend/common.py`
+- [ ] Add MCP tool execution in orchestrator
+
+### 🎯 Milestone 4: MCP Server Examples & Documentation (REQUIRED)
+**Goal**: Provide comprehensive examples and documentation for MCP integration
+
+#### 4.1 Example MCP Servers (REQUIRED)
+- [ ] Discord MCP server integration (`barryyip0625/mcp-discord`)
+- [ ] Twitter/X MCP server setup (`enescinar/twitter-mcp`)
+- [ ] Paper search MCP server for academic research
+- [ ] Custom MCP server development template
+- [ ] HTTP-based MCP server examples
+
+#### 4.2 Configuration & Documentation (REQUIRED)
+- [ ] Create MCP configuration examples for all backends
+- [ ] Write comprehensive MCP setup guides
+- [ ] Document MCP server development best practices
+- [ ] Create troubleshooting guides for common issues
+- [ ] Add MCP integration tutorials and walkthroughs
 
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
-- [ ] Comprehensive logging system captures all session activities
-- [ ] Full Windows compatibility with all features working seamlessly
-- [ ] All known bugs and minor issues are resolved
-- [ ] CLI parameters work correctly with clear documentation
-- [ ] All existing functionality continues to work (backward compatibility)
+- [ ] Basic MCP support with official library integration
+- [ ] Single MCP server connection per agent
+- [ ] Core MCP tools are discoverable and executable
+- [ ] Example MCP server configurations provided
+- [ ] Backward compatibility with existing configurations
 
 ### Performance Requirements (REQUIRED)
-- [ ] Logging adds minimal performance overhead (<5% impact)
-- [ ] Windows platform performs comparably to Linux/macOS
-- [ ] Bug fixes improve overall system stability and reliability
-- [ ] No performance regressions from improvements
+- [ ] MCP operations function without blocking main execution
+- [ ] Basic tool discovery and execution works reliably
+- [ ] Reasonable response times for MCP operations
+- [ ] Async operations for non-blocking I/O
 
 ### Quality Requirements (REQUIRED)
-- [ ] Comprehensive test coverage for logging features
-- [ ] Full Windows test suite with CI/CD integration
+- [ ] Basic test coverage for core MCP features
+- [ ] Example configurations that work out-of-the-box
 - [ ] Zero regressions in existing functionality
-- [ ] Clear documentation for Windows setup and troubleshooting
-- [ ] Improved error messages and user experience
+- [ ] Documentation for basic MCP setup
+- [ ] Working examples for Discord and Twitter MCP servers
 
 ### Functional Requirements (OPTIONAL)
-- [ ] Multi-agent synthesis improves answer quality demonstrably
-- [ ] Agents can effectively build upon each other's work
-- [ ] Revision mechanism enhances collaborative intelligence
+- [ ] Multiple simultaneous MCP server connections
+- [ ] Advanced tool caching and refresh mechanisms
+- [ ] Tool permission management and analytics
+- [ ] Custom MCP server development templates
+- [ ] HTTP-based transport for remote servers
 
 ### Performance Requirements (OPTIONAL)
-- [ ] Synthesis cycles complete within reasonable timeouts
-- [ ] Answer revision adds minimal coordination overhead
+- [ ] MCP operations optimized to <100ms overhead
+- [ ] Efficient caching reduces discovery calls
+- [ ] Circuit breaker prevents cascading failures
+- [ ] Connection pooling for multiple servers
 
-### Quality Requirements (OPTIONAL)
-- [ ] Synthesis features are well-documented with examples
-- [ ] Clear metrics showing improvement in answer quality
+### Security Requirements (OPTIONAL)
+- [ ] Command sanitization prevents injection attacks
+- [ ] Secure credential storage for MCP servers
+- [ ] Permission-based tool access control
+- [ ] Input validation for all MCP operations
+- [ ] Audit logging for security events
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **Current Logging System**: Basic logging infrastructure in `massgen/frontend/logging/`
-- **Cross-Platform Architecture**: Existing backend and orchestrator systems
-- **Windows Development Environment**: Access to Windows testing infrastructure
-- **Current Agent Coordination**: Message templates and voting mechanisms
-- **Configuration System**: YAML/JSON configuration management
+- **Official MCP Library**: Python `mcp` package from PyPI
+- **Async/Await Support**: Python 3.7+ asyncio capabilities
+- **Backend Systems**: Existing Claude Code, Gemini, and GPT-5 backends
+- **Configuration System**: YAML configuration management
+- **External MCP Servers**: NPM packages for Discord, Twitter, etc.
 
 ### Risks & Mitigations
-1. **Windows-Specific Edge Cases**: *Mitigation*: Comprehensive Windows testing and platform-specific error handling
-2. **Logging Performance Impact**: *Mitigation*: Asynchronous logging and configurable verbosity levels
-3. **Breaking Changes**: *Mitigation*: Maintain backward compatibility and provide migration guides
-4. **Complex Synthesis Logic**: *Mitigation*: Start with simple revision mechanisms and iterate
-5. **Testing Complexity**: *Mitigation*: Automated cross-platform CI/CD pipeline
+1. **MCP Server Compatibility**: *Mitigation*: Comprehensive testing with multiple server implementations
+2. **Security Vulnerabilities**: *Mitigation*: Command sanitization and input validation
+3. **Performance Impact**: *Mitigation*: Async operations and efficient caching
+4. **Breaking Changes**: *Mitigation*: Maintain backward compatibility
+5. **Network Reliability**: *Mitigation*: Circuit breaker pattern and retry mechanisms
 
-## Post-v0.0.13 Considerations
+## Post-v0.0.14 Considerations
 
-### Future Enhancements (v0.0.14+)
+### Future Enhancements (v0.0.15+)
 - **Web Interface**: Browser-based conversation interface with enhanced logging visualization
 - **Advanced Agent Orchestration**: Hierarchical agent coordination and specialized roles
 - **Performance Optimization**: Advanced caching and optimization techniques
@@ -145,27 +168,27 @@ Version 0.0.14 focuses on **Enhanced Logging System**, **Windows Platform Suppor
 
 | Week | Focus | Key Deliverables | Status |
 |------|-------|------------------|--------|
-| 1 | Logging system design | Architecture for enhanced logging and monitoring | ⏳ **PENDING** |
-| 2 | Windows compatibility | Platform-specific implementations and fixes | ⏳ **PENDING** |
-| 3 | Bug fixes & improvements | CLI, backend, and configuration improvements | ⏳ **PENDING** |
-| 4 | Testing & release | Cross-platform testing, documentation, validation | ⏳ **PENDING** |
+| 1 | MCP Core Infrastructure | Basic MCP client implementation with stdio transport | ⏳ **PENDING** |
+| 2 | Example Integrations | Discord and Twitter MCP server examples | ⏳ **PENDING** |
+| 3 | Documentation | Setup guides and configuration examples | ⏳ **PENDING** |
+| 4 | Testing & Release | Integration testing and v0.0.14 release preparation | ⏳ **PENDING** |
 
 ## Getting Started
 
 ### For Contributors
-1. Review current logging implementation in `massgen/frontend/logging/`
-2. Examine Windows-specific issues in Claude Code backend
-3. Check known bug reports and issue tracking
-4. Understand current CLI parameter handling in `massgen/cli.py`
-5. Run cross-platform tests to identify compatibility issues
+1. Review MCP specification at [modelcontextprotocol.io](https://modelcontextprotocol.io/)
+2. Examine existing MCP implementation in `massgen/mcp_tools/`
+3. Test with example MCP servers (Discord, Twitter)
+4. Understand backend integration patterns
+5. Contribute new MCP server examples
 
 ### For Users
-- v0.0.13 will be fully backward compatible with existing configurations
-- Windows users will gain full platform support and improved experience
-- Enhanced logging will provide better debugging and monitoring capabilities
-- All current backends will continue to work with improved stability
-- Comprehensive Windows setup documentation will be provided
+- v0.0.14 will be fully backward compatible with v0.0.13
+- MCP servers can be added to any agent configuration
+- Tools from MCP servers are auto-discovered
+- All existing features continue to work unchanged
+- Comprehensive MCP setup guides will be provided
 
 ---
 
-*This roadmap represents our commitment to making MassGen a robust, cross-platform system with comprehensive logging and monitoring capabilities, ensuring reliability and usability across all supported platforms.*
+*This roadmap represents our commitment to making MassGen a universal AI orchestration platform with comprehensive Model Context Protocol support, enabling seamless integration with any external tool or service through the MCP standard.*
