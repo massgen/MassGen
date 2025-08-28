@@ -9,7 +9,7 @@ agents:
       # model: "claude-sonnet-4-20250514"
 
       # Claude Code Stream specific options
-      # append_system_prompt: "You are a helpful AI assistant powered by Claude Code. You have access to a comprehensive set of development tools including file operations, code execution, web search, and more. Use these capabilities thoughtfully to provide the best assistance."
+      # system_prompt: "You are a helpful AI assistant powered by Claude Code. You have access to a comprehensive set of development tools including file operations, code execution, web search, and more. Use these capabilities thoughtfully to provide the best assistance."
       # max_turns: 3 # Allow unlimited conversation turns
 
       # Tool configuration (Claude Code's native tools)

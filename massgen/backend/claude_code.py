@@ -67,6 +67,7 @@ import atexit
 
 
 from .base import LLMBackend, StreamChunk
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk, logger
 
 
 class ClaudeCodeBackend(LLMBackend):
@@ -952,6 +953,15 @@ class ClaudeCodeBackend(LLMBackend):
         Yields:
             StreamChunk objects with response content and metadata
         """
+        # Extract agent_id from kwargs if provided
+        agent_id = kwargs.get('agent_id', None)
+        
+        log_backend_activity(
+            self.get_provider_name(),
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id
+        )
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
         # Check if we already have a client
@@ -1068,6 +1078,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Format the messages for Claude Code
         if not messages:
+            log_stream_chunk("backend.claude_code", "error", "No messages provided to stream_with_tools", agent_id)
             # No messages to process - yield error
             yield StreamChunk(
                 type="error",
@@ -1081,6 +1092,7 @@ class ClaudeCodeBackend(LLMBackend):
         assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
 
         if assistant_messages:
+            log_stream_chunk("backend.claude_code", "error", "Claude Code backend cannot accept assistant messages - it maintains its own conversation history", agent_id)
             yield StreamChunk(
                 type="error",
                 error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
@@ -1089,6 +1101,7 @@ class ClaudeCodeBackend(LLMBackend):
             return
 
         if not user_messages:
+            log_stream_chunk("backend.claude_code", "error", "No user messages found to send to Claude Code", agent_id)
             yield StreamChunk(
                 type="error",
                 error="No user messages found to send to Claude Code",
@@ -1106,8 +1119,15 @@ class ClaudeCodeBackend(LLMBackend):
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
+            log_backend_agent_message(
+                agent_id or "default",
+                "SEND",
+                {"system": workflow_system_prompt, "user": combined_query},
+                backend_name=self.get_provider_name()
+            )
             await client.query(combined_query)
         else:
+            log_stream_chunk("backend.claude_code", "error", "All user messages were empty", agent_id)
             yield StreamChunk(
                 type="error", error="All user messages were empty", source="claude_code"
             )
@@ -1125,12 +1145,26 @@ class ClaudeCodeBackend(LLMBackend):
                             accumulated_content += block.text
 
                             # Yield content chunk
+                            log_backend_agent_message(
+                                agent_id or "default",
+                                "RECV",
+                                {"content": block.text},
+                                backend_name=self.get_provider_name()
+                            )
+                            log_stream_chunk("backend.claude_code", "content", block.text, agent_id)
                             yield StreamChunk(
                                 type="content", content=block.text, source="claude_code"
                             )
 
                         elif isinstance(block, ToolUseBlock):
                             # Claude Code's builtin tool usage
+                            log_backend_activity(
+                                self.get_provider_name(),
+                                f"Builtin tool called: {block.name}",
+                                {"tool_id": block.id},
+                                agent_id=agent_id
+                            )
+                            log_stream_chunk("backend.claude_code", "tool_use", {"name": block.name, "input": block.input}, agent_id)
                             yield StreamChunk(
                                 type="content",
                                 content=f"🔧 {block.name}({block.input})",
@@ -1142,6 +1176,7 @@ class ClaudeCodeBackend(LLMBackend):
                             # Note: ToolResultBlock.tool_use_id references
                             # the original ToolUseBlock.id
                             status = "❌ Error" if block.is_error else "✅ Result"
+                            log_stream_chunk("backend.claude_code", "tool_result", {"is_error": block.is_error, "content": block.content}, agent_id)
                             yield StreamChunk(
                                 type="content",
                                 content=f"🔧 Tool {status}: {block.content}",
@@ -1153,6 +1188,7 @@ class ClaudeCodeBackend(LLMBackend):
                         accumulated_content
                     )
                     if workflow_tool_calls:
+                        log_stream_chunk("backend.claude_code", "tool_calls", workflow_tool_calls, agent_id)
                         yield StreamChunk(
                             type="tool_calls",
                             tool_calls=workflow_tool_calls,
@@ -1160,6 +1196,7 @@ class ClaudeCodeBackend(LLMBackend):
                         )
 
                     # Yield complete message
+                    log_stream_chunk("backend.claude_code", "complete_message", accumulated_content[:200] if len(accumulated_content) > 200 else accumulated_content, agent_id)
                     yield StreamChunk(
                         type="complete_message",
                         complete_message={
@@ -1172,6 +1209,7 @@ class ClaudeCodeBackend(LLMBackend):
                 elif isinstance(message, SystemMessage):
                     # System status updates
                     self._track_session_info(message=message)
+                    log_stream_chunk("backend.claude_code", "backend_status", {"subtype": message.subtype, "data": message.data}, agent_id)
                     yield StreamChunk(
                         type="backend_status",
                         status=message.subtype,
@@ -1187,6 +1225,7 @@ class ClaudeCodeBackend(LLMBackend):
                     self.update_token_usage_from_result_message(message)
 
                     # Yield completion
+                    log_stream_chunk("backend.claude_code", "complete_response", {"session_id": message.session_id, "cost_usd": message.total_cost_usd}, agent_id)
                     yield StreamChunk(
                         type="complete_response",
                         complete_message={
@@ -1200,6 +1239,7 @@ class ClaudeCodeBackend(LLMBackend):
                     )
 
                     # Final done signal
+                    log_stream_chunk("backend.claude_code", "done", None, agent_id)
                     yield StreamChunk(type="done", source="claude_code")
                     break
 
@@ -1212,6 +1252,7 @@ class ClaudeCodeBackend(LLMBackend):
             elif "exit code 1" in error_msg and "win32" in str(sys.platform):
                 error_msg += "\n\nThis may indicate missing git-bash on Windows. Please install Git Bash from https://git-scm.com/downloads/win"
 
+            log_stream_chunk("backend.claude_code", "error", error_msg, agent_id)
             yield StreamChunk(
                 type="error",
                 error=f"Claude Code streaming error: {str(error_msg)}",
