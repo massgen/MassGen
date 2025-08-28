@@ -22,6 +22,7 @@ Usage examples:
 import argparse
 import asyncio
 import json
+import logging
 import os
 import sys
 import yaml
@@ -81,6 +82,8 @@ class ConfigurationError(Exception):
     """Configuration error for CLI."""
 
     pass
+
+
 
 
 def load_config_file(config_path: str) -> Dict[str, Any]:
@@ -748,6 +751,9 @@ Environment Variables:
         "--no-display", action="store_true", help="Disable visual coordination display"
     )
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
+    parser.add_argument(
+        "--debug", action="store_true", help="Enable debug mode with verbose logging"
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group(
@@ -761,6 +767,14 @@ Environment Variables:
 
     args = parser.parse_args()
 
+    # Always setup logging (will save INFO to file, console output depends on debug flag)
+    from .logger_config import setup_logging, logger
+    setup_logging(debug=args.debug)
+    
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
+
     # Validate arguments
     if not args.backend:
         if not args.model and not args.config:
@@ -772,6 +786,9 @@ Environment Variables:
         # Load or create configuration
         if args.config:
             config = load_config_file(args.config)
+            if args.debug:
+                logger.debug(f"Loaded config from file: {args.config}")
+                logger.debug(f"Config content: {json.dumps(config, indent=2)}")
         else:
             model = args.model
             if args.backend:
@@ -788,6 +805,9 @@ Environment Variables:
                 system_message=system_message,
                 base_url=args.base_url,
             )
+            if args.debug:
+                logger.debug(f"Created simple config with backend: {backend}, model: {model}")
+                logger.debug(f"Config content: {json.dumps(config, indent=2)}")
 
         # Apply command-line overrides
         ui_config = config.get("ui", {})
@@ -795,6 +815,12 @@ Environment Variables:
             ui_config["display_type"] = "simple"
         if args.no_logs:
             ui_config["logging_enabled"] = False
+        if args.debug:
+            ui_config["debug"] = True
+            # Enable logging if debug is on
+            ui_config["logging_enabled"] = True
+            # # Force simple UI in debug mode
+            # ui_config["display_type"] = "simple"
 
         # Apply timeout overrides from CLI arguments
         timeout_settings = config.get("timeout_settings", {})
@@ -805,10 +831,17 @@ Environment Variables:
         config["timeout_settings"] = timeout_settings
 
         # Create agents
+        if args.debug:
+            from .logger_config import logger
+            logger.debug("Creating agents from config...")
         agents = create_agents_from_config(config)
 
         if not agents:
             raise ConfigurationError("No agents configured")
+        
+        if args.debug:
+            from .logger_config import logger
+            logger.debug(f"Created {len(agents)} agent(s): {list(agents.keys())}")
 
         # Create timeout config from settings and put it in kwargs
         timeout_settings = config.get("timeout_settings", {})

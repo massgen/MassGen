@@ -1,7 +1,7 @@
 """
 MassGen Coordination UI
 
-Main interface for coordinating agents with visual display and logging.
+Main interface for coordinating agents with visual display.
 """
 
 import time
@@ -11,18 +11,16 @@ from .displays.base_display import BaseDisplay
 from .displays.terminal_display import TerminalDisplay
 from .displays.simple_display import SimpleDisplay
 from .displays.rich_terminal_display import RichTerminalDisplay, is_rich_available
-from .logging.realtime_logger import RealtimeLogger
 
 
 class CoordinationUI:
-    """Main coordination interface with display and logging capabilities."""
+    """Main coordination interface with display capabilities."""
 
     def __init__(
         self,
         display: Optional[BaseDisplay] = None,
-        logger: Optional[RealtimeLogger] = None,
+        logger: Optional[Any] = None,
         display_type: str = "terminal",
-        logging_enabled: bool = True,
         enable_final_presentation: bool = False,
         **kwargs,
     ):
@@ -32,21 +30,12 @@ class CoordinationUI:
             display: Custom display instance (overrides display_type)
             logger: Custom logger instance
             display_type: Type of display ("terminal", "simple", "rich_terminal", "textual_terminal")
-            logging_enabled: Whether to enable real-time logging
             enable_final_presentation: Whether to ask winning agent to present final answer
             **kwargs: Additional configuration passed to display/logger
         """
         self.enable_final_presentation = enable_final_presentation
         self.display = display
-        # Filter kwargs for logger (only pass logger-specific params)
-        logger_kwargs = {
-            k: v for k, v in kwargs.items() if k in ["filename", "update_frequency"]
-        }
-        self.logger = (
-            logger
-            if logger is not None
-            else (RealtimeLogger(**logger_kwargs) if logging_enabled else None)
-        )
+        self.logger = logger
         self.display_type = display_type
         self.config = kwargs
 
@@ -136,7 +125,7 @@ class CoordinationUI:
     async def coordinate(
         self, orchestrator, question: str, agent_ids: Optional[List[str]] = None
     ) -> str:
-        """Coordinate agents with visual display and logging.
+        """Coordinate agents with visual display.
 
         Args:
             orchestrator: MassGen orchestrator instance
@@ -1229,7 +1218,7 @@ class CoordinationUI:
 async def coordinate_with_terminal_ui(
     orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
 ) -> str:
-    """Quick coordination with terminal UI and logging.
+    """Quick coordination with terminal UI.
 
     Args:
         orchestrator: MassGen orchestrator instance
@@ -1251,7 +1240,7 @@ async def coordinate_with_terminal_ui(
 async def coordinate_with_simple_ui(
     orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
 ) -> str:
-    """Quick coordination with simple UI and logging.
+    """Quick coordination with simple UI.
 
     Args:
         orchestrator: MassGen orchestrator instance
@@ -1272,7 +1261,7 @@ async def coordinate_with_simple_ui(
 async def coordinate_with_rich_ui(
     orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
 ) -> str:
-    """Quick coordination with rich terminal UI and logging.
+    """Quick coordination with rich terminal UI.
 
     Args:
         orchestrator: MassGen orchestrator instance

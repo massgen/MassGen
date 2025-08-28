@@ -8,6 +8,7 @@ Standalone implementation optimized for the standard Response API format (origin
 import os
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
 
 
 class ResponseBackend(LLMBackend):
@@ -101,6 +102,16 @@ class ResponseBackend(LLMBackend):
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI Response API."""
+        # Extract agent_id for logging
+        agent_id = kwargs.get('agent_id', None)
+        
+        log_backend_activity(
+            self.get_provider_name(),
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id
+        )
+        
         try:
             import openai
 
@@ -153,6 +164,16 @@ class ResponseBackend(LLMBackend):
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(provider_tools)
+            
+            # Log messages being sent
+            log_backend_agent_message(
+                agent_id or "default",
+                "SEND",
+                {"input": converted_messages[:3] if len(converted_messages) > 3 else converted_messages,
+                 "num_tools": len(api_params.get("tools", [])),
+                 "model": api_params.get("model")},
+                backend_name=self.get_provider_name()
+            )
 
             stream = await client.responses.create(**api_params)
 
@@ -165,11 +186,19 @@ class ResponseBackend(LLMBackend):
                         chunk, "delta"
                     ):
                         content += chunk.delta
+                        log_backend_agent_message(
+                            agent_id or "default",
+                            "RECV",
+                            {"content": chunk.delta},
+                            backend_name=self.get_provider_name()
+                        )
+                        log_stream_chunk("backend.response", "content", chunk.delta, agent_id)
                         yield StreamChunk(type="content", content=chunk.delta)
                     elif chunk.type == "response.reasoning_text.delta" and hasattr(
                         chunk, "delta"
                     ):
                         # Stream reasoning process as it develops
+                        log_stream_chunk("backend.response", "reasoning", chunk.delta, agent_id)
                         yield StreamChunk(
                             type="reasoning",
                             content=f"🧠 [Reasoning] {chunk.delta}",
@@ -180,6 +209,7 @@ class ResponseBackend(LLMBackend):
                     elif chunk.type == "response.reasoning_text.done":
                         # Complete reasoning step finished
                         reasoning_text = getattr(chunk, "text", "")
+                        log_stream_chunk("backend.response", "reasoning_done", reasoning_text, agent_id)
                         yield StreamChunk(
                             type="reasoning_done",
                             content=f"\n🧠 [Reasoning Complete]\n",
@@ -191,6 +221,7 @@ class ResponseBackend(LLMBackend):
                         chunk.type == "response.reasoning_summary_text.delta"
                         and hasattr(chunk, "delta")
                     ):
+                        log_stream_chunk("backend.response", "reasoning_summary", chunk.delta, agent_id)
                         # Stream reasoning summary as it develops
                         yield StreamChunk(
                             type="reasoning_summary",
@@ -202,6 +233,7 @@ class ResponseBackend(LLMBackend):
                     elif chunk.type == "response.reasoning_summary_text.done":
                         # Complete reasoning summary finished
                         summary_text = getattr(chunk, "text", "")
+                        log_stream_chunk("backend.response", "reasoning_summary_done", summary_text, agent_id)
                         yield StreamChunk(
                             type="reasoning_summary_done",
                             content=f"\n📋 [Reasoning Summary Complete]\n",
@@ -210,31 +242,37 @@ class ResponseBackend(LLMBackend):
                             summary_index=getattr(chunk, "summary_index", None),
                         )
                     elif chunk.type == "response.web_search_call.in_progress":
+                        log_stream_chunk("backend.response", "web_search", "Starting search", agent_id)
                         yield StreamChunk(
                             type="content",
                             content=f"\n🔍 [Provider Tool: Web Search] Starting search...",
                         )
                     elif chunk.type == "response.web_search_call.searching":
+                        log_stream_chunk("backend.response", "web_search", "Searching", agent_id)
                         yield StreamChunk(
                             type="content",
                             content=f"\n🔍 [Provider Tool: Web Search] Searching...",
                         )
                     elif chunk.type == "response.web_search_call.completed":
+                        log_stream_chunk("backend.response", "web_search", "Search completed", agent_id)
                         yield StreamChunk(
                             type="content",
                             content=f"\n✅ [Provider Tool: Web Search] Search completed",
                         )
                     elif chunk.type == "response.code_interpreter_call.in_progress":
+                        log_stream_chunk("backend.response", "code_interpreter", "Starting execution", agent_id)
                         yield StreamChunk(
                             type="content",
                             content=f"\n💻 [Provider Tool: Code Interpreter] Starting execution...",
                         )
                     elif chunk.type == "response.code_interpreter_call.executing":
+                        log_stream_chunk("backend.response", "code_interpreter", "Executing", agent_id)
                         yield StreamChunk(
                             type="content",
                             content=f"\n💻 [Provider Tool: Code Interpreter] Executing...",
                         )
                     elif chunk.type == "response.code_interpreter_call.completed":
+                        log_stream_chunk("backend.response", "code_interpreter", "Execution completed", agent_id)
                         yield StreamChunk(
                             type="content",
                             content=f"\n✅ [Provider Tool: Code Interpreter] Execution completed",
@@ -251,6 +289,7 @@ class ResponseBackend(LLMBackend):
                                 ):
                                     search_query = chunk.item.action["query"]
                                     if search_query:
+                                        log_stream_chunk("backend.response", "search_query", search_query, agent_id)
                                         yield StreamChunk(
                                             type="content",
                                             content=f"\n🔍 [Search Query] '{search_query}'\n",
@@ -261,6 +300,7 @@ class ResponseBackend(LLMBackend):
                             ):
                                 if hasattr(chunk.item, "code") and chunk.item.code:
                                     # Format code as a proper code block - don't assume language
+                                    log_stream_chunk("backend.response", "code_executed", chunk.item.code, agent_id)
                                     yield StreamChunk(
                                         type="content",
                                         content=f"💻 [Code Executed]\n```\n{chunk.item.code}\n```\n",
@@ -294,6 +334,7 @@ class ResponseBackend(LLMBackend):
                                                 output_text = str(output["data"])
 
                                         if output_text and output_text.strip():
+                                            log_stream_chunk("backend.response", "code_result", output_text.strip(), agent_id)
                                             yield StreamChunk(
                                                 type="content",
                                                 content=f"📊 [Result] {output_text.strip()}\n",
@@ -322,6 +363,7 @@ class ResponseBackend(LLMBackend):
                                         if outputs:
                                             content += f" → {outputs}"
 
+                                        log_stream_chunk("backend.response", "code_interpreter_result", content, agent_id)
                                         yield StreamChunk(
                                             type="content", content=content
                                         )
@@ -339,12 +381,13 @@ class ResponseBackend(LLMBackend):
                                                 content += (
                                                     f" → Found {len(results)} results"
                                                 )
-
+                                            log_stream_chunk("backend.response", "web_search_result", content, agent_id)
                                             yield StreamChunk(
                                                 type="tool", content=content
                                             )
 
                             # Yield the complete response for internal use
+                            log_stream_chunk("backend.response", "complete_response", "Response completed", agent_id)
                             yield StreamChunk(
                                 type="complete_response", response=response_dict
                             )
@@ -354,16 +397,20 @@ class ResponseBackend(LLMBackend):
                                 "role": "assistant",
                                 "content": content.strip(),
                             }
+                            log_stream_chunk("backend.response", "complete_message", complete_message, agent_id)
                             yield StreamChunk(
                                 type="complete_message",
                                 complete_message=complete_message,
                             )
 
                         # Signal completion
+                        log_stream_chunk("backend.response", "done", None, agent_id)
                         yield StreamChunk(type="done")
 
         except Exception as e:
-            yield StreamChunk(type="error", error=str(e))
+            error_msg = str(e)
+            log_stream_chunk("backend.response", "error", error_msg, agent_id)
+            yield StreamChunk(type="error", error=error_msg)
         finally:
             # Ensure the underlying HTTP client is properly closed to avoid event loop issues
             try:

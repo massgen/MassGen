@@ -31,6 +31,7 @@ import logging
 # Local imports
 
 from .base import LLMBackend, StreamChunk
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -304,11 +305,234 @@ class ChatCompletionsBackend(LLMBackend):
 
         # Fallback in case stream ends without finish_reason
         yield StreamChunk(type="done")
+    
+    async def handle_chat_completions_stream_with_logging(
+        self, stream, enable_web_search: bool = False, agent_id: Optional[str] = None
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Handle standard Chat Completions API streaming format with logging."""
+        import json
+
+        content = ""
+        current_tool_calls = {}
+        search_sources_used = 0
+        provider_name = self.get_provider_name()
+        log_prefix = f"backend.{provider_name.lower().replace(' ', '_')}"
+
+        async for chunk in stream:
+            try:
+                if hasattr(chunk, "choices") and chunk.choices:
+                    choice = chunk.choices[0]
+
+                    # Handle content delta
+                    if hasattr(choice, "delta") and choice.delta:
+                        delta = choice.delta
+
+                        # Plain text content
+                        if getattr(delta, "content", None):
+                            # handle reasoning first
+                            reasoning_active_key = f"_reasoning_active"
+                            if hasattr(self, reasoning_active_key):
+                                if getattr(self, reasoning_active_key) == True:
+                                    setattr(self, reasoning_active_key, False)
+                                    log_stream_chunk(log_prefix, "reasoning_done", "", agent_id)
+                                    yield StreamChunk(type="reasoning_done", content="")
+                            content_chunk = delta.content
+                            content += content_chunk
+                            log_backend_agent_message(
+                                agent_id or "default",
+                                "RECV",
+                                {"content": content_chunk},
+                                backend_name=provider_name
+                            )
+                            log_stream_chunk(log_prefix, "content", content_chunk, agent_id)
+                            yield StreamChunk(type="content", content=content_chunk)
+
+                        # Provider-specific reasoning/thinking streams (non-standard OpenAI fields)
+                        if getattr(delta, "reasoning_content", None):
+                            reasoning_active_key = f"_reasoning_active"
+                            setattr(self, reasoning_active_key, True)
+                            thinking_delta = getattr(delta, "reasoning_content")
+                            if thinking_delta:
+                                log_stream_chunk(log_prefix, "reasoning", thinking_delta, agent_id)
+                                yield StreamChunk(
+                                    type="reasoning",
+                                    content=thinking_delta,
+                                    reasoning_delta=thinking_delta,
+                                )
+
+                        # Tool calls streaming (OpenAI-style)
+                        if getattr(delta, "tool_calls", None):
+                            # handle reasoning first
+                            reasoning_active_key = f"_reasoning_active"
+                            if hasattr(self, reasoning_active_key):
+                                if getattr(self, reasoning_active_key) == True:
+                                    setattr(self, reasoning_active_key, False)
+                                    log_stream_chunk(log_prefix, "reasoning_done", "", agent_id)
+                                    yield StreamChunk(type="reasoning_done", content="")
+
+                            for tool_call_delta in delta.tool_calls:
+                                index = getattr(tool_call_delta, "index", 0)
+
+                                if index not in current_tool_calls:
+                                    current_tool_calls[index] = {
+                                        "id": "",
+                                        "function": {
+                                            "name": "",
+                                            "arguments": "",
+                                        },
+                                    }
+
+                                # Accumulate id
+                                if getattr(tool_call_delta, "id", None):
+                                    current_tool_calls[index]["id"] = tool_call_delta.id
+
+                                # Function name
+                                if (
+                                    hasattr(tool_call_delta, "function")
+                                    and tool_call_delta.function
+                                ):
+                                    if getattr(tool_call_delta.function, "name", None):
+                                        current_tool_calls[index]["function"][
+                                            "name"
+                                        ] = tool_call_delta.function.name
+
+                                    # Accumulate arguments (as string chunks)
+                                    if getattr(
+                                        tool_call_delta.function, "arguments", None
+                                    ):
+                                        current_tool_calls[index]["function"][
+                                            "arguments"
+                                        ] += tool_call_delta.function.arguments
+
+                    # Handle finish reason
+                    if getattr(choice, "finish_reason", None):
+                        # handle reasoning first
+                        reasoning_active_key = f"_reasoning_active"
+                        if hasattr(self, reasoning_active_key):
+                            if getattr(self, reasoning_active_key) == True:
+                                setattr(self, reasoning_active_key, False)
+                                log_stream_chunk(log_prefix, "reasoning_done", "", agent_id)
+                                yield StreamChunk(type="reasoning_done", content="")
+
+                        if choice.finish_reason == "tool_calls" and current_tool_calls:
+
+                            final_tool_calls = []
+
+                            for index in sorted(current_tool_calls.keys()):
+                                call = current_tool_calls[index]
+                                function_name = call["function"]["name"]
+                                arguments_str = call["function"]["arguments"]
+
+                                try:
+                                    arguments_obj = (
+                                        json.loads(arguments_str)
+                                        if arguments_str.strip()
+                                        else {}
+                                    )
+                                except json.JSONDecodeError:
+                                    arguments_obj = {}
+
+                                final_tool_calls.append(
+                                    {
+                                        "id": call["id"] or f"toolcall_{index}",
+                                        "type": "function",
+                                        "function": {
+                                            "name": function_name,
+                                            "arguments": arguments_obj,
+                                        },
+                                    }
+                                )
+
+                            log_stream_chunk(log_prefix, "tool_calls", final_tool_calls, agent_id)
+                            yield StreamChunk(
+                                type="tool_calls", tool_calls=final_tool_calls
+                            )
+
+                            complete_message = {
+                                "role": "assistant",
+                                "content": content.strip(),
+                                "tool_calls": final_tool_calls,
+                            }
+
+                            yield StreamChunk(
+                                type="complete_message",
+                                complete_message=complete_message,
+                            )
+                            log_stream_chunk(log_prefix, "done", None, agent_id)
+                            yield StreamChunk(type="done")
+                            return
+
+                        elif choice.finish_reason in ["stop", "length"]:
+                            if search_sources_used > 0:
+                                search_complete_msg = f"\n✅ [Live Search Complete] Used {search_sources_used} sources\n"
+                                log_stream_chunk(log_prefix, "content", search_complete_msg, agent_id)
+                                yield StreamChunk(
+                                    type="content",
+                                    content=search_complete_msg,
+                                )
+
+                            # Handle citations if present
+                            if hasattr(chunk, "citations") and chunk.citations:
+                                if enable_web_search:
+                                    citation_text = "\n📚 **Citations:**\n"
+                                    for i, citation in enumerate(chunk.citations, 1):
+                                        citation_text += f"{i}. {citation}\n"
+                                    log_stream_chunk(log_prefix, "content", citation_text, agent_id)
+                                    yield StreamChunk(
+                                        type="content", content=citation_text
+                                    )
+
+                            # Return final message
+                            complete_message = {
+                                "role": "assistant",
+                                "content": content.strip(),
+                            }
+                            yield StreamChunk(
+                                type="complete_message",
+                                complete_message=complete_message,
+                            )
+                            log_stream_chunk(log_prefix, "done", None, agent_id)
+                            yield StreamChunk(type="done")
+                            return
+
+                # Optionally handle usage metadata
+                if hasattr(chunk, "usage") and chunk.usage:
+                    if getattr(chunk.usage, "num_sources_used", 0) > 0:
+                        search_sources_used = chunk.usage.num_sources_used
+                        if enable_web_search:
+                            search_msg = f"\n📊 [Live Search] Using {search_sources_used} sources for real-time data\n"
+                            log_stream_chunk(log_prefix, "content", search_msg, agent_id)
+                            yield StreamChunk(
+                                type="content",
+                                content=search_msg,
+                            )
+
+            except Exception as chunk_error:
+                error_msg = f"Chunk processing error: {chunk_error}"
+                log_stream_chunk(log_prefix, "error", error_msg, agent_id)
+                yield StreamChunk(
+                    type="error", error=error_msg
+                )
+                continue
+
+        # Fallback in case stream ends without finish_reason
+        log_stream_chunk(log_prefix, "done", None, agent_id)
+        yield StreamChunk(type="done")
 
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI-compatible Chat Completions API."""
+        # Extract agent_id for logging
+        agent_id = kwargs.get('agent_id', None)
+        
+        log_backend_activity(
+            self.get_provider_name(),
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id
+        )
+        
         try:
             import openai
 
@@ -384,20 +608,28 @@ class ChatCompletionsBackend(LLMBackend):
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(provider_tools)
+            
+            # Log messages being sent
+            log_backend_agent_message(
+                agent_id or "default",
+                "SEND",
+                {"messages": api_params["messages"], "tools": len(api_params.get("tools", [])) if api_params.get("tools") else 0},
+                backend_name=self.get_provider_name()
+            )
 
             # create stream
             stream = await client.chat.completions.create(**api_params)
 
-            # Use existing streaming handler with enhanced error handling
-            async for chunk in self.handle_chat_completions_stream(
-                stream, enable_web_search
+            # Use existing streaming handler with enhanced error handling and logging
+            async for chunk in self.handle_chat_completions_stream_with_logging(
+                stream, enable_web_search, agent_id
             ):
                 yield chunk
 
         except Exception as e:
-            yield StreamChunk(
-                type="error", error=f"Chat Completions API error: {str(e)}"
-            )
+            error_msg = f"Chat Completions API error: {str(e)}"
+            log_stream_chunk(f"backend.{self.get_provider_name().lower().replace(' ', '_')}", "error", error_msg, agent_id)
+            yield StreamChunk(type="error", error=error_msg)
         finally:
             # Ensure the underlying HTTP client is properly closed to avoid event loop issues
             try:

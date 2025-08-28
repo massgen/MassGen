@@ -15,6 +15,5 @@ TODO - Missing Frontend Features from v0.0.1:
 
 from .coordination_ui import CoordinationUI
 from .displays import TerminalDisplay, SimpleDisplay
-from .logging import RealtimeLogger
 
-__all__ = ["CoordinationUI", "TerminalDisplay", "SimpleDisplay", "RealtimeLogger"]
+__all__ = ["CoordinationUI", "TerminalDisplay", "SimpleDisplay"]

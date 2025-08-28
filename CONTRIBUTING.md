@@ -14,45 +14,52 @@ massgen/
 ├── chat_agent.py            # Chat agent implementation
 ├── agent_config.py          # Agent configuration management
 ├── message_templates.py     # Message template system
+├── logger_config.py         # Logging configuration
 ├── utils.py                 # Helper functions and model registry
 ├── backend/                 # Model-specific implementations
 │   ├── __init__.py
 │   ├── base.py             # Base backend interface
+│   ├── cli_base.py         # CLI backend base class
 │   ├── chat_completions.py # Chat completion utilities
 │   ├── response.py         # Response handling
+│   ├── azure_openai.py     # Azure OpenAI backend
 │   ├── claude.py           # Anthropic Claude backend
 │   ├── claude_code.py      # Claude Code CLI backend
-│   ├── cli_base.py         # Base CLI backend interface
 │   ├── gemini.py           # Google Gemini backend
 │   ├── grok.py             # xAI Grok backend
-│   ├── azure_openai.py     # Azure OpenAI backend
-│   ├── lmstudio.py         # LMStudio backend
-│   └── *.md                # Backend documentation files
+│   └── lmstudio.py         # LMStudio backend
 ├── frontend/               # User interface components
 │   ├── __init__.py
-│   ├── coordination_ui.py  # Main UI coordination
-│   ├── displays/           # Display implementations
-│   │   ├── __init__.py
-│   │   ├── base_display.py
-│   │   ├── rich_terminal_display.py
-│   │   ├── simple_display.py
-│   │   └── terminal_display.py
-│   └── logging/            # Logging system
-│       ├── __init__.py
-│       └── realtime_logger.py
-├── configs/                # Configuration files
-│   ├── *.yaml             # 38+ agent configuration templates
-│   └── *.md               # Configuration documentation
-├── tests/                  # Test suite
 │   ├── __init__.py
-│   ├── test_*.py          # Unit and integration tests
-│   ├── *.sh               # Test scripts
+│   ├── coordination_ui.py  # Main UI coordination
+│   └── displays/           # Display implementations
+│       ├── __init__.py
+│       ├── base_display.py
+│       ├── rich_terminal_display.py
+│       ├── simple_display.py
+│       └── terminal_display.py
+├── configs/                # Configuration files
+│   ├── *.yaml             # Various agent configurations
+│   └── *.md               # Documentation (MCP setup guides, etc.)
+├── tests/                  # Test files
+│   ├── __init__.py
+│   ├── test_*.py          # Test implementations
 │   └── *.md               # Test documentation
-└── v1/                     # Legacy v1 implementation
-    ├── README.md
-    ├── *.py               # Legacy modules
-    ├── backends/          # Legacy backends
-    └── examples/          # Legacy configuration examples
+└── v1/                     # Legacy version 1 code
+    ├── __init__.py
+    ├── agent.py
+    ├── agents.py
+    ├── backends/
+    ├── cli.py
+    ├── config.py
+    ├── examples/
+    ├── logging.py
+    ├── main.py
+    ├── orchestrator.py
+    ├── streaming_display.py
+    ├── tools.py
+    ├── types.py
+    └── utils.py
 ```
 
 ### Adding New Model Backends
