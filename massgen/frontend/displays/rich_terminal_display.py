@@ -2557,6 +2557,11 @@ class RichTerminalDisplay(TerminalDisplay):
                 content = getattr(chunk, "content", "") or ""
                 chunk_type = getattr(chunk, "type", "")
                 source = getattr(chunk, "source", selected_agent)
+                
+                # Skip debug chunks from display but still log them
+                if chunk_type == "debug":
+                    # Debug info is logged elsewhere but not displayed in final presentation
+                    continue
 
                 if content:
                     # Ensure content is a string
