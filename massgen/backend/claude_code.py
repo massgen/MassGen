@@ -552,7 +552,7 @@ class ClaudeCodeBackend(LLMBackend):
                     if name == "new_answer":
                         system_parts.append(
                             '    Usage: {"tool_name": "new_answer", '
-                            '"arguments": {"content": "your improved answer. If any builtin tools like search or code execution were used, include how they are used here."}}'
+                            '"arguments": {"content": "your improved answer. If any builtin tools were used, mention how they are used here."}}'
                         )
                     elif name == "vote":
                         # Extract valid agent IDs from enum if available
