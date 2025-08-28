@@ -61,6 +61,9 @@ from claude_code_sdk import (  # type: ignore
     ToolUseBlock,
     ToolResultBlock,
 )
+import sys
+import warnings
+import atexit
 
 
 from .base import LLMBackend, StreamChunk
@@ -102,11 +105,171 @@ class ClaudeCodeBackend(LLMBackend):
         if self.api_key:
             os.environ["ANTHROPIC_API_KEY"] = self.api_key
 
+        # Set git-bash path for Windows compatibility
+        if sys.platform == "win32" and not os.environ.get("CLAUDE_CODE_GIT_BASH_PATH"):
+            import shutil
+            bash_path = shutil.which("bash")
+            if bash_path:
+                os.environ["CLAUDE_CODE_GIT_BASH_PATH"] = bash_path
+                print(f"[ClaudeCodeBackend] Set CLAUDE_CODE_GIT_BASH_PATH={bash_path}")
+
+        # Comprehensive Windows subprocess cleanup warning suppression
+        if sys.platform == "win32":
+            self._setup_windows_subprocess_cleanup_suppression()
+
         # Single ClaudeSDKClient for this backend instance
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
         self._temporary_cwd: Optional[str] = None  # Temporary workspace for context sharing
+
+        self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
+
+    def _setup_windows_subprocess_cleanup_suppression(self):
+        """Comprehensive Windows subprocess cleanup warning suppression."""
+        # All warning filters
+        warnings.filterwarnings("ignore", message="unclosed transport")
+        warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
+        warnings.filterwarnings("ignore", message="Exception ignored in")
+        warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
+        warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
+        warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
+        warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
+
+        # Patch asyncio transport destructors to be silent
+        try:
+            import asyncio.base_subprocess
+            import asyncio.proactor_events
+
+            # Store originals
+            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, '__del__', None)
+            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, '__del__', None)
+
+            def silent_subprocess_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_subprocess_del:
+                            original_subprocess_del(self)
+                except Exception:
+                    pass
+
+            def silent_pipe_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_pipe_del:
+                            original_pipe_del(self)
+                except Exception:
+                    pass
+
+            # Apply patches
+            if original_subprocess_del:
+                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
+            if original_pipe_del:
+                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
+        except Exception:
+            pass  # If patching fails, fall back to warning filters only
+
+        # Setup exit handler for stderr suppression
+        original_stderr = sys.stderr
+
+        def suppress_exit_warnings():
+            try:
+                sys.stderr = open(os.devnull, 'w')
+                import time
+                time.sleep(0.3)
+            except Exception:
+                pass
+            finally:
+                try:
+                    if sys.stderr != original_stderr:
+                        sys.stderr.close()
+                    sys.stderr = original_stderr
+                except Exception:
+                    pass
+
+        atexit.register(suppress_exit_warnings)
+
+
+        self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
+
+    def _setup_windows_subprocess_cleanup_suppression(self):
+        """Comprehensive Windows subprocess cleanup warning suppression."""
+        # All warning filters
+        warnings.filterwarnings("ignore", message="unclosed transport")
+        warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
+        warnings.filterwarnings("ignore", message="Exception ignored in")
+        warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
+        warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
+        warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
+        warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
+
+        # Patch asyncio transport destructors to be silent
+        try:
+            import asyncio.base_subprocess
+            import asyncio.proactor_events
+
+            # Store originals
+            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, '__del__', None)
+            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, '__del__', None)
+
+            def silent_subprocess_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_subprocess_del:
+                            original_subprocess_del(self)
+                except Exception:
+                    pass
+
+            def silent_pipe_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_pipe_del:
+                            original_pipe_del(self)
+                except Exception:
+                    pass
+
+            # Apply patches
+            if original_subprocess_del:
+                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
+            if original_pipe_del:
+                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
+        except Exception:
+            pass  # If patching fails, fall back to warning filters only
+
+        # Setup exit handler for stderr suppression
+        original_stderr = sys.stderr
+
+        def suppress_exit_warnings():
+            try:
+                sys.stderr = open(os.devnull, 'w')
+                import time
+                time.sleep(0.3)
+            except Exception:
+                pass
+            finally:
+                try:
+                    if sys.stderr != original_stderr:
+                        sys.stderr.close()
+                    sys.stderr = original_stderr
+                except Exception:
+                    pass
+
+        atexit.register(suppress_exit_warnings)
+
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -818,22 +981,85 @@ class ClaudeCodeBackend(LLMBackend):
             workflow_system_prompt = self._build_system_prompt_with_workflow_tools(
                 tools or [], system_content
             )
-            # Handle different system prompt mode
-            if all_params.get("system_prompt"):
-                # Create client with system_prompt
-                client = self.create_client(
-                    **{**all_params, "system_prompt": workflow_system_prompt}
-                )
-            else:
-                # Create client with the enhanced system prompt
-                client = self.create_client(
-                    **{**all_params, "append_system_prompt": workflow_system_prompt}
-                )
 
+            # Windows-specific handling: detect complex prompts that cause subprocess hang
+            if sys.platform == "win32" and len(workflow_system_prompt) > 200:
+                # Windows with complex prompt: use post-connection delivery to avoid hang
+                print(f"[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
+                clean_params = {k: v for k, v in all_params.items() 
+                                if k not in ["system_prompt", "append_system_prompt"]}
+                client = self.create_client(**clean_params)
+                self._pending_system_prompt = workflow_system_prompt
+
+            else:
+                    # Original approach for Mac/Linux and Windows with simple prompts
+                try:
+                    # Handle different system prompt mode
+                    if all_params.get("system_prompt"):
+                        # Create client with system_prompt
+                        client = self.create_client(
+                            **{**all_params, "system_prompt": workflow_system_prompt}
+                        )
+                    else:
+                        # Create client with the enhanced system prompt
+                        client = self.create_client(
+                            **{**all_params, "append_system_prompt": workflow_system_prompt}
+                        )
+                    self._pending_system_prompt = None
+
+                except Exception as create_error:
+                    # Fallback for unexpected failures
+                    if sys.platform == "win32":
+                        clean_params = {k: v for k, v in all_params.items() 
+                                        if k not in ["system_prompt", "append_system_prompt"]}
+                        client = self.create_client(**clean_params)
+                        self._pending_system_prompt = workflow_system_prompt
+                    else:
+                        # On Mac/Linux, re-raise the error since this shouldn't happen
+                        raise create_error
+                    
 
         # Connect client if not already connected
         if not client._transport:
-            await client.connect()
+            try:
+                await client.connect()
+
+                # If we have a pending system prompt, deliver it at system level using /system command
+                if hasattr(self, '_pending_system_prompt') and self._pending_system_prompt:
+                    try:
+                        # Use Claude Code's native /system command for proper system-level delivery
+                        system_command = f"/system {self._pending_system_prompt}"
+                        await client.query(system_command)
+
+                        # Consume the system response
+                        async for response in client.receive_response():
+                            if hasattr(response, 'subtype') and response.subtype == 'init':
+                                # This is the system initialization response
+                                break
+
+                        yield StreamChunk(
+                            type="content",
+                            content=f"[SYSTEM] Applied system instructions at system level\n",
+                            source="claude_code"
+                        )
+
+                        # Clear the pending prompt
+                        self._pending_system_prompt = None
+
+                    except Exception as sys_e:
+                        yield StreamChunk(
+                            type="content",
+                            content=f"[SYSTEM] Warning: System-level delivery failed: {str(sys_e)}\n",
+                            source="claude_code"
+                        )
+
+            except Exception as e:
+                yield StreamChunk(
+                    type="error",
+                    error=f"Failed to connect to Claude Code: {str(e)}",
+                    source="claude_code"
+                )
+                return  
 
         # Log backend inputs when we have workflow_system_prompt available
         if 'workflow_system_prompt' in locals():
@@ -978,9 +1204,17 @@ class ClaudeCodeBackend(LLMBackend):
                     break
 
         except Exception as e:
+            error_msg = str(e)
+
+            # Provide helpful Windows-specific guidance
+            if "git-bash" in error_msg.lower() or "bash.exe" in error_msg.lower():
+                error_msg += "\n\nWindows Setup Required:\n1. Install Git Bash: https://git-scm.com/downloads/win\n2. Ensure git-bash is in PATH, or set: CLAUDE_CODE_GIT_BASH_PATH=C:\\Program Files\\Git\\bin\\bash.exe"
+            elif "exit code 1" in error_msg and "win32" in str(sys.platform):
+                error_msg += "\n\nThis may indicate missing git-bash on Windows. Please install Git Bash from https://git-scm.com/downloads/win"
+
             yield StreamChunk(
                 type="error",
-                error=f"Claude Code streaming error: {str(e)}",
+                error=f"Claude Code streaming error: {str(error_msg)}",
                 source="claude_code",
             )
 
