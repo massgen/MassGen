@@ -5,6 +5,35 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.13] - 2025-08-28
+
+### Added
+- **Unified Logging System**: Better logging infrastructure for better debugging and monitoring
+  - New centralized `logger_config.py` with colored console output and file logging
+  - Debug mode support via `--debug` CLI flag for verbose logging
+  - Consistent logging format across all backends, including Claude, Gemini, Grok, Azure OpenAI, and other providers
+  - Color-coded log levels for better visibility (DEBUG: cyan, INFO: green)
+  
+- **Windows Platform Support**: Enhanced cross-platform compatibility
+  - Windows-specific fixes for terminal display and color output
+  - Improved path handling for Windows file systems
+  - Better process management on Windows platform
+
+### Changed
+- **Frontend Improvements**: Refined display
+  - Enhanced rich terminal display formatting to not show debug info in the final presentation
+
+- **Documentation Updates**: Improved project documentation
+  - Updated CONTRIBUTING.md with better guidelines
+  - Enhanced README with logging configuration details
+  - Renamed roadmap from v0.0.13 to v0.0.14 for future planning
+
+### Technical Details
+- **Commits**: 35+ commits including new logging system and Windows support
+- **Files Modified**: 24+ files across backend, frontend, logging, and CLI modules
+- **New Features**: Unified logging system with debug mode, Windows platform support
+- **Contributors**: @qidanrui @sonichi @Henry-811 @JeffreyCh0 @voidcenter and the MassGen team
+
 ## [0.0.12] - 2025-08-27
 
 ### Added
