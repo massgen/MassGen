@@ -13,7 +13,7 @@ uv run python -m massgen.cli --config massgen/configs/claude_code_context_sharin
 **Prompt:**  
 ```
 I want to create a website for the following conference:
->> 1) Conference Name: The Thirty-Ninth Annual Conference on Neural Information Processing Systems (NEURIPSS2025)
+>> 1) Conference Name: The Thirty-Ninth Annual Conference on Neural Information Processing Systems (NeurIPS2025)
 >> 2) Date: Tuesday Dec 2nd through Sunday Dec 7th, 2025
 >> 3) Location: San Diego Convention Center, California, United States
 >> 4) Organizer: Neural Information Processing Systems Foundation
@@ -52,10 +52,12 @@ This case study showcases MassGen's **v0.0.12 context sharing enhancement** for 
 - **Temporary Workspaces**: `claude_code_temp_workspaces/` - Cross-agent file access
 
 **Context Sharing Mechanism:**
-- Agent 1 created the initial website implementation
-- MassGen automatically captured Agent 1's workspace snapshot
-- Agent 2 received access to Agent 1's work via temporary workspace mapping
-- Agent 2 could read, analyze, and build upon Agent 1's implementation
+  - **Both agents** initially worked in parallel in their respective workspaces
+  - **MassGen** automatically captured workspace snapshots from both agents
+  - **Agent 1** accessed Agent 2's work via `claude_code_temp_workspaces\claude_code_agent2\` to review their implementation
+  - **Agent 2** received access to Agent 1's work via temporary workspace mapping (`claude_code_temp_workspaces/claude_code_agent2/agent1/`)
+  - **Context sharing was bidirectional** - both agents could read, analyze, and compare each other's implementations
+  - This enabled informed decision-making during the voting phase as agents could directly examine competing solutions
 
 ### Technical Development Approaches
 
@@ -191,6 +193,7 @@ claude_code_temp_workspaces/
 ```
 
 **Cross-Agent Visibility:**
+- Agent 1 could read and analyze Agent 2's complete implementation
 - Agent 2 could read and analyze Agent 1's complete implementation
 - File-level granularity enabled detailed code review and comparison
 - Anonymous agent mapping (`agent1`, `agent2`) maintained privacy
@@ -200,11 +203,11 @@ claude_code_temp_workspaces/
 Both agents demonstrated excellent task breakdown and tracking:
 
 **Agent 1 Task Management:**
-1. ✅ Create main HTML structure for NIPS 2025 conference website
-2. ✅ Design CSS stylesheet with professional academic styling  
-3. ✅ Add conference sections: header, about, program, venue, registration, speakers
-4. ✅ Include responsive design for mobile/desktop viewing
-5. ✅ Test the website structure and styling
+- Create main HTML structure for NIPS 2025 conference website
+- Design CSS stylesheet with professional academic styling  
+- Add conference sections: header, about, program, venue, registration, speakers
+- Include responsive design for mobile/desktop viewing
+- Test the website structure and styling
 
 **Agent 2 Integration Process:**
 - Successfully analyzed existing work through context sharing
