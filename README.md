@@ -304,6 +304,10 @@ uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Sear
 # Hybrid local and API-based models (NEW in v0.0.7)
 uv run python -m massgen.cli --config two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
 uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distributed system architecture"
+
+# Debug mode for troubleshooting (NEW in v0.0.13)
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest --debug "What is machine learning?"
+uv run python -m massgen.cli --config three_agents_default.yaml --debug "Debug multi-agent coordination"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
@@ -320,6 +324,7 @@ See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md)
 | `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
 | `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
 | `--no-logs`        | Disable real-time logging.|
+| `--debug`          | Enable debug mode with verbose logging (NEW in v0.0.13). Shows detailed orchestrator activities, agent messages, backend operations, and tool calls. Debug logs are saved to `agent_outputs/log_{time}/massgen_debug.log`. |
 | `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
 
 #### Configuration File Format
@@ -684,15 +689,27 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.12)
+### Recent Achievements (v0.0.13)
 
-**🚀 Enhanced Claude Code Agent Context Sharing**
-- **Claude Agent Context Sharing**: Claude Code agents now share workspace context by maintaining snapshots and temporary workspace in orchestrator's side, enabling agents to build upon each other's work more effectively
+**🔧 Unified Logging System**
+- **Centralized Logging Infrastructure**: New `logger_config.py` with colored console output and file logging for better debugging and monitoring
+- **Debug Mode Support**: Added `--debug` CLI flag for verbose logging with detailed orchestrator activities, agent messages, and backend operations
+- **Consistent Format**: Unified logging format across all backends with color-coded log levels
 
-**📚 Documentation Improvement**
-- **Enhanced README**: Updated with current features and improved setup instructions
+**🪟 Windows Platform Support**
+- **Cross-Platform Compatibility**: Enhanced Windows-specific fixes for terminal display and color output
+- **Path Handling**: Improved file system path handling for Windows environments
+- **Process Management**: Better process management on Windows platform
 
-### Previous Achievements (v0.0.3-v0.0.11)
+**🎨 Frontend & Documentation Updates**
+- **Enhanced Display**: Refined rich terminal display formatting that excludes debug info from final presentation
+- **Documentation**: Updated CONTRIBUTING.md guidelines and enhanced README with logging configuration details
+
+### Previous Achievements (v0.0.3-v0.0.12)
+
+✅ **Enhanced Claude Code Agent Context Sharing (v0.0.12)**: Claude Code agents now share workspace context by maintaining snapshots and temporary workspace in orchestrator's side
+
+✅ **Documentation Improvement (v0.0.12)**: Updated README with current features and improved setup instructions
 
 ✅ **Custom System Messages (v0.0.11)**: Enhanced system message configuration and preservation with backend-specific system prompt customization
 
@@ -727,16 +744,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.13 Roadmap
+### v0.0.14 Roadmap
 
-Version 0.0.13 will focus on **Enhanced Logging System**, **Windows Platform Support**, and **Bug Fixes**. Key planned features include:
+Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling seamless connection to external tools and services through the MCP standard. Key enhancements include:
 
-- **Advanced Logging System**: 📊 Enhanced session logging, better debugging capabilities, and improved log management
-- **Windows Platform Support**: 🪟 Full Windows compatibility with platform-specific implementations and cross-platform tools
-- **Bug Fixes & Minor Improvements**: 🐛 Address various minor issues, CLI parameter handling, and backend stability improvements
-- **Enhanced Multi-Agent Synthesis**: 🤝 Enable agents to revise and improve their answers based on seeing other agents' work
+- **MCP Core Infrastructure** (Required): 🔌 Official MCP library integration with multi-server support
+- **MCP Tools Ecosystem** (Required): 🛠️ Tool discovery, execution, and management
+- **Enhanced Security & Reliability** (Required): 🔒 Command sanitization, circuit breakers, and fault tolerance
+- **MCP Server Examples** (Required): 📚 Discord, Twitter/X, and custom MCP server integrations
 
-For detailed milestones and technical specifications, see the [full v0.0.13 roadmap](ROADMAP_v0.0.13.md).
+For detailed milestones and technical specifications, see the [full v0.0.14 roadmap](ROADMAP_v0.0.14.md).
 
 ---
 
