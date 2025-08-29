@@ -65,7 +65,7 @@ from .orchestrator import Orchestrator, create_orchestrator
 from .message_templates import MessageTemplates, get_templates
 from .agent_config import AgentConfig
 
-__version__ = "0.0.11"
+__version__ = "0.0.13"
 __author__ = "MassGen Contributors"
 
 __all__ = [
