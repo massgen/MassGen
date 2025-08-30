@@ -148,6 +148,9 @@ class Orchestrator(ChatAgent):
         if snapshot_storage:
             self._snapshot_storage = snapshot_storage
             snapshot_path = Path(self._snapshot_storage)
+            # Clean existing directory if it exists and has contents
+            if snapshot_path.exists() and any(snapshot_path.iterdir()):
+                shutil.rmtree(snapshot_path)
             snapshot_path.mkdir(parents=True, exist_ok=True)
             # Create directories for each claude_code agent
             for agent_id, agent in self.agents.items():
@@ -161,6 +164,9 @@ class Orchestrator(ChatAgent):
         if agent_temporary_workspace:
             self._agent_temporary_workspace = agent_temporary_workspace
             workspace_path = Path(self._agent_temporary_workspace)
+            # Clean existing directory if it exists and has contents
+            if workspace_path.exists() and any(workspace_path.iterdir()):
+                shutil.rmtree(workspace_path)
             workspace_path.mkdir(parents=True, exist_ok=True)
             # Create workspace directories for each claude_code agent
             for agent_id, agent in self.agents.items():

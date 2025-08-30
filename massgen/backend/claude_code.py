@@ -47,6 +47,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import uuid
 from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
@@ -123,6 +124,28 @@ class ClaudeCodeBackend(LLMBackend):
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
         self._temporary_cwd: Optional[str] = None  # Temporary workspace for context sharing
+
+        # Handle initial cwd if provided - create directory and clear existing files
+        cwd_path = kwargs.get("cwd")
+        if cwd_path:
+            cwd_dir = Path(cwd_path)
+            if not cwd_dir.is_absolute():
+                # Convert relative path to absolute path
+                cwd_dir = cwd_dir.resolve()
+
+            # Clear existing files if directory exists
+            if cwd_dir.exists() and cwd_dir.is_dir():
+                for item in cwd_dir.iterdir():
+                    if item.is_file():
+                        item.unlink()
+                    elif item.is_dir():
+                        shutil.rmtree(item)
+
+            # Create directory if it doesn't exist
+            cwd_dir.mkdir(parents=True, exist_ok=True)
+
+            # Store the validated absolute path
+            self._cwd = str(cwd_dir)
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
 
@@ -902,12 +925,13 @@ class ClaudeCodeBackend(LLMBackend):
                 # Convert relative path to absolute path
                 cwd_dir = cwd_dir.resolve()
 
-            # Create directory if it doesn't exist
+            # Create directory if it doesn't exist (files already cleared in __init__ if needed)
             cwd_dir.mkdir(parents=True, exist_ok=True)
 
             # Ensure we return a valid absolute path
             cwd_option = cwd_dir
-        self._cwd = str(cwd_option)
+            # Update the stored cwd path
+            self._cwd = str(cwd_option)
 
         return ClaudeCodeOptions(
             # No model set by default - let Claude Code decide
