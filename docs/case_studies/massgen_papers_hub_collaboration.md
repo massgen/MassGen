@@ -190,17 +190,20 @@ We observe that the final presentation retained Agent 1's feature card layout bu
 
 ### Paper Cards and Links
 
-We observe that the final presentation uses Agent 1's paper card structure and incorporates Agent 2's direct arXiv link feature. The final synthesis combines papers from both agents: Agent 1 contributed 7 papers while Agent 2 contributed 3 unique papers, all targeting MassGen and multi-agent scaling systems with valid arXiv links. Here are the snapshots:
+We observe that the final presentation uses Agent 1's paper card structure and incorporates Agent 2's direct arXiv link feature. The final synthesis combines papers from both agents: 1 paper found by both agents, 3 unique papers from Agent 1, 2 unique papers from Agent 2, plus 4 new papers added in the final synthesis, all targeting MassGen and multi-agent scaling systems with valid arXiv links. Here are the snapshots:
 
 *Agent 1: Numbered cards with tags, no direct paper links*
+*Papers Contributed to Final: Number 1, 3, 5, 6*
 
 <img src="screenshots/paper_search_web/papers_agent1_original.png" width="800"/>
 
 *Agent 2: Numbered cards with embedded arXiv links and detailed descriptions*
+*Papers Contributed to Final: Number 1, 5, 10*
 
 <img src="screenshots/paper_search_web/papers_agent2_original.png" width="800"/>
 
 *Final: Agent 1's numbered cards style + Agent 2's arXiv links*
+*New Papers: Number 2, 6, 9, 10*
 
 <img src="screenshots/paper_search_web/papers_final_synthesis.png" width="800"/>
 
@@ -298,15 +301,15 @@ The final presentation demonstrates **intelligent decision-making** in synthesis
 
 **10 Papers Actually Delivered in Final Presentation:**
 1. Multi-Agent Collaboration Mechanisms: A Survey of LLMs (2025) - *From both agents*
-2. MASS: Scaling Large Language Model-based Multi-Agent Collaboration - *From Agent 1*
+2. MASS: Scaling Large Language Model-based Multi-Agent Collaboration - *New in final*
 3. TradingAgents: Multi-Agents LLM Financial Trading Framework - *From Agent 1*
-4. Position: Towards a Responsible LLM-empowered Multi-Agent Systems (2025) - *From Agent 2*
+4. Position: Towards a Responsible LLM-empowered Multi-Agent Systems - *From Agent 1*
 5. AgentScope: A Flexible yet Robust Multi-Agent Platform - *From Agent 2*
-6. LLM-Based Multi-Agent Systems for Software Engineering (ACM TOSEM) - *From Agent 1*
+6. LLM-Based Multi-Agent Systems for Software Engineering - *New in final*
 7. Self-Organized Agents: Ultra Large-Scale Code Generation - *From Agent 1*
-8. Large Language Model based Multi-Agents: A Survey of Progress and Challenges - *From Agent 1*
-9. Communication-Centric Multi-Agent Systems - *From Agent 2*
-10. Multi-Agent LLM Systems with Heterogeneous Models - *From Agent 1*
+8. Large Language Model based Multi-Agents: A Survey of Progress and Challenges - *From Agent 2*
+9. Communication-Centric Multi-Agent Systems - *New in final*
+10. Multi-Agent LLM Systems with Heterogeneous Models - *New in final*
 
 ---
 
