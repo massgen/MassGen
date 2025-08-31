@@ -331,7 +331,7 @@ We observe that the navigation evolved from Agent 1's basic structure through Ag
 *Agent 1 Initial Navigation:*
 ![Agent 1 Initial Nav](../../clean_sections/nav_agent1_initial.png)
 
-*Agent 2 Navigation:*
+*Agent 2 Initial Navigation:*
 ![Agent 2 Nav](../../clean_sections/nav_agent2.png)
 
 *Final Presentation Navigation (Collaborative Synthesis):*
@@ -342,7 +342,7 @@ We observe that Agent 1's initial hero section already included comprehensive st
 *Agent 1 Initial Hero Section:*
 ![Agent 1 Initial Landing](../../clean_sections/hero_agent1_initial.png)
 
-*Agent 2 Hero Section:*
+*Agent 2 Initial Hero Section:*
 ![Agent 2 Landing](../../clean_sections/hero_agent2.png)
 
 *Final Presentation Hero Section (Collaborative Synthesis):*
@@ -353,7 +353,7 @@ We observe that Agent 1's initial registration already included comprehensive pr
 *Agent 1 Initial Registration:*
 ![Agent 1 Initial Registration](../../clean_sections/reg_agent1_initial.png)
 
-*Agent 2 Registration:*
+*Agent 2 Initial Registration:*
 ![Agent 2 Registration](../../clean_sections/reg_agent2.png)
 
 *Final Presentation Registration (Collaborative Synthesis):*
