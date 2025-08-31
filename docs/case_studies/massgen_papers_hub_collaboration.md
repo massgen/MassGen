@@ -192,17 +192,17 @@ We observe that the final presentation retained Agent 1's feature card layout bu
 
 We observe that the final presentation uses Agent 1's paper card structure and incorporates Agent 2's direct arXiv link feature. The final synthesis combines papers from both agents: 1 paper found by both agents, 3 unique papers from Agent 1, 2 unique papers from Agent 2, plus 4 new papers added in the final synthesis, all targeting MassGen and multi-agent scaling systems with valid arXiv links. Here are the snapshots:
 
-*Agent 1: Numbered cards with tags, no direct paper links*
+*Agent 1: Numbered cards with tags, no direct paper links*  
 *Papers Contributed to Final: Number 1, 3, 5, 6*
 
 <img src="screenshots/paper_search_web/papers_agent1_original.png" width="800"/>
 
-*Agent 2: Numbered cards with embedded arXiv links and detailed descriptions*
+*Agent 2: Numbered cards with embedded arXiv links and detailed descriptions*  
 *Papers Contributed to Final: Number 1, 5, 10*
 
 <img src="screenshots/paper_search_web/papers_agent2_original.png" width="800"/>
 
-*Final: Agent 1's numbered cards style + Agent 2's arXiv links*
+*Final: Agent 1's numbered cards style + Agent 2's arXiv links*  
 *New Papers: Number 2, 6, 9, 10*
 
 <img src="screenshots/paper_search_web/papers_final_synthesis.png" width="800"/>
@@ -310,6 +310,10 @@ The final presentation demonstrates **intelligent decision-making** in synthesis
 8. Large Language Model based Multi-Agents: A Survey of Progress and Challenges - *From Agent 2*
 9. Communication-Centric Multi-Agent Systems - *New in final*
 10. Multi-Agent LLM Systems with Heterogeneous Models - *New in final*
+
+**Relevance Analysis to Task Objective:**
+
+Compared with the two individual agent runs, the final selection aligns more closely with the objective: search for 10 of the latest papers on multi-agent scaling systems (MassGen/MASS). It enforces recency (2024 to 2025) and curates for explicit scaling relevance. While both agents included some application-specific work (trading frameworks) and general surveys, the final synthesis retained core scaling papers from both runs (Agent 1’s collaboration-mechanisms survey and Agent 2’s AgentScope platform) and added new scaling-focused discoveries (the MASS framework, LLM-based software engineering, communication-centric coordination, and heterogeneous models). Notably, 40% of the final set (#2, #6, #9, #10) were newly surfaced during synthesis, which demonstrates broader search coverage than either individual agent. The result is a more comprehensive, scaling-oriented curation that better satisfies the “latest + scaling system” requirement.
 
 ---
 
