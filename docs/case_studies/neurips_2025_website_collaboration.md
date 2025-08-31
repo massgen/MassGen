@@ -136,7 +136,7 @@ This case study showcases MassGen's **v0.0.12 context sharing enhancement** for 
 
 ## The Final Collaborative Result
 
-**Agent 2** was selected as the final presenter, delivering a synthesis that combined:
+**Agent 1** was selected as the final presenter, delivering a synthesis that combined:
 
 ### Website Features Delivered
 
@@ -268,4 +268,4 @@ This case study demonstrates **MassGen v0.0.12's breakthrough in Claude Code age
 
 This case study validates **MassGen's Claude Code integration** as a powerful platform for **collaborative software development**, enabling multiple AI agents to work together on complex technical projects while maintaining code quality, design consistency, and project coherence. The **context sharing system** proves particularly valuable for **development workflows** where **building upon existing work** and **maintaining architectural consistency** are critical for success.
 
-**Agent 2's final implementation** represents the **collective intelligence** of both agents, combining **Agent 1's solid foundation** with **Agent 2's enhanced academic focus**, delivering a **professional conference website** that meets all requirements for a prestigious research conference like NIPS 2025.
+**Agent 1's final implementation** represents the **collective intelligence** of both agents, combining **Agent 1's solid foundation** with **Agent 2's enhanced academic focus**, delivering a **professional conference website** that meets all requirements for a prestigious research conference like NIPS 2025.
