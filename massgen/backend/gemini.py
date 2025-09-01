@@ -851,29 +851,12 @@ Make your decision and include the JSON at the very end of your response."""
 
             async def _stream_with_config(active_config: Dict[str, Any]):
                 nonlocal full_content_text, final_response
-                for chunk in client.models.generate_content_stream(
+                stream = await client.aio.models.generate_content_stream(
                     model=model_name, contents=full_content, config=active_config
-                ):
-                    # Prefer extracting text from candidates to avoid SDK warnings about non-text parts
-                    emitted_text = ""
-                    if hasattr(chunk, "candidates") and chunk.candidates:
-                        try:
-                            for candidate in chunk.candidates:
-                                if hasattr(candidate, "content") and hasattr(
-                                    candidate.content, "parts"
-                                ):
-                                    for part in candidate.content.parts:
-                                        if hasattr(part, "text") and part.text:
-                                            emitted_text += part.text
-                        except Exception:
-                            # Ignore parsing issues and fall back below if needed
-                            pass
-
-                    if emitted_text:
-                        full_content_text += emitted_text
-                        yield StreamChunk(type="content", content=emitted_text)
-                    elif hasattr(chunk, "text") and chunk.text:
-                        # Fallback only when no candidates/parts available
+                )
+                async for chunk in stream:
+                    # Direct text extraction for regular streaming
+                    if hasattr(chunk, "text") and chunk.text:
                         chunk_text = chunk.text
                         full_content_text += chunk_text
                         yield StreamChunk(type="content", content=chunk_text)
@@ -945,43 +928,41 @@ Make your decision and include the JSON at the very end of your response."""
                         f"MCP tool call #{self._mcp_tool_calls_count} initiated"
                     )
 
-                    # Use async non-streaming call with sessions (SDK supports auto-calling MCP here)
-                    response = await client.aio.models.generate_content(
+                    # Use async streaming call with sessions (SDK supports auto-calling MCP here)
+                    # The SDK's session feature will still handle tool calling automatically
+                    stream = await client.aio.models.generate_content_stream(
                         model=model_name, contents=full_content, config=session_config
                     )
 
-                    # Track successful MCP tool execution
-                    self._mcp_tool_successes += 1
-                    logger.debug(
-                        f"MCP tool call #{self._mcp_tool_calls_count} succeeded"
-                    )
+                    # Iterate over the asynchronous stream to get chunks as they arrive
+                    async for chunk in stream:
+                        # Track successful MCP tool execution (only on first chunk)
+                        if not hasattr(self, '_mcp_stream_started'):
+                            self._mcp_tool_successes += 1
+                            self._mcp_stream_started = True
+                            logger.debug(
+                                f"MCP tool call #{self._mcp_tool_calls_count} succeeded"
+                            )
 
-                    # Assemble text from candidates to avoid SDK warnings about non-text parts
-                    assembled_text = ""
-                    if hasattr(response, "candidates") and response.candidates:
-                        try:
-                            for candidate in response.candidates:
-                                if hasattr(candidate, "content") and hasattr(
-                                    candidate.content, "parts"
-                                ):
-                                    for part in candidate.content.parts:
-                                        if hasattr(part, "text") and part.text:
-                                            assembled_text += part.text
-                        except Exception:
-                            assembled_text = ""
+                        # Direct text extraction for MCP path
+                        if hasattr(chunk, "text") and chunk.text:
+                            chunk_text = chunk.text
+                            full_content_text += chunk_text
+                            yield StreamChunk(type="content", content=chunk_text)
 
-                    if assembled_text:
-                        full_content_text += assembled_text
-                        yield StreamChunk(type="content", content=assembled_text)
+                        # Keep track of the final response for tool processing
+                        if hasattr(chunk, "candidates"):
+                            final_response = chunk
+
+                    # Reset stream tracking
+                    if hasattr(self, '_mcp_stream_started'):
+                        delattr(self, '_mcp_stream_started')
 
                     # Add MCP usage indicator
                     yield StreamChunk(
                         type="content",
                         content="🔧 [MCP Tools] Session-based tools used\n",
                     )
-
-                    # Track final response for any post-processing (builtins off in this mode)
-                    final_response = response
                 except (
                     MCPConnectionError,
                     MCPTimeoutError,
