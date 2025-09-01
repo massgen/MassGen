@@ -7,20 +7,18 @@ Version 0.0.15 focuses on **Gemini MCP Implementation**, bringing Model Context 
 - **Gemini MCP Integration** (Required): 🔌 Native MCP support for Gemini backend with tool ecosystem access
 - **Cross-Provider MCP** (Required): 🛠️ Unified MCP interface across Claude Code and Gemini backends
 - **Enhanced Tool Discovery** (Required): 📚 Improved tool discovery and execution management for Gemini agents
-- **Performance Optimization** (Required): ⚡ Optimized MCP server communication and resource management
 
 ## Key Technical Priorities
 
 1. **Gemini MCP Backend** (REQUIRED): Full MCP integration in Gemini backend with native tool support
 2. **Cross-Provider MCP Interface** (REQUIRED): Unified MCP abstraction layer across different backends
-3. **Tool Discovery Enhancement** (REQUIRED): Improved tool discovery and management for Gemini agents
-4. **Performance Optimization** (REQUIRED): Optimized MCP communication and resource utilization
-5. **Documentation & Examples** (OPTIONAL): Comprehensive Gemini MCP setup guides and examples
+3. **Tool Discovery Enhancement** (REQUIRED): Improved tool discovery
+4. **Documentation & Examples** (OPTIONAL): Comprehensive Gemini MCP setup guides and examples
 
 ## Key Milestones
 
 ### 🎯 Milestone 1: Gemini MCP Backend Integration (REQUIRED)
-**Goal**: Implement native MCP support in Gemini backend for comprehensive tool ecosystem access
+**Goal**: Implement native MCP support in Gemini backend for MCP tools access
 
 #### 1.1 Gemini MCP Client Implementation (REQUIRED)
 - [ ] Extend `gemini.py` backend with MCP integration
@@ -80,17 +78,13 @@ Version 0.0.15 focuses on **Gemini MCP Implementation**, bringing Model Context 
 **Goal**: Provide comprehensive Gemini MCP examples and documentation
 
 #### 4.1 Gemini MCP Configuration Examples (REQUIRED)
-- [ ] Create Gemini + Discord MCP configuration templates
-- [ ] Add Gemini + Twitter/X MCP setup examples
-- [ ] Develop Gemini + Paper search MCP configurations
-- [ ] Create multi-agent Gemini MCP coordination examples
+- [ ] Create single/multi-agent Gemini MCP coordination examples
 - [ ] Add performance benchmarking configurations
 
 #### 4.2 Documentation & Guides (REQUIRED)
 - [ ] Write Gemini MCP setup and configuration guides
 - [ ] Document Gemini-specific MCP tool integration patterns
 - [ ] Create troubleshooting guides for Gemini MCP issues
-- [ ] Add comparative analysis: Claude Code vs Gemini MCP capabilities
 - [ ] Develop best practices for Gemini MCP multi-agent workflows
 
 ## Success Criteria
@@ -102,7 +96,7 @@ Version 0.0.15 focuses on **Gemini MCP Implementation**, bringing Model Context 
 - [ ] Example Gemini MCP configurations provided
 - [ ] Backward compatibility with existing v0.0.14 configurations
 
-### Performance Requirements (REQUIRED)
+### Performance Requirements (OPTIONAL)
 - [ ] Gemini MCP operations with minimal latency overhead
 - [ ] Efficient tool discovery and caching for Gemini agents
 - [ ] Optimized MCP server communication protocols
