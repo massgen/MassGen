@@ -1,38 +1,39 @@
-# MassGen v0.0.14 Roadmap
+# MassGen v0.0.15 Roadmap
 
 ## Overview
 
-Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling seamless connection to external tools and services through the MCP standard. Key enhancements include:
+Version 0.0.15 focuses on **Gemini MCP Implementation**, bringing Model Context Protocol support to Google's Gemini models for the first time. Key enhancements include:
 
-- **MCP Core Infrastructure** (Required): 🔌 Official MCP library integration with multi-server support
-- **MCP Tools Ecosystem** (Required): 🛠️ Tool discovery, execution, and management
-- **Enhanced Security & Reliability** (Required): 🔒 Command sanitization, circuit breakers, and fault tolerance
-- **MCP Server Examples** (Required): 📚 Discord, Twitter/X, and custom MCP server integrations
+- **Gemini MCP Integration** (Required): 🔌 Native MCP support for Gemini backend with tool ecosystem access
+- **Cross-Provider MCP** (Required): 🛠️ Unified MCP interface across Claude Code and Gemini backends
+- **Enhanced Tool Discovery** (Required): 📚 Improved tool discovery and execution management for Gemini agents
+- **Performance Optimization** (Required): ⚡ Optimized MCP server communication and resource management
 
 ## Key Technical Priorities
 
-1. **MCP Core Integration** (REQUIRED): Full Model Context Protocol support with official library
-2. **Multi-Server Architecture** (REQUIRED): Support for multiple simultaneous MCP server connections
-3. **Security & Reliability** (OPTIONAL): Enhanced security measures and fault-tolerant design
-4. **MCP Tools Ecosystem** (OPTIONAL): Comprehensive tool discovery, validation, and execution
-5. **Developer Experience** (OPTIONAL): MCP server development tools and debugging utilities
+1. **Gemini MCP Backend** (REQUIRED): Full MCP integration in Gemini backend with native tool support
+2. **Cross-Provider MCP Interface** (REQUIRED): Unified MCP abstraction layer across different backends
+3. **Tool Discovery Enhancement** (REQUIRED): Improved tool discovery and management for Gemini agents
+4. **Performance Optimization** (REQUIRED): Optimized MCP communication and resource utilization
+5. **Documentation & Examples** (OPTIONAL): Comprehensive Gemini MCP setup guides and examples
 
 ## Key Milestones
 
-### 🎯 Milestone 1: MCP Core Infrastructure (REQUIRED)
-**Goal**: Implement official Model Context Protocol support with robust architecture
+### 🎯 Milestone 1: Gemini MCP Backend Integration (REQUIRED)
+**Goal**: Implement native MCP support in Gemini backend for comprehensive tool ecosystem access
 
-#### 1.1 Core MCP Client Implementation (REQUIRED)
-- [ ] Integrate official `mcp` Python package
-- [ ] Implement `MCPClient` class with async/await support
-- [ ] Create `MultiMCPClient` for managing multiple servers
+#### 1.1 Gemini MCP Client Implementation (REQUIRED)
+- [ ] Extend `gemini.py` backend with MCP integration
+- [ ] Implement MCP tool discovery for Gemini agents
+- [ ] Create MCP-to-Gemini tool format conversion
+- [ ] Add MCP server lifecycle management in Gemini backend
 
-#### 1.2 Transport Layer Support (REQUIRED)
-- [ ] Implement stdio transport for local MCP servers
-- [ ] Add streamable-http transport for remote servers
-- [ ] Create transport abstraction layer
-- [ ] Add connection retry and timeout handling
-- [ ] Implement keepalive and health checking
+#### 1.2 Cross-Provider MCP Interface (REQUIRED)
+- [ ] Create unified MCP abstraction layer shared by Claude Code and Gemini
+- [ ] Implement common MCP utilities in `backend/mcp_common.py`
+- [ ] Add standardized MCP configuration format
+- [ ] Create MCP server connection pooling
+- [ ] Implement consistent tool execution interface
 
 ### 🎯 Milestone 2: Security & Reliability Framework (OPTIONAL)
 **Goal**: Implement comprehensive security measures and fault-tolerant design
@@ -75,44 +76,44 @@ Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling
 - [ ] Create common MCP utilities in `backend/common.py`
 - [ ] Add MCP tool execution in orchestrator
 
-### 🎯 Milestone 4: MCP Server Examples & Documentation (REQUIRED)
-**Goal**: Provide comprehensive examples and documentation for MCP integration
+### 🎯 Milestone 4: Gemini MCP Examples & Documentation (REQUIRED)
+**Goal**: Provide comprehensive Gemini MCP examples and documentation
 
-#### 4.1 Example MCP Servers (REQUIRED)
-- [ ] Discord MCP server integration (`barryyip0625/mcp-discord`)
-- [ ] Twitter/X MCP server setup (`enescinar/twitter-mcp`)
-- [ ] Paper search MCP server for academic research
-- [ ] Custom MCP server development template
-- [ ] HTTP-based MCP server examples
+#### 4.1 Gemini MCP Configuration Examples (REQUIRED)
+- [ ] Create Gemini + Discord MCP configuration templates
+- [ ] Add Gemini + Twitter/X MCP setup examples
+- [ ] Develop Gemini + Paper search MCP configurations
+- [ ] Create multi-agent Gemini MCP coordination examples
+- [ ] Add performance benchmarking configurations
 
-#### 4.2 Configuration & Documentation (REQUIRED)
-- [ ] Create MCP configuration examples for all backends
-- [ ] Write comprehensive MCP setup guides
-- [ ] Document MCP server development best practices
-- [ ] Create troubleshooting guides for common issues
-- [ ] Add MCP integration tutorials and walkthroughs
+#### 4.2 Documentation & Guides (REQUIRED)
+- [ ] Write Gemini MCP setup and configuration guides
+- [ ] Document Gemini-specific MCP tool integration patterns
+- [ ] Create troubleshooting guides for Gemini MCP issues
+- [ ] Add comparative analysis: Claude Code vs Gemini MCP capabilities
+- [ ] Develop best practices for Gemini MCP multi-agent workflows
 
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
-- [ ] Basic MCP support with official library integration
-- [ ] Single MCP server connection per agent
-- [ ] Core MCP tools are discoverable and executable
-- [ ] Example MCP server configurations provided
-- [ ] Backward compatibility with existing configurations
+- [ ] Gemini backend fully integrated with MCP support
+- [ ] MCP tools discoverable and executable in Gemini agents
+- [ ] Cross-provider MCP interface working between Claude Code and Gemini
+- [ ] Example Gemini MCP configurations provided
+- [ ] Backward compatibility with existing v0.0.14 configurations
 
 ### Performance Requirements (REQUIRED)
-- [ ] MCP operations function without blocking main execution
-- [ ] Basic tool discovery and execution works reliably
-- [ ] Reasonable response times for MCP operations
-- [ ] Async operations for non-blocking I/O
+- [ ] Gemini MCP operations with minimal latency overhead
+- [ ] Efficient tool discovery and caching for Gemini agents
+- [ ] Optimized MCP server communication protocols
+- [ ] Parallel MCP tool execution across multiple Gemini agents
 
 ### Quality Requirements (REQUIRED)
-- [ ] Basic test coverage for core MCP features
-- [ ] Example configurations that work out-of-the-box
-- [ ] Zero regressions in existing functionality
-- [ ] Documentation for basic MCP setup
-- [ ] Working examples for Discord and Twitter MCP servers
+- [ ] Comprehensive test coverage for Gemini MCP features
+- [ ] Working Gemini MCP configuration examples
+- [ ] Zero regressions in existing Gemini functionality
+- [ ] Complete Gemini MCP setup documentation
+- [ ] Performance benchmarks comparing Claude Code vs Gemini MCP
 
 ### Functional Requirements (OPTIONAL)
 - [ ] Multiple simultaneous MCP server connections
@@ -150,12 +151,12 @@ Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling
 4. **Breaking Changes**: *Mitigation*: Maintain backward compatibility
 5. **Network Reliability**: *Mitigation*: Circuit breaker pattern and retry mechanisms
 
-## Post-v0.0.14 Considerations
+## Post-v0.0.15 Considerations
 
-### Future Enhancements (v0.0.15+)
+### Future Enhancements (v0.0.16+)
 - **Web Interface**: Browser-based conversation interface with enhanced logging visualization
 - **Advanced Agent Orchestration**: Hierarchical agent coordination and specialized roles
-- **Performance Optimization**: Advanced caching and optimization techniques
+- **OpenAI MCP Integration**: Extend MCP support to GPT-5 and other OpenAI models
 - **Enterprise Features**: Team collaboration, audit logging, and compliance features
 
 ### Long-term Vision
@@ -168,10 +169,10 @@ Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling
 
 | Week | Focus | Key Deliverables | Status |
 |------|-------|------------------|--------|
-| 1 | MCP Core Infrastructure | Basic MCP client implementation with stdio transport | ⏳ **PENDING** |
-| 2 | Example Integrations | Discord and Twitter MCP server examples | ⏳ **PENDING** |
-| 3 | Documentation | Setup guides and configuration examples | ⏳ **PENDING** |
-| 4 | Testing & Release | Integration testing and v0.0.14 release preparation | ⏳ **PENDING** |
+| 1 | Gemini MCP Backend | Gemini backend MCP integration and tool discovery | ⏳ **PENDING** |
+| 2 | Cross-Provider Interface | Unified MCP abstraction layer implementation | ⏳ **PENDING** |
+| 3 | Examples & Documentation | Gemini MCP configuration examples and setup guides | ⏳ **PENDING** |
+| 4 | Testing & Release | Integration testing and v0.0.15 release preparation | ⏳ **PENDING** |
 
 ## Getting Started
 
@@ -183,12 +184,12 @@ Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling
 5. Contribute new MCP server examples
 
 ### For Users
-- v0.0.14 will be fully backward compatible with v0.0.13
-- MCP servers can be added to any agent configuration
-- Tools from MCP servers are auto-discovered
-- All existing features continue to work unchanged
-- Comprehensive MCP setup guides will be provided
+- v0.0.15 will be fully backward compatible with v0.0.14
+- Gemini agents will gain access to the full MCP ecosystem
+- MCP tools will work seamlessly across Claude Code and Gemini backends
+- All existing Claude Code MCP configurations continue to work unchanged
+- Comprehensive Gemini MCP setup guides and examples will be provided
 
 ---
 
-*This roadmap represents our commitment to making MassGen a universal AI orchestration platform with comprehensive Model Context Protocol support, enabling seamless integration with any external tool or service through the MCP standard.*
+*This roadmap represents our commitment to expanding MassGen's Model Context Protocol ecosystem by bringing the full MCP toolset to Gemini agents, creating a unified multi-provider MCP experience for seamless tool integration across all supported AI models.*
