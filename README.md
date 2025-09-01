@@ -89,15 +89,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.12](#recent-achievements-v0012)
-  - [v0.0.3 - v0.0.11](#previous-achievements-v003-v0011)
+  - [v0.0.14](#recent-achievements-v0014)
+  - [v0.0.3 - v0.0.13](#previous-achievements-v003-v0013)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
-  - Expanded Model, Tool & Agent Integration
+  - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.13 Roadmap](#v0013-roadmap)
+- [v0.0.15 Roadmap](#v0015-roadmap)
 </details>
 
 <details open>
@@ -329,7 +329,6 @@ See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md)
 
 #### Configuration File Format
 
-MassGen supports YAML configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 MassGen supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
 
 **Single Agent Configuration:**
@@ -689,23 +688,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.13)
+### Recent Achievements (v0.0.14)
 
-**🔧 Unified Logging System**
-- **Centralized Logging Infrastructure**: New `logger_config.py` with colored console output and file logging for better debugging and monitoring
-- **Debug Mode Support**: Added `--debug` CLI flag for verbose logging with detailed orchestrator activities, agent messages, and backend operations
-- **Consistent Format**: Unified logging format across all backends with color-coded log levels
+**📝 Development Guide & Documentation**
+- **Enhanced Logging**: Improved logging infrastructure with add_log feature for better multi-agent workflow debugging
 
-**🪟 Windows Platform Support**
-- **Cross-Platform Compatibility**: Enhanced Windows-specific fixes for terminal display and color output
-- **Path Handling**: Improved file system path handling for Windows environments
-- **Process Management**: Better process management on Windows platform
+### Previous Achievements (v0.0.3-v0.0.13)
 
-**🎨 Frontend & Documentation Updates**
-- **Enhanced Display**: Refined rich terminal display formatting that excludes debug info from final presentation
-- **Documentation**: Updated CONTRIBUTING.md guidelines and enhanced README with logging configuration details
+✅ **Unified Logging System (v0.0.13)**: Centralized logging infrastructure with debug mode and enhanced terminal display formatting
 
-### Previous Achievements (v0.0.3-v0.0.12)
+✅ **Windows Platform Support (v0.0.13)**: Windows platform compatibility with improved path handling and process management
 
 ✅ **Enhanced Claude Code Agent Context Sharing (v0.0.12)**: Claude Code agents now share workspace context by maintaining snapshots and temporary workspace in orchestrator's side
 
@@ -744,16 +736,16 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.14 Roadmap
+### v0.0.15 Roadmap
 
-Version 0.0.14 focuses on **Model Context Protocol (MCP) Integration**, enabling seamless connection to external tools and services through the MCP standard. Key enhancements include:
+Version 0.0.15 focuses on **Gemini MCP Implementation**, bringing Model Context Protocol support to Google's Gemini models for the first time. Key enhancements include:
 
-- **MCP Core Infrastructure** (Required): 🔌 Official MCP library integration with multi-server support
-- **MCP Tools Ecosystem** (Required): 🛠️ Tool discovery, execution, and management
-- **Enhanced Security & Reliability** (Required): 🔒 Command sanitization, circuit breakers, and fault tolerance
-- **MCP Server Examples** (Required): 📚 Discord, Twitter/X, and custom MCP server integrations
+- **Gemini MCP Integration**: 🔌 Native MCP support for Gemini backend with tool ecosystem access
+- **Cross-Provider MCP**: 🛠️ Unified MCP interface across Claude Code and Gemini backends
+- **Enhanced Tool Discovery**: 📚 Improved tool discovery and execution management for Gemini agents
+- **Performance Optimization**: ⚡ Optimized MCP server communication and resource management
 
-For detailed milestones and technical specifications, see the [full v0.0.14 roadmap](ROADMAP_v0.0.14.md).
+For detailed milestones and technical specifications, see the [full v0.0.15 roadmap](ROADMAP_v0.0.15.md).
 
 ---
 
