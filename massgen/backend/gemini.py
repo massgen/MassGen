@@ -509,15 +509,12 @@ Make your decision and include the JSON at the very end of your response."""
     async def _handle_mcp_error_and_fallback(
         self,
         error: Exception,
-        config: Dict[str, Any],
-        all_tools: List,
-        _stream_with_config,
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
+        """Handle MCP errors with specific messaging"""
         self._mcp_tool_failures += 1
-        
+
         log_type, user_message, _ = self._mcp_error_details(error)
-        
+
         # Log with specific error type
         logger.warning(
             f"MCP tool call #{self._mcp_tool_calls_count} failed - {log_type}: {error}"
@@ -528,13 +525,6 @@ Make your decision and include the JSON at the very end of your response."""
             type="content",
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
-
-        # Build non-MCP configuration and stream fallback
-        manual_config = dict(config)
-        if all_tools:
-            manual_config["tools"] = all_tools
-        async for schunk in _stream_with_config(manual_config):
-            yield schunk
 
     def _trim_message_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Trim message history to prevent unbounded growth in MCP execution loop."""
@@ -849,66 +839,6 @@ Make your decision and include the JSON at the very end of your response."""
             full_content_text = ""
             final_response = None
 
-            async def _stream_with_config(active_config: Dict[str, Any]):
-                nonlocal full_content_text, final_response
-                stream = await client.aio.models.generate_content_stream(
-                    model=model_name, contents=full_content, config=active_config
-                )
-                async for chunk in stream:
-                    # Direct text extraction for regular streaming
-                    if hasattr(chunk, "text") and chunk.text:
-                        chunk_text = chunk.text
-                        full_content_text += chunk_text
-                        yield StreamChunk(type="content", content=chunk_text)
-
-                    # Keep track of the final response for tool processing
-                    if hasattr(chunk, "candidates"):
-                        final_response = chunk
-
-                    # Check for tools used in each chunk for real-time detection (manual MCP path only)
-                    if (
-                        (not using_sdk_mcp)
-                        and builtin_tools
-                        and hasattr(chunk, "candidates")
-                        and chunk.candidates
-                    ):
-                        candidate = chunk.candidates[0]
-
-                        # Check for code execution in this chunk
-                        if (
-                            enable_code_execution
-                            and hasattr(candidate, "content")
-                            and hasattr(candidate.content, "parts")
-                        ):
-                            for part in candidate.content.parts:
-                                if (
-                                    hasattr(part, "executable_code")
-                                    and part.executable_code
-                                ):
-                                    code_content = getattr(
-                                        part.executable_code,
-                                        "code",
-                                        str(part.executable_code),
-                                    )
-                                    yield StreamChunk(
-                                        type="content",
-                                        content=f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n",
-                                    )
-                                elif (
-                                    hasattr(part, "code_execution_result")
-                                    and part.code_execution_result
-                                ):
-                                    result_content = getattr(
-                                        part.code_execution_result,
-                                        "output",
-                                        str(part.code_execution_result),
-                                    )
-                                    yield StreamChunk(
-                                        type="content",
-                                        content=f"📊 [Result] {result_content}\n",
-                                    )
-
-            # Execute the request, supporting optional SDK MCP sessions
             if using_sdk_mcp and self.mcp_servers:
                 # Reuse active sessions from MultiMCPClient
                 try:
@@ -970,14 +900,121 @@ Make your decision and include the JSON at the very end of your response."""
                     MCPError,
                     Exception,
                 ) as e:
-                    async for chunk in self._handle_mcp_error_and_fallback(
-                        e, config, all_tools, _stream_with_config
-                    ):
+                    # Emit user-friendly error message
+                    async for chunk in self._handle_mcp_error_and_fallback(e):
                         yield chunk
+
+                    # Fallback to non-MCP streaming with manual configuration
+                    manual_config = dict(config)
+                    if all_tools:
+                        manual_config["tools"] = all_tools
+
+                    stream = await client.aio.models.generate_content_stream(
+                        model=model_name, contents=full_content, config=manual_config
+                    )
+                    async for chunk in stream:
+                        if hasattr(chunk, "text") and chunk.text:
+                            chunk_text = chunk.text
+                            full_content_text += chunk_text
+                            yield StreamChunk(type="content", content=chunk_text)
+
+                        if hasattr(chunk, "candidates"):
+                            final_response = chunk
+
+                        if (
+                            (not using_sdk_mcp)
+                            and builtin_tools
+                            and hasattr(chunk, "candidates")
+                            and chunk.candidates
+                        ):
+                            candidate = chunk.candidates[0]
+
+                            if (
+                                enable_code_execution
+                                and hasattr(candidate, "content")
+                                and hasattr(candidate.content, "parts")
+                            ):
+                                for part in candidate.content.parts:
+                                    if (
+                                        hasattr(part, "executable_code")
+                                        and part.executable_code
+                                    ):
+                                        code_content = getattr(
+                                            part.executable_code,
+                                            "code",
+                                            str(part.executable_code),
+                                        )
+                                        yield StreamChunk(
+                                            type="content",
+                                            content=f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n",
+                                        )
+                                    elif (
+                                        hasattr(part, "code_execution_result")
+                                        and part.code_execution_result
+                                    ):
+                                        result_content = getattr(
+                                            part.code_execution_result,
+                                            "output",
+                                            str(part.code_execution_result),
+                                        )
+                                        yield StreamChunk(
+                                            type="content",
+                                            content=f"📊 [Result] {result_content}\n",
+                                        )
             else:
                 # Non-MCP path (existing behavior)
-                async for schunk in _stream_with_config(config):
-                    yield schunk
+                stream = await client.aio.models.generate_content_stream(
+                    model=model_name, contents=full_content, config=config
+                )
+                async for chunk in stream:
+                    if hasattr(chunk, "text") and chunk.text:
+                        chunk_text = chunk.text
+                        full_content_text += chunk_text
+                        yield StreamChunk(type="content", content=chunk_text)
+
+                    if hasattr(chunk, "candidates"):
+                        final_response = chunk
+
+                    if (
+                        (not using_sdk_mcp)
+                        and builtin_tools
+                        and hasattr(chunk, "candidates")
+                        and chunk.candidates
+                    ):
+                        candidate = chunk.candidates[0]
+
+                        if (
+                            enable_code_execution
+                            and hasattr(candidate, "content")
+                            and hasattr(candidate.content, "parts")
+                        ):
+                            for part in candidate.content.parts:
+                                if (
+                                    hasattr(part, "executable_code")
+                                    and part.executable_code
+                                ):
+                                    code_content = getattr(
+                                        part.executable_code,
+                                        "code",
+                                        str(part.executable_code),
+                                    )
+                                    yield StreamChunk(
+                                        type="content",
+                                        content=f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n",
+                                    )
+                                elif (
+                                    hasattr(part, "code_execution_result")
+                                    and part.code_execution_result
+                                ):
+                                    result_content = getattr(
+                                        part.code_execution_result,
+                                        "output",
+                                        str(part.code_execution_result),
+                                    )
+                                    yield StreamChunk(
+                                        type="content",
+                                        content=f"📊 [Result] {result_content}\n",
+                                    )
 
             content = full_content_text
 
