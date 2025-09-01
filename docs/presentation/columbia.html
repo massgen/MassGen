@@ -958,7 +958,7 @@
             </div>
         </div>
 
-        <!-- Slide 9A: Context Sharing Challenge -->
+        <!-- Slide 10: Context Sharing Challenge -->
         <div class="slide">
             <div class="icon">⚠️</div>
             <h2>The Context Sharing Challenge</h2>
@@ -1045,7 +1045,7 @@
             </div>
         </div>
 
-        <!-- Slide 9B: Context Sharing Solution -->
+        <!-- Slide 11: Context Sharing Solution -->
         <div class="slide">
             <div class="icon">✅</div>
             <h2>Our Context Sharing Solution (v0.0.12)</h2>
@@ -1089,22 +1089,36 @@
                         <text x="490" y="270" text-anchor="middle" font-family="Arial" font-size="9" fill="white">Temp Context</text>
                         
                         <!-- Snapshot arrows -->
-                        <line x1="250" y1="160" x2="150" y2="200" stroke="#27ae60" stroke-width="3" marker-end="url(#arrowhead-green)"/>
-                        <line x1="350" y1="160" x2="450" y2="200" stroke="#27ae60" stroke-width="3" marker-end="url(#arrowhead-green)"/>
+                        <line x1="150" y1="200" x2="250" y2="160" stroke="#27ae60" stroke-width="3" marker-end="url(#arrowhead-green)"/>
+                        <line x1="450" y1="200" x2="350" y2="160" stroke="#27ae60" stroke-width="3" marker-end="url(#arrowhead-green)"/>
                         
-                        <!-- Context sharing arrows -->
-                        <path d="M 170 240 Q 250 180 330 200 Q 400 220 430 240" stroke="#1abc9c" stroke-width="2" fill="none" stroke-dasharray="5,5" marker-end="url(#arrowhead-teal)"/>
-                        <path d="M 430 250 Q 350 290 270 270 Q 200 250 170 250" stroke="#1abc9c" stroke-width="2" fill="none" stroke-dasharray="5,5" marker-end="url(#arrowhead-teal)"/>
+                        <!-- Context sharing arrows - from snapshot storage to temp context -->
+                        <path d="M 250 160 Q 200 200 150 260" stroke="#1abc9c" stroke-width="2" fill="none" stroke-dasharray="5,5" marker-end="url(#arrowhead-teal)"/>
+                        <path d="M 350 160 Q 400 200 450 260" stroke="#1abc9c" stroke-width="2" fill="none" stroke-dasharray="5,5" marker-end="url(#arrowhead-teal)"/>
+                        <text x="200" y="210" text-anchor="middle" font-family="Arial" font-size="10" fill="#1abc9c">context</text>
+                        <text x="400" y="210" text-anchor="middle" font-family="Arial" font-size="10" fill="#1abc9c">sharing</text>
                         
-                        <!-- Temp workspace detail -->
-                        <rect x="220" y="320" width="160" height="100" rx="8" fill="#ecf0f1" stroke="#95a5a6" stroke-width="2"/>
-                        <text x="300" y="340" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#2c3e50">Agent's Temp Workspace</text>
-                        <rect x="240" y="350" width="50" height="20" rx="3" fill="#e74c3c"/>
-                        <text x="265" y="363" text-anchor="middle" font-family="Arial" font-size="9" fill="white">agent1/</text>
-                        <rect x="310" y="350" width="50" height="20" rx="3" fill="#e74c3c"/>
-                        <text x="335" y="363" text-anchor="middle" font-family="Arial" font-size="9" fill="white">agent2/</text>
-                        <text x="300" y="385" text-anchor="middle" font-family="Arial" font-size="10" fill="#7f8c8d">Read & Test</text>
-                        <text x="300" y="400" text-anchor="middle" font-family="Arial" font-size="10" fill="#7f8c8d">No Interference</text>
+                        <!-- Agent 1 Temp workspace -->
+                        <rect x="150" y="320" width="120" height="80" rx="8" fill="#ecf0f1" stroke="#3498db" stroke-width="2"/>
+                        <text x="210" y="340" text-anchor="middle" font-family="Arial" font-size="11" font-weight="bold" fill="#2c3e50">Agent 1 Temp Copy</text>
+                        <rect x="170" y="350" width="35" height="15" rx="2" fill="#e74c3c"/>
+                        <text x="187" y="360" text-anchor="middle" font-family="Arial" font-size="8" fill="white">agent1/</text>
+                        <rect x="215" y="350" width="35" height="15" rx="2" fill="#3498db"/>
+                        <text x="232" y="360" text-anchor="middle" font-family="Arial" font-size="8" fill="white">agent2/</text>
+                        <text x="210" y="380" text-anchor="middle" font-family="Arial" font-size="9" fill="#7f8c8d">Own temp copy</text>
+                        
+                        <!-- Agent 2 Temp workspace -->
+                        <rect x="330" y="320" width="120" height="80" rx="8" fill="#ecf0f1" stroke="#e74c3c" stroke-width="2"/>
+                        <text x="390" y="340" text-anchor="middle" font-family="Arial" font-size="11" font-weight="bold" fill="#2c3e50">Agent 2 Temp Copy</text>
+                        <rect x="350" y="350" width="35" height="15" rx="2" fill="#e74c3c"/>
+                        <text x="367" y="360" text-anchor="middle" font-family="Arial" font-size="8" fill="white">agent1/</text>
+                        <rect x="395" y="350" width="35" height="15" rx="2" fill="#3498db"/>
+                        <text x="412" y="360" text-anchor="middle" font-family="Arial" font-size="8" fill="white">agent2/</text>
+                        <text x="390" y="380" text-anchor="middle" font-family="Arial" font-size="9" fill="#7f8c8d">Own temp copy</text>
+                        
+                        <!-- Connection lines from agents to their temp workspaces -->
+                        <line x1="150" y1="275" x2="210" y2="320" stroke="#1abc9c" stroke-width="1" stroke-dasharray="2,2"/>
+                        <line x1="450" y1="275" x2="390" y2="320" stroke="#1abc9c" stroke-width="1" stroke-dasharray="2,2"/>
                         
                         <!-- Key benefits -->
                         <rect x="20" y="450" width="560" height="40" rx="8" fill="#d4edda" stroke="#27ae60" stroke-width="2"/>
@@ -1123,7 +1137,7 @@
             </div>
         </div>
 
-        <!-- Slide 9C: Context Sharing in Action -->
+        <!-- Slide 12: Context Sharing in Action -->
         <div class="slide">
             <div class="icon">🎬</div>
             <h2>Context Sharing in Action</h2>
@@ -1207,10 +1221,10 @@
             </div>
         </div>
 
-        <!-- Slide 13: Evolution from v0.0.1 to v0.0.12 -->
+        <!-- Slide 13: Evolution from v0.0.1 to v0.0.13 -->
         <div class="slide">
             <div class="icon">🚀</div>
-            <h2>MassGen Evolution: v0.0.1 → v0.0.12</h2>
+            <h2>MassGen Evolution: v0.0.1 → v0.0.13</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin: 50px 0; align-items: center; justify-items: center;">
                 <div style="background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 350px; text-align: center;">
                     <div style="font-size: 3em; margin-bottom: 20px;">🏗️</div>
@@ -1225,7 +1239,7 @@
                     <div style="position: absolute; top: -15px; right: -15px; background: #f39c12; color: white; padding: 8px 20px; border-radius: 25px; font-size: 0.9em; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">LATEST</div>
                     <div style="font-size: 3em; margin-bottom: 20px;">🚀</div>
                     <h3 style="margin: 0 0 15px 0; font-size: 1.6em;">Rapid Evolution</h3>
-                    <div style="font-size: 1.1em; opacity: 0.9; margin-bottom: 25px;">v0.0.3 → v0.0.12</div>
+                    <div style="font-size: 1.1em; opacity: 0.9; margin-bottom: 25px;">v0.0.3 → v0.0.13</div>
                     <div style="font-size: 1.1em; line-height: 1.6;">
                         Claude Code CLI, GPT-5, 10+ providers<br>
                         MCP, browsing, coding collaboration<br>
@@ -1263,11 +1277,12 @@
                     <div style="background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 15px 0; font-size: 1.4em;">🎓 Academic Institutions</h3>
                         <ul style="font-size: 1.1em; line-height: 1.6; list-style: none; padding: 0;">
-                            <li style="margin-bottom: 8px;"><strong>UC Berkeley & Waseda University</strong></li>
+                            <li style="margin-bottom: 8px;"><strong>Simon Fraser University</strong></li>
+                            <li style="margin-bottom: 8px;"><strong>UC Berkeley</strong></li>
                             <li style="margin-bottom: 8px;"><strong>UC Santa Cruz</strong></li>
+                            <li style="margin-bottom: 8px;"><strong>University of Pennsylvania</strong></li>
                             <li style="margin-bottom: 8px;"><strong>University of Sydney</strong></li>
                             <li style="margin-bottom: 8px;"><strong>University of Toronto</strong></li>
-                            <li style="margin-bottom: 8px;"><strong>University of Pennsylvania</strong></li>
                         </ul>
                     </div>
                 </div>
@@ -1626,7 +1641,7 @@
             "Context Sharing - Challenge",
             "Context Sharing - Solution v0.0.12",
             "Context Sharing - In Action",
-            "Evolution - v0.0.1 to v0.0.12",
+            "Evolution - v0.0.1 to v0.0.13",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
             "Columbia Research Applications",
