@@ -48,7 +48,7 @@ try:
         MCPResourceError,
     )
     from ..mcp_tools.security import validate_url
-    from .common import Function
+    from ..mcp_tools.backend_utils import Function
 except ImportError as e:  # MCP not installed or import failed within mcp_tools
     logger.debug(f"MCP import failed: {e}")
     MultiMCPClient = None  # type: ignore[assignment]
@@ -104,18 +104,16 @@ class ChatCompletionsBackend(LLMBackend):
         
         # Initialize circuit breakers if available
         if self._circuit_breakers_enabled:
-            from ..mcp_tools.circuit_breaker import CircuitBreakerConfig
-            
-            # Configure circuit breakers with explicit parameters for different transport types
-            mcp_tools_config = CircuitBreakerConfig(
-                max_failures=3,      
-                reset_time_seconds=30,  
-                backoff_multiplier=2,   
-                max_backoff_multiplier=8  
-            )
-            self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config)
-            
-            logger.debug("Circuit breakers initialized for MCP transport types")
+            from ..mcp_tools.backend_utils import MCPConfigHelper
+
+            # Use shared utility to build circuit breaker configuration
+            mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools")
+            if mcp_tools_config:
+                self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config)
+                logger.debug("Circuit breakers initialized for MCP transport types")
+            else:
+                logger.warning("Circuit breaker config not available, disabling circuit breaker functionality")
+                self._circuit_breakers_enabled = False
         else:
             logger.debug("Circuit breakers not available - proceeding without circuit breaker protection")
 
@@ -135,68 +133,30 @@ class ChatCompletionsBackend(LLMBackend):
 
     def _normalize_mcp_servers(self) -> List[Dict[str, Any]]:
         """Validate and normalize mcp_servers into a list of dicts."""
-        servers = self.mcp_servers
-        if not servers:
-            return []
-        if isinstance(servers, dict):
-            return [servers]
-        if not isinstance(servers, list):
-            raise ValueError(
-                f"mcp_servers must be a list or dict, got {type(servers).__name__}"
-            )
-        normalized: List[Dict[str, Any]] = []
-        for idx, entry in enumerate(servers):
-            if not isinstance(entry, dict):
-                raise ValueError(
-                    f"MCP server configuration at index {idx} must be a dictionary, got {type(entry).__name__}"
-                )
-            normalized.append(entry)
-        return normalized
+        from ..mcp_tools.backend_utils import MCPSetupManager
+        return MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
 
     def _separate_mcp_servers_by_transport_type(self) -> None:
-        """
-        Separate MCP servers into local execution transport types.
-        
-        Transport Types:
-        - "stdio" & "streamable-http"
-        """
+        """Separate MCP servers into local execution transport types."""
+        from ..mcp_tools.backend_utils import MCPSetupManager
+
         validated_servers = self._normalize_mcp_servers()
+        mcp_tools_servers, http_servers = MCPSetupManager.separate_servers_by_transport_type(validated_servers)
 
-        for server in validated_servers:
-            # Accept both 'type' and legacy 'transport_type' keys
-            transport_type = server.get("type") or server.get("transport_type")
-            server_name = server.get("name", "unnamed")
+        # Chat Completions only supports stdio/streamable-http (no HTTP)
+        self._mcp_tools_servers = mcp_tools_servers
 
-            if not transport_type:
-                logger.warning(
-                    f"MCP server '{server_name}' missing required 'type' field. "
-                    f"Supported types: 'stdio', 'streamable-http'. Skipping server."
-                )
-                continue
-
-            if transport_type in ["stdio", "streamable-http"]:
-                # Both stdio and streamable-http use our mcp_tools folder (MultiMCPClient)
-                self._mcp_tools_servers.append(server)
-            else:
-                logger.warning(
-                    f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. "
-                    f"Supported types: 'stdio', 'streamable-http'. Skipping server."
-                )
+        if http_servers:
+            logger.warning(f"Chat Completions backend does not support HTTP MCP servers. Ignoring {len(http_servers)} HTTP servers.")
 
     def _apply_mcp_tools_circuit_breaker_filtering(self, servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Filter MCP tools servers based on circuit breaker state."""
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
+
         if not self._circuit_breakers_enabled or not self._mcp_tools_circuit_breaker:
             return servers
-        
-        filtered_servers = []
-        for server in servers:
-            server_name = server.get("name", "unnamed")
-            if not self._mcp_tools_circuit_breaker.should_skip_server(server_name):
-                filtered_servers.append(server)
-            else:
-                logger.debug(f"Circuit breaker: Skipping MCP tools server {server_name} (circuit open)")
-        
-        return filtered_servers
+
+        return MCPCircuitBreakerManager.apply_circuit_breaker_filtering(servers, self._mcp_tools_circuit_breaker)
 
     def get_circuit_breaker_status(self) -> Dict[str, Any]:
         """Get comprehensive circuit breaker status for all MCP servers.
@@ -229,16 +189,17 @@ class ChatCompletionsBackend(LLMBackend):
 
     async def _record_mcp_tools_success(self, servers: List[Dict[str, Any]]) -> None:
         """Record successful MCP tools operation for circuit breaker."""
-        if self._mcp_tools_circuit_breaker:
-            for server in servers:
-                server_name = server.get("name", "unknown")
-                self._mcp_tools_circuit_breaker.record_success(server_name)
-                logger.debug(f"Recorded MCP tools success for server: {server_name}")
-        
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
+
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+            await MCPCircuitBreakerManager.record_success(servers, self._mcp_tools_circuit_breaker)
 
     async def _record_mcp_tools_failure(self, servers: List[Dict[str, Any]], error_message: str) -> None:
         """Record connection failure for mcp_tools servers in circuit breaker."""
-        await self._record_mcp_tools_event(servers, event="failure", error_message=error_message)
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
+
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+            await MCPCircuitBreakerManager.record_failure(servers, self._mcp_tools_circuit_breaker, error_message)
 
     async def _record_mcp_tools_event(
         self,
@@ -247,67 +208,21 @@ class ChatCompletionsBackend(LLMBackend):
         error_message: Optional[str] = None,
     ) -> None:
         """Record success/failure for mcp_tools servers in circuit breaker."""
-        if not self._circuit_breakers_enabled or not self._mcp_tools_circuit_breaker:
-            return
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
 
-        count = 0
-        for server in servers:
-            server_name = server.get("name", "unnamed")
-            try:
-                if event == "success":
-                    self._mcp_tools_circuit_breaker.record_success(server_name)
-                else:
-                    self._mcp_tools_circuit_breaker.record_failure(server_name)
-                count += 1
-            except Exception as cb_error:
-                logger.warning(
-                    f"Circuit breaker record_{event} failed for mcp_tools server {server_name}: {cb_error}"
-                )
-
-        if count > 0:
-            if event == "success":
-                logger.debug(
-                    f"Circuit breaker: Recorded success for {count} mcp_tools servers"
-                )
-            else:
-                logger.warning(
-                    f"Circuit breaker: Recorded failure for {count} mcp_tools servers. Error: {error_message}"
-                )
-
-
-
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+            await MCPCircuitBreakerManager.record_event(servers, self._mcp_tools_circuit_breaker, event, error_message)
 
     @staticmethod
     def _get_mcp_error_info(error: Exception) -> tuple[str, str, str]:
-        """Get standardized MCP error information.
-
-        Returns:
-            tuple: (log_type, user_message, error_category)
-        """
-        error_mappings = {
-            MCPConnectionError: ("connection error", "MCP connection failed", "connection"),
-            MCPTimeoutError: ("timeout error", "MCP session timeout", "timeout"),
-            MCPServerError: ("server error", "MCP server error", "server"),
-            MCPError: ("MCP error", "MCP error", "general"),
-        }
-
-        return error_mappings.get(
-            type(error), ("unexpected error", "MCP communication error", "unknown")
-        )
+        """Get standardized MCP error information."""
+        from ..mcp_tools.backend_utils import MCPErrorHandler
+        return MCPErrorHandler.get_error_details(error)
 
     def _log_mcp_error(self, error: Exception, operation: str) -> None:
         """Log MCP errors with appropriate severity based on error type."""
-        error_type = type(error).__name__
-        if isinstance(error, (MCPConnectionError, MCPTimeoutError)):
-            logger.warning(f"MCP {operation} failed (transient {error_type}): {error}")
-        elif isinstance(error, (MCPAuthenticationError, MCPResourceError)):
-            logger.error(f"MCP {operation} failed (auth/resource {error_type}): {error}")
-        elif isinstance(error, MCPServerError):
-            logger.error(f"MCP {operation} failed (server error {error_type}): {error}")
-        elif isinstance(error, MCPError):
-            logger.warning(f"MCP {operation} failed (general {error_type}): {error}")
-        else:
-            logger.error(f"MCP {operation} failed (unexpected {error_type}): {error}")
+        from ..mcp_tools.backend_utils import MCPErrorHandler
+        MCPErrorHandler.log_error(error, operation)
 
     @staticmethod
     def _is_transient_error(error: Exception) -> bool:
@@ -508,17 +423,12 @@ class ChatCompletionsBackend(LLMBackend):
 
     async def cleanup_mcp(self) -> None:
         """Cleanup MCP resources and disconnect client."""
-        if self._mcp_client:
-            try:
-                logger.debug("Starting MCP client cleanup")
-                await self._mcp_client.disconnect()
-                logger.info("MCP client disconnected successfully")
-            except (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError, Exception) as e:
-                self._log_mcp_error(e, "disconnect")
-            finally:
-                self._mcp_client = None
-                self._mcp_initialized = False
-                logger.debug("MCP client cleanup completed")
+        from ..mcp_tools.backend_utils import MCPResourceManager
+
+        await MCPResourceManager.cleanup_mcp_client(self._mcp_client, logger)
+        self._mcp_client = None
+        self._mcp_initialized = False
+        self.functions.clear()
 
 
     def get_provider_name(self) -> str:
@@ -980,98 +890,80 @@ class ChatCompletionsBackend(LLMBackend):
                 pass
 
     def _trim_message_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Trim message history to prevent unbounded growth in MCP execution loop.
-        Preserves the first system message if present; keeps only the most recent
-        messages up to the configured limit.
-        """
-        try:
-            max_items = int(getattr(self, '_max_mcp_message_history', 200))
-        except Exception:
-            max_items = 200
+        """Trim message history to prevent unbounded growth in MCP execution loop."""
+        from ..mcp_tools.backend_utils import MCPMessageManager
+        max_items = getattr(self, '_max_mcp_message_history', 200)
+        return MCPMessageManager.trim_message_history(messages, max_items)
 
-        if max_items <= 0 or len(messages) <= max_items:
-            return messages
+    def _mcp_error_details(self, error: Exception, context: Optional[str] = None, *, log: bool = False) -> tuple[str, str, str]:
+        """Return standardized MCP error info and optionally log."""
+        from ..mcp_tools.backend_utils import MCPErrorHandler
+        return MCPErrorHandler.get_error_details(error, context, log=log)
 
-        preserved = []
-        remaining = messages
-        if messages and messages[0].get("role") == "system":
-            preserved = [messages[0]]
-            remaining = messages[1:]
+    async def _handle_mcp_retry_error(
+        self, error: Exception, retry_count: int, max_retries: int
+    ) -> tuple[bool, AsyncGenerator[StreamChunk, None]]:
+        """Handle MCP retry errors with specific messaging and fallback logic."""
+        from ..mcp_tools.backend_utils import MCPRetryHandler
+        return await MCPRetryHandler.handle_retry_error(error, retry_count, max_retries, StreamChunk)
 
-        # Keep the most recent items within the limit
-        allowed = max_items - len(preserved)
-        trimmed_tail = remaining[-allowed:] if allowed > 0 else []
-        return preserved + trimmed_tail
+    async def _handle_mcp_error_and_fallback(
+        self,
+        error: Exception,
+        config: Dict[str, Any],
+        all_tools: List,
+        _stream_with_config,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
+        from ..mcp_tools.backend_utils import MCPRetryHandler
+
+        self._mcp_tool_failures += 1
+
+        # Use shared error handling for user messaging
+        async for chunk in MCPRetryHandler.handle_error_and_fallback(
+            error, self._mcp_tool_calls_count, StreamChunk
+        ):
+            yield chunk
+
+        # Continue with fallback logic using non-MCP tools
+        if all_tools:
+            config["tools"] = all_tools
+            async for chunk in _stream_with_config(config):
+                yield chunk
 
     async def _execute_mcp_function_with_retry(
         self, function_name: str, args: Dict[str, Any], max_retries: int = 3
     ) -> Any:
-        """Execute MCP function with exponential backoff retry logic.
-        
-        Args:
-            function_name: Name of the MCP function to call
-            args: Function arguments as dictionary
-            max_retries: Maximum number of retry attempts
-            
-        Returns:
-            Function result or structured error payload if all retries fail
-        """
-        async with self._stats_lock:
-            self._mcp_tool_calls_count += 1
-            call_index_snapshot = self._mcp_tool_calls_count
+        """Execute MCP function with exponential backoff retry logic."""
+        from ..mcp_tools.backend_utils import MCPExecutionManager
 
-        import json
-
-        for attempt in range(max_retries + 1):
-            try:
-                # Convert args to JSON string for the function call
-                arguments_json = json.dumps(args)
-                
-                # Execute the MCP function with enhanced error handling
-                result = await self.functions[function_name].call(arguments_json)
-                
-                # Successful execution, return result
-                if attempt > 0:
-                    logger.info(f"MCP function {function_name} (#{call_index_snapshot}) succeeded on retry attempt {attempt}")
-                
-                return result
-                
-            except (MCPAuthenticationError, MCPResourceError) as auth_error:
-                self._log_mcp_error(auth_error, f"function call {function_name}")
-                await self._record_mcp_tools_failure(self._mcp_tools_servers, str(auth_error))
-                async with self._stats_lock:
+        # Stats callback for tracking
+        async def stats_callback(action: str) -> int:
+            async with self._stats_lock:
+                if action == "increment_calls":
+                    self._mcp_tool_calls_count += 1
+                    return self._mcp_tool_calls_count
+                elif action == "increment_failures":
                     self._mcp_tool_failures += 1
-                return {"error": str(auth_error), "type": "auth_resource_error", "function": function_name}
-                
-            except Exception as e:
-                is_last_attempt = attempt == max_retries
-                
-                if self._is_transient_error(e) and not is_last_attempt:
-                    # Calculate exponential backoff with jitter
-                    base_delay = 0.5  
-                    backoff_delay = base_delay * (2 ** attempt)
-                    jitter = random.uniform(0.1, 0.3) * backoff_delay
-                    total_delay = backoff_delay + jitter
-                    
-                    self._log_mcp_error(e, f"function call {function_name} (attempt {attempt + 1})")
-                    logger.warning(f"Retrying in {total_delay:.2f}s...")
-                    
-                    await asyncio.sleep(total_delay)
-                    continue
-                else:
-                    self._log_mcp_error(e, f"function call {function_name} (final)")
-                    await self._record_mcp_tools_failure(self._mcp_tools_servers, str(e))
-                    
-                    # Record failure in stats
-                    async with self._stats_lock:
-                        self._mcp_tool_failures += 1
+                    return self._mcp_tool_failures
+            return 0
 
-                    # Return structured error payload as fallback
-                    return {"error": str(e), "type": "execution_error", "function": function_name, "attempts": attempt + 1}
-        
-        async with self._stats_lock:
-            self._mcp_tool_failures += 1
-        return {"error": f"Maximum retries ({max_retries}) exceeded", "type": "retry_exhausted", "function": function_name}
+        # Circuit breaker callback
+        async def circuit_breaker_callback(event: str, error_msg: str) -> None:
+            if event == "failure":
+                await self._record_mcp_tools_failure(self._mcp_tools_servers, error_msg)
+            else:
+                await self._record_mcp_tools_success(self._mcp_tools_servers)
+
+        return await MCPExecutionManager.execute_function_with_retry(
+            function_name=function_name,
+            args=args,
+            functions=self.functions,
+            max_retries=max_retries,
+            stats_callback=stats_callback,
+            circuit_breaker_callback=circuit_breaker_callback,
+            logger_instance=logger
+        )
 
     async def stream_with_mcp(
         self, client, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
@@ -1352,17 +1244,20 @@ class ChatCompletionsBackend(LLMBackend):
 
     async def __aenter__(self) -> "ChatCompletionsBackend":
         """Async context manager entry."""
+        from ..mcp_tools.backend_utils import MCPResourceManager
+
         logger.debug("Entering ChatCompletionsBackend async context")
         self._context_manager_active = True
+        await MCPResourceManager.setup_mcp_context_manager(self)
         return self
 
     async def __aexit__(self, exc_type: Optional[type], exc_val: Optional[BaseException], exc_tb: Optional[object]) -> bool:
         """Async context manager exit."""
+        from ..mcp_tools.backend_utils import MCPResourceManager
+
         logger.debug("Exiting ChatCompletionsBackend async context")
         try:
-            await self.cleanup_mcp()
-        except Exception as e:
-            logger.error(f"Error during ChatCompletionsBackend cleanup: {e}")
+            await MCPResourceManager.cleanup_mcp_context_manager(self, logger)
         finally:
             self._context_manager_active = False
         logger.debug("ChatCompletionsBackend async context exit completed")

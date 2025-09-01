@@ -24,7 +24,7 @@ import enum
 import logging
 import asyncio
 import re
-from typing import Dict, List, Any, AsyncGenerator, Optional
+from typing import Dict, List, Any, AsyncGenerator, Optional, Literal
 from .base import LLMBackend, StreamChunk
 
 try:
@@ -118,7 +118,32 @@ class GeminiBackend(LLMBackend):
         self._mcp_tool_calls_count = 0
         self._mcp_tool_failures = 0
         self._mcp_tool_successes = 0
+
+        # Limit for message history growth within MCP execution loop
+        self._max_mcp_message_history = kwargs.pop("max_mcp_message_history", 200)
         self._mcp_connection_retries = 0
+
+        # Circuit breaker configuration (previously missing in gemini.py)
+        self._circuit_breakers_enabled = kwargs.pop("circuit_breaker_enabled", True)
+        self._mcp_tools_circuit_breaker = None
+
+        # Initialize circuit breaker if enabled
+        if self._circuit_breakers_enabled:
+            try:
+                from ..mcp_tools.circuit_breaker import MCPCircuitBreaker
+                from ..mcp_tools.backend_utils import MCPConfigHelper
+
+                # Use shared utility to build circuit breaker configuration
+                mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools")
+                if mcp_tools_config:
+                    self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config)
+                    logger.debug("Circuit breaker initialized for Gemini MCP tools")
+                else:
+                    logger.warning("Circuit breaker config not available, disabling circuit breaker functionality")
+                    self._circuit_breakers_enabled = False
+            except ImportError:
+                logger.warning("Circuit breaker not available, disabling circuit breaker functionality")
+                self._circuit_breakers_enabled = False
 
         if BaseModel is None:
             raise ImportError(
@@ -127,23 +152,8 @@ class GeminiBackend(LLMBackend):
 
     def _normalize_mcp_servers(self) -> List[Dict[str, Any]]:
         """Validate and normalize mcp_servers into a list of dicts."""
-        servers = self.mcp_servers
-        if not servers:
-            return []
-        if isinstance(servers, dict):
-            return [servers]
-        if not isinstance(servers, list):
-            raise ValueError(
-                f"mcp_servers must be a list or dict, got {type(servers).__name__}"
-            )
-        normalized: List[Dict[str, Any]] = []
-        for idx, entry in enumerate(servers):
-            if not isinstance(entry, dict):
-                raise ValueError(
-                    f"MCP server configuration at index {idx} must be a dictionary, got {type(entry).__name__}"
-                )
-            normalized.append(entry)
-        return normalized
+        from ..mcp_tools.backend_utils import MCPSetupManager
+        return MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
 
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client (sessions only)."""
@@ -228,27 +238,43 @@ class GeminiBackend(LLMBackend):
             logger.info(
                 f"Setting up MCP sessions with {len(normalized_servers)} servers"
             )
+
+            # Apply circuit breaker filtering before connection attempts
+            filtered_servers = self._apply_mcp_tools_circuit_breaker_filtering(normalized_servers)
+            if not filtered_servers:
+                logger.warning("All MCP servers are circuit breaker blocked")
+                return
+
+            if len(filtered_servers) < len(normalized_servers):
+                logger.info(f"Circuit breaker filtered {len(normalized_servers) - len(filtered_servers)} servers")
+
             # Extract tool filtering parameters from validated config
             allowed_tools = validated_config.get("allowed_tools")
             exclude_tools = validated_config.get("exclude_tools")
-            
+
             # Log tool filtering if configured
             if allowed_tools:
                 logger.info(f"MCP tool filtering - allowed tools: {allowed_tools}")
             if exclude_tools:
                 logger.info(f"MCP tool filtering - excluding: {exclude_tools}")
-            
+
             self._mcp_client = await MultiMCPClient.create_and_connect(
-                normalized_servers,
+                filtered_servers,
                 timeout_seconds=30,
                 allowed_tools=allowed_tools,
                 exclude_tools=exclude_tools
             )
 
+            # Record success for circuit breaker
+            await self._record_mcp_tools_success(filtered_servers)
+
             self._mcp_initialized = True
             logger.info("Successfully initialized MCP sessions")
 
         except Exception as e:
+            # Record failure for circuit breaker
+            await self._record_mcp_tools_failure(self.mcp_servers, str(e))
+
             # Enhanced error handling for different MCP error types
             if isinstance(e, RuntimeError) and "MCP configuration" in str(e):
                 raise
@@ -268,7 +294,7 @@ class GeminiBackend(LLMBackend):
                 logger.warning(f"MCP error during setup: {e}")
                 self._mcp_client = None
                 return
-            
+
             else:
                 logger.warning(f"Failed to setup MCP sessions: {e}")
                 self._mcp_client = None
@@ -445,25 +471,9 @@ Make your decision and include the JSON at the very end of your response."""
         return []
 
     def _mcp_error_details(self, error: Exception, context: Optional[str] = None, *, log: bool = False) -> tuple[str, str, str]:
-        """Return standardized MCP error info and optionally log.
-
-        Returns a tuple of (log_type, user_message, error_category).
-        """
-        if isinstance(error, MCPConnectionError):
-            details = ("connection error", "MCP connection failed", "connection")
-        elif isinstance(error, MCPTimeoutError):
-            details = ("timeout error", "MCP session timeout", "timeout")
-        elif isinstance(error, MCPServerError):
-            details = ("server error", "MCP server error", "server")
-        elif isinstance(error, MCPError):
-            details = ("MCP error", "MCP error", "general")
-        else:
-            details = ("unexpected error", "MCP connection failed", "unknown")
-
-        if log and context:
-            logger.warning(f"MCP {details[0]} during {context}: {error}")
-
-        return details
+        """Return standardized MCP error info and optionally log."""
+        from ..mcp_tools.backend_utils import MCPErrorHandler
+        return MCPErrorHandler.get_error_details(error, context, log=log)
 
     async def _handle_mcp_retry_error(
         self, error: Exception, retry_count: int, max_retries: int
@@ -525,6 +535,90 @@ Make your decision and include the JSON at the very end of your response."""
             manual_config["tools"] = all_tools
         async for schunk in _stream_with_config(manual_config):
             yield schunk
+
+    def _trim_message_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Trim message history to prevent unbounded growth in MCP execution loop."""
+        from ..mcp_tools.backend_utils import MCPMessageManager
+        max_items = getattr(self, '_max_mcp_message_history', 200)
+        return MCPMessageManager.trim_message_history(messages, max_items)
+
+    def _is_transient_error(self, error: Exception) -> bool:
+        """Determine if an error is transient and should be retried."""
+        from ..mcp_tools.backend_utils import MCPErrorHandler
+        return MCPErrorHandler.is_transient_error(error)
+
+    def _log_mcp_error(self, error: Exception, context: str) -> None:
+        """Log MCP error with appropriate level and context."""
+        from ..mcp_tools.backend_utils import MCPErrorHandler
+        MCPErrorHandler.log_error(error, context)
+
+    def _apply_mcp_tools_circuit_breaker_filtering(self, servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Filter MCP tools servers based on circuit breaker state."""
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
+
+        if not self._circuit_breakers_enabled or not self._mcp_tools_circuit_breaker:
+            return servers
+
+        return MCPCircuitBreakerManager.apply_circuit_breaker_filtering(servers, self._mcp_tools_circuit_breaker)
+
+    async def _record_mcp_tools_success(self, servers: List[Dict[str, Any]]) -> None:
+        """Record successful MCP tools operation for circuit breaker."""
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
+
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+            await MCPCircuitBreakerManager.record_success(servers, self._mcp_tools_circuit_breaker)
+
+    async def _record_mcp_tools_failure(self, servers: List[Dict[str, Any]], error_message: str) -> None:
+        """Record connection failure for mcp_tools servers in circuit breaker."""
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
+
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+            await MCPCircuitBreakerManager.record_failure(servers, self._mcp_tools_circuit_breaker, error_message)
+
+    async def _record_mcp_tools_event(
+        self,
+        servers: List[Dict[str, Any]],
+        event: Literal["success", "failure"],
+        error_message: Optional[str] = None,
+    ) -> None:
+        """Record success/failure for mcp_tools servers in circuit breaker."""
+        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
+
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+            await MCPCircuitBreakerManager.record_event(servers, self._mcp_tools_circuit_breaker, event, error_message)
+
+    async def _execute_mcp_function_with_retry(
+        self, function_name: str, args: Dict[str, Any]
+    ) -> Any:
+        """Execute MCP function with exponential backoff retry logic."""
+        from ..mcp_tools.backend_utils import MCPExecutionManager
+
+        # Stats callback for tracking
+        async def stats_callback(action: str) -> int:
+            if action == "increment_calls":
+                self._mcp_tool_calls_count += 1
+                return self._mcp_tool_calls_count
+            elif action == "increment_failures":
+                self._mcp_tool_failures += 1
+                return self._mcp_tool_failures
+            return 0
+
+        # Circuit breaker callback
+        async def circuit_breaker_callback(event: str, error_msg: str) -> None:
+            if event == "failure":
+                await self._record_mcp_tools_failure(self.mcp_servers, error_msg)
+            else:
+                await self._record_mcp_tools_success(self.mcp_servers)
+
+        return await MCPExecutionManager.execute_function_with_retry(
+            function_name=function_name,
+            args=args,
+            functions=self.functions,
+            max_retries=3,
+            stats_callback=stats_callback,
+            circuit_breaker_callback=circuit_breaker_callback,
+            logger_instance=logger
+        )
 
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
@@ -671,6 +765,13 @@ Make your decision and include the JSON at the very end of your response."""
                                     0.5 * retry_count
                                 )  # Progressive backoff
 
+                            # Apply circuit breaker filtering before retry attempts
+                            filtered_retry_servers = self._apply_mcp_tools_circuit_breaker_filtering(self.mcp_servers)
+                            if not filtered_retry_servers:
+                                logger.warning("All MCP servers circuit breaker blocked during retry")
+                                using_sdk_mcp = False
+                                break
+
                             # Get validated config for tool filtering parameters
                             backend_config = {"mcp_servers": self.mcp_servers}
                             if MCPConfigValidator is not None:
@@ -687,13 +788,16 @@ Make your decision and include the JSON at the very end of your response."""
                             else:
                                 allowed_tools_retry = None
                                 exclude_tools_retry = None
-                            
+
                             self._mcp_client = await MultiMCPClient.create_and_connect(
-                                self.mcp_servers,
+                                filtered_retry_servers,
                                 timeout_seconds=30,
                                 allowed_tools=allowed_tools_retry,
                                 exclude_tools=exclude_tools_retry
                             )
+
+                            # Record success for circuit breaker
+                            await self._record_mcp_tools_success(filtered_retry_servers)
                             mcp_connected = True
                             logger.info(
                                 f"MCP connection successful on attempt {retry_count}"
@@ -707,6 +811,9 @@ Make your decision and include the JSON at the very end of your response."""
                             MCPError,
                             Exception,
                         ) as e:
+                            # Record failure for circuit breaker
+                            await self._record_mcp_tools_failure(self.mcp_servers, str(e))
+
                             (
                                 should_continue,
                                 error_chunks,

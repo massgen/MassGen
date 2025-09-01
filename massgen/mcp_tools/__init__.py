@@ -23,6 +23,15 @@ from .security import prepare_command, sanitize_tool_name
 from .config_validator import MCPConfigValidator, validate_mcp_integration
 from mcp import types as mcp_types
 
+# shared utilities for backend integration
+from .backend_utils import (
+    Function, MCPErrorHandler, MCPRetryHandler,
+    MCPMessageManager, MCPConfigHelper, MCPCircuitBreakerManager,
+    MCPResourceManager, MCPSetupManager, MCPExecutionManager
+)
+from .integration import MCPIntegrationManager
+from .converters import MCPConverters, MCPFormatValidator
+
 __all__ = [
     # Core client classes
     "MCPClient",
@@ -56,4 +65,18 @@ __all__ = [
     # Configuration validation
     "MCPConfigValidator",
     "validate_mcp_integration",
+
+    # shared utilities for backend integration
+    "Function",
+    "MCPIntegrationManager",
+    "MCPErrorHandler",
+    "MCPRetryHandler",
+    "MCPMessageManager",
+    "MCPConfigHelper",
+    "MCPCircuitBreakerManager",
+    "MCPResourceManager",
+    "MCPSetupManager",
+    "MCPExecutionManager",
+    "MCPConverters",
+    "MCPFormatValidator",
 ]
