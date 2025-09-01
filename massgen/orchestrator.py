@@ -6,18 +6,38 @@ multiple sub-agents using the proven binary decision framework behind the scenes
 
 TODOs:
 - Move CLI's coordinate_with_context logic to orchestrator and simplify CLI to just use orchestrator
+- Implement orchestrator system message functionality to customize coordination behavior:
+  * Custom voting strategies (consensus, expertise-weighted, domain-specific)
+  * Message construction templates for sub-agent instructions
+  * Conflict resolution approaches (evidence-based, democratic, expert-priority)
+  * Workflow preferences (thorough vs fast, iterative vs single-pass)
+  * Domain-specific coordination (research teams, technical reviews, creative brainstorming)
+  * Dynamic agent selection based on task requirements and orchestrator instructions
 """
 
 import asyncio
 import json
-import time
 import logging
+import os
+import time
+import shutil
+from pathlib import Path
+from datetime import datetime
 from typing import Dict, List, Optional, Any, AsyncGenerator
 from dataclasses import dataclass, field
 from .message_templates import MessageTemplates
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
+from .logger_config import (
+    log_orchestrator_activity,
+    log_orchestrator_agent_message,
+    log_coordination_step,
+    log_tool_call,
+    log_stream_chunk,
+    logger,  # Import logger directly for INFO logging
+    get_log_session_dir  # Import to get log directory
+)
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -79,6 +99,8 @@ class Orchestrator(ChatAgent):
         orchestrator_id: str = "orchestrator",
         session_id: Optional[str] = None,
         config: Optional[AgentConfig] = None,
+        snapshot_storage: Optional[str] = None,
+        agent_temporary_workspace: Optional[str] = None,
     ):
         """
         Initialize MassGen orchestrator.
@@ -88,6 +110,8 @@ class Orchestrator(ChatAgent):
             orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
             session_id: Optional session identifier
             config: Optional AgentConfig for customizing orchestrator behavior
+            snapshot_storage: Optional path to store agent workspace snapshots
+            agent_temporary_workspace: Optional path for agent temporary workspaces
         """
         super().__init__(session_id)
         self.orchestrator_id = orchestrator_id
@@ -108,6 +132,7 @@ class Orchestrator(ChatAgent):
         # Internal coordination state
         self._coordination_messages: List[Dict[str, str]] = []
         self._selected_agent: Optional[str] = None
+        self._final_presentation_content: Optional[str] = None
 
         # Timeout and resource tracking
         self.total_tokens: int = 0
@@ -119,10 +144,50 @@ class Orchestrator(ChatAgent):
         self._active_streams: Dict = {}
         self._active_tasks: Dict = {}
         
-    def _get_agent_tools(self, agent_id: str) -> List[Dict[str, Any]]:
-        """Return only workflow coordination tools (vote/new_answer)."""
-        _ = agent_id  # unused
-        return self.workflow_tools.copy()
+        # Context sharing for Claude Code agents
+        self._snapshot_storage: Optional[str] = snapshot_storage
+        self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
+        
+        # Create snapshot storage and workspace directories if specified
+        if snapshot_storage:
+            self._snapshot_storage = snapshot_storage
+            snapshot_path = Path(self._snapshot_storage)
+            # Clean existing directory if it exists and has contents
+            if snapshot_path.exists() and any(snapshot_path.iterdir()):
+                shutil.rmtree(snapshot_path)
+            snapshot_path.mkdir(parents=True, exist_ok=True)
+            # Create directories for each claude_code agent
+            for agent_id, agent in self.agents.items():
+                if hasattr(agent, 'backend'):
+                    if hasattr(agent.backend, 'get_provider_name'):
+                        provider_name = agent.backend.get_provider_name()
+                        if provider_name == 'claude_code':
+                            agent_dir = snapshot_path / agent_id
+                            agent_dir.mkdir(parents=True, exist_ok=True)
+                        
+        if agent_temporary_workspace:
+            self._agent_temporary_workspace = agent_temporary_workspace
+            workspace_path = Path(self._agent_temporary_workspace)
+            # Clean existing directory if it exists and has contents
+            if workspace_path.exists() and any(workspace_path.iterdir()):
+                shutil.rmtree(workspace_path)
+            workspace_path.mkdir(parents=True, exist_ok=True)
+            # Create workspace directories for each claude_code agent
+            for agent_id, agent in self.agents.items():
+                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                    provider_name = agent.backend.get_provider_name()
+                    if provider_name == 'claude_code':
+                        agent_workspace = workspace_path / agent_id
+                        agent_workspace.mkdir(parents=True, exist_ok=True)
+                        
+            # Create log directories for each claude_code agent
+            log_session_dir = get_log_session_dir()
+            for agent_id, agent in self.agents.items():
+                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                    provider_name = agent.backend.get_provider_name()
+                    if provider_name == 'claude_code':
+                        agent_log_dir = log_session_dir / agent_id
+                        agent_log_dir.mkdir(parents=True, exist_ok=True)
 
     async def chat(
         self,
@@ -156,6 +221,7 @@ class Orchestrator(ChatAgent):
         user_message = conversation_context.get("current_message")
 
         if not user_message:
+            log_stream_chunk("orchestrator", "error", "No user message found in conversation")
             yield StreamChunk(
                 type="error", error="No user message found in conversation"
             )
@@ -183,6 +249,7 @@ class Orchestrator(ChatAgent):
                 yield chunk
         else:
             # Already coordinating - provide status update
+            log_stream_chunk("orchestrator", "content", "🔄 Coordinating agents, please wait...")
             yield StreamChunk(
                 type="content", content="🔄 Coordinating agents, please wait..."
             )
@@ -243,6 +310,15 @@ class Orchestrator(ChatAgent):
         self.total_tokens = 0
         self.is_orchestrator_timeout = False
         self.timeout_reason = None
+        
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            "Starting coordination with timeout",
+            {
+                "timeout_seconds": self.config.timeout_config.orchestrator_timeout_seconds,
+                "agents": list(self.agents.keys())
+            }
+        )
 
         # Track active coordination state for cleanup
         self._active_streams = {}
@@ -281,6 +357,12 @@ class Orchestrator(ChatAgent):
         self, conversation_context: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
+        log_coordination_step(
+            "Starting multi-agent coordination",
+            {"agents": list(self.agents.keys()), "has_context": conversation_context is not None}
+        )
+        
+        log_stream_chunk("orchestrator", "content", "🚀 Starting multi-agent coordination...\n\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content="🚀 Starting multi-agent coordination...\n\n",
@@ -294,6 +376,7 @@ class Orchestrator(ChatAgent):
             self.agent_states[agent_id].has_voted = False
             self.agent_states[agent_id].restart_pending = True
 
+        log_stream_chunk("orchestrator", "content", "## 📋 Agents Coordinating\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content="## 📋 Agents Coordinating\n",
@@ -314,6 +397,11 @@ class Orchestrator(ChatAgent):
         }
         self._selected_agent = self._determine_final_agent_from_votes(
             votes, current_answers
+        )
+        
+        log_coordination_step(
+            "Final agent selected",
+            {"selected_agent": self._selected_agent, "votes": votes}
         )
 
         # Present final answer
@@ -402,17 +490,20 @@ class Orchestrator(ChatAgent):
 
                     if chunk_type == "content":
                         # Stream agent content in real-time with source info
+                        log_stream_chunk("orchestrator", "content", chunk_data, agent_id)
                         yield StreamChunk(
                             type="content", content=chunk_data, source=agent_id
                         )
 
                     elif chunk_type == "reasoning":
                         # Stream reasoning content with proper attribution
+                        log_stream_chunk("orchestrator", "reasoning", chunk_data, agent_id)
                         yield chunk_data  # chunk_data is already a StreamChunk with source
 
                     elif chunk_type == "result":
                         # Agent completed with result
                         result_type, result_data = chunk_data
+                        log_stream_chunk("orchestrator", f"result.{result_type}", result_data, agent_id)
 
                         # Emit agent completion status immediately upon result
                         yield StreamChunk(
@@ -425,9 +516,12 @@ class Orchestrator(ChatAgent):
 
                         if result_type == "answer":
                             # Agent provided an answer (initial or improved)
+                            # Save snapshot when agent provides new answer
+                            await self._save_claude_code_snapshot(agent_id)
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             answered_agents[agent_id] = result_data
                             reset_signal = True
+                            log_stream_chunk("orchestrator", "content", "✅ Answer provided\n", agent_id)
                             yield StreamChunk(
                                 type="content",
                                 content=f"✅ Answer provided\n",
@@ -440,6 +534,7 @@ class Orchestrator(ChatAgent):
                             if self.agent_states[agent_id].restart_pending:
                                 voted_for = result_data.get("agent_id", "<unknown>")
                                 reason = result_data.get("reason", "No reason provided")
+                                log_stream_chunk("orchestrator", "content", f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers", agent_id)
                                 yield StreamChunk(
                                     type="content",
                                     content=f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
@@ -447,7 +542,10 @@ class Orchestrator(ChatAgent):
                                 )
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
+                                # Save snapshot when agent successfully votes
+                                # await self._save_claude_code_snapshot(agent_id)
                                 voted_agents[agent_id] = result_data
+                                log_stream_chunk("orchestrator", "content", f"✅ Vote recorded for [{result_data['agent_id']}]", agent_id)
                                 yield StreamChunk(
                                     type="content",
                                     content=f"✅ Vote recorded for [{result_data['agent_id']}]",
@@ -456,10 +554,12 @@ class Orchestrator(ChatAgent):
 
                     elif chunk_type == "error":
                         # Agent error
+                        log_stream_chunk("orchestrator", "error", chunk_data, agent_id)
                         yield StreamChunk(
                             type="content", content=f"❌ {chunk_data}", source=agent_id
                         )
                         # Emit agent completion status for errors too
+                        log_stream_chunk("orchestrator", "agent_status", "completed", agent_id)
                         yield StreamChunk(
                             type="agent_status",
                             source=agent_id,
@@ -468,8 +568,16 @@ class Orchestrator(ChatAgent):
                         )
                         await self._close_agent_stream(agent_id, active_streams)
 
+                    elif chunk_type == "debug":
+                        # Debug information - forward as StreamChunk for logging
+                        log_stream_chunk("orchestrator", "debug", chunk_data, agent_id)
+                        yield StreamChunk(
+                            type="debug", content=chunk_data, source=agent_id
+                        )
+
                     elif chunk_type == "done":
                         # Stream completed - emit completion status for frontend
+                        log_stream_chunk("orchestrator", "done", None, agent_id)
                         yield StreamChunk(
                             type="agent_status",
                             source=agent_id,
@@ -479,6 +587,7 @@ class Orchestrator(ChatAgent):
                         await self._close_agent_stream(agent_id, active_streams)
 
                 except Exception as e:
+                    log_stream_chunk("orchestrator", "error", f"❌ Stream error - {e}", agent_id)
                     yield StreamChunk(
                         type="content",
                         content=f"❌ Stream error - {e}",
@@ -511,6 +620,122 @@ class Orchestrator(ChatAgent):
         for agent_id in list(active_streams.keys()):
             await self._close_agent_stream(agent_id, active_streams)
 
+    async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
+        """Restore all snapshots to an agent's workspace using anonymous IDs.
+        
+        Args:
+            agent_id: ID of the Claude Code agent receiving the context
+            
+        Returns:
+            Path to the agent's workspace directory if successful, None otherwise
+        """
+        if not self._agent_temporary_workspace or not self._snapshot_storage:
+            return None
+            
+        agent = self.agents.get(agent_id)
+        if not agent:
+            return None
+            
+        # Check if this is a Claude Code agent
+        if not (hasattr(agent, 'backend') and 
+                hasattr(agent.backend, 'get_provider_name') and
+                agent.backend.get_provider_name() == 'claude_code'):
+            return None
+            
+        # Get agent's workspace directory
+        workspace_dir = Path(self._agent_temporary_workspace) / agent_id
+        
+        # Clear existing workspace content completely
+        if workspace_dir.exists():
+            shutil.rmtree(workspace_dir)
+        workspace_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Create anonymous mapping for agent IDs (same logic as in message_templates.py)
+        # This ensures consistency with the anonymous IDs shown to agents
+        agent_mapping = {}
+        sorted_agent_ids = sorted(self.agents.keys())
+        for i, real_agent_id in enumerate(sorted_agent_ids, 1):
+            agent_mapping[real_agent_id] = f"agent{i}"
+        
+        # Copy all snapshots to workspace using anonymous IDs as folder names
+        snapshot_base = Path(self._snapshot_storage)
+        for source_agent_id in self.agents.keys():
+            source_snapshot = snapshot_base / source_agent_id
+            if source_snapshot.exists() and source_snapshot.is_dir():
+                # Use anonymous ID for destination directory name
+                anon_id = agent_mapping[source_agent_id]
+                dest_dir = workspace_dir / anon_id
+                
+                # Copy snapshot content to directory with anonymous name
+                if list(source_snapshot.iterdir()):  # Only copy if not empty
+                    shutil.copytree(source_snapshot, dest_dir, dirs_exist_ok=True)
+        
+        return str(workspace_dir)
+    
+    async def _save_all_claude_code_snapshots(self) -> None:
+        """Save snapshots for all Claude Code agents."""
+        if not self._snapshot_storage:
+            return
+            
+        for agent_id in self.agents.keys():
+            await self._save_claude_code_snapshot(agent_id)
+    
+    async def _save_claude_code_snapshot(self, agent_id: str) -> None:
+        """Save a snapshot of Claude Code agent's working directory.
+        
+        Args:
+            agent_id: ID of the Claude Code agent
+        """
+        if not self._snapshot_storage:
+            return
+            
+        agent = self.agents.get(agent_id)
+        if not agent:
+            return
+            
+        # Check if this is a Claude Code agent
+        if not (hasattr(agent, 'backend') and 
+                hasattr(agent.backend, 'get_provider_name') and
+                agent.backend.get_provider_name() == 'claude_code'):
+            return
+            
+        # Get the working directory from the backend
+        if hasattr(agent.backend, '_cwd') and agent.backend._cwd:
+            source_dir = Path(agent.backend._cwd)
+            if source_dir.exists() and source_dir.is_dir():
+                # Destination directory for this agent's snapshots
+                dest_dir = Path(self._snapshot_storage) / agent_id
+                
+                # Clear existing snapshot and copy new one
+                if dest_dir.exists():
+                    shutil.rmtree(dest_dir)
+                dest_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Copy all contents from source to destination
+                for item in source_dir.iterdir():
+                    if item.is_file():
+                        shutil.copy2(item, dest_dir / item.name)
+                    elif item.is_dir():
+                        shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
+                
+                # Also copy snapshot to timestamped log directory
+                log_session_dir = get_log_session_dir()
+                agent_log_dir = log_session_dir / agent_id
+                if agent_log_dir.exists():
+                    # Check if source directory has any contents
+                    if any(source_dir.iterdir()):
+                        # Create timestamped subdirectory
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        timestamped_dir = agent_log_dir / timestamp
+                        timestamped_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        # Copy snapshot contents to timestamped directory
+                        for item in source_dir.iterdir():
+                            if item.is_file():
+                                shutil.copy2(item, timestamped_dir / item.name)
+                            elif item.is_dir():
+                                shutil.copytree(item, timestamped_dir / item.name, dirs_exist_ok=True)
+    
     async def _close_agent_stream(
         self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
     ) -> None:
@@ -608,6 +833,23 @@ class Orchestrator(ChatAgent):
             restart_pending is cleared at the beginning of execution.
         """
         agent = self.agents[agent_id]
+        
+        # Get backend name for logging
+        backend_name = None
+        if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+            backend_name = agent.backend.get_provider_name()
+        
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            f"Starting agent execution: {agent_id}",
+            {
+                "agent_id": agent_id,
+                "backend": backend_name,
+                "task": task if task else None,  # Full task for debug logging
+                "has_answers": bool(answers),
+                "num_answers": len(answers) if answers else 0
+            }
+        )
 
         # Initialize agent state
         self.agent_states[agent_id].is_killed = False
@@ -616,7 +858,16 @@ class Orchestrator(ChatAgent):
         # Clear restart pending flag at the beginning of agent execution
         self.agent_states[agent_id].restart_pending = False
 
+        # Restore snapshots to workspace for Claude Code agents
+        workspace_path = await self._restore_snapshots_to_workspace(agent_id)
+        if workspace_path and hasattr(agent.backend, 'set_temporary_cwd'):
+            # Set the temporary workspace path for context sharing
+            agent.backend.set_temporary_cwd(workspace_path)
+
         try:
+            # Get agent's custom system message if available
+            agent_system_message = agent.get_configurable_system_message()
+            
             # Build conversation with context support
             if conversation_context and conversation_context.get(
                 "conversation_history"
@@ -629,6 +880,7 @@ class Orchestrator(ChatAgent):
                     ),
                     agent_summaries=answers,
                     valid_agent_ids=list(answers.keys()) if answers else None,
+                    base_system_message=agent_system_message,
                 )
             else:
                 # Fallback to standard conversation building
@@ -636,7 +888,20 @@ class Orchestrator(ChatAgent):
                     task=task,
                     agent_summaries=answers,
                     valid_agent_ids=list(answers.keys()) if answers else None,
+                    base_system_message=agent_system_message,
                 )
+            
+            # Log the messages being sent to the agent with backend info
+            backend_name = None
+            if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                backend_name = agent.backend.get_provider_name()
+            
+            log_orchestrator_agent_message(
+                agent_id,
+                "SEND",
+                {"system": conversation["system_message"], "user": conversation["user_message"]},
+                backend_name=backend_name
+            )
 
             # Clean startup without redundant messages
 
@@ -698,6 +963,11 @@ class Orchestrator(ChatAgent):
                         response_text += chunk.content
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
+                        # Log received content
+                        backend_name = None
+                        if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                            backend_name = agent.backend.get_provider_name()
+                        log_orchestrator_agent_message(agent_id, "RECV", {"content": chunk.content}, backend_name=backend_name)
                     elif chunk.type in [
                         "reasoning",
                         "reasoning_done",
@@ -724,11 +994,19 @@ class Orchestrator(ChatAgent):
                         yield ("reasoning", reasoning_chunk)
                     elif chunk.type == "backend_status":
                         pass
+                    elif chunk.type == "debug":
+                        # Forward debug chunks
+                        yield ("debug", chunk.content)
                     elif chunk.type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                         tool_calls.extend(chunk_tool_calls)
                         # Stream tool calls to show agent actions
+                        # Get backend name for logging
+                        backend_name = None
+                        if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                            backend_name = agent.backend.get_provider_name()
+                        
                         for tool_call in chunk_tool_calls:
                             tool_name = agent.backend.extract_tool_name(tool_call)
                             tool_args = agent.backend.extract_tool_arguments(tool_call)
@@ -736,9 +1014,11 @@ class Orchestrator(ChatAgent):
                             if tool_name == "new_answer":
                                 content = tool_args.get("content", "")
                                 yield ("content", f'💡 Providing answer: "{content}"')
+                                log_tool_call(agent_id, "new_answer", {"content": content}, None, backend_name)  # Full content for debug logging
                             elif tool_name == "vote":
                                 agent_voted_for = tool_args.get("agent_id", "")
                                 reason = tool_args.get("reason", "")
+                                log_tool_call(agent_id, "vote", {"agent_id": agent_voted_for, "reason": reason}, None, backend_name)  # Full reason for debug logging
 
                                 # Convert anonymous agent ID to real agent ID for display
                                 real_agent_id = agent_voted_for
@@ -758,6 +1038,7 @@ class Orchestrator(ChatAgent):
                                 )
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
+                                log_tool_call(agent_id, tool_name, tool_args, None, backend_name)
                     elif chunk.type == "error":
                         # Stream error information to user interface
                         error_msg = (
@@ -1020,12 +1301,14 @@ class Orchestrator(ChatAgent):
 
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
         """Present the final coordinated answer."""
+        log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
         yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
 
         # Select the best agent based on current state
         if not self._selected_agent:
             self._selected_agent = self._determine_final_agent_from_states()
             if self._selected_agent:
+                log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
                 yield StreamChunk(
                     type="content",
                     content=f"🏆 Selected Agent: {self._selected_agent}\n",
@@ -1041,10 +1324,13 @@ class Orchestrator(ChatAgent):
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
 
+            log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
             yield StreamChunk(
                 type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n"
             )
+            log_stream_chunk("orchestrator", "content", final_answer)
             yield StreamChunk(type="content", content=final_answer)
+            log_stream_chunk("orchestrator", "content", f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*")
             yield StreamChunk(
                 type="content",
                 content=f"\n\n---\n*Coordinated by {len(self.agents)} agents via MassGen framework*",
@@ -1052,15 +1338,18 @@ class Orchestrator(ChatAgent):
         else:
             error_msg = "❌ Unable to provide coordinated answer - no successful agents"
             self.add_to_history("assistant", error_msg)
+            log_stream_chunk("orchestrator", "error", error_msg)
             yield StreamChunk(type="content", content=error_msg)
 
         # Update workflow phase
         self.workflow_phase = "presenting"
+        log_stream_chunk("orchestrator", "done", None)
         yield StreamChunk(type="done")
 
     async def _handle_orchestrator_timeout(self) -> AsyncGenerator[StreamChunk, None]:
         """Handle orchestrator timeout by jumping directly to get_final_presentation."""
         # Output orchestrator timeout message first
+        log_stream_chunk("orchestrator", "content", f"\n⚠️ **Orchestrator Timeout**: {self.timeout_reason}\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content=f"\n⚠️ **Orchestrator Timeout**: {self.timeout_reason}\n",
@@ -1074,6 +1363,7 @@ class Orchestrator(ChatAgent):
             if state.answer and not state.is_killed
         }
 
+        log_stream_chunk("orchestrator", "content", f"📊 Current state: {len(available_answers)} answers available\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content=f"📊 Current state: {len(available_answers)} answers available\n",
@@ -1082,12 +1372,14 @@ class Orchestrator(ChatAgent):
 
         # If no answers available, provide fallback with timeout explanation
         if len(available_answers) == 0:
+            log_stream_chunk("orchestrator", "error", "❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n", self.orchestrator_id)
             yield StreamChunk(
                 type="content",
                 content="❌ No answers available from any agents due to timeout. No agents had enough time to provide responses.\n",
                 source=self.orchestrator_id,
             )
             self.workflow_phase = "presenting"
+            log_stream_chunk("orchestrator", "done", None)
             yield StreamChunk(type="done")
             return
 
@@ -1104,6 +1396,7 @@ class Orchestrator(ChatAgent):
 
         # Jump directly to get_final_presentation
         vote_results = self._get_vote_results()
+        log_stream_chunk("orchestrator", "content", f"🎯 Jumping to final presentation with {self._selected_agent} (selected despite timeout)\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
             content=f"🎯 Jumping to final presentation with {self._selected_agent} (selected despite timeout)\n",
@@ -1158,6 +1451,7 @@ class Orchestrator(ChatAgent):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Ask the winning agent to present their final answer with voting context."""
         if selected_agent_id not in self.agents:
+            log_stream_chunk("orchestrator", "error", f"Selected agent {selected_agent_id} not found")
             yield StreamChunk(
                 type="error", error=f"Selected agent {selected_agent_id} not found"
             )
@@ -1172,6 +1466,20 @@ class Orchestrator(ChatAgent):
         self._final_presentation_started = True
 
         agent = self.agents[selected_agent_id]
+        
+        # Restore workspace to preserve context from coordination phase
+        # This allows the agent to reference and access previous work
+        temp_workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
+        if temp_workspace_path and hasattr(agent, 'backend'):
+            if hasattr(agent.backend, 'set_temporary_cwd'):
+                # Set the temporary workspace for context sharing
+                agent.backend.set_temporary_cwd(temp_workspace_path)
+                # Log workspace restoration for visibility
+                yield StreamChunk(
+                    type="debug",
+                    content=f"Restored workspace context for final presentation: {temp_workspace_path}",
+                    source=selected_agent_id
+                )
 
         # Prepare context about the voting
         vote_counts = vote_results.get("vote_counts", {})
@@ -1200,18 +1508,37 @@ class Orchestrator(ChatAgent):
             selected_agent_id=selected_agent_id,
         )
 
-        # Get agent's original system message if available
-        agent_system_message = getattr(agent, "system_message", None)
+        # Get agent's configurable system message using the standard interface
+        agent_system_message = agent.get_configurable_system_message()
+        
+        # Build system message with workspace context if available
+        base_system_message = self.message_templates.final_presentation_system_message(
+            agent_system_message
+        )
+        
+        # Add workspace context information to system message if workspace was restored
+        if temp_workspace_path:
+            workspace_context_parts = []
+            absolute_temp_path = os.path.join(os.getcwd(), temp_workspace_path)
+            workspace_context_parts.append(f"    Context: You have access to a reference workspace at: {absolute_temp_path}")
+            workspace_context_parts.append("    This reference workspace contains work from yourself and other agents for REFERENCE ONLY.")
+            workspace_context_parts.append("    CRITICAL: You should READ documents or EXECUTE code from the reference workspace to understand other agents' work.")
+            workspace_context_parts.append("    When you READ or EXECUTE content from the reference workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the reference workspace as well.")
+            workspace_context_parts.append(f"    You also can look in your working directory for your most updated information.")
+            workspace_context_parts.append(f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.")
+            
+            workspace_context = "\n".join(workspace_context_parts)
+            base_system_message = f"{base_system_message}\n\n{workspace_context}"
+        
         # Create conversation with system and user messages
         presentation_messages = [
             {
                 "role": "system",
-                "content": self.message_templates.final_presentation_system_message(
-                    agent_system_message
-                ),
+                "content": base_system_message,
             },
             {"role": "user", "content": presentation_content},
         ]
+        log_stream_chunk("orchestrator", "status", f"🎤  [{selected_agent_id}] presenting final answer\n")
         yield StreamChunk(
             type="status",
             content=f"🎤  [{selected_agent_id}] presenting final answer\n",
@@ -1223,6 +1550,7 @@ class Orchestrator(ChatAgent):
             # Use the same streaming approach as regular coordination
             if chunk.type == "content" and chunk.content:
                 presentation_content += chunk.content
+                log_stream_chunk("orchestrator", "content", chunk.content, selected_agent_id)
                 yield StreamChunk(
                     type="content", content=chunk.content, source=selected_agent_id
                 )
@@ -1250,6 +1578,7 @@ class Orchestrator(ChatAgent):
                     summary_index=getattr(chunk, "summary_index", None),
                 )
                 # Use the same format as main coordination for consistency
+                log_stream_chunk("orchestrator", chunk.type, chunk.content, selected_agent_id)
                 yield reasoning_chunk
             elif chunk.type == "backend_status":
                 status_json = json.loads(chunk.content)
@@ -1259,19 +1588,23 @@ class Orchestrator(ChatAgent):
 Final Session ID: {session_id}.
 """
 
+                log_stream_chunk("orchestrator", "content", content, selected_agent_id)
                 yield StreamChunk(
                     type="content", content=content, source=selected_agent_id
                 )
 
             elif chunk.type == "done":
+                log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
+                log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
                 yield StreamChunk(
                     type="error", error=chunk.error, source=selected_agent_id
                 )
             # Pass through other chunk types as-is but with source
             else:
                 if hasattr(chunk, "source"):
+                    log_stream_chunk("orchestrator", chunk.type, getattr(chunk, "content", ""), selected_agent_id)
                     yield StreamChunk(
                         type=chunk.type,
                         content=getattr(chunk, "content", ""),
@@ -1283,6 +1616,7 @@ Final Session ID: {session_id}.
                         },
                     )
                 else:
+                    log_stream_chunk("orchestrator", chunk.type, getattr(chunk, "content", ""), selected_agent_id)
                     yield StreamChunk(
                         type=chunk.type,
                         content=getattr(chunk, "content", ""),
@@ -1294,16 +1628,24 @@ Final Session ID: {session_id}.
                         },
                     )
 
-        # If no content was generated, use the stored answer as fallback
-        if not presentation_content.strip():
+        # Store the final presentation content for logging
+        if presentation_content.strip():
+            # Store the synthesized final answer
+            self._final_presentation_content = presentation_content.strip()
+        else:
+            # If no content was generated, use the stored answer as fallback
             stored_answer = self.agent_states[selected_agent_id].answer
             if stored_answer:
+                fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
+                log_stream_chunk("orchestrator", "content", fallback_content, selected_agent_id)
                 yield StreamChunk(
                     type="content",
-                    content=f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}",
+                    content=fallback_content,
                     source=selected_agent_id,
                 )
+                self._final_presentation_content = stored_answer
             else:
+                log_stream_chunk("orchestrator", "error", "\n❌ No content generated for final presentation and no stored answer available.", selected_agent_id)
                 yield StreamChunk(
                     type="content",
                     content="\n❌ No content generated for final presentation and no stored answer available.",
@@ -1401,16 +1743,19 @@ Final Session ID: {session_id}.
             conversation_context
             and len(conversation_context.get("conversation_history", [])) > 0
         ):
+            log_stream_chunk("orchestrator", "content", f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or coordinate a new task that takes our conversation history into account.")
             yield StreamChunk(
                 type="content",
                 content=f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or coordinate a new task that takes our conversation history into account.",
             )
         else:
+            log_stream_chunk("orchestrator", "content", f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.")
             yield StreamChunk(
                 type="content",
                 content=f"🤔 Thank you for your follow-up: '{user_message}'. The coordination is complete, but I can help clarify the answer or coordinate a new task if needed.",
             )
 
+        log_stream_chunk("orchestrator", "done", None)
         yield StreamChunk(type="done")
 
     # =============================================================================
@@ -1439,6 +1784,7 @@ Final Session ID: {session_id}.
             "workflow_phase": self.workflow_phase,
             "current_task": self.current_task,
             "selected_agent": self._selected_agent,
+            "final_presentation_content": self._final_presentation_content,
             "vote_results": vote_results,
             "agents": {
                 aid: {
@@ -1456,13 +1802,41 @@ Final Session ID: {session_id}.
             "conversation_length": len(self.conversation_history),
         }
 
-    def reset(self) -> None:
+    def get_configurable_system_message(self) -> Optional[str]:
+        """
+        Get the configurable system message for the orchestrator.
+        
+        This can define how the orchestrator should coordinate agents, construct messages,
+        handle conflicts, make decisions, etc. For example:
+        - Custom voting strategies
+        - Message construction templates  
+        - Conflict resolution approaches
+        - Coordination workflow preferences
+        
+        Returns:
+            Orchestrator's configurable system message if available, None otherwise
+        """
+        if self.config and hasattr(self.config, 'get_configurable_system_message'):
+            return self.config.get_configurable_system_message()
+        elif self.config and hasattr(self.config, 'custom_system_instruction'):
+            return self.config.custom_system_instruction
+        elif self.config and self.config.backend_params:
+            # Check for backend-specific system prompts
+            backend_params = self.config.backend_params
+            if "system_prompt" in backend_params:
+                return backend_params["system_prompt"]
+            elif "append_system_prompt" in backend_params:
+                return backend_params["append_system_prompt"]
+        return None
+
+    async def reset(self) -> None:
         """Reset orchestrator state for new task."""
         self.conversation_history.clear()
         self.current_task = None
         self.workflow_phase = "idle"
         self._coordination_messages.clear()
         self._selected_agent = None
+        self._final_presentation_content = None
 
         # Reset agent states
         for state in self.agent_states.values():
@@ -1495,6 +1869,8 @@ def create_orchestrator(
     orchestrator_id: str = "orchestrator",
     session_id: Optional[str] = None,
     config: Optional[AgentConfig] = None,
+    snapshot_storage: Optional[str] = None,
+    agent_temporary_workspace: Optional[str] = None,
 ) -> Orchestrator:
     """
     Create a MassGen orchestrator with sub-agents.
@@ -1504,6 +1880,8 @@ def create_orchestrator(
         orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
         session_id: Optional session ID
         config: Optional AgentConfig for orchestrator customization
+        snapshot_storage: Optional path to store agent workspace snapshots (for Claude Code context sharing)
+        agent_temporary_workspace: Optional path for agent temporary workspaces (for Claude Code context sharing)
 
     Returns:
         Configured Orchestrator
@@ -1515,4 +1893,6 @@ def create_orchestrator(
         orchestrator_id=orchestrator_id,
         session_id=session_id,
         config=config,
+        snapshot_storage=snapshot_storage,
+        agent_temporary_workspace=agent_temporary_workspace,
     )

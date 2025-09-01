@@ -47,6 +47,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import uuid
 from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
@@ -61,9 +62,13 @@ from claude_code_sdk import (  # type: ignore
     ToolUseBlock,
     ToolResultBlock,
 )
+import sys
+import warnings
+import atexit
 
 
 from .base import LLMBackend, StreamChunk
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk, logger
 
 
 class ClaudeCodeBackend(LLMBackend):
@@ -102,10 +107,193 @@ class ClaudeCodeBackend(LLMBackend):
         if self.api_key:
             os.environ["ANTHROPIC_API_KEY"] = self.api_key
 
+        # Set git-bash path for Windows compatibility
+        if sys.platform == "win32" and not os.environ.get("CLAUDE_CODE_GIT_BASH_PATH"):
+            import shutil
+            bash_path = shutil.which("bash")
+            if bash_path:
+                os.environ["CLAUDE_CODE_GIT_BASH_PATH"] = bash_path
+                print(f"[ClaudeCodeBackend] Set CLAUDE_CODE_GIT_BASH_PATH={bash_path}")
+
+        # Comprehensive Windows subprocess cleanup warning suppression
+        if sys.platform == "win32":
+            self._setup_windows_subprocess_cleanup_suppression()
+
         # Single ClaudeSDKClient for this backend instance
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
         self._cwd: Optional[str] = None
+        self._temporary_cwd: Optional[str] = None  # Temporary workspace for context sharing
+
+        # Handle initial cwd if provided - create directory and clear existing files
+        cwd_path = kwargs.get("cwd")
+        if cwd_path:
+            cwd_dir = Path(cwd_path)
+            if not cwd_dir.is_absolute():
+                # Convert relative path to absolute path
+                cwd_dir = cwd_dir.resolve()
+
+            # Clear existing files if directory exists
+            if cwd_dir.exists() and cwd_dir.is_dir():
+                for item in cwd_dir.iterdir():
+                    if item.is_file():
+                        item.unlink()
+                    elif item.is_dir():
+                        shutil.rmtree(item)
+
+            # Create directory if it doesn't exist
+            cwd_dir.mkdir(parents=True, exist_ok=True)
+
+            # Store the validated absolute path
+            self._cwd = str(cwd_dir)
+
+        self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
+
+    def _setup_windows_subprocess_cleanup_suppression(self):
+        """Comprehensive Windows subprocess cleanup warning suppression."""
+        # All warning filters
+        warnings.filterwarnings("ignore", message="unclosed transport")
+        warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
+        warnings.filterwarnings("ignore", message="Exception ignored in")
+        warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
+        warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
+        warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
+        warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
+
+        # Patch asyncio transport destructors to be silent
+        try:
+            import asyncio.base_subprocess
+            import asyncio.proactor_events
+
+            # Store originals
+            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, '__del__', None)
+            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, '__del__', None)
+
+            def silent_subprocess_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_subprocess_del:
+                            original_subprocess_del(self)
+                except Exception:
+                    pass
+
+            def silent_pipe_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_pipe_del:
+                            original_pipe_del(self)
+                except Exception:
+                    pass
+
+            # Apply patches
+            if original_subprocess_del:
+                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
+            if original_pipe_del:
+                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
+        except Exception:
+            pass  # If patching fails, fall back to warning filters only
+
+        # Setup exit handler for stderr suppression
+        original_stderr = sys.stderr
+
+        def suppress_exit_warnings():
+            try:
+                sys.stderr = open(os.devnull, 'w')
+                import time
+                time.sleep(0.3)
+            except Exception:
+                pass
+            finally:
+                try:
+                    if sys.stderr != original_stderr:
+                        sys.stderr.close()
+                    sys.stderr = original_stderr
+                except Exception:
+                    pass
+
+        atexit.register(suppress_exit_warnings)
+
+
+        self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
+
+    def _setup_windows_subprocess_cleanup_suppression(self):
+        """Comprehensive Windows subprocess cleanup warning suppression."""
+        # All warning filters
+        warnings.filterwarnings("ignore", message="unclosed transport")
+        warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
+        warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
+        warnings.filterwarnings("ignore", message="Exception ignored in")
+        warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
+        warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
+        warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
+        warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
+
+        # Patch asyncio transport destructors to be silent
+        try:
+            import asyncio.base_subprocess
+            import asyncio.proactor_events
+
+            # Store originals
+            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, '__del__', None)
+            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, '__del__', None)
+
+            def silent_subprocess_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_subprocess_del:
+                            original_subprocess_del(self)
+                except Exception:
+                    pass
+
+            def silent_pipe_del(self):
+                try:
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if original_pipe_del:
+                            original_pipe_del(self)
+                except Exception:
+                    pass
+
+            # Apply patches
+            if original_subprocess_del:
+                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
+            if original_pipe_del:
+                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
+        except Exception:
+            pass  # If patching fails, fall back to warning filters only
+
+        # Setup exit handler for stderr suppression
+        original_stderr = sys.stderr
+
+        def suppress_exit_warnings():
+            try:
+                sys.stderr = open(os.devnull, 'w')
+                import time
+                time.sleep(0.3)
+            except Exception:
+                pass
+            finally:
+                try:
+                    if sys.stderr != original_stderr:
+                        sys.stderr.close()
+                    sys.stderr = original_stderr
+                except Exception:
+                    pass
+
+        atexit.register(suppress_exit_warnings)
+
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -119,6 +307,14 @@ class ClaudeCodeBackend(LLMBackend):
             True - Claude Code maintains server-side session state
         """
         return True
+    
+    def set_temporary_cwd(self, temporary_cwd: str) -> None:
+        """Set the temporary working directory for context sharing.
+        
+        Args:
+            temporary_cwd: Path to temporary workspace containing shared context from other agents
+        """
+        self._temporary_cwd = temporary_cwd
 
     async def clear_history(self) -> None:
         """
@@ -377,7 +573,7 @@ class ClaudeCodeBackend(LLMBackend):
                 if t.get("function", {}).get("name") in ["new_answer", "vote"]
             ]
             if workflow_tools:
-                system_parts.append("\n--- Available Tools ---")
+                system_parts.append("\n--- Coordination Actions ---")
                 for tool in workflow_tools:
                     name = tool.get("function", {}).get("name", "unknown")
                     description = tool.get("function", {}).get(
@@ -387,11 +583,60 @@ class ClaudeCodeBackend(LLMBackend):
 
                     # Add usage examples for workflow tools
                     if name == "new_answer":
+                        # Add reference to temporary workspace if available
+                        if self._temporary_cwd:
+                            absolute_temp_path = os.path.join(os.getcwd(), self._temporary_cwd)
+                            system_parts.append(
+                                f"    Context: You have access to a reference workspace at: {absolute_temp_path}"
+                            )
+                            system_parts.append(
+                                "    This workspace contains work from yourself and other agents for REFERENCE ONLY."
+                            )
+                            system_parts.append(
+                                "    CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace."
+                            )
+                            system_parts.append(
+                                f"    DO NOT look in your working directory ({self._cwd}) for agent information - it's exclusively for creating YOUR OWN new work."
+                            )
+                            system_parts.append(
+                                "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
+                            )
+                            system_parts.append(
+                                "    When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well."
+                            )
+                            system_parts.append(
+                                f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory: {self._cwd}"
+                            )
                         system_parts.append(
                             '    Usage: {"tool_name": "new_answer", '
-                            '"arguments": {"content": "your answer"}}'
+                            '"arguments": {"content": "your improved answer. If any builtin tools were used, mention how they are used here."}}'
                         )
                     elif name == "vote":
+                        # Add reference to temporary workspace if available for voting context
+                        if self._temporary_cwd:
+                            absolute_temp_path = os.path.join(os.getcwd(), self._temporary_cwd)
+                            system_parts.append(
+                                f"    Context: You can review all agents' work (including your own) at: {absolute_temp_path}"
+                            )
+                            system_parts.append(
+                                "    CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace."
+                            )
+                            system_parts.append(
+                                f"    DO NOT look in your working directory ({self._cwd}) for agent information - it's exclusively for creating YOUR OWN new work."
+                            )
+                            system_parts.append(
+                                "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
+                            )
+                            system_parts.append(
+                                "    When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well."
+                            )
+                            system_parts.append(
+                                f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory: {self._cwd}"
+                            )
+                            system_parts.append(
+                                "    Use this context to make an informed voting decision."
+                            )
+                        
                         # Extract valid agent IDs from enum if available
                         agent_id_enum = None
                         for t in tools:
@@ -420,14 +665,14 @@ class ClaudeCodeBackend(LLMBackend):
                                 '"reason": "explanation"}}'
                             )
 
-                system_parts.append("\n--- MassGen Workflow Instructions ---")
+                system_parts.append("\n--- MassGen Coordination Instructions ---")
                 system_parts.append(
                     "IMPORTANT: You must respond with a structured JSON decision at the end of your response."
                 )
-                system_parts.append(
-                    "You must use the coordination tools (new_answer, vote) "
-                    "to participate in multi-agent workflows."
-                )
+                # system_parts.append(
+                #     "You must use the coordination tools (new_answer, vote) "
+                #     "to participate in multi-agent workflows."
+                # )
                 # system_parts.append(
                 #     "Make sure to include the JSON in the exact format shown in the usage examples above.")
                 system_parts.append(
@@ -444,6 +689,39 @@ class ClaudeCodeBackend(LLMBackend):
                 )
 
         return "\n".join(system_parts)
+
+    async def _log_backend_input(self, messages, system_prompt, tools, kwargs):
+        """Log backend inputs using StreamChunk for visibility (enabled by default)."""
+        # Enable by default, but allow disabling via environment variable
+        if os.getenv('MASSGEN_LOG_BACKENDS', '1') == '0':
+            return
+            
+        try:
+            # Create debug info using the logging approach that works in MassGen
+            reset_mode = "🔄 RESET" if kwargs.get('reset_chat') else "💬 CONTINUE"  
+            tools_info = f"🔧 {len(tools)} tools" if tools else "🚫 No tools"
+            
+            debug_info = f"[BACKEND] {reset_mode} | {tools_info} | Session: {self._current_session_id}"
+            
+            if system_prompt and len(system_prompt) > 0:
+                # Show full system prompt in debug logging
+                debug_info += f"\n[SYSTEM_FULL] {system_prompt}"
+                
+                
+            # Yield a debug chunk that will be captured by the logging system
+            yield StreamChunk(
+                type="debug",
+                content=debug_info,
+                source="claude_code_backend"
+            )
+                
+        except Exception as e:
+            # Log the error but don't break backend execution
+            yield StreamChunk(
+                type="debug",
+                content=f"[BACKEND_LOG_ERROR] {str(e)}",
+                source="claude_code_backend"
+            )
 
     def extract_structured_response(
         self, response_text: str
@@ -647,12 +925,13 @@ class ClaudeCodeBackend(LLMBackend):
                 # Convert relative path to absolute path
                 cwd_dir = cwd_dir.resolve()
 
-            # Create directory if it doesn't exist
+            # Create directory if it doesn't exist (files already cleared in __init__ if needed)
             cwd_dir.mkdir(parents=True, exist_ok=True)
 
             # Ensure we return a valid absolute path
             cwd_option = cwd_dir
-        self._cwd = str(cwd_option)
+            # Update the stored cwd path
+            self._cwd = str(cwd_option)
 
         return ClaudeCodeOptions(
             # No model set by default - let Claude Code decide
@@ -674,6 +953,7 @@ class ClaudeCodeBackend(LLMBackend):
         Returns:
             ClaudeSDKClient instance
         """
+
         # Build options with all parameters
         options = self._build_claude_options(**options_kwargs)
 
@@ -697,6 +977,15 @@ class ClaudeCodeBackend(LLMBackend):
         Yields:
             StreamChunk objects with response content and metadata
         """
+        # Extract agent_id from kwargs if provided
+        agent_id = kwargs.get('agent_id', None)
+        
+        log_backend_activity(
+            self.get_provider_name(),
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id
+        )
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
         # Check if we already have a client
@@ -712,36 +1001,108 @@ class ClaudeCodeBackend(LLMBackend):
                     "Bash(chmod*)",
                     "Bash(chown*)",
                 ]
-                # Extract system message from messages for append mode
-                system_msg = next(
-                    (msg for msg in messages if msg.get("role") == "system"), None
-                )
-                if system_msg:
-                    system_content = system_msg.get("content", "")  # noqa: E128
-                else:
-                    system_content = ""
-                # Build system prompt with tools information
-                workflow_system_prompt = self._build_system_prompt_with_workflow_tools(
-                    tools or [], system_content
-                )
-                # Handle different system prompt mode
-                if all_params.get("system_prompt"):
-                    # Create client with system_prompt
-                    client = self.create_client(
-                        system_prompt=workflow_system_prompt, **all_params
-                    )
-                else:
-                    # Create client with the enhanced system prompt
-                    client = self.create_client(
-                        append_system_prompt=workflow_system_prompt, **all_params
-                    )
+
+            # Extract system message from messages for append mode (always do this)
+            system_msg = next(
+                (msg for msg in messages if msg.get("role") == "system"), None
+            )
+            if system_msg:
+                system_content = system_msg.get("content", "")  # noqa: E128
+            else:
+                system_content = ""
+            
+            # Build system prompt with tools information
+            workflow_system_prompt = self._build_system_prompt_with_workflow_tools(
+                tools or [], system_content
+            )
+
+            # Windows-specific handling: detect complex prompts that cause subprocess hang
+            if sys.platform == "win32" and len(workflow_system_prompt) > 200:
+                # Windows with complex prompt: use post-connection delivery to avoid hang
+                print(f"[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
+                clean_params = {k: v for k, v in all_params.items() 
+                                if k not in ["system_prompt", "append_system_prompt"]}
+                client = self.create_client(**clean_params)
+                self._pending_system_prompt = workflow_system_prompt
+
+            else:
+                    # Original approach for Mac/Linux and Windows with simple prompts
+                try:
+                    # Handle different system prompt mode
+                    if all_params.get("system_prompt"):
+                        # Create client with system_prompt
+                        client = self.create_client(
+                            **{**all_params, "system_prompt": workflow_system_prompt}
+                        )
+                    else:
+                        # Create client with the enhanced system prompt
+                        client = self.create_client(
+                            **{**all_params, "append_system_prompt": workflow_system_prompt}
+                        )
+                    self._pending_system_prompt = None
+
+                except Exception as create_error:
+                    # Fallback for unexpected failures
+                    if sys.platform == "win32":
+                        clean_params = {k: v for k, v in all_params.items() 
+                                        if k not in ["system_prompt", "append_system_prompt"]}
+                        client = self.create_client(**clean_params)
+                        self._pending_system_prompt = workflow_system_prompt
+                    else:
+                        # On Mac/Linux, re-raise the error since this shouldn't happen
+                        raise create_error
+                    
 
         # Connect client if not already connected
         if not client._transport:
-            await client.connect()
+            try:
+                await client.connect()
+
+                # If we have a pending system prompt, deliver it at system level using /system command
+                if hasattr(self, '_pending_system_prompt') and self._pending_system_prompt:
+                    try:
+                        # Use Claude Code's native /system command for proper system-level delivery
+                        system_command = f"/system {self._pending_system_prompt}"
+                        await client.query(system_command)
+
+                        # Consume the system response
+                        async for response in client.receive_response():
+                            if hasattr(response, 'subtype') and response.subtype == 'init':
+                                # This is the system initialization response
+                                break
+
+                        yield StreamChunk(
+                            type="content",
+                            content=f"[SYSTEM] Applied system instructions at system level\n",
+                            source="claude_code"
+                        )
+
+                        # Clear the pending prompt
+                        self._pending_system_prompt = None
+
+                    except Exception as sys_e:
+                        yield StreamChunk(
+                            type="content",
+                            content=f"[SYSTEM] Warning: System-level delivery failed: {str(sys_e)}\n",
+                            source="claude_code"
+                        )
+
+            except Exception as e:
+                yield StreamChunk(
+                    type="error",
+                    error=f"Failed to connect to Claude Code: {str(e)}",
+                    source="claude_code"
+                )
+                return  
+
+        # Log backend inputs when we have workflow_system_prompt available
+        if 'workflow_system_prompt' in locals():
+            async for debug_chunk in self._log_backend_input(messages, workflow_system_prompt, tools, kwargs):
+                yield debug_chunk
 
         # Format the messages for Claude Code
         if not messages:
+            log_stream_chunk("backend.claude_code", "error", "No messages provided to stream_with_tools", agent_id)
             # No messages to process - yield error
             yield StreamChunk(
                 type="error",
@@ -755,6 +1116,7 @@ class ClaudeCodeBackend(LLMBackend):
         assistant_messages = [msg for msg in messages if msg.get("role") == "assistant"]
 
         if assistant_messages:
+            log_stream_chunk("backend.claude_code", "error", "Claude Code backend cannot accept assistant messages - it maintains its own conversation history", agent_id)
             yield StreamChunk(
                 type="error",
                 error="Claude Code backend cannot accept assistant messages - it maintains its own conversation history",
@@ -763,6 +1125,7 @@ class ClaudeCodeBackend(LLMBackend):
             return
 
         if not user_messages:
+            log_stream_chunk("backend.claude_code", "error", "No user messages found to send to Claude Code", agent_id)
             yield StreamChunk(
                 type="error",
                 error="No user messages found to send to Claude Code",
@@ -776,15 +1139,24 @@ class ClaudeCodeBackend(LLMBackend):
             content = user_msg.get("content", "").strip()
             if content:
                 user_contents.append(content)
+                
         if user_contents:
             # Join multiple user messages with newlines
             combined_query = "\n\n".join(user_contents)
+            log_backend_agent_message(
+                agent_id or "default",
+                "SEND",
+                {"system": workflow_system_prompt, "user": combined_query},
+                backend_name=self.get_provider_name()
+            )
             await client.query(combined_query)
         else:
+            log_stream_chunk("backend.claude_code", "error", "All user messages were empty", agent_id)
             yield StreamChunk(
                 type="error", error="All user messages were empty", source="claude_code"
             )
             return
+        
         # Stream response and convert to MassGen StreamChunks
         accumulated_content = ""
         try:
@@ -797,12 +1169,26 @@ class ClaudeCodeBackend(LLMBackend):
                             accumulated_content += block.text
 
                             # Yield content chunk
+                            log_backend_agent_message(
+                                agent_id or "default",
+                                "RECV",
+                                {"content": block.text},
+                                backend_name=self.get_provider_name()
+                            )
+                            log_stream_chunk("backend.claude_code", "content", block.text, agent_id)
                             yield StreamChunk(
                                 type="content", content=block.text, source="claude_code"
                             )
 
                         elif isinstance(block, ToolUseBlock):
                             # Claude Code's builtin tool usage
+                            log_backend_activity(
+                                self.get_provider_name(),
+                                f"Builtin tool called: {block.name}",
+                                {"tool_id": block.id},
+                                agent_id=agent_id
+                            )
+                            log_stream_chunk("backend.claude_code", "tool_use", {"name": block.name, "input": block.input}, agent_id)
                             yield StreamChunk(
                                 type="content",
                                 content=f"🔧 {block.name}({block.input})",
@@ -814,6 +1200,7 @@ class ClaudeCodeBackend(LLMBackend):
                             # Note: ToolResultBlock.tool_use_id references
                             # the original ToolUseBlock.id
                             status = "❌ Error" if block.is_error else "✅ Result"
+                            log_stream_chunk("backend.claude_code", "tool_result", {"is_error": block.is_error, "content": block.content}, agent_id)
                             yield StreamChunk(
                                 type="content",
                                 content=f"🔧 Tool {status}: {block.content}",
@@ -825,6 +1212,7 @@ class ClaudeCodeBackend(LLMBackend):
                         accumulated_content
                     )
                     if workflow_tool_calls:
+                        log_stream_chunk("backend.claude_code", "tool_calls", workflow_tool_calls, agent_id)
                         yield StreamChunk(
                             type="tool_calls",
                             tool_calls=workflow_tool_calls,
@@ -832,6 +1220,7 @@ class ClaudeCodeBackend(LLMBackend):
                         )
 
                     # Yield complete message
+                    log_stream_chunk("backend.claude_code", "complete_message", accumulated_content[:200] if len(accumulated_content) > 200 else accumulated_content, agent_id)
                     yield StreamChunk(
                         type="complete_message",
                         complete_message={
@@ -844,6 +1233,7 @@ class ClaudeCodeBackend(LLMBackend):
                 elif isinstance(message, SystemMessage):
                     # System status updates
                     self._track_session_info(message=message)
+                    log_stream_chunk("backend.claude_code", "backend_status", {"subtype": message.subtype, "data": message.data}, agent_id)
                     yield StreamChunk(
                         type="backend_status",
                         status=message.subtype,
@@ -859,6 +1249,7 @@ class ClaudeCodeBackend(LLMBackend):
                     self.update_token_usage_from_result_message(message)
 
                     # Yield completion
+                    log_stream_chunk("backend.claude_code", "complete_response", {"session_id": message.session_id, "cost_usd": message.total_cost_usd}, agent_id)
                     yield StreamChunk(
                         type="complete_response",
                         complete_message={
@@ -872,13 +1263,23 @@ class ClaudeCodeBackend(LLMBackend):
                     )
 
                     # Final done signal
+                    log_stream_chunk("backend.claude_code", "done", None, agent_id)
                     yield StreamChunk(type="done", source="claude_code")
                     break
 
         except Exception as e:
+            error_msg = str(e)
+
+            # Provide helpful Windows-specific guidance
+            if "git-bash" in error_msg.lower() or "bash.exe" in error_msg.lower():
+                error_msg += "\n\nWindows Setup Required:\n1. Install Git Bash: https://git-scm.com/downloads/win\n2. Ensure git-bash is in PATH, or set: CLAUDE_CODE_GIT_BASH_PATH=C:\\Program Files\\Git\\bin\\bash.exe"
+            elif "exit code 1" in error_msg and "win32" in str(sys.platform):
+                error_msg += "\n\nThis may indicate missing git-bash on Windows. Please install Git Bash from https://git-scm.com/downloads/win"
+
+            log_stream_chunk("backend.claude_code", "error", error_msg, agent_id)
             yield StreamChunk(
                 type="error",
-                error=f"Claude Code streaming error: {str(e)}",
+                error=f"Claude Code streaming error: {str(error_msg)}",
                 source="claude_code",
             )
 

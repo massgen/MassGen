@@ -271,7 +271,10 @@ class RichTerminalDisplay(TerminalDisplay):
         )  # Extra delay after punctuation
 
         # File-based output system
-        self.output_dir = kwargs.get("output_dir", "agent_outputs")
+        # Use centralized log session directory
+        from massgen.logger_config import get_log_session_dir
+        log_session_dir = get_log_session_dir()
+        self.output_dir = kwargs.get("output_dir", log_session_dir / "agent_outputs")
         self.agent_files = {}
         self.system_status_file = None
         self._selected_agent = None
@@ -2272,6 +2275,10 @@ class RichTerminalDisplay(TerminalDisplay):
         """Write content to agent's individual txt file."""
         if agent_id not in self.agent_files:
             return
+        
+        # Skip debug content from txt files
+        if content_type == "debug":
+            return
 
         try:
             file_path = self.agent_files[agent_id]
@@ -2550,6 +2557,11 @@ class RichTerminalDisplay(TerminalDisplay):
                 content = getattr(chunk, "content", "") or ""
                 chunk_type = getattr(chunk, "type", "")
                 source = getattr(chunk, "source", selected_agent)
+                
+                # Skip debug chunks from display but still log them
+                if chunk_type == "debug":
+                    # Debug info is logged elsewhere but not displayed in final presentation
+                    continue
 
                 if content:
                     # Ensure content is a string
@@ -3086,9 +3098,8 @@ class RichTerminalDisplay(TerminalDisplay):
     ):
         """Save the final presentation content to a text file in agent_outputs directory."""
         try:
-            # Create filename with timestamp
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"final_presentation_{selected_agent}_{timestamp}.txt"
+            # Create filename without timestamp (already in parent directory)
+            filename = f"final_presentation_{selected_agent}.txt"
             file_path = Path(self.output_dir) / filename
 
             # Write the final presentation content
@@ -3116,9 +3127,8 @@ class RichTerminalDisplay(TerminalDisplay):
     def _initialize_final_presentation_file(self, selected_agent: str) -> Path:
         """Initialize a new final presentation file and return the file path."""
         try:
-            # Create filename with timestamp
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"final_presentation_{selected_agent}_{timestamp}.txt"
+            # Create filename without timestamp (already in parent directory)
+            filename = f"final_presentation_{selected_agent}.txt"
             file_path = Path(self.output_dir) / filename
 
             # Write the initial header

@@ -26,6 +26,7 @@ import asyncio
 import re
 from typing import Dict, List, Any, AsyncGenerator, Optional, Literal
 from .base import LLMBackend, StreamChunk
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
 
 try:
     from pydantic import BaseModel, Field
@@ -34,7 +35,6 @@ except ImportError:
     Field = None
 
 # MCP integration imports
-
 try:
     from ..mcp_tools import MultiMCPClient, MCPError, MCPConnectionError
     from ..mcp_tools.config_validator import MCPConfigValidator
@@ -613,7 +613,17 @@ Make your decision and include the JSON at the very end of your response."""
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using Gemini API with structured output for coordination and MCP tool support."""
+        """Stream response using Gemini API with structured output for coordination and MCP tool support.""" 
+        # Extract agent_id for logging
+        agent_id = kwargs.get('agent_id', None)
+        
+        log_backend_activity(
+            "gemini",
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id
+        )
+        
         try:
             from google import genai
 
@@ -834,11 +844,18 @@ Make your decision and include the JSON at the very end of your response."""
                 else:
                     # Tools or sessions are present; fallback to text parsing
                     pass
+            # Log messages being sent after builtin_tools is defined
+            log_backend_agent_message(
+                agent_id or "default",
+                "SEND",
+                {"content": full_content, "builtin_tools": len(builtin_tools) if builtin_tools else 0},
+                backend_name="gemini"
+            )
+
 
             # Use streaming for real-time response
             full_content_text = ""
             final_response = None
-
             if using_sdk_mcp and self.mcp_servers:
                 # Reuse active sessions from MultiMCPClient
                 try:
@@ -857,7 +874,7 @@ Make your decision and include the JSON at the very end of your response."""
                     logger.debug(
                         f"MCP tool call #{self._mcp_tool_calls_count} initiated"
                     )
-
+                    
                     # Use async streaming call with sessions (SDK supports auto-calling MCP here)
                     # The SDK's session feature will still handle tool calling automatically
                     stream = await client.aio.models.generate_content_stream(
@@ -878,6 +895,13 @@ Make your decision and include the JSON at the very end of your response."""
                         if hasattr(chunk, "text") and chunk.text:
                             chunk_text = chunk.text
                             full_content_text += chunk_text
+                            log_backend_agent_message(
+                               agent_id or "default",
+                               "RECV",
+                                {"content": chunk_text},
+                                backend_name="gemini"
+                             )
+                            log_stream_chunk("backend.gemini", "content", chunk_text, agent_id)
                             yield StreamChunk(type="content", content=chunk_text)
 
                         # Keep track of the final response for tool processing
@@ -998,10 +1022,12 @@ Make your decision and include the JSON at the very end of your response."""
                                         "code",
                                         str(part.executable_code),
                                     )
+                                    code_exec_msg = f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n"
+                                    log_stream_chunk("backend.gemini", "code_execution", code_content, agent_id)
                                     yield StreamChunk(
-                                        type="content",
-                                        content=f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n",
-                                    )
+                                    type="content",
+                                    content=code_exec_msg,
+                                )
                                 elif (
                                     hasattr(part, "code_execution_result")
                                     and part.code_execution_result
@@ -1011,10 +1037,12 @@ Make your decision and include the JSON at the very end of your response."""
                                         "output",
                                         str(part.code_execution_result),
                                     )
+                                    result_msg = f"📊 [Result] {result_content}\n"
+                                    log_stream_chunk("backend.gemini", "code_result", result_content, agent_id)
                                     yield StreamChunk(
-                                        type="content",
-                                        content=f"📊 [Result] {result_content}\n",
-                                    )
+                                    type="content",
+                                    content=result_msg,
+                                )
 
             content = full_content_text
 
@@ -1044,6 +1072,7 @@ Make your decision and include the JSON at the very end of your response."""
                     )
                     if tool_calls:
                         tool_calls_detected = tool_calls
+                        log_stream_chunk("backend.gemini", "tool_calls", tool_calls, agent_id)
 
             # Process builtin tool results if any tools were used
             if (
@@ -1093,6 +1122,7 @@ Make your decision and include the JSON at the very end of your response."""
 
                     # Only show indicators if search was actually used
                     if search_actually_used:
+                        log_stream_chunk("backend.gemini", "web_search", "Results integrated", agent_id)
                         yield StreamChunk(
                             type="content",
                             content="🔍 [Builtin Tool: Web Search] Results integrated\n",
@@ -1100,6 +1130,7 @@ Make your decision and include the JSON at the very end of your response."""
 
                         # Show search queries
                         for query in search_queries:
+                            log_stream_chunk("backend.gemini", "search_query", query, agent_id)
                             yield StreamChunk(
                                 type="content", content=f"🔍 [Search Query] '{query}'\n"
                             )
@@ -1133,6 +1164,7 @@ Make your decision and include the JSON at the very end of your response."""
 
                     if code_parts:
                         # Code execution was actually used
+                        log_stream_chunk("backend.gemini", "code_execution", "Code executed", agent_id)
                         yield StreamChunk(
                             type="content",
                             content="💻 [Builtin Tool: Code Execution] Code executed\n",
@@ -1141,12 +1173,14 @@ Make your decision and include the JSON at the very end of your response."""
                         for part in code_parts:
                             if part.startswith("Code: "):
                                 code_content = part[6:]  # Remove "Code: " prefix
+                                log_stream_chunk("backend.gemini", "code_executed", code_content, agent_id)
                                 yield StreamChunk(
                                     type="content",
                                     content=f"💻 [Code Executed]\n```python\n{code_content}\n```\n",
                                 )
                             elif part.startswith("Result: "):
                                 result_content = part[8:]  # Remove "Result: " prefix
+                                log_stream_chunk("backend.gemini", "code_result", result_content, agent_id)
                                 yield StreamChunk(
                                     type="content",
                                     content=f"📊 [Result] {result_content}\n",
@@ -1156,6 +1190,7 @@ Make your decision and include the JSON at the very end of your response."""
 
             # Yield coordination tool calls if detected
             if tool_calls_detected:
+                log_stream_chunk("backend.gemini", "tool_calls", tool_calls_detected, agent_id)
                 yield StreamChunk(type="tool_calls", tool_calls=tool_calls_detected)
 
             # Build complete message
@@ -1163,13 +1198,17 @@ Make your decision and include the JSON at the very end of your response."""
             if tool_calls_detected:
                 complete_message["tool_calls"] = tool_calls_detected
 
+            log_stream_chunk("backend.gemini", "complete_message", complete_message, agent_id)
             yield StreamChunk(
                 type="complete_message", complete_message=complete_message
             )
+            log_stream_chunk("backend.gemini", "done", None, agent_id)
             yield StreamChunk(type="done")
 
         except Exception as e:
-            yield StreamChunk(type="error", error=f"Gemini API error: {e}")
+            error_msg = f"Gemini API error: {e}"
+            log_stream_chunk("backend.gemini", "error", error_msg, agent_id)
+            yield StreamChunk(type="error", error=error_msg)
 
     def get_provider_name(self) -> str:
         """Get the provider name."""

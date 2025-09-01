@@ -10,7 +10,7 @@ import asyncio
 import random
 from typing import Dict, List, Any, AsyncGenerator, Optional, Callable, Literal
 from .base import LLMBackend, StreamChunk
-
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
 
 logger = logging.getLogger(__name__)
 
@@ -697,6 +697,7 @@ class ResponseBackend(LLMBackend):
     async def stream_with_mcp(
         self, client, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
+
         """Stream response with stdio MCP function call execution loop."""
         max_iterations = 10  # Prevent infinite loops
         current_messages = self._trim_message_history(messages.copy())
@@ -935,6 +936,15 @@ class ResponseBackend(LLMBackend):
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI Response API with MCP integration."""
+        
+            agent_id = kwargs.get('agent_id', None)
+        
+        log_backend_activity(
+            self.get_provider_name(),
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id
+        )
         try:
             import openai
 
@@ -970,6 +980,7 @@ class ResponseBackend(LLMBackend):
             else:
                 logger.error(f"Streaming error: {e}")
                 yield StreamChunk(type="error", error=str(e))
+          
         finally:
             # Ensure the underlying HTTP client is properly closed to avoid event loop issues
             try:

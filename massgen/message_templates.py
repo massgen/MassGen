@@ -58,14 +58,20 @@ class MessageTemplates:
         # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
         # For any time-sensitive requests, use the search tool (if available) rather than relying on prior knowledge."""
 
-        return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
+        # BACKUP - Original evaluation message (pre-synthesis-encouragement update):
+        # return f"""You are evaluating answers from multiple agents for final response to a message. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE?
+        #
+        # If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
+        # Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
+        #
+        # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
+
+        return f"""You are evaluating answers from multiple agents for final response to a message. Different agents may have different builtin tools and capabilities. Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well?
 
 If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
-Otherwise, do additional work first, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
-Note that each time you must use at least one tool.
+Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses, then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE. Make sure you actually call `vote` or `new_answer` (in tool call format).
 
-*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**.
-"""
+*Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
     # =============================================================================
     # USER MESSAGE TEMPLATES
@@ -202,7 +208,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
                     "properties": {
                         "content": {
                             "type": "string",
-                            "description": "Your improved answer. If any builtin tools like search or code execution were used, include how they are used here.",
+                            "description": "Your improved answer. If any builtin tools like search or code execution were used, mention how they are used here.",
                         }
                     },
                     "required": ["content"],
@@ -268,21 +274,24 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
 
-        presentation_instructions = """You have been selected as the winning answer in a coordination process. Your task is to present a polished, comprehensive final answer that incorporates the best insights from all participants.
+        # BACKUP - Original final presentation message (pre-explicit-synthesis update):
+        # presentation_instructions = """You have been selected as the winning presenter in a coordination process. Your task is to present a polished, comprehensive final answer that incorporates the best insights from all participants.
+        #
+        # Consider:
+        # 1. Your original response and how it can be refined
+        # 2. Valuable insights from other agents' answers that should be incorporated  
+        # 3. Feedback received through the voting process
+        # 4. Ensuring clarity, completeness, and comprehensiveness for the final audience
+        #
+        # Present your final coordinated answer in the most helpful and complete way possible."""
 
-Consider:
-1. Your original response and how it can be refined
-2. Valuable insights from other agents' answers that should be incorporated  
-3. Feedback received through the voting process
-4. Ensuring clarity, completeness, and comprehensiveness for the final audience
-
-Present your final coordinated answer in the most helpful and complete way possible."""
+        presentation_instructions = """You have been selected as the winning presenter in a coordination process.
+Present the best possible coordinated answer by combining the strengths from all participants."""
 
         # Combine with original system message if provided
         if original_system_message:
             return f"""{original_system_message}
 
-COORDINATION CONTEXT:
 {presentation_instructions}"""
         else:
             return presentation_instructions
@@ -359,10 +368,17 @@ COORDINATION CONTEXT:
         task: str,
         agent_summaries: Optional[Dict[str, str]] = None,
         valid_agent_ids: Optional[List[str]] = None,
+        base_system_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Build complete initial conversation for MassGen evaluation."""
+        # Use agent's custom system message if provided, otherwise use default evaluation message
+        if base_system_message:
+            system_message = f"{base_system_message}\n\n{self.evaluation_system_message()}"
+        else:
+            system_message = self.evaluation_system_message()
+            
         return {
-            "system_message": self.evaluation_system_message(),
+            "system_message": system_message,
             "user_message": self.build_evaluation_message(task, agent_summaries),
             "tools": self.get_standard_tools(valid_agent_ids),
         }
@@ -373,10 +389,17 @@ COORDINATION CONTEXT:
         conversation_history: Optional[List[Dict[str, str]]] = None,
         agent_summaries: Optional[Dict[str, str]] = None,
         valid_agent_ids: Optional[List[str]] = None,
+        base_system_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Build complete conversation with conversation history context for MassGen evaluation."""
+        # Use agent's custom system message if provided, otherwise use default context-aware message
+        if base_system_message:
+            system_message = f"{base_system_message}\n\n{self.system_message_with_context(conversation_history)}"
+        else:
+            system_message = self.system_message_with_context(conversation_history)
+            
         return {
-            "system_message": self.system_message_with_context(conversation_history),
+            "system_message": system_message,
             "user_message": self.build_coordination_context(
                 current_task, conversation_history, agent_summaries
             ),

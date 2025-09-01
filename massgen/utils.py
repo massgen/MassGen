@@ -36,7 +36,7 @@ MODEL_MAPPINGS = {
         "claude-3-5-sonnet-latest",
         "claude-3-5-haiku-latest",
         "claude-3-5-sonnet-20250114",
-        "claude-3-5-haiku-20250107",
+        "claude-3-5-haiku-20241022",
         # Claude 3 variants
         "claude-3-opus-20240229",
     ],

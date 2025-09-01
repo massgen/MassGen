@@ -1,7 +1,7 @@
 """
 MassGen Coordination UI
 
-Main interface for coordinating agents with visual display and logging.
+Main interface for coordinating agents with visual display.
 """
 
 import time
@@ -11,18 +11,16 @@ from .displays.base_display import BaseDisplay
 from .displays.terminal_display import TerminalDisplay
 from .displays.simple_display import SimpleDisplay
 from .displays.rich_terminal_display import RichTerminalDisplay, is_rich_available
-from .logging.realtime_logger import RealtimeLogger
 
 
 class CoordinationUI:
-    """Main coordination interface with display and logging capabilities."""
+    """Main coordination interface with display capabilities."""
 
     def __init__(
         self,
         display: Optional[BaseDisplay] = None,
-        logger: Optional[RealtimeLogger] = None,
+        logger: Optional[Any] = None,
         display_type: str = "terminal",
-        logging_enabled: bool = True,
         enable_final_presentation: bool = False,
         **kwargs,
     ):
@@ -32,21 +30,12 @@ class CoordinationUI:
             display: Custom display instance (overrides display_type)
             logger: Custom logger instance
             display_type: Type of display ("terminal", "simple", "rich_terminal", "textual_terminal")
-            logging_enabled: Whether to enable real-time logging
             enable_final_presentation: Whether to ask winning agent to present final answer
             **kwargs: Additional configuration passed to display/logger
         """
         self.enable_final_presentation = enable_final_presentation
         self.display = display
-        # Filter kwargs for logger (only pass logger-specific params)
-        logger_kwargs = {
-            k: v for k, v in kwargs.items() if k in ["filename", "update_frequency"]
-        }
-        self.logger = (
-            logger
-            if logger is not None
-            else (RealtimeLogger(**logger_kwargs) if logging_enabled else None)
-        )
+        self.logger = logger
         self.display_type = display_type
         self.config = kwargs
 
@@ -136,7 +125,7 @@ class CoordinationUI:
     async def coordinate(
         self, orchestrator, question: str, agent_ids: Optional[List[str]] = None
     ) -> str:
-        """Coordinate agents with visual display and logging.
+        """Coordinate agents with visual display.
 
         Args:
             orchestrator: MassGen orchestrator instance
@@ -211,6 +200,13 @@ class CoordinationUI:
                     status = getattr(chunk, "status", None)
                     if source and status:
                         self.display.update_agent_status(source, status)
+                    continue
+                
+                # Filter out debug chunks from display
+                elif chunk_type == "debug":
+                    # Log debug info but don't display it
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk_type)
                     continue
 
                 # builtin_tool_results handling removed - now handled as simple content
@@ -440,13 +436,18 @@ class CoordinationUI:
                 # Allow time for final presentation to be fully visible
                 time.sleep(1.5)
 
-            # Get the clean final answer from orchestrator's stored state (avoids token spacing issues)
+            # Get the final presentation content (synthesis) or fall back to stored answer
             orchestrator_final_answer = None
-            if (
+            
+            # First try to get the synthesized final presentation content
+            if hasattr(orchestrator, "_final_presentation_content") and orchestrator._final_presentation_content:
+                orchestrator_final_answer = orchestrator._final_presentation_content.strip()
+            elif (
                 selected_agent
                 and hasattr(orchestrator, "agent_states")
                 and selected_agent in orchestrator.agent_states
             ):
+                # Fall back to stored answer if no final presentation content
                 stored_answer = orchestrator.agent_states[selected_agent].answer
                 if stored_answer:
                     # Clean up the stored answer
@@ -481,7 +482,7 @@ class CoordinationUI:
 
             # Finalize session
             if self.logger:
-                session_info = self.logger.finalize_session(final_answer, success=True)
+                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -536,7 +537,7 @@ class CoordinationUI:
             print()
 
             if self.logger:
-                session_info = self.logger.finalize_session(final_answer, success=True)
+                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -630,6 +631,13 @@ class CoordinationUI:
                     status = getattr(chunk, "status", None)
                     if source and status:
                         self.display.update_agent_status(source, status)
+                    continue
+                
+                # Filter out debug chunks from display
+                elif chunk_type == "debug":
+                    # Log debug info but don't display it
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk_type)
                     continue
 
                 # builtin_tool_results handling removed - now handled as simple content
@@ -893,7 +901,7 @@ class CoordinationUI:
 
             # Finalize session
             if self.logger:
-                session_info = self.logger.finalize_session(final_answer, success=True)
+                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -1210,7 +1218,7 @@ class CoordinationUI:
 async def coordinate_with_terminal_ui(
     orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
 ) -> str:
-    """Quick coordination with terminal UI and logging.
+    """Quick coordination with terminal UI.
 
     Args:
         orchestrator: MassGen orchestrator instance
@@ -1232,7 +1240,7 @@ async def coordinate_with_terminal_ui(
 async def coordinate_with_simple_ui(
     orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
 ) -> str:
-    """Quick coordination with simple UI and logging.
+    """Quick coordination with simple UI.
 
     Args:
         orchestrator: MassGen orchestrator instance
@@ -1253,7 +1261,7 @@ async def coordinate_with_simple_ui(
 async def coordinate_with_rich_ui(
     orchestrator, question: str, enable_final_presentation: bool = False, **kwargs
 ) -> str:
-    """Quick coordination with rich terminal UI and logging.
+    """Quick coordination with rich terminal UI.
 
     Args:
         orchestrator: MassGen orchestrator instance
