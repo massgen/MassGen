@@ -20,6 +20,7 @@ import os
 import time
 import shutil
 from pathlib import Path
+from datetime import datetime
 from typing import Dict, List, Optional, Any, AsyncGenerator
 from dataclasses import dataclass, field
 from .message_templates import MessageTemplates
@@ -32,7 +33,8 @@ from .logger_config import (
     log_coordination_step,
     log_tool_call,
     log_stream_chunk,
-    logger  # Import logger directly for INFO logging
+    logger,  # Import logger directly for INFO logging
+    get_log_session_dir  # Import to get log directory
 )
 
 
@@ -146,6 +148,9 @@ class Orchestrator(ChatAgent):
         if snapshot_storage:
             self._snapshot_storage = snapshot_storage
             snapshot_path = Path(self._snapshot_storage)
+            # Clean existing directory if it exists and has contents
+            if snapshot_path.exists() and any(snapshot_path.iterdir()):
+                shutil.rmtree(snapshot_path)
             snapshot_path.mkdir(parents=True, exist_ok=True)
             # Create directories for each claude_code agent
             for agent_id, agent in self.agents.items():
@@ -159,6 +164,9 @@ class Orchestrator(ChatAgent):
         if agent_temporary_workspace:
             self._agent_temporary_workspace = agent_temporary_workspace
             workspace_path = Path(self._agent_temporary_workspace)
+            # Clean existing directory if it exists and has contents
+            if workspace_path.exists() and any(workspace_path.iterdir()):
+                shutil.rmtree(workspace_path)
             workspace_path.mkdir(parents=True, exist_ok=True)
             # Create workspace directories for each claude_code agent
             for agent_id, agent in self.agents.items():
@@ -167,6 +175,15 @@ class Orchestrator(ChatAgent):
                     if provider_name == 'claude_code':
                         agent_workspace = workspace_path / agent_id
                         agent_workspace.mkdir(parents=True, exist_ok=True)
+                        
+            # Create log directories for each claude_code agent
+            log_session_dir = get_log_session_dir()
+            for agent_id, agent in self.agents.items():
+                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
+                    provider_name = agent.backend.get_provider_name()
+                    if provider_name == 'claude_code':
+                        agent_log_dir = log_session_dir / agent_id
+                        agent_log_dir.mkdir(parents=True, exist_ok=True)
 
     async def chat(
         self,
@@ -465,10 +482,6 @@ class Orchestrator(ChatAgent):
                 del active_tasks[agent_id]
 
                 try:
-
-                    # Save snapshot of Claude Code agent's workspace
-                    await self._save_claude_code_snapshot(agent_id)
-
                     chunk_type, chunk_data = await task
 
                     if chunk_type == "content":
@@ -499,6 +512,8 @@ class Orchestrator(ChatAgent):
 
                         if result_type == "answer":
                             # Agent provided an answer (initial or improved)
+                            # Save snapshot when agent provides new answer
+                            await self._save_claude_code_snapshot(agent_id)
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             answered_agents[agent_id] = result_data
                             reset_signal = True
@@ -523,6 +538,8 @@ class Orchestrator(ChatAgent):
                                 )
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
+                                # Save snapshot when agent successfully votes
+                                # await self._save_claude_code_snapshot(agent_id)
                                 voted_agents[agent_id] = result_data
                                 log_stream_chunk("orchestrator", "content", f"✅ Vote recorded for [{result_data['agent_id']}]", agent_id)
                                 yield StreamChunk(
@@ -598,9 +615,6 @@ class Orchestrator(ChatAgent):
             task.cancel()
         for agent_id in list(active_streams.keys()):
             await self._close_agent_stream(agent_id, active_streams)
-        
-        # Save snapshots for all Claude Code agents after coordination completes
-        await self._save_all_claude_code_snapshots()
 
     async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
         """Restore all snapshots to an agent's workspace using anonymous IDs.
@@ -699,6 +713,24 @@ class Orchestrator(ChatAgent):
                         shutil.copy2(item, dest_dir / item.name)
                     elif item.is_dir():
                         shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
+                
+                # Also copy snapshot to timestamped log directory
+                log_session_dir = get_log_session_dir()
+                agent_log_dir = log_session_dir / agent_id
+                if agent_log_dir.exists():
+                    # Check if source directory has any contents
+                    if any(source_dir.iterdir()):
+                        # Create timestamped subdirectory
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        timestamped_dir = agent_log_dir / timestamp
+                        timestamped_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        # Copy snapshot contents to timestamped directory
+                        for item in source_dir.iterdir():
+                            if item.is_file():
+                                shutil.copy2(item, timestamped_dir / item.name)
+                            elif item.is_dir():
+                                shutil.copytree(item, timestamped_dir / item.name, dirs_exist_ok=True)
     
     async def _close_agent_stream(
         self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
