@@ -82,6 +82,16 @@ class Orchestrator(ChatAgent):
     - Configurable presentation formats for final answers
     - Advanced coordination workflows (hierarchical, weighted voting, etc.)
 
+    TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+    - Add permission validation logic for agent workspace access
+    - Implement validate_agent_access() method to check if agent has required permission for resource
+    - Replace current prompt-based access control with explicit system-level enforcement
+    - Add PermissionManager integration for managing agent access rules
+    - Implement audit logging for all access attempts to workspace resources
+    - Support dynamic permission negotiation during runtime
+    - Add configurable policy framework for permission management
+    - Integrate with workspace snapshot mechanism for controlled context sharing
+
     Restart Behavior:
     When an agent provides new_answer, all agents gracefully restart to ensure
     consistent coordination state. This allows all agents to transition to Case 2
@@ -619,6 +629,12 @@ class Orchestrator(ChatAgent):
     async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
         """Restore all snapshots to an agent's workspace using anonymous IDs.
         
+        TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+        - Validate agent permissions before restoring snapshots
+        - Check if agent has read access to other agents' workspaces
+        - Implement fine-grained control over which snapshots can be accessed
+        - Add audit logging for snapshot access attempts
+        
         Args:
             agent_id: ID of the Claude Code agent receiving the context
             
@@ -773,6 +789,22 @@ class Orchestrator(ChatAgent):
         if hasattr(self, "_active_streams") and self._active_streams:
             for agent_id in list(self._active_streams.keys()):
                 await self._close_agent_stream(agent_id, self._active_streams)
+    
+    # TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+    # Add the following permission validation methods:
+    # async def validate_agent_access(self, agent_id: str, resource_path: str, access_type: str) -> bool:
+    #     """Check if agent has required permission for resource.
+    #     
+    #     Args:
+    #         agent_id: ID of the agent requesting access
+    #         resource_path: Path to the resource being accessed
+    #         access_type: Type of access (read, write, read-write, execute)
+    #     
+    #     Returns:
+    #         bool: True if access is allowed, False otherwise
+    #     """
+    #     # Implementation will check against PermissionManager
+    #     pass
 
     def _create_tool_error_messages(
         self,

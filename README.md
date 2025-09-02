@@ -725,8 +725,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Improved Logging System**: Enhanced logging system for better agents' answer debugging.
 - **Final Answer Directory**: New structure in Claude Code and logs for storing final results
 - **Documentation Updates**: Detailed architecture documentation and future development plans for permission-based context sharing
-  - See [v0.0.14 Release Notes](docs/release_notes/v0.0.14.md) for user-facing features
-  - See [v0.0.14 Developer Notes](docs/dev_notes/v0.0.14-context.md) for technical design details
 
 ### Previous Achievements (v0.0.3-v0.0.13)
 
