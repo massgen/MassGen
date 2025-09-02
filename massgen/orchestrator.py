@@ -668,39 +668,6 @@ class Orchestrator(ChatAgent):
         
         return str(workspace_dir)
     
-    async def _create_final_presentation_workspace(self, agent_id: str) -> Optional[str]:
-        """Create a dedicated final presentation workspace for a Claude Code agent.
-        
-        Args:
-            agent_id: ID of the Claude Code agent
-            
-        Returns:
-            Path to the final presentation workspace directory if successful, None otherwise
-        """
-        if not self._agent_temporary_workspace:
-            return None
-            
-        agent = self.agents.get(agent_id)
-        if not agent:
-            return None
-            
-        # Check if this is a Claude Code agent
-        if not (hasattr(agent, 'backend') and 
-                hasattr(agent.backend, 'get_provider_name') and
-                agent.backend.get_provider_name() == 'claude_code'):
-            return None
-            
-        # Create final workspace directory (separate from temp workspace)
-        final_workspace_base = Path(self._agent_temporary_workspace).parent / "claude_code_final_workspaces"
-        final_workspace_dir = final_workspace_base / agent_id
-        
-        # Clean existing final workspace and create fresh one
-        if final_workspace_dir.exists():
-            shutil.rmtree(final_workspace_dir)
-        final_workspace_dir.mkdir(parents=True, exist_ok=True)
-        
-        return str(final_workspace_dir)
-    
     async def _save_all_claude_code_snapshots(self) -> None:
         """Save snapshots for all Claude Code agents."""
         if not self._snapshot_storage:
@@ -709,13 +676,12 @@ class Orchestrator(ChatAgent):
         for agent_id in self.agents.keys():
             await self._save_claude_code_snapshot(agent_id)
     
-    async def _save_claude_code_snapshot(self, agent_id: str, is_final: bool = False, source_dir: Path = None) -> None:
+    async def _save_claude_code_snapshot(self, agent_id: str, is_final: bool = False) -> None:
         """Save a snapshot of Claude Code agent's working directory.
         
         Args:
             agent_id: ID of the Claude Code agent
             is_final: If True, save workspace in a separate timestamped directory reserved for final presentation
-            source_dir: Optional Path to use as source directory, defaults to agent's current working directory
         """
         
         if not self._snapshot_storage:
@@ -734,8 +700,7 @@ class Orchestrator(ChatAgent):
         # Get the working directory from the backend
         # For final presentation, this should be the final workspace directory
         if hasattr(agent.backend, '_cwd') and agent.backend._cwd:
-            if source_dir is None:
-                source_dir = Path(agent.backend._cwd)
+            source_dir = Path(agent.backend._cwd)
             if source_dir.exists() and source_dir.is_dir():
                 # Destination directory for this agent's snapshots
                 dest_dir = Path(self._snapshot_storage) / agent_id if not is_final else Path(self._snapshot_storage) / "final" / agent_id
@@ -1501,19 +1466,17 @@ class Orchestrator(ChatAgent):
         # 2. Final workspace (WRITE) - where agent creates final presentation work
         temp_workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
 
-        final_workspace_path = await self._create_final_presentation_workspace(selected_agent_id)
-        
-        if temp_workspace_path and final_workspace_path and hasattr(agent, 'backend'):
+        if temp_workspace_path and hasattr(agent, 'backend'):
             # Set temporary workspace path for reference access
             if hasattr(agent.backend, 'set_temporary_cwd'):
                 agent.backend.set_temporary_cwd(temp_workspace_path)
 
-            # Log workspace setup for visibility
-            yield StreamChunk(
-                type="debug",
-                content=f"Final presentation setup - Reference: {temp_workspace_path}, Working: {final_workspace_path}",
-                source=selected_agent_id
-            )
+                # Log workspace setup for visibility
+                yield StreamChunk(
+                    type="debug",
+                    content=f"Final presentation setup - Reference: {temp_workspace_path}",
+                    source=selected_agent_id
+                )
 
         # Prepare context about the voting
         vote_counts = vote_results.get("vote_counts", {})
@@ -1551,21 +1514,15 @@ class Orchestrator(ChatAgent):
         )
         
         # Add workspace context information to system message if workspaces were set up
-        if temp_workspace_path and final_workspace_path:
+        if temp_workspace_path:
             workspace_context_parts = []
             absolute_temp_path = os.path.join(os.getcwd(), temp_workspace_path)
-            absolute_final_path = os.path.join(os.getcwd(), final_workspace_path)
-            
-            workspace_context_parts.append(f"    WORKSPACE SETUP FOR FINAL PRESENTATION:")
-            workspace_context_parts.append(f"    1. REFERENCE WORKSPACE (READ-ONLY, EXECUTE): {absolute_temp_path}")
-            workspace_context_parts.append("       - Contains work from all agents (including yourself) from the coordination phase")
-            workspace_context_parts.append("       - Use this to READ, EXECUTE, analyze, and understand previous work")
-            workspace_context_parts.append("       - When you READ or EXECUTE content from the reference workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the reference workspace as well.")
-            workspace_context_parts.append(f"    2. FINAL WORKSPACE (YOUR WORKING DIRECTORY): {absolute_final_path}")
-            workspace_context_parts.append("       - This is your current working directory where you should create your final presentation")
-            workspace_context_parts.append("       - Write ALL final presentation files here (HTML, documents, code, etc.)")
-            workspace_context_parts.append("       - This workspace will be saved as your final presentation output")
-            workspace_context_parts.append("    WORKFLOW: Read and/or execute from reference workspace, create final work in your working directory")
+            workspace_context_parts.append(f"    Context: You have access to a reference workspace at: {absolute_temp_path}")
+            workspace_context_parts.append("    This reference workspace contains work from yourself and other agents for REFERENCE ONLY.")
+            workspace_context_parts.append("    CRITICAL: You should READ documents or EXECUTE code from the reference workspace to understand other agents' work.")
+            workspace_context_parts.append("    When you READ or EXECUTE content from the reference workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the reference workspace as well.")
+            workspace_context_parts.append(f"    You also can look in your working directory for your most updated information.")
+            workspace_context_parts.append(f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.")
             
             workspace_context = "\n".join(workspace_context_parts)
             base_system_message = f"{base_system_message}\n\n{workspace_context}"
@@ -1638,7 +1595,7 @@ Final Session ID: {session_id}.
             elif chunk.type == "done":
                 log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                 # Save the final workspace snapshot (from final workspace directory)
-                await self._save_claude_code_snapshot(selected_agent_id, is_final=True, source_dir=Path(final_workspace_path))
+                await self._save_claude_code_snapshot(selected_agent_id, is_final=True)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
                 log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
