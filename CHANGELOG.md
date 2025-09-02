@@ -5,17 +5,23 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.14] - 2025-09-01
+## [0.0.14] - 2025-09-02
 
 ### Added
 - **Enhanced Logging System**: Improved logging infrastructure with add_log feature
   - Better log organization and preservation for multi-agent workflows
   - Enhanced workspace management for Claude Code agents
+  - New final answer directory structure in Claude Code and logs for storing final results
+
+### Documentation
+- **Release Documents**: Updated release documentation and materials
+  - Updated CHANGELOG.md for better release tracking
+  - Removed unnecessary use case documentation
 
 ### Technical Details
-- **Commits**: 10+ commits including logging improvements and documentation updates
+- **Commits**: 19 commits
 - **Files Modified**: Logging system enhancements, documentation updates
-- **New Features**: Enhanced logging with add_log feature
+- **New Features**: Enhanced logging, improved final presentation logging for Claude Code
 - **Contributors**: @qidanrui @sonichi and the MassGen team
 
 ## [0.0.13] - 2025-08-28
