@@ -6,9 +6,15 @@ from __future__ import annotations
 from typing import Dict, List, Any, Optional, Tuple
 import asyncio
 import json
-import logging
+from ..logger_config import logger, log_backend_activity
 
-logger = logging.getLogger(__name__)
+
+def _log_mcp_activity(backend_name: Optional[str], message: str, details: Dict[str, Any], agent_id: Optional[str] = None) -> None:
+    """Log MCP activity with backend context if available."""
+    if backend_name:
+        log_backend_activity(backend_name, f"MCP: {message}", details, agent_id=agent_id)
+    else:
+        logger.info(f"MCP {message}", extra=details)
 
 # Import MCP components
 try:
@@ -19,7 +25,7 @@ try:
         MCPValidationError
     )
 except ImportError as e:
-    logger.debug(f"MCP import failed: {e}")
+    logger.error("MCP import failed", extra={"error": str(e)})
     MultiMCPClient = None
     Function = None
     MCPErrorHandler = None
@@ -34,107 +40,111 @@ class MCPIntegrationManager:
     """Centralized MCP integration management for stdio/streamable-http only."""
     
     @staticmethod
-    def normalize_mcp_servers(servers: Any) -> List[Dict[str, Any]]:
+    def normalize_mcp_servers(servers: Any, backend_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """Validate and normalize mcp_servers into a list of dicts.
-        
+
         Args:
             servers: MCP servers configuration (list, dict, or None)
-            
+            backend_name: Optional backend name for logging context
+
         Returns:
             Normalized list of server dictionaries
         """
         if not servers:
             return []
-        
+
         if isinstance(servers, dict):
             servers = [servers]
-        
+
         if not isinstance(servers, list):
-            logger.warning(f"Invalid mcp_servers type: {type(servers)}, expected list or dict")
+            _log_mcp_activity(backend_name, "invalid mcp_servers type", {"type": type(servers).__name__, "expected": "list or dict"})
             return []
-        
+
         normalized = []
         for i, server in enumerate(servers):
             if not isinstance(server, dict):
-                logger.warning(f"Skipping invalid server at index {i}: {server}")
+                _log_mcp_activity(backend_name, "skipping invalid server", {"index": i, "server": str(server)})
                 continue
-            
+
             if "type" not in server:
-                logger.warning(f"Server at index {i} missing 'type' field")
+                _log_mcp_activity(backend_name, "server missing type field", {"index": i})
                 continue
-            
+
             # Add default name if missing
             if "name" not in server:
                 server = server.copy()
                 server["name"] = f"server_{i}"
-            
+
             normalized.append(server)
-        
+
         return normalized
     
     @staticmethod
-    def separate_stdio_streamable_servers(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def separate_stdio_streamable_servers(servers: List[Dict[str, Any]], backend_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """Extract only stdio and streamable-http servers.
-        
+
         Args:
             servers: List of server configurations
-            
+            backend_name: Optional backend name for logging context
+
         Returns:
             List containing only stdio and streamable-http servers
         """
         stdio_streamable = []
-        
+
         for server in servers:
             transport_type = server.get("type", "").lower()
             if transport_type in ["stdio", "streamable-http"]:
                 stdio_streamable.append(server)
             else:
-                logger.debug(f"Excluding {transport_type} server '{server.get('name', 'unnamed')}' from stdio/streamable-http processing")
-        
+                _log_mcp_activity(backend_name, "excluding server from stdio/streamable-http processing", {"transport_type": transport_type, "server_name": server.get('name', 'unnamed')})
+
         return stdio_streamable
     
     @staticmethod
     async def setup_mcp_client(
-        servers: List[Dict[str, Any]], 
-        allowed_tools: Optional[List[str]], 
+        servers: List[Dict[str, Any]],
+        allowed_tools: Optional[List[str]],
         exclude_tools: Optional[List[str]],
         circuit_breaker = None,
-        timeout_seconds: int = 30
+        timeout_seconds: int = 30,
+        backend_name: Optional[str] = None
     ) -> Optional[MultiMCPClient]:
         """Setup MCP client for stdio/streamable-http servers with circuit breaker protection.
-        
+
         Args:
             servers: List of server configurations
             allowed_tools: Optional list of allowed tool names
             exclude_tools: Optional list of excluded tool names
             circuit_breaker: Optional circuit breaker for failure tracking
             timeout_seconds: Connection timeout in seconds
-            
+            backend_name: Optional backend name for logging context
+
         Returns:
             Connected MultiMCPClient or None if setup failed
         """
         if MultiMCPClient is None:
-            logger.warning("MultiMCPClient not available, MCP functionality disabled")
+            _log_mcp_activity(backend_name, "MultiMCPClient unavailable", {"functionality": "disabled"})
             return None
-        
+
         # Normalize and filter servers
-        normalized_servers = MCPIntegrationManager.normalize_mcp_servers(servers)
-        stdio_streamable_servers = MCPIntegrationManager.separate_stdio_streamable_servers(normalized_servers)
-        
+        normalized_servers = MCPIntegrationManager.normalize_mcp_servers(servers, backend_name)
+        stdio_streamable_servers = MCPIntegrationManager.separate_stdio_streamable_servers(normalized_servers, backend_name)
+
         if not stdio_streamable_servers:
-            logger.debug("No stdio/streamable-http servers configured")
+            _log_mcp_activity(backend_name, "no stdio/streamable-http servers configured", {})
             return None
         
         # Apply circuit breaker filtering if available
         if circuit_breaker:
             filtered_servers = MCPIntegrationManager.apply_circuit_breaker_filtering(
-                stdio_streamable_servers, circuit_breaker
+                stdio_streamable_servers, circuit_breaker, backend_name
             )
         else:
             filtered_servers = stdio_streamable_servers
-        
+
         if not filtered_servers:
-            logger.warning("All stdio/streamable-http servers filtered out by circuit breaker")
+            _log_mcp_activity(backend_name, "all servers filtered by circuit breaker", {"transport_types": ["stdio", "streamable-http"]})
             return None
         
         # Retry logic with exponential backoff
@@ -143,7 +153,7 @@ class MCPIntegrationManager:
             try:
                 if retry > 0:
                     delay = MCPErrorHandler.get_retry_delay(retry - 1)
-                    logger.info(f"MCP connection retry {retry}/{max_retries - 1} after {delay:.2f}s")
+                    _log_mcp_activity(backend_name, "connection retry", {"attempt": retry, "max_retries": max_retries - 1, "delay_seconds": delay})
                     await asyncio.sleep(delay)
                 
                 client = await MultiMCPClient.create_and_connect(
@@ -156,10 +166,10 @@ class MCPIntegrationManager:
                 # Record success in circuit breaker
                 if circuit_breaker:
                     await MCPIntegrationManager.record_circuit_breaker_event(
-                        filtered_servers, "success", circuit_breaker
+                        filtered_servers, "success", circuit_breaker, backend_name=backend_name
                     )
-                
-                logger.info(f"MCP connection successful on attempt {retry + 1}")
+
+                _log_mcp_activity(backend_name, "connection successful", {"attempt": retry + 1})
                 return client
                 
             except (MCPConnectionError, MCPTimeoutError, MCPServerError) as e:
@@ -170,10 +180,10 @@ class MCPIntegrationManager:
                 # Record failure and re-raise
                 if circuit_breaker:
                     await MCPIntegrationManager.record_circuit_breaker_event(
-                        filtered_servers, "failure", circuit_breaker, str(e)
+                        filtered_servers, "failure", circuit_breaker, str(e), backend_name
                     )
-                
-                MCPErrorHandler.log_error(e, f"MCP connection failed after {max_retries} attempts", "error")
+
+                _log_mcp_activity(backend_name, "connection failed after retries", {"max_retries": max_retries, "error": str(e)})
                 return None
             except Exception as e:
                 MCPErrorHandler.log_error(e, f"Unexpected error during MCP connection attempt {retry + 1}", "error")
@@ -184,20 +194,21 @@ class MCPIntegrationManager:
         return None
     
     @staticmethod
-    def convert_tools_to_functions(mcp_client) -> Dict[str, Function]:
+    def convert_tools_to_functions(mcp_client, backend_name: Optional[str] = None) -> Dict[str, Function]:
         """Convert MCP tools to Function objects with standardized closure pattern.
-        
+
         Args:
             mcp_client: Connected MultiMCPClient instance
-            
+            backend_name: Optional backend name for logging context
+
         Returns:
             Dictionary mapping tool names to Function objects
         """
         if not mcp_client or not hasattr(mcp_client, 'tools'):
             return {}
-        
+
         functions = {}
-        
+
         for tool_name, tool in mcp_client.tools.items():
             try:
                 # Fix closure bug by using default parameter to capture tool_name
@@ -206,7 +217,7 @@ class MCPIntegrationManager:
                         try:
                             arguments = json.loads(input_str)
                         except (json.JSONDecodeError, ValueError) as e:
-                            logger.error(f"Invalid JSON arguments for MCP tool {captured_tool_name}: {e}")
+                            _log_mcp_activity(backend_name, "invalid JSON arguments for tool", {"tool_name": captured_tool_name, "error": str(e)})
                             raise MCPValidationError(
                                 f"Invalid JSON arguments for tool {captured_tool_name}: {e}",
                                 field="arguments",
@@ -223,55 +234,58 @@ class MCPIntegrationManager:
                     entrypoint=entrypoint,
                 )
                 functions[function.name] = function
-                
+
             except Exception as e:
-                logger.error(f"Failed to register MCP tool {tool_name}: {e}")
-        
-        logger.info(f"Registered {len(functions)} MCP tools as Function objects")
+                _log_mcp_activity(backend_name, "failed to register tool", {"tool_name": tool_name, "error": str(e)})
+
+        _log_mcp_activity(backend_name, "registered tools as Function objects", {"tool_count": len(functions)})
         return functions
     
     @staticmethod
-    def apply_circuit_breaker_filtering(servers: List[Dict], circuit_breaker) -> List[Dict]:
+    def apply_circuit_breaker_filtering(servers: List[Dict], circuit_breaker, backend_name: Optional[str] = None) -> List[Dict]:
         """Apply circuit breaker filtering to stdio/streamable-http servers.
-        
+
         Args:
             servers: List of server configurations
             circuit_breaker: Circuit breaker instance
-            
+            backend_name: Optional backend name for logging context
+
         Returns:
             List of servers that pass circuit breaker filtering
         """
         if not circuit_breaker:
             return servers
-        
+
         filtered_servers = []
         for server in servers:
             server_name = server.get("name", "unnamed")
             if not circuit_breaker.should_skip_server(server_name):
                 filtered_servers.append(server)
             else:
-                logger.debug(f"Circuit breaker: Skipping server {server_name} (circuit open)")
-        
+                _log_mcp_activity(backend_name, "circuit breaker skipping server", {"server_name": server_name, "reason": "circuit_open"})
+
         return filtered_servers
     
     @staticmethod
     async def record_circuit_breaker_event(
-        servers: List[Dict], 
-        event: str, 
-        circuit_breaker, 
-        error_msg: Optional[str] = None
+        servers: List[Dict],
+        event: str,
+        circuit_breaker,
+        error_msg: Optional[str] = None,
+        backend_name: Optional[str] = None
     ) -> None:
         """Record circuit breaker events for stdio/streamable-http servers.
-        
+
         Args:
             servers: List of server configurations
             event: Event type ("success" or "failure")
             circuit_breaker: Circuit breaker instance
             error_msg: Optional error message for failure events
+            backend_name: Optional backend name for logging context
         """
         if not circuit_breaker:
             return
-        
+
         count = 0
         for server in servers:
             server_name = server.get("name", "unnamed")
@@ -282,24 +296,26 @@ class MCPIntegrationManager:
                     circuit_breaker.record_failure(server_name)
                 count += 1
             except Exception as cb_error:
-                logger.warning(f"Circuit breaker record_{event} failed for server {server_name}: {cb_error}")
-        
+                _log_mcp_activity(backend_name, "circuit breaker record failed", {"event": event, "server_name": server_name, "error": str(cb_error)})
+
         if count > 0:
             if event == "success":
-                logger.debug(f"Circuit breaker: Recorded success for {count} servers")
+                _log_mcp_activity(backend_name, "circuit breaker recorded success", {"server_count": count})
             else:
-                logger.warning(f"Circuit breaker: Recorded failure for {count} servers. Error: {error_msg}")
+                _log_mcp_activity(backend_name, "circuit breaker recorded failure", {"server_count": count, "error": error_msg})
     
     @staticmethod
-    async def cleanup_mcp_client(client) -> None:
+    async def cleanup_mcp_client(client, backend_name: Optional[str] = None) -> None:
         """Clean up MCP client connections.
-        
+
         Args:
             client: MultiMCPClient instance to clean up
+            backend_name: Optional backend name for logging context
         """
         if client:
             try:
                 await client.cleanup()
-                logger.debug("MCP client cleanup completed")
+                _log_mcp_activity(backend_name, "client cleanup completed", {})
             except Exception as e:
-                logger.warning(f"Error during MCP client cleanup: {e}")
+                _log_mcp_activity(backend_name, "error during client cleanup", {"error": str(e)})
+

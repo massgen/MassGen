@@ -17,7 +17,6 @@ TODOs:
 
 import asyncio
 import json
-import logging
 import os
 import time
 import shutil
@@ -38,10 +37,6 @@ from .logger_config import (
     logger,  # Import logger directly for INFO logging
     get_log_session_dir  # Import to get log directory
 )
-
-# Set up logging
-logger = logging.getLogger(__name__)
-
 
 @dataclass
 class AgentState:

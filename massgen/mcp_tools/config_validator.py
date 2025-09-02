@@ -4,11 +4,9 @@ backend integration settings, and orchestrator coordination parameters.
 """
 
 
-import logging
+from ..logger_config import logger
 from typing import Dict, Any
 from .exceptions import MCPConfigurationError, MCPValidationError
-
-logger = logging.getLogger(__name__)
 
 
 class MCPConfigValidator:

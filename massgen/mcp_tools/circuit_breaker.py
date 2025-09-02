@@ -5,11 +5,17 @@ Provides unified failure tracking and circuit breaker functionality across all M
 """
 
 import time
-import logging
-from typing import Dict, Optional, Tuple
+from ..logger_config import logger, log_backend_activity
+from typing import Dict, Optional, Tuple, Any
 from dataclasses import dataclass, field
 
-logger = logging.getLogger(__name__)
+
+def _log_mcp_activity(backend_name: Optional[str], message: str, details: Dict[str, Any], agent_id: Optional[str] = None) -> None:
+    """Log MCP activity with backend context if available."""
+    if backend_name:
+        log_backend_activity(backend_name, f"MCP: {message}", details, agent_id=agent_id)
+    else:
+        logger.info(f"MCP {message}", extra=details)
 
 
 @dataclass
@@ -36,19 +42,21 @@ class ServerStatus:
 class MCPCircuitBreaker:
     """
     Circuit breaker for MCP server failure handling.
-    
+
     Provides consistent failure tracking and exponential backoff across all MCP integrations.
     Prevents repeated connection attempts to failing servers while allowing recovery.
     """
 
-    def __init__(self, config: Optional[CircuitBreakerConfig] = None):
+    def __init__(self, config: Optional[CircuitBreakerConfig] = None, backend_name: Optional[str] = None):
         """
         Initialize circuit breaker.
-        
+
         Args:
             config: Circuit breaker configuration. Uses default if None.
+            backend_name: Name of the backend using this circuit breaker for logging context.
         """
         self.config = config or CircuitBreakerConfig()
+        self.backend_name = backend_name
         self._server_status: Dict[str, ServerStatus] = {}
         
     def should_skip_server(self, server_name: str) -> bool:
@@ -78,8 +86,10 @@ class MCPCircuitBreaker:
         
         if time_since_failure > backoff_time:
             # Reset failure count after backoff period
-            logger.info(
-                f"Circuit breaker reset for server {server_name} after {backoff_time:.1f}s"
+            _log_mcp_activity(
+                self.backend_name,
+                "Circuit breaker reset for server",
+                {"server_name": server_name, "backoff_time_seconds": backoff_time},
             )
             self._reset_server(server_name)
             return False
@@ -104,13 +114,24 @@ class MCPCircuitBreaker:
         
         if status.failure_count >= self.config.max_failures:
             backoff_time = self._calculate_backoff_time(status.failure_count)
-            logger.warning(
-                f"Server {server_name} has failed {status.failure_count} times, "
-                f"will be skipped for {backoff_time:.1f} seconds"
+            _log_mcp_activity(
+                self.backend_name,
+                "Server circuit breaker opened",
+                {
+                    "server_name": server_name,
+                    "failure_count": status.failure_count,
+                    "backoff_time_seconds": backoff_time,
+                },
             )
         else:
-            logger.debug(
-                f"Server {server_name} failure recorded ({status.failure_count}/{self.config.max_failures})"
+            _log_mcp_activity(
+                self.backend_name,
+                "Server failure recorded",
+                {
+                    "server_name": server_name,
+                    "failure_count": status.failure_count,
+                    "max_failures": self.config.max_failures,
+                },
             )
             
     def record_success(self, server_name: str) -> None:
@@ -123,7 +144,11 @@ class MCPCircuitBreaker:
         if server_name in self._server_status:
             old_status = self._server_status[server_name]
             if old_status.failure_count > 0:
-                logger.info(f"Server {server_name} recovered after {old_status.failure_count} failures")
+                _log_mcp_activity(
+                    self.backend_name,
+                    "Server recovered",
+                    {"server_name": server_name, "previous_failure_count": old_status.failure_count},
+                )
             self._reset_server(server_name)
             
     def get_server_status(self, server_name: str) -> Tuple[int, float, bool]:
@@ -177,7 +202,11 @@ class MCPCircuitBreaker:
         """Reset circuit breaker state for all servers."""
         reset_count = len([s for s in self._server_status.values() if s.is_failing])
         if reset_count > 0:
-            logger.info(f"Resetting circuit breaker for {reset_count} servers")
+            _log_mcp_activity(
+                self.backend_name,
+                "Resetting circuit breaker for all servers",
+                {"server_count": reset_count},
+            )
         self._server_status.clear()
         
     def _reset_server(self, server_name: str) -> None:

@@ -2,7 +2,7 @@
 MCP client implementation for connecting to MCP servers. This module provides enhanced MCP client functionality to connect with MCP servers and integrate external tools and resources into the MassGen workflow.
 """
 import asyncio
-import logging
+from ..logger_config import logger
 from datetime import timedelta
 from enum import Enum
 from types import TracebackType
@@ -34,7 +34,7 @@ class ConnectionState(Enum):
     FAILED = "failed"
 
 
-logger = logging.getLogger(__name__)
+
 
 
 def _ensure_timedelta(value: Union[int, float, timedelta], default_seconds: float) -> timedelta:

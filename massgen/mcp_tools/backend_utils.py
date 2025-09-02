@@ -4,10 +4,15 @@ Contains all utilities that backends need for MCP functionality.
 """
 from __future__ import annotations
 from typing import Dict, List, Any, Optional, Tuple, Callable, Awaitable, AsyncGenerator, Literal
-import logging
+from ..logger_config import logger, log_backend_activity
 import random
 
-logger = logging.getLogger(__name__)
+def _log_mcp_activity(backend_name: Optional[str], message: str, details: Dict[str, Any], agent_id: Optional[str] = None) -> None:
+    """Log MCP activity with backend context if available."""
+    if backend_name:
+        log_backend_activity(backend_name, f"MCP: {message}", details, agent_id=agent_id)
+    else:
+        logger.info(f"MCP {message}", extra=details)
 
 # Import MCP exceptions
 try:
@@ -112,8 +117,7 @@ class MCPErrorHandler:
         
         if log:
             log_type, user_message, error_category = details
-            context_str = f" ({context})" if context else ""
-            logger.warning(f"MCP {log_type}: {error}{context_str}")
+            logger.warning(f"MCP {log_type}: {error}", extra={"context": context or "none"})
         
         return details
     
@@ -135,7 +139,7 @@ class MCPErrorHandler:
         return False
     
     @staticmethod
-    def log_error(error: Exception, context: str, level: str = "auto") -> None:
+    def log_error(error: Exception, context: str, level: str = "auto", backend_name: Optional[str] = None, agent_id: Optional[str] = None) -> None:
         """Log MCP error with appropriate level and context."""
         log_type, user_message, error_category = MCPErrorHandler.get_error_details(error)
         if level == "auto":
@@ -145,17 +149,17 @@ class MCPErrorHandler:
                 level = "error"
             else:
                 level = "error"
-        
+
         # Log with appropriate level
         log_message = f"MCP {log_type} during {context}: {error}"
         if level == "debug":
-            logger.debug(log_message)
+            _log_mcp_activity(backend_name, "error (debug)", {"message": log_message}, agent_id=agent_id)
         elif level == "info":
-            logger.info(log_message)
+            _log_mcp_activity(backend_name, "error (info)", {"message": log_message}, agent_id=agent_id)
         elif level == "warning":
-            logger.warning(log_message)
+            _log_mcp_activity(backend_name, "error (warning)", {"message": log_message}, agent_id=agent_id)
         else:
-            logger.error(log_message)
+            _log_mcp_activity(backend_name, "error (error)", {"message": log_message}, agent_id=agent_id)
     
     @staticmethod
     def get_retry_delay(attempt: int, base_delay: float = 0.5) -> float:
@@ -179,16 +183,17 @@ class MCPRetryHandler:
     
     @staticmethod
     async def handle_retry_error(
-        error: Exception, 
-        retry_count: int, 
+        error: Exception,
+        retry_count: int,
         max_retries: int,
-        stream_chunk_class
+        stream_chunk_class,
+        backend_name: Optional[str] = None
     ) -> Tuple[bool, AsyncGenerator]:
         """Handle MCP retry errors with specific messaging and fallback logic."""
         log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
-        
+
         # Log the retry attempt
-        logger.warning(f"MCP {log_type} on attempt {retry_count}: {error}")
+        _log_mcp_activity(backend_name, f"{log_type} on retry", {"attempt": retry_count, "error": str(error)})
 
         # Check if we've exhausted retries
         if retry_count >= max_retries:
@@ -209,13 +214,14 @@ class MCPRetryHandler:
     async def handle_error_and_fallback(
         error: Exception,
         tool_call_count: int,
-        stream_chunk_class
+        stream_chunk_class,
+        backend_name: Optional[str] = None
     ) -> AsyncGenerator:
         """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
         log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
-        
+
         # Log with specific error type
-        logger.warning(f"MCP tool call #{tool_call_count} failed - {log_type}: {error}")
+        _log_mcp_activity(backend_name, "tool call failed", {"call_number": tool_call_count, "error_type": log_type, "error": str(error)})
 
         # Yield user-friendly error message
         yield stream_chunk_class(
@@ -251,10 +257,7 @@ class MCPMessageManager:
         result = preserved + trimmed_tail
         
         if len(messages) > len(result):
-            logger.debug(
-                f"Trimmed message history from {len(messages)} to {len(result)} messages "
-                f"(limit: {max_items})"
-            )
+            logger.debug("MCP trimmed message history", extra={"original_count": len(messages), "trimmed_count": len(result), "limit": max_items})
         
         return result
 
@@ -263,19 +266,19 @@ class MCPConfigHelper:
     """MCP configuration management utilities."""
     
     @staticmethod
-    def validate_backend_config(config: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_backend_config(config: Dict[str, Any], backend_name: Optional[str] = None) -> Dict[str, Any]:
         """Validate backend MCP configuration using existing MCPConfigValidator."""
         if MCPConfigValidator is None:
-            logger.debug("MCPConfigValidator not available, skipping validation")
+            _log_mcp_activity(backend_name, "MCPConfigValidator unavailable", {"action": "skipping_validation"})
             return config
-        
+
         try:
             validator = MCPConfigValidator()
             validated_config = validator.validate(config)
-            logger.debug("MCP configuration validation successful")
+            _log_mcp_activity(backend_name, "configuration validation successful", {})
             return validated_config
         except Exception as e:
-            logger.error(f"MCP configuration validation failed: {e}")
+            _log_mcp_activity(backend_name, "configuration validation failed", {"error": str(e)})
             raise
     
     @staticmethod
@@ -289,23 +292,23 @@ class MCPConfigHelper:
             if isinstance(allowed_tools, str):
                 allowed_tools = [allowed_tools]
             else:
-                logger.warning(f"Invalid allowed_tools type: {type(allowed_tools)}, ignoring")
+                logger.warning("MCP invalid allowed_tools type", extra={"type": type(allowed_tools).__name__, "action": "ignoring"})
                 allowed_tools = None
-        
+
         if exclude_tools is not None and not isinstance(exclude_tools, list):
             if isinstance(exclude_tools, str):
                 exclude_tools = [exclude_tools]
             else:
-                logger.warning(f"Invalid exclude_tools type: {type(exclude_tools)}, ignoring")
+                logger.warning("MCP invalid exclude_tools type", extra={"type": type(exclude_tools).__name__, "action": "ignoring"})
                 exclude_tools = None
         
         return allowed_tools, exclude_tools
     
     @staticmethod
-    def build_circuit_breaker_config(transport_type: str = "mcp_tools") -> Optional[Any]:
+    def build_circuit_breaker_config(transport_type: str = "mcp_tools", backend_name: Optional[str] = None) -> Optional[Any]:
         """Build circuit breaker configuration for transport type."""
         if CircuitBreakerConfig is None:
-            logger.debug("CircuitBreakerConfig not available")
+            _log_mcp_activity(backend_name, "CircuitBreakerConfig unavailable", {})
             return None
 
         try:
@@ -326,10 +329,10 @@ class MCPConfigHelper:
                     max_backoff_multiplier=8
                 )
 
-            logger.debug(f"Created circuit breaker config for {transport_type}")
+            _log_mcp_activity(backend_name, "created circuit breaker config", {"transport_type": transport_type})
             return config
         except Exception as e:
-            logger.warning(f"Failed to create circuit breaker config: {e}")
+            _log_mcp_activity(backend_name, "failed to create circuit breaker config", {"error": str(e)})
             return None
 
 
@@ -337,7 +340,7 @@ class MCPCircuitBreakerManager:
     """Circuit breaker management utilities for MCP integration."""
 
     @staticmethod
-    def apply_circuit_breaker_filtering(servers: List[Dict[str, Any]], circuit_breaker) -> List[Dict[str, Any]]:
+    def apply_circuit_breaker_filtering(servers: List[Dict[str, Any]], circuit_breaker, backend_name: Optional[str] = None, agent_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Filter MCP servers based on circuit breaker state."""
         if not circuit_breaker:
             return servers
@@ -348,12 +351,12 @@ class MCPCircuitBreakerManager:
             if not circuit_breaker.should_skip_server(server_name):
                 filtered_servers.append(server)
             else:
-                logger.debug(f"Circuit breaker: Skipping server {server_name} (circuit open)")
+                _log_mcp_activity(backend_name, "circuit breaker skipping server", {"server_name": server_name, "reason": "circuit_open"}, agent_id=agent_id)
 
         return filtered_servers
 
     @staticmethod
-    async def record_success(servers: List[Dict[str, Any]], circuit_breaker) -> None:
+    async def record_success(servers: List[Dict[str, Any]], circuit_breaker, backend_name: Optional[str] = None, agent_id: Optional[str] = None) -> None:
         """Record successful operation for circuit breaker."""
         if not circuit_breaker:
             return
@@ -362,14 +365,14 @@ class MCPCircuitBreakerManager:
             server_name = server.get("name", "unknown")
             try:
                 circuit_breaker.record_success(server_name)
-                logger.debug(f"Recorded success for server: {server_name}")
+                _log_mcp_activity(backend_name, "recorded success for server", {"server_name": server_name}, agent_id=agent_id)
             except Exception as cb_error:
-                logger.warning(f"Circuit breaker record_success failed for server {server_name}: {cb_error}")
+                _log_mcp_activity(backend_name, "circuit breaker record_success failed", {"server_name": server_name, "error": str(cb_error)}, agent_id=agent_id)
 
     @staticmethod
-    async def record_failure(servers: List[Dict[str, Any]], circuit_breaker, error_message: str) -> None:
+    async def record_failure(servers: List[Dict[str, Any]], circuit_breaker, error_message: str, backend_name: Optional[str] = None, agent_id: Optional[str] = None) -> None:
         """Record failure for circuit breaker."""
-        await MCPCircuitBreakerManager.record_event(servers, circuit_breaker, "failure", error_message)
+        await MCPCircuitBreakerManager.record_event(servers, circuit_breaker, "failure", error_message, backend_name, agent_id)
 
     @staticmethod
     async def record_event(
@@ -377,6 +380,8 @@ class MCPCircuitBreakerManager:
         circuit_breaker,
         event: Literal["success", "failure"],
         error_message: Optional[str] = None,
+        backend_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
     ) -> None:
         """Record success/failure for servers in circuit breaker."""
         if not circuit_breaker:
@@ -392,50 +397,48 @@ class MCPCircuitBreakerManager:
                     circuit_breaker.record_failure(server_name)
                 count += 1
             except Exception as cb_error:
-                logger.warning(
-                    f"Circuit breaker record_{event} failed for server {server_name}: {cb_error}"
-                )
+                _log_mcp_activity(backend_name, "circuit breaker record failed", {"event": event, "server_name": server_name, "error": str(cb_error)}, agent_id=agent_id)
 
         if count > 0:
             if event == "success":
-                logger.debug(f"Circuit breaker: Recorded success for {count} servers")
+                _log_mcp_activity(backend_name, "circuit breaker recorded success", {"server_count": count}, agent_id=agent_id)
             else:
-                logger.warning(f"Circuit breaker: Recorded failure for {count} servers. Error: {error_message}")
+                _log_mcp_activity(backend_name, "circuit breaker recorded failure", {"server_count": count, "error": error_message}, agent_id=agent_id)
 
 
 class MCPResourceManager:
     """Resource management utilities for MCP integration."""
 
     @staticmethod
-    async def cleanup_mcp_client(mcp_client, logger_instance=None) -> None:
+    async def cleanup_mcp_client(mcp_client, logger_instance=None, backend_name: Optional[str] = None) -> None:
         """Clean up MCP client connections and reset state."""
         log = logger_instance or logger
 
         if mcp_client:
             try:
                 await mcp_client.disconnect()
-                log.debug("MCP client disconnected successfully")
+                _log_mcp_activity(backend_name, "client disconnected successfully", {})
             except Exception as e:
-                log.warning(f"Error disconnecting MCP client: {e}")
+                _log_mcp_activity(backend_name, "error disconnecting client", {"error": str(e)})
 
     @staticmethod
-    async def setup_mcp_context_manager(backend_instance):
+    async def setup_mcp_context_manager(backend_instance, backend_name: Optional[str] = None):
         """Setup MCP tools if configured during context manager entry."""
         if hasattr(backend_instance, '_mcp_tools_servers') and backend_instance._mcp_tools_servers and not backend_instance._mcp_initialized:
             try:
                 await backend_instance._setup_mcp_tools()
             except Exception as e:
-                logger.warning(f"MCP setup failed during context entry: {e}")
+                _log_mcp_activity(backend_name, "setup failed during context entry", {"error": str(e)})
         elif hasattr(backend_instance, 'mcp_servers') and backend_instance.mcp_servers and not backend_instance._mcp_initialized:
             try:
                 await backend_instance._setup_mcp_tools()
             except Exception as e:
-                logger.warning(f"MCP setup failed during context entry: {e}")
+                _log_mcp_activity(backend_name, "setup failed during context entry", {"error": str(e)})
 
         return backend_instance
 
     @staticmethod
-    async def cleanup_mcp_context_manager(backend_instance, logger_instance=None) -> None:
+    async def cleanup_mcp_context_manager(backend_instance, logger_instance=None, backend_name: Optional[str] = None) -> None:
         """Clean up MCP resources during context manager exit."""
         log = logger_instance or logger
 
@@ -443,13 +446,13 @@ class MCPResourceManager:
             if hasattr(backend_instance, 'cleanup_mcp'):
                 await backend_instance.cleanup_mcp()
             elif hasattr(backend_instance, '_mcp_client'):
-                await MCPResourceManager.cleanup_mcp_client(backend_instance._mcp_client, log)
+                await MCPResourceManager.cleanup_mcp_client(backend_instance._mcp_client, log, backend_name)
                 backend_instance._mcp_client = None
                 backend_instance._mcp_initialized = False
                 if hasattr(backend_instance, 'functions'):
                     backend_instance.functions.clear()
         except Exception as e:
-            log.error(f"Error during MCP cleanup: {e}")
+            _log_mcp_activity(backend_name, "error during cleanup", {"error": str(e)})
 
 
 class MCPSetupManager:
@@ -498,10 +501,7 @@ class MCPSetupManager:
             server_name = server.get("name", "unnamed")
 
             if not transport_type:
-                logger.warning(
-                    f"MCP server '{server_name}' missing required 'type' field. "
-                    f"Supported types: 'stdio', 'streamable-http', 'http'. Skipping server."
-                )
+                logger.warning("MCP server missing type field", extra={"server_name": server_name, "supported_types": ["stdio", "streamable-http", "http"], "action": "skipping"})
                 continue
 
             if transport_type in ["stdio", "streamable-http"]:
@@ -510,10 +510,7 @@ class MCPSetupManager:
             elif transport_type == "http":
                 http_servers.append(server)
             else:
-                logger.warning(
-                    f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. "
-                    f"Supported types: 'stdio', 'streamable-http', 'http'. Skipping server."
-                )
+                logger.warning("MCP unknown transport type", extra={"transport_type": transport_type, "server_name": server_name, "supported_types": ["stdio", "streamable-http", "http"], "action": "skipping"})
 
         return mcp_tools_servers, http_servers
 
@@ -567,7 +564,7 @@ class MCPExecutionManager:
 
                 # Successful execution
                 if attempt > 0:
-                    log.info(f"MCP function {function_name} (#{call_index}) succeeded on retry attempt {attempt}")
+                    logger.info("MCP function succeeded on retry", extra={"function_name": function_name, "call_index": call_index, "retry_attempt": attempt})
 
                 return result
 
@@ -588,7 +585,7 @@ class MCPExecutionManager:
                     delay = MCPErrorHandler.get_retry_delay(attempt)
 
                     MCPErrorHandler.log_error(e, f"function call {function_name} (attempt {attempt + 1})")
-                    log.warning(f"Retrying in {delay:.2f}s...")
+                    logger.info("MCP retrying function call", extra={"delay_seconds": delay})
 
                     await asyncio.sleep(delay)
                     continue

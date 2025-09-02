@@ -4,9 +4,7 @@ Provides consistent format conversion across all backend implementations.
 """
 from __future__ import annotations
 from typing import Dict, List, Any, Tuple
-import logging
-
-logger = logging.getLogger(__name__)
+from ..logger_config import logger
 
 # Import Function class
 try:

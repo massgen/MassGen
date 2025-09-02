@@ -2,7 +2,7 @@
 MCP-specific exceptions with enhanced error handling and context preservation.
 """
 
-import logging
+from ..logger_config import logger
 from typing import Optional, Dict, Any, Union
 from datetime import datetime, timezone
 
@@ -67,16 +67,12 @@ class MCPError(Exception):
             'timestamp': self.timestamp.isoformat()
         }
 
-    def log_error(self, logger: Optional[logging.Logger] = None) -> None:
+    def log_error(self) -> None:
         """Log the error with appropriate level and context."""
-        if logger is None:
-            logger = logging.getLogger(__name__)
-
         logger.error(
             f"{self.__class__.__name__}: {self.original_message}",
             extra={'mcp_error': self.to_dict()}
         )
-
 
 class MCPConnectionError(MCPError):
     """
