@@ -676,12 +676,14 @@ class Orchestrator(ChatAgent):
         for agent_id in self.agents.keys():
             await self._save_claude_code_snapshot(agent_id)
     
-    async def _save_claude_code_snapshot(self, agent_id: str) -> None:
+    async def _save_claude_code_snapshot(self, agent_id: str, is_final: bool = False) -> None:
         """Save a snapshot of Claude Code agent's working directory.
         
         Args:
             agent_id: ID of the Claude Code agent
+            is_final: If True, save workspace in a separate timestamped directory reserved for final presentation
         """
+        
         if not self._snapshot_storage:
             return
             
@@ -696,11 +698,12 @@ class Orchestrator(ChatAgent):
             return
             
         # Get the working directory from the backend
+        # For final presentation, this should be the final workspace directory
         if hasattr(agent.backend, '_cwd') and agent.backend._cwd:
             source_dir = Path(agent.backend._cwd)
             if source_dir.exists() and source_dir.is_dir():
                 # Destination directory for this agent's snapshots
-                dest_dir = Path(self._snapshot_storage) / agent_id
+                dest_dir = Path(self._snapshot_storage) / agent_id if not is_final else Path(self._snapshot_storage) / "final" / agent_id
                 
                 # Clear existing snapshot and copy new one
                 if dest_dir.exists():
@@ -716,7 +719,13 @@ class Orchestrator(ChatAgent):
                 
                 # Also copy snapshot to timestamped log directory
                 log_session_dir = get_log_session_dir()
-                agent_log_dir = log_session_dir / agent_id
+                
+                if is_final:
+                    agent_log_dir = log_session_dir / "final_workspace" / agent_id
+                    agent_log_dir.mkdir(parents=True, exist_ok=True)
+                else:
+                    agent_log_dir = log_session_dir / agent_id
+
                 if agent_log_dir.exists():
                     # Check if source directory has any contents
                     if any(source_dir.iterdir()):
@@ -1457,7 +1466,7 @@ class Orchestrator(ChatAgent):
         temp_workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
         if temp_workspace_path and hasattr(agent, 'backend'):
             if hasattr(agent.backend, 'set_temporary_cwd'):
-                # Set the temporary workspace for context sharing
+                # Set temporary workspace for context sharing
                 agent.backend.set_temporary_cwd(temp_workspace_path)
                 # Log workspace restoration for visibility
                 yield StreamChunk(
@@ -1582,6 +1591,8 @@ Final Session ID: {session_id}.
 
             elif chunk.type == "done":
                 log_stream_chunk("orchestrator", "done", None, selected_agent_id)
+                # Save the final workspace snapshot (from final workspace directory)
+                await self._save_claude_code_snapshot(selected_agent_id, is_final=True)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
                 log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
