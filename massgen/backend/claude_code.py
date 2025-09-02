@@ -77,6 +77,15 @@ class ClaudeCodeBackend(LLMBackend):
     Provides streaming interface to Claude Code with built-in tool execution
     capabilities and MassGen workflow tool integration. Uses ClaudeSDKClient
     for direct communication with Claude Code server.
+    
+    TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+    - Implement permission enforcement during file/workspace operations
+    - Add execute_with_permissions() method to check permissions before operations
+    - Integrate with PermissionManager for access control validation
+    - Add audit logging for all file system access attempts
+    - Enforce workspace boundaries based on agent permissions
+    - Prevent unauthorized access to other agents' workspaces
+    - Support permission-aware tool execution (Read, Write, Bash, etc.)
     """
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -543,6 +552,26 @@ class ClaudeCodeBackend(LLMBackend):
             Current session ID if available, None otherwise
         """
         return self._current_session_id
+    
+    # TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+    # Add permission enforcement methods:
+    # def execute_with_permissions(self, operation, path):
+    #     """Execute operation only if permissions allow.
+    #     
+    #     Args:
+    #         operation: The operation to execute (e.g., tool call)
+    #         path: The file/directory path being accessed
+    #     
+    #     Raises:
+    #         PermissionError: If agent lacks required access
+    #     """
+    #     if not self.check_permission(path, operation.type):
+    #         raise PermissionError(f"Agent {self.agent_id} lacks {operation.type} access to {path}")
+    #
+    # def check_permission(self, path: str, access_type: str) -> bool:
+    #     """Check if current agent has permission for path access."""
+    #     # Will integrate with PermissionManager
+    #     pass
 
     def _build_system_prompt_with_workflow_tools(
         self, tools: List[Dict[str, Any]], base_system: Optional[str] = None

@@ -31,6 +31,7 @@
 </p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
+
 This project started with the "threads of thought" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/2025/04/16/Reasoning/), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2). Here is a [video recording](https://www.youtube.com/watch?v=xM2Uguw1UsQ) of the background context introduction presented at the Berkeley Agentic AI Summit 2025.
 
 ---
@@ -607,16 +608,46 @@ The system provides multiple ways to view and analyze results:
 [![MassGen Case Study](https://img.youtube.com/vi/Dp2oldJJImw/0.jpg)](https://www.youtube.com/watch?v=Dp2oldJJImw)
 
 #### Comprehensive Logging
+
 All sessions are automatically logged with detailed information. The file can be viewed throught the interaction with UI.
 
-```bash
-agent_outputs/
-  ├── agent_1.txt       # The full logs by agent 1
-  ├── agent_2.txt       # The full logs by agent 2
-  ├── agent_3.txt       # The full logs by agent 3
-  ├── system_status.txt # The full logs of system status
+##### Logging Storage Structure
+Logging storage are organized in the following directory hierarchy:
+
 ```
----
+massgen_logs/
+└── log_{timestamp}/
+    ├── agent_outputs/
+    │   ├── agent_id.txt
+    │   ├── final_presentation_agent_id.txt
+    │   └── system_status.txt
+    ├── agent_id/
+    │   └── {answer_generation_timestamp}/
+    │       └── files_included_in_generated_answer
+    ├── final_workspace/
+    │   └── agent_id/
+    │       └── {answer_generation_timestamp}/
+    │           └── files_included_in_generated_answer
+    └── massgen.log / massgen_debug.log
+```
+
+##### Directory Structure Explanation
+- `log_{timestamp}`: Main log directory identified by session timestamp
+- `agent_outputs/`: Contains text outputs from each agent
+  - `agent_id.txt`: Raw output from each agent
+  - `final_presentation_agent_id.txt`: Final presentation for the selected agent
+  - `system_status.txt`: System status information
+- `agent_id/`: Directory for each agent containing answer versions
+  - `{answer_generation_timestamp}/`: Timestamp directory for each answer version
+    - `files_included_in_generated_answer`: All relevant files in that version
+- `final_workspace/`: Final presentation for selected agents
+  - `agent_id/`: Selected agent id
+    - `{answer_generation_timestamp}/`: Timestamp directory for final presentation
+      - `files_included_in_generated_answer`: All relevant files in final presentation
+- `massgen.log` or `massgen_debug.log`: Main log file, `massgen.log` for general logging, `massgen_debug.log` for verbose debugging information.
+
+##### Important Note
+The final presentation continues to be stored in each Claude Code Agent's workspace as before. After generating the final presentation, the relevant files will be copied to the `final_workspace/` directory.
 
 ## 💡 Examples
 
@@ -690,8 +721,10 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Recent Achievements (v0.0.14)
 
-**📝 Development Guide & Documentation**
-- **Enhanced Logging**: Improved logging infrastructure with add_log feature for better multi-agent workflow debugging
+**📝 Enhanced Logging**
+- **Improved Logging System**: Enhanced logging system for better agents' answer debugging.
+- **Final Answer Directory**: New structure in Claude Code and logs for storing final results
+- **Documentation Updates**: Detailed architecture documentation and future development plans for permission-based context sharing
 
 ### Previous Achievements (v0.0.3-v0.0.13)
 
@@ -738,12 +771,13 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.15 Roadmap
 
-Version 0.0.15 focuses on **Gemini MCP Implementation**, bringing Model Context Protocol support to Google's Gemini models for the first time. Key enhancements include:
+Version 0.0.15 will focus on **Gemini MCP Implementation**, bringing Model Context Protocol support to Google's Gemini models for the first time. Key planned enhancements include:
 
 - **Gemini MCP Integration**: 🔌 Native MCP support for Gemini backend with tool ecosystem access
 - **Cross-Provider MCP**: 🛠️ Unified MCP interface across Claude Code and Gemini backends
 - **Enhanced Tool Discovery**: 📚 Improved tool discovery and execution management for Gemini agents
 - **Performance Optimization**: ⚡ Optimized MCP server communication and resource management
+- **Enhanced Context Sharing**: 🔄 Improved multi-agent context preservation and sharing mechanisms
 
 For detailed milestones and technical specifications, see the [full v0.0.15 roadmap](ROADMAP_v0.0.15.md).
 
