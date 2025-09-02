@@ -31,6 +31,7 @@
 </p>
 
 MassGen is a cutting-edge multi-agent system that leverages the power of collaborative AI to solve complex tasks. It assigns a task to multiple AI agents who work in parallel, observe each other's progress, and refine their approaches to converge on the best solution to deliver a comprehensive and high-quality result. The power of this "parallel study group" approach is exemplified by advanced systems like xAI's Grok Heavy and Google DeepMind's Gemini Deep Think.
+
 This project started with the "threads of thought" and "iterative refinement" ideas presented in [The Myth of Reasoning](https://docs.ag2.ai/latest/docs/blog/2025/04/16/Reasoning/), and extends the classic "multi-agent conversation" idea in [AG2](https://github.com/ag2ai/ag2). Here is a [video recording](https://www.youtube.com/watch?v=xM2Uguw1UsQ) of the background context introduction presented at the Berkeley Agentic AI Summit 2025.
 
 ---
@@ -690,8 +691,10 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Recent Achievements (v0.0.14)
 
-**📝 Development Guide & Documentation**
-- **Enhanced Logging**: Improved logging infrastructure with add_log feature for better multi-agent workflow debugging
+**📝 Enhanced Logging**
+- **Improved Logging System**: Enhanced logging system for better agents' answer debugging.
+- **Final Answer Directory**: New structure in Claude Code and logs for storing final results
+- **Documentation Updates**: Updated release tracking and removed unnecessary use case documentation
 
 ### Previous Achievements (v0.0.3-v0.0.13)
 
@@ -738,12 +741,13 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.15 Roadmap
 
-Version 0.0.15 focuses on **Gemini MCP Implementation**, bringing Model Context Protocol support to Google's Gemini models for the first time. Key enhancements include:
+Version 0.0.15 will focus on **Gemini MCP Implementation**, bringing Model Context Protocol support to Google's Gemini models for the first time. Key planned enhancements include:
 
 - **Gemini MCP Integration**: 🔌 Native MCP support for Gemini backend with tool ecosystem access
 - **Cross-Provider MCP**: 🛠️ Unified MCP interface across Claude Code and Gemini backends
 - **Enhanced Tool Discovery**: 📚 Improved tool discovery and execution management for Gemini agents
 - **Performance Optimization**: ⚡ Optimized MCP server communication and resource management
+- **Enhanced Context Sharing**: 🔄 Improved multi-agent context preservation and sharing mechanisms
 
 For detailed milestones and technical specifications, see the [full v0.0.15 roadmap](ROADMAP_v0.0.15.md).
 
