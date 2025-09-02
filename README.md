@@ -607,16 +607,46 @@ The system provides multiple ways to view and analyze results:
 [![MassGen Case Study](https://img.youtube.com/vi/Dp2oldJJImw/0.jpg)](https://www.youtube.com/watch?v=Dp2oldJJImw)
 
 #### Comprehensive Logging
+
 All sessions are automatically logged with detailed information. The file can be viewed throught the interaction with UI.
 
-```bash
-agent_outputs/
-  ├── agent_1.txt       # The full logs by agent 1
-  ├── agent_2.txt       # The full logs by agent 2
-  ├── agent_3.txt       # The full logs by agent 3
-  ├── system_status.txt # The full logs of system status
+##### Logging Storage Structure
+Logging storage are organized in the following directory hierarchy:
+
 ```
----
+massgen_logs/
+└── log_{timestamp}/
+    ├── agent_outputs/
+    │   ├── agent_id.txt
+    │   ├── final_presentation_agent_id.txt
+    │   └── system_status.txt
+    ├── agent_id/
+    │   └── {answer_generation_timestamp}/
+    │       └── files_included_in_generated_answer
+    ├── final_workspace/
+    │   └── agent_id/
+    │       └── {answer_generation_timestamp}/
+    │           └── files_included_in_generated_answer
+    └── massgen.log / massgen_debug.log
+```
+
+##### Directory Structure Explanation
+- `log_{timestamp}`: Main log directory identified by session timestamp
+- `agent_outputs/`: Contains text outputs from each agent
+  - `agent_id.txt`: Raw output from each agent
+  - `final_presentation_agent_id.txt`: Final presentation for the selected agent
+  - `system_status.txt`: System status information
+- `agent_id/`: Directory for each agent containing answer versions
+  - `{answer_generation_timestamp}/`: Timestamp directory for each answer version
+    - `files_included_in_generated_answer`: All relevant files in that version
+- `final_workspace/`: Final presentation for selected agents
+  - `agent_id/`: Selected agent id
+    - `{answer_generation_timestamp}/`: Timestamp directory for final presentation
+      - `files_included_in_generated_answer`: All relevant files in final presentation
+- `massgen.log` or `massgen_debug.log`: Main log file, `massgen.log` for general logging, `massgen_debug.log` for verbose debugging information.
+
+##### Important Note
+The final presentation continues to be stored in each Claude Code Agent's workspace as before. After generating the final presentation, the relevant files will be copied to the `final_workspace/` directory.
 
 ## 💡 Examples
 
