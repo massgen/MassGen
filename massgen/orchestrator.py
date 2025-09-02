@@ -1461,20 +1461,17 @@ class Orchestrator(ChatAgent):
 
         agent = self.agents[selected_agent_id]
         
-        # Create dual workspace system for final presentation:
-        # 1. Temp workspace (READ-ONLY) - contains all previous work for reference
-        # 2. Final workspace (WRITE) - where agent creates final presentation work
+        # Restore workspace to preserve context from coordination phase
+        # This allows the agent to reference and access previous work
         temp_workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
-
         if temp_workspace_path and hasattr(agent, 'backend'):
-            # Set temporary workspace path for reference access
             if hasattr(agent.backend, 'set_temporary_cwd'):
+                # Set temporary workspace for context sharing
                 agent.backend.set_temporary_cwd(temp_workspace_path)
-
-                # Log workspace setup for visibility
+                # Log workspace restoration for visibility
                 yield StreamChunk(
                     type="debug",
-                    content=f"Final presentation setup - Reference: {temp_workspace_path}",
+                    content=f"Restored workspace context for final presentation: {temp_workspace_path}",
                     source=selected_agent_id
                 )
 
@@ -1513,7 +1510,7 @@ class Orchestrator(ChatAgent):
             agent_system_message
         )
         
-        # Add workspace context information to system message if workspaces were set up
+        # Add workspace context information to system message if workspace was restored
         if temp_workspace_path:
             workspace_context_parts = []
             absolute_temp_path = os.path.join(os.getcwd(), temp_workspace_path)
