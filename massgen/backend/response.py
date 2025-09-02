@@ -937,7 +937,7 @@ class ResponseBackend(LLMBackend):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI Response API with MCP integration."""
         
-            agent_id = kwargs.get('agent_id', None)
+        agent_id = kwargs.get('agent_id', None)
         
         log_backend_activity(
             self.get_provider_name(),

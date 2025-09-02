@@ -616,6 +616,8 @@ Make your decision and include the JSON at the very end of your response."""
         """Stream response using Gemini API with structured output for coordination and MCP tool support.""" 
         # Extract agent_id for logging
         agent_id = kwargs.get('agent_id', None)
+        client = None
+        stream = None
         
         log_backend_activity(
             "gemini",
@@ -627,8 +629,8 @@ Make your decision and include the JSON at the very end of your response."""
         try:
             from google import genai
 
-            # Setup MCP tools if not already initialized
-            await self._setup_mcp_tools()
+            # Setup MCP via async context manager entry
+            await self.__aenter__()
 
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
@@ -1209,6 +1211,14 @@ Make your decision and include the JSON at the very end of your response."""
             error_msg = f"Gemini API error: {e}"
             log_stream_chunk("backend.gemini", "error", error_msg, agent_id)
             yield StreamChunk(type="error", error=error_msg)
+        finally:
+            # Cleanup resources
+            await self._cleanup_resources(stream, client)
+            # Ensure context manager exit for MCP cleanup
+            try:
+                await self.__aexit__(None, None, None)
+            except Exception as e:
+                logger.warning(f"Failed MCP cleanup: {e}")
 
     def get_provider_name(self) -> str:
         """Get the provider name."""
@@ -1284,3 +1294,64 @@ Make your decision and include the JSON at the very end of your response."""
             finally:
                 self._mcp_client = None
                 self._mcp_initialized = False
+
+    async def _cleanup_resources(self, stream, client):
+        """Cleanup google-genai resources to avoid unclosed aiohttp sessions."""
+        # Close stream 
+        try:
+            if stream is not None:
+                close_fn = getattr(stream, 'aclose', None) or getattr(stream, 'close', None)
+                if close_fn is not None:
+                    maybe = close_fn()
+                    if hasattr(maybe, '__await__'):
+                        await maybe
+        except Exception as e:
+            logger.debug(f"Stream close failed: {e}")
+
+        # Close internal async transport if exposed
+        try:
+            if client is not None and hasattr(client, 'aio') and client.aio is not None:
+                aio_obj = client.aio
+                for method_name in ('close', 'stop'):
+                    method = getattr(aio_obj, method_name, None)
+                    if method:
+                        maybe = method()
+                        if hasattr(maybe, '__await__'):
+                            await maybe
+                        break
+        except Exception as e:
+            logger.debug(f"client.aio close failed: {e}")
+
+        # Close client
+        try:
+            if client is not None:
+                for method_name in ('aclose', 'close'):
+                    method = getattr(client, method_name, None)
+                    if method:
+                        maybe = method()
+                        if hasattr(maybe, '__await__'):
+                            await maybe
+                        break
+        except Exception as e:
+            logger.debug(f"client close failed: {e}")
+
+    async def __aenter__(self) -> "GeminiBackend":
+        """Async context manager entry."""
+        try:
+            await self._setup_mcp_tools()
+        except Exception as e:
+            logger.warning(f"MCP setup failed during context entry: {e}")
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[type],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[object],
+    ) -> None:
+        """Async context manager exit with automatic resource cleanup."""
+        try:
+            await self.cleanup_mcp()
+        except Exception as e:
+            logger.error(f"Error during GeminiBackend cleanup: {e}")
+            return False

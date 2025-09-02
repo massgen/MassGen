@@ -929,9 +929,8 @@ class Orchestrator(ChatAgent):
                     # But we need the agent to have this in its history for subsequent calls
                     # First attempt: provide complete conversation and reset agent's history
                     # Provide only coordination tools; MCP sessions handled by backend
-                    agent_tools = self._get_agent_tools(agent_id)
                     chat_stream = agent.chat(
-                        conversation_messages, agent_tools, reset_chat=True
+                        conversation_messages, self.workflow_tools, reset_chat=True
                     )
                 else:
                     # Subsequent attempts: send enforcement message (set by error handling)
@@ -939,9 +938,8 @@ class Orchestrator(ChatAgent):
                     if isinstance(enforcement_msg, list):
                         # Tool message array
                         # Provide only coordination tools; MCP sessions handled by backend
-                        agent_tools = self._get_agent_tools(agent_id)
                         chat_stream = agent.chat(
-                            enforcement_msg, agent_tools, reset_chat=False
+                            enforcement_msg, self.workflow_tools, reset_chat=False
                         )
                     else:
                         # Single user message
@@ -950,9 +948,8 @@ class Orchestrator(ChatAgent):
                             "content": enforcement_msg,
                         }
                         # Provide only coordination tools; MCP sessions handled by backend
-                        agent_tools = self._get_agent_tools(agent_id)
                         chat_stream = agent.chat(
-                            [enforcement_message], agent_tools, reset_chat=False
+                            [enforcement_message], self.workflow_tools, reset_chat=False
                         )
                 response_text = ""
                 tool_calls = []
