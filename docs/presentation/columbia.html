@@ -144,20 +144,14 @@
 
         .slide-counter {
             position: fixed;
-            bottom: 30px;
-            left: 30px;
-            background: rgba(0,0,0,0.7);
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
             color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 16px;
-            max-width: 300px;
-        }
-
-        .slide-title {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-top: 5px;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
         }
 
         .slide-nav {
@@ -516,9 +510,8 @@
             .slide-counter {
                 bottom: 15px;
                 left: 15px;
-                padding: 8px 15px;
-                font-size: 14px;
-                max-width: 200px;
+                padding: 5px 10px;
+                font-size: 12px;
             }
             
             .slide-nav {
@@ -1221,7 +1214,438 @@
             </div>
         </div>
 
-        <!-- Slide 13: Evolution from v0.0.1 to v0.0.14 -->
+        <!-- Slide 13: Rigorous Benchmarking Results -->
+        <div class="slide">
+            <div class="icon">📊</div>
+            <h2>Rigorous Benchmarking: Multi-Domain Performance</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666;">
+                <em>Scientific evaluation across graduate-level reasoning, instruction-following, and narrative tasks</em>
+            </div>
+            
+            <!-- Visual Performance Chart -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin: 30px 0;">
+                <!-- GPQA-Diamond Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">🧪 GPQA-Diamond</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Graduate Physics/Chemistry</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 87.4%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">87.4% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 85.9%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">85.9%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok 4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 85.4%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">85.4%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 84.8%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">84.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 68.2%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">68.2%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IFEval Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">📋 IFEval</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Instruction Following</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 88%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">88.0% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 87.4%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">87.4%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok 4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 84.7%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">84.7%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 66%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">66.0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 63.6%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">63.6%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MuSR Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">📖 MuSR</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Narrative Reasoning</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 69.6%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">69.6% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 69.2%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">69.2%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 68.3%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">68.3%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok 4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 67.6%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">67.6%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 62.8%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">62.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overall Performance Summary -->
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 20px; display: inline-block; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">🏆 Overall Champion</div>
+                    <div style="font-size: 2.2em; font-weight: bold; margin: 10px 0;">MassGen: 81.2%</div>
+                    <div style="font-size: 0.9em; opacity: 0.9;">Wins 2/3 benchmarks • Statistically significant</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px;">
+                <div style="background: #d4edda; padding: 15px; border-radius: 12px; border-left: 4px solid #27ae60; flex: 1; max-width: 260px;">
+                    <strong style="color: #155724; font-size: 1em;">✅ Key Results:</strong><br>
+                    <div style="color: #155724; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • <strong>Highest on 2/3</strong> benchmarks<br>
+                        • <strong>Best overall</strong> average<br>
+                        • <strong>Consistent</strong> performance
+                    </div>
+                </div>
+                <div style="background: #fff3cd; padding: 15px; border-radius: 12px; border-left: 4px solid #f39c12; flex: 1; max-width: 260px;">
+                    <strong style="color: #856404; font-size: 1em;">📈 Statistical:</strong><br>
+                    <div style="color: #856404; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • vs Claude: <strong>p = 1.4e-07</strong> ⭐⭐⭐<br>
+                        • vs Gemini: <strong>p = 1.1e-28</strong> ⭐⭐⭐<br>
+                        • Not due to chance
+                    </div>
+                </div>
+                <div style="background: #d1ecf1; padding: 15px; border-radius: 12px; border-left: 4px solid #17a2b8; flex: 1; max-width: 260px;">
+                    <strong style="color: #0c5460; font-size: 1em;">🔬 Research Gap:</strong><br>
+                    <div style="color: #0c5460; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • <strong>Oracle:</strong> 95.5% (GPQA)<br>
+                        • <strong>Actual:</strong> 87.4%<br>
+                        • <strong>Potential:</strong> 8.1 points
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 14: Case Study - Success Through Collaboration -->
+        <div class="slide">
+            <div class="icon">🔬</div>
+            <h2>Case Study: Success Through Peer Correction</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666; font-style: italic;">
+                Graduate-level physics question from GPQA-Diamond benchmark
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;">
+                <div>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 4px solid #3498db; margin-bottom: 25px;">
+                        <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🌌 The Problem</h3>
+                        <div style="font-size: 0.95em; line-height: 1.5; color: #495057;">
+                            A quasar shows a peak at 790 nm wavelength. Given Lambda-CDM cosmological parameters 
+                            (H₀ = 70 km/s/Mpc, Ωₘ = 0.3, ΩΛ = 0.7), what is the comoving distance?<br><br>
+                            <strong>Options:</strong> A) 8 Gpc  B) 7 Gpc  C) 6 Gpc  D) 9 Gpc
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 15px 0;">🎯 Final Result</h3>
+                        <div style="font-size: 1.1em; text-align: center;">
+                            <div style="font-size: 2em; margin: 15px 0;">✅</div>
+                            <strong>Correct Answer: A (8 Gpc)</strong><br>
+                            <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                                Orchestration succeeded where individual agents initially failed
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">🤖 Round 1: Initial Answers</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4;">
+                            <strong>Claude:</strong> "I calculate ~6 Gpc → Answer C"<br>
+                            <strong>GPT-5:</strong> "I get ~8.95 Gpc → Answer D"<br>
+                            <strong>Gemini:</strong> "~6.1 Gpc → Answer C"
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">🔄 Self-Correction Process</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            <strong>Claude observes:</strong> "There is significant discrepancy in calculations: 
+                            Agent1 gets ~6.1 Gpc, Agent2 gets ~8.95 Gpc. Let me re-examine..."
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 10px 0;">✨ Breakthrough Moment</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            <strong>Claude revises:</strong> "Standard cosmological calculators yield 8000-8500 Mpc 
+                            for z=5.5. This equals 8.0-8.5 Gpc, closest to option A."<br><br>
+                            <strong>Result:</strong> 3/4 agents converge on correct answer
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(39, 174, 96, 0.1); border-radius: 15px; border: 2px dashed #27ae60;">
+                <strong style="color: #27ae60; font-size: 1.2em;">💡 Success Mechanism:</strong><br>
+                <span style="color: #155724; font-size: 1.1em;">Peer observation → Discrepancy detection → Self-correction → Consensus</span>
+            </div>
+        </div>
+
+        <!-- Slide 15: Case Study - When Coordination Fails -->
+        <div class="slide">
+            <div class="icon">⚠️</div>
+            <h2>Case Study: When Good Analysis Goes Wrong</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666; font-style: italic;">
+                Understanding current limitations and improvement opportunities
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;">
+                <div>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 4px solid #e74c3c; margin-bottom: 25px;">
+                        <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🔭 The Problem</h3>
+                        <div style="font-size: 0.95em; line-height: 1.5; color: #495057;">
+                            "How many stars would be detectable using the ESPRESSO spectrograph 
+                            with S/N ≥ 10 in 1-hour exposure?"<br><br>
+                            <strong>Candidates:</strong> Canopus, Polaris, and 4 synthetic stars<br>
+                            <strong>Correct Answer:</strong> 2 stars (Canopus saturates detector)
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 15px 0;">❌ Orchestration Failed</h3>
+                        <div style="font-size: 1.1em; text-align: center;">
+                            <div style="font-size: 2em; margin: 15px 0;">✗</div>
+                            <strong>Wrong Answer: 3 stars</strong><br>
+                            <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                                Despite Claude having the correct reasoning
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">✅ Claude (Correct)</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            "Canopus is too bright and would <strong>saturate the detector</strong> 
+                            in a 1-hour exposure. Only 2 stars are detectable without saturation."
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #e67e22, #d35400); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">❌ Others (Detailed but Wrong)</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4;">
+                            <strong>GPT-5, Gemini, Grok:</strong> Provided comprehensive magnitude calculations 
+                            but <strong>failed to consider detector saturation</strong> → concluded 3 stars
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #95a5a6, #7f8c8d); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 10px 0;">🎯 What Happened</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            Orchestration selected Gemini for having "most accurate and comprehensive reasoning," 
+                            prioritizing <strong>analysis quality over correctness</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; gap: 30px; margin-top: 15px; margin-bottom: 80px;">
+                <div style="background: #fff3cd; padding: 20px; border-radius: 15px; border-left: 4px solid #f39c12; flex: 1;">
+                    <strong style="color: #856404; font-size: 1.1em;">🔍 Root Cause:</strong><br>
+                    <div style="color: #856404; margin-top: 10px; line-height: 1.5;">
+                        System confused <strong>detailed explanation</strong> with <strong>correctness</strong>
+                    </div>
+                </div>
+                <div style="background: #d1ecf1; padding: 20px; border-radius: 15px; border-left: 4px solid #17a2b8; flex: 1;">
+                    <strong style="color: #0c5460; font-size: 1.1em;">💡 Improvement Opportunity:</strong><br>
+                    <div style="color: #0c5460; margin-top: 10px; line-height: 1.5;">
+                        Better balance <strong>reasoning quality</strong> and <strong>answer validation</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Coordination Strategy Research -->
+        <div class="slide">
+            <div class="icon">🧠</div>
+            <h2>Coordination Psychology: How Voting Behavior Changes</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666;">
+                <em>Controlled experiments reveal how coordination mechanisms shape multi-agent behavior</em>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                <div>
+                    <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">🎭 Identity Disclosure Effects</h3>
+                    
+                    <div style="background: #f8f9fa; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #3498db; margin: 0 0 15px 0;">Anonymous Voting (Baseline)</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 0.9em;">GPT-5 Self-Voting</span>
+                            <div style="background: #3498db; height: 20px; width: 81%; border-radius: 10px; position: relative;">
+                                <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.8em; font-weight: bold;">81.0%</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                            Agents see: "agent1", "agent2", "agent3", "agent4"
+                        </div>
+                    </div>
+                    
+                    <div style="background: #fff3cd; border-radius: 15px; padding: 20px; border-left: 4px solid #f39c12;">
+                        <h4 style="color: #856404; margin: 0 0 15px 0;">Identified Voting</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 0.9em;">GPT-5 Self-Voting</span>
+                            <div style="background: #f39c12; height: 20px; width: 88.4%; border-radius: 10px; position: relative;">
+                                <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.8em; font-weight: bold;">88.4%</span>
+                            </div>
+                        </div>
+                        <div style="color: #856404; font-size: 0.9em; margin-top: 15px;">
+                            <strong>+7.4%</strong> increase in self-voting<br>
+                            <strong>Consensus ties:</strong> 14.1% → 23.2%
+                        </div>
+                        <div style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                            Agents see: "GPT-5", "Claude", "Gemini", "Grok"
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h3 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">👁️ Vote Visibility Effects</h3>
+                    
+                    <div style="background: #f8f9fa; border-radius: 15px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #27ae60; margin: 0 0 15px 0;">Hidden Tally (Baseline)</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 0.9em;">First-voted Selected</span>
+                            <div style="background: #27ae60; height: 20px; width: 54.1%; border-radius: 10px; position: relative;">
+                                <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.8em; font-weight: bold;">54.1%</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                            Agents vote independently without seeing others' choices
+                        </div>
+                    </div>
+                    
+                    <div style="background: #d4edda; border-radius: 15px; padding: 20px; border-left: 4px solid #27ae60;">
+                        <h4 style="color: #155724; margin: 0 0 15px 0;">Visible Tally</h4>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 0.9em;">First-voted Selected</span>
+                            <div style="background: #155724; height: 20px; width: 67.8%; border-radius: 10px; position: relative;">
+                                <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.8em; font-weight: bold;">67.8%</span>
+                            </div>
+                        </div>
+                        <div style="color: #155724; font-size: 0.9em; margin-top: 15px;">
+                            <strong>+13.7%</strong> herding behavior<br>
+                            <strong>Especially strong:</strong> GPT-5 (+40%)
+                        </div>
+                        <div style="font-size: 0.8em; color: #666; margin-top: 10px;">
+                            Agents see ongoing vote counts and reasons
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 30px; background: rgba(116, 185, 255, 0.1); padding: 25px; border-radius: 15px; border: 2px dashed #74b9ff;">
+                <h3 style="color: #2c3e50; margin: 0 0 15px 0; text-align: center;">🎯 Key Behavioral Insights</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5em; margin-bottom: 10px;">🎭</div>
+                        <strong style="color: #2c3e50;">Identity Matters</strong><br>
+                        <span style="color: #666; font-size: 0.9em;">Knowing "who said what" increases bias and reduces consensus</span>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5em; margin-bottom: 10px;">🐑</div>
+                        <strong style="color: #2c3e50;">Herding Behavior</strong><br>
+                        <span style="color: #666; font-size: 0.9em;">Visible votes create momentum effects, sometimes premature consensus</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 17: Evolution from v0.0.1 to v0.0.14 -->
         <div class="slide">
             <div class="icon">🚀</div>
             <h2>MassGen Evolution: v0.0.1 → v0.0.14</h2>
@@ -1257,7 +1681,7 @@
             </div>
         </div>
 
-        <!-- Slide 14: Early Adopters -->
+        <!-- Slide 18: Early Adopters -->
         <div class="slide">
             <div class="icon">🌟</div>
             <h2>Early Adopters & Community Growth</h2>
@@ -1298,7 +1722,7 @@
             </div>
         </div>
 
-        <!-- Slide 15: Live Demo Examples -->
+        <!-- Slide 19: Live Demo Examples -->
         <div class="slide">
             <div class="icon">🎬</div>
             <h2>Live Demonstrations</h2>
@@ -1333,7 +1757,7 @@
             </div>
         </div>
 
-        <!-- Slide 16: Columbia Research Applications -->
+        <!-- Slide 20: Columbia Research Applications -->
         <div class="slide">
             <div class="icon">🎓</div>
             <h2>Columbia Research Applications</h2>
@@ -1365,7 +1789,7 @@
             </div>
         </div>
 
-        <!-- Slide 17: Getting Started -->
+        <!-- Slide 21: Getting Started -->
         <div class="slide">
             <div class="icon">⚡</div>
             <h2>Get Started in 60 Seconds</h2>
@@ -1400,7 +1824,7 @@
             </div>
         </div>
 
-        <!-- Slide 18: Roadmap & Vision -->
+        <!-- Slide 22: Roadmap & Vision -->
         <div class="slide">
             <div class="icon">🔮</div>
             <h2>Vision: The Path to Exponential Intelligence</h2>
@@ -1578,7 +2002,7 @@
             </div>
         </div>
 
-        <!-- Slide 19: Call to Action -->
+        <!-- Slide 23: Call to Action -->
         <div class="slide" style="background: linear-gradient(135deg, #667eea, #764ba2), url('https://github.com/Leezekun/MassGen/blob/main/assets/cos.png?raw=true'); background-size: cover; background-blend-mode: overlay; background-position: center;">
             <div class="icon">🚀</div>
             <h2 style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Join the Multi-Agent Revolution</h2>
@@ -1607,8 +2031,7 @@
 
     <!-- Navigation -->
     <div class="slide-counter">
-        <span id="current-slide">1</span> / <span id="total-slides">19</span>
-        <div class="slide-title" id="slide-title">Title - Columbia University</div>
+        <span id="current-slide">1</span> / <span id="total-slides">23</span>
     </div>
 
     <div class="slide-nav">
@@ -1641,6 +2064,10 @@
             "Context Sharing - Challenge",
             "Context Sharing - Solution v0.0.12",
             "Context Sharing - In Action",
+            "Benchmarking - Multi-Domain Performance",
+            "Case Study - Success Through Collaboration", 
+            "Case Study - When Coordination Fails",
+            "Coordination Psychology - Voting Behavior",
             "Evolution - v0.0.1 to v0.0.14",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
@@ -1668,7 +2095,6 @@
             slides[currentSlide].classList.add('active');
             
             document.getElementById('current-slide').textContent = currentSlide + 1;
-            document.getElementById('slide-title').textContent = slideTitles[currentSlide];
             
             // Update navigation dots
             document.querySelectorAll('.nav-dot').forEach((dot, index) => {
