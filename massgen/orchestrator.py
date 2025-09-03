@@ -82,6 +82,16 @@ class Orchestrator(ChatAgent):
     - Configurable presentation formats for final answers
     - Advanced coordination workflows (hierarchical, weighted voting, etc.)
 
+    TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+    - Add permission validation logic for agent workspace access
+    - Implement validate_agent_access() method to check if agent has required permission for resource
+    - Replace current prompt-based access control with explicit system-level enforcement
+    - Add PermissionManager integration for managing agent access rules
+    - Implement audit logging for all access attempts to workspace resources
+    - Support dynamic permission negotiation during runtime
+    - Add configurable policy framework for permission management
+    - Integrate with workspace snapshot mechanism for controlled context sharing
+
     Restart Behavior:
     When an agent provides new_answer, all agents gracefully restart to ensure
     consistent coordination state. This allows all agents to transition to Case 2
@@ -619,6 +629,12 @@ class Orchestrator(ChatAgent):
     async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
         """Restore all snapshots to an agent's workspace using anonymous IDs.
         
+        TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+        - Validate agent permissions before restoring snapshots
+        - Check if agent has read access to other agents' workspaces
+        - Implement fine-grained control over which snapshots can be accessed
+        - Add audit logging for snapshot access attempts
+        
         Args:
             agent_id: ID of the Claude Code agent receiving the context
             
@@ -676,12 +692,14 @@ class Orchestrator(ChatAgent):
         for agent_id in self.agents.keys():
             await self._save_claude_code_snapshot(agent_id)
     
-    async def _save_claude_code_snapshot(self, agent_id: str) -> None:
+    async def _save_claude_code_snapshot(self, agent_id: str, is_final: bool = False) -> None:
         """Save a snapshot of Claude Code agent's working directory.
         
         Args:
             agent_id: ID of the Claude Code agent
+            is_final: If True, save workspace in a separate timestamped directory reserved for final presentation
         """
+        
         if not self._snapshot_storage:
             return
             
@@ -696,11 +714,12 @@ class Orchestrator(ChatAgent):
             return
             
         # Get the working directory from the backend
+        # For final presentation, this should be the final workspace directory
         if hasattr(agent.backend, '_cwd') and agent.backend._cwd:
             source_dir = Path(agent.backend._cwd)
             if source_dir.exists() and source_dir.is_dir():
                 # Destination directory for this agent's snapshots
-                dest_dir = Path(self._snapshot_storage) / agent_id
+                dest_dir = Path(self._snapshot_storage) / agent_id if not is_final else Path(self._snapshot_storage) / "final" / agent_id
                 
                 # Clear existing snapshot and copy new one
                 if dest_dir.exists():
@@ -716,7 +735,13 @@ class Orchestrator(ChatAgent):
                 
                 # Also copy snapshot to timestamped log directory
                 log_session_dir = get_log_session_dir()
-                agent_log_dir = log_session_dir / agent_id
+                
+                if is_final:
+                    agent_log_dir = log_session_dir / "final_workspace" / agent_id
+                    agent_log_dir.mkdir(parents=True, exist_ok=True)
+                else:
+                    agent_log_dir = log_session_dir / agent_id
+
                 if agent_log_dir.exists():
                     # Check if source directory has any contents
                     if any(source_dir.iterdir()):
@@ -764,6 +789,22 @@ class Orchestrator(ChatAgent):
         if hasattr(self, "_active_streams") and self._active_streams:
             for agent_id in list(self._active_streams.keys()):
                 await self._close_agent_stream(agent_id, self._active_streams)
+    
+    # TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
+    # Add the following permission validation methods:
+    # async def validate_agent_access(self, agent_id: str, resource_path: str, access_type: str) -> bool:
+    #     """Check if agent has required permission for resource.
+    #     
+    #     Args:
+    #         agent_id: ID of the agent requesting access
+    #         resource_path: Path to the resource being accessed
+    #         access_type: Type of access (read, write, read-write, execute)
+    #     
+    #     Returns:
+    #         bool: True if access is allowed, False otherwise
+    #     """
+    #     # Implementation will check against PermissionManager
+    #     pass
 
     def _create_tool_error_messages(
         self,
@@ -1457,7 +1498,7 @@ class Orchestrator(ChatAgent):
         temp_workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
         if temp_workspace_path and hasattr(agent, 'backend'):
             if hasattr(agent.backend, 'set_temporary_cwd'):
-                # Set the temporary workspace for context sharing
+                # Set temporary workspace for context sharing
                 agent.backend.set_temporary_cwd(temp_workspace_path)
                 # Log workspace restoration for visibility
                 yield StreamChunk(
@@ -1582,6 +1623,8 @@ Final Session ID: {session_id}.
 
             elif chunk.type == "done":
                 log_stream_chunk("orchestrator", "done", None, selected_agent_id)
+                # Save the final workspace snapshot (from final workspace directory)
+                await self._save_claude_code_snapshot(selected_agent_id, is_final=True)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
                 log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
