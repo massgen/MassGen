@@ -90,15 +90,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.14](#recent-achievements-v0014)
-  - [v0.0.3 - v0.0.13](#previous-achievements-v003-v0013)
+  - [v0.0.15](#recent-achievements-v0015)
+  - [v0.0.3 - v0.0.14](#previous-achievements-v003-v0014)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.15 Roadmap](#v0015-roadmap)
+- [v0.0.16 Roadmap](#v0016-roadmap-in-progress)
 </details>
 
 <details open>
@@ -245,7 +245,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
 | **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ❌ | ❌ | Web search, code execution |
+| **Gemini API** | ✅ | ✅ | ❌ | ✅ | Web search, code execution |
 | **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
 | **OpenAI API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **ZAI API** | ❌ | ❌ | ❌ | ❌ | - |
@@ -395,7 +395,7 @@ backend:
   enable_code_execution: true        # Code execution capability
 ```
 
-#### Gemini
+#### Gemini (v0.0.15+ with MCP Support)
 
 ```yaml
 backend:
@@ -406,6 +406,37 @@ backend:
   max_tokens: 2500                   # Maximum response length
   enable_web_search: true            # Web search capability
   enable_code_execution: true        # Code execution capability
+  
+  # MCP (Model Context Protocol) servers configuration (v0.0.15+)
+  mcp_servers:
+    # Weather server
+    weather:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "@fak111/weather-mcp"]
+    
+    # Brave Search API server (requires BRAVE_API_KEY in .env)
+    brave_search:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-brave-search"]
+      env:
+        BRAVE_API_KEY: "${BRAVE_API_KEY}"
+    
+    # Airbnb search server
+    airbnb:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "@openbnb/mcp-server-airbnb", "--ignore-robots-txt"]
+  
+  # Tool configuration (MCP tools are auto-discovered)
+  allowed_tools:                        # Optional: whitelist specific tools
+    - "mcp__weather__get_current_weather"
+    - "mcp__brave_search__brave_web_search"
+    - "mcp__airbnb__airbnb_search"
+  
+  exclude_tools:                        # Optional: blacklist specific tools
+    - "mcp__airbnb__debug_mode"
 ```
 
 #### Grok
@@ -719,14 +750,18 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.14)
+### Recent Achievements (v0.0.15)
 
-**📝 Enhanced Logging**
-- **Improved Logging System**: Enhanced logging system for better agents' answer debugging.
-- **Final Answer Directory**: New structure in Claude Code and logs for storing final results
-- **Documentation Updates**: Detailed architecture documentation and future development plans for permission-based context sharing
+**🔌 Gemini MCP Implementation**
+- **Gemini MCP Integration**: Native MCP support for Gemini backend with full tool ecosystem access
+- **Cross-Provider MCP**: Unified MCP interface working across Claude Code and Gemini backends
+- **Enhanced Tool Discovery**: Improved tool discovery and execution management for Gemini agents
+- **Performance Optimization**: Optimized MCP server communication with circuit breaker patterns
+- **MCP Security Framework**: Command sanitization and secure credential management for MCP servers
 
-### Previous Achievements (v0.0.3-v0.0.13)
+### Previous Achievements (v0.0.3-v0.0.14)
+
+✅ **Enhanced Logging (v0.0.14)**: Improved logging system for better agents' answer debugging, new final answer directory structure, and detailed architecture documentation
 
 ✅ **Unified Logging System (v0.0.13)**: Centralized logging infrastructure with debug mode and enhanced terminal display formatting
 
@@ -758,28 +793,28 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
 
-### Key Future Enhancements:
+### Key Future Enhancements
 
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
--   **Expanded Model, Tool & Agent Integration:** Adding & enhancing support for more models/tools/agents, including a wider range of tools like MCP Servers, and coding agents
+-   **Expanded Model Integration:** Adding support for more frontier models and local inference engines
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
 -   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
 -   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
--   **Claude Code Context Sharing:** Enabling seamless Claude code agents context sharing and other models (planned for v0.0.12)
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.15 Roadmap
+### v0.0.16 Roadmap (🚧 In Progress)
 
-Version 0.0.15 will focus on **Gemini MCP Implementation**, bringing Model Context Protocol support to Google's Gemini models for the first time. Key planned enhancements include:
+The roadmap for v0.0.16 is currently being developed. Potential focus areas under consideration include:
 
-- **Gemini MCP Integration**: 🔌 Native MCP support for Gemini backend with tool ecosystem access
-- **Cross-Provider MCP**: 🛠️ Unified MCP interface across Claude Code and Gemini backends
-- **Enhanced Tool Discovery**: 📚 Improved tool discovery and execution management for Gemini agents
-- **Performance Optimization**: ⚡ Optimized MCP server communication and resource management
-- **Enhanced Context Sharing**: 🔄 Improved multi-agent context preservation and sharing mechanisms
+- **OpenAI MCP Integration**: Extending MCP support to GPT-5 and other OpenAI models
+- **Advanced Orchestration Patterns**: Hierarchical agent coordination and specialized role assignment
+- **Enterprise Features**: Team collaboration, audit logging, and compliance features
+- **Web Interface Development**: Browser-based conversation interface with enhanced visualization
+- **Performance Benchmarking Suite**: Comprehensive testing framework for multi-agent systems
+- **Enhanced Context Sharing**: Cross-model workspace sharing beyond Claude Code agents
 
-For detailed milestones and technical specifications, see the [full v0.0.15 roadmap](ROADMAP_v0.0.15.md).
+For detailed milestones and technical specifications, see the [full v0.0.16 roadmap](ROADMAP_v0.0.16.md).
 
 ---
 
