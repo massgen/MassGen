@@ -27,6 +27,7 @@ from .message_templates import MessageTemplates
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
+from .coordination_tracker import CoordinationTracker, EventType
 from .logger_config import (
     log_orchestrator_activity,
     log_orchestrator_agent_message,
@@ -153,6 +154,10 @@ class Orchestrator(ChatAgent):
         # Context sharing for Claude Code agents
         self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
+        
+        # Coordination tracking - always enabled for analysis/debugging
+        self.coordination_tracker = CoordinationTracker()
+        self.coordination_tracker.initialize_agents(list(agents.keys()))
         
         # Create snapshot storage and workspace directories if specified
         if snapshot_storage:
@@ -367,7 +372,6 @@ class Orchestrator(ChatAgent):
             "Starting multi-agent coordination",
             {"agents": list(self.agents.keys()), "has_context": conversation_context is not None}
         )
-        
         log_stream_chunk("orchestrator", "content", "🚀 Starting multi-agent coordination...\n\n", self.orchestrator_id)
         yield StreamChunk(
             type="content",
@@ -409,10 +413,14 @@ class Orchestrator(ChatAgent):
             "Final agent selected",
             {"selected_agent": self._selected_agent, "votes": votes}
         )
-
+        
         # Present final answer
         async for chunk in self._present_final_answer():
             yield chunk
+
+        # Save coordination logs using the coordination tracker
+        log_dir = get_log_session_dir()
+        self.coordination_tracker.save_coordination_logs(log_dir)
 
     async def _stream_coordination_with_agents(
         self,
@@ -456,6 +464,8 @@ class Orchestrator(ChatAgent):
                     and not self.agent_states[agent_id].has_voted
                     and not self.agent_states[agent_id].is_killed
                 ):
+                    # Track agent start/restart
+                    self.coordination_tracker.track_agent_start(agent_id, current_answers, conversation_context)
                     active_streams[agent_id] = self._stream_agent_execution(
                         agent_id,
                         self.current_task,
@@ -527,6 +537,9 @@ class Orchestrator(ChatAgent):
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             answered_agents[agent_id] = result_data
                             reset_signal = True
+                            
+                            # Track new answer event
+                            self.coordination_tracker.track_new_answer(agent_id, result_data)
                             log_stream_chunk("orchestrator", "content", "✅ Answer provided\n", agent_id)
                             yield StreamChunk(
                                 type="content",
@@ -551,6 +564,10 @@ class Orchestrator(ChatAgent):
                                 # Save snapshot when agent successfully votes
                                 # await self._save_claude_code_snapshot(agent_id)
                                 voted_agents[agent_id] = result_data
+                                # Track new vote event
+                                voted_for = result_data.get("agent_id", "<unknown>")
+                                reason = result_data.get("reason", "No reason provided")
+                                self.coordination_tracker.track_vote(agent_id, voted_for, reason)
                                 log_stream_chunk("orchestrator", "content", f"✅ Vote recorded for [{result_data['agent_id']}]", agent_id)
                                 yield StreamChunk(
                                     type="content",
@@ -565,6 +582,7 @@ class Orchestrator(ChatAgent):
                             type="content", content=f"❌ {chunk_data}", source=agent_id
                         )
                         # Emit agent completion status for errors too
+                        self.coordination_tracker.track_agent_error(agent_id, chunk_data)
                         log_stream_chunk("orchestrator", "agent_status", "completed", agent_id)
                         yield StreamChunk(
                             type="agent_status",
@@ -593,6 +611,7 @@ class Orchestrator(ChatAgent):
                         await self._close_agent_stream(agent_id, active_streams)
 
                 except Exception as e:
+                    self.coordination_tracker.track_agent_error(agent_id, str(e))
                     log_stream_chunk("orchestrator", "error", f"❌ Stream error - {e}", agent_id)
                     yield StreamChunk(
                         type="content",
@@ -607,9 +626,12 @@ class Orchestrator(ChatAgent):
                 for state in self.agent_states.values():
                     state.has_voted = False
                 votes.clear()
+                restart_triggered_id = agent_id  # Last agent to provide new answer
                 # Signal ALL agents to gracefully restart
                 for agent_id in self.agent_states.keys():
                     self.agent_states[agent_id].restart_pending = True
+                # Track restart signals
+                self.coordination_tracker.track_restart_signal(restart_triggered_id, self.agent_states.keys())
             # Set has_voted = True for agents that voted (only if no reset signal)
             else:
                 for agent_id, vote_data in voted_agents.items():
@@ -620,10 +642,11 @@ class Orchestrator(ChatAgent):
             for agent_id, answer in answered_agents.items():
                 self.agent_states[agent_id].answer = answer
 
-        # Cancel any remaining tasks and close streams
+        # Cancel any remaining tasks and close streams, as all agents have voted (no more new answers)
         for task in active_tasks.values():
             task.cancel()
         for agent_id in list(active_streams.keys()):
+            self.coordination_tracker.track_agent_terminated(agent_id)
             await self._close_agent_stream(agent_id, active_streams)
 
     async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
@@ -887,7 +910,6 @@ class Orchestrator(ChatAgent):
                 "num_answers": len(answers) if answers else 0
             }
         )
-
         # Initialize agent state
         self.agent_states[agent_id].is_killed = False
         self.agent_states[agent_id].timeout_reason = None
@@ -1354,6 +1376,10 @@ class Orchestrator(ChatAgent):
             and self.agent_states[self._selected_agent].answer
         ):
             final_answer = self.agent_states[self._selected_agent].answer
+
+            # Track final answer and set winner
+            self.coordination_tracker.set_final_winner(self._selected_agent)
+            self.coordination_tracker.track_final_answer(self._selected_agent, final_answer)
 
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
