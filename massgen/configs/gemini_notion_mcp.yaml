@@ -1,0 +1,41 @@
+# Dual agent configuration using the Mapbox MCP with Gemini-2.5-flash.
+# python -m massgen.cli --config configs/gemini_mcp_test.yaml "Generate and refine a structured Todo list for learning about multi-agent systems. After finalizing the list, add it to my Notion 'Multiagent' page under the appropriate Todo section."
+agents:
+  - id: "gemini-2.5-flash1"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      enable_web_search: true
+
+
+      # MCP tools configuration
+      mcp_servers:
+        notionApi:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@notionhq/notion-mcp-server"]
+          env:
+            "NOTION_TOKEN": "ntn_b14082500112cDkO8n4N9iQ41aikw5DcAdGQbRv8jFL0vZ" 
+
+
+  - id: "gemini-2.5-flash2"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      enable_web_search: true
+
+
+      # MCP tools configuration
+      mcp_servers:
+        notionApi:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@notionhq/notion-mcp-server"]
+          env:
+            "NOTION_TOKEN": "ntn_b14082500112cDkO8n4N9iQ41aikw5DcAdGQbRv8jFL0vZ" 
+
+
+# UI Configuration
+ui:
+  type: "rich_terminal"
+  logging_enabled: true
