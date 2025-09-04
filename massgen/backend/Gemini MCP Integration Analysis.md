@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Gemini uses MCP sessions as tools to pass an MCP client session directly to the Gemini SDK as a tool, which then automatically handles the session and enables seamless tool calling with MCP servers.
+Gemini uses MCP sessions as tools by passing an MCP client session directly to the Gemini SDK, which automatically manages the session and enables seamless tool calling with MCP servers
 
 Key features of the Gemini MCP integration include:
 
