@@ -720,7 +720,7 @@ Here are a few examples of how you can use MassGen for different tasks:
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
-- [**MassGen Case Studies**](docs/case_studies/index.md)
+- [**MassGen Case Studies**](docs/case_studies/README.md)
 
 <!-- Uncomment when we add coding agent support -->
 <!-- ### 1. 📝 Code Generation
