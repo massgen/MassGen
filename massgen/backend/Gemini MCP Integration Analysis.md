@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The Gemini backend in MassGen implements a sophisticated Model Context Protocol (MCP) integration that leverages the Gemini SDK's session-based approach for automatic tool calling. the Gemini implementation uses MCP sessions that are automatically handled by the Google Gemini API, providing seamless integration between MCP tools and the model's reasoning capabilities.
+Gemini uses MCP sessions as tools to pass an MCP client session directly to the Gemini SDK as a tool, which then automatically handles the session and enables seamless tool calling with MCP servers.
 
 Key features of the Gemini MCP integration include:
 
@@ -16,7 +16,7 @@ This approach provides a more streamlined user experience compared to manual too
 
 ## MCP Integration Architecture in Gemini Backend
 
-## Architecture Overview
+### Architecture Overview
 
 The Gemini backend implements a sophisticated layered architecture for MCP integration. The visual diagrams below illustrate:
 
@@ -266,14 +266,14 @@ flowchart TD
 
     C --> H{Retry Count < Max?}
     D --> H
-    E --> I{HTTP Status Code?}
+    E --> I{Contains retry keywords?}
     F --> J[Immediate Failure]
     G --> K[Log and Re-raise]
 
     H -->|Yes| L[Exponential Backoff]
     H -->|No| M[Fallback to Builtin]
-    I -->|5xx| N[Retryable Server Error]
-    I -->|4xx| O[Client Error - No Retry]
+    I -->|timeout,connection,network,temporary,unavailable,5xx| N[Retryable Server Error]
+    I -->|other| O[Non-retryable Server Error]
 
     L --> P[Retry Connection]
     M --> Q[Use Builtin Tools]
@@ -624,19 +624,6 @@ except (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError) as e:
 3. Fallback to builtin tools (search, code execution)
 4. Continue with standard Gemini capabilities
 
-### Comparison with Other Backends
-
-**Session-based (Gemini)**:
-- Automatic tool calling by SDK
-- Simplified backend implementation
-- Better integration with model reasoning
-- Limited control over tool execution timing
-
-**Manual tool calling (OpenAI/Claude)**:
-- Explicit tool call parsing and execution
-- Full control over tool execution flow
-- More complex implementation
-- Manual result integration required
 
 ## Error Handling and Resilience
 
@@ -688,7 +675,7 @@ Different MCP error types receive different handling:
 
 - **MCPConnectionError**: Retryable, circuit breaker tracked
 - **MCPTimeoutError**: Retryable, may indicate server load
-- **MCPServerError**: Conditionally retryable based on error code
+- **MCPServerError**: Conditionally retryable based on error message keywords
 - **MCPAuthenticationError**: Non-retryable, immediate failure
 - **MCPValidationError**: Non-retryable, configuration issue
 
