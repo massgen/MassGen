@@ -98,7 +98,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.16 Roadmap](#v0016-roadmap-in-progress)
+- [v0.0.16 Roadmap](#v0016-roadmap)
 </details>
 
 <details open>
@@ -281,17 +281,15 @@ uv run python -m massgen.cli --config massgen/configs/gemini_mcp_example.yaml "W
 # First, set BRAVE_API_KEY in your .env file, then:
 uv run python -m massgen.cli --config massgen/configs/multimcp_gemini.yaml "Find safe neighborhoods in Paris and suggest Airbnb stays for 2 people next week"
 
-# Test MCP with local stdio server
-# First start the local test server:
-uv run python massgen/tests/mcp_test_server.py
-# Then try:
+# Test MCP server connection
+# Test server: massgen/tests/mcp_test_server.py (the config below will run it automatically)
 uv run python -m massgen.cli --config massgen/configs/gemini_mcp_test.yaml "Test the MCP tools - show me what you can do"
 
 # Test MCP with streamable-http server
 # First start the HTTP test server:
 uv run python massgen/tests/test_http_mcp_server.py
 # Then try:
-uv run python -m massgen.cli --config massgen/configs/gemini_streamable_http_test.yaml "<prompt>"
+uv run python -m massgen.cli --config massgen/configs/gemini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
 ```
 
 **What's happening:** Gemini automatically discovers and uses tools from configured MCP servers (weather data, web search, Airbnb listings, etc.) without manual tool calling.
@@ -720,7 +718,7 @@ Here are a few examples of how you can use MassGen for different tasks:
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
-- [**MassGen Case Studies**](docs/case_studies/index.md)
+- [**MassGen Case Studies**](docs/case_studies/README.md)
 
 <!-- Uncomment when we add coding agent support -->
 <!-- ### 1. 📝 Code Generation
@@ -786,7 +784,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 **🔌 Gemini MCP Implementation**
 - **Gemini MCP Integration**: Native MCP support for Gemini backend with full tool ecosystem access
-- **Cross-Provider MCP**: Unified MCP interface working across Claude Code and Gemini backends
 - **Enhanced Tool Discovery**: Improved discovery of tools within configured MCP servers (automatic tool detection from MCP servers)
 - **Performance Optimization**: Optimized MCP server communication with circuit breaker patterns
 - **MCP Security Framework**: Command sanitization and secure credential management for MCP servers
