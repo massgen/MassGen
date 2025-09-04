@@ -29,7 +29,6 @@ from .backend_utils import (
     MCPMessageManager, MCPConfigHelper, MCPCircuitBreakerManager,
     MCPResourceManager, MCPSetupManager, MCPExecutionManager
 )
-from .integration import MCPIntegrationManager
 from .converters import MCPConverters, MCPFormatValidator
 
 __all__ = [
@@ -68,7 +67,6 @@ __all__ = [
 
     # shared utilities for backend integration
     "Function",
-    "MCPIntegrationManager",
     "MCPErrorHandler",
     "MCPRetryHandler",
     "MCPMessageManager",
