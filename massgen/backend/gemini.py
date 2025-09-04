@@ -23,6 +23,8 @@ import json
 import enum
 import asyncio
 import re
+import time
+import hashlib
 from typing import Dict, List, Any, AsyncGenerator, Optional, Literal, Callable, Awaitable
 from .base import LLMBackend, StreamChunk
 from ..logger_config import logger, log_backend_activity, log_backend_agent_message, log_stream_chunk, log_tool_call
@@ -92,6 +94,342 @@ class CoordinationResponse(BaseModel):
     )
 
 
+class MCPResponseTracker:
+    """
+    Tracks MCP tool responses across streaming chunks to handle deduplication.
+    
+    Similar to MCPCallTracker but for tracking tool responses to avoid duplicate output.
+    """
+    
+    def __init__(self):
+        """Initialize the tracker with empty storage."""
+        self.processed_responses = set()  # Store hashes of processed responses
+        self.response_history = []  # Store all unique responses with timestamps
+        
+    def get_response_hash(self, tool_name: str, tool_response: Any) -> str:
+        """
+        Generate a unique hash for a tool response based on name and response content.
+        
+        Args:
+            tool_name: Name of the tool that responded
+            tool_response: Response from the tool
+            
+        Returns:
+            MD5 hash string identifying this specific response
+        """
+        # Create a deterministic string representation
+        content = f"{tool_name}:{str(tool_response)}"
+        return hashlib.md5(content.encode()).hexdigest()
+    
+    def is_new_response(self, tool_name: str, tool_response: Any) -> bool:
+        """
+        Check if this is a new tool response we haven't seen before.
+        
+        Args:
+            tool_name: Name of the tool that responded
+            tool_response: Response from the tool
+            
+        Returns:
+            True if this is a new response, False if already processed
+        """
+        response_hash = self.get_response_hash(tool_name, tool_response)
+        return response_hash not in self.processed_responses
+    
+    def add_response(self, tool_name: str, tool_response: Any) -> Dict[str, Any]:
+        """
+        Add a new response to the tracker.
+        
+        Args:
+            tool_name: Name of the tool that responded
+            tool_response: Response from the tool
+            
+        Returns:
+            Dictionary containing response details and timestamp
+        """
+        response_hash = self.get_response_hash(tool_name, tool_response)
+        self.processed_responses.add(response_hash)
+        
+        record = {
+            "tool_name": tool_name,
+            "response": tool_response,
+            "hash": response_hash,
+            "timestamp": time.time()
+        }
+        self.response_history.append(record)
+        return record
+
+
+class MCPCallTracker:
+    """
+    Tracks MCP tool calls across streaming chunks to handle deduplication.
+    
+    Uses hashing to identify unique tool calls and timestamps to track when they occurred.
+    This ensures we don't double-count the same tool call appearing in multiple chunks.
+    """
+    
+    def __init__(self):
+        """Initialize the tracker with empty storage."""
+        self.processed_calls = set()  # Store hashes of processed calls
+        self.call_history = []  # Store all unique calls with timestamps
+        self.last_chunk_calls = []  # Track calls from the last chunk for deduplication
+        self.dedup_window = 0.5  # Time window in seconds for deduplication
+        
+    def get_call_hash(self, tool_name: str, tool_args: Dict[str, Any]) -> str:
+        """
+        Generate a unique hash for a tool call based on name and arguments.
+        
+        Args:
+            tool_name: Name of the tool being called
+            tool_args: Arguments passed to the tool
+            
+        Returns:
+            MD5 hash string identifying this specific call
+        """
+        # Create a deterministic string representation
+        content = f"{tool_name}:{json.dumps(tool_args, sort_keys=True)}"
+        return hashlib.md5(content.encode()).hexdigest()
+    
+    def is_new_call(self, tool_name: str, tool_args: Dict[str, Any]) -> bool:
+        """
+        Check if this is a new tool call we haven't seen before.
+        
+        Uses a time-window based approach: identical calls within the dedup_window
+        are considered duplicates (likely from streaming chunks), while those outside
+        the window are considered new calls (likely intentional repeated calls).
+        
+        Args:
+            tool_name: Name of the tool being called
+            tool_args: Arguments passed to the tool
+            
+        Returns:
+            True if this is a new call, False if we've seen it before
+        """
+        call_hash = self.get_call_hash(tool_name, tool_args)
+        current_time = time.time()
+        
+        # Check if this call exists in recent history within the dedup window
+        for call in self.call_history[-10:]:  # Check last 10 calls for efficiency
+            if call.get("hash") == call_hash:
+                time_diff = current_time - call.get("timestamp", 0)
+                if time_diff < self.dedup_window:
+                    # This is likely a duplicate from streaming chunks
+                    return False
+                # If outside the window, treat as a new intentional call
+        
+        # Mark as processed
+        self.processed_calls.add(call_hash)
+        return True
+    
+    def add_call(self, tool_name: str, tool_args: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Add a new tool call to the history.
+        
+        Args:
+            tool_name: Name of the tool being called
+            tool_args: Arguments passed to the tool
+            
+        Returns:
+            Dictionary containing the call details with timestamp and hash
+        """
+        call_record = {
+            "name": tool_name,
+            "arguments": tool_args,
+            "timestamp": time.time(),
+            "hash": self.get_call_hash(tool_name, tool_args),
+            "sequence": len(self.call_history)  # Add sequence number for ordering
+        }
+        self.call_history.append(call_record)
+        
+        # Clean up old history to prevent memory growth
+        if len(self.call_history) > 100:
+            self.call_history = self.call_history[-50:]
+        
+        return call_record
+    
+    def get_summary(self) -> str:
+        """
+        Get a summary of all tracked tool calls.
+        
+        Returns:
+            Human-readable summary of tool usage
+        """
+        if not self.call_history:
+            return "No MCP tools called"
+        
+        tool_names = [call["name"] for call in self.call_history]
+        unique_tools = list(dict.fromkeys(tool_names))  # Preserve order
+        return f"Used {len(self.call_history)} MCP tool calls: {', '.join(unique_tools)}"
+
+
+class MCPResponseExtractor:
+    """
+    Extracts MCP tool calls and responses from Gemini SDK stream chunks.
+    
+    This class parses the internal SDK chunks to capture:
+    - function_call parts (tool invocations)
+    - function_response parts (tool results)
+    - Paired call-response data for tracking complete tool executions
+    """
+    
+    def __init__(self):
+        """Initialize the extractor with empty storage."""
+        self.mcp_calls = []  # All tool calls
+        self.mcp_responses = []  # All tool responses
+        self.call_response_pairs = []  # Matched call-response pairs
+        self._pending_call = None  # Track current call awaiting response
+    
+    def extract_function_call(self, function_call) -> Optional[Dict[str, Any]]:
+        """
+        Extract tool call information from SDK function_call object.
+        
+        Tries multiple methods to extract data from different SDK versions:
+        1. Direct attributes (name, args)
+        2. Dictionary-like interface (get method)
+        3. __dict__ attributes
+        4. Protobuf _pb attributes
+        """
+        tool_name = None
+        tool_args = None
+        
+        # Method 1: Direct attributes
+        tool_name = getattr(function_call, "name", None)
+        tool_args = getattr(function_call, "args", None)
+        
+        # Method 2: Dictionary-like object
+        if tool_name is None:
+            try:
+                if hasattr(function_call, "get"):
+                    tool_name = function_call.get("name", None)
+                    tool_args = function_call.get("args", None)
+            except:
+                pass
+        
+        # Method 3: __dict__ inspection
+        if tool_name is None:
+            try:
+                if hasattr(function_call, "__dict__"):
+                    fc_dict = function_call.__dict__
+                    tool_name = fc_dict.get("name", None)
+                    tool_args = fc_dict.get("args", None)
+            except:
+                pass
+        
+        # Method 4: Protobuf _pb attribute
+        if tool_name is None:
+            try:
+                if hasattr(function_call, "_pb"):
+                    pb = function_call._pb
+                    if hasattr(pb, "name"):
+                        tool_name = pb.name
+                    if hasattr(pb, "args"):
+                        tool_args = pb.args
+            except:
+                pass
+        
+        if tool_name:
+            call_data = {
+                "name": tool_name,
+                "arguments": tool_args or {},
+                "timestamp": time.time(),
+                "raw": str(function_call)[:200]  # Truncate for logging
+            }
+            self.mcp_calls.append(call_data)
+            self._pending_call = call_data
+            return call_data
+        
+        return None
+    
+    def extract_function_response(self, function_response) -> Optional[Dict[str, Any]]:
+        """
+        Extract tool response information from SDK function_response object.
+        
+        Uses same extraction methods as function_call for consistency.
+        """
+        tool_name = None
+        tool_response = None
+        
+        # Method 1: Direct attributes
+        tool_name = getattr(function_response, "name", None)
+        tool_response = getattr(function_response, "response", None)
+        
+        # Method 2: Dictionary-like object
+        if tool_name is None:
+            try:
+                if hasattr(function_response, "get"):
+                    tool_name = function_response.get("name", None)
+                    tool_response = function_response.get("response", None)
+            except:
+                pass
+        
+        # Method 3: __dict__ inspection
+        if tool_name is None:
+            try:
+                if hasattr(function_response, "__dict__"):
+                    fr_dict = function_response.__dict__
+                    tool_name = fr_dict.get("name", None)
+                    tool_response = fr_dict.get("response", None)
+            except:
+                pass
+        
+        # Method 4: Protobuf _pb attribute
+        if tool_name is None:
+            try:
+                if hasattr(function_response, "_pb"):
+                    pb = function_response._pb
+                    if hasattr(pb, "name"):
+                        tool_name = pb.name
+                    if hasattr(pb, "response"):
+                        tool_response = pb.response
+            except:
+                pass
+        
+        if tool_name:
+            response_data = {
+                "name": tool_name,
+                "response": tool_response or {},
+                "timestamp": time.time(),
+                "raw": str(function_response)[:500]  # Truncate for logging
+            }
+            self.mcp_responses.append(response_data)
+            
+            # Pair with pending call if names match
+            if self._pending_call and self._pending_call["name"] == tool_name:
+                self.call_response_pairs.append({
+                    "call": self._pending_call,
+                    "response": response_data,
+                    "duration": response_data["timestamp"] - self._pending_call["timestamp"],
+                    "paired_at": time.time()
+                })
+                self._pending_call = None
+            
+            return response_data
+        
+        return None
+    
+    def get_summary(self) -> Dict[str, Any]:
+        """
+        Get a summary of all extracted MCP tool interactions.
+        """
+        return {
+            "total_calls": len(self.mcp_calls),
+            "total_responses": len(self.mcp_responses),
+            "paired_interactions": len(self.call_response_pairs),
+            "pending_call": self._pending_call is not None,
+            "tool_names": list(set(call["name"] for call in self.mcp_calls)),
+            "average_duration": (
+                sum(pair["duration"] for pair in self.call_response_pairs) / len(self.call_response_pairs)
+                if self.call_response_pairs else 0
+            )
+        }
+    
+    def clear(self):
+        """Clear all stored data."""
+        self.mcp_calls.clear()
+        self.mcp_responses.clear()
+        self.call_response_pairs.clear()
+        self._pending_call = None
+
+
 class GeminiBackend(LLMBackend):
     """Google Gemini backend using structured output for coordination and MCP tool integration."""
 
@@ -114,6 +452,9 @@ class GeminiBackend(LLMBackend):
         self._mcp_tool_calls_count = 0
         self._mcp_tool_failures = 0
         self._mcp_tool_successes = 0
+        
+        # MCP Response Extractor for capturing tool interactions
+        self.mcp_extractor = MCPResponseExtractor()
 
         # Limit for message history growth within MCP execution loop
         self._max_mcp_message_history = kwargs.pop("max_mcp_message_history", 200)
@@ -831,8 +1172,7 @@ Make your decision and include the JSON at the very end of your response."""
             
             # Setup builtin tools (only when not using SDK MCP sessions)
             builtin_tools = []
-            if not using_sdk_mcp:
-                if enable_web_search:
+            if enable_web_search:
                     try:
                         from google.genai import types
 
@@ -844,7 +1184,7 @@ Make your decision and include the JSON at the very end of your response."""
                             content="\n⚠️  Web search requires google.genai.types\n",
                         )
 
-                if enable_code_execution:
+            if enable_code_execution:
                     try:
                         from google.genai import types
 
@@ -1089,159 +1429,113 @@ Make your decision and include the JSON at the very end of your response."""
                         model=model_name, contents=full_content, config=session_config
                     )
 
-                    # Track MCP tool calls in the response
-                    mcp_tools_used = []
+                    # Initialize MCPCallTracker and MCPResponseTracker for deduplication across chunks
+                    mcp_tracker = MCPCallTracker()
+                    mcp_response_tracker = MCPResponseTracker()
+                    mcp_tools_used = []  # Keep for backward compatibility
                     
                     # Iterate over the asynchronous stream to get chunks as they arrive
                     async for chunk in stream:
-                        # Check if chunk contains function call information (for MCP tools)
-                        if hasattr(chunk, "candidates") and chunk.candidates:
-                            candidate = chunk.candidates[0]
-                            if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
-                                for part in candidate.content.parts:
-                                    # Check for function_call part which indicates MCP tool usage
-                                    if hasattr(part, "function_call"):
-                                        # Debug: print the actual function_call object
-                                        logger.debug(f"function_call type: {type(part.function_call)}")
-                                        logger.debug(f"function_call dir: {dir(part.function_call)}")
-                                        logger.debug(f"function_call: {part.function_call}")
-                                        
-                                        # Try multiple ways to get the function name and args
-                                        # Method 1: Direct attributes
-                                        tool_name = getattr(part.function_call, "name", None)
-                                        tool_args = getattr(part.function_call, "args", None)
-                                        
-                                        # Method 2: Try as dictionary-like object
-                                        if tool_name is None:
-                                            try:
-                                                if hasattr(part.function_call, "get"):
-                                                    tool_name = part.function_call.get("name", None)
-                                                    tool_args = part.function_call.get("args", None)
-                                            except:
-                                                pass
-                                        
-                                        # Method 3: Try __dict__ if available
-                                        if tool_name is None:
-                                            try:
-                                                if hasattr(part.function_call, "__dict__"):
-                                                    fc_dict = part.function_call.__dict__
-                                                    tool_name = fc_dict.get("name", None)
-                                                    tool_args = fc_dict.get("args", None)
-                                            except:
-                                                pass
-                                        
-                                        # Method 4: Check for _pb attribute (protobuf)
-                                        if tool_name is None:
-                                            try:
-                                                if hasattr(part.function_call, "_pb"):
-                                                    pb = part.function_call._pb
-                                                    if hasattr(pb, "name"):
-                                                        tool_name = pb.name
-                                                    if hasattr(pb, "args"):
-                                                        tool_args = pb.args
-                                            except:
-                                                pass
-                                        
-                                        # If still no name found, skip this part as it's likely internal SDK handling
-                                        if tool_name is None:
-                                            logger.debug("Skipping function_call with no accessible name - likely SDK internal handling")
-                                            continue
-                                        
-                                        # Ensure we have valid values
-                                        tool_name = tool_name or "mcp_tool"
-                                        tool_args = tool_args or {}
-                                        mcp_tools_used.append({
-                                            "name": tool_name,
-                                            "arguments": tool_args
-                                        })
-                                        
-                                        # Yield detailed MCP tool call information
-                                        yield StreamChunk(
-                                            type="mcp_status",
-                                            status="mcp_tool_called",
-                                            content=f"🔧 MCP Tool Called: {tool_name} with args: {json.dumps(tool_args, indent=2)}",
-                                            source="mcp_tools"
-                                        )
-                                        
-                                        # Log the specific tool call
-                                        log_tool_call(
-                                            agent_id,
-                                            tool_name,
-                                            tool_args,
-                                            backend_name="gemini"
-                                        )
-                                    
-                                    # Check for function_response part which contains tool results
-                                    elif hasattr(part, "function_response"):
-                                        # Debug: print the actual function_response object
-                                        logger.debug(f"function_response type: {type(part.function_response)}")
-                                        logger.debug(f"function_response dir: {dir(part.function_response)}")
-                                        logger.debug(f"function_response: {part.function_response}")
-                                        
-                                        # Try multiple ways to get the function name and response
-                                        # Method 1: Direct attributes
-                                        tool_name = getattr(part.function_response, "name", None)
-                                        tool_response = getattr(part.function_response, "response", None)
-                                        
-                                        # Method 2: Try as dictionary-like object
-                                        if tool_name is None:
-                                            try:
-                                                if hasattr(part.function_response, "get"):
-                                                    tool_name = part.function_response.get("name", None)
-                                                    tool_response = part.function_response.get("response", None)
-                                            except:
-                                                pass
-                                        
-                                        # Method 3: Try __dict__ if available
-                                        if tool_name is None:
-                                            try:
-                                                if hasattr(part.function_response, "__dict__"):
-                                                    fr_dict = part.function_response.__dict__
-                                                    tool_name = fr_dict.get("name", None)
-                                                    tool_response = fr_dict.get("response", None)
-                                            except:
-                                                pass
-                                        
-                                        # Method 4: Check for _pb attribute (protobuf)
-                                        if tool_name is None:
-                                            try:
-                                                if hasattr(part.function_response, "_pb"):
-                                                    pb = part.function_response._pb
-                                                    if hasattr(pb, "name"):
-                                                        tool_name = pb.name
-                                                    if hasattr(pb, "response"):
-                                                        tool_response = pb.response
-                                            except:
-                                                pass
-                                        
-                                        # If still no name found, skip this part
-                                        if tool_name is None:
-                                            logger.debug("Skipping function_response with no accessible name - likely SDK internal handling")
-                                            continue
-                                        
-                                        # Ensure we have valid values
-                                        tool_name = tool_name or "mcp_tool"
-                                        tool_response = tool_response or {}
-                                        
-                                        # Yield MCP tool response information
-                                        yield StreamChunk(
-                                            type="mcp_status",
-                                            status="mcp_tool_response",
-                                            content=f"✅ MCP Tool Response from {tool_name}: {json.dumps(tool_response, indent=2) if isinstance(tool_response, dict) else str(tool_response)[:500]}",
-                                            source="mcp_tools"
-                                        )
-                                        
-                                        # Log the tool response
-                                        log_backend_activity(
-                                            "gemini",
-                                            "MCP tool response received",
-                                            {
-                                                "tool_name": tool_name,
-                                                "response_preview": str(tool_response)[:200]
-                                            },
-                                            agent_id=agent_id
-                                        )
+                        # print(chunk)
                         
+                        # Check automatic_function_calling_history for MCP function calls
+                        # Process all chunks to catch tool calls that may appear in later chunks
+                        if hasattr(chunk, "automatic_function_calling_history") and chunk.automatic_function_calling_history:
+                            for history_item in chunk.automatic_function_calling_history:
+                                if hasattr(history_item, "parts"):
+                                    for part in history_item.parts:
+                                        # Check for function_call part
+                                        if hasattr(part, "function_call") and part.function_call:
+                                            # Use MCPResponseExtractor to extract call data
+                                            call_data = self.mcp_extractor.extract_function_call(part.function_call)
+                                            
+                                            if call_data:
+                                                tool_name = call_data["name"]
+                                                tool_args = call_data["arguments"]
+                                                
+                                                # Check if this is a new call using the tracker
+                                                if mcp_tracker.is_new_call(tool_name, tool_args):
+                                                    # Add to tracker history
+                                                    call_record = mcp_tracker.add_call(tool_name, tool_args)
+                                                    
+                                                    # Add to legacy list for compatibility
+                                                    mcp_tools_used.append({
+                                                        "name": tool_name,
+                                                        "arguments": tool_args,
+                                                        "timestamp": call_record["timestamp"]
+                                                    })
+                                                    
+                                                    # Format timestamp for display
+                                                    timestamp_str = time.strftime('%H:%M:%S', time.localtime(call_record["timestamp"]))
+                                                    
+                                                    # Yield detailed MCP tool call information
+                                                    yield StreamChunk(
+                                                        type="mcp_status",
+                                                        status="mcp_tool_called",
+                                                        content=f"🔧 MCP Tool Called: {tool_name} at {timestamp_str} with args: {json.dumps(tool_args, indent=2)}",
+                                                        source="mcp_tools"
+                                                    )
+                                                    
+                                                    # Log the specific tool call
+                                                    log_tool_call(
+                                                        agent_id,
+                                                        tool_name,
+                                                        tool_args,
+                                                        backend_name="gemini"
+                                                    )
+                                        
+                                        # Check for function_response part
+                                        elif hasattr(part, "function_response") and part.function_response:
+                                            # Use MCPResponseExtractor to extract response data
+                                            response_data = self.mcp_extractor.extract_function_response(part.function_response)
+                                            
+                                            if response_data:
+                                                tool_name = response_data["name"]
+                                                tool_response = response_data["response"]
+                                                
+                                                # Check if this is a new response using the tracker
+                                                if mcp_response_tracker.is_new_response(tool_name, tool_response):
+                                                    # Add to tracker history
+                                                    response_record = mcp_response_tracker.add_response(tool_name, tool_response)
+                                                    
+                                                    # Extract text content from CallToolResult
+                                                    response_text = None
+                                                    if isinstance(tool_response, dict) and 'result' in tool_response:
+                                                        result = tool_response['result']
+                                                        # Check if result has content attribute (CallToolResult object)
+                                                        if hasattr(result, 'content') and result.content:
+                                                            # Get the first content item (TextContent object)
+                                                            first_content = result.content[0]
+                                                            # Extract the text attribute
+                                                            if hasattr(first_content, 'text'):
+                                                                response_text = first_content.text
+                                                    
+                                                    # Use extracted text or fallback to string representation
+                                                    if response_text is None:
+                                                        response_text = str(tool_response)
+                                                    
+                                                    # Format timestamp for display
+                                                    timestamp_str = time.strftime('%H:%M:%S', time.localtime(response_record["timestamp"]))
+                                                    
+                                                    # Yield MCP tool response information
+                                                    yield StreamChunk(
+                                                        type="mcp_status",
+                                                        status="mcp_tool_response",
+                                                        content=f"✅ MCP Tool Response from {tool_name} at {timestamp_str}: {response_text}",
+                                                        source="mcp_tools"
+                                                    )
+                                                    
+                                                    # Log the tool response
+                                                    log_backend_activity(
+                                                        "gemini",
+                                                        "MCP tool response received",
+                                                        {
+                                                            "tool_name": tool_name,
+                                                            "response_preview": str(tool_response)[:]
+                                                        },
+                                                        agent_id=agent_id
+                                                    )
+
                         # Track successful MCP tool execution (only on first chunk)
                         if not hasattr(self, '_mcp_stream_started'):
                             self._mcp_tool_successes += 1
@@ -1292,17 +1586,12 @@ Make your decision and include the JSON at the very end of your response."""
                     if hasattr(self, '_mcp_stream_started'):
                         delattr(self, '_mcp_stream_started')
 
-                    # Add MCP usage indicator with detailed summary
-                    if mcp_tools_used:
-                        # Filter out tools that weren't properly detected
-                        valid_tools = [t for t in mcp_tools_used if t['name'] not in ['unknown', 'mcp_tool']]
-                        if valid_tools:
-                            tools_summary = f"Used {len(valid_tools)} MCP tools: {', '.join([t['name'] for t in valid_tools])}"
-                        else:
-                            # When SDK handles tools internally, we may not see explicit tool names
-                            tools_summary = f"MCP session complete - Used {len(mcp_tools_used)} MCP tools"
-                    else:
+                    # Add MCP usage indicator with detailed summary using tracker
+                    tools_summary = mcp_tracker.get_summary()
+                    if not tools_summary or tools_summary == "No MCP tools called":
                         tools_summary = "MCP session completed (no tools explicitly called)"
+                    else:
+                        tools_summary = f"MCP session complete - {tools_summary}"
                     
                     log_stream_chunk("backend.gemini", "mcp_indicator", tools_summary, agent_id)
                     yield StreamChunk(
@@ -1731,6 +2020,46 @@ Make your decision and include the JSON at the very end of your response."""
 
         return input_cost + output_cost + tool_costs
 
+    def get_mcp_results(self) -> Dict[str, Any]:
+        """
+        Get all captured MCP tool calls and responses.
+        
+        Returns:
+            Dict containing:
+            - calls: List of all MCP tool calls
+            - responses: List of all MCP tool responses  
+            - pairs: List of matched call-response pairs
+            - summary: Statistical summary of interactions
+        """
+        return {
+            "calls": self.mcp_extractor.mcp_calls,
+            "responses": self.mcp_extractor.mcp_responses,
+            "pairs": self.mcp_extractor.call_response_pairs,
+            "summary": self.mcp_extractor.get_summary()
+        }
+    
+    def get_mcp_paired_results(self) -> List[Dict[str, Any]]:
+        """
+        Get only the paired MCP tool calls and responses.
+        
+        Returns:
+            List of dictionaries containing matched call-response pairs
+        """
+        return self.mcp_extractor.call_response_pairs
+    
+    def get_mcp_summary(self) -> Dict[str, Any]:
+        """
+        Get a summary of MCP tool interactions.
+        
+        Returns:
+            Dictionary with statistics about MCP tool usage
+        """
+        return self.mcp_extractor.get_summary()
+    
+    def clear_mcp_results(self):
+        """Clear all stored MCP interaction data."""
+        self.mcp_extractor.clear()
+    
     def reset_tool_usage(self):
         """Reset tool usage tracking."""
         self.search_count = 0
@@ -1740,6 +2069,8 @@ Make your decision and include the JSON at the very end of your response."""
         self._mcp_tool_failures = 0
         self._mcp_tool_successes = 0
         self._mcp_connection_retries = 0
+        # Clear MCP extractor data
+        self.mcp_extractor.clear()
         super().reset_token_usage()
 
     async def cleanup_mcp(self):
