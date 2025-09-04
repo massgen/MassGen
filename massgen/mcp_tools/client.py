@@ -6,7 +6,7 @@ from ..logger_config import logger
 from datetime import timedelta
 from enum import Enum
 from types import TracebackType
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, Callable, Awaitable
 
 
 from .exceptions import (
@@ -89,6 +89,7 @@ class MCPClient:
         timeout_seconds: int = 30,
         allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], Awaitable[None]]] = None,
     ):
         """
         Initialize MCP client.
@@ -104,6 +105,7 @@ class MCPClient:
             timeout_seconds: Timeout for operations in seconds
             allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
+            status_callback: Optional async callback for status updates
         """
         # Validate and sanitize configuration
         self.config = MCPConfigValidator.validate_server_config(server_config)
@@ -112,6 +114,7 @@ class MCPClient:
         self.allowed_tools = allowed_tools
         self.exclude_tools = exclude_tools
         self.use_official_library = True
+        self.status_callback = status_callback
         self.tools: Dict[str, mcp_types.Tool] = {}
         self.resources: Dict[str, mcp_types.Resource] = {}
         self.prompts: Dict[str, mcp_types.Prompt] = {}
@@ -168,6 +171,13 @@ class MCPClient:
 
             logger.info(f"Connecting to MCP server: {self.name}")
             self._connection_state = ConnectionState.CONNECTING
+            
+            # Send connecting status if callback is available
+            if self.status_callback:
+                await self.status_callback("connecting", {
+                    "server": self.name,
+                    "message": f"Connecting to MCP server: {self.name}"
+                })
 
             # Reset events for a new connection attempt
             self._connected_event = asyncio.Event()
@@ -307,11 +317,30 @@ class MCPClient:
                     logger.info(f"✅ MCP server '{self.name}' connected successfully!")
                     print(f"✅ MCP server '{self.name}' connected successfully!")
                     
+                    # Send connected status if callback is available
+                    if self.status_callback:
+                        await self.status_callback("connected", {
+                            "server": self.name,
+                            "message": f"✅ MCP server '{self.name}' connected successfully!",
+                            "tools_count": len(self.tools),
+                            "resources_count": len(self.resources),
+                            "prompts_count": len(self.prompts)
+                        })
+                    
                     # Wait until disconnect is requested
                     await self._disconnect_event.wait()
 
         except Exception as e:
             logger.error(f"MCP manager error for {self.name}: {e}", exc_info=True)
+            
+            # Send error status if callback is available
+            if self.status_callback:
+                await self.status_callback("error", {
+                    "server": self.name,
+                    "message": f"Failed to connect to MCP server '{self.name}': {e}",
+                    "error": str(e)
+                })
+            
             if not self._connected_event.is_set():
                 self._connected_event.set()
         finally:
@@ -515,6 +544,15 @@ class MCPClient:
             ) from e
 
         logger.debug(f"Calling tool {tool_name} on {self.name} with arguments: {validated_arguments}")
+        
+        # Send tool call start status if callback is available
+        if self.status_callback:
+            await self.status_callback("tool_call_start", {
+                "server": self.name,
+                "tool": tool_name,
+                "message": f"Calling tool '{tool_name}' on server '{self.name}'",
+                "arguments": validated_arguments
+            })
 
         try:
             # Add timeout to tool calls
@@ -523,9 +561,27 @@ class MCPClient:
                 timeout=self.timeout_seconds
             )
             logger.debug(f"Tool {tool_name} completed successfully on {self.name}")
+            
+            # Send tool call success status if callback is available
+            if self.status_callback:
+                await self.status_callback("tool_call_success", {
+                    "server": self.name,
+                    "tool": tool_name,
+                    "message": f"Tool '{tool_name}' executed successfully on server '{self.name}'"
+                })
+            
             return result
 
         except asyncio.TimeoutError:
+            # Send tool call timeout status if callback is available
+            if self.status_callback:
+                await self.status_callback("tool_call_timeout", {
+                    "server": self.name,
+                    "tool": tool_name,
+                    "message": f"Tool '{tool_name}' timed out after {self.timeout_seconds} seconds",
+                    "timeout": self.timeout_seconds
+                })
+            
             raise MCPTimeoutError(
                 f"Tool call timed out after {self.timeout_seconds} seconds",
                 timeout_seconds=self.timeout_seconds,
@@ -534,6 +590,16 @@ class MCPClient:
             )
         except Exception as e:
             logger.error(f"Tool call failed for {tool_name} on {self.name}: {e}", exc_info=True)
+            
+            # Send tool call error status if callback is available
+            if self.status_callback:
+                await self.status_callback("tool_call_error", {
+                    "server": self.name,
+                    "tool": tool_name,
+                    "message": f"Tool '{tool_name}' failed: {e}",
+                    "error": str(e)
+                })
+            
             raise MCPServerError(
                 f"Tool call failed: {e}",
                 server_name=self.name,
@@ -693,6 +759,7 @@ class MultiMCPClient:
         timeout_seconds: int = 30,
         allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
+        status_callback: Optional[Callable[[str, Dict[str, Any]], Awaitable[None]]] = None,
     ):
         """
         Initialize MultiMCP client.
@@ -702,12 +769,14 @@ class MultiMCPClient:
             timeout_seconds: Timeout for operations in seconds
             allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
+            status_callback: Optional async callback for status updates
         """
         self.server_configs = [MCPConfigValidator.validate_server_config(config) for config in server_configs]
         
         self.timeout_seconds = timeout_seconds
         self.allowed_tools = allowed_tools
         self.exclude_tools = exclude_tools
+        self.status_callback = status_callback
 
         # Client management
         self.clients: Dict[str, MCPClient] = {}
@@ -734,6 +803,13 @@ class MultiMCPClient:
             logger.info(f"🔄 Setting up MCP sessions with {len(self.server_configs)} servers...")
             print(f"🔄 Setting up MCP sessions with {len(self.server_configs)} servers...")
             
+            # Send overall setup status if callback is available
+            if self.status_callback:
+                await self.status_callback("setup_start", {
+                    "message": f"Setting up MCP sessions with {len(self.server_configs)} servers",
+                    "server_count": len(self.server_configs)
+                })
+            
             await self._connect_all()
 
     async def _connect_all(self) -> None:
@@ -758,6 +834,7 @@ class MultiMCPClient:
                     timeout_seconds=self.timeout_seconds,
                     allowed_tools=self.allowed_tools,
                     exclude_tools=self.exclude_tools,
+                    status_callback=self.status_callback,
                 )
 
                 # Connect the client (this will start its background manager)
@@ -829,6 +906,16 @@ class MultiMCPClient:
 
         logger.info(f"MultiMCP client initialized with {len(self.clients)} servers, "
                    f"{len(self.tools)} tools, {len(self.resources)} resources, {len(self.prompts)} prompts")
+        
+        # Send setup complete status if callback is available
+        if self.status_callback:
+            await self.status_callback("setup_complete", {
+                "message": f"MCP setup complete: {len(self.clients)} servers connected",
+                "connected_servers": len(self.clients),
+                "total_tools": len(self.tools),
+                "total_resources": len(self.resources),
+                "total_prompts": len(self.prompts)
+            })
 
 
     async def disconnect(self) -> None:

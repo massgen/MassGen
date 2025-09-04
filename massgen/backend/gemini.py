@@ -23,7 +23,7 @@ import json
 import enum
 import asyncio
 import re
-from typing import Dict, List, Any, AsyncGenerator, Optional, Literal
+from typing import Dict, List, Any, AsyncGenerator, Optional, Literal, Callable, Awaitable
 from .base import LLMBackend, StreamChunk
 from ..logger_config import logger, log_backend_activity, log_backend_agent_message, log_stream_chunk, log_tool_call
 
@@ -154,14 +154,62 @@ class GeminiBackend(LLMBackend):
         from ..mcp_tools.backend_utils import MCPSetupManager
         return MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
 
+    async def _setup_mcp_with_status_stream(self, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
+        """Initialize MCP client with status streaming."""
+        status_queue: asyncio.Queue[StreamChunk] = asyncio.Queue()
+        
+        async def status_callback(status: str, details: Dict[str, Any]) -> None:
+            """Callback to queue status updates as StreamChunks."""
+            chunk = StreamChunk(
+                type="mcp_status",
+                status=status,
+                content=details.get("message", ""),
+                source="mcp_tools"
+            )
+            await status_queue.put(chunk)
+        
+        # Start the actual setup in background
+        setup_task = asyncio.create_task(
+            self._setup_mcp_tools_internal(agent_id, status_callback)
+        )
+        
+        # Yield status updates while setup is running
+        while not setup_task.done():
+            try:
+                chunk = await asyncio.wait_for(status_queue.get(), timeout=0.1)
+                yield chunk
+            except asyncio.TimeoutError:
+                continue
+        
+        # Wait for setup to complete and handle any final errors
+        try:
+            await setup_task
+        except Exception as e:
+            yield StreamChunk(
+                type="mcp_status",
+                status="error",
+                content=f"MCP setup failed: {e}",
+                source="mcp_tools"
+            )
+    
     async def _setup_mcp_tools(self, agent_id: Optional[str] = None) -> None:
-        """Initialize MCP client (sessions only)."""
+        """Initialize MCP client (sessions only) - backward compatibility."""
+        if not self.mcp_servers or self._mcp_initialized:
+            return
+        # Consume status updates without yielding them
+        async for _ in self._setup_mcp_with_status_stream(agent_id):
+            pass
+    
+    async def _setup_mcp_tools_internal(self, agent_id: Optional[str] = None, status_callback: Optional[Callable[[str, Dict[str, Any]], Awaitable[None]]] = None) -> None:
+        """Internal MCP setup logic."""
         if not self.mcp_servers or self._mcp_initialized:
             return
 
         if MultiMCPClient is None:
             reason = "MCP import failed - MultiMCPClient not available"
             log_backend_activity("gemini", "MCP import failed", {"reason": reason, "fallback": "workflow_tools"}, agent_id=agent_id)
+            if status_callback:
+                await status_callback("error", {"message": "MCP import failed - falling back to workflow tools"})
             # Clear MCP servers to prevent further attempts
             self.mcp_servers = []
             return
@@ -190,6 +238,8 @@ class GeminiBackend(LLMBackend):
                         "mcp_servers", self.mcp_servers
                     )
                     log_backend_activity("gemini", "MCP configuration validated", {"server_count": len(self.mcp_servers)}, agent_id=agent_id)
+                    if status_callback:
+                        await status_callback("info", {"message": f"MCP configuration validated: {len(self.mcp_servers)} servers"})
 
                     # Log validated server names for debugging
                     if True: 
@@ -197,10 +247,14 @@ class GeminiBackend(LLMBackend):
                         log_backend_activity("gemini", "MCP servers validated", {"servers": server_names}, agent_id=agent_id)
                 except MCPConfigurationError as e:
                     log_backend_activity("gemini", "MCP configuration validation failed", {"error": e.original_message}, agent_id=agent_id)
+                    if status_callback:
+                        await status_callback("error", {"message": f"Invalid MCP configuration: {e.original_message}"})
                     self._mcp_client = None  # Clear client state for consistency
                     raise RuntimeError(f"Invalid MCP configuration: {e.original_message}") from e
                 except MCPValidationError as e:
                     log_backend_activity("gemini", "MCP validation failed", {"error": e.original_message}, agent_id=agent_id)
+                    if status_callback:
+                        await status_callback("error", {"message": f"MCP validation error: {e.original_message}"})
                     self._mcp_client = None  # Clear client state for consistency
                     raise RuntimeError(f"MCP validation error: {e.original_message}") from e
                 except Exception as e:
@@ -216,15 +270,21 @@ class GeminiBackend(LLMBackend):
 
             normalized_servers = self._normalize_mcp_servers()
             log_backend_activity("gemini", "Setting up MCP sessions", {"server_count": len(normalized_servers)}, agent_id=agent_id)
+            if status_callback:
+                await status_callback("info", {"message": f"Setting up MCP sessions for {len(normalized_servers)} servers"})
 
             # Apply circuit breaker filtering before connection attempts
             filtered_servers = self._apply_mcp_tools_circuit_breaker_filtering(normalized_servers, agent_id=agent_id)
             if not filtered_servers:
                 log_backend_activity("gemini", "All MCP servers blocked by circuit breaker", {}, agent_id=agent_id)
+                if status_callback:
+                    await status_callback("warning", {"message": "All MCP servers blocked by circuit breaker"})
                 return
 
             if len(filtered_servers) < len(normalized_servers):
                 log_backend_activity("gemini", "Circuit breaker filtered servers", {"filtered_count": len(normalized_servers) - len(filtered_servers)}, agent_id=agent_id)
+                if status_callback:
+                    await status_callback("warning", {"message": f"Circuit breaker filtered {len(normalized_servers) - len(filtered_servers)} servers"})
 
             # Extract tool filtering parameters from validated config
             allowed_tools = validated_config.get("allowed_tools")
@@ -236,12 +296,17 @@ class GeminiBackend(LLMBackend):
             if exclude_tools:
                 log_backend_activity("gemini", "MCP tool filtering configured", {"exclude_tools": exclude_tools}, agent_id=agent_id)
 
-            self._mcp_client = await MultiMCPClient.create_and_connect(
+            # Create client with status callback
+            self._mcp_client = MultiMCPClient(
                 filtered_servers,
                 timeout_seconds=30,
                 allowed_tools=allowed_tools,
-                exclude_tools=exclude_tools
+                exclude_tools=exclude_tools,
+                status_callback=status_callback
             )
+            
+            # Connect the client
+            await self._mcp_client.connect()
 
             # Determine which servers actually connected
             try:
@@ -254,6 +319,8 @@ class GeminiBackend(LLMBackend):
                 await self._record_mcp_tools_failure(filtered_servers, "No servers connected", agent_id=agent_id)    
                 
                 log_backend_activity( "gemini", "MCP connection failed: no servers connected", {}, agent_id=agent_id)
+                if status_callback:
+                    await status_callback("error", {"message": "MCP connection failed: no servers connected"})
                 self._mcp_client = None
                 return
 
@@ -272,6 +339,8 @@ class GeminiBackend(LLMBackend):
                 {},
                 agent_id=agent_id
             )
+            if status_callback:
+                await status_callback("success", {"message": f"MCP sessions initialized successfully with {len(connected_server_names)} servers"})
 
         except Exception as e:
             # Record failure for circuit breaker
@@ -287,6 +356,8 @@ class GeminiBackend(LLMBackend):
                     {"error": str(e)},
                     agent_id=agent_id
                 )
+                if status_callback:
+                    await status_callback("error", {"message": f"Failed to establish MCP connections: {e}"})
                 self._mcp_client = None
                 raise RuntimeError(f"Failed to establish MCP connections: {e}") from e
             elif isinstance(e, MCPTimeoutError):
@@ -296,6 +367,8 @@ class GeminiBackend(LLMBackend):
                     {"error": str(e)},
                     agent_id=agent_id
                 )
+                if status_callback:
+                    await status_callback("error", {"message": f"MCP connection timeout: {e}"})
                 self._mcp_client = None
                 raise RuntimeError(f"MCP connection timeout: {e}") from e
             elif isinstance(e, MCPServerError):
@@ -305,6 +378,8 @@ class GeminiBackend(LLMBackend):
                     {"error": str(e)},
                     agent_id=agent_id
                 )
+                if status_callback:
+                    await status_callback("error", {"message": f"MCP server error: {e}"})
                 self._mcp_client = None
                 raise RuntimeError(f"MCP server error: {e}") from e
             elif isinstance(e, MCPError):
@@ -314,6 +389,8 @@ class GeminiBackend(LLMBackend):
                     {"error": str(e)},
                     agent_id=agent_id
                 )
+                if status_callback:
+                    await status_callback("error", {"message": f"MCP error during setup: {e}"})
                 self._mcp_client = None
                 return
 
@@ -324,6 +401,8 @@ class GeminiBackend(LLMBackend):
                     {"error": str(e)},
                     agent_id=agent_id
                 )
+                if status_callback:
+                    await status_callback("error", {"message": f"MCP session setup failed: {e}"})
                 self._mcp_client = None
 
     def detect_coordination_tools(self, tools: List[Dict[str, Any]]) -> bool:
@@ -533,8 +612,9 @@ Make your decision and include the JSON at the very end of your response."""
 
         # Continue retrying
         async def empty_chunks():
-            return
-            yield  # Make this a generator
+            # Empty generator - just return without yielding anything
+            if False:  # Make this a generator without actually yielding
+                yield
 
         return True, empty_chunks()
 
@@ -679,8 +759,13 @@ Make your decision and include the JSON at the very end of your response."""
         try:
             from google import genai
 
-            # Setup MCP via async context manager entry
-            await self.__aenter__()
+            # Setup MCP with status streaming if not already initialized
+            if not self._mcp_initialized and self.mcp_servers:
+                async for chunk in self._setup_mcp_with_status_stream(agent_id):
+                    yield chunk
+            elif not self._mcp_initialized:
+                # Setup MCP without streaming for backward compatibility
+                await self._setup_mcp_tools(agent_id)
 
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
@@ -816,6 +901,13 @@ Make your decision and include the JSON at the very end of your response."""
                                     agent_id=agent_id,
                 
                                 )
+                                # Yield retry status
+                                yield StreamChunk(
+                                    type="mcp_status",
+                                    status="mcp_retry",
+                                    content=f"Retrying MCP connection (attempt {retry_count}/{max_mcp_retries})",
+                                    source="mcp_tools"
+                                )
                                 # Brief delay between retries
                                 await asyncio.sleep(
                                     0.5 * retry_count
@@ -830,6 +922,13 @@ Make your decision and include the JSON at the very end of your response."""
                                     {},
                                     agent_id=agent_id,
                 
+                                )
+                                # Yield blocked status
+                                yield StreamChunk(
+                                    type="mcp_status",
+                                    status="mcp_blocked",
+                                    content="All MCP servers blocked by circuit breaker",
+                                    source="mcp_tools"
                                 )
                                 using_sdk_mcp = False
                                 break
@@ -867,6 +966,13 @@ Make your decision and include the JSON at the very end of your response."""
                                 {"attempt": retry_count},
                                 agent_id=agent_id,
             
+                            )
+                            # Yield success status
+                            yield StreamChunk(
+                                type="mcp_status",
+                                status="mcp_connected",
+                                content=f"MCP connection successful on attempt {retry_count}",
+                                source="mcp_tools"
                             )
                             break
 
@@ -952,6 +1058,14 @@ Make your decision and include the JSON at the very end of your response."""
                         {"session_count": len(mcp_sessions), "call_number": self._mcp_tool_calls_count},
                         backend_name="gemini"
                     )
+                    
+                    # Yield MCP status as StreamChunk
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="mcp_tools_initiated",
+                        content=f"MCP tool call initiated (call #{self._mcp_tool_calls_count})",
+                        source="mcp_tools"
+                    )
 
                     # Use async streaming call with sessions (SDK supports auto-calling MCP here)
                     # The SDK's session feature will still handle tool calling automatically
@@ -981,6 +1095,14 @@ Make your decision and include the JSON at the very end of your response."""
                                 result="success",
                                 backend_name="gemini"
                             )
+                            
+                            # Yield MCP success status as StreamChunk
+                            yield StreamChunk(
+                                type="mcp_status",
+                                status="mcp_tools_success",
+                                content=f"MCP tool call succeeded (call #{self._mcp_tool_calls_count})",
+                                source="mcp_tools"
+                            )
 
                         # Direct text extraction for MCP path
                         if hasattr(chunk, "text") and chunk.text:
@@ -1006,8 +1128,10 @@ Make your decision and include the JSON at the very end of your response."""
                     # Add MCP usage indicator
                     log_stream_chunk("backend.gemini", "mcp_indicator", "Session-based tools used", agent_id)
                     yield StreamChunk(
-                        type="content",
-                        content="🔧 [MCP Tools] Session-based tools used\n",
+                        type="mcp_status",
+                        status="mcp_session_complete",
+                        content="MCP session-based tools used successfully",
+                        source="mcp_tools"
                     )
                 except (
                     MCPConnectionError,
@@ -1513,6 +1637,8 @@ Make your decision and include the JSON at the very end of your response."""
         exc_tb: Optional[object],
     ) -> None:
         """Async context manager exit with automatic resource cleanup."""
+        # Parameters are required by context manager protocol but not used
+        _ = (exc_type, exc_val, exc_tb)
         try:
             await self.cleanup_mcp()
         except Exception as e:
