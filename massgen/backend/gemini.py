@@ -1615,6 +1615,11 @@ Make your decision and include the JSON at the very end of your response."""
                     if all_tools:
                         manual_config["tools"] = all_tools
 
+                    # Need to create a new stream for fallback since stream is None
+                    stream = await client.aio.models.generate_content_stream(
+                        model=model_name, contents=full_content, config=manual_config
+                    )
+                    
                     async for chunk in stream:
                         # Process text content
                         if hasattr(chunk, "text") and chunk.text:
@@ -1626,6 +1631,11 @@ Make your decision and include the JSON at the very end of your response."""
 
             else:
                 # Non-MCP path (existing behavior)
+                # Create stream for non-MCP path
+                stream = await client.aio.models.generate_content_stream(
+                    model=model_name, contents=full_content, config=config
+                )
+                
                 async for chunk in stream:
                     # ============================================
                     # 1. Process text content
