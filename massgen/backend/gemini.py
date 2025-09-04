@@ -1436,10 +1436,9 @@ Make your decision and include the JSON at the very end of your response."""
                     
                     # Iterate over the asynchronous stream to get chunks as they arrive
                     async for chunk in stream:
-                        # print(chunk)
-                        
-                        # Check automatic_function_calling_history for MCP function calls
-                        # Process all chunks to catch tool calls that may appear in later chunks
+                        # ============================================
+                        # 1. Process MCP function calls/responses
+                        # ============================================
                         if hasattr(chunk, "automatic_function_calling_history") and chunk.automatic_function_calling_history:
                             for history_item in chunk.automatic_function_calling_history:
                                 if hasattr(history_item, "parts"):
@@ -1536,36 +1535,37 @@ Make your decision and include the JSON at the very end of your response."""
                                                         agent_id=agent_id
                                                     )
 
-                        # Track successful MCP tool execution (only on first chunk)
-                        if not hasattr(self, '_mcp_stream_started'):
-                            self._mcp_tool_successes += 1
-                            self._mcp_stream_started = True
-                            log_backend_activity(
-                                "gemini",
-                                "MCP tool call succeeded",
-                                {"call_number": self._mcp_tool_calls_count},
-                                agent_id=agent_id,
-            
-                            )
+                            # Track successful MCP tool execution (only on first chunk with MCP history)
+                            if not hasattr(self, '_mcp_stream_started'):
+                                self._mcp_tool_successes += 1
+                                self._mcp_stream_started = True
+                                log_backend_activity(
+                                    "gemini",
+                                    "MCP tool call succeeded",
+                                    {"call_number": self._mcp_tool_calls_count},
+                                    agent_id=agent_id,
+                                )
 
-                            # Log MCP tool success as a tool call event
-                            log_tool_call(
-                                agent_id,
-                                "mcp_session_tools",
-                                {"session_count": len(mcp_sessions), "call_number": self._mcp_tool_calls_count},
-                                result="success",
-                                backend_name="gemini"
-                            )
-                            
-                            # Yield MCP success status as StreamChunk
-                            yield StreamChunk(
-                                type="mcp_status",
-                                status="mcp_tools_success",
-                                content=f"MCP tool call succeeded (call #{self._mcp_tool_calls_count})",
-                                source="mcp_tools"
-                            )
+                                # Log MCP tool success as a tool call event
+                                log_tool_call(
+                                    agent_id,
+                                    "mcp_session_tools",
+                                    {"session_count": len(mcp_sessions), "call_number": self._mcp_tool_calls_count},
+                                    result="success",
+                                    backend_name="gemini"
+                                )
+                                
+                                # Yield MCP success status as StreamChunk
+                                yield StreamChunk(
+                                    type="mcp_status",
+                                    status="mcp_tools_success",
+                                    content=f"MCP tool call succeeded (call #{self._mcp_tool_calls_count})",
+                                    source="mcp_tools"
+                                )
 
-                        # Direct text extraction for MCP path
+                        # ============================================
+                        # 2. Process text content
+                        # ============================================
                         if hasattr(chunk, "text") and chunk.text:
                             chunk_text = chunk.text
                             full_content_text += chunk_text
@@ -1577,10 +1577,6 @@ Make your decision and include the JSON at the very end of your response."""
                              )
                             log_stream_chunk("backend.gemini", "content", chunk_text, agent_id)
                             yield StreamChunk(type="content", content=chunk_text)
-
-                        # Keep track of the final response for tool processing
-                        if hasattr(chunk, "candidates"):
-                            final_response = chunk
 
                     # Reset stream tracking
                     if hasattr(self, '_mcp_stream_started'):
@@ -1619,10 +1615,8 @@ Make your decision and include the JSON at the very end of your response."""
                     if all_tools:
                         manual_config["tools"] = all_tools
 
-                    stream = await client.aio.models.generate_content_stream(
-                        model=model_name, contents=full_content, config=manual_config
-                    )
                     async for chunk in stream:
+                        # Process text content
                         if hasattr(chunk, "text") and chunk.text:
                             chunk_text = chunk.text
                             full_content_text += chunk_text
@@ -1630,55 +1624,12 @@ Make your decision and include the JSON at the very end of your response."""
                             log_stream_chunk("backend.gemini", "fallback_content", chunk_text, agent_id)
                             yield StreamChunk(type="content", content=chunk_text)
 
-                        if hasattr(chunk, "candidates"):
-                            final_response = chunk
-
-                        if (
-                            (not using_sdk_mcp)
-                            and builtin_tools
-                            and hasattr(chunk, "candidates")
-                            and chunk.candidates
-                        ):
-                            candidate = chunk.candidates[0]
-
-                            if (
-                                enable_code_execution
-                                and hasattr(candidate, "content")
-                                and hasattr(candidate.content, "parts")
-                            ):
-                                for part in candidate.content.parts:
-                                    if (
-                                        hasattr(part, "executable_code")
-                                        and part.executable_code
-                                    ):
-                                        code_content = getattr(
-                                            part.executable_code,
-                                            "code",
-                                            str(part.executable_code),
-                                        )
-                                        yield StreamChunk(
-                                            type="content",
-                                            content=f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n",
-                                        )
-                                    elif (
-                                        hasattr(part, "code_execution_result")
-                                        and part.code_execution_result
-                                    ):
-                                        result_content = getattr(
-                                            part.code_execution_result,
-                                            "output",
-                                            str(part.code_execution_result),
-                                        )
-                                        yield StreamChunk(
-                                            type="content",
-                                            content=f"📊 [Result] {result_content}\n",
-                                        )
             else:
                 # Non-MCP path (existing behavior)
-                stream = await client.aio.models.generate_content_stream(
-                    model=model_name, contents=full_content, config=config
-                )
                 async for chunk in stream:
+                    # ============================================
+                    # 1. Process text content
+                    # ============================================
                     if hasattr(chunk, "text") and chunk.text:
                         chunk_text = chunk.text
                         full_content_text += chunk_text
@@ -1694,54 +1645,6 @@ Make your decision and include the JSON at the very end of your response."""
 
                         yield StreamChunk(type="content", content=chunk_text)
 
-                    if hasattr(chunk, "candidates"):
-                        final_response = chunk
-
-                    if (
-                        (not using_sdk_mcp)
-                        and builtin_tools
-                        and hasattr(chunk, "candidates")
-                        and chunk.candidates
-                    ):
-                        candidate = chunk.candidates[0]
-
-                        if (
-                            enable_code_execution
-                            and hasattr(candidate, "content")
-                            and hasattr(candidate.content, "parts")
-                        ):
-                            for part in candidate.content.parts:
-                                if (
-                                    hasattr(part, "executable_code")
-                                    and part.executable_code
-                                ):
-                                    code_content = getattr(
-                                        part.executable_code,
-                                        "code",
-                                        str(part.executable_code),
-                                    )
-                                    code_exec_msg = f"\n💻 [Code Executed]\n```python\n{code_content}\n```\n"
-                                    # Detailed code execution chunk logging
-                                    log_stream_chunk("backend.gemini", "code_execution_result", {"code_parts": 1, "execution_successful": True, "snippet": code_content}, agent_id)
-                                    yield StreamChunk(
-                                    type="content",
-                                    content=code_exec_msg,
-                                )
-                                elif (
-                                    hasattr(part, "code_execution_result")
-                                    and part.code_execution_result
-                                ):
-                                    result_content = getattr(
-                                        part.code_execution_result,
-                                        "output",
-                                        str(part.code_execution_result),
-                                    )
-                                    result_msg = f"📊 [Result] {result_content}\n"
-                                    log_stream_chunk("backend.gemini", "code_execution_result", {"code_parts": 1, "execution_successful": True, "result": result_content}, agent_id)
-                                    yield StreamChunk(
-                                    type="content",
-                                    content=result_msg,
-                                )
 
             content = full_content_text
 
@@ -1790,8 +1693,7 @@ Make your decision and include the JSON at the very end of your response."""
 
             # Process builtin tool results if any tools were used
             if (
-                not using_sdk_mcp
-                and builtin_tools
+                builtin_tools
                 and final_response
                 and hasattr(final_response, "candidates")
                 and final_response.candidates
