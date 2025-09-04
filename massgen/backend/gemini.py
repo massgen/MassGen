@@ -1395,7 +1395,7 @@ Make your decision and include the JSON at the very end of your response."""
                         {
                             "call_number": self._mcp_tool_calls_count,
                             "session_count": len(mcp_sessions),
-                            "available_tools": available_tools[:10],  # Log first 10 tools for brevity
+                            "available_tools": available_tools[:],  # Log first 10 tools for brevity
                             "total_tools": len(available_tools)
                         },
                         agent_id=agent_id,

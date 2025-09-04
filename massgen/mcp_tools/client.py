@@ -315,7 +315,6 @@ class MCPClient:
 
                     # Add prominent connection success message
                     logger.info(f"✅ MCP server '{self.name}' connected successfully!")
-                    print(f"✅ MCP server '{self.name}' connected successfully!")
                     
                     # Send connected status if callback is available
                     if self.status_callback:
