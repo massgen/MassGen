@@ -21,8 +21,8 @@
 </p>
 
 <p align="center">
-  <a href="https://youtu.be/Dp2oldJJImw">
-    <img src="https://img.youtube.com/vi/Dp2oldJJImw/0.jpg" alt="MassGen Demo Video" width="600">
+  <a href="https://www.youtube.com/watch?v=Dp2oldJJImw">
+    <img src="assets/massgen-demo.gif" alt="MassGen case study -- Berkeley Agentic AI Summit Question" width="800">
   </a>
 </p>
 
@@ -268,6 +268,23 @@ uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "When is you
 ```
 
 All the models with a default backend can be found [here](massgen/utils.py).
+
+#### 🆕 Gemini with MCP Tools (NEW in v0.0.15)
+
+**Quick Examples - Try These Now:**
+```bash
+# Simple weather query using MCP-enabled Gemini
+uv run python -m massgen.cli --config massgen/configs/gemini_mcp_example.yaml "What's the weather in Tokyo?"
+
+# Travel research with multiple MCP servers (Airbnb + Brave Search)
+# First, set BRAVE_API_KEY in your .env file, then:
+uv run python -m massgen.cli --config massgen/configs/multimcp_gemini.yaml "Find safe neighborhoods in Paris and suggest Airbnb stays for 2 people next week"
+
+# Test MCP server connection
+uv run python -m massgen.cli --config massgen/configs/gemini_mcp_test.yaml "Test the MCP tools - show me what you can do"
+```
+
+**What's happening:** Gemini automatically discovers and uses tools from configured MCP servers (weather data, web search, Airbnb listings, etc.) without manual tool calling.
 
 **Local models (NEW in v0.0.7):**
 ```bash
@@ -755,7 +772,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 **🔌 Gemini MCP Implementation**
 - **Gemini MCP Integration**: Native MCP support for Gemini backend with full tool ecosystem access
 - **Cross-Provider MCP**: Unified MCP interface working across Claude Code and Gemini backends
-- **Enhanced Tool Discovery**: Improved tool discovery and execution management for Gemini agents
+- **Enhanced Tool Discovery**: Improved discovery of tools within configured MCP servers (automatic tool detection from MCP servers)
 - **Performance Optimization**: Optimized MCP server communication with circuit breaker patterns
 - **MCP Security Framework**: Command sanitization and secure credential management for MCP servers
 
