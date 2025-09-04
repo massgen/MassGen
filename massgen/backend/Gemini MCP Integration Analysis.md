@@ -508,15 +508,6 @@ The Gemini backend imports and handles all MCP exception types:
 - **MCPAuthenticationError**: Authentication and authorization failures
 - **MCPResourceError**: Resource availability and access errors
 
-### Not Directly Used Components
-
-#### MCPIntegrationManager
-- **Reason**: Gemini uses session-based integration rather than manual tool management
-- **Alternative**: Direct session passing to Gemini SDK
-
-#### Function Class
-- **Reason**: Gemini SDK handles tool definitions through sessions
-- **Alternative**: MCP sessions provide tool definitions directly to the SDK
 
 ### Circuit Breaker Integration
 
@@ -850,6 +841,8 @@ Connection state and tool usage are continuously monitored:
 - **Circuit breaker state**: Per-server failure tracking
 
 ### Memory Management
+
+MCPMessageManager.trim_message_history() is called via gemini backend's _trim_message_history() wrapper method.
 
 Message history is trimmed to prevent unbounded growth:
 
