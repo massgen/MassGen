@@ -174,6 +174,7 @@ This collaborative approach ensures that the final output leverages collective i
 ```bash
 git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
+pip install ./requirements.txts
 pip install uv
 uv venv
 ```
@@ -280,8 +281,17 @@ uv run python -m massgen.cli --config massgen/configs/gemini_mcp_example.yaml "W
 # First, set BRAVE_API_KEY in your .env file, then:
 uv run python -m massgen.cli --config massgen/configs/multimcp_gemini.yaml "Find safe neighborhoods in Paris and suggest Airbnb stays for 2 people next week"
 
-# Test MCP server connection
+# Test MCP with local stdio server
+# First start the local test server:
+uv run python massgen/tests/mcp_test_server.py
+# Then try:
 uv run python -m massgen.cli --config massgen/configs/gemini_mcp_test.yaml "Test the MCP tools - show me what you can do"
+
+# Test MCP with streamable-http server
+# First start the HTTP test server:
+uv run python massgen/tests/test_http_mcp_server.py
+# Then try:
+uv run python -m massgen.cli --config massgen/configs/gemini_streamable_http_test.yaml "<prompt>"
 ```
 
 **What's happening:** Gemini automatically discovers and uses tools from configured MCP servers (weather data, web search, Airbnb listings, etc.) without manual tool calling.
@@ -445,6 +455,11 @@ backend:
       type: "stdio"
       command: "npx"
       args: ["-y", "@openbnb/mcp-server-airbnb", "--ignore-robots-txt"]
+    
+    # Example streamable-http MCP server
+    test_http_server:
+      type: "streamable-http"
+      url: "http://localhost:5173/sse"  # URL for streamable-http transport
   
   # Tool configuration (MCP tools are auto-discovered)
   allowed_tools:                        # Optional: whitelist specific tools
@@ -820,11 +835,12 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.16 Roadmap (🚧 In Progress)
+### v0.0.16 Roadmap
 
-The roadmap for v0.0.16 is currently being developed. Potential focus areas under consideration include:
+Version 0.0.16 focuses on expanding MCP ecosystem and enterprise readiness, extending Model Context Protocol support across more providers while enhancing system observability. Key enhancements planned include:
 
 - **OpenAI MCP Integration**: Extending MCP support to GPT-5 and other OpenAI models
+- **Improved MCP Logging**: Enhanced debugging and monitoring capabilities for MCP server interactions and tool calls
 - **Advanced Orchestration Patterns**: Hierarchical agent coordination and specialized role assignment
 - **Enterprise Features**: Team collaboration, audit logging, and compliance features
 - **Web Interface Development**: Browser-based conversation interface with enhanced visualization
