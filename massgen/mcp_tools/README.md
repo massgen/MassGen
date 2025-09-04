@@ -84,61 +84,43 @@ sequenceDiagram
 
 Use the included test server for development. It provides sample tools like `mcp_echo` and `add_numbers`:
 
+Note: If you're using an agent config with `type: "stdio"` (for example `massgen/configs/gemini_mcp_test.yaml`), you do not need to run this manually , MassGen will automatically launch the server from the config.
+
 ```python
 # Run the test server (from massgen/tests/mcp_test_server.py)
-python -m massgen.tests.mcp_test_server
+uv run python -m massgen.tests.mcp_test_server
 ```
+For streamable-http connections, start the HTTP test server instead:
+
+```bash
+uv run python massgen/tests/test_http_mcp_server.py
+```
+This serves at `http://localhost:8000/mcp` and pairs with `massgen/configs/gemini_streamable_http_test.yaml`.
 
 #### 2. Configure MCP Connection
 
 Create a configuration file or use the provided examples:
 
 ```yaml
-# Based on massgen/configs/gemini_mcp_example.yaml
+# Based on massgen/configs/gemini_mcp_test.yaml
+# The `mcp_servers` list should be added to your agent's backend configuration.
+# The following example shows how to configure a connection to the test server.
 mcp_servers:
-  test_server:
-    name: "test_server"
+  - name: "test_server"
     type: "stdio"
     command: "python"
-    args: ["-m", "massgen.tests.mcp_test_server"]
-    security:
-      level: "moderate"
-    timeout: 30
-    max_retries: 3
+    args: ["-u", "-m", "massgen.tests.mcp_test_server"]
 ```
 
-#### 3. Connect and Use Tools
+For a complete, runnable example, see `massgen/configs/gemini_mcp_test.yaml`. To test the full configuration, run:
 
-```python
-import asyncio
-from massgen.mcp_tools import MCPClient
-
-async def main():
-    config = {
-        "name": "test_server",
-        "type": "stdio",
-        "command": "python",
-        "args": ["-m", "massgen.tests.mcp_test_server"],
-        "security": {
-            "level": "moderate"
-        }
-    }
-
-    # The async context manager connects automatically
-    async with MCPClient(config) as client:
-        # Discover available tools
-        tools = client.get_available_tools()
-        print(f"Available tools: {tools}")
-
-        # Call a tool
-        result = await client.call_tool("mcp_echo", {"text": "Hello MCP!"})
-        print(f"Result: {result}")
-
-if __name__ == "__main__":
-    asyncio.run(main())
+```bash
+uv run python -m massgen.cli --config massgen/configs/gemini_mcp_test.yaml "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
 ```
 
 ## Supported Transports
+
+# Note: type accepts "stdio" and "streamable-http"
 
 ### stdio Transport
 
@@ -148,7 +130,6 @@ Direct process communication through stdin/stdout:
 type: "stdio"
 command: "python"
 args: ["-m", "your.mcp.server"]
-# Note: type accepts "stdio" and "streamable-http"
 ```
 
 ### streamable-http Transport
@@ -160,7 +141,6 @@ type: "streamable-http"
 url: "http://localhost:8000/mcp"
 headers:
   Authorization: "Bearer your-token"
-# Note: type accepts "stdio" and "streamable-http"
 ```
 
 ## Tool Discovery and Naming
@@ -185,6 +165,9 @@ The module provides comprehensive error handling through custom exceptions:
 
 - **[Client Documentation](client.md)**: Detailed API reference and usage examples
 - **[Security Documentation](security.md)**: Security features and best practices
+- **[Circuit Breaker Documentation](circuit_breaker.md)**: Details on the circuit breaker implementation
+- **[Config Validator Documentation](config_validator.md)**: Information about configuration validation
+- **[Exceptions Documentation](exceptions.md)**: Custom exception classes and handling
 
 ## Troubleshooting
 
@@ -243,4 +226,7 @@ logging.getLogger('massgen.mcp_tools').setLevel(logging.DEBUG)
 
 See the `massgen/configs/` directory for complete configuration examples:
 
-- `gemini_mcp_example.yaml`: Basic single-server setup
+- `gemini_mcp_test.yaml`: Basic single-server setup for testing
+- `gemini_mcp_example.yaml`: Example with an external weather tool
+- `gemini_streamable_http_test.yaml`: MCP server connection with streamable-http transport type
+- `multimcp_gemini.yaml`: Multiple MCP servers (Airbnb + Brave Search) with Gemini backend for travel research
