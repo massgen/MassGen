@@ -27,7 +27,8 @@ from .message_templates import MessageTemplates
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
-from .coordination_tracker import CoordinationTracker, EventType
+from .utils import ActionType, AgentStatus, EventType
+from .coordination_tracker import CoordinationTracker
 from .logger_config import (
     log_orchestrator_activity,
     log_orchestrator_agent_message,
@@ -157,7 +158,7 @@ class Orchestrator(ChatAgent):
         
         # Coordination tracking - always enabled for analysis/debugging
         self.coordination_tracker = CoordinationTracker()
-        self.coordination_tracker.initialize_agents(list(agents.keys()))
+        self.coordination_tracker.initialize_session(list(agents.keys()))
         
         # Create snapshot storage and workspace directories if specified
         if snapshot_storage:
@@ -355,6 +356,10 @@ class Orchestrator(ChatAgent):
             self.timeout_reason = (
                 f"Time limit exceeded ({elapsed:.1f}s/{timeout_seconds}s)"
             )
+            # Track timeout for all agents that were still working
+            for agent_id in self.agent_states.keys():
+                if not self.agent_states[agent_id].has_voted:
+                    self.coordination_tracker.track_agent_action(agent_id, ActionType.TIMEOUT, self.timeout_reason)
 
             # Force cleanup of any active agent streams and tasks
             await self._cleanup_active_coordination()
@@ -449,6 +454,8 @@ class Orchestrator(ChatAgent):
 
         # Stream agent outputs in real-time until all have voted
         while not all(state.has_voted for state in self.agent_states.values()):
+            # Start new coordination iteration
+            self.coordination_tracker.start_new_iteration()
             # Check for orchestrator timeout - stop spawning new agents
             if self.is_orchestrator_timeout:
                 break
@@ -464,8 +471,6 @@ class Orchestrator(ChatAgent):
                     and not self.agent_states[agent_id].has_voted
                     and not self.agent_states[agent_id].is_killed
                 ):
-                    # Track agent start/restart
-                    self.coordination_tracker.track_agent_start(agent_id, current_answers, conversation_context)
                     active_streams[agent_id] = self._stream_agent_execution(
                         agent_id,
                         self.current_task,
@@ -494,6 +499,7 @@ class Orchestrator(ChatAgent):
             reset_signal = False
             voted_agents = {}
             answered_agents = {}
+            completed_agent_ids = set()  # Track all agents whose tasks completed
 
             # Process completed stream chunks
             for task in done:
@@ -519,6 +525,8 @@ class Orchestrator(ChatAgent):
                     elif chunk_type == "result":
                         # Agent completed with result
                         result_type, result_data = chunk_data
+                        # Result ends the agent's current stream
+                        completed_agent_ids.add(agent_id)
                         log_stream_chunk("orchestrator", f"result.{result_type}", result_data, agent_id)
 
                         # Emit agent completion status immediately upon result
@@ -536,10 +544,10 @@ class Orchestrator(ChatAgent):
                             await self._save_claude_code_snapshot(agent_id)
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             answered_agents[agent_id] = result_data
+                            self.coordination_tracker.add_agent_answer(agent_id, result_data)
                             reset_signal = True
                             
                             # Track new answer event
-                            self.coordination_tracker.track_new_answer(agent_id, result_data)
                             log_stream_chunk("orchestrator", "content", "✅ Answer provided\n", agent_id)
                             yield StreamChunk(
                                 type="content",
@@ -553,6 +561,10 @@ class Orchestrator(ChatAgent):
                             if self.agent_states[agent_id].restart_pending:
                                 voted_for = result_data.get("agent_id", "<unknown>")
                                 reason = result_data.get("reason", "No reason provided")
+                                # Track the ignored vote action
+                                self.coordination_tracker.track_agent_action(agent_id, ActionType.VOTE_IGNORED, 
+                                    f"Voted for {voted_for} but ignored due to restart")
+                                # Save in coordination tracker that we waste a vote due to restart
                                 log_stream_chunk("orchestrator", "content", f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers", agent_id)
                                 yield StreamChunk(
                                     type="content",
@@ -564,10 +576,10 @@ class Orchestrator(ChatAgent):
                                 # Save snapshot when agent successfully votes
                                 # await self._save_claude_code_snapshot(agent_id)
                                 voted_agents[agent_id] = result_data
+                                self.coordination_tracker.add_agent_vote(agent_id, result_data)
                                 # Track new vote event
                                 voted_for = result_data.get("agent_id", "<unknown>")
                                 reason = result_data.get("reason", "No reason provided")
-                                self.coordination_tracker.track_vote(agent_id, voted_for, reason)
                                 log_stream_chunk("orchestrator", "content", f"✅ Vote recorded for [{result_data['agent_id']}]", agent_id)
                                 yield StreamChunk(
                                     type="content",
@@ -577,12 +589,13 @@ class Orchestrator(ChatAgent):
 
                     elif chunk_type == "error":
                         # Agent error
+                        self.coordination_tracker.track_agent_action(agent_id, ActionType.ERROR, chunk_data)
+                        # Error ends the agent's current stream
+                        completed_agent_ids.add(agent_id)
                         log_stream_chunk("orchestrator", "error", chunk_data, agent_id)
                         yield StreamChunk(
                             type="content", content=f"❌ {chunk_data}", source=agent_id
                         )
-                        # Emit agent completion status for errors too
-                        self.coordination_tracker.track_agent_error(agent_id, chunk_data)
                         log_stream_chunk("orchestrator", "agent_status", "completed", agent_id)
                         yield StreamChunk(
                             type="agent_status",
@@ -601,6 +614,7 @@ class Orchestrator(ChatAgent):
 
                     elif chunk_type == "done":
                         # Stream completed - emit completion status for frontend
+                        completed_agent_ids.add(agent_id)
                         log_stream_chunk("orchestrator", "done", None, agent_id)
                         yield StreamChunk(
                             type="agent_status",
@@ -611,7 +625,8 @@ class Orchestrator(ChatAgent):
                         await self._close_agent_stream(agent_id, active_streams)
 
                 except Exception as e:
-                    self.coordination_tracker.track_agent_error(agent_id, str(e))
+                    self.coordination_tracker.track_agent_action(agent_id, ActionType.ERROR, f"Stream error - {e}")
+                    completed_agent_ids.add(agent_id)
                     log_stream_chunk("orchestrator", "error", f"❌ Stream error - {e}", agent_id)
                     yield StreamChunk(
                         type="content",
@@ -642,11 +657,16 @@ class Orchestrator(ChatAgent):
             for agent_id, answer in answered_agents.items():
                 self.agent_states[agent_id].answer = answer
 
+            # Change status to IDLE for all agents whose tasks completed this iteration
+            for agent_id in completed_agent_ids:
+                self.coordination_tracker.change_status(agent_id, AgentStatus.IDLE)
+
         # Cancel any remaining tasks and close streams, as all agents have voted (no more new answers)
-        for task in active_tasks.values():
+        for agent_id, task in active_tasks.items():
+            if not task.done():
+                self.coordination_tracker.track_agent_action(agent_id, ActionType.CANCELLED, "All agents voted - coordination complete")
             task.cancel()
         for agent_id in list(active_streams.keys()):
-            self.coordination_tracker.track_agent_terminated(agent_id)
             await self._close_agent_stream(agent_id, active_streams)
 
     async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
@@ -792,15 +812,21 @@ class Orchestrator(ChatAgent):
             del active_streams[agent_id]
 
     def _check_restart_pending(self, agent_id: str) -> bool:
-        """Check if agent should restart and yield restart message if needed."""
-        return self.agent_states[agent_id].restart_pending
+        """Check if agent should restart and yield restart message if needed. This is only called to exit out of _stream_agent_execution()."""
+        restart_pending = self.agent_states[agent_id].restart_pending
+        if restart_pending:
+            self.coordination_tracker.track_agent_action(agent_id, ActionType.RESTART, "Gracefully restarting due to new answers from other agents")
+        return restart_pending
 
     async def _cleanup_active_coordination(self) -> None:
         """Force cleanup of active coordination streams and tasks on timeout."""
         # Cancel and cleanup active tasks
         if hasattr(self, "_active_tasks") and self._active_tasks:
-            for task in self._active_tasks.values():
+            for agent_id, task in self._active_tasks.items():
                 if not task.done():
+                    # Only track if not already tracked by timeout above
+                    if not self.is_orchestrator_timeout:
+                        self.coordination_tracker.track_agent_action(agent_id, ActionType.CANCELLED, "Coordination cleanup")
                     task.cancel()
                     try:
                         await task
@@ -949,6 +975,9 @@ class Orchestrator(ChatAgent):
                     valid_agent_ids=list(answers.keys()) if answers else None,
                     base_system_message=agent_system_message,
                 )
+
+            # Track the context used for this agent execution
+            self.coordination_tracker.track_agent_context(agent_id, answers, conversation.get("conversation_history", []))
             
             # Log the messages being sent to the agent with backend info
             backend_name = None
@@ -971,6 +1000,9 @@ class Orchestrator(ChatAgent):
                 {"role": "user", "content": conversation["user_message"]},
             ]
             enforcement_msg = self.message_templates.enforcement_message()
+
+            # Update agent status to WORKING
+            self.coordination_tracker.change_status(agent_id, AgentStatus.WORKING)
 
             for attempt in range(max_attempts):
                 if self._check_restart_pending(agent_id):
@@ -1378,8 +1410,7 @@ class Orchestrator(ChatAgent):
             final_answer = self.agent_states[self._selected_agent].answer
 
             # Track final answer and set winner
-            self.coordination_tracker.set_final_winner(self._selected_agent)
-            self.coordination_tracker.track_final_answer(self._selected_agent, final_answer)
+            self.coordination_tracker.set_final_answer(self._selected_agent, final_answer)
 
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
@@ -1567,6 +1598,12 @@ class Orchestrator(ChatAgent):
         base_system_message = self.message_templates.final_presentation_system_message(
             agent_system_message
         )
+
+        # Change the status of all agents that were not selected to AgentStatus.COMPLETED
+        for aid, state in self.agent_states.items():
+            if aid != selected_agent_id:
+                self.coordination_tracker.change_status(aid, AgentStatus.COMPLETED)
+        self.coordination_tracker.set_final_agent(selected_agent_id, voting_summary, all_answers)
         
         # Add workspace context information to system message if workspace was restored
         if temp_workspace_path:
@@ -1839,7 +1876,7 @@ Final Session ID: {session_id}.
             "session_id": self.session_id,
             "workflow_phase": self.workflow_phase,
             "current_task": self.current_task,
-            "selected_agent": self._selected_agent,
+            "selected_agent": self.coordination_tracker.final_winner if self.coordination_tracker else self._selected_agent,
             "final_presentation_content": self._final_presentation_content,
             "vote_results": vote_results,
             "agents": {

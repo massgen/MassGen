@@ -1,3 +1,26 @@
+from enum import Enum
+
+class ActionType(Enum):
+    """All types of actions an agent can take -- TODO: Note this is also in masgen/backend/gemini.py; we should have an enums or utils file with this."""
+    NEW_ANSWER = "answer"
+    VOTE = "vote"
+    VOTE_IGNORED = "vote_ignored"  # Vote was cast but ignored due to restart
+    RESTART = "restart"  # Agent restarting due to new answers from others
+    ERROR = "error"
+    TIMEOUT = "timeout"
+    CANCELLED = "cancelled"
+
+class AgentStatus(Enum):
+    """All types of states an agent can be in during coordination."""
+    WORKING = "working"  # actively working on something
+    IDLE = "idle"  # out of the event loop -- waiting but may be called again
+    COMPLETED = "completed"  # finished all work -- will not be called again
+
+class EventType(Enum):
+    """All types of events that can occur during orchestration."""
+    RESTART = "restart"
+    CHANGE_CONTEXT = "change_context"  # changes the input context for all agents
+
 MODEL_MAPPINGS = {
     "openai": [
         # GPT-5 variants
