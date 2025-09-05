@@ -834,14 +834,16 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.16 Roadmap
 
-Version 0.0.16 focuses on **MCP Enhancement and OpenAI Integration**, expanding Model Context Protocol support to OpenAI models while improving system observability. Key enhancements include:
+Version 0.0.16 focuses on **MCP File System and Logging Enhancement**, improving agent communication and system observability. Key enhancements include:
 
-- **OpenAI MCP Support**: Extend MCP support to GPT-5 and other OpenAI models with full tool ecosystem access
-- **MCP File System Access**: Enable secure file system operations through MCP servers with sandboxed environments
+- **MCP File System Integration**: Leverage existing filesystem MCP servers and generalize Claude Code workspace sharing to all agents using filesystem MCP tools
 - **Enhanced MCP Logging**: Organized and comprehensive MCP operation logging with dedicated log files per server
-- **Advanced Orchestration Patterns**: Hierarchical agent coordination and specialized role assignment
-- **Enterprise Features**: Team collaboration, audit logging, and compliance features
-- **Performance Benchmarking Suite**: Comprehensive testing framework for multi-agent systems
+- **OpenAI MCP Exploration**: Initial research and groundwork for OpenAI MCP support (full implementation planned for v0.0.17)
+
+Key technical approach:
+- **Existing MCP Server Integration**: Use proven filesystem MCP servers like `@modelcontextprotocol/server-filesystem`
+- **Generalized Workspace Sharing**: Extract and extend Claude Code's workspace sharing to work with any backend using filesystem MCP tools
+- **Smart Tool Detection**: Automatically trigger workspace snapshots when agents use filesystem operations (read, write, edit, list)
 
 For detailed milestones and technical specifications, see the [full v0.0.16 roadmap](ROADMAP_v0.0.16.md).
 
