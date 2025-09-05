@@ -246,7 +246,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
 | **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ❌ | ✅ | Web search, code execution |
+| **Gemini API** | ✅ | ✅ | ❌ | ✅ | Web search, code execution, **MCP integration**|
 | **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
 | **OpenAI API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
 | **ZAI API** | ❌ | ❌ | ❌ | ❌ | - |
@@ -834,15 +834,14 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.16 Roadmap
 
-Version 0.0.16 focuses on expanding MCP ecosystem and enterprise readiness, extending Model Context Protocol support across more providers while enhancing system observability. Key enhancements planned include:
+Version 0.0.16 focuses on **MCP Enhancement and OpenAI Integration**, expanding Model Context Protocol support to OpenAI models while improving system observability. Key enhancements include:
 
-- **OpenAI MCP Integration**: Extending MCP support to GPT-5 and other OpenAI models
-- **Improved MCP Logging**: Enhanced debugging and monitoring capabilities for MCP server interactions and tool calls
+- **OpenAI MCP Support**: Extend MCP support to GPT-5 and other OpenAI models with full tool ecosystem access
+- **MCP File System Access**: Enable secure file system operations through MCP servers with sandboxed environments
+- **Enhanced MCP Logging**: Organized and comprehensive MCP operation logging with dedicated log files per server
 - **Advanced Orchestration Patterns**: Hierarchical agent coordination and specialized role assignment
 - **Enterprise Features**: Team collaboration, audit logging, and compliance features
-- **Web Interface Development**: Browser-based conversation interface with enhanced visualization
 - **Performance Benchmarking Suite**: Comprehensive testing framework for multi-agent systems
-- **Enhanced Context Sharing**: Cross-model workspace sharing beyond Claude Code agents
 
 For detailed milestones and technical specifications, see the [full v0.0.16 roadmap](ROADMAP_v0.0.16.md).
 

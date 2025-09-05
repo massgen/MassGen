@@ -47,11 +47,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added security and troubleshooting guides for MCP
 
 ### Technical Details
-- **Commits**: 23 commits including MCP integration, documentation, and bug fixes
-- **Files Modified**: 30+ files across MCP modules, backends, configurations, and tests
-- **New Package**: `massgen/mcp_tools/` with complete MCP framework
+- **Commits**: 40+ commits including MCP integration, documentation, and bug fixes
+- **Files Modified**: 35+ files across MCP modules, backends, configurations, and tests
 - **Security Features**: Configurable security levels (strict/moderate/permissive)
-- **Contributors**: @praneeth999 @qidanrui @sonichi and the MassGen team
+- **Contributors**: @praneeth999 @qidanrui @sonichi @a5507203 @ncrispino @Henry-811 and the MassGen team
 
 ## [0.0.14] - 2025-09-02
 
