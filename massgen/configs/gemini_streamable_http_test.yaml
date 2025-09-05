@@ -1,0 +1,43 @@
+# MassGen Configuration: Gemini with Streamable HTTP MCP Integration
+# This configuration tests the streamable-http transport for MCP servers
+# Prerequisites:
+# 1. Start the test MCP server: python massgen/tests/test_http_mcp_server.py
+# 2. Verify server is running at http://localhost:8000/mcp
+# 3. Run: uv run python -m massgen.cli --config configs/gemini_streamable_http_test.yaml "Run a complete system check - events, birthdays, random data, and server status"
+
+agents:
+  - id: "gemini_streamable_http_test"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        - name: "streamable_http_server"
+          type: "streamable-http"
+          url: "http://localhost:8000/mcp"
+          # Security configuration for testing environment
+          security:
+            level: "permissive"  # Allow more flexibility for testing
+            allow_localhost: true  # Required for localhost:8000 connection
+            allow_private_ips: true  # Allow private IP ranges for testing
+    system_message: |
+      You are testing the MCP integration with Streamable HTTP transport using the "streamable_http_server".
+      
+      The Streamable HTTP transport enables multiple client connections and supports server-to-client streaming.
+     
+      The following MCP tools from the "streamable_http_server" are available and will be auto-called by the system when needed:
+      - get_events(day: str): Retrieves calendar events for a specific day (e.g., "wednesday", "friday").
+      - get_birthdays(): Retrieves a list of upcoming birthdays for the current week.
+      - random_data(count: int = 3): Generates a specified number of random test data items.
+      - server_status(): Performs a server health check and returns the current status and time.
+      
+      Do not output function-call syntax. Simply perform the tasks and present clear, concise results.
+      
+      Tasks to verify:
+      - Calendar events: Check events for "Wednesday" and "Friday".
+      - Birthdays: Check for upcoming birthdays.
+      - Random data generation: Request a few random data items.
+      - Server status: Verify the server is healthy and reports the time.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
