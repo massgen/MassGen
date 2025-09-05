@@ -12,8 +12,14 @@ class ActionType(Enum):
 
 class AgentStatus(Enum):
     """All types of states an agent can be in during coordination."""
-    WORKING = "working"  # actively working on something
-    IDLE = "idle"  # out of the event loop -- waiting but may be called again
+    STREAMING = "streaming"  # actively streaming content/reasoning
+    ANSWERING = "answering"  # in the process of providing an answer
+    VOTING = "voting"  # in the process of voting
+    VOTED = "voted"  # has cast their vote for this round
+    ANSWERED = "answered"  # has provided an answer this round
+    RESTARTING = "restarting"  # restarting due to new answer from another agent
+    ERROR = "error"  # encountered an error
+    TIMEOUT = "timeout"  # timed out
     COMPLETED = "completed"  # finished all work -- will not be called again
 
 class EventType(Enum):

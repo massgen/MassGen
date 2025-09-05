@@ -425,6 +425,10 @@ class Orchestrator(ChatAgent):
 
         # Save coordination logs using the coordination tracker
         log_dir = get_log_session_dir()
+        
+        # End the coordination session
+        self.coordination_tracker._end_session()
+        
         self.coordination_tracker.save_coordination_logs(log_dir)
 
     async def _stream_coordination_with_agents(
@@ -499,7 +503,7 @@ class Orchestrator(ChatAgent):
             reset_signal = False
             voted_agents = {}
             answered_agents = {}
-            completed_agent_ids = set()  # Track all agents whose tasks completed
+            completed_agent_ids = set()  # Track all agents whose tasks completed, i.e., done, error, result.
 
             # Process completed stream chunks
             for task in done:
@@ -657,9 +661,13 @@ class Orchestrator(ChatAgent):
             for agent_id, answer in answered_agents.items():
                 self.agent_states[agent_id].answer = answer
 
-            # Change status to IDLE for all agents whose tasks completed this iteration
+            # Update status based on what actions agents took
             for agent_id in completed_agent_ids:
-                self.coordination_tracker.change_status(agent_id, AgentStatus.IDLE)
+                if agent_id in answered_agents:
+                    self.coordination_tracker.change_status(agent_id, AgentStatus.ANSWERED)
+                elif agent_id in voted_agents:
+                    self.coordination_tracker.change_status(agent_id, AgentStatus.VOTED)
+                # Errors and timeouts are already tracked via track_agent_action
 
         # Cancel any remaining tasks and close streams, as all agents have voted (no more new answers)
         for agent_id, task in active_tasks.items():
@@ -1001,8 +1009,8 @@ class Orchestrator(ChatAgent):
             ]
             enforcement_msg = self.message_templates.enforcement_message()
 
-            # Update agent status to WORKING
-            self.coordination_tracker.change_status(agent_id, AgentStatus.WORKING)
+            # Update agent status to STREAMING
+            self.coordination_tracker.change_status(agent_id, AgentStatus.STREAMING)
 
             for attempt in range(max_attempts):
                 if self._check_restart_pending(agent_id):
@@ -1389,6 +1397,9 @@ class Orchestrator(ChatAgent):
 
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
         """Present the final coordinated answer."""
+        # Always start final round tracking
+        self.coordination_tracker.start_final_round(self._selected_agent)
+        
         log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
         yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
 
@@ -1409,8 +1420,14 @@ class Orchestrator(ChatAgent):
         ):
             final_answer = self.agent_states[self._selected_agent].answer
 
+            # Track iterations during final answer presentation (even for stored answers)
+            self.coordination_tracker.start_new_iteration()  # Iteration for winner selection
+            
             # Track final answer and set winner
             self.coordination_tracker.set_final_answer(self._selected_agent, final_answer)
+            
+            # Mark final presentation as completed
+            self.coordination_tracker.change_status(self._selected_agent, AgentStatus.COMPLETED)
 
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
@@ -1541,6 +1558,12 @@ class Orchestrator(ChatAgent):
         self, selected_agent_id: str, vote_results: Dict[str, Any]
     ) -> AsyncGenerator[StreamChunk, None]:
         """Ask the winning agent to present their final answer with voting context."""
+        # Debug: Track that we entered final presentation
+        self.coordination_tracker._add_event("debug", None, f"get_final_presentation called for {selected_agent_id}")
+        
+        # Start tracking the final round
+        self.coordination_tracker.start_final_round(selected_agent_id)
+        
         if selected_agent_id not in self.agents:
             log_stream_chunk("orchestrator", "error", f"Selected agent {selected_agent_id} not found")
             yield StreamChunk(
@@ -1635,7 +1658,11 @@ class Orchestrator(ChatAgent):
 
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         presentation_content = ""
+        
+        # Track final round iterations (each chunk is like an iteration)
         async for chunk in agent.chat(presentation_messages, reset_chat=True):
+            # Start new iteration for this chunk
+            self.coordination_tracker.start_new_iteration()
             # Use the same streaming approach as regular coordination
             if chunk.type == "content" and chunk.content:
                 presentation_content += chunk.content
@@ -1744,6 +1771,9 @@ Final Session ID: {session_id}.
                     content="\n❌ No content generated for final presentation and no stored answer available.",
                     source=selected_agent_id,
                 )
+        
+        # Mark final round as completed
+        self.coordination_tracker.change_status(selected_agent_id, AgentStatus.COMPLETED)
 
     def _get_vote_results(self) -> Dict[str, Any]:
         """Get current vote results and statistics."""
