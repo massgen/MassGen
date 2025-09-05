@@ -581,6 +581,14 @@ class Orchestrator(ChatAgent):
                             type="debug", content=chunk_data, source=agent_id
                         )
 
+                    elif chunk_type == "mcp_status":
+                        # MCP status messages - forward with proper formatting
+                        mcp_message = f"🔧 MCP: {chunk_data}"
+                        log_stream_chunk("orchestrator", "mcp_status", chunk_data, agent_id)
+                        yield StreamChunk(
+                            type="content", content=mcp_message, source=agent_id
+                        )
+
                     elif chunk_type == "done":
                         # Stream completed - emit completion status for frontend
                         log_stream_chunk("orchestrator", "done", None, agent_id)
@@ -1025,6 +1033,10 @@ class Orchestrator(ChatAgent):
                         yield ("reasoning", reasoning_chunk)
                     elif chunk.type == "backend_status":
                         pass
+                    elif chunk.type == "mcp_status":
+                        # Forward MCP status messages with proper formatting
+                        mcp_content = f"🔧 MCP: {chunk.content}"
+                        yield ("content", mcp_content)
                     elif chunk.type == "debug":
                         # Forward debug chunks
                         yield ("debug", chunk.content)
@@ -1619,6 +1631,13 @@ Final Session ID: {session_id}.
                 log_stream_chunk("orchestrator", "content", content, selected_agent_id)
                 yield StreamChunk(
                     type="content", content=content, source=selected_agent_id
+                )
+            elif chunk.type == "mcp_status":
+                # Handle MCP status messages in final presentation
+                mcp_content = f"🔧 MCP: {chunk.content}"
+                log_stream_chunk("orchestrator", "content", mcp_content, selected_agent_id)
+                yield StreamChunk(
+                    type="content", content=mcp_content, source=selected_agent_id
                 )
 
             elif chunk.type == "done":
