@@ -828,7 +828,7 @@ class Orchestrator(ChatAgent):
         # Clear restart pending flag at the beginning of agent execution
         self.agent_states[agent_id].restart_pending = False
 
-        # Restore snapshots to workspace for Claude Code agents
+        # Restore snapshots to workspace for agents with filesystem support
         workspace_path = await self._restore_snapshots_to_workspace(agent_id)
         if workspace_path and hasattr(agent.backend, 'set_temporary_cwd'):
             # Set the temporary workspace path for context sharing
