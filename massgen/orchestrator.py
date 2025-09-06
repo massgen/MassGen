@@ -27,7 +27,7 @@ from .message_templates import MessageTemplates
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
-from .utils import ActionType, AgentStatus, EventType
+from .utils import ActionType, AgentStatus
 from .coordination_tracker import CoordinationTracker
 from .logger_config import (
     log_orchestrator_activity,
@@ -246,6 +246,7 @@ class Orchestrator(ChatAgent):
         if self.workflow_phase == "idle":
             # New task - start MassGen coordination with full context
             self.current_task = user_message
+            self.coordination_tracker.set_user_prompt(self.current_task)
             self.workflow_phase = "coordinating"
 
             async for chunk in self._coordinate_agents_with_timeout(
@@ -650,7 +651,7 @@ class Orchestrator(ChatAgent):
                 for agent_id in self.agent_states.keys():
                     self.agent_states[agent_id].restart_pending = True
                 # Track restart signals
-                self.coordination_tracker.track_restart_signal(restart_triggered_id, self.agent_states.keys())
+                self.coordination_tracker.track_restart_signal(restart_triggered_id, list(self.agent_states.keys()))
             # Set has_voted = True for agents that voted (only if no reset signal)
             else:
                 for agent_id, vote_data in voted_agents.items():
@@ -822,8 +823,8 @@ class Orchestrator(ChatAgent):
     def _check_restart_pending(self, agent_id: str) -> bool:
         """Check if agent should restart and yield restart message if needed. This is only called to exit out of _stream_agent_execution()."""
         restart_pending = self.agent_states[agent_id].restart_pending
-        if restart_pending:
-            self.coordination_tracker.track_agent_action(agent_id, ActionType.RESTART, "Gracefully restarting due to new answers from other agents")
+        # if restart_pending:
+        #     self.coordination_tracker.agent_restarted(agent_id)
         return restart_pending
 
     async def _cleanup_active_coordination(self) -> None:
