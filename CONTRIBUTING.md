@@ -28,6 +28,16 @@ massgen/
 │   ├── gemini.py           # Google Gemini backend
 │   ├── grok.py             # xAI Grok backend
 │   └── lmstudio.py         # LMStudio backend
+├── mcp_tools/              # MCP (Model Context Protocol) integration
+│   ├── __init__.py
+│   ├── README.md           # Comprehensive MCP documentation
+│   ├── client.py           # MCP client implementation
+│   ├── manager.py          # Multi-server MCP management
+│   ├── security.py         # Security validation and sanitization
+│   ├── server.py           # MCP server lifecycle management
+│   ├── session.py          # Session-based tool execution
+│   ├── tools.py            # Tool discovery and execution
+│   └── transport.py        # Transport layer (stdio, streamable-http)
 ├── frontend/               # User interface components
 │   ├── __init__.py
 │   ├── coordination_ui.py  # Main UI coordination
@@ -43,6 +53,8 @@ massgen/
 ├── tests/                  # Test files
 │   ├── __init__.py
 │   ├── test_*.py          # Test implementations
+│   ├── mcp_test_server.py # MCP stdio test server
+│   ├── test_http_mcp_server.py # MCP HTTP test server
 │   └── *.md               # Test documentation
 └── v1/                     # Legacy version 1 code
     ├── __init__.py
