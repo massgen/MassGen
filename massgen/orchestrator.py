@@ -175,6 +175,7 @@ class Orchestrator(ChatAgent):
         for agent_id, agent in self.agents.items():
             if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager:
                 agent.backend.filesystem_manager.setup_orchestration_paths(
+                    agent_id=agent_id,
                     snapshot_storage=self._snapshot_storage,
                     agent_temporary_workspace=self._agent_temporary_workspace
                 )

@@ -71,8 +71,7 @@ class LLMBackend(ABC):
                 from ..filesystem_manager import FilesystemManager
                 
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd,
-                    agent_id=kwargs.get("agent_id")
+                    cwd=cwd
                 )
                 
                 # Inject filesystem MCP server into configuration
@@ -82,8 +81,7 @@ class LLMBackend(ABC):
                 from ..filesystem_manager import FilesystemManager
                 
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd,
-                    agent_id=kwargs.get("agent_id")
+                    cwd=cwd
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
