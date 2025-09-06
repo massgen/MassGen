@@ -7,6 +7,14 @@ Base backend interface for LLM providers.
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from dataclasses import dataclass
+from enum import Enum
+
+
+class FilesystemSupport(Enum):
+    """Types of filesystem support for backends."""
+    NONE = "none"  # No filesystem support
+    NATIVE = "native"  # Built-in filesystem tools (like Claude Code)
+    MCP = "mcp"  # Filesystem support through MCP servers
 
 
 @dataclass
@@ -52,6 +60,34 @@ class LLMBackend(ABC):
         self.api_key = api_key
         self.config = kwargs
         self.token_usage = TokenUsage()
+        
+        # Filesystem manager integration
+        self.filesystem_manager = None
+        cwd = kwargs.get("cwd")
+        if cwd:
+            filesystem_support = self.get_filesystem_support()
+            if filesystem_support == FilesystemSupport.MCP:
+                # Backend supports MCP - inject filesystem MCP server
+                from ..filesystem_manager import FilesystemManager
+                
+                self.filesystem_manager = FilesystemManager(
+                    cwd=cwd,
+                    agent_id=kwargs.get("agent_id")
+                )
+                
+                # Inject filesystem MCP server into configuration
+                self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
+            elif filesystem_support == FilesystemSupport.NATIVE:
+                # Backend has native filesystem support - create manager but don't inject MCP
+                from ..filesystem_manager import FilesystemManager
+                
+                self.filesystem_manager = FilesystemManager(
+                    cwd=cwd,
+                    agent_id=kwargs.get("agent_id")
+                )
+                # Don't inject MCP - native backend handles filesystem tools itself
+            elif filesystem_support == FilesystemSupport.NONE:
+                raise ValueError(f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration.")
 
     @abstractmethod
     async def stream_with_tools(
@@ -113,6 +149,20 @@ class LLMBackend(ABC):
     def reset_token_usage(self):
         """Reset token usage tracking."""
         self.token_usage = TokenUsage()
+    
+    def get_filesystem_support(self) -> FilesystemSupport:
+        """
+        Get the type of filesystem support this backend provides.
+        
+        Returns:
+            FilesystemSupport: The type of filesystem support
+            - NONE: No filesystem capabilities
+            - NATIVE: Built-in filesystem tools (like Claude Code)  
+            - MCP: Can use filesystem through MCP servers
+        """
+        # By default, backends have no filesystem support
+        # Subclasses should override this method
+        return FilesystemSupport.NONE
 
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by this provider."""

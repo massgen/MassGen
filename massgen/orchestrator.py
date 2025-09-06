@@ -150,11 +150,11 @@ class Orchestrator(ChatAgent):
         self._active_streams: Dict = {}
         self._active_tasks: Dict = {}
         
-        # Context sharing for Claude Code agents
+        # Context sharing for agents with filesystem support
         self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
         
-        # Create snapshot storage and workspace directories if specified
+        # Setup base directories and configure agent filesystem managers
         if snapshot_storage:
             self._snapshot_storage = snapshot_storage
             snapshot_path = Path(self._snapshot_storage)
@@ -162,14 +162,6 @@ class Orchestrator(ChatAgent):
             if snapshot_path.exists() and any(snapshot_path.iterdir()):
                 shutil.rmtree(snapshot_path)
             snapshot_path.mkdir(parents=True, exist_ok=True)
-            # Create directories for each claude_code agent
-            for agent_id, agent in self.agents.items():
-                if hasattr(agent, 'backend'):
-                    if hasattr(agent.backend, 'get_provider_name'):
-                        provider_name = agent.backend.get_provider_name()
-                        if provider_name == 'claude_code':
-                            agent_dir = snapshot_path / agent_id
-                            agent_dir.mkdir(parents=True, exist_ok=True)
                         
         if agent_temporary_workspace:
             self._agent_temporary_workspace = agent_temporary_workspace
@@ -178,22 +170,14 @@ class Orchestrator(ChatAgent):
             if workspace_path.exists() and any(workspace_path.iterdir()):
                 shutil.rmtree(workspace_path)
             workspace_path.mkdir(parents=True, exist_ok=True)
-            # Create workspace directories for each claude_code agent
-            for agent_id, agent in self.agents.items():
-                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
-                    provider_name = agent.backend.get_provider_name()
-                    if provider_name == 'claude_code':
-                        agent_workspace = workspace_path / agent_id
-                        agent_workspace.mkdir(parents=True, exist_ok=True)
-                        
-            # Create log directories for each claude_code agent
-            log_session_dir = get_log_session_dir()
-            for agent_id, agent in self.agents.items():
-                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
-                    provider_name = agent.backend.get_provider_name()
-                    if provider_name == 'claude_code':
-                        agent_log_dir = log_session_dir / agent_id
-                        agent_log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Configure orchestration paths for each agent with filesystem support
+        for agent_id, agent in self.agents.items():
+            if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager:
+                agent.backend.filesystem_manager.setup_orchestration_paths(
+                    snapshot_storage=self._snapshot_storage,
+                    agent_temporary_workspace=self._agent_temporary_workspace
+                )
 
     async def chat(
         self,
@@ -523,7 +507,7 @@ class Orchestrator(ChatAgent):
                         if result_type == "answer":
                             # Agent provided an answer (initial or improved)
                             # Save snapshot when agent provides new answer
-                            await self._save_claude_code_snapshot(agent_id)
+                            await self._save_agent_snapshot(agent_id)
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             answered_agents[agent_id] = result_data
                             reset_signal = True
@@ -656,20 +640,10 @@ class Orchestrator(ChatAgent):
         if not agent:
             return None
             
-        # Check if this is a Claude Code agent
-        if not (hasattr(agent, 'backend') and 
-                hasattr(agent.backend, 'get_provider_name') and
-                agent.backend.get_provider_name() == 'claude_code'):
+        # Check if agent has filesystem support
+        if not (hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager):
             return None
             
-        # Get agent's workspace directory
-        workspace_dir = Path(self._agent_temporary_workspace) / agent_id
-        
-        # Clear existing workspace content completely
-        if workspace_dir.exists():
-            shutil.rmtree(workspace_dir)
-        workspace_dir.mkdir(parents=True, exist_ok=True)
-        
         # Create anonymous mapping for agent IDs (same logic as in message_templates.py)
         # This ensures consistency with the anonymous IDs shown to agents
         agent_mapping = {}
@@ -677,93 +651,43 @@ class Orchestrator(ChatAgent):
         for i, real_agent_id in enumerate(sorted_agent_ids, 1):
             agent_mapping[real_agent_id] = f"agent{i}"
         
-        # Copy all snapshots to workspace using anonymous IDs as folder names
+        # Collect all snapshots that exist
+        all_snapshots = {}
         snapshot_base = Path(self._snapshot_storage)
         for source_agent_id in self.agents.keys():
             source_snapshot = snapshot_base / source_agent_id
             if source_snapshot.exists() and source_snapshot.is_dir():
-                # Use anonymous ID for destination directory name
-                anon_id = agent_mapping[source_agent_id]
-                dest_dir = workspace_dir / anon_id
-                
-                # Copy snapshot content to directory with anonymous name
-                if list(source_snapshot.iterdir()):  # Only copy if not empty
-                    shutil.copytree(source_snapshot, dest_dir, dirs_exist_ok=True)
+                all_snapshots[source_agent_id] = source_snapshot
         
-        return str(workspace_dir)
+        # Use the filesystem manager to restore snapshots
+        workspace_path = await agent.backend.filesystem_manager.restore_snapshots(all_snapshots, agent_mapping)
+        return str(workspace_path) if workspace_path else None
     
-    async def _save_all_claude_code_snapshots(self) -> None:
-        """Save snapshots for all Claude Code agents."""
+    async def _save_all_agent_snapshots(self) -> None:
+        """Save snapshots for all agents with filesystem support."""
         if not self._snapshot_storage:
             return
             
         for agent_id in self.agents.keys():
-            await self._save_claude_code_snapshot(agent_id)
+            await self._save_agent_snapshot(agent_id)
     
-    async def _save_claude_code_snapshot(self, agent_id: str, is_final: bool = False) -> None:
-        """Save a snapshot of Claude Code agent's working directory.
+    async def _save_agent_snapshot(self, agent_id: str, is_final: bool = False) -> None:
+        """Save a snapshot of an agent's working directory.
         
         Args:
-            agent_id: ID of the Claude Code agent
-            is_final: If True, save workspace in a separate timestamped directory reserved for final presentation
+            agent_id: ID of the agent
+            is_final: If True, save as final snapshot for presentation
         """
-        
         if not self._snapshot_storage:
             return
             
         agent = self.agents.get(agent_id)
         if not agent:
             return
-            
-        # Check if this is a Claude Code agent
-        if not (hasattr(agent, 'backend') and 
-                hasattr(agent.backend, 'get_provider_name') and
-                agent.backend.get_provider_name() == 'claude_code'):
-            return
-            
-        # Get the working directory from the backend
-        # For final presentation, this should be the final workspace directory
-        if hasattr(agent.backend, '_cwd') and agent.backend._cwd:
-            source_dir = Path(agent.backend._cwd)
-            if source_dir.exists() and source_dir.is_dir():
-                # Destination directory for this agent's snapshots
-                dest_dir = Path(self._snapshot_storage) / agent_id if not is_final else Path(self._snapshot_storage) / "final" / agent_id
-                
-                # Clear existing snapshot and copy new one
-                if dest_dir.exists():
-                    shutil.rmtree(dest_dir)
-                dest_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Copy all contents from source to destination
-                for item in source_dir.iterdir():
-                    if item.is_file():
-                        shutil.copy2(item, dest_dir / item.name)
-                    elif item.is_dir():
-                        shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
-                
-                # Also copy snapshot to timestamped log directory
-                log_session_dir = get_log_session_dir()
-                
-                if is_final:
-                    agent_log_dir = log_session_dir / "final_workspace" / agent_id
-                    agent_log_dir.mkdir(parents=True, exist_ok=True)
-                else:
-                    agent_log_dir = log_session_dir / agent_id
-
-                if agent_log_dir.exists():
-                    # Check if source directory has any contents
-                    if any(source_dir.iterdir()):
-                        # Create timestamped subdirectory
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                        timestamped_dir = agent_log_dir / timestamp
-                        timestamped_dir.mkdir(parents=True, exist_ok=True)
-                        
-                        # Copy snapshot contents to timestamped directory
-                        for item in source_dir.iterdir():
-                            if item.is_file():
-                                shutil.copy2(item, timestamped_dir / item.name)
-                            elif item.is_dir():
-                                shutil.copytree(item, timestamped_dir / item.name, dirs_exist_ok=True)
+        
+        # Use the agent's filesystem manager if available
+        if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager:
+            await agent.backend.filesystem_manager.save_snapshot(is_final=is_final)
     
     async def _close_agent_stream(
         self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
@@ -1643,7 +1567,7 @@ Final Session ID: {session_id}.
             elif chunk.type == "done":
                 log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                 # Save the final workspace snapshot (from final workspace directory)
-                await self._save_claude_code_snapshot(selected_agent_id, is_final=True)
+                await self._save_agent_snapshot(selected_agent_id, is_final=True)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
                 log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)

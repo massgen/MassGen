@@ -67,7 +67,7 @@ import warnings
 import atexit
 
 
-from .base import LLMBackend, StreamChunk
+from .base import LLMBackend, StreamChunk, FilesystemSupport
 from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk, logger
 
 
@@ -233,6 +233,10 @@ class ClaudeCodeBackend(LLMBackend):
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         return "claude_code"
+    
+    def get_filesystem_support(self) -> FilesystemSupport:
+        """Claude Code has native filesystem support."""
+        return FilesystemSupport.NATIVE
 
     def is_stateful(self) -> bool:
         """
