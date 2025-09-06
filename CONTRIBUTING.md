@@ -31,13 +31,13 @@ massgen/
 ├── mcp_tools/              # MCP (Model Context Protocol) integration
 │   ├── __init__.py
 │   ├── README.md           # Comprehensive MCP documentation
+│   ├── backend_utils.py    # Backend utility functions for MCP
+│   ├── circuit_breaker.py  # Circuit breaker pattern implementation
 │   ├── client.py           # MCP client implementation
-│   ├── manager.py          # Multi-server MCP management
-│   ├── security.py         # Security validation and sanitization
-│   ├── server.py           # MCP server lifecycle management
-│   ├── session.py          # Session-based tool execution
-│   ├── tools.py            # Tool discovery and execution
-│   └── transport.py        # Transport layer (stdio, streamable-http)
+│   ├── config_validator.py # Configuration validation
+│   ├── converters.py       # Data format converters
+│   ├── exceptions.py       # Custom MCP exceptions
+│   └── security.py         # Security validation and sanitization
 ├── frontend/               # User interface components
 │   ├── __init__.py
 │   ├── coordination_ui.py  # Main UI coordination
