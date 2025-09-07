@@ -253,13 +253,13 @@ class FilesystemManager:
     
     def get_latest_snapshot(self, agent_id: str) -> Optional[Path]:
         """
-        Get the latest snapshot for an agent from log directories.
+        Get the latest workspace snapshot for an agent from log directories.
         
         Args:
-            agent_id: The agent ID to get the latest snapshot for
+            agent_id: The agent ID to get the latest workspace snapshot for
             
         Returns:
-            Path to the latest snapshot directory, or None if not found
+            Path to the latest workspace directory (agent_id/timestamp/workspace/), or None if not found
         """
         log_session_dir = get_log_session_dir()
         if not log_session_dir:
@@ -275,11 +275,13 @@ class FilesystemManager:
             if d.is_dir() and d.name.startswith('2')  # Timestamp starts with year
         ], key=lambda p: p.name, reverse=True)
         
-        # Return the most recent snapshot that has contents
+        # Return the most recent workspace directory that has contents
         for snapshot in snapshots:
-            if any(snapshot.iterdir()):
-                return snapshot
-                
+            workspace_dir = snapshot / "workspace"
+            if workspace_dir.exists() and workspace_dir.is_dir():
+                if any(workspace_dir.iterdir()):
+                    return workspace_dir
+                    
         return None
     
     async def copy_snapshots_to_temp_workspace(self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]) -> Optional[Path]:

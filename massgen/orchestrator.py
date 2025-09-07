@@ -1448,6 +1448,9 @@ class Orchestrator(ChatAgent):
         ):
             final_answer = self.agent_states[self._selected_agent].answer
 
+            # Save the final workspace snapshot (from final workspace directory)
+            await self._save_agent_snapshot(self._selected_agent, answer_content=final_answer, is_final=True)
+
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
 
@@ -1722,8 +1725,6 @@ Final Session ID: {session_id}.
 
             elif chunk.type == "done":
                 log_stream_chunk("orchestrator", "done", None, selected_agent_id)
-                # Save the final workspace snapshot (from final workspace directory)
-                await self._save_agent_snapshot(selected_agent_id, is_final=True)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
                 log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
