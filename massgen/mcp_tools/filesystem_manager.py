@@ -90,35 +90,37 @@ class FilesystemManager:
                 agent_log_dir.mkdir(parents=True, exist_ok=True)
     
     def _setup_workspace(self, cwd: str) -> Path:
-        """
-        Setup workspace directory, creating if needed and clearing existing files.
-        
-        Args:
-            cwd: Path to workspace directory
-            
-        Returns:
-            Absolute path to the workspace
+        """Setup workspace directory, creating if needed and clearing existing files safely."""
+        workspace = Path(cwd).resolve()
 
-        TODO: Need to have an option in config to NOT clear existing files. What if a user provides a workspace with existing files they want to keep? E.g., a codebase.
-        """
-        workspace = Path(cwd)
-        
-        # Convert to absolute path
+        # Safety checks
         if not workspace.is_absolute():
-            workspace = workspace.resolve()
-        
-        # Clear existing files if directory exists (like Claude Code does)
+            raise AssertionError("Workspace must be absolute")
+        if workspace == Path("/") or len(workspace.parts) < 3:
+            raise AssertionError(f"Refusing unsafe workspace path: {workspace}")
+        if self.agent_temporary_workspace_parent:
+            parent = Path(self.agent_temporary_workspace_parent).resolve()
+            try:
+                workspace.relative_to(parent)
+            except ValueError:
+                raise AssertionError(f"Workspace must be under safe parent: {parent}")
+
+        # Create if needed
+        workspace.mkdir(parents=True, exist_ok=True)
+
+        # Clear existing contents
         if workspace.exists() and workspace.is_dir():
             for item in workspace.iterdir():
+                if item.is_symlink():
+                    raise AssertionError(f"Refusing to clear symlink in workspace: {item}")
                 if item.is_file():
                     item.unlink()
                 elif item.is_dir():
                     shutil.rmtree(item)
-        
-        # Create directory if it doesn't exist
-        workspace.mkdir(parents=True, exist_ok=True)
-        
+
         return workspace
+
+
     
     def get_mcp_filesystem_config(self) -> Dict[str, Any]:
         """
