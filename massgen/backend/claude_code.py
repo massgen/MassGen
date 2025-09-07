@@ -802,6 +802,7 @@ class ClaudeCodeBackend(LLMBackend):
         # Filter out parameters handled separately or not for ClaudeCodeOptions
         excluded_params = {
             "cwd",
+            "agent_temporary_workspace",
             "permission_mode",
             "type",
             "agent_id",
