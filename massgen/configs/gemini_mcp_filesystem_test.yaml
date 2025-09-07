@@ -6,17 +6,17 @@ agents:
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"
-      cwd: "gemini_workspace1"  # Working directory for file operations
+      cwd: "workspace1"  # Working directory for file operations
 
   - id: "gemini_agent2"
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"
-      cwd: "gemini_workspace2"  # Working directory for file operations
+      cwd: "workspace2"  # Working directory for file operations
 
 orchestrator:
-    snapshot_storage: "gemini_snapshots"  # Directory to store workspace snapshots
-    agent_temporary_workspace: "gemini_temp_workspaces"  # Directory for temporary agent workspaces
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
 
 ui:
   display_type: "rich_terminal"

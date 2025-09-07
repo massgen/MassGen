@@ -32,13 +32,15 @@ class FilesystemManager:
     
     def __init__(
         self,
-        cwd: str
+        cwd: str,
+        agent_temporary_workspace_parent: str = None
     ):
         """
         Initialize FilesystemManager.
         
         Args:
             cwd: Working directory path for the agent
+            agent_temporary_workspace_parent: Parent directory for temporary workspaces
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         
@@ -47,7 +49,8 @@ class FilesystemManager:
         
         # Orchestration-specific paths (set by setup_orchestration_paths)
         self.snapshot_storage = None
-        self.agent_temporary_workspace = None
+        self.agent_temporary_workspace = None  # Full path for this specific agent's temporary workspace
+        self.agent_temporary_workspace_parent = agent_temporary_workspace_parent
         
         # Track whether we're using a temporary workspace
         self._using_temporary = False
@@ -69,7 +72,6 @@ class FilesystemManager:
             agent_temporary_workspace: Base path for temporary workspace during context sharing
         """
         self.agent_id = agent_id
-        logger.info(f"[FilesystemManager] setup_orchestration_paths called - agent_id: {agent_id}, snapshot_storage: {snapshot_storage}, agent_temporary_workspace: {agent_temporary_workspace}")
         # Setup snapshot storage if provided
         if snapshot_storage and self.agent_id:
             self.snapshot_storage = Path(snapshot_storage) / self.agent_id
@@ -125,21 +127,20 @@ class FilesystemManager:
         Returns:
             Dictionary with MCP server configuration for filesystem access
         """
-        # Determine which workspace to use
-        workspace_path = str(self.agent_temporary_workspace if self._using_temporary and self.agent_temporary_workspace else self.cwd)
-        
-        # Build MCP server configuration
-        # For now, we only allow access to the workspace directory
-        # In the future, we could add more directories based on configuration
+        # Build MCP server configuration with access to both workspaces
         config = {
             "type": "stdio",
             "command": "npx",
             "args": [
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
-                workspace_path  # Primary workspace directory
+                str(self.cwd)  # Main workspace directory
             ]
         }
+        
+        # Add temporary workspace parent if it exists (for context sharing)
+        if self.agent_temporary_workspace_parent:
+            config["args"].append(str(self.agent_temporary_workspace_parent))
         
         return config
     
@@ -252,6 +253,8 @@ class FilesystemManager:
     async def restore_snapshots(self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]) -> Optional[Path]:
         """
         Restore snapshots from multiple agents to temporary workspace.
+
+        This method is called by the orchestrator before starting an agent that needs context from others. This ensures it has all the necessary files in its temporary workspace.
         
         Args:
             all_snapshots: Dictionary mapping agent_id to snapshot path

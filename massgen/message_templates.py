@@ -3,6 +3,7 @@ Message templates for MassGen framework following input_cases_reference.md
 Implements proven binary decision framework that eliminates perfectionism loops.
 """
 
+import re
 from typing import Dict, Any, Optional, List
 
 
@@ -436,6 +437,58 @@ Based on the coordination process above, present your final answer:"""
         messages = conversation_messages.copy()
         messages.append({"role": "user", "content": self.enforcement_message()})
         return messages
+
+    def filesystem_system_message(
+        self, 
+        main_workspace: Optional[str] = None,
+        temp_workspace: Optional[str] = None
+    ) -> str:
+        """Generate filesystem access instructions for agents with filesystem support.
+        
+        Args:
+            main_workspace: Path to agent's main workspace
+            temp_workspace: Path to temporary workspace for context sharing
+        """
+        if "filesystem_system_message" in self._template_overrides:
+            return str(self._template_overrides["filesystem_system_message"])
+
+        # Build workspace information
+        workspace_info = []
+        if main_workspace:
+            workspace_info.append(f"1. **Your Main Workspace**: `{main_workspace}`")
+            workspace_info.append("   - Use this for creating your own files and outputs if providing new_answer")
+            workspace_info.append("   - For voting, you only need to read from context workspace")
+        
+        if temp_workspace:
+            workspace_info.append(f"2. **Context Workspace**: `{temp_workspace}`")
+            workspace_info.append("   - Contains work from other agents for reference")
+            workspace_info.append("   - Files organized by anonymous agent IDs (agent1/, agent2/, etc.)")
+            workspace_info.append("   - **READ ONLY** - do not modify files here")
+            workspace_info.append("   - IMPORTANT: Each agent works in their own separate workspace")
+            workspace_info.append("   - File paths in answers have been normalized to show where you can access their work")
+            workspace_info.append("   - All agents' work is equally valid regardless of which workspace directory they used")
+            workspace_info.append("   - Focus on evaluating the content and quality of their work, not the specific paths")
+
+        workspace_section = "\n".join(workspace_info) if workspace_info else "- Check your available directories using filesystem tools"
+
+        return f"""## Filesystem Access
+
+You have access to filesystem operations through MCP tools allowing you to read and write files.
+
+### Your Accessible Directories:
+
+{workspace_section}
+
+### Best Practices:
+
+- Always save your own work in your main workspace
+- Use absolute paths when possible for clarity
+- When referencing others' work, read from context directories first
+- Create meaningful file names and directory structure
+
+### IMPORTANT Evaluation Note:
+When evaluating other agents' work, focus on the CONTENT and FUNCTIONALITY of their files. Each agent works in their own isolated workspace - this is correct behavior. The paths shown in their answers are normalized so you can access and verify their work. Judge based on code quality, correctness, and completeness, not on which workspace directory was used.
+"""
 
 
 # Global template instance

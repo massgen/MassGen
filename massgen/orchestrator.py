@@ -17,6 +17,7 @@ TODOs:
 
 import asyncio
 import os
+import re
 import time
 import shutil
 from pathlib import Path
@@ -154,6 +155,7 @@ class Orchestrator(ChatAgent):
         self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
         
+        # TODO: Remove the below, they are no longer necessary and should instead go in the FilesystemManager
         # Setup base directories and configure agent filesystem managers
         if snapshot_storage:
             self._snapshot_storage = snapshot_storage
@@ -634,15 +636,12 @@ class Orchestrator(ChatAgent):
         Returns:
             Path to the agent's workspace directory if successful, None otherwise
         """
-        if not self._agent_temporary_workspace or not self._snapshot_storage:
-            return None
-            
         agent = self.agents.get(agent_id)
         if not agent:
             return None
             
         # Check if agent has filesystem support
-        if not (hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager):
+        if not agent.backend.filesystem_manager:
             return None
             
         # Create anonymous mapping for agent IDs (same logic as in message_templates.py)
@@ -687,7 +686,7 @@ class Orchestrator(ChatAgent):
             return
         
         # Use the agent's filesystem manager if available
-        if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager:
+        if agent.backend.filesystem_manager:
             await agent.backend.filesystem_manager.save_snapshot(is_final=is_final)
     
     async def _close_agent_stream(
@@ -704,6 +703,79 @@ class Orchestrator(ChatAgent):
     def _check_restart_pending(self, agent_id: str) -> bool:
         """Check if agent should restart and yield restart message if needed."""
         return self.agent_states[agent_id].restart_pending
+
+    def _normalize_workspace_paths_in_answers(self, answers: Dict[str, str], viewing_agent_id: Optional[str] = None) -> Dict[str, str]:
+        """Normalize absolute workspace paths in agent answers to accessible temporary workspace paths.
+        
+        This addresses the issue where agents working in separate workspace directories
+        reference the same logical files using different absolute paths, causing them
+        to think they're working on different tasks when voting.
+
+        Converts workspace paths to temporary workspace paths where the viewing agent can actually
+        access other agents' files for verification during context sharing.
+
+        TODO: Replace with Docker volume mounts to ensure consistent paths across agents.
+        
+        Args:
+            answers: Dict mapping agent_id to their answer content
+            viewing_agent_id: The agent who will be reading these answers. 
+                            If None, normalizes to generic "workspace/" prefix.
+            
+        Returns:
+            Dict with same keys but normalized answer content with accessible paths
+        """
+        normalized_answers = {}
+        
+        # Get viewing agent's temporary workspace path for context sharing
+        temp_workspace_base = None
+        if viewing_agent_id:
+            viewing_agent = self.agents.get(viewing_agent_id)
+            if viewing_agent and viewing_agent.backend.filesystem_manager:
+                temp_workspace_base = viewing_agent.backend.filesystem_manager.agent_temporary_workspace
+        
+        # Create anonymous agent mapping for consistent directory names
+        agent_mapping = {}
+        sorted_agent_ids = sorted(self.agents.keys())
+        for i, real_agent_id in enumerate(sorted_agent_ids, 1):
+            agent_mapping[real_agent_id] = f"agent{i}"
+        
+        for agent_id, answer in answers.items():
+            normalized_answer = answer
+            
+            # Replace all workspace paths found in the answer
+            for other_agent_id, other_agent in self.agents.items():
+                if not other_agent.backend.filesystem_manager:
+                    continue
+                    
+                # Get this agent's workspace path
+                other_workspace = str(other_agent.backend.filesystem_manager.get_current_workspace())
+
+                # Pattern matches the workspace path followed by optional slash and captures the rest
+                workspace_pattern = re.escape(other_workspace) + r'/?(.*)' 
+                
+                def replace_workspace(match):
+                    remainder = match.group(1)
+                    anon_agent_id = agent_mapping.get(other_agent_id, f"agent_{other_agent_id}")
+                    
+                    if temp_workspace_base and remainder:
+                        # Replace with accessible path in temporary workspace
+                        replacement = f"{temp_workspace_base}/{anon_agent_id}/{remainder}"
+                    elif temp_workspace_base and not remainder:
+                        # Just the agent's directory in temporary workspace
+                        replacement = f"{temp_workspace_base}/{anon_agent_id}"
+                    elif remainder:
+                        # Fallback to generic workspace prefix
+                        replacement = f"{anon_agent_id}/{remainder}"
+                    else:
+                        replacement = anon_agent_id
+                    
+                    return replacement
+                
+                normalized_answer = re.sub(workspace_pattern, replace_workspace, normalized_answer)
+            
+            normalized_answers[agent_id] = normalized_answer
+            
+        return normalized_answers
 
     async def _cleanup_active_coordination(self) -> None:
         """Force cleanup of active coordination streams and tasks on timeout."""
@@ -837,6 +909,19 @@ class Orchestrator(ChatAgent):
         try:
             # Get agent's custom system message if available
             agent_system_message = agent.get_configurable_system_message()
+
+            # Append filesystem system message, if applicable
+            if agent.backend.filesystem_manager:
+                main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+                temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+                filesystem_system_message = self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace
+                )
+                agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
+            
+            # Normalize workspace paths in agent answers for better comparison from this agent's perspective
+            normalized_answers = self._normalize_workspace_paths_in_answers(answers, agent_id) if answers else answers
             
             # Build conversation with context support
             if conversation_context and conversation_context.get(
@@ -848,16 +933,16 @@ class Orchestrator(ChatAgent):
                     conversation_history=conversation_context.get(
                         "conversation_history", []
                     ),
-                    agent_summaries=answers,
-                    valid_agent_ids=list(answers.keys()) if answers else None,
+                    agent_summaries=normalized_answers,
+                    valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
                 )
             else:
                 # Fallback to standard conversation building
                 conversation = self.message_templates.build_initial_conversation(
                     task=task,
-                    agent_summaries=answers,
-                    valid_agent_ids=list(answers.keys()) if answers else None,
+                    agent_summaries=normalized_answers,
+                    valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
                 )
             
@@ -1463,11 +1548,15 @@ class Orchestrator(ChatAgent):
             aid: s.answer for aid, s in self.agent_states.items() if s.answer
         }
 
+        # Normalize workspace paths in both voting summary and all answers for final presentation. Use same function for consistency.
+        normalized_voting_summary = self._normalize_workspace_paths_in_answers({selected_agent_id: voting_summary}, selected_agent_id)[selected_agent_id]
+        normalized_all_answers = self._normalize_workspace_paths_in_answers(all_answers, selected_agent_id)
+
         # Use MessageTemplates to build the presentation message
         presentation_content = self.message_templates.build_final_presentation_message(
             original_task=self.current_task or "Task coordination",
-            vote_summary=voting_summary,
-            all_answers=all_answers,
+            vote_summary=normalized_voting_summary,
+            all_answers=normalized_all_answers,
             selected_agent_id=selected_agent_id,
         )
 
@@ -1480,18 +1569,13 @@ class Orchestrator(ChatAgent):
         )
         
         # Add workspace context information to system message if workspace was restored
-        if temp_workspace_path:
-            workspace_context_parts = []
-            absolute_temp_path = os.path.join(os.getcwd(), temp_workspace_path)
-            workspace_context_parts.append(f"    Context: You have access to a reference workspace at: {absolute_temp_path}")
-            workspace_context_parts.append("    This reference workspace contains work from yourself and other agents for REFERENCE ONLY.")
-            workspace_context_parts.append("    CRITICAL: You should READ documents or EXECUTE code from the reference workspace to understand other agents' work.")
-            workspace_context_parts.append("    When you READ or EXECUTE content from the reference workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the reference workspace as well.")
-            workspace_context_parts.append(f"    You also can look in your working directory for your most updated information.")
-            workspace_context_parts.append(f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.")
-            
-            workspace_context = "\n".join(workspace_context_parts)
-            base_system_message = f"{base_system_message}\n\n{workspace_context}"
+        if agent.backend.filesystem_manager and temp_workspace_path:
+            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+            base_system_message += "\n\n" + self.message_templates.filesystem_system_message(
+                main_workspace=main_workspace,
+                temp_workspace=temp_workspace
+            )
         
         # Create conversation with system and user messages
         presentation_messages = [

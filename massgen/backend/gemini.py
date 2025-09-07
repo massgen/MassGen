@@ -1203,7 +1203,8 @@ Make your decision and include the JSON at the very end of your response."""
             excluded_params = {
                 "enable_web_search", "enable_code_execution", "agent_id", "session_id",
                 # MCP-specific parameters that should not be passed to Gemini
-                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto", "type", "allowed_tools", "exclude_tools", "cwd"
+                # TODO: Place this somewhere we can import from when extending MCP support to other backends
+                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto", "type", "allowed_tools", "exclude_tools", "cwd", "agent_temporary_workspace"
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:

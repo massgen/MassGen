@@ -70,8 +70,11 @@ class LLMBackend(ABC):
                 # Backend supports MCP - inject filesystem MCP server
                 from ..filesystem_manager import FilesystemManager
                 
+                # Get temporary workspace parent from kwargs if available
+                temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd
+                    cwd=cwd,
+                    agent_temporary_workspace_parent=temp_workspace_parent
                 )
                 
                 # Inject filesystem MCP server into configuration
@@ -80,12 +83,17 @@ class LLMBackend(ABC):
                 # Backend has native filesystem support - create manager but don't inject MCP
                 from ..filesystem_manager import FilesystemManager
                 
+                # Get temporary workspace parent from kwargs if available  
+                temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd
+                    cwd=cwd,
+                    agent_temporary_workspace_parent=temp_workspace_parent
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
                 raise ValueError(f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration.")
+        else:
+            self.filesystem_manager = None
 
     @abstractmethod
     async def stream_with_tools(
