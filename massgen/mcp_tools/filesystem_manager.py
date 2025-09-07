@@ -183,10 +183,14 @@ class FilesystemManager:
         Args:
             source_dir: Source directory to snapshot (defaults to current workspace)
             is_final: If True, save as final snapshot for presentation
+
+        TODO: reimplement without 'shutil' and 'os' operations for true async 
         """
+
         if not self.snapshot_storage:
+            logger.warning("No snapshot storage dir set — skipping save_snapshot")
             return
-        
+
         # Use current workspace if no source specified
         if source_dir is None:
             source_dir = self.cwd
@@ -254,6 +258,8 @@ class FilesystemManager:
             
         Returns:
             Path to the temporary workspace with restored snapshots
+
+        TODO: reimplement without 'shutil' and 'os' operations for true async
         """
         if not self.agent_temporary_workspace:
             return None
@@ -301,12 +307,30 @@ class FilesystemManager:
         return self.cwd
     
     def cleanup(self) -> None:
-        """
-        Cleanup temporary resources (not the main workspace).
-        """
-        # Only cleanup temporary workspace, not main workspace or snapshots
-        if self.agent_temporary_workspace and self.agent_temporary_workspace.exists():
-            try:
-                shutil.rmtree(self.agent_temporary_workspace)
-            except Exception as e:
-                logger.warning(f"Failed to cleanup temporary workspace: {e}")
+        """Cleanup temporary resources (not the main workspace)."""
+
+        p = self.agent_temporary_workspace
+
+        #Aggressive path-checking for validity 
+        if not p:
+            return
+        try:
+            p = p.resolve()
+            if not p.exists():
+                return
+            assert p.is_absolute(), "Temporary workspace must be absolute"
+            assert p.is_dir(), "Temporary workspace must be a directory"
+
+            if self.agent_temporary_workspace_parent:
+                parent = Path(self.agent_temporary_workspace_parent).resolve()
+                try:
+                    p.relative_to(parent)
+                except ValueError:
+                    raise AssertionError(f"Refusing to delete workspace outside of parent: {p}")
+
+            if p == Path("/") or len(p.parts) < 3:
+                raise AssertionError(f"Unsafe path for deletion: {p}")
+
+            shutil.rmtree(p)
+        except Exception as e:
+            logger.warning(f"[FilesystemManager] cleanup failed for {p}: {e}")
