@@ -33,7 +33,8 @@ class FilesystemManager:
     def __init__(
         self,
         cwd: str,
-        agent_temporary_workspace_parent: str = None
+        agent_temporary_workspace_parent: str = None,
+        parent: str = "workspaces"
     ):
         """
         Initialize FilesystemManager.
@@ -41,14 +42,22 @@ class FilesystemManager:
         Args:
             cwd: Working directory path for the agent
             agent_temporary_workspace_parent: Parent directory for temporary workspaces
+            parent: Parent directory for all workspaces (default: "workspaces")
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
+        self.parent = parent
         
         # Set agent_temporary_workspace_parent first, before calling _setup_workspace
         self.agent_temporary_workspace_parent = agent_temporary_workspace_parent
+
         # Get absolute path for temporary workspace parent if provided
         if self.agent_temporary_workspace_parent:
-            temp_parent_path = Path(self.agent_temporary_workspace_parent)
+            # Add parent directory prefix for temp workspaces if not already present
+            temp_parent = self.agent_temporary_workspace_parent
+            if not Path(temp_parent).is_absolute() and not str(temp_parent).startswith(self.parent):
+                temp_parent = f"{self.parent}/{temp_parent}"
+            
+            temp_parent_path = Path(temp_parent)
             if not temp_parent_path.is_absolute():
                 temp_parent_path = temp_parent_path.resolve()
             self.agent_temporary_workspace_parent = temp_parent_path
@@ -56,8 +65,7 @@ class FilesystemManager:
         # Setup main working directory (now that agent_temporary_workspace_parent is set)
         self.cwd = self._setup_workspace(cwd)
         
-        # Orchestration-specific paths (set by setup_orchestration_paths)
-        self.snapshot_storage = None
+        # Orchestration-specific paths (set by setup_orchestration_paths) 
         self.agent_temporary_workspace = None  # Full path for this specific agent's temporary workspace
          
         # Track whether we're using a temporary workspace
@@ -67,32 +75,22 @@ class FilesystemManager:
     def setup_orchestration_paths(
         self,
         agent_id: str,
-        snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None
     ) -> None:
         """
-        Setup orchestration-specific paths for snapshots and temporary workspace.
+        Setup orchestration-specific paths for temporary workspace.
         Called by orchestrator to configure paths for this specific orchestration.
         
         Args:
             agent_id: The agent identifier for this orchestration
-            snapshot_storage: Base path for storing workspace snapshots
             agent_temporary_workspace: Base path for temporary workspace during context sharing
         """
+        logger.info(f"[FilesystemManager.setup_orchestration_paths] Called for agent_id={agent_id}, agent_temporary_workspace={agent_temporary_workspace}")
         self.agent_id = agent_id
-        # Setup snapshot storage if provided
-        if snapshot_storage and self.agent_id:
-            self.snapshot_storage = Path(snapshot_storage) / self.agent_id
-            self.snapshot_storage.mkdir(parents=True, exist_ok=True)
-        
+
         # Setup temporary workspace for context sharing
         if agent_temporary_workspace and self.agent_id:
-            temp_workspace_path = Path(agent_temporary_workspace) / self.agent_id
-            # Convert to absolute path
-            if not temp_workspace_path.is_absolute():
-                temp_workspace_path = temp_workspace_path.resolve()
-            self.agent_temporary_workspace = temp_workspace_path
-            self.agent_temporary_workspace.mkdir(parents=True, exist_ok=True)
+            self.agent_temporary_workspace = self._setup_workspace(self.agent_temporary_workspace_parent / self.agent_id)
             
         # Also setup log directories if we have an agent_id
         if self.agent_id:
@@ -103,6 +101,11 @@ class FilesystemManager:
     
     def _setup_workspace(self, cwd: str) -> Path:
         """Setup workspace directory, creating if needed and clearing existing files safely."""
+        # Add parent directory prefix if not already present
+        cwd_path = Path(cwd)
+        if not cwd_path.is_absolute() and not str(cwd_path).startswith(self.parent):
+            cwd = f"{self.parent}/{cwd}"
+        
         workspace = Path(cwd).resolve()
 
         # Safety checks
@@ -184,24 +187,28 @@ class FilesystemManager:
         
         return backend_config
     
-    async def save_snapshot(self, source_dir: Optional[Path] = None, is_final: bool = False) -> None:
+    async def save_snapshot(self, source_dir: Optional[Path] = None, timestamp: Optional[str] = None, is_final: bool = False) -> None:
         """
-        Save a snapshot of the workspace.
+        Save a snapshot of the workspace to log directories.
         
         Args:
             source_dir: Source directory to snapshot (defaults to current workspace)
+            timestamp: Optional timestamp to use for the snapshot directory (if not provided, generates one)
             is_final: If True, save as final snapshot for presentation
 
-        TODO: reimplement without 'shutil' and 'os' operations for true async 
+        TODO: reimplement without 'shutil' and 'os' operations for true async, though we may not need to worry about race conditions here since only one agent writes at a time
         """
-
-        if not self.snapshot_storage:
-            logger.warning("No snapshot storage dir set — skipping save_snapshot")
+        logger.info(f"[FilesystemManager.save_snapshot] Called for agent_id={self.agent_id}, is_final={is_final}, source_dir={source_dir}")
+        
+        log_session_dir = get_log_session_dir()
+        if not log_session_dir or not self.agent_id:
+            logger.warning(f"No log session dir or agent_id set — skipping save_snapshot (log_session_dir={log_session_dir}, agent_id={self.agent_id})")
             return
 
         # Use current workspace if no source specified
         if source_dir is None:
             source_dir = self.cwd
+            logger.info(f"[FilesystemManager.save_snapshot] Using default cwd: {self.cwd}")
         
         source_path = Path(source_dir)
         
@@ -209,59 +216,81 @@ class FilesystemManager:
             logger.warning(f"[FilesystemManager] Source path invalid - exists: {source_path.exists()}, is_dir: {source_path.is_dir() if source_path.exists() else False}")
             return
         
-        # Determine destination
+        # Determine destination directory
         if is_final:
-            dest_dir = self.snapshot_storage.parent / "final" / self.agent_id if self.agent_id else self.snapshot_storage / "final"
+            # For final snapshots, save to final/agent_id/workspace/
+            dest_dir = log_session_dir / "final" / self.agent_id / "workspace"
+            logger.info(f"[FilesystemManager.save_snapshot] Final snapshot dest_dir: {dest_dir}")
+            # Clear existing final snapshot
+            if dest_dir.exists():
+                shutil.rmtree(dest_dir)
+            dest_dir.mkdir(parents=True, exist_ok=True)
         else:
-            dest_dir = self.snapshot_storage
-        
-        # Clear existing snapshot and copy new one
-        if dest_dir.exists():
-            shutil.rmtree(dest_dir)
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Copy all contents
-        items_copied = 0
-        for item in source_path.iterdir():
-            if item.is_file():
-                shutil.copy2(item, dest_dir / item.name)
-                items_copied += 1
-                logger.debug(f"[FilesystemManager] Copied file: {item.name}")
-            elif item.is_dir():
-                shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
-                items_copied += 1
-                logger.debug(f"[FilesystemManager] Copied directory: {item.name}")
-        
-        # Also save timestamped snapshot to log directory
-        log_session_dir = get_log_session_dir()
-        if log_session_dir and self.agent_id:
-            if is_final:
-                log_dir = log_session_dir / "final_workspace" / self.agent_id
-                log_dir.mkdir(parents=True, exist_ok=True)
-            else:
-                log_dir = log_session_dir / self.agent_id
-            
-            if any(source_path.iterdir()):
-                # Create timestamped subdirectory
+            # For regular snapshots, create agent_id/timestamp/workspace/ structure
+            if not timestamp:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                timestamped_dir = log_dir / timestamp
-                timestamped_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Copy snapshot contents
-                for item in source_path.iterdir():
-                    if item.is_file():
-                        shutil.copy2(item, timestamped_dir / item.name)
-                    elif item.is_dir():
-                        shutil.copytree(item, timestamped_dir / item.name, dirs_exist_ok=True)
+            dest_dir = log_session_dir / self.agent_id / timestamp / "workspace"
+            logger.info(f"[FilesystemManager.save_snapshot] Regular snapshot dest_dir: {dest_dir}")
+            dest_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Only copy if source has contents
+        if any(source_path.iterdir()):
+            items_copied = 0
+            # Copy snapshot contents
+            for item in source_path.iterdir():
+                if item.is_file():
+                    shutil.copy2(item, dest_dir / item.name)
+                    items_copied += 1
+                    logger.info(f"[FilesystemManager] Copied file: {item.name}")
+                elif item.is_dir():
+                    shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
+                    items_copied += 1
+                    logger.info(f"[FilesystemManager] Copied directory: {item.name}")
+            
+            logger.info(f"[FilesystemManager] Saved {'final' if is_final else 'regular'} snapshot with {items_copied} items to {dest_dir}")
+        else:
+            logger.warning(f"[FilesystemManager.save_snapshot] Source path {source_path} is empty, skipping snapshot")
     
-    async def restore_snapshots(self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]) -> Optional[Path]:
+    def get_latest_snapshot(self, agent_id: str) -> Optional[Path]:
         """
-        Restore snapshots from multiple agents to temporary workspace.
-
-        This method is called by the orchestrator before starting an agent that needs context from others. This ensures it has all the necessary files in its temporary workspace.
+        Get the latest snapshot for an agent from log directories.
         
         Args:
-            all_snapshots: Dictionary mapping agent_id to snapshot path
+            agent_id: The agent ID to get the latest snapshot for
+            
+        Returns:
+            Path to the latest snapshot directory, or None if not found
+        """
+        log_session_dir = get_log_session_dir()
+        if not log_session_dir:
+            return None
+        
+        agent_log_dir = log_session_dir / agent_id
+        if not agent_log_dir.exists() or not agent_log_dir.is_dir():
+            return None
+            
+        # Get all timestamped subdirectories, sorted by name (which sorts by timestamp)
+        snapshots = sorted([
+            d for d in agent_log_dir.iterdir() 
+            if d.is_dir() and d.name.startswith('2')  # Timestamp starts with year
+        ], key=lambda p: p.name, reverse=True)
+        
+        # Return the most recent snapshot that has contents
+        for snapshot in snapshots:
+            if any(snapshot.iterdir()):
+                return snapshot
+                
+        return None
+    
+    async def copy_snapshots_to_temp_workspace(self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]) -> Optional[Path]:
+        """
+        Copy snapshots from multiple agents to temporary workspace for context sharing.
+
+        This method is called by the orchestrator before starting an agent that needs context from others. 
+        It copies the latest snapshots from log directories to a temporary workspace.
+        
+        Args:
+            all_snapshots: Dictionary mapping agent_id to snapshot path (from log directories)
             agent_mapping: Dictionary mapping real agent_id to anonymous agent_id
             
         Returns:
@@ -289,6 +318,50 @@ class FilesystemManager:
                     shutil.copytree(snapshot_path, dest_dir, dirs_exist_ok=True)
         
         return self.agent_temporary_workspace
+    
+    def _log_workspace_contents(self, workspace_path: Path, workspace_name: str, context: str = "") -> None:
+        """
+        Log the contents of a workspace directory for visibility.
+        
+        Args:
+            workspace_path: Path to the workspace to log
+            workspace_name: Human-readable name for the workspace
+            context: Additional context (e.g., "before execution", "after execution")
+        """
+        if not workspace_path or not workspace_path.exists():
+            logger.info(f"[FilesystemManager.{workspace_name}] {context} - Workspace does not exist: {workspace_path}")
+            return
+            
+        try:
+            files = list(workspace_path.rglob('*'))
+            file_paths = [str(f.relative_to(workspace_path)) for f in files if f.is_file()]
+            dir_paths = [str(f.relative_to(workspace_path)) for f in files if f.is_dir()]
+            
+            logger.info(f"[FilesystemManager.{workspace_name}] {context} - Workspace: {workspace_path}")
+            if file_paths:
+                logger.info(f"[FilesystemManager.{workspace_name}] {context} - Files ({len(file_paths)}): {file_paths}")
+            if dir_paths:
+                logger.info(f"[FilesystemManager.{workspace_name}] {context} - Directories ({len(dir_paths)}): {dir_paths}")
+            if not file_paths and not dir_paths:
+                logger.info(f"[FilesystemManager.{workspace_name}] {context} - Empty workspace")
+        except Exception as e:
+            logger.warning(f"[FilesystemManager.{workspace_name}] {context} - Error reading workspace: {e}")
+    
+    def log_current_state(self, context: str = "") -> None:
+        """
+        Log the current state of both main and temp workspaces.
+        
+        Args:
+            context: Context for the logging (e.g., "before execution", "after answer")
+        """
+        agent_context = f"agent_id={self.agent_id}, {context}" if context else f"agent_id={self.agent_id}"
+        
+        # Log main workspace
+        self._log_workspace_contents(self.get_current_workspace(), "main_workspace", agent_context)
+        
+        # Log temp workspace if it exists
+        if self.agent_temporary_workspace:
+            self._log_workspace_contents(self.agent_temporary_workspace, "temp_workspace", agent_context)
     
     def set_temporary_workspace(self, use_temporary: bool = True) -> None:
         """
