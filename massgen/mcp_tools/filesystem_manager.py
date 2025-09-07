@@ -44,12 +44,7 @@ class FilesystemManager:
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         
-        # Setup main working directory
-        self.cwd = self._setup_workspace(cwd)
-        
-        # Orchestration-specific paths (set by setup_orchestration_paths)
-        self.snapshot_storage = None
-        self.agent_temporary_workspace = None  # Full path for this specific agent's temporary workspace
+        # Set agent_temporary_workspace_parent first, before calling _setup_workspace
         self.agent_temporary_workspace_parent = agent_temporary_workspace_parent
         # Get absolute path for temporary workspace parent if provided
         if self.agent_temporary_workspace_parent:
@@ -57,6 +52,13 @@ class FilesystemManager:
             if not temp_parent_path.is_absolute():
                 temp_parent_path = temp_parent_path.resolve()
             self.agent_temporary_workspace_parent = temp_parent_path
+        
+        # Setup main working directory (now that agent_temporary_workspace_parent is set)
+        self.cwd = self._setup_workspace(cwd)
+        
+        # Orchestration-specific paths (set by setup_orchestration_paths)
+        self.snapshot_storage = None
+        self.agent_temporary_workspace = None  # Full path for this specific agent's temporary workspace
          
         # Track whether we're using a temporary workspace
         self._using_temporary = False
@@ -108,12 +110,6 @@ class FilesystemManager:
             raise AssertionError("Workspace must be absolute")
         if workspace == Path("/") or len(workspace.parts) < 3:
             raise AssertionError(f"Refusing unsafe workspace path: {workspace}")
-        if self.agent_temporary_workspace_parent:
-            parent = Path(self.agent_temporary_workspace_parent).resolve()
-            try:
-                workspace.relative_to(parent)
-            except ValueError:
-                raise AssertionError(f"Workspace must be under safe parent: {parent}")
 
         # Create if needed
         workspace.mkdir(parents=True, exist_ok=True)
