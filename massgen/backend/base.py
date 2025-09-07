@@ -68,7 +68,7 @@ class LLMBackend(ABC):
             filesystem_support = self.get_filesystem_support()
             if filesystem_support == FilesystemSupport.MCP:
                 # Backend supports MCP - inject filesystem MCP server
-                from ..filesystem_manager import FilesystemManager
+                from ..mcp_tools.filesystem_manager import FilesystemManager
                 
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
@@ -81,7 +81,7 @@ class LLMBackend(ABC):
                 self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
             elif filesystem_support == FilesystemSupport.NATIVE:
                 # Backend has native filesystem support - create manager but don't inject MCP
-                from ..filesystem_manager import FilesystemManager
+                from ..mcp_tools.filesystem_manager import FilesystemManager
                 
                 # Get temporary workspace parent from kwargs if available  
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")

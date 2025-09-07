@@ -17,7 +17,7 @@ import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional, List, Any
-from .logger_config import logger, get_log_session_dir
+from ..logger_config import logger, get_log_session_dir
 
 
 class FilesystemManager:
@@ -184,10 +184,7 @@ class FilesystemManager:
             source_dir: Source directory to snapshot (defaults to current workspace)
             is_final: If True, save as final snapshot for presentation
         """
-        logger.info(f"[FilesystemManager] save_snapshot called - agent_id: {self.agent_id}, is_final: {is_final}, snapshot_storage: {self.snapshot_storage}")
-        
         if not self.snapshot_storage:
-            logger.warning(f"[FilesystemManager] No snapshot storage configured for agent {self.agent_id}")
             return
         
         # Use current workspace if no source specified
@@ -195,7 +192,6 @@ class FilesystemManager:
             source_dir = self.cwd
         
         source_path = Path(source_dir)
-        logger.info(f"[FilesystemManager] Checking source_path: {source_path}, exists: {source_path.exists()}, is_dir: {source_path.is_dir() if source_path.exists() else 'N/A'}")
         
         if not source_path.exists() or not source_path.is_dir():
             logger.warning(f"[FilesystemManager] Source path invalid - exists: {source_path.exists()}, is_dir: {source_path.is_dir() if source_path.exists() else False}")
@@ -208,9 +204,7 @@ class FilesystemManager:
             dest_dir = self.snapshot_storage
         
         # Clear existing snapshot and copy new one
-        logger.info(f"[FilesystemManager] Preparing destination: {dest_dir}")
         if dest_dir.exists():
-            logger.info(f"[FilesystemManager] Removing existing destination: {dest_dir}")
             shutil.rmtree(dest_dir)
         dest_dir.mkdir(parents=True, exist_ok=True)
         
@@ -225,8 +219,6 @@ class FilesystemManager:
                 shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
                 items_copied += 1
                 logger.debug(f"[FilesystemManager] Copied directory: {item.name}")
-        
-        logger.info(f"[FilesystemManager] Snapshot saved successfully: {items_copied} items copied from {source_path} to {dest_dir}")
         
         # Also save timestamped snapshot to log directory
         log_session_dir = get_log_session_dir()
