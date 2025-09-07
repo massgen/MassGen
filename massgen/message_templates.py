@@ -454,22 +454,28 @@ Based on the coordination process above, present your final answer:"""
 
         # Build workspace information
         workspace_info = []
-        if main_workspace:
-            workspace_info.append(f"1. **Your Main Workspace**: `{main_workspace}`")
-            workspace_info.append("   - Use this for creating your own files and outputs if providing new_answer")
-            workspace_info.append("   - For voting, you only need to read from context workspace")
-        
-        if temp_workspace:
-            workspace_info.append(f"2. **Context Workspace**: `{temp_workspace}`")
-            workspace_info.append("   - Contains work from other agents for reference")
-            workspace_info.append("   - Files organized by anonymous agent IDs (agent1/, agent2/, etc.)")
-            workspace_info.append("   - **READ ONLY** - do not modify files here")
-            workspace_info.append("   - IMPORTANT: Each agent works in their own separate workspace")
-            workspace_info.append("   - File paths in answers have been normalized to show where you can access their work")
-            workspace_info.append("   - All agents' work is equally valid regardless of which workspace directory they used")
-            workspace_info.append("   - Focus on evaluating the content and quality of their work, not the specific paths")
+        if main_workspace: 
+            workspace_info.append(f"1. **Your Main Workspace**: `{main_workspace}`") 
+            workspace_info.append(" - IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.") 
+            workspace_info.append(" - DO NOT look in your working directory for agent information - it's exclusively for creating YOUR OWN new work.") 
+            workspace_info.append(" - Use this for creating your own files and outputs if providing new_answer")
+            workspace_info.append(f" - When to write new answers, do not create different versions in the `{main_workspace}`. You should edit answers in existing file directly .")
 
-        workspace_section = "\n".join(workspace_info) if workspace_info else "- Check your available directories using filesystem tools"
+        if temp_workspace: 
+            workspace_info.append(f"2. **Context Workspace**: `{temp_workspace}`") 
+            workspace_info.append(f" - Context: You have access to a reference workspace at: `{temp_workspace}`") 
+            workspace_info.append(" - This workspace contains work from yourself and other agents for REFERENCE ONLY.") 
+            workspace_info.append(" - CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace.") 
+            workspace_info.append(" - You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work.") 
+            workspace_info.append(" - When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well.") 
+            workspace_info.append(" - For voting, you can review all agents' work here and use this context to make an informed voting decision.") 
+            workspace_info.append(" - Files organized by anonymous agent IDs (agent1/, agent2/, etc.)") 
+            workspace_info.append(" - IMPORTANT: Each agent works in their own separate workspace") 
+            workspace_info.append(" - File paths in answers have been normalized to show where you can access their work") 
+            workspace_info.append(" - All agents' work is equally valid regardless of which workspace directory they used") 
+            workspace_info.append(" - Focus on evaluating the content and quality of their work, not the specific paths") 
+
+        workspace_section = "\n".join(workspace_info) if workspace_info else "- Check your available directories using filesystem tools"     
 
         return f"""## Filesystem Access
 
