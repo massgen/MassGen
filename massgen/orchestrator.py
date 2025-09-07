@@ -1446,10 +1446,7 @@ class Orchestrator(ChatAgent):
             and self._selected_agent in self.agent_states
             and self.agent_states[self._selected_agent].answer
         ):
-            final_answer = self.agent_states[self._selected_agent].answer
-
-            # Save the final workspace snapshot (from final workspace directory)
-            await self._save_agent_snapshot(self._selected_agent, answer_content=final_answer, is_final=True)
+            final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
 
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
@@ -1650,6 +1647,8 @@ class Orchestrator(ChatAgent):
                 main_workspace=main_workspace,
                 temp_workspace=temp_workspace
             )
+            # Add special note that we must not just cite answers from the temp workspace but instead create a synthesized final answer
+            base_system_message += "\n\nNote: When presenting the final answer, it is not sufficient to just read from existing temporary workspace files. Instead, you must write to your main workspace so that everything needed for the final answer is contained in your main workspace. This ensures the final answer is complete and self-contained."
         
         # Create conversation with system and user messages
         presentation_messages = [
@@ -1724,6 +1723,9 @@ Final Session ID: {session_id}.
                 )
 
             elif chunk.type == "done":
+                # Save the final workspace snapshot (from final workspace directory)
+                final_answer = presentation_content.strip() if presentation_content.strip() else self.agent_states[selected_agent_id].answer  # fallback to stored answer if no content generated
+                await self._save_agent_snapshot(self._selected_agent, answer_content=final_answer, is_final=True)
                 log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
