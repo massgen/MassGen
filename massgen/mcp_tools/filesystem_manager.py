@@ -51,7 +51,13 @@ class FilesystemManager:
         self.snapshot_storage = None
         self.agent_temporary_workspace = None  # Full path for this specific agent's temporary workspace
         self.agent_temporary_workspace_parent = agent_temporary_workspace_parent
-        
+        # Get absolute path for temporary workspace parent if provided
+        if self.agent_temporary_workspace_parent:
+            temp_parent_path = Path(self.agent_temporary_workspace_parent)
+            if not temp_parent_path.is_absolute():
+                temp_parent_path = temp_parent_path.resolve()
+            self.agent_temporary_workspace_parent = temp_parent_path
+         
         # Track whether we're using a temporary workspace
         self._using_temporary = False
         self._original_cwd = self.cwd
@@ -79,7 +85,11 @@ class FilesystemManager:
         
         # Setup temporary workspace for context sharing
         if agent_temporary_workspace and self.agent_id:
-            self.agent_temporary_workspace = Path(agent_temporary_workspace) / self.agent_id
+            temp_workspace_path = Path(agent_temporary_workspace) / self.agent_id
+            # Convert to absolute path
+            if not temp_workspace_path.is_absolute():
+                temp_workspace_path = temp_workspace_path.resolve()
+            self.agent_temporary_workspace = temp_workspace_path
             self.agent_temporary_workspace.mkdir(parents=True, exist_ok=True)
             
         # Also setup log directories if we have an agent_id

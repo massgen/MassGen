@@ -726,13 +726,12 @@ class Orchestrator(ChatAgent):
         """
         normalized_answers = {}
         
-        # Get viewing agent's temporary workspace path for context sharing
+        # Get viewing agent's temporary workspace path for context sharing (full absolute path)
         temp_workspace_base = None
         if viewing_agent_id:
             viewing_agent = self.agents.get(viewing_agent_id)
             if viewing_agent and viewing_agent.backend.filesystem_manager:
-                temp_workspace_base = viewing_agent.backend.filesystem_manager.agent_temporary_workspace
-        
+                temp_workspace_base = str(viewing_agent.backend.filesystem_manager.agent_temporary_workspace)
         # Create anonymous agent mapping for consistent directory names
         agent_mapping = {}
         sorted_agent_ids = sorted(self.agents.keys())
@@ -758,10 +757,10 @@ class Orchestrator(ChatAgent):
                     anon_agent_id = agent_mapping.get(other_agent_id, f"agent_{other_agent_id}")
                     
                     if temp_workspace_base and remainder:
-                        # Replace with accessible path in temporary workspace
+                        # Replace with accessible path in temporary workspace (full absolute path)
                         replacement = f"{temp_workspace_base}/{anon_agent_id}/{remainder}"
                     elif temp_workspace_base and not remainder:
-                        # Just the agent's directory in temporary workspace
+                        # Just the agent's directory in temporary workspace (full absolute path)
                         replacement = f"{temp_workspace_base}/{anon_agent_id}"
                     elif remainder:
                         # Fallback to generic workspace prefix
