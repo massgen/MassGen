@@ -89,10 +89,10 @@ Key workspace configuration:
 ```yaml
 agents:
   - name: claude_code_agent1
-    workspace: MASSGEN/claude_code_workspace1
+    workspace: claude_code_workspace1
 
   - name: claude_code_agent2
-    workspace: MASSGEN/claude_code_workspace2
+    workspace: claude_code_workspace2
 
 ```
 
@@ -104,11 +104,9 @@ uv run python -m massgen.cli --config massgen/configs/claude_code_context_sharin
 <h2 id="agents">🤖 Agents</h2>
 
 - **Agent 1 (claude_code_agent1)**: Creates website in `/claude_code_workspace1/`
-  - Session ID: unique-session-id-1
   - Focus: Traditional grid-based layout with fact cards
   
 - **Agent 2 (claude_code_agent2)**: Creates website in `/claude_code_workspace2/`
-  - Session ID: unique-session-id-2
   - Focus: Interactive features with animations and sparkle effects
 
 Both agents use Claude Code's file management capabilities with:
@@ -173,7 +171,7 @@ With isolated workspaces, the voting process becomes more meaningful:
 
 The two agents took distinctly different approaches:
 
-**Agent 1's Implementation:**
+**Agent 1's Website Implementation:**
 
 - 12 fact cards in a responsive grid layout
 - Random fact generator feature
@@ -182,7 +180,7 @@ The two agents took distinctly different approaches:
 
 <img src="case_study_gifs/add_log_agent1.gif" alt="Agent 1 Implementation" width="800">
 
-**Agent 2's Implementation:**
+**Agent 2's Website Implementation:**
 - Enhanced interactivity with demo buttons for each fact
 - Sparkle effects following mouse movement
 - More elaborate animations and transitions
