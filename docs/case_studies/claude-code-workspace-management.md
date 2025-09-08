@@ -90,10 +90,10 @@ Key workspace configuration:
 agents:
   - name: claude_code_agent1
     workspace: MASSGEN/claude_code_workspace1
-    session_id: unique_session_1
+
   - name: claude_code_agent2
     workspace: MASSGEN/claude_code_workspace2
-    session_id: unique_session_2
+
 ```
 
 ### Command
