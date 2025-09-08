@@ -1,0 +1,23 @@
+# MassGen Configuration
+# Usage:
+# uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test.yaml "Please create a txt file with all the current directories you can read files from."
+agents:
+  - id: "gemini_agent1"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace1"  # Working directory for file operations. Generic name so no hint of content.
+
+  - id: "gemini_agent2"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace2"  # Working directory for file operations. Generic name so no hint of content.
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "workspaces"  # Directory for temporary agent workspaces
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

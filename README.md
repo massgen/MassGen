@@ -90,15 +90,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.15](#recent-achievements-v0015)
-  - [v0.0.3 - v0.0.14](#previous-achievements-v003-v0014)
+  - [v0.0.16](#recent-achievements-v0016)
+  - [v0.0.3 - v0.0.15](#previous-achievements-v003-v0015)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.16 Roadmap](#v0016-roadmap)
+- [v0.0.17 Roadmap](#v0017-roadmap)
 </details>
 
 <details open>
@@ -781,15 +781,23 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.15)
+### Recent Achievements (v0.0.16)
 
-**🔌 Gemini MCP Implementation**
-- **Gemini MCP Integration**: Native MCP support for Gemini backend with full tool ecosystem access
-- **Enhanced Tool Discovery**: Improved discovery of tools within configured MCP servers (automatic tool detection from MCP servers)
-- **Performance Optimization**: Optimized MCP server communication with circuit breaker patterns
-- **MCP Security Framework**: Command sanitization and secure credential management for MCP servers
+**Unified Filesystem Support with MCP Integration**: Advanced filesystem capabilities designed for all backends
+- Complete `FilesystemManager` class providing unified filesystem access with extensible backend support
+- Currently supports Gemini and Claude Code backends, designed for seamless expansion to all backends
+- MCP-based filesystem operations enabling file manipulation, workspace management, and cross-agent collaboration
 
-### Previous Achievements (v0.0.3-v0.0.14)
+**Expanded Configuration Library**: New configurations for filesystem testing and collaboration
+- Gemini MCP filesystem testing configurations: `gemini_mcp_filesystem_test.yaml`, `gemini_mcp_filesystem_test_sharing.yaml`, and more
+- Hybrid model setups for cross-backend collaboration
+
+**New Case Studies**
+- Case studies: [`gemini-mcp-notion-integration.md`](docs/case_studies/gemini-mcp-notion-integration.md) and [`claude-code-workspace-management.md`](docs/case_studies/claude-code-workspace-management.md)
+
+### Previous Achievements (v0.0.3-v0.0.15)
+
+✅ **MCP (Model Context Protocol) Integration Framework (v0.0.15)**: Complete MCP implementation for external tool integration with Gemini backend support, multi-server MCP client, circuit breaker patterns for fault tolerance, and comprehensive security framework with command sanitization
 
 ✅ **Enhanced Logging (v0.0.14)**: Improved logging system for better agents' answer debugging, new final answer directory structure, and detailed architecture documentation
 
@@ -833,20 +841,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.16 Roadmap
+### v0.0.17 Roadmap
 
-Version 0.0.16 focuses on **MCP File System and Logging Enhancement**, improving agent communication and system observability. Key enhancements include:
+Version 0.0.17 focuses on **expanding MCP ecosystem support and improving system observability**, building on the unified filesystem foundation established in v0.0.16. Key priorities include:
 
-- **MCP File System Integration**: Leverage existing filesystem MCP servers and generalize Claude Code workspace sharing to all agents using filesystem MCP tools
-- **Enhanced MCP Logging**: Organized and comprehensive MCP operation logging with dedicated log files per server
-- **OpenAI MCP Exploration**: Initial research and groundwork for OpenAI MCP support (full implementation planned for v0.0.17)
+- **OpenAI MCP Support**: Complete MCP integration for OpenAI/GPT models (GPT-4, GPT-5, etc.)
+- **Enhanced MCP Logging**: Organized and structured MCP operation logging with filtering and search capabilities
+- **Terminal Display Improvements**: Fix scroll issues for long generated results in terminal displays
+- **Historical Documentation**: Comprehensive case studies explaining v0.0.12 and v0.0.13 achievements
 
 Key technical approach:
-- **Existing MCP Server Integration**: Use proven filesystem MCP servers like `@modelcontextprotocol/server-filesystem`
-- **Generalized Workspace Sharing**: Extract and extend Claude Code's workspace sharing to work with any backend using filesystem MCP tools
-- **Smart Tool Detection**: Automatically trigger workspace snapshots when agents use filesystem operations (read, write, edit, list)
+- **Unified MCP Architecture**: Standardize MCP integration across all backends (OpenAI, Gemini, Claude Code)
+- **Structured Logging System**: Create separate log files for each MCP server with hierarchical organization
+- **Function Calling Bridge**: Develop seamless conversion between MCP tools and OpenAI function format
 
-For detailed milestones and technical specifications, see the [full v0.0.16 roadmap](ROADMAP_v0.0.16.md).
+For detailed milestones and technical specifications, see the [full v0.0.17 roadmap](ROADMAP_v0.0.17.md).
 
 ---
 
