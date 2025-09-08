@@ -154,6 +154,7 @@ massgen_logs/
 <h3 id="enhanced-collaboration">🎯 Enhanced Collaboration</h3>
 
 **Before**: "Error: File already exists" or silently overwrites existing work
+
 **After**: Each agent successfully creates its own version without conflicts
 
 The agents now:
