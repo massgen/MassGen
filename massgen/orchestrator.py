@@ -765,36 +765,17 @@ class Orchestrator(ChatAgent):
         for agent_id, answer in answers.items():
             normalized_answer = answer
             
-            # Replace all workspace paths found in the answer
+            # Replace all workspace paths found in the answer with accessible paths
             for other_agent_id, other_agent in self.agents.items():
                 if not other_agent.backend.filesystem_manager:
                     continue
                     
-                # Get this agent's workspace path
+                anon_agent_id = agent_mapping.get(other_agent_id, f"agent_{other_agent_id}")
+                replace_path = os.path.join(temp_workspace_base, anon_agent_id) if temp_workspace_base else anon_agent_id
                 other_workspace = str(other_agent.backend.filesystem_manager.get_current_workspace())
-
-                # Pattern matches the workspace path followed by optional slash and captures the rest
-                workspace_pattern = re.escape(other_workspace) + r'/?(.*)' 
-                
-                def replace_workspace(match):
-                    remainder = match.group(1)
-                    anon_agent_id = agent_mapping.get(other_agent_id, f"agent_{other_agent_id}")
-                    
-                    if temp_workspace_base and remainder:
-                        # Replace with accessible path in temporary workspace (full absolute path)
-                        replacement = f"{temp_workspace_base}/{anon_agent_id}/{remainder}"
-                    elif temp_workspace_base and not remainder:
-                        # Just the agent's directory in temporary workspace (full absolute path)
-                        replacement = f"{temp_workspace_base}/{anon_agent_id}"
-                    elif remainder:
-                        # Fallback to generic workspace prefix
-                        replacement = f"{anon_agent_id}/{remainder}"
-                    else:
-                        replacement = anon_agent_id
-                    
-                    return replacement
-                
-                normalized_answer = re.sub(workspace_pattern, replace_workspace, normalized_answer)
+                logger.debug(f"[Orchestrator._normalize_workspace_paths_in_answers] Replacing {other_workspace} in answer from {agent_id} with path {replace_path}. original answer: {normalized_answer}")
+                normalized_answer = normalized_answer.replace(other_workspace, replace_path)
+                logger.debug(f"[Orchestrator._normalize_workspace_paths_in_answers] Intermediate normalized answer: {normalized_answer}")
             
             normalized_answers[agent_id] = normalized_answer
             
@@ -818,25 +799,12 @@ class Orchestrator(ChatAgent):
         
         # Replace all agent workspace paths with canonical '/workspace/' 
         for agent_id, agent in self.agents.items():
-            if not hasattr(agent, 'backend') or not hasattr(agent.backend, 'filesystem_manager'):
-                continue
-            if not agent.backend.filesystem_manager:
+            if not hasattr(agent, 'backend') and not agent.backend.filesystem_manager:
                 continue
                 
             # Get this agent's workspace path
             workspace_path = str(agent.backend.filesystem_manager.get_current_workspace())
-
-            # Pattern matches the workspace path followed by optional slash and captures the rest
-            workspace_pattern = re.escape(workspace_path) + r'/?(.*)' 
-            
-            def replace_workspace(match):
-                remainder = match.group(1)
-                if remainder:
-                    return f"{replacement_path}/{remainder}"
-                else:
-                    return replacement_path
-            
-            normalized_content = re.sub(workspace_pattern, replace_workspace, normalized_content)
+            normalized_content = normalized_content.replace(workspace_path, replacement_path)
         
         return normalized_content
 

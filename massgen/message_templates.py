@@ -458,14 +458,13 @@ Based on the coordination process above, present your final answer:"""
             workspace_info.append(f"1. **Your Main Workspace**: `{main_workspace}`") 
             workspace_info.append(" - IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.") 
             workspace_info.append(" - DO NOT look in your working directory for agent information - it's exclusively for creating YOUR OWN new work.") 
-            workspace_info.append(" - Use this for creating your own files and outputs if providing new_answer")
+            workspace_info.append(" - Use this for creating your own files and outputs if providing a new answer")
             workspace_info.append(" - When providing a new answer, ensure you save any relevant files or outputs in your main workspace. Then, give a summary of your work in the answer content. Do NOT repeat the full file contents in your answer.")
             workspace_info.append(f" - Do NOT copy any files from the temporary workspace to your main workspace to use them. The only thing that should go in your main workspace is YOUR OWN work for your new answer.")
 
         if temp_workspace: 
             workspace_info.append(f"2. **Context Workspace**: `{temp_workspace}`") 
-            workspace_info.append(f" - Context: You have access to a reference temporary workspace at: `{temp_workspace}`") 
-            workspace_info.append(" - This workspace contains work from yourself and other agents for REFERENCE ONLY.") 
+            workspace_info.append(f" - Context: You have access to a reference temporary workspace that contains work from yourself and other agents for REFERENCE ONLY.") 
             workspace_info.append(" - CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace.") 
             workspace_info.append(" - You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work.") 
             workspace_info.append(" - When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well.") 
@@ -493,10 +492,9 @@ You have access to filesystem operations through MCP tools allowing you to read 
 - Use absolute paths when possible for clarity
 - When referencing others' work, read from context directories first
 - Create meaningful file names and directory structure
-
-### IMPORTANT Evaluation Note:
-When evaluating other agents' work, focus on the CONTENT and FUNCTIONALITY of their files. Each agent works in their own isolated workspace - this is correct behavior. The paths shown in their answers are normalized so you can access and verify their work. Judge based on code quality, correctness, and completeness, not on which workspace directory was used.
 """
+# ### IMPORTANT Evaluation Note:
+# When evaluating other agents' work, focus on the CONTENT and FUNCTIONALITY of their files. Each agent works in their own isolated workspace - this is correct behavior. The paths shown in their answers are normalized so you can access and verify their work. Judge based on code quality, correctness, and completeness, not on which workspace directory was used.
 
 
 # Global template instance

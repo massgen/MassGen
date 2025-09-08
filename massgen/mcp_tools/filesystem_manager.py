@@ -187,39 +187,6 @@ class FilesystemManager:
         
         return backend_config
     
-    def normalize_paths_for_logs(self, content: str) -> str:
-        """
-        Normalize workspace paths in content to relative paths for log files.
-        Replaces absolute workspace paths with 'workspace/' for better readability in logs.
-        
-        Args:
-            content: Content containing absolute workspace paths
-            
-        Returns:
-            Content with normalized relative paths
-        """
-        if not content:
-            return content
-
-        import re
-        
-        # Get the current workspace path as string
-        workspace_str = str(self.cwd)
-        
-        # Escape special regex characters in the path
-        escaped_workspace = re.escape(workspace_str)
-
-        # Pattern: match workspace path followed by optional slash and rest of segment
-        # [^\s]* ensures we don't consume across whitespace/newlines
-        pattern = re.compile(rf"{escaped_workspace}(?:[/\\]?)([^\n\r]*)")
-
-        def replace_path(match: re.Match) -> str:
-            remainder = match.group(1)
-            return f"workspace/{remainder}" if remainder else "workspace"
-
-        return pattern.sub(replace_path, content)
-
-    
     async def save_snapshot(self, timestamp: Optional[str] = None, is_final: bool = False) -> None:
         """
         Save a snapshot of the workspace. Always saves to snapshot_storage if available (keeping only most recent).
@@ -312,10 +279,9 @@ class FilesystemManager:
                 logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
                 continue
             if item.is_file():
-                shutil.copy2(item, self.snapshot_storage / item.name)
+                item.unlink()
             elif item.is_dir():
-                shutil.copytree(item, self.snapshot_storage / item.name)
-            items_copied += 1
+                shutil.rmtree(item)
 
         logger.info(f"[FilesystemManager] Cleared workspace after snapshot")
     
