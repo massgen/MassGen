@@ -273,15 +273,15 @@ class FilesystemManager:
             # On failure, DO NOT clear the workspace and exit
             return
 
-        # --- 3. Clear the workspace only if snapshot succeeded ---
-        for item in source_path.iterdir():
-            if item.is_symlink():
-                logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
-                continue
-            if item.is_file():
-                item.unlink()
-            elif item.is_dir():
-                shutil.rmtree(item)
+        # --- 3. (TODO in future): Give option to clear the workspace, if snapshot succeeded ---
+        # for item in source_path.iterdir():
+        #     if item.is_symlink():
+        #         logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
+        #         continue
+        #     if item.is_file():
+        #         item.unlink()
+        #     elif item.is_dir():
+        #         shutil.rmtree(item)
 
         logger.info(f"[FilesystemManager] Cleared workspace after snapshot")
     
