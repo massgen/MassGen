@@ -388,11 +388,13 @@ async def run_question_with_history(
             orchestrator_config.timeout_config = timeout_config
         
         # Get context sharing parameters from kwargs (if present in config)
+        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
         agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
         
         orchestrator = Orchestrator(
             agents=agents, 
             config=orchestrator_config,
+            snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace
         )
         # Create a fresh UI instance for each question to ensure clean state
@@ -473,11 +475,13 @@ async def run_single_question(
             orchestrator_config.timeout_config = timeout_config
         
         # Get context sharing parameters from kwargs (if present in config)
+        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
         agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
         
         orchestrator = Orchestrator(
             agents=agents, 
             config=orchestrator_config,
+            snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace
         )
         # Create a fresh UI instance for each question to ensure clean state

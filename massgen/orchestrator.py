@@ -105,6 +105,7 @@ class Orchestrator(ChatAgent):
         orchestrator_id: str = "orchestrator",
         session_id: Optional[str] = None,
         config: Optional[AgentConfig] = None,
+        snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
     ):
         """
@@ -115,6 +116,7 @@ class Orchestrator(ChatAgent):
             orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
             session_id: Optional session identifier
             config: Optional AgentConfig for customizing orchestrator behavior
+            snapshot_storage: Optional path to store agent workspace snapshots
             agent_temporary_workspace: Optional path for agent temporary workspaces
         """
         super().__init__(session_id)
@@ -150,13 +152,24 @@ class Orchestrator(ChatAgent):
         self._active_tasks: Dict = {}
         
         # Context sharing for agents with filesystem support
+        self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
+        
+        # Setup snapshot directory if provided (keep temp workspace setup as is)
+        if snapshot_storage:
+            self._snapshot_storage = snapshot_storage
+            snapshot_path = Path(self._snapshot_storage)
+            # Clean existing directory if it exists and has contents
+            if snapshot_path.exists() and any(snapshot_path.iterdir()):
+                shutil.rmtree(snapshot_path)
+            snapshot_path.mkdir(parents=True, exist_ok=True)
         
         # Configure orchestration paths for each agent with filesystem support
         for agent_id, agent in self.agents.items():
             if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager:
                 agent.backend.filesystem_manager.setup_orchestration_paths(
                     agent_id=agent_id,
+                    snapshot_storage=self._snapshot_storage,
                     agent_temporary_workspace=self._agent_temporary_workspace
                 )
 
@@ -635,13 +648,14 @@ class Orchestrator(ChatAgent):
         for i, real_agent_id in enumerate(sorted_agent_ids, 1):
             agent_mapping[real_agent_id] = f"agent{i}"
         
-        # Collect latest workspace snapshots from log directories using filesystem manager
+        # Collect snapshots from snapshot_storage directory
         all_snapshots = {}
-        for source_agent_id in self.agents.keys():
-            # Use the target agent's filesystem manager to find latest snapshot
-            latest_snapshot = agent.backend.filesystem_manager.get_latest_snapshot(source_agent_id)
-            if latest_snapshot:
-                all_snapshots[source_agent_id] = latest_snapshot
+        if self._snapshot_storage:
+            snapshot_base = Path(self._snapshot_storage)
+            for source_agent_id in self.agents.keys():
+                source_snapshot = snapshot_base / source_agent_id
+                if source_snapshot.exists() and source_snapshot.is_dir():
+                    all_snapshots[source_agent_id] = source_snapshot
         
         # Use the filesystem manager to copy snapshots to temp workspace
         workspace_path = await agent.backend.filesystem_manager.copy_snapshots_to_temp_workspace(all_snapshots, agent_mapping)
@@ -1993,6 +2007,7 @@ def create_orchestrator(
     orchestrator_id: str = "orchestrator",
     session_id: Optional[str] = None,
     config: Optional[AgentConfig] = None,
+    snapshot_storage: Optional[str] = None,
     agent_temporary_workspace: Optional[str] = None,
 ) -> Orchestrator:
     """
@@ -2003,6 +2018,7 @@ def create_orchestrator(
         orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
         session_id: Optional session ID
         config: Optional AgentConfig for orchestrator customization
+        snapshot_storage: Optional path to store agent workspace snapshots
         agent_temporary_workspace: Optional path for agent temporary workspaces (for Claude Code context sharing)
 
     Returns:
@@ -2015,5 +2031,6 @@ def create_orchestrator(
         orchestrator_id=orchestrator_id,
         session_id=session_id,
         config=config,
+        snapshot_storage=snapshot_storage,
         agent_temporary_workspace=agent_temporary_workspace,
     )

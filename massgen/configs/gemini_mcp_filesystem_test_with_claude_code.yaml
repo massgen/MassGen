@@ -1,11 +1,11 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config configs/gemini_mcp_filesystem_test_with_claude_code.yaml " Please create a Python script with a hello world function in various fictional languages and save it directly into a file in your workspace."
+# uv run python -m massgen.cli --config configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a website with a diverse set of fun facts about LLMs, placing the output into a file in LaTeX Beamer format."
 agents:
   - id: "gemini_agent"
     backend:
       type: "gemini"
-      model: "gemini-2.5-flash"
+      model: "gemini-2.5-pro"
       cwd: "workspace1"  # Working directory for file operations
 
   - id: "claude_code"

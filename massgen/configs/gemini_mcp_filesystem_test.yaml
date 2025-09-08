@@ -15,6 +15,7 @@ agents:
       cwd: "workspace2"  # Working directory for file operations
 
 orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
     agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
 
 ui:
