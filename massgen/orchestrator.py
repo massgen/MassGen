@@ -799,7 +799,7 @@ class Orchestrator(ChatAgent):
         
         # Replace all agent workspace paths with canonical '/workspace/' 
         for agent_id, agent in self.agents.items():
-            if not hasattr(agent, 'backend') and not agent.backend.filesystem_manager:
+            if not agent.backend.filesystem_manager:
                 continue
                 
             # Get this agent's workspace path
