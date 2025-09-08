@@ -166,7 +166,7 @@ class Orchestrator(ChatAgent):
         
         # Configure orchestration paths for each agent with filesystem support
         for agent_id, agent in self.agents.items():
-            if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager:
+            if agent.backend.filesystem_manager:
                 agent.backend.filesystem_manager.setup_orchestration_paths(
                     agent_id=agent_id,
                     snapshot_storage=self._snapshot_storage,
