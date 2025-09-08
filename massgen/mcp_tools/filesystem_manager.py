@@ -187,18 +187,17 @@ class FilesystemManager:
         
         return backend_config
     
-    async def save_snapshot(self, source_dir: Optional[Path] = None, timestamp: Optional[str] = None, is_final: bool = False) -> None:
+    async def save_snapshot(self, timestamp: Optional[str] = None, is_final: bool = False) -> None:
         """
-        Save a snapshot of the workspace to log directories.
+        Save a snapshot of the workspace to log directories. Then, clear the workspace so it is ready for next execution.
         
         Args:
-            source_dir: Source directory to snapshot (defaults to current workspace)
             timestamp: Optional timestamp to use for the snapshot directory (if not provided, generates one)
             is_final: If True, save as final snapshot for presentation
 
         TODO: reimplement without 'shutil' and 'os' operations for true async, though we may not need to worry about race conditions here since only one agent writes at a time
         """
-        logger.info(f"[FilesystemManager.save_snapshot] Called for agent_id={self.agent_id}, is_final={is_final}, source_dir={source_dir}")
+        logger.info(f"[FilesystemManager.save_snapshot] Called for agent_id={self.agent_id}, is_final={is_final}")
         
         log_session_dir = get_log_session_dir()
         if not log_session_dir or not self.agent_id:
@@ -206,9 +205,8 @@ class FilesystemManager:
             return
 
         # Use current workspace if no source specified
-        if source_dir is None:
-            source_dir = self.cwd
-            logger.info(f"[FilesystemManager.save_snapshot] Using default cwd: {self.cwd}")
+        source_dir = self.cwd
+        logger.info(f"[FilesystemManager.save_snapshot] Using default cwd source_dir: {self.cwd}")
         
         source_path = Path(source_dir)
         
@@ -246,6 +244,14 @@ class FilesystemManager:
                     shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
                     items_copied += 1
                     logger.info(f"[FilesystemManager] Copied directory: {item.name}")
+            # Clear source workspace after snapshot
+            for item in source_path.iterdir():
+                if item.is_symlink():
+                    raise AssertionError(f"Refusing to clear symlink in workspace: {item}")
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
             
             logger.info(f"[FilesystemManager] Saved {'final' if is_final else 'regular'} snapshot with {items_copied} items to {dest_dir}")
         else:
