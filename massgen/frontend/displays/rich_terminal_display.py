@@ -1521,7 +1521,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     options_text.append(f"{agent_id}\n", style=self.colors["warning"])
 
                 options_text.append(
-                    "  s: Inpsect the orchestrator working log including the voting process\n",
+                    "  s: Inspect the orchestrator working log including the voting process\n",
                     style=self.colors["warning"],
                 )
 

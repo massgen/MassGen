@@ -17,6 +17,7 @@ TODOs:
 
 import asyncio
 import os
+import re
 import time
 import shutil
 from pathlib import Path
@@ -152,7 +153,7 @@ class Orchestrator(ChatAgent):
         self._active_streams: Dict = {}
         self._active_tasks: Dict = {}
         
-        # Context sharing for Claude Code agents
+        # Context sharing for agents with filesystem support
         self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
         
@@ -168,38 +169,15 @@ class Orchestrator(ChatAgent):
             if snapshot_path.exists() and any(snapshot_path.iterdir()):
                 shutil.rmtree(snapshot_path)
             snapshot_path.mkdir(parents=True, exist_ok=True)
-            # Create directories for each claude_code agent
-            for agent_id, agent in self.agents.items():
-                if hasattr(agent, 'backend'):
-                    if hasattr(agent.backend, 'get_provider_name'):
-                        provider_name = agent.backend.get_provider_name()
-                        if provider_name == 'claude_code':
-                            agent_dir = snapshot_path / agent_id
-                            agent_dir.mkdir(parents=True, exist_ok=True)
-                        
-        if agent_temporary_workspace:
-            self._agent_temporary_workspace = agent_temporary_workspace
-            workspace_path = Path(self._agent_temporary_workspace)
-            # Clean existing directory if it exists and has contents
-            if workspace_path.exists() and any(workspace_path.iterdir()):
-                shutil.rmtree(workspace_path)
-            workspace_path.mkdir(parents=True, exist_ok=True)
-            # Create workspace directories for each claude_code agent
-            for agent_id, agent in self.agents.items():
-                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
-                    provider_name = agent.backend.get_provider_name()
-                    if provider_name == 'claude_code':
-                        agent_workspace = workspace_path / agent_id
-                        agent_workspace.mkdir(parents=True, exist_ok=True)
-                        
-            # Create log directories for each claude_code agent
-            log_session_dir = get_log_session_dir()
-            for agent_id, agent in self.agents.items():
-                if hasattr(agent, 'backend') and hasattr(agent.backend, 'get_provider_name'):
-                    provider_name = agent.backend.get_provider_name()
-                    if provider_name == 'claude_code':
-                        agent_log_dir = log_session_dir / agent_id
-                        agent_log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Configure orchestration paths for each agent with filesystem support
+        for agent_id, agent in self.agents.items():
+            if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager') and agent.backend.filesystem_manager:
+                agent.backend.filesystem_manager.setup_orchestration_paths(
+                    agent_id=agent_id,
+                    snapshot_storage=self._snapshot_storage,
+                    agent_temporary_workspace=self._agent_temporary_workspace
+                )
 
     async def chat(
         self,
@@ -545,9 +523,13 @@ class Orchestrator(ChatAgent):
 
                         if result_type == "answer":
                             # Agent provided an answer (initial or improved)
-                            # Save snapshot when agent provides new answer
-                            await self._save_claude_code_snapshot(agent_id)
+                            agent = self.agents.get(agent_id)
+                            # Save snapshot (of workspace and answer) when agent provides new answer
+                            await self._save_agent_snapshot(agent_id, answer_content=result_data)
+                            if agent and agent.backend.filesystem_manager:
+                                agent.backend.filesystem_manager.log_current_state("after providing answer")
                             # Always record answers, even from restarting agents (orchestrator accepts them)
+                            
                             answered_agents[agent_id] = result_data
                             self.coordination_tracker.add_agent_answer(agent_id, result_data)
                             reset_signal = True
@@ -578,8 +560,10 @@ class Orchestrator(ChatAgent):
                                 )
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
-                                # Save snapshot when agent successfully votes
-                                # await self._save_claude_code_snapshot(agent_id)
+                                # Log workspaces for current agent
+                                agent = self.agents.get(agent_id)
+                                if agent and agent.backend.filesystem_manager:
+                                    self.agents.get(agent_id).backend.filesystem_manager.log_current_state("after voting")
                                 voted_agents[agent_id] = result_data
                                 self.coordination_tracker.add_agent_vote(agent_id, result_data)
                                 # Track new vote event
@@ -615,6 +599,14 @@ class Orchestrator(ChatAgent):
                         log_stream_chunk("orchestrator", "debug", chunk_data, agent_id)
                         yield StreamChunk(
                             type="debug", content=chunk_data, source=agent_id
+                        )
+
+                    elif chunk_type == "mcp_status":
+                        # MCP status messages - forward with proper formatting
+                        mcp_message = f"🔧 MCP: {chunk_data}"
+                        log_stream_chunk("orchestrator", "mcp_status", chunk_data, agent_id)
+                        yield StreamChunk(
+                            type="content", content=mcp_message, source=agent_id
                         )
 
                     elif chunk_type == "done":
@@ -678,8 +670,8 @@ class Orchestrator(ChatAgent):
         for agent_id in list(active_streams.keys()):
             await self._close_agent_stream(agent_id, active_streams)
 
-    async def _restore_snapshots_to_workspace(self, agent_id: str) -> Optional[str]:
-        """Restore all snapshots to an agent's workspace using anonymous IDs.
+    async def _copy_all_snapshots_to_temp_workspace(self, agent_id: str) -> Optional[str]:
+        """Copy all agents' latest workspace snapshots to a temporary workspace for context sharing.
         
         TODO (v0.0.14 Context Sharing Enhancement - See docs/dev_notes/v0.0.14-context.md):
         - Validate agent permissions before restoring snapshots
@@ -693,27 +685,14 @@ class Orchestrator(ChatAgent):
         Returns:
             Path to the agent's workspace directory if successful, None otherwise
         """
-        if not self._agent_temporary_workspace or not self._snapshot_storage:
-            return None
-            
         agent = self.agents.get(agent_id)
         if not agent:
             return None
             
-        # Check if this is a Claude Code agent
-        if not (hasattr(agent, 'backend') and 
-                hasattr(agent.backend, 'get_provider_name') and
-                agent.backend.get_provider_name() == 'claude_code'):
+        # Check if agent has filesystem support
+        if not agent.backend.filesystem_manager:
             return None
             
-        # Get agent's workspace directory
-        workspace_dir = Path(self._agent_temporary_workspace) / agent_id
-        
-        # Clear existing workspace content completely
-        if workspace_dir.exists():
-            shutil.rmtree(workspace_dir)
-        workspace_dir.mkdir(parents=True, exist_ok=True)
-        
         # Create anonymous mapping for agent IDs (same logic as in message_templates.py)
         # This ensures consistency with the anonymous IDs shown to agents
         agent_mapping = {}
@@ -721,93 +700,70 @@ class Orchestrator(ChatAgent):
         for i, real_agent_id in enumerate(sorted_agent_ids, 1):
             agent_mapping[real_agent_id] = f"agent{i}"
         
-        # Copy all snapshots to workspace using anonymous IDs as folder names
-        snapshot_base = Path(self._snapshot_storage)
-        for source_agent_id in self.agents.keys():
-            source_snapshot = snapshot_base / source_agent_id
-            if source_snapshot.exists() and source_snapshot.is_dir():
-                # Use anonymous ID for destination directory name
-                anon_id = agent_mapping[source_agent_id]
-                dest_dir = workspace_dir / anon_id
-                
-                # Copy snapshot content to directory with anonymous name
-                if list(source_snapshot.iterdir()):  # Only copy if not empty
-                    shutil.copytree(source_snapshot, dest_dir, dirs_exist_ok=True)
+        # Collect snapshots from snapshot_storage directory
+        all_snapshots = {}
+        if self._snapshot_storage:
+            snapshot_base = Path(self._snapshot_storage)
+            for source_agent_id in self.agents.keys():
+                source_snapshot = snapshot_base / source_agent_id
+                if source_snapshot.exists() and source_snapshot.is_dir():
+                    all_snapshots[source_agent_id] = source_snapshot
         
-        return str(workspace_dir)
+        # Use the filesystem manager to copy snapshots to temp workspace
+        workspace_path = await agent.backend.filesystem_manager.copy_snapshots_to_temp_workspace(all_snapshots, agent_mapping)
+        return str(workspace_path) if workspace_path else None
     
-    async def _save_all_claude_code_snapshots(self) -> None:
-        """Save snapshots for all Claude Code agents."""
-        if not self._snapshot_storage:
-            return
-            
-        for agent_id in self.agents.keys():
-            await self._save_claude_code_snapshot(agent_id)
-    
-    async def _save_claude_code_snapshot(self, agent_id: str, is_final: bool = False) -> None:
-        """Save a snapshot of Claude Code agent's working directory.
+    async def _save_agent_snapshot(self, agent_id: str, answer_content: str = None, is_final: bool = False) -> None:
+        """
+        Save a snapshot of an agent's working directory and answer with the same timestamp.
+        
+        Creates a timestamped directory structure:
+        - agent_id/timestamp/workspace/ - Contains the workspace files
+        - agent_id/timestamp/answer.txt - Contains the answer text
         
         Args:
-            agent_id: ID of the Claude Code agent
-            is_final: If True, save workspace in a separate timestamped directory reserved for final presentation
+            agent_id: ID of the agent
+            answer_content: The answer content to save (if provided)
+            is_final: If True, save as final snapshot for presentation
         """
+        from datetime import datetime
         
-        if not self._snapshot_storage:
-            return
-            
+        logger.info(f"[Orchestrator._save_agent_snapshot] Called for agent_id={agent_id}, has_answer={bool(answer_content)}, is_final={is_final}")
+        
         agent = self.agents.get(agent_id)
         if not agent:
+            logger.warning(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} not found in agents dict")
             return
-            
-        # Check if this is a Claude Code agent
-        if not (hasattr(agent, 'backend') and 
-                hasattr(agent.backend, 'get_provider_name') and
-                agent.backend.get_provider_name() == 'claude_code'):
-            return
-            
-        # Get the working directory from the backend
-        # For final presentation, this should be the final workspace directory
-        if hasattr(agent.backend, '_cwd') and agent.backend._cwd:
-            source_dir = Path(agent.backend._cwd)
-            if source_dir.exists() and source_dir.is_dir():
-                # Destination directory for this agent's snapshots
-                dest_dir = Path(self._snapshot_storage) / agent_id if not is_final else Path(self._snapshot_storage) / "final" / agent_id
-                
-                # Clear existing snapshot and copy new one
-                if dest_dir.exists():
-                    shutil.rmtree(dest_dir)
-                dest_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Copy all contents from source to destination
-                for item in source_dir.iterdir():
-                    if item.is_file():
-                        shutil.copy2(item, dest_dir / item.name)
-                    elif item.is_dir():
-                        shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
-                
-                # Also copy snapshot to timestamped log directory
+        
+        # Generate single timestamp for both answer and workspace
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        
+        # Save answer if provided
+        if answer_content:
+            try:
                 log_session_dir = get_log_session_dir()
-                
-                if is_final:
-                    agent_log_dir = log_session_dir / "final_workspace" / agent_id
-                    agent_log_dir.mkdir(parents=True, exist_ok=True)
-                else:
-                    agent_log_dir = log_session_dir / agent_id
-
-                if agent_log_dir.exists():
-                    # Check if source directory has any contents
-                    if any(source_dir.iterdir()):
-                        # Create timestamped subdirectory
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                        timestamped_dir = agent_log_dir / timestamp
-                        timestamped_dir.mkdir(parents=True, exist_ok=True)
-                        
-                        # Copy snapshot contents to timestamped directory
-                        for item in source_dir.iterdir():
-                            if item.is_file():
-                                shutil.copy2(item, timestamped_dir / item.name)
-                            elif item.is_dir():
-                                shutil.copytree(item, timestamped_dir / item.name, dirs_exist_ok=True)
+                if log_session_dir:
+                    if is_final:
+                        # For final, save to final directory
+                        timestamped_dir = log_session_dir / "final" / agent_id
+                    else:
+                        # For regular snapshots, create timestamped directory
+                        timestamped_dir = log_session_dir / agent_id / timestamp
+                    timestamped_dir.mkdir(parents=True, exist_ok=True)
+                    answer_file = timestamped_dir / "answer.txt"
+                    
+                    # Write the answer content
+                    answer_file.write_text(answer_content)
+                    logger.info(f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}")
+            except Exception as e:
+                logger.warning(f"[Orchestrator._save_agent_snapshot] Failed to save answer for {agent_id}: {e}")
+        
+        # Save workspace snapshot with the same timestamp
+        if agent.backend.filesystem_manager:
+            logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} has filesystem_manager, calling save_snapshot with timestamp={timestamp if not is_final else None}")
+            await agent.backend.filesystem_manager.save_snapshot(timestamp=timestamp if not is_final else None, is_final=is_final)
+        else:
+            logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager")
     
     async def _close_agent_stream(
         self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
@@ -826,6 +782,86 @@ class Orchestrator(ChatAgent):
         # if restart_pending:
         #     self.coordination_tracker.agent_restarted(agent_id)
         return restart_pending
+
+    def _normalize_workspace_paths_in_answers(self, answers: Dict[str, str], viewing_agent_id: Optional[str] = None) -> Dict[str, str]:
+        """Normalize absolute workspace paths in agent answers to accessible temporary workspace paths.
+        
+        This addresses the issue where agents working in separate workspace directories
+        reference the same logical files using different absolute paths, causing them
+        to think they're working on different tasks when voting.
+
+        Converts workspace paths to temporary workspace paths where the viewing agent can actually
+        access other agents' files for verification during context sharing.
+
+        TODO: Replace with Docker volume mounts to ensure consistent paths across agents.
+        
+        Args:
+            answers: Dict mapping agent_id to their answer content
+            viewing_agent_id: The agent who will be reading these answers. 
+                            If None, normalizes to generic "workspace/" prefix.
+            
+        Returns:
+            Dict with same keys but normalized answer content with accessible paths
+        """
+        normalized_answers = {}
+        
+        # Get viewing agent's temporary workspace path for context sharing (full absolute path)
+        temp_workspace_base = None
+        if viewing_agent_id:
+            viewing_agent = self.agents.get(viewing_agent_id)
+            if viewing_agent and viewing_agent.backend.filesystem_manager:
+                temp_workspace_base = str(viewing_agent.backend.filesystem_manager.agent_temporary_workspace)
+        # Create anonymous agent mapping for consistent directory names
+        agent_mapping = {}
+        sorted_agent_ids = sorted(self.agents.keys())
+        for i, real_agent_id in enumerate(sorted_agent_ids, 1):
+            agent_mapping[real_agent_id] = f"agent{i}"
+        
+        for agent_id, answer in answers.items():
+            normalized_answer = answer
+            
+            # Replace all workspace paths found in the answer with accessible paths
+            for other_agent_id, other_agent in self.agents.items():
+                if not other_agent.backend.filesystem_manager:
+                    continue
+                    
+                anon_agent_id = agent_mapping.get(other_agent_id, f"agent_{other_agent_id}")
+                replace_path = os.path.join(temp_workspace_base, anon_agent_id) if temp_workspace_base else anon_agent_id
+                other_workspace = str(other_agent.backend.filesystem_manager.get_current_workspace())
+                logger.debug(f"[Orchestrator._normalize_workspace_paths_in_answers] Replacing {other_workspace} in answer from {agent_id} with path {replace_path}. original answer: {normalized_answer}")
+                normalized_answer = normalized_answer.replace(other_workspace, replace_path)
+                logger.debug(f"[Orchestrator._normalize_workspace_paths_in_answers] Intermediate normalized answer: {normalized_answer}")
+            
+            normalized_answers[agent_id] = normalized_answer
+            
+        return normalized_answers
+    
+    def _normalize_workspace_paths_for_comparison(self, content: str, replacement_path: str = "/workspace") -> str:
+        """
+        Normalize all workspace paths in content to a canonical form for equality comparison.
+        
+        Unlike _normalize_workspace_paths_in_answers which normalizes paths for specific agents,
+        this method normalizes ALL workspace paths to a neutral canonical form (like '/workspace')
+        so that content can be compared for equality regardless of which agent workspace it came from.
+        
+        Args:
+            content: Content that may contain workspace paths
+            
+        Returns:
+            Content with all workspace paths normalized to canonical form
+        """
+        normalized_content = content
+        
+        # Replace all agent workspace paths with canonical '/workspace/' 
+        for agent_id, agent in self.agents.items():
+            if not hasattr(agent, 'backend') and not agent.backend.filesystem_manager:
+                continue
+                
+            # Get this agent's workspace path
+            workspace_path = str(agent.backend.filesystem_manager.get_current_workspace())
+            normalized_content = normalized_content.replace(workspace_path, replacement_path)
+        
+        return normalized_content
 
     async def _cleanup_active_coordination(self) -> None:
         """Force cleanup of active coordination streams and tasks on timeout."""
@@ -945,6 +981,7 @@ class Orchestrator(ChatAgent):
                 "num_answers": len(answers) if answers else 0
             }
         )
+        
         # Initialize agent state
         self.agent_states[agent_id].is_killed = False
         self.agent_states[agent_id].timeout_reason = None
@@ -952,15 +989,35 @@ class Orchestrator(ChatAgent):
         # Clear restart pending flag at the beginning of agent execution
         self.agent_states[agent_id].restart_pending = False
 
-        # Restore snapshots to workspace for Claude Code agents
-        workspace_path = await self._restore_snapshots_to_workspace(agent_id)
-        if workspace_path and hasattr(agent.backend, 'set_temporary_cwd'):
-            # Set the temporary workspace path for context sharing
-            agent.backend.set_temporary_cwd(workspace_path)
+        # Copy all agents' snapshots to temp workspace for context sharing
+        workspace_path = await self._copy_all_snapshots_to_temp_workspace(agent_id)
+
+        # Log workspace state before agent starts
+        if agent.backend.filesystem_manager:
+            agent.backend.filesystem_manager.log_current_state("before execution")
 
         try:
             # Get agent's custom system message if available
             agent_system_message = agent.get_configurable_system_message()
+
+            # Append filesystem system message, if applicable
+            if agent.backend.filesystem_manager:
+                main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+                temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+                filesystem_system_message = self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace
+                )
+                agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
+            
+            # Normalize workspace paths in agent answers for better comparison from this agent's perspective
+            normalized_answers = self._normalize_workspace_paths_in_answers(answers, agent_id) if answers else answers
+            
+            # Log the normalized answers this agent will see
+            if normalized_answers:
+                logger.info(f"[Orchestrator] Agent {agent_id} sees normalized answers: {normalized_answers}")
+            else:
+                logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
             
             # Build conversation with context support
             if conversation_context and conversation_context.get(
@@ -972,16 +1029,16 @@ class Orchestrator(ChatAgent):
                     conversation_history=conversation_context.get(
                         "conversation_history", []
                     ),
-                    agent_summaries=answers,
-                    valid_agent_ids=list(answers.keys()) if answers else None,
+                    agent_summaries=normalized_answers,
+                    valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
                 )
             else:
                 # Fallback to standard conversation building
                 conversation = self.message_templates.build_initial_conversation(
                     task=task,
-                    agent_summaries=answers,
-                    valid_agent_ids=list(answers.keys()) if answers else None,
+                    agent_summaries=normalized_answers,
+                    valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
                 )
 
@@ -1014,7 +1071,10 @@ class Orchestrator(ChatAgent):
             self.coordination_tracker.change_status(agent_id, AgentStatus.STREAMING)
 
             for attempt in range(max_attempts):
+                logger.info(f"[Orchestrator] Agent {agent_id} attempt {attempt + 1}/{max_attempts}")
+                
                 if self._check_restart_pending(agent_id):
+                    logger.info(f"[Orchestrator] Agent {agent_id} restarting due to restart_pending flag")
                     # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
                     yield (
                         "content",
@@ -1051,6 +1111,8 @@ class Orchestrator(ChatAgent):
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
+                
+                logger.info(f"[Orchestrator] Agent {agent_id} starting to stream chat response...")
 
                 async for chunk in chat_stream:
                     if chunk.type == "content":
@@ -1088,6 +1150,10 @@ class Orchestrator(ChatAgent):
                         yield ("reasoning", reasoning_chunk)
                     elif chunk.type == "backend_status":
                         pass
+                    elif chunk.type == "mcp_status":
+                        # Forward MCP status messages with proper formatting
+                        mcp_content = f"🔧 MCP: {chunk.content}"
+                        yield ("content", mcp_content)
                     elif chunk.type == "debug":
                         # Forward debug chunks
                         yield ("debug", chunk.content)
@@ -1128,7 +1194,7 @@ class Orchestrator(ChatAgent):
 
                                 yield (
                                     "content",
-                                    f"🗳️ Voting for [{real_agent_id}]: {reason}",
+                                    f"🗳️ Voting for [{real_agent_id}] (options: {', '.join(sorted(answers.keys()))}) : {reason}",
                                 )
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
@@ -1214,6 +1280,8 @@ class Orchestrator(ChatAgent):
                         tool_args = agent.backend.extract_tool_arguments(tool_call)
 
                         if tool_name == "vote":
+                            # Log which agents we are choosing from
+                            logger.info(f"[Orchestrator] Agent {agent_id} voting from options: {list(answers.keys()) if answers else 'No answers available'}")
                             # Check if agent should restart - votes invalid during restart
                             if self.agent_states[agent_id].restart_pending:
                                 yield (
@@ -1321,8 +1389,12 @@ class Orchestrator(ChatAgent):
                             content = tool_args.get("content", response_text.strip())
 
                             # Check for duplicate answer
+                            # Normalize both new content and existing content to neutral paths for comparison
+                            normalized_new_content = self._normalize_workspace_paths_for_comparison(content)
+                            
                             for existing_agent_id, existing_content in answers.items():
-                                if content.strip() == existing_content.strip():
+                                normalized_existing_content = self._normalize_workspace_paths_for_comparison(existing_content)
+                                if normalized_new_content.strip() == normalized_existing_content.strip():
                                     if attempt < max_attempts - 1:
                                         if self._check_restart_pending(agent_id):
                                             yield (
@@ -1419,7 +1491,7 @@ class Orchestrator(ChatAgent):
             and self._selected_agent in self.agent_states
             and self.agent_states[self._selected_agent].answer
         ):
-            final_answer = self.agent_states[self._selected_agent].answer
+            final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
 
             # Track iterations during final answer presentation (even for stored answers)
             self.coordination_tracker.start_new_iteration()  # Iteration for winner selection
@@ -1574,19 +1646,14 @@ class Orchestrator(ChatAgent):
 
         agent = self.agents[selected_agent_id]
         
-        # Restore workspace to preserve context from coordination phase
+        # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work
-        temp_workspace_path = await self._restore_snapshots_to_workspace(selected_agent_id)
-        if temp_workspace_path and hasattr(agent, 'backend'):
-            if hasattr(agent.backend, 'set_temporary_cwd'):
-                # Set temporary workspace for context sharing
-                agent.backend.set_temporary_cwd(temp_workspace_path)
-                # Log workspace restoration for visibility
-                yield StreamChunk(
-                    type="debug",
-                    content=f"Restored workspace context for final presentation: {temp_workspace_path}",
-                    source=selected_agent_id
-                )
+        temp_workspace_path = await self._copy_all_snapshots_to_temp_workspace(selected_agent_id)
+        yield StreamChunk(
+            type="debug",
+            content=f"Restored workspace context for final presentation: {temp_workspace_path}",
+            source=selected_agent_id
+        )
 
         # Prepare context about the voting
         vote_counts = vote_results.get("vote_counts", {})
@@ -1607,11 +1674,15 @@ class Orchestrator(ChatAgent):
             aid: s.answer for aid, s in self.agent_states.items() if s.answer
         }
 
+        # Normalize workspace paths in both voting summary and all answers for final presentation. Use same function for consistency.
+        normalized_voting_summary = self._normalize_workspace_paths_in_answers({selected_agent_id: voting_summary}, selected_agent_id)[selected_agent_id]
+        normalized_all_answers = self._normalize_workspace_paths_in_answers(all_answers, selected_agent_id)
+
         # Use MessageTemplates to build the presentation message
         presentation_content = self.message_templates.build_final_presentation_message(
             original_task=self.current_task or "Task coordination",
-            vote_summary=voting_summary,
-            all_answers=all_answers,
+            vote_summary=normalized_voting_summary,
+            all_answers=normalized_all_answers,
             selected_agent_id=selected_agent_id,
         )
 
@@ -1630,18 +1701,15 @@ class Orchestrator(ChatAgent):
         self.coordination_tracker.set_final_agent(selected_agent_id, voting_summary, all_answers)
         
         # Add workspace context information to system message if workspace was restored
-        if temp_workspace_path:
-            workspace_context_parts = []
-            absolute_temp_path = os.path.join(os.getcwd(), temp_workspace_path)
-            workspace_context_parts.append(f"    Context: You have access to a reference workspace at: {absolute_temp_path}")
-            workspace_context_parts.append("    This reference workspace contains work from yourself and other agents for REFERENCE ONLY.")
-            workspace_context_parts.append("    CRITICAL: You should READ documents or EXECUTE code from the reference workspace to understand other agents' work.")
-            workspace_context_parts.append("    When you READ or EXECUTE content from the reference workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the reference workspace as well.")
-            workspace_context_parts.append(f"    You also can look in your working directory for your most updated information.")
-            workspace_context_parts.append(f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.")
-            
-            workspace_context = "\n".join(workspace_context_parts)
-            base_system_message = f"{base_system_message}\n\n{workspace_context}"
+        if agent.backend.filesystem_manager and temp_workspace_path:
+            main_workspace = str(agent.backend.filesystem_manager.get_current_workspace())
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
+            base_system_message += "\n\n" + self.message_templates.filesystem_system_message(
+                main_workspace=main_workspace,
+                temp_workspace=temp_workspace
+            )
+            # Add special note that we must not just cite answers from the temp workspace but instead create a synthesized final answer
+            base_system_message += "\n\nNote: When presenting the final answer, it is not sufficient to just read from existing temporary workspace files. Instead, you must write to your main workspace so that everything needed for the final answer is contained in your main workspace. This ensures the final answer is complete and self-contained."
         
         # Create conversation with system and user messages
         presentation_messages = [
@@ -1711,11 +1779,19 @@ Final Session ID: {session_id}.
                 yield StreamChunk(
                     type="content", content=content, source=selected_agent_id
                 )
+            elif chunk.type == "mcp_status":
+                # Handle MCP status messages in final presentation
+                mcp_content = f"🔧 MCP: {chunk.content}"
+                log_stream_chunk("orchestrator", "content", mcp_content, selected_agent_id)
+                yield StreamChunk(
+                    type="content", content=mcp_content, source=selected_agent_id
+                )
 
             elif chunk.type == "done":
-                log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                 # Save the final workspace snapshot (from final workspace directory)
-                await self._save_claude_code_snapshot(selected_agent_id, is_final=True)
+                final_answer = presentation_content.strip() if presentation_content.strip() else self.agent_states[selected_agent_id].answer  # fallback to stored answer if no content generated
+                await self._save_agent_snapshot(self._selected_agent, answer_content=final_answer, is_final=True)
+                log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                 yield StreamChunk(type="done", source=selected_agent_id)
             elif chunk.type == "error":
                 log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
@@ -2002,7 +2078,7 @@ def create_orchestrator(
         orchestrator_id: Unique identifier for this orchestrator (default: "orchestrator")
         session_id: Optional session ID
         config: Optional AgentConfig for orchestrator customization
-        snapshot_storage: Optional path to store agent workspace snapshots (for Claude Code context sharing)
+        snapshot_storage: Optional path to store agent workspace snapshots
         agent_temporary_workspace: Optional path for agent temporary workspaces (for Claude Code context sharing)
 
     Returns:

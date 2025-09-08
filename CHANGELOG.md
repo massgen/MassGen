@@ -5,6 +5,76 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - 2025-09-08
+
+### Added
+- **Unified Filesystem Support with MCP Integration**: Advanced filesystem capabilities designed for all backends
+  - Complete `FilesystemManager` class providing unified filesystem access with extensible backend support
+  - Currently supports Gemini and Claude Code backends, designed for seamless expansion to all backends
+  - MCP-based filesystem operations enabling file manipulation, workspace management, and cross-agent collaboration
+
+- **Expanded Configuration Library**: New YAML configurations for various use cases
+  - **Gemini MCP Filesystem Testing**: `gemini_mcp_filesystem_test.yaml`, `gemini_mcp_filesystem_test_sharing.yaml`, `gemini_mcp_filesystem_test_single_agent.yaml`, `gemini_mcp_filesystem_test_with_claude_code.yaml`
+  - **Hybrid Model Setups**: `geminicode_gpt5nano.yaml`
+
+- **Case Studies**: Added comprehensive case studies from previous versions
+  - `gemini-mcp-notion-integration.md`: Gemini MCP Notion server integration and productivity workflows
+  - `claude-code-workspace-management.md`: Claude Code context sharing and workspace management demonstrations
+
+
+### Technical Details
+- **Commits**: 30+ commits including workspace redesign and orchestrator enhancements
+- **Files Modified**: 40+ files across orchestrator, mcp_tools, configurations, and case studies
+- **New Architecture**: Complete workspace management system with FilesystemManager
+- **Contributors**: @ncrispino @a5507203 @sonichi @Henry-811 and the MassGen team
+
+## [0.0.15] - 2025-09-05
+
+### Added
+- **MCP (Model Context Protocol) Integration Framework**: Complete implementation for external tool integration
+  - New `massgen/mcp_tools/` package with 8 core modules for MCP support
+  - Multi-server MCP client supporting simultaneous connections to multiple MCP servers
+  - Two transport types: stdio (process-based) and streamable-http (web-based)
+  - Circuit breaker patterns for fault tolerance and reliability
+  - Comprehensive security framework with command sanitization and validation
+  - Automatic tool discovery with name prefixing for multi-server setups
+
+- **Gemini MCP Support**: Full MCP integration for Gemini backend
+  - Session-based tool execution via Gemini SDK
+  - Automatic tool discovery and calling capabilities
+  - Robust error handling with exponential backoff
+  - Support for both stdio and HTTP-based MCP servers
+  - Integration with existing Gemini function calling
+
+- **Test Infrastructure for MCP**: Development and testing utilities
+  - Simple stdio-based MCP test server (`mcp_test_server.py`)
+  - FastMCP streamable-http test server (`test_http_mcp_server.py`)
+  - Comprehensive test suite for MCP integration
+
+- **MCP Configuration Examples**: New YAML configurations for MCP usage
+  - `gemini_mcp_test.yaml`: Basic Gemini MCP testing
+  - `gemini_mcp_example.yaml`: Weather service integration example
+  - `gemini_streamable_http_test.yaml`: HTTP transport testing
+  - `multimcp_gemini.yaml`: Multi-server MCP configuration
+  - Additional Claude Code MCP configurations
+
+### Changed
+- **Dependencies**: Updated package requirements
+  - Added `mcp>=1.12.0` for official MCP protocol support
+  - Added `aiohttp>=3.8.0` for HTTP-based MCP communication
+  - Updated `pyproject.toml` and `requirements.txt`
+
+- **Documentation**: Enhanced project documentation
+  - Created technical analysis documents for Gemini MCP integration
+  - Added comprehensive MCP tools README with architecture diagrams
+  - Added security and troubleshooting guides for MCP
+
+### Technical Details
+- **Commits**: 40+ commits including MCP integration, documentation, and bug fixes
+- **Files Modified**: 35+ files across MCP modules, backends, configurations, and tests
+- **Security Features**: Configurable security levels (strict/moderate/permissive)
+- **Contributors**: @praneeth999 @qidanrui @sonichi @a5507203 @ncrispino @Henry-811 and the MassGen team
+
 ## [0.0.14] - 2025-09-02
 
 ### Added

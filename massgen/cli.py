@@ -170,7 +170,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError(
                 "Gemini API key not found. Set GOOGLE_API_KEY or provide in config."
             )
-        return GeminiBackend(api_key=api_key)
+        return GeminiBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "chatcompletion":
         api_key = kwargs.get("api_key")
@@ -241,7 +241,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableAgent]:
+def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration."""
     agents = {}
 
@@ -268,6 +268,10 @@ def create_agents_from_config(config: Dict[str, Any]) -> Dict[str, ConfigurableA
                 "Backend type must be specified or inferrable from model"
             )
 
+        # Add orchestrator context for filesystem setup if available
+        if orchestrator_config and "agent_temporary_workspace" in orchestrator_config:
+            backend_config["agent_temporary_workspace"] = orchestrator_config["agent_temporary_workspace"]
+        
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}
 
@@ -834,7 +838,9 @@ Environment Variables:
         if args.debug:
             from .logger_config import logger
             logger.debug("Creating agents from config...")
-        agents = create_agents_from_config(config)
+        # Extract orchestrator config for agent setup
+        orchestrator_cfg = config.get("orchestrator", {})
+        agents = create_agents_from_config(config, orchestrator_cfg)
 
         if not agents:
             raise ConfigurationError("No agents configured")

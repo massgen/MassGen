@@ -47,7 +47,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import uuid
 from pathlib import Path
 from typing import Dict, List, Any, AsyncGenerator, Optional
@@ -67,7 +66,7 @@ import warnings
 import atexit
 
 
-from .base import LLMBackend, StreamChunk
+from .base import LLMBackend, StreamChunk, FilesystemSupport
 from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk, logger
 
 
@@ -131,104 +130,13 @@ class ClaudeCodeBackend(LLMBackend):
         # Single ClaudeSDKClient for this backend instance
         self._client: Optional[Any] = None  # ClaudeSDKClient
         self._current_session_id: Optional[str] = None
-        self._cwd: Optional[str] = None
-        self._temporary_cwd: Optional[str] = None  # Temporary workspace for context sharing
-
-        # Handle initial cwd if provided - create directory and clear existing files
-        cwd_path = kwargs.get("cwd")
-        if cwd_path:
-            cwd_dir = Path(cwd_path)
-            if not cwd_dir.is_absolute():
-                # Convert relative path to absolute path
-                cwd_dir = cwd_dir.resolve()
-
-            # Clear existing files if directory exists
-            if cwd_dir.exists() and cwd_dir.is_dir():
-                for item in cwd_dir.iterdir():
-                    if item.is_file():
-                        item.unlink()
-                    elif item.is_dir():
-                        shutil.rmtree(item)
-
-            # Create directory if it doesn't exist
-            cwd_dir.mkdir(parents=True, exist_ok=True)
-
-            # Store the validated absolute path
-            self._cwd = str(cwd_dir)
-
-        self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
-
-    def _setup_windows_subprocess_cleanup_suppression(self):
-        """Comprehensive Windows subprocess cleanup warning suppression."""
-        # All warning filters
-        warnings.filterwarnings("ignore", message="unclosed transport")
-        warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
-        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
-        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
-        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
-        warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
-        warnings.filterwarnings("ignore", message="Exception ignored in")
-        warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
-        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
-        warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
-        warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
-        warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
-
-        # Patch asyncio transport destructors to be silent
-        try:
-            import asyncio.base_subprocess
-            import asyncio.proactor_events
-
-            # Store originals
-            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, '__del__', None)
-            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, '__del__', None)
-
-            def silent_subprocess_del(self):
-                try:
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        if original_subprocess_del:
-                            original_subprocess_del(self)
-                except Exception:
-                    pass
-
-            def silent_pipe_del(self):
-                try:
-                    with warnings.catch_warnings():
-                        warnings.simplefilter("ignore")
-                        if original_pipe_del:
-                            original_pipe_del(self)
-                except Exception:
-                    pass
-
-            # Apply patches
-            if original_subprocess_del:
-                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
-            if original_pipe_del:
-                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
-        except Exception:
-            pass  # If patching fails, fall back to warning filters only
-
-        # Setup exit handler for stderr suppression
-        original_stderr = sys.stderr
-
-        def suppress_exit_warnings():
-            try:
-                sys.stderr = open(os.devnull, 'w')
-                import time
-                time.sleep(0.3)
-            except Exception:
-                pass
-            finally:
-                try:
-                    if sys.stderr != original_stderr:
-                        sys.stderr.close()
-                    sys.stderr = original_stderr
-                except Exception:
-                    pass
-
-        atexit.register(suppress_exit_warnings)
-
+        
+        # Get workspace paths from filesystem manager (required for Claude Code)
+        # The filesystem manager handles all workspace setup and management
+        if not self.filesystem_manager:
+            raise ValueError("Claude Code backend requires 'cwd' configuration for workspace management")
+        
+        self._cwd: str = str(Path(str(self.filesystem_manager.get_current_workspace())).resolve())
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
 
@@ -307,6 +215,10 @@ class ClaudeCodeBackend(LLMBackend):
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         return "claude_code"
+    
+    def get_filesystem_support(self) -> FilesystemSupport:
+        """Claude Code has native filesystem support."""
+        return FilesystemSupport.NATIVE
 
     def is_stateful(self) -> bool:
         """
@@ -317,14 +229,6 @@ class ClaudeCodeBackend(LLMBackend):
         """
         return True
     
-    def set_temporary_cwd(self, temporary_cwd: str) -> None:
-        """Set the temporary working directory for context sharing.
-        
-        Args:
-            temporary_cwd: Path to temporary workspace containing shared context from other agents
-        """
-        self._temporary_cwd = temporary_cwd
-
     async def clear_history(self) -> None:
         """
         Clear Claude Code conversation history while preserving session.
@@ -612,60 +516,11 @@ class ClaudeCodeBackend(LLMBackend):
 
                     # Add usage examples for workflow tools
                     if name == "new_answer":
-                        # Add reference to temporary workspace if available
-                        if self._temporary_cwd:
-                            absolute_temp_path = os.path.join(os.getcwd(), self._temporary_cwd)
-                            system_parts.append(
-                                f"    Context: You have access to a reference workspace at: {absolute_temp_path}"
-                            )
-                            system_parts.append(
-                                "    This workspace contains work from yourself and other agents for REFERENCE ONLY."
-                            )
-                            system_parts.append(
-                                "    CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace."
-                            )
-                            system_parts.append(
-                                f"    DO NOT look in your working directory ({self._cwd}) for agent information - it's exclusively for creating YOUR OWN new work."
-                            )
-                            system_parts.append(
-                                "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
-                            )
-                            system_parts.append(
-                                "    When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well."
-                            )
-                            system_parts.append(
-                                f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory: {self._cwd}"
-                            )
                         system_parts.append(
                             '    Usage: {"tool_name": "new_answer", '
                             '"arguments": {"content": "your improved answer. If any builtin tools were used, mention how they are used here."}}'
                         )
                     elif name == "vote":
-                        # Add reference to temporary workspace if available for voting context
-                        if self._temporary_cwd:
-                            absolute_temp_path = os.path.join(os.getcwd(), self._temporary_cwd)
-                            system_parts.append(
-                                f"    Context: You can review all agents' work (including your own) at: {absolute_temp_path}"
-                            )
-                            system_parts.append(
-                                "    CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace."
-                            )
-                            system_parts.append(
-                                f"    DO NOT look in your working directory ({self._cwd}) for agent information - it's exclusively for creating YOUR OWN new work."
-                            )
-                            system_parts.append(
-                                "    You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
-                            )
-                            system_parts.append(
-                                "    When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well."
-                            )
-                            system_parts.append(
-                                f"    IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory: {self._cwd}"
-                            )
-                            system_parts.append(
-                                "    Use this context to make an informed voting decision."
-                            )
-                        
                         # Extract valid agent IDs from enum if available
                         agent_id_enum = None
                         for t in tools:
@@ -938,6 +793,7 @@ class ClaudeCodeBackend(LLMBackend):
         # Filter out parameters handled separately or not for ClaudeCodeOptions
         excluded_params = {
             "cwd",
+            "agent_temporary_workspace",
             "permission_mode",
             "type",
             "agent_id",
@@ -946,21 +802,9 @@ class ClaudeCodeBackend(LLMBackend):
             "allowed_tools",
         }
 
-        # Handle cwd - create directory if it doesn't exist and ensure absolute path
-        cwd_option = None
-        if cwd_path:
-            cwd_dir = Path(cwd_path)
-            if not cwd_dir.is_absolute():
-                # Convert relative path to absolute path
-                cwd_dir = cwd_dir.resolve()
-
-            # Create directory if it doesn't exist (files already cleared in __init__ if needed)
-            cwd_dir.mkdir(parents=True, exist_ok=True)
-
-            # Ensure we return a valid absolute path
-            cwd_option = cwd_dir
-            # Update the stored cwd path
-            self._cwd = str(cwd_option)
+        # Get cwd from filesystem manager (always available since we require it in __init__)
+        cwd_option = Path(str(self.filesystem_manager.get_current_workspace())).resolve()
+        self._cwd = str(cwd_option)
 
         return ClaudeCodeOptions(
             # No model set by default - let Claude Code decide
