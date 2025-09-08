@@ -50,15 +50,12 @@ massgen/
 │   │   ├── rich_terminal_display.py
 │   │   ├── simple_display.py
 │   │   └── terminal_display.py
-│   └── logging/            # Frontend logging utilities
 ├── configs/                # Configuration files
 │   ├── *.yaml             # Various agent configurations
 │   └── *.md               # MCP setup guides and documentation
 ├── tests/                  # Test files
 │   ├── __init__.py
 │   ├── test_*.py          # Test implementations
-│   ├── mcp_test_server.py # MCP stdio test server
-│   ├── test_http_mcp_server.py # MCP HTTP test server
 │   └── *.md               # Test documentation and case studies
 └── v1/                     # Legacy version 1 code
     ├── __init__.py
