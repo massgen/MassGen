@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MassGen presentation at Columbia University.">
+    <meta name="description" content="MassGen presentation at Columbia University DAPLab.">
     <meta name="theme-color" content="#667eea">
     <title>MassGen: Scaling AI Through Multi-Agent Collaboration | Columbia University</title>
     <link rel="preconnect" href="https://docs.ag2.ai">
@@ -51,523 +51,349 @@
 
         .slide h1 {
             font-size: 3.5em;
-            color: #2c3e50;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-align: center;
-            font-weight: 700;
+            font-weight: bold;
         }
 
         .slide h2 {
             font-size: 2.8em;
-            color: #34495e;
-            margin-bottom: 40px;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .slide .subtitle {
-            font-size: 1.4em;
-            color: #7f8c8d;
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .slide .speaker-info {
-            font-size: 1.3em;
+            margin-bottom: 30px;
             color: #2c3e50;
             text-align: center;
-            margin-bottom: 20px;
-            font-weight: 500;
+            font-weight: bold;
         }
 
-        .slide .summit-info {
-            font-size: 1.1em;
-            color: #3498db;
-            text-align: center;
+        .slide h3 {
+            font-size: 2.2em;
             margin-bottom: 20px;
-            font-family: 'Courier New', monospace;
+            color: #34495e;
+            text-align: center;
+        }
+
+        .slide p, .slide li {
+            font-size: 1.4em;
+            line-height: 1.8;
+            color: #2c3e50;
+            margin-bottom: 15px;
         }
 
         .slide ul {
-            font-size: 1.8em;
-            line-height: 1.8;
-            color: #2c3e50;
-            list-style: none;
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        .slide li {
-            margin-bottom: 25px;
             padding-left: 40px;
-            position: relative;
-        }
-
-        .slide li::before {
-            content: "→";
-            position: absolute;
-            left: 0;
-            color: #3498db;
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-
-        .navigation {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1000;
-        }
-
-        .nav-btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            margin: 0 5px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-btn:hover {
-            background: #2980b9;
-            transform: translateY(-2px);
-        }
-
-        .nav-btn:disabled {
-            background: #bdc3c7;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .slide-counter {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.6);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        .slide-nav {
-            position: fixed;
-            top: 30px;
-            right: 30px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            font-size: 14px;
-        }
-
-        .nav-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            max-width: 250px;
-        }
-
-        .nav-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.3);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .nav-dot.active {
-            background: #3498db;
-            transform: scale(1.3);
-        }
-
-        .nav-dot:hover {
-            background: rgba(255,255,255,0.6);
         }
 
         .icon {
             font-size: 4em;
             text-align: center;
             margin-bottom: 30px;
+            display: block;
         }
 
-        .code-snippet {
-            background: #2c3e50;
-            color: #ecf0f1;
-            padding: 20px;
-            border-radius: 10px;
-            font-family: 'Courier New', monospace;
-            width: 95%;
-            max-width: 1200px;
-            font-size: 1.1em;
-            margin: 20px auto;
+        /* Problem/Solution Grid */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            margin: 40px 0;
         }
 
-        .highlight {
-            color: #e74c3c;
-            font-weight: bold;
+        .comparison-item {
+            text-align: center;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
 
-        .architecture-diagram {
-            width: 100%;
-            height: 60vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            margin-top: 20px;
+        .problem-item {
+            background: linear-gradient(135deg, #ff9a8b, #ff6a88);
+            color: white;
         }
 
-        .arch-flow {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-            width: 100%;
-            max-width: 1000px;
+        .solution-item {
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            color: #2c3e50;
         }
 
-        .arch-component {
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .feature-box {
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
-            padding: 20px;
+            padding: 30px;
             border-radius: 15px;
-            text-align: center;
-            min-width: 180px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            transition: transform 0.3s ease;
-        }
-
-        .arch-component:hover {
-            transform: translateY(-3px);
-        }
-
-        .orchestrator {
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-        }
-
-        .agent {
-            background: linear-gradient(135deg, #fd79a8, #e84393);
-            min-width: 160px;
-            padding: 20px;
-        }
-
-        .hub {
-            background: linear-gradient(135deg, #00b894, #00cec9);
-        }
-
-        .agents-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .agents-row {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .collaboration-note {
-            font-size: 1.2em;
-            color: #2c3e50;
-            font-weight: bold;
             text-align: center;
-            background: rgba(116, 185, 255, 0.1);
-            padding: 10px 20px;
-            border-radius: 25px;
-            border: 2px dashed #74b9ff;
         }
 
-        .component-icon {
-            font-size: 1.8em;
-            margin-bottom: 8px;
+        .feature-box h4 {
+            font-size: 1.6em;
+            margin-bottom: 15px;
         }
 
-        .component-title {
-            font-size: 1.1em;
-            font-weight: bold;
-            margin-bottom: 6px;
-        }
-
-        .component-desc {
-            font-size: 0.9em;
+        .feature-box p {
+            font-size: 1.2em;
             opacity: 0.9;
+            color: white;
         }
 
-        .flow-arrow {
-            font-size: 3em;
-            color: #3498db;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
+        /* Demo Grid */
         .demo-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 30px;
-            margin: 20px 0;
+            margin: 30px 0;
         }
 
         .demo-box {
-            background: linear-gradient(135deg, #fd79a8, #e84393);
+            background: linear-gradient(135deg, #f093fb, #f5576c);
             color: white;
             padding: 25px;
             border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
             font-size: 1.1em;
         }
 
-        .metrics-comparison {
+        /* Architecture */
+        .architecture-flow {
             display: flex;
-            justify-content: space-around;
-            margin: 30px 0;
-            gap: 30px;
+            justify-content: space-between;
+            align-items: center;
+            margin: 50px 0;
+            font-size: 1.3em;
         }
 
-        .metrics-box {
-            background: #f8f9fa;
-            padding: 25px;
+        .arch-step {
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            padding: 30px 20px;
             border-radius: 15px;
             text-align: center;
             flex: 1;
-            border: 3px solid;
+            margin: 0 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
 
-        .metrics-box.single {
-            border-color: #3498db;
+        .arch-arrow {
+            font-size: 2em;
+            color: #667eea;
         }
 
-        .metrics-box.multi {
-            border-color: #e74c3c;
-        }
-
-        .metrics-title {
-            font-weight: bold;
-            margin-bottom: 15px;
-            font-size: 1.2em;
-        }
-
-        .metrics-value {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin: 15px 0;
-        }
-
-        .version-evolution {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 30px;
-            margin: 30px 0;
-        }
-
-        .version-box {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-        }
-
-        .version-box.current {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            transform: scale(1.05);
-        }
-
+        /* Call to Action */
         .call-to-action {
-            background: linear-gradient(135deg, #00b894, #00cec9);
-            color: white;
-            padding: 40px;
-            border-radius: 20px;
             text-align: center;
-            margin: 30px 0;
+            padding: 40px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 20px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            margin: 40px 0;
         }
 
         .cta-links {
             display: flex;
-            justify-content: space-around;
-            margin-top: 30px;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
             flex-wrap: wrap;
         }
 
         .cta-link {
-            background: rgba(255,255,255,0.2);
+            display: inline-block;
             padding: 15px 30px;
-            border-radius: 25px;
-            text-decoration: none;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 1.2em;
             font-weight: bold;
-            transition: all 0.3s ease;
-            margin: 10px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
         .cta-link:hover {
-            background: rgba(255,255,255,0.3);
             transform: translateY(-3px);
-        }
-
-        .inline-link {
-            color: #3498db;
-            text-decoration: underline;
-            font-weight: bold;
-        }
-
-        .inline-link:hover {
-            color: #2980b9;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         }
 
         .version-badge {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #ff9a8b, #ff6a88);
             color: white;
-            padding: 10px 20px;
             border-radius: 25px;
             font-size: 1.1em;
             font-weight: bold;
-            display: inline-block;
-            margin-top: 20px;
-            animation: pulse 2s infinite;
-            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 30px;
-            margin: 30px 0;
-        }
-
-        .feature-card {
-            background: rgba(255,255,255,0.1);
-            border: 2px solid #3498db;
-            padding: 25px;
-            border-radius: 15px;
-            text-align: center;
-        }
-
-        .feature-icon {
-            font-size: 3em;
-            margin-bottom: 15px;
-        }
-
-        .datahack-logo {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
             margin: 20px 0;
         }
 
-        /* Mobile Responsive Design */
+        /* Navigation Styles */
+        .slide-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 1.2em;
+            z-index: 1000;
+        }
+
+        .slide-nav {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+
+        .nav-grid {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        .nav-dot:hover {
+            background: rgba(255,255,255,0.8);
+            transform: scale(1.2);
+        }
+
+        .nav-dot.active {
+            background: white;
+            transform: scale(1.3);
+        }
+
+        .navigation {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .nav-btn {
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s ease, transform 0.3s ease;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: rgba(0,0,0,0.9);
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Case Study Styles */
+        .case-study {
+            background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .case-study h4 {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .case-study p {
+            color: #2c3e50;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        /* Benchmarking */
+        .benchmark-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .benchmark-item {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .benchmark-item h4 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .benchmark-item .score {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #ffeaa7;
+        }
+
+        /* Responsive Design */
         @media (max-width: 768px) {
             .slide {
-                padding: 20px;
-                font-size: 14px;
+                padding: 30px;
             }
             
             .slide h1 {
-                font-size: 2.2em;
-                margin-bottom: 20px;
+                font-size: 2.5em;
             }
             
             .slide h2 {
-                font-size: 1.8em;
-                margin-bottom: 25px;
+                font-size: 2em;
             }
             
-            .slide ul {
-                font-size: 1.2em;
-                max-width: 100%;
+            .comparison-grid,
+            .feature-grid,
+            .demo-grid,
+            .benchmark-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
             }
             
-            .slide li {
-                margin-bottom: 15px;
-                padding-left: 25px;
-            }
-            
-            .navigation {
-                bottom: 15px;
-                right: 15px;
-            }
-            
-            .nav-btn {
-                padding: 8px 12px;
-                font-size: 14px;
-                margin: 0 2px;
-            }
-            
-            .slide-counter {
-                bottom: 15px;
-                left: 15px;
-                padding: 5px 10px;
-                font-size: 12px;
-            }
-            
-            .slide-nav {
-                top: 15px;
-                right: 15px;
-                padding: 10px;
-            }
-            
-            .nav-grid {
-                max-width: 200px;
-                gap: 6px;
-            }
-            
-            .nav-dot {
-                width: 10px;
-                height: 10px;
-            }
-            
-            .metrics-comparison {
+            .architecture-flow {
                 flex-direction: column;
                 gap: 20px;
             }
             
-            .demo-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
+            .arch-arrow {
+                transform: rotate(90deg);
             }
             
-            .version-evolution {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-            
-            .architecture-diagram {
-                height: 50vh;
-                padding: 10px;
-            }
-            
-            .arch-component {
-                min-width: 140px;
-                padding: 15px;
-                font-size: 0.9em;
-            }
-            
-            .code-snippet {
-                font-size: 0.9em;
-                padding: 15px;
+            .cta-links {
+                flex-direction: column;
+                align-items: center;
             }
         }
     </style>
-</head>
 <body>
     <div class="slideshow-container">
         <!-- Slide 1: Title -->
@@ -1668,10 +1494,10 @@
             </div>
         </div>
 
-        <!-- Slide 18: Evolution from v0.0.1 to v0.0.14 -->
+        <!-- Slide 18: Evolution from v0.0.1 -->
         <div class="slide">
             <div class="icon">🚀</div>
-            <h2>MassGen Evolution: v0.0.1 → v0.0.15</h2>
+            <h2>MassGen Evolution: v0.0.1 → v0.0.16</h2>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin: 50px 0; align-items: center; justify-items: center;">
                 <div style="background: linear-gradient(135deg, #74b9ff, #0984e3); color: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); max-width: 350px; text-align: center;">
                     <div style="font-size: 3em; margin-bottom: 20px;">🏗️</div>
@@ -1686,20 +1512,20 @@
                     <div style="position: absolute; top: -15px; right: -15px; background: #f39c12; color: white; padding: 8px 20px; border-radius: 25px; font-size: 0.9em; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">LATEST</div>
                     <div style="font-size: 3em; margin-bottom: 20px;">🚀</div>
                     <h3 style="margin: 0 0 15px 0; font-size: 1.6em;">Rapid Evolution</h3>
-                    <div style="font-size: 1.1em; opacity: 0.9; margin-bottom: 25px;">v0.0.3 → v0.0.15</div>
+                    <div style="font-size: 1.1em; opacity: 0.9; margin-bottom: 25px;">v0.0.3 → v0.0.16</div>
                     <div style="font-size: 1.1em; line-height: 1.6;">
                         Claude Code CLI, GPT-5, 10+ providers<br>
                         MCP integration, browsing, coding<br>
-                        Enhanced logging & tooling<br>
+                        Unified filesystem & enhanced tooling<br>
                         Industrial & academic adoption
                     </div>
                 </div>
             </div>
             <div style="text-align: center; margin-top: 40px;">
                 <div style="display: inline-flex; gap: 40px; align-items: center; font-size: 1.3em; color: #2c3e50;">
-                    <div><strong style="color: #e74c3c;">14</strong> Releases</div>
+                    <div><strong style="color: #e74c3c;">15</strong> Releases</div>
                     <div style="color: #bdc3c7;">•</div>
-                    <div><strong style="color: #e74c3c;">21 Days</strong> Foundation→Expansion</div>
+                    <div><strong style="color: #e74c3c;">25+ Days</strong> Foundation→Expansion</div>
                 </div>
             </div>
         </div>
@@ -1757,21 +1583,21 @@
             <h2>Live Demonstrations</h2>
             <div class="demo-grid">
                 <div class="demo-box">
+                    <strong>🌐 LLM Fun Facts Website (v0.0.14):</strong> Claude Code agents create interactive websites with enhanced logging and workspace isolation
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Conflict-free parallel development with comprehensive versioning
+                    </div>
+                </div>
+                <div class="demo-box">
+                    <strong>📋 Notion MCP Integration (v0.0.15):</strong> Gemini agents generate and store todo lists via external API with real-time verification
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Seamless external tool integration and persistent output management
+                    </div>
+                </div>
+                <div class="demo-box">
                     <strong>🏆 IMO 2025 Winner Research:</strong> Multi-agent fact-checking → unanimous consensus on Google DeepMind victory
                     <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
                         <strong>Result:</strong> Accurate identification despite conflicting information
-                    </div>
-                </div>
-                <div class="demo-box">
-                    <strong>📝 Creative Writing:</strong> Robot-music story refined through collaborative voting → final unanimous approval
-                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
-                        <strong>Result:</strong> Higher quality narrative through collaborative editing
-                    </div>
-                </div>
-                <div class="demo-box">
-                    <strong>🌍 Stockholm Travel Guide:</strong> Agents combined local knowledge + real-time data → comprehensive October 2025 plan
-                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
-                        <strong>Result:</strong> Detailed recommendations no single agent could provide
                     </div>
                 </div>
                 <div class="demo-box">
@@ -2047,7 +1873,7 @@
                 </div>
                 <div style="margin-top: 30px;">
                     <div class="version-badge" style="background: linear-gradient(135deg, #e74c3c, #c0392b); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">
-                        🚀 v0.0.3→v0.0.15 Latest | 10+ providers; Claude Code CLI; GPT-5 & GPT-OSS; Local Models; MCP Integration; Enhanced Logging 
+                        🚀 v0.0.3→v0.0.16 Latest | 10+ providers; Claude Code CLI; GPT-5 & GPT-OSS; Local Models; MCP Integration; Unified Filesystem 
                     </div>
                 </div>
             </div>
@@ -2057,8 +1883,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Navigation -->
+<!-- Navigation -->
     <div class="slide-counter">
         <span id="current-slide">1</span> / <span id="total-slides">24</span>
     </div>
@@ -2082,23 +1907,23 @@
         // Slide titles for navigation
         const slideTitles = [
             "Title - Columbia University",
-            "Problem - Single-Agent Limitation", 
+            "Problem - Single-Agent Limitation",
             "Solution - Multi-Agent Collaboration",
             "AG2 - Research Foundation",
             "Evidence - Performance Gains",
             "Architecture - System Design",
             "Features & Capabilities",
             "Tech - Async Streaming",
-            "Tech - Backend Challenges", 
+            "Tech - Backend Challenges",
             "Tech - Binary Decision Framework",
             "Context Sharing - Challenge",
             "Context Sharing - Solution v0.0.12",
             "Context Sharing - In Action",
-            "Benchmarking - Multi-Domain Performance",
-            "Case Study - Success Through Collaboration", 
+            "Benchmarking - Preliminary Results",
+            "Case Study - Success Through Collaboration",
             "Case Study - When Coordination Fails",
             "Coordination Psychology - Voting Behavior",
-            "Evolution - v0.0.1 to v0.0.15",
+            "Evolution - v0.0.1 to v0.0.16",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
             "Columbia Research Applications",
