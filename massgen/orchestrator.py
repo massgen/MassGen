@@ -27,6 +27,16 @@ from .message_templates import MessageTemplates
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
+
+
+class ConsumptionCapReached(Exception):
+    """Exception raised when an agent exceeds its token consumption limit."""
+    
+    def __init__(self, message: str, agent_id: str, current_tokens: int, limit: int):
+        super().__init__(message)
+        self.agent_id = agent_id
+        self.current_tokens = current_tokens
+        self.limit = limit
 from .logger_config import (
     log_orchestrator_activity,
     log_orchestrator_agent_message,
@@ -145,6 +155,10 @@ class Orchestrator(ChatAgent):
         self.coordination_start_time: float = 0
         self.is_orchestrator_timeout: bool = False
         self.timeout_reason: Optional[str] = None
+        
+        # Token consumption tracking (builds on existing total_tokens)
+        self.agent_token_usage: Dict[str, int] = {}  # agent_id -> tokens consumed
+        self.agent_token_limits: Dict[str, int] = {}  # agent_id -> individual limit
 
         # Coordination state tracking for cleanup
         self._active_streams: Dict = {}
@@ -194,6 +208,9 @@ class Orchestrator(ChatAgent):
                     if provider_name == 'claude_code':
                         agent_log_dir = log_session_dir / agent_id
                         agent_log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize token consumption limits
+        self._initialize_consumption_limits()
 
     async def chat(
         self,
@@ -338,9 +355,18 @@ class Orchestrator(ChatAgent):
                 async for chunk in self._coordinate_agents(conversation_context):
                     # Track tokens if this is a content chunk
                     if hasattr(chunk, "content") and chunk.content:
-                        self.total_tokens += len(
-                            chunk.content.split()
-                        )  # Rough token estimation
+                        tokens = len(chunk.content.split())  # Rough token estimation
+                        self.total_tokens += tokens
+                        
+                        # Track per-agent consumption
+                        if hasattr(chunk, "source") and chunk.source:
+                            agent_id = chunk.source
+                            if agent_id in self.agent_token_usage:
+                                self.agent_token_usage[agent_id] += tokens
+                                
+                                # Check if agent exceeded its limit
+                                if self._check_agent_consumption_cap(agent_id):
+                                    continue  # Skip yielding, agent will be killed
 
                     yield chunk
 
@@ -1900,10 +1926,111 @@ Final Session ID: {session_id}.
         self.coordination_start_time = 0
         self.is_orchestrator_timeout = False
         self.timeout_reason = None
+        
+        # Reset consumption tracking
+        for agent_id in self.agents.keys():
+            self.agent_token_usage[agent_id] = 0
 
         # Clear coordination state
         self._active_streams = {}
         self._active_tasks = {}
+
+    def _initialize_consumption_limits(self) -> None:
+        """Initialize per-agent token consumption limits based on config."""
+        consumption_config = self.config.consumption_config
+        
+        # Initialize usage tracking for all agents
+        for agent_id in self.agents.keys():
+            self.agent_token_usage[agent_id] = 0
+            
+        # No limits if no total budget set
+        if not consumption_config.max_total_tokens:
+            return
+            
+        # Mode 1: Custom limits for ALL agents
+        if consumption_config.per_agent_limits:
+            # Validate: custom limits must cover all agents
+            missing_agents = set(self.agents.keys()) - set(consumption_config.per_agent_limits.keys())
+            if missing_agents:
+                raise ValueError(
+                    f"Custom per_agent_limits must be provided for ALL agents. "
+                    f"Missing limits for: {sorted(missing_agents)}"
+                )
+                
+            # Validate: no limits for non-existent agents
+            extra_agents = set(consumption_config.per_agent_limits.keys()) - set(self.agents.keys())
+            if extra_agents:
+                raise ValueError(
+                    f"per_agent_limits contains unknown agents: {sorted(extra_agents)}"
+                )
+                
+            # Use custom limits
+            self.agent_token_limits = consumption_config.per_agent_limits.copy()
+            
+        # Mode 2: Automatic even split
+        else:
+            tokens_per_agent = consumption_config.max_total_tokens // len(self.agents)
+            for agent_id in self.agents.keys():
+                self.agent_token_limits[agent_id] = tokens_per_agent
+                    
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            "Token consumption limits initialized",
+            {
+                "total_budget": consumption_config.max_total_tokens,
+                "agent_limits": dict(self.agent_token_limits),
+                "token_allocation_mode": "custom" if consumption_config.per_agent_limits else "even_split"
+            }
+        )
+
+    def _check_agent_consumption_cap(self, agent_id: str) -> bool:
+        """
+        Check if agent has exceeded its token consumption limit.
+        
+        Args:
+            agent_id: ID of the agent to check
+            
+        Returns:
+            bool: True if agent exceeded limit (and was killed), False otherwise
+        """
+        # No limits configured
+        if agent_id not in self.agent_token_limits:
+            return False
+            
+        current_usage = self.agent_token_usage.get(agent_id, 0)
+        limit = self.agent_token_limits[agent_id]
+        
+        # Check if limit exceeded
+        if current_usage > limit:
+            self._kill_agent_for_consumption_cap(agent_id, current_usage, limit)
+            return True
+            
+        return False
+
+    def _kill_agent_for_consumption_cap(self, agent_id: str, current_tokens: int, limit: int) -> None:
+        """
+        Kill an agent that has exceeded its token consumption limit.
+        
+        Args:
+            agent_id: ID of the agent to kill
+            current_tokens: Current token usage by the agent
+            limit: The agent's token limit
+        """
+        reason = f"Token consumption limit exceeded: {current_tokens}/{limit} tokens"
+        
+        log_orchestrator_activity(
+            self.orchestrator_id,
+            f"Agent {agent_id} killed for consumption limit",
+            {
+                "agent_id": agent_id,
+                "current_tokens": current_tokens,
+                "limit": limit,
+                "reason": reason
+            }
+        )
+        
+        # Use existing agent failure mechanism
+        self.mark_agent_failed(agent_id, reason)
 
 
 # =============================================================================

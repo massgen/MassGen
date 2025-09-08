@@ -29,13 +29,19 @@ class TimeoutConfig:
 class ConsumptionConfig:
     """Configuration for token consumption limits in MassGen.
 
+    Dynamic allocation design:
+    - User sets total budget via max_total_tokens
+    - Budget automatically split evenly among agents by default
+    - Individual agent limits can be customized via per_agent_limits
+    - Agents killed individually when they exceed their allocation
+
     Args:
-        max_tokens_per_agent: Maximum tokens each agent can consume (default: None = unlimited)
-        max_total_tokens: Maximum total tokens across all agents (default: None = unlimited)
+        max_total_tokens: Total token budget for all agents (default: None = unlimited)
+        per_agent_limits: Custom limits per agent ID {agent_id: limit} (default: None = even split)
     """
 
-    max_tokens_per_agent: Optional[int] = None
     max_total_tokens: Optional[int] = None
+    per_agent_limits: Optional[Dict[str, int]] = None
 
 
 @dataclass
@@ -694,8 +700,8 @@ class AgentConfig:
                 "orchestrator_timeout_seconds": self.timeout_config.orchestrator_timeout_seconds,
             },
             "consumption_config": {
-                "max_tokens_per_agent": self.consumption_config.max_tokens_per_agent,
                 "max_total_tokens": self.consumption_config.max_total_tokens,
+                "per_agent_limits": self.consumption_config.per_agent_limits,
             },
         }
 

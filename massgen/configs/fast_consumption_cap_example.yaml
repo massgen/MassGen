@@ -1,0 +1,49 @@
+# MassGen Configuration with Token Consumption Caps
+# Demonstrates how to control token usage and prevent runaway costs
+
+# Standard timeout settings
+timeout_settings:
+  orchestrator_timeout_seconds: 600   # 10 minutes max coordination
+
+# Token consumption limits - two modes available
+consumption_settings:
+  # Mode 1: Automatic even split (recommended for most users)
+  max_total_tokens: 5000   # Total budget automatically split among agents (2500 tokens each)
+
+  # Mode 2: Custom per-agent limits (uncomment to use instead)
+  # per_agent_limits:
+  #   research-agent: 3000    # Research agent gets more tokens for web search
+  #   analysis-agent: 2000    # Analysis agent gets fewer tokens
+
+agents:
+  - id: "research-agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      enable_web_search: true
+    system_message: "You are a research specialist. Use web search to gather comprehensive information."
+    
+  - id: "analysis-agent"
+    backend:
+      type: "openai" 
+      model: "gpt-4o-mini"
+      enable_code_interpreter: true
+    system_message: "You are an analysis specialist. Analyze data and provide insights."
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Usage Examples:
+#
+# Even Split Mode (default):
+# - research-agent: 2500 tokens max
+# - analysis-agent: 2500 tokens max
+# - Total: 5000 tokens max
+# - Agents killed individually when they exceed their 2500 token limit
+#
+# Custom Limits Mode (uncomment per_agent_limits above):
+# - research-agent: 3000 tokens max (more for web searches)
+# - analysis-agent: 2000 tokens max (less for simpler analysis)
+# - Total: 5000 tokens max
+# - Each agent killed when they exceed their individual limit
