@@ -1,6 +1,21 @@
-# MassGen v0.0.14: Enhanced Logging and Workspace Management
+# MassGen v0.0.12-0.0.14: Enhanced Logging and Workspace Management
 
-MassGen v0.0.14 introduces comprehensive logging functionality and improved workspace management for multi-agent workflows, enabling better debugging, analysis, and artifact tracking. This case study demonstrates these improvements through a creative web development task.
+MassGen v0.0.12-v0.0.14 introduces comprehensive logging functionality and improved workspace management for multi-agent workflows, enabling better debugging, analysis, and artifact tracking. This case study demonstrates these improvements through a creative web development task.
+
+## Table of Contents
+- [📋 PLANNING PHASE](#📋-planning-phase)
+  - [📝 Evaluation Design](#📝-evaluation-design)
+  - [🔧 Evaluation Analysis](#🔧-evaluation-analysis)
+  - [🎯 Desired Features](#🎯-desired-features)
+- [🚀 TESTING PHASE](#🚀-testing-phase)
+  - [📦 Implementation Details](#📦-implementation-details)
+  - [🤖 Agents](#🤖-agents)
+  - [🎥 Demo](#🎥-demo)
+- [📊 EVALUATION & ANALYSIS](#📊-evaluation--analysis)
+  - [Results](#results)
+  - [💡 Implementation Differences](#💡-implementation-differences)
+  - [🏆 Final Implementation - Combined Solution](#🏆-final-implementation---combined-solution)
+- [🎯 Conclusion](#🎯-conclusion)
 
 ---
 
@@ -12,14 +27,15 @@ MassGen v0.0.14 introduces comprehensive logging functionality and improved work
 "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 
 ### Baseline Config
-Prior to v0.0.14, Claude Code agents would use a shared workspace configuration like `massgen/configs/claude_code_4o.yaml` with potential workspace conflicts.
+Prior to v0.0.12, for multiple Claude Code agents to collaborate, they need to use the same workspace, which often cause conflicts. If they use separate workspaces, they don't collaborate smoothly.
 
 ### Baseline Command
 ```bash
 uv run python -m massgen.cli --config massgen/configs/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
-**Expected Result**: Agents might overwrite each other's work or create conflicting files in the same directory, leading to confusion and lost work.
+### Expected Result
+Agents don't know where to find the workspace associated with an agent. Even if that info is included in the answer of an agent, the agents might overwrite each other's work or create conflicting files in the same directory, leading to confusion and lost work.
 
 ## 🔧 Evaluation Analysis
 
@@ -54,7 +70,7 @@ The new logging and workspace features would be considered successful if:
 MassGen v0.0.14 (September 1, 2025)
 
 ### Config
-Configuration file: `massgen/configs/claude_code_context_sharing.yaml`
+Configuration file: [`massgen/configs/claude_code_context_sharing.yaml`](../../massgen/configs/claude_code_context_sharing.yaml)
 
 Key workspace configuration:
 ```yaml
@@ -104,7 +120,7 @@ The most significant change is the **comprehensive logging system** that capture
 **Evidence from actual log directory structure:**
 ```
 massgen_logs/
-└── 20250901_202552/                         # v0.0.14 case study logs
+└── log_20250901_202552/                         
     ├── agent_outputs/
     │   ├── system_status.txt                       # Complete timeline with timestamps
     │   ├── claude_code_agent1.txt                  # Agent 1's complete output
@@ -126,7 +142,7 @@ massgen_logs/
 
 ### 🎯 Enhanced Collaboration
 
-**Before**: "Error: File already exists" or silently overwritten work
+**Before**: "Error: File already exists" or silently overwrites existing work
 **After**: Each agent successfully creates its own version without conflicts
 
 The agents now:
