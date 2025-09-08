@@ -174,9 +174,10 @@ This collaborative approach ensures that the final output leverages collective i
 ```bash
 git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
-pip install ./requirements.txts
+
 pip install uv
 uv venv
+
 ```
 
 **Optional CLI Tools** (for enhanced capabilities):
