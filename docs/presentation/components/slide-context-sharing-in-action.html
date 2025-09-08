@@ -1,0 +1,83 @@
+        <!-- Slide 13: Context Sharing in Action -->
+        <div class="slide">
+            <div class="icon">🎬</div>
+            <h2>Context Sharing in Action</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;">
+                <div>
+                    <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1.2em;">🔬 Round 1: Agent 1 (Data Scientist)</h3>
+                        <div style="font-size: 1em; line-height: 1.5;">
+                            • Creates <code>analysis.py</code> and <code>results.csv</code><br>
+                            • Saves to permanent workspace<br>
+                            • <strong>📸 Snapshot captured</strong>
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1.2em;">🧪 Round 2: Agent 2 (Code Reviewer)</h3>
+                        <div style="font-size: 1em; line-height: 1.5;">
+                            • Sees <code>agent1/analysis.py</code> in temp workspace<br>
+                            • <strong>Reads & tests</strong> the analysis code<br>
+                            • Modifications in temp dir <strong>don't affect</strong> Agent 1<br>
+                            • Creates <code>improved_analysis.py</code> in own workspace
+                        </div>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1.2em;">🎯 Final Presentation</h3>
+                        <div style="font-size: 1em; line-height: 1.5;">
+                            • Winning agent has <strong>full context</strong><br>
+                            • Can reference both agents' work<br>
+                            • Snapshots ensure <strong>correct version</strong> access
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="text-align: center;">
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; border: 2px solid #dee2e6;">
+                        <h3 style="color: #495057; margin-bottom: 15px;">🗂️ Workspace Structure</h3>
+                        
+                        <!-- Agent 1 Permanent -->
+                        <div style="background: #3498db; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+                            <div style="font-weight: bold; margin-bottom: 10px;">👨‍💼 Agent 1 Permanent Workspace</div>
+                            <div style="font-family: monospace; font-size: 0.9em;">
+                                📄 analysis.py<br>
+                                📊 results.csv<br>
+                                📝 methodology.md
+                            </div>
+                        </div>
+                        
+                        <!-- Agent 2 Temp View -->
+                        <div style="background: #1abc9c; color: white; padding: 15px; border-radius: 10px; margin-bottom: 15px; text-align: left;">
+                            <div style="font-weight: bold; margin-bottom: 10px;">👁️ Agent 2 Temp Workspace (Read-Only Context)</div>
+                            <div style="font-family: monospace; font-size: 0.9em;">
+                                📁 agent1/<br>
+                                &nbsp;&nbsp;📄 analysis.py ✅ <em>readable & testable</em><br>
+                                &nbsp;&nbsp;📊 results.csv<br>
+                                &nbsp;&nbsp;📝 methodology.md
+                            </div>
+                        </div>
+                        
+                        <!-- Agent 2 Permanent -->
+                        <div style="background: #e74c3c; color: white; padding: 15px; border-radius: 10px; text-align: left;">
+                            <div style="font-weight: bold; margin-bottom: 10px;">👨‍💻 Agent 2 Permanent Workspace</div>
+                            <div style="font-family: monospace; font-size: 0.9em;">
+                                📄 improved_analysis.py<br>
+                                📋 code_review.md<br>
+                                🧪 test_results.json
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #d4edda; padding: 15px; border-radius: 10px; margin-top: 20px; border-left: 4px solid #27ae60;">
+                        <strong style="color: #155724;">🔑 Key Benefits Illustrated:</strong><br>
+                        <div style="color: #155724; font-size: 0.95em; text-align: left; margin-top: 10px;">
+                            ✅ Agent 2 can READ & execute Agent 1's work<br>
+                            ✅ Temp modifications don't corrupt original<br>
+                            ✅ Each agent maintains workspace integrity<br>
+                            ✅ Final answer has complete context
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
