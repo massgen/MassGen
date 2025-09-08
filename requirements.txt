@@ -16,3 +16,18 @@ claude-code-sdk>=0.0.19
 loguru>=0.7.0
 mcp>=1.12.0
 aiohttp>=3.8.0
+
+# Documentation dependencies
+sphinx>=7.0.0
+sphinx-rtd-theme>=2.0.0
+myst-parser>=2.0.0
+sphinx-copybutton>=0.5.0
+sphinx-autobuild>=2021.3.14
+sphinxcontrib-mermaid>=0.9.0
+sphinx-autodoc-typehints>=1.24.0
+sphinx-autoapi>=3.0.0
+sphinx-design>=0.5.0
+sphinx-tabs>=3.4.0
+sphinx-togglebutton>=0.3.0
+sphinx-inline-tabs>=2023.4.21
+sphinxcontrib-lunrsearch>=0.4
