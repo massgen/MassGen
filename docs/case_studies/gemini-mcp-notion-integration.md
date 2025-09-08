@@ -161,6 +161,7 @@ A key change is that MassGen agents can now **interact with external systems** t
 <h3 id="enhanced-task-completion">🎯 Enhanced Task Completion</h3>
 
 **Before**: "I can't create Notion pages, but here's a todo list you can copy-paste"
+
 **After**: "I have successfully created and verified a new Notion page with your Todo list... Here is the verified Todo list from the Notion page"
 
 The agents now:
