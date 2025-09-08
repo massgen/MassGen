@@ -3,17 +3,31 @@
 MassGen v0.0.15 introduces the Model Context Protocol (MCP) integration for Gemini agents, enabling seamless access to external tools and services. This case study demonstrates the first implementation of MCP in MassGen through a practical learning content generation task using Notion API.
 
 ## Table of Contents
+- [Prerequisites for MCP Integration](#prerequisites-for-mcp-integration)
 - [📋 PLANNING PHASE](#📋-planning-phase)
   - [📝 Evaluation Design](#📝-evaluation-design)
+    - [Prompt](#prompt)
+    - [Baseline Config](#baseline-config)
+    - [Baseline Command](#baseline-command)
+    - [Expected Result](#expected-result)
   - [🔧 Evaluation Analysis](#🔧-evaluation-analysis)
+    - [Current Failure Modes](#current-failure-modes)
+    - [Success Criteria](#success-criteria)
   - [🎯 Desired Features](#🎯-desired-features)
 - [🚀 TESTING PHASE](#🚀-testing-phase)
   - [📦 Implementation Details](#📦-implementation-details)
+    - [Version](#version)
+    - [New Config](#new-config)
+    - [Command](#command)
   - [🤖 Agents](#🤖-agents)
   - [🎥 Demo](#🎥-demo)
 - [📊 EVALUATION & ANALYSIS](#📊-evaluation--analysis)
   - [Results](#results)
+    - [🔧 External Tool Integration - The Core Transformation](#🔧-external-tool-integration---the-core-transformation)
+    - [🎯 Enhanced Task Completion](#🎯-enhanced-task-completion)
+    - [🗳️ Voting Evolution](#🗳️-voting-evolution)
 - [🎯 Conclusion](#🎯-conclusion)
+- [📌 Status Tracker](#📌-status-tracker)
 
 
 ## Prerequisites for MCP Integration
