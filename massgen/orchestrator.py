@@ -518,7 +518,9 @@ class Orchestrator(ChatAgent):
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
                                 # Log workspaces for current agent
-                                self.agents.get(agent_id).backend.filesystem_manager.log_current_state("after voting")
+                                agent = self.agents.get(agent_id)
+                                if agent and agent.backend.filesystem_manager:
+                                    self.agents.get(agent_id).backend.filesystem_manager.log_current_state("after voting")
                                 voted_agents[agent_id] = result_data
                                 log_stream_chunk("orchestrator", "content", f"✅ Vote recorded for [{result_data['agent_id']}]", agent_id)
                                 yield StreamChunk(
@@ -784,12 +786,12 @@ class Orchestrator(ChatAgent):
             
         return normalized_answers
     
-    def _normalize_workspace_paths_for_comparison(self, content: str) -> str:
+    def _normalize_workspace_paths_for_comparison(self, content: str, replacement_path: str = "/workspace") -> str:
         """
         Normalize all workspace paths in content to a canonical form for equality comparison.
         
         Unlike _normalize_workspace_paths_in_answers which normalizes paths for specific agents,
-        this method normalizes ALL workspace paths to a neutral canonical form (like '/workspace/')
+        this method normalizes ALL workspace paths to a neutral canonical form (like '/workspace')
         so that content can be compared for equality regardless of which agent workspace it came from.
         
         Args:
@@ -816,9 +818,9 @@ class Orchestrator(ChatAgent):
             def replace_workspace(match):
                 remainder = match.group(1)
                 if remainder:
-                    return f"/workspace/{remainder}"
+                    return f"{replacement_path}/{remainder}"
                 else:
-                    return "/workspace"
+                    return replacement_path
             
             normalized_content = re.sub(workspace_pattern, replace_workspace, normalized_content)
         
@@ -952,9 +954,6 @@ class Orchestrator(ChatAgent):
 
         # Copy all agents' snapshots to temp workspace for context sharing
         workspace_path = await self._copy_all_snapshots_to_temp_workspace(agent_id)
-        if workspace_path and hasattr(agent.backend, 'set_temporary_cwd'):
-            # Set the temporary workspace path for context sharing
-            agent.backend.set_temporary_cwd(workspace_path)
 
         # Log workspace state before agent starts
         if agent.backend.filesystem_manager:
@@ -1589,16 +1588,11 @@ class Orchestrator(ChatAgent):
         # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work
         temp_workspace_path = await self._copy_all_snapshots_to_temp_workspace(selected_agent_id)
-        if temp_workspace_path and hasattr(agent, 'backend'):
-            if hasattr(agent.backend, 'set_temporary_cwd'):
-                # Set temporary workspace for context sharing
-                agent.backend.set_temporary_cwd(temp_workspace_path)
-                # Log workspace restoration for visibility
-                yield StreamChunk(
-                    type="debug",
-                    content=f"Restored workspace context for final presentation: {temp_workspace_path}",
-                    source=selected_agent_id
-                )
+        yield StreamChunk(
+            type="debug",
+            content=f"Restored workspace context for final presentation: {temp_workspace_path}",
+            source=selected_agent_id
+        )
 
         # Prepare context about the voting
         vote_counts = vote_results.get("vote_counts", {})

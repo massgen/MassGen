@@ -137,7 +137,6 @@ class ClaudeCodeBackend(LLMBackend):
             raise ValueError("Claude Code backend requires 'cwd' configuration for workspace management")
         
         self._cwd: str = str(Path(str(self.filesystem_manager.get_current_workspace())).resolve())
-        self._temporary_cwd: Optional[str] = None
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
 
@@ -230,14 +229,6 @@ class ClaudeCodeBackend(LLMBackend):
         """
         return True
     
-    def set_temporary_cwd(self, temporary_cwd: str) -> None:
-        """Set the temporary working directory for context sharing.
-        
-        Args:
-            temporary_cwd: Path to temporary workspace containing shared context from other agents
-        """
-        self._temporary_cwd = temporary_cwd
-
     async def clear_history(self) -> None:
         """
         Clear Claude Code conversation history while preserving session.
