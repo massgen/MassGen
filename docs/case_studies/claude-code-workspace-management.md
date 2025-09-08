@@ -3,38 +3,38 @@
 MassGen v0.0.12-v0.0.14 introduces comprehensive logging functionality and improved workspace management for multi-agent workflows, enabling better debugging, analysis, and artifact tracking. This case study demonstrates these improvements through a creative web development task.
 
 ## Table of Contents
-- [📋 PLANNING PHASE](#📋-planning-phase)
-  - [📝 Evaluation Design](#📝-evaluation-design)
+- [📋 PLANNING PHASE](#planning-phase)
+  - [📝 Evaluation Design](#evaluation-design)
     - [Prompt](#prompt)
     - [Baseline Config](#baseline-config)
     - [Baseline Command](#baseline-command)
     - [Expected Result](#expected-result)
-  - [🔧 Evaluation Analysis](#🔧-evaluation-analysis)
+  - [🔧 Evaluation Analysis](#evaluation-analysis)
     - [Current Failure Modes](#current-failure-modes)
     - [Success Criteria](#success-criteria)
-  - [🎯 Desired Features](#🎯-desired-features)
-- [🚀 TESTING PHASE](#🚀-testing-phase)
-  - [📦 Implementation Details](#📦-implementation-details)
+  - [🎯 Desired Features](#desired-features)
+- [🚀 TESTING PHASE](#testing-phase)
+  - [📦 Implementation Details](#implementation-details)
     - [Version](#version)
     - [Config](#config)
     - [Command](#command)
-  - [🤖 Agents](#🤖-agents)
-  - [🎥 Demo](#🎥-demo)
-- [📊 EVALUATION & ANALYSIS](#📊-evaluation--analysis)
+  - [🤖 Agents](#agents)
+  - [🎥 Demo](#demo)
+- [📊 EVALUATION & ANALYSIS](#evaluation-analysis)
   - [Results](#results)
-    - [📊 Enhanced Logging - The Core Improvement](#📊-enhanced-logging---the-core-improvement)
-    - [🎯 Enhanced Collaboration](#🎯-enhanced-collaboration)
-    - [🗳️ Voting Process Enhancement](#🗳️-voting-process-enhancement)
-    - [💡 Implementation Differences](#💡-implementation-differences)
-    - [🏆 Final Implementation - Combined Solution](#🏆-final-implementation---combined-solution)
-- [🎯 Conclusion](#🎯-conclusion)
-- [📌 Status Tracker](#📌-status-tracker)
+    - [📊 Enhanced Logging - The Core Improvement](#enhanced-logging)
+    - [🎯 Enhanced Collaboration](#enhanced-collaboration)
+    - [🗳️ Voting Process Enhancement](#voting-process-enhancement)
+    - [💡 Implementation Differences](#implementation-differences)
+    - [🏆 Final Implementation - Combined Solution](#final-implementation)
+- [🎯 Conclusion](#conclusion)
+- [📌 Status Tracker](#status-tracker)
 
 ---
 
-# 📋 PLANNING PHASE
+<h1 id="planning-phase">📋 PLANNING PHASE</h1>
 
-## 📝 Evaluation Design
+<h2 id="evaluation-design">📝 Evaluation Design</h2> 
 
 ### Prompt
 "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
@@ -50,7 +50,7 @@ uv run python -m massgen.cli --config massgen/configs/claude_code_context_sharin
 ### Expected Result
 Agents don't know where to find the workspace associated with an agent. Even if that info is included in the answer of an agent, the agents might overwrite each other's work or create conflicting files in the same directory, leading to confusion and lost work.
 
-## 🔧 Evaluation Analysis
+<h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
 
 ### Current Failure Modes
 Before v0.0.14, MassGen had basic logging but lacked critical features:
@@ -68,16 +68,16 @@ The new logging and workspace features would be considered successful if:
 4. **Workspace Isolation**: Each agent maintains separate working directories
 5. **Debug Capabilities**: Easy analysis of multi-agent coordination and decision-making
 
-## 🎯 Desired Features
+<h2 id="desired-features">🎯 Desired Features</h2>
 
 1. **Per-agent versioned logging**: Every generated answer is saved in timestamped folders per agent (e.g., claude_code_agent1/20250901_202649_594259/).
 2. **Final workspace snapshot**: A final_workspace/ copy of the winning solution for quick access and reproducibility.
 
 ---
 
-# 🚀 TESTING PHASE
+<h1 id="testing-phase">🚀 TESTING PHASE</h1>
 
-## 📦 Implementation Details
+<h2 id="implementation-details">📦 Implementation Details</h2>
 
 ### Version
 MassGen v0.0.14 (September 1, 2025)
@@ -101,7 +101,7 @@ agents:
 uv run python -m massgen.cli --config massgen/configs/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
-## 🤖 Agents
+<h2 id="agents">🤖 Agents</h2>
 
 - **Agent 1 (claude_code_agent1)**: Creates website in `/claude_code_workspace1/`
   - Session ID: unique-session-id-1
@@ -116,17 +116,17 @@ Both agents use Claude Code's file management capabilities with:
 - Bash tool for checking directory structure
 - Read tool for verifying created content
 
-## 🎥 Demo
+<h2 id="demo">🎥 Demo</h2>
 
 [![MassGen v0.0.14 Logging and Workspace Demo](https://img.youtube.com/vi/jmQmoaFotBE/0.jpg)](https://youtu.be/jmQmoaFotBE)
 
 ---
 
-# 📊 EVALUATION & ANALYSIS
+<h1 id="evaluation-analysis">📊 EVALUATION & ANALYSIS</h1>
 
 ## Results
 
-### 📊 Enhanced Logging - The Core Improvement
+<h3 id="enhanced-logging">📊 Enhanced Logging - The Core Improvement</h3>
 
 The most significant change is the **comprehensive logging system** that captures every aspect of multi-agent workflows:
 
@@ -153,7 +153,7 @@ massgen_logs/
 ```
 - Clear timestamps throughout: `[20:26:40]`, `[20:26:55]`, `[20:34:58]` for debugging
 
-### 🎯 Enhanced Collaboration
+<h3 id="enhanced-collaboration">🎯 Enhanced Collaboration</h3>
 
 **Before**: "Error: File already exists" or silently overwrites existing work
 **After**: Each agent successfully creates its own version without conflicts
@@ -162,14 +162,14 @@ The agents now:
 1. **Work independently** in separate workspace directories
 2. **Preserve all outputs** for later comparison and voting
 
-### 🗳️ Voting Process Enhancement
+<h3 id="voting-process-enhancement">🗳️ Voting Process Enhancement</h3>
 
 With isolated workspaces, the voting process becomes more meaningful:
 - Voters can compare complete, unmodified implementations
 - No risk of partial overwrites affecting evaluation
 - Clear attribution of work to specific agents
 
-### 💡 Implementation Differences
+<h3 id="implementation-differences">💡 Implementation Differences</h3>
 
 The two agents took distinctly different approaches:
 
@@ -190,7 +190,7 @@ The two agents took distinctly different approaches:
 
 <img src="case_study_gifs/add_log_agent2.gif" alt="Agent 2 Implementation" width="800">
 
-### 🏆 Final Implementation - Combined Solution
+<h3 id="final-implementation">🏆 Final Implementation - Combined Solution</h3>
 
 **Winning Agent**: Agent 2 (claude_code_agent2) with elements from Agent 1
 
@@ -210,7 +210,7 @@ The complete final implementation was preserved in:
 
 <img src="case_study_gifs/add_log_final.gif" alt="Final Implementation" width="800">
 
-## 🎯 Conclusion
+<h2 id="conclusion">🎯 Conclusion</h2>
 
 The logging and workspace improvements in v0.0.14 represent crucial advancements for multi-agent collaboration:
 
@@ -231,7 +231,7 @@ The success of this case study validates the workspace isolation approach and de
 
 ---
 
-### 📌 Status Tracker
+<h3 id="status-tracker">📌 Status Tracker</h3>
 - ✅ Planning phase completed
 - ✅ Features implemented  
 - ✅ Testing completed
