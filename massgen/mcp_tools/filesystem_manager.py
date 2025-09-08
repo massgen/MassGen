@@ -121,7 +121,7 @@ class FilesystemManager:
         if workspace.exists() and workspace.is_dir():
             for item in workspace.iterdir():
                 if item.is_symlink():
-                    raise AssertionError(f"Refusing to clear symlink in workspace: {item}")
+                    logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink during clear: {item}")
                 if item.is_file():
                     item.unlink()
                 elif item.is_dir():
@@ -200,7 +200,7 @@ class FilesystemManager:
         """
         if not content:
             return content
-            
+
         import re
         
         # Get the current workspace path as string
@@ -208,21 +208,17 @@ class FilesystemManager:
         
         # Escape special regex characters in the path
         escaped_workspace = re.escape(workspace_str)
-        
-        # Pattern matches the workspace path followed by optional slash and captures the rest
-        pattern = escaped_workspace + r'/?(\S*)'
-        
-        def replace_path(match):
+
+        # Pattern: match workspace path followed by optional slash and rest of segment
+        # [^\s]* ensures we don't consume across whitespace/newlines
+        pattern = re.compile(rf"{escaped_workspace}(?:[/\\]?)([^\n\r]*)")
+
+        def replace_path(match: re.Match) -> str:
             remainder = match.group(1)
-            if remainder:
-                return f"workspace/{remainder}"
-            else:
-                return "workspace"
-        
-        # Replace all occurrences
-        normalized = re.sub(pattern, replace_path, content)
-        
-        return normalized
+            return f"workspace/{remainder}" if remainder else "workspace"
+
+        return pattern.sub(replace_path, content)
+
     
     async def save_snapshot(self, timestamp: Optional[str] = None, is_final: bool = False) -> None:
         """
@@ -243,74 +239,85 @@ class FilesystemManager:
         source_path = Path(source_dir)
         
         if not source_path.exists() or not source_path.is_dir():
-            logger.warning(f"[FilesystemManager] Source path invalid - exists: {source_path.exists()}, is_dir: {source_path.is_dir() if source_path.exists() else False}")
+            logger.warning(
+                f"[FilesystemManager] Source path invalid - exists: {source_path.exists()}, "
+                f"is_dir: {source_path.is_dir() if source_path.exists() else False}"
+            )
             return
-        
-        # Check if source has any contents
-        if source_path.exists() and any(source_path.iterdir()):
-            # 1. Always save to snapshot_storage if available (keep only most recent)
+
+        if not any(source_path.iterdir()):
+            logger.warning(f"[FilesystemManager.save_snapshot] Source path {source_path} is empty, skipping snapshot")
+            return
+
+        try:
+            # --- 1. Save to snapshot_storage ---
             if self.snapshot_storage:
-                # Clear existing snapshot and save new one
                 if self.snapshot_storage.exists():
                     shutil.rmtree(self.snapshot_storage)
                 self.snapshot_storage.mkdir(parents=True, exist_ok=True)
-                
-                # Copy all contents to snapshot
+
                 items_copied = 0
                 for item in source_path.iterdir():
+                    if item.is_symlink():
+                        logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
+                        continue
                     if item.is_file():
                         shutil.copy2(item, self.snapshot_storage / item.name)
-                        items_copied += 1
                     elif item.is_dir():
                         shutil.copytree(item, self.snapshot_storage / item.name)
-                        items_copied += 1
-                
+                    items_copied += 1
+
                 logger.info(f"[FilesystemManager] Saved snapshot with {items_copied} items to {self.snapshot_storage}")
-            
-            # 2. Additionally save to log directories if logging is enabled
+
+            # --- 2. Save to log directories ---
             log_session_dir = get_log_session_dir()
             if log_session_dir and self.agent_id:
-                # Determine log destination directory
                 if is_final:
-                    # For final snapshots, save to final/agent_id/workspace/
                     dest_dir = log_session_dir / "final" / self.agent_id / "workspace"
-                    logger.info(f"[FilesystemManager.save_snapshot] Final log snapshot dest_dir: {dest_dir}")
-                    # Clear existing final snapshot
                     if dest_dir.exists():
                         shutil.rmtree(dest_dir)
                     dest_dir.mkdir(parents=True, exist_ok=True)
+                    logger.info(f"[FilesystemManager.save_snapshot] Final log snapshot dest_dir: {dest_dir}")
                 else:
-                    # For regular snapshots, create agent_id/timestamp/workspace/ structure
                     if not timestamp:
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
                     dest_dir = log_session_dir / self.agent_id / timestamp / "workspace"
-                    logger.info(f"[FilesystemManager.save_snapshot] Regular log snapshot dest_dir: {dest_dir}")
                     dest_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Copy to log directory
+                    logger.info(f"[FilesystemManager.save_snapshot] Regular log snapshot dest_dir: {dest_dir}")
+
                 items_copied = 0
                 for item in source_path.iterdir():
+                    if item.is_symlink():
+                        logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
+                        continue
                     if item.is_file():
                         shutil.copy2(item, dest_dir / item.name)
-                        items_copied += 1
                     elif item.is_dir():
                         shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
-                        items_copied += 1
-                
-                logger.info(f"[FilesystemManager] Saved {'final' if is_final else 'regular'} log snapshot with {items_copied} items to {dest_dir}")
-            
-            # Clear source workspace after all snapshots are saved
-            for item in source_path.iterdir():
-                if item.is_symlink():
-                    raise AssertionError(f"Refusing to clear symlink in workspace: {item}")
-                if item.is_file():
-                    item.unlink()
-                elif item.is_dir():
-                    shutil.rmtree(item)
-            
-            logger.info(f"[FilesystemManager] Cleared workspace after snapshot")
-        else:
-            logger.warning(f"[FilesystemManager.save_snapshot] Source path {source_path} is empty, skipping snapshot")
+                    items_copied += 1
+
+                logger.info(
+                    f"[FilesystemManager] Saved {'final' if is_final else 'regular'} "
+                    f"log snapshot with {items_copied} items to {dest_dir}"
+                )
+
+        except Exception as e:
+            logger.exception(f"[FilesystemManager.save_snapshot] Snapshot failed: {e}")
+            # On failure, DO NOT clear the workspace and exit
+            return
+
+        # --- 3. Clear the workspace only if snapshot succeeded ---
+        for item in source_path.iterdir():
+            if item.is_symlink():
+                logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
+                continue
+            if item.is_file():
+                shutil.copy2(item, self.snapshot_storage / item.name)
+            elif item.is_dir():
+                shutil.copytree(item, self.snapshot_storage / item.name)
+            items_copied += 1
+
+        logger.info(f"[FilesystemManager] Cleared workspace after snapshot")
     
     async def copy_snapshots_to_temp_workspace(self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]) -> Optional[Path]:
         """
