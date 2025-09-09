@@ -27,7 +27,8 @@ massgen/
 │   ├── claude_code.py      # Claude Code CLI backend
 │   ├── gemini.py           # Google Gemini backend
 │   ├── grok.py             # xAI Grok backend
-│   └── lmstudio.py         # LMStudio backend
+│   ├── lmstudio.py         # LMStudio backend
+│   └── *.md                # Backend documentation and API research
 ├── mcp_tools/              # MCP (Model Context Protocol) integration
 │   ├── __init__.py
 │   ├── README.md           # Comprehensive MCP documentation
@@ -37,25 +38,25 @@ massgen/
 │   ├── config_validator.py # Configuration validation
 │   ├── converters.py       # Data format converters
 │   ├── exceptions.py       # Custom MCP exceptions
-│   └── security.py         # Security validation and sanitization
+│   ├── security.py         # Security validation and sanitization
+│   ├── filesystem_manager.py # Workspace and snapshot management
+│   └── *.md                # Individual component documentation
 ├── frontend/               # User interface components
 │   ├── __init__.py
 │   ├── coordination_ui.py  # Main UI coordination
-│   └── displays/           # Display implementations
-│       ├── __init__.py
-│       ├── base_display.py
-│       ├── rich_terminal_display.py
-│       ├── simple_display.py
-│       └── terminal_display.py
+│   ├── displays/           # Display implementations
+│   │   ├── __init__.py
+│   │   ├── base_display.py
+│   │   ├── rich_terminal_display.py
+│   │   ├── simple_display.py
+│   │   └── terminal_display.py
 ├── configs/                # Configuration files
 │   ├── *.yaml             # Various agent configurations
-│   └── *.md               # Documentation (MCP setup guides, etc.)
+│   └── *.md               # MCP setup guides and documentation
 ├── tests/                  # Test files
 │   ├── __init__.py
 │   ├── test_*.py          # Test implementations
-│   ├── mcp_test_server.py # MCP stdio test server
-│   ├── test_http_mcp_server.py # MCP HTTP test server
-│   └── *.md               # Test documentation
+│   └── *.md               # Test documentation and case studies
 └── v1/                     # Legacy version 1 code
     ├── __init__.py
     ├── agent.py
@@ -130,9 +131,9 @@ We welcome contributions in these areas:
 
 ### Development Workflow
 
-> **Important**: Our next version is v0.0.16. If you want to contribute, please contribute to the `dev/v0.0.16` branch.
+> **Important**: Our next version is v0.0.17. If you want to contribute, please contribute to the `dev/v0.0.17` branch.
 
-1. **Fork the repository** and create a feature branch from `dev/v0.0.16`
+1. **Fork the repository** and create a feature branch from `dev/v0.0.17`
 2. **Set up the development environment** following the setup instructions above
 3. **Make your changes** following the existing code style and patterns
 4. **Add tests** for new functionality
