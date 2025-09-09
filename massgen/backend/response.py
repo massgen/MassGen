@@ -10,7 +10,7 @@ import asyncio
 import random
 import re
 from typing import Dict, List, Any, AsyncGenerator, Optional, Callable, Literal
-from .base import LLMBackend, StreamChunk
+from .base import LLMBackend, StreamChunk, FilesystemSupport
 from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ try:
         MCPConfigValidator, validate_url
     )
 except ImportError as e:  # MCP not installed or import failed within mcp_tools
-    logger.debug(f"MCP import failed: {e}")
+    logger.warning(f"MCP import failed: {e}")
     MultiMCPClient = None  # type: ignore[assignment]
     MCPError = ImportError  # type: ignore[assignment]
     MCPConnectionError = ImportError  # type: ignore[assignment]
@@ -47,8 +47,8 @@ class ResponseBackend(LLMBackend):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
 
-        # MCP integration
-        self.mcp_servers = kwargs.pop("mcp_servers", [])
+        #MCP integration (filesystem MCP server may have been injected by base class)
+        self.mcp_servers = self.config.get("mcp_servers", [])
         self.allowed_tools = kwargs.pop("allowed_tools", None)
         self.exclude_tools = kwargs.pop("exclude_tools", None)
         self._mcp_client: Optional[MultiMCPClient] = None
@@ -87,9 +87,9 @@ class ResponseBackend(LLMBackend):
                 logger.warning("No circuit breaker configs available, disabling circuit breaker functionality")
                 self._circuit_breakers_enabled = False
             else:
-                logger.debug("Circuit breakers initialized for MCP transport types")
+                logger.info("Circuit breakers initialized for MCP transport types")
         else:
-            logger.debug("Circuit breakers not available - proceeding without circuit breaker protection")
+            logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
 
         # Transport Types:
         # - "stdio" & "streamable-http": Use our mcp_tools folder (MultiMCPClient)
@@ -419,6 +419,8 @@ class ResponseBackend(LLMBackend):
             "mcp_servers",  # MCP-specific parameter
             "allowed_tools",  # Tool filtering parameter
             "exclude_tools",  # Tool filtering parameter
+            "cwd",  # Current working directory
+            "agent_temporary_workspace",  # Agent temporary workspace
         }
         for key, value in all_params.items():
             if key not in excluded_params and value is not None:
@@ -440,7 +442,7 @@ class ResponseBackend(LLMBackend):
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(mcp_tools)
-                logger.debug(f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to OpenAI Response API")
+                logger.info(f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to OpenAI Response API")
 
         # Add HTTP MCP servers as native MCP tools
         if self._http_servers:
@@ -449,7 +451,7 @@ class ResponseBackend(LLMBackend):
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(http_mcp_tools)
-                logger.debug(f"Added {len(http_mcp_tools)} HTTP MCP servers to OpenAI tools")
+                logger.info(f"Added {len(http_mcp_tools)} HTTP MCP servers to OpenAI tools")
 
         # Add provider tools (web search, code interpreter) if enabled
         provider_tools = []
@@ -571,7 +573,7 @@ class ResponseBackend(LLMBackend):
             )
 
         for iteration in range(max_iterations):
-            logger.debug(f"MCP function call iteration {iteration + 1}/{max_iterations}")
+            logger.info(f"MCP function call iteration {iteration + 1}/{max_iterations}")
 
             # Build API params for this iteration
             all_params = {**self.config, **kwargs}
@@ -598,7 +600,7 @@ class ResponseBackend(LLMBackend):
                             "name": getattr(chunk.item, "name", ""),
                             "arguments": ""
                         }
-                        logger.debug(f"Function call detected: {current_function_call['name']}")
+                        logger.info(f"Function call detected: {current_function_call['name']}")
 
                     # Accumulate function arguments
                     elif (chunk.type == "response.function_call_arguments.delta" and
@@ -640,7 +642,7 @@ class ResponseBackend(LLMBackend):
                 non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self.functions]
 
                 if non_mcp_functions:
-                    logger.debug(f"Non-MCP function calls detected: {[call['name'] for call in non_mcp_functions]}. Exiting MCP execution loop.")
+                    logger.info(f"Non-MCP function calls detected: {[call['name'] for call in non_mcp_functions]}. Exiting MCP execution loop.")
                     yield StreamChunk(type="done")
                     return
 
@@ -676,7 +678,7 @@ class ResponseBackend(LLMBackend):
                             "output": str(result)
                         })
 
-                        logger.debug(f"Executed MCP function {function_name} (stdio/streamable-http)")
+                        logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
                         
                         # Yield MCP tool response status
                         yield StreamChunk(
@@ -862,12 +864,12 @@ class ResponseBackend(LLMBackend):
                 # Choose streaming mode based on MCP availability
                 if self.functions:
                     
-                    logger.debug("Using stdio MCP execution mode")
+                    logger.info("Using stdio MCP execution mode")
                     async for chunk in self.stream_with_mcp(client, messages, tools, **kwargs):
                         yield chunk
                 else:
                 
-                    logger.debug("Using HTTP-only MCP mode")
+                    logger.info("Using HTTP-only MCP mode")
                     async for chunk in self.stream_without_mcp(client, messages, tools, **kwargs):
                         yield chunk
 
@@ -901,6 +903,10 @@ class ResponseBackend(LLMBackend):
     def get_provider_name(self) -> str:
         """Get the provider name."""
         return "OpenAI"
+    
+    def get_filesystem_support(self) -> FilesystemSupport:
+        """OpenAI supports filesystem through MCP servers."""
+        return FilesystemSupport.MCP
 
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by OpenAI."""
@@ -1017,7 +1023,7 @@ class ResponseBackend(LLMBackend):
         from ..mcp_tools import MCPCircuitBreakerManager
 
         if not self._circuit_breakers_enabled or not self._mcp_tools_circuit_breaker:
-            logger.debug("Circuit breaker not enabled for mcp_tools servers")
+            logger.info("Circuit breaker not enabled for mcp_tools servers")
             return servers
 
         return MCPCircuitBreakerManager.apply_circuit_breaker_filtering(servers, self._mcp_tools_circuit_breaker)
@@ -1029,7 +1035,7 @@ class ResponseBackend(LLMBackend):
             True if server should be included, False if it should be skipped
         """
         if not self._circuit_breakers_enabled or not self._http_circuit_breaker:
-            logger.debug(f"Circuit breaker not enabled for HTTP server {server_name}")
+            logger.info(f"Circuit breaker not enabled for HTTP server {server_name}")
             return True
         
         try:
@@ -1039,7 +1045,7 @@ class ResponseBackend(LLMBackend):
                 logger.info(f"Circuit breaker: Skipping HTTP MCP server {server_name}")
                 return False
             else:
-                logger.debug(f"Circuit breaker: Allowing HTTP MCP server {server_name}")
+                logger.info(f"Circuit breaker: Allowing HTTP MCP server {server_name}")
                 return True
         except Exception as cb_error:
             logger.warning(f"Circuit breaker should_skip_server failed for HTTP server {server_name}: {cb_error}")
