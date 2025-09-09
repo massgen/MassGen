@@ -140,6 +140,7 @@ class FilesystemManager:
         """
         # Build MCP server configuration with access to both workspaces
         config = {
+            "name": "filesystem",
             "type": "stdio",
             "command": "npx",
             "args": [
@@ -165,22 +166,15 @@ class FilesystemManager:
         Returns:
             Modified configuration with filesystem MCP server added
         """
-        # Get existing mcp_servers configuration
-        mcp_servers = backend_config.get("mcp_servers", {})
-        
-        # Convert list format to dict if needed
-        if isinstance(mcp_servers, list):
-            # Convert list of servers to dict format
-            servers_dict = {}
-            for server in mcp_servers:
-                if isinstance(server, dict):
-                    name = server.get("name", f"server_{len(servers_dict)}")
-                    servers_dict[name] = server
-            mcp_servers = servers_dict
-        
-        # Add filesystem server if not already present
-        if "filesystem" not in mcp_servers:
-            mcp_servers["filesystem"] = self.get_mcp_filesystem_config()
+        # Get existing mcp_servers configuration and add filesystem server if missing
+        mcp_servers = backend_config.get("mcp_servers", [])
+        try:
+            if "filesystem" not in [server.get("name") for server in mcp_servers]:
+                mcp_servers.append(self.get_mcp_filesystem_config())
+            else:
+                logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present in configuration, continuing without changes")
+        except Exception as e:
+            logger.warning(f"[FilesystemManager.inject_filesystem_mcp] Error checking existing MCP servers: {e}")
         
         # Update backend config
         backend_config["mcp_servers"] = mcp_servers
