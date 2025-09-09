@@ -159,11 +159,40 @@ mcp_servers:
     type: "streamable-http"
     url: "https://api.weather.example.com/mcp"
   
-  # http transport - direct OpenAI MCP servers
+  # http transport - direct OpenAI MCP servers with authorization
   enterprise_tools:
     type: "http"
     url: "https://mcp.enterprise.example.com"
+    authorization: "${ENTERPRISE_MCP_TOKEN}"  # Environment variable substitution
+    require_approval: "never"  # Optional: "never" (default) or "always"
+    allowed_tools:              # Optional: limit to specific tools
+      - "create_report"
+      - "get_data"
+  
+  # HTTP MCP server with always requiring approval
+  secure_payment_service:
+    type: "http"
+    url: "https://mcp.stripe.com"
+    authorization: "${STRIPE_OAUTH_ACCESS_TOKEN}"
+    require_approval: "always"  # User must approve each tool call
 ```
+
+### Configuration Options
+
+#### require_approval
+- **"never"**: Tools are executed automatically (default behavior)
+- **"always"**: User must approve each tool execution before it runs
+- **Purpose**: Control user interaction level for sensitive operations
+
+#### authorization  
+- **Format**: Supports environment variable substitution with `${VAR_NAME}` pattern
+- **Purpose**: Authenticate with HTTP MCP servers requiring API keys or OAuth tokens
+- **Examples**: `"Bearer ${API_TOKEN}"`, `"${OAUTH_ACCESS_TOKEN}"`
+
+#### allowed_tools
+- **Purpose**: Limit server to specific tools (optional)
+- **Format**: List of tool names to include
+- **Use Case**: Restrict access to sensitive operations
 
 ## Performance Optimization
 
