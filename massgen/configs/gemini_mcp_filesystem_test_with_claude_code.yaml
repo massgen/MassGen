@@ -1,12 +1,13 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a website with a diverse set of fun facts about LLMs, placing the output into a file in LaTeX Beamer format."
+# uv run python -m massgen.cli --config configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 agents:
   - id: "gemini_agent"
     backend:
       type: "gemini"
       model: "gemini-2.5-pro"
       cwd: "workspace1"  # Working directory for file operations
+      enable_web_search: true
 
   - id: "claude_code"
     backend:
