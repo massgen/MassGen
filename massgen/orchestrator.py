@@ -525,13 +525,14 @@ class Orchestrator(ChatAgent):
                             # Agent provided an answer (initial or improved)
                             agent = self.agents.get(agent_id)
                             # Save snapshot (of workspace and answer) when agent provides new answer
-                            await self._save_agent_snapshot(agent_id, answer_content=result_data)
+                            answer_timestamp = await self._save_agent_snapshot(agent_id, answer_content=result_data)
                             if agent and agent.backend.filesystem_manager:
                                 agent.backend.filesystem_manager.log_current_state("after providing answer")
                             # Always record answers, even from restarting agents (orchestrator accepts them)
                             
                             answered_agents[agent_id] = result_data
-                            self.coordination_tracker.add_agent_answer(agent_id, result_data)
+                            # Pass timestamp to coordination_tracker for mapping
+                            self.coordination_tracker.add_agent_answer(agent_id, result_data, snapshot_timestamp=answer_timestamp)
                             reset_signal = True
                             
                             # Track new answer event
@@ -560,12 +561,15 @@ class Orchestrator(ChatAgent):
                                 )
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
+                                # Save vote snapshot
+                                vote_timestamp = await self._save_agent_vote(agent_id, result_data)
                                 # Log workspaces for current agent
                                 agent = self.agents.get(agent_id)
                                 if agent and agent.backend.filesystem_manager:
                                     self.agents.get(agent_id).backend.filesystem_manager.log_current_state("after voting")
                                 voted_agents[agent_id] = result_data
-                                self.coordination_tracker.add_agent_vote(agent_id, result_data)
+                                # Pass timestamp to coordination_tracker for mapping
+                                self.coordination_tracker.add_agent_vote(agent_id, result_data, snapshot_timestamp=vote_timestamp)
                                 # Track new vote event
                                 voted_for = result_data.get("agent_id", "<unknown>")
                                 reason = result_data.get("reason", "No reason provided")
@@ -764,6 +768,88 @@ class Orchestrator(ChatAgent):
             await agent.backend.filesystem_manager.save_snapshot(timestamp=timestamp if not is_final else None, is_final=is_final)
         else:
             logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager")
+        
+        # Return the timestamp for tracking
+        return timestamp if not is_final else "final"
+    
+    async def _save_agent_vote(self, agent_id: str, vote_data: Dict[str, Any]) -> str:
+        """
+        Save an agent's vote with timestamp.
+        
+        Creates a timestamped directory structure:
+        - agent_id/timestamp/vote.json - Contains the vote data
+        
+        Args:
+            agent_id: ID of the agent
+            vote_data: The vote data to save (voted_for, reason, etc.)
+            
+        Returns:
+            The timestamp used for this snapshot
+        """
+        from datetime import datetime
+        import json
+        import time
+        
+        logger.info(f"[Orchestrator._save_agent_vote] Called for agent_id={agent_id}, vote_data={vote_data}")
+        
+        # Generate timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        
+        log_session_dir = get_log_session_dir()
+        logger.info(f"[Orchestrator._save_agent_vote] log_session_dir = {log_session_dir}")
+        
+        if log_session_dir:
+            try:
+                # Create timestamped directory for vote
+                timestamped_dir = log_session_dir / agent_id / timestamp
+                timestamped_dir.mkdir(parents=True, exist_ok=True)
+                vote_file = timestamped_dir / "vote.json"
+                
+                # Get current state for context
+                current_answers = {
+                    aid: state.answer 
+                    for aid, state in self.agent_states.items() 
+                    if state.answer
+                }
+                
+                # Create anonymous agent mapping
+                agent_mapping = {}
+                for i, real_id in enumerate(sorted(self.agents.keys()), 1):
+                    agent_mapping[f"agent{i}"] = real_id
+                
+                # Build comprehensive vote data
+                comprehensive_vote_data = {
+                    "voter_id": agent_id,
+                    "voter_anon_id": next((anon for anon, real in agent_mapping.items() if real == agent_id), agent_id),
+                    "voted_for": vote_data.get("agent_id", "unknown"),
+                    "voted_for_anon": next((anon for anon, real in agent_mapping.items() if real == vote_data.get("agent_id")), "unknown"),
+                    "reason": vote_data.get("reason", ""),
+                    "timestamp": timestamp,
+                    "unix_timestamp": time.time(),
+                    "iteration": self.coordination_tracker.current_iteration if self.coordination_tracker else None,
+                    "round": self.coordination_tracker.current_round if self.coordination_tracker else None,
+                    "available_options": list(current_answers.keys()),
+                    "available_options_anon": [next((anon for anon, real in agent_mapping.items() if real == aid), aid) for aid in sorted(current_answers.keys())],
+                    "agent_mapping": agent_mapping,
+                    "vote_context": {
+                        "total_agents": len(self.agents),
+                        "agents_with_answers": len(current_answers),
+                        "current_task": self.current_task
+                    }
+                }
+                
+                # Write the comprehensive vote data
+                with open(vote_file, 'w', encoding='utf-8') as f:
+                    json.dump(comprehensive_vote_data, f, indent=2)
+                logger.info(f"[Orchestrator._save_agent_vote] Saved comprehensive vote to {vote_file}")
+            except Exception as e:
+                import traceback
+                logger.error(f"[Orchestrator._save_agent_vote] Failed to save vote for {agent_id}: {e}")
+                logger.error(f"[Orchestrator._save_agent_vote] Traceback: {traceback.format_exc()}")
+        else:
+            logger.warning(f"[Orchestrator._save_agent_vote] log_session_dir is None, skipping vote save")
+        
+        return timestamp
     
     async def _close_agent_stream(
         self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
@@ -1042,8 +1128,8 @@ class Orchestrator(ChatAgent):
                     base_system_message=agent_system_message,
                 )
 
-            # Track the context used for this agent execution
-            self.coordination_tracker.track_agent_context(agent_id, answers, conversation.get("conversation_history", []))
+            # Track all the context used for this agent execution
+            self.coordination_tracker.track_agent_context(agent_id, answers, conversation.get("conversation_history", []), conversation)
             
             # Log the messages being sent to the agent with backend info
             backend_name = None
@@ -1496,8 +1582,8 @@ class Orchestrator(ChatAgent):
             # Track iterations during final answer presentation (even for stored answers)
             self.coordination_tracker.start_new_iteration()  # Iteration for winner selection
             
-            # Track final answer and set winner
-            self.coordination_tracker.set_final_answer(self._selected_agent, final_answer)
+            # Track final answer and set winner (with "final" as the timestamp since this is stored answer)
+            self.coordination_tracker.set_final_answer(self._selected_agent, final_answer, snapshot_timestamp="final")
             
             # Mark final presentation as completed
             self.coordination_tracker.change_status(self._selected_agent, AgentStatus.COMPLETED)

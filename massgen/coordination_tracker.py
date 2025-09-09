@@ -102,6 +102,9 @@ class CoordinationTracker:
         
         # Answer formatting settings
         self.preview_length = 150  # Default preview length for answers
+        
+        # Snapshot mapping - tracks filesystem snapshots for answers/votes
+        self.snapshot_mappings: Dict[str, Dict[str, Any]] = {}  # label/vote_id -> snapshot info
 
     def initialize_session(self, agent_ids: List[str], user_prompt: Optional[str] = None):
         """Initialize a new coordination session."""
@@ -134,8 +137,12 @@ class CoordinationTracker:
         """Record when an agent changes status."""
         self._add_event("status_change", agent_id, f"Changed to status: {new_status.value}")
 
-    def track_agent_context(self, agent_id: str, answers: Dict[str, str], conversation_history: Optional[Dict[str, Any]] = None):
-        """Record when an agent receives context."""
+    def track_agent_context(self, agent_id: str, answers: Dict[str, str], conversation_history: Optional[Dict[str, Any]] = None, agent_full_context: Optional[str] = None):
+        """Record when an agent receives context.
+
+        TODO: Saving full context, want to find a structured way to save this. This is crucial so we can reconstruct what the agent saw. How about we save this in the timestamp'd snapshot folder for the agent? Recall that for each decision (action, vote) the orchestrator creates a timestamped folder for the agent. We can save the full context there as context.txt. Then, we just need to track in the snapshot_mappings.json file that this context.txt exists for that action/vote. And it should be apparent that the context.txt is the context used for that action/vote.
+
+        """
         context = {
             "available_answers": list(answers.keys()),
             "answer_count": len(answers),
@@ -173,8 +180,14 @@ class CoordinationTracker:
     #         self.current_round += 1
     #         self._add_event("restart_complete", None, f"All agents restarted - Now in round {self.current_round}")
 
-    def add_agent_answer(self, agent_id: str, answer: str):
-        """Record when an agent provides a new answer."""
+    def add_agent_answer(self, agent_id: str, answer: str, snapshot_timestamp: Optional[str] = None):
+        """Record when an agent provides a new answer.
+        
+        Args:
+            agent_id: ID of the agent
+            answer: The answer content
+            snapshot_timestamp: Timestamp of the filesystem snapshot (if any)
+        """
         # Create answer object
         agent_answer = AgentAnswer(
             agent_id=agent_id,
@@ -193,12 +206,30 @@ class CoordinationTracker:
         self.answers_by_agent[agent_id].append(agent_answer)
         self.all_answers[label] = answer  # Quick lookup by label
         
+        # Track snapshot mapping if provided
+        if snapshot_timestamp:
+            self.snapshot_mappings[label] = {
+                "type": "answer",
+                "label": label,
+                "agent_id": agent_id,
+                "timestamp": snapshot_timestamp,
+                "iteration": self.current_iteration,
+                "round": self.current_round,
+                "path": f"{agent_id}/{snapshot_timestamp}/answer.txt"
+            }
+        
         # Record event with label (important info) but no preview (that's for display only)
         context = {"label": label}
         self._add_event("new_answer", agent_id, f"Provided answer {label}", context)
 
-    def add_agent_vote(self, agent_id: str, vote_data: Dict[str, Any]):
-        """Record when an agent votes."""
+    def add_agent_vote(self, agent_id: str, vote_data: Dict[str, Any], snapshot_timestamp: Optional[str] = None):
+        """Record when an agent votes.
+        
+        Args:
+            agent_id: ID of the voting agent
+            vote_data: Dictionary with vote information
+            snapshot_timestamp: Timestamp of the filesystem snapshot (if any)
+        """
         # Handle both "voted_for" and "agent_id" keys (orchestrator uses "agent_id")
         voted_for = vote_data.get("voted_for") or vote_data.get("agent_id", "unknown")
         reason = vote_data.get("reason", "")
@@ -226,6 +257,25 @@ class CoordinationTracker:
         )
         self.votes.append(vote)
         
+        # Track snapshot mapping if provided
+        if snapshot_timestamp:
+            # Create a meaningful vote label similar to answer labels
+            agent_num = self.agent_ids.index(agent_id) + 1 if agent_id in self.agent_ids else 0
+            vote_num = len([v for v in self.votes if v.voter_id == agent_id])
+            vote_label = f"agent{agent_num}.vote{vote_num}"
+            
+            self.snapshot_mappings[vote_label] = {
+                "type": "vote",
+                "label": vote_label,
+                "agent_id": agent_id,
+                "timestamp": snapshot_timestamp,
+                "voted_for": voted_for,
+                "voted_for_label": voted_for_label,
+                "iteration": self.current_iteration,
+                "round": self.current_round,
+                "path": f"{agent_id}/{snapshot_timestamp}/vote.json"
+            }
+        
         # Record event - only essential info in context
         context = {
             "voted_for": voted_for,  # Real agent ID for compatibility
@@ -245,8 +295,14 @@ class CoordinationTracker:
         }
         self._add_event("final_agent_selected", agent_id, "Selected as final presenter", self.final_context)
 
-    def set_final_answer(self, agent_id: str, final_answer: str):
-        """Record the final answer presentation."""
+    def set_final_answer(self, agent_id: str, final_answer: str, snapshot_timestamp: Optional[str] = None):
+        """Record the final answer presentation.
+        
+        Args:
+            agent_id: ID of the agent
+            final_answer: The final answer content
+            snapshot_timestamp: Timestamp of the filesystem snapshot (if any)
+        """
         # Create final answer object
         final_answer_obj = AgentAnswer(
             agent_id=agent_id,
@@ -263,6 +319,18 @@ class CoordinationTracker:
         # Store the final answer
         self.answers_by_agent[agent_id].append(final_answer_obj)
         self.all_answers[label] = final_answer
+        
+        # Track snapshot mapping if provided
+        if snapshot_timestamp:
+            self.snapshot_mappings[label] = {
+                "type": "final_answer",
+                "label": label,
+                "agent_id": agent_id,
+                "timestamp": snapshot_timestamp,
+                "iteration": self.current_iteration,
+                "round": self.current_round,
+                "path": f"final/{agent_id}/answer.txt" if snapshot_timestamp == "final" else f"{agent_id}/{snapshot_timestamp}/answer.txt"
+            }
         
         # Record event with label only (no preview)
         context = {"label": label, **(self.final_context or {})}
@@ -388,6 +456,12 @@ class CoordinationTracker:
                 events_data = [event.to_dict() for event in self.events]
                 json.dump(events_data, f, indent=2, default=str)
             
+            # Save snapshot mappings to track filesystem snapshots
+            if self.snapshot_mappings:
+                snapshot_mappings_file = log_dir / "snapshot_mappings.json"
+                with open(snapshot_mappings_file, 'w', encoding='utf-8') as f:
+                    json.dump(self.snapshot_mappings, f, indent=2, default=str)
+            
             # Save all answers with labels
             answers_file = log_dir / "answers.json"
             with open(answers_file, 'w', encoding='utf-8') as f:
@@ -407,17 +481,8 @@ class CoordinationTracker:
                 }
                 json.dump(answers_data, f, indent=2, default=str)
             
-            # Save individual answer files
-            for label, content in self.all_answers.items():
-                answer_file = log_dir / f"answer_{label}.txt"
-                with open(answer_file, 'w', encoding='utf-8') as f:
-                    f.write(f"ANSWER: {label}\n")
-                    f.write("=" * 50 + "\n")
-                    agent_id = self._get_agent_id_from_label(label)
-                    f.write(f"Agent: {agent_id}\n")
-                    f.write(f"Type: {'Final Answer' if label.endswith('.final') else 'Regular Answer'}\n")
-                    f.write("-" * 50 + "\n")
-                    f.write(content)
+            # Individual answer files are now saved by orchestrator with proper timestamps
+            # The snapshot_mappings.json file tracks the mapping from labels to filesystem paths
             
             # Save votes
             if self.votes:
@@ -734,53 +799,18 @@ class CoordinationTracker:
                 events_by_round[round_num] = []
             events_by_round[round_num].append(event)
         
-        # Build context map from actual context_received events
-        agent_context_by_iteration = {aid: {} for aid in self.agent_ids}
-        for event in sorted_events:
-            if event.event_type == "context_received" and event.agent_id and event.context:
-                iteration = event.context.get("iteration", 0)
-                available_answers = event.context.get("available_answers", [])
-                # Convert agent IDs to answer labels
-                answer_labels = []
-                for answer_ref in available_answers:
-                    if answer_ref in self.agent_ids:
-                        # Find latest answer label for this agent
-                        agent_num = self.agent_ids.index(answer_ref) + 1
-                        # Find the most recent non-final answer for this agent
-                        for label in sorted(self.all_answers.keys()):
-                            if label.startswith(f"agent{agent_num}.") and not label.endswith(".final"):
-                                answer_labels.append(label)
-                                break
-                    else:
-                        # Already a label
-                        answer_labels.append(answer_ref)
-                agent_context_by_iteration[event.agent_id][iteration] = answer_labels
+        # Initialize context tracking across all rounds  
+        global_agent_context = {aid: [] for aid in self.agent_ids}
         
         # Process each round
         for round_num in sorted(events_by_round.keys()):
             events = events_by_round[round_num]
             
-            # Get context for agents in this round from actual context_received events
-            round_agent_context = {}
-            for aid in self.agent_ids:
-                # Find the most recent context for this agent up to this round
-                agent_context = []
-                for iteration in sorted(agent_context_by_iteration[aid].keys()):
-                    # Get context from events in this round or earlier rounds
-                    round_for_iteration = None
-                    for event in sorted_events:
-                        if event.context and event.context.get("iteration") == iteration:
-                            round_for_iteration = event.context.get("round", 0)
-                            break
-                    if round_for_iteration is not None and round_for_iteration <= round_num:
-                        agent_context = agent_context_by_iteration[aid][iteration]
-                round_agent_context[aid] = agent_context
-            
             # Initialize round data
             round_data = {
                 "round": round_num,
                 "events": events,  # Store the events for this round
-                "agents": {aid: {"status": AgentStatus.ANSWERING.value.upper(), "context": round_agent_context.get(aid, []), "details": ""} for aid in self.agent_ids},
+                "agents": {aid: {"status": AgentStatus.ANSWERING.value.upper(), "context": global_agent_context[aid].copy(), "details": ""} for aid in self.agent_ids},
                 "is_final": False
             }
             
@@ -814,12 +844,15 @@ class CoordinationTracker:
                 # Update answering agent
                 round_data["agents"][new_answer_event.agent_id] = {
                     "status": f"NEW ANSWER: {label}",
-                    "context": round_agent_context.get(new_answer_event.agent_id, []),
+                    "context": global_agent_context[new_answer_event.agent_id].copy(),
                     "details": f"Provided answer {label}"
                 }
                 
-                # Update details for other agents
+                # Update global context for ALL agents (including the answering agent)
+                # They will see this answer in future rounds after restart
                 for aid in self.agent_ids:
+                    if label not in global_agent_context[aid]:
+                        global_agent_context[aid].append(label)
                     if aid != new_answer_event.agent_id:
                         round_data["agents"][aid]["details"] = "Waiting for coordination to continue..."
                 
@@ -861,7 +894,7 @@ class CoordinationTracker:
                         voted_for_label = vote_event.context.get("voted_for_label", vote_event.context.get("voted_for", "unknown"))
                         round_data["agents"][vote_event.agent_id] = {
                             "status": f"VOTE: {voted_for_label}",
-                            "context": round_agent_context.get(vote_event.agent_id, []),
+                            "context": global_agent_context[vote_event.agent_id].copy(),
                             "details": f"Selected: {voted_for_label}"
                         }
             
@@ -881,7 +914,7 @@ class CoordinationTracker:
                     # Update final agent
                     round_data["agents"][final_answer_event.agent_id] = {
                         "status": f"FINAL ANSWER: {label}",
-                        "context": round_agent_context.get(final_answer_event.agent_id, []),
+                        "context": global_agent_context[final_answer_event.agent_id].copy(),
                         "details": "Presented final answer"
                     }
                     
@@ -921,7 +954,7 @@ class CoordinationTracker:
                     if aid != restart_event.agent_id:  # Don't override triggering agent
                         round_data["agents"][aid] = {
                             "status": AgentStatus.RESTARTING.value.upper(),
-                            "context": round_agent_context.get(aid, []),
+                            "context": global_agent_context[aid].copy(),
                             "details": "Previous work discarded, restarting with new context"
                         }
             
