@@ -5,6 +5,29 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.16] - 2025-09-08
+
+### Added
+- **Unified Filesystem Support with MCP Integration**: Advanced filesystem capabilities designed for all backends
+  - Complete `FilesystemManager` class providing unified filesystem access with extensible backend support
+  - Currently supports Gemini and Claude Code backends, designed for seamless expansion to all backends
+  - MCP-based filesystem operations enabling file manipulation, workspace management, and cross-agent collaboration
+
+- **Expanded Configuration Library**: New YAML configurations for various use cases
+  - **Gemini MCP Filesystem Testing**: `gemini_mcp_filesystem_test.yaml`, `gemini_mcp_filesystem_test_sharing.yaml`, `gemini_mcp_filesystem_test_single_agent.yaml`, `gemini_mcp_filesystem_test_with_claude_code.yaml`
+  - **Hybrid Model Setups**: `geminicode_gpt5nano.yaml`
+
+- **Case Studies**: Added comprehensive case studies from previous versions
+  - `gemini-mcp-notion-integration.md`: Gemini MCP Notion server integration and productivity workflows
+  - `claude-code-workspace-management.md`: Claude Code context sharing and workspace management demonstrations
+
+
+### Technical Details
+- **Commits**: 30+ commits including workspace redesign and orchestrator enhancements
+- **Files Modified**: 40+ files across orchestrator, mcp_tools, configurations, and case studies
+- **New Architecture**: Complete workspace management system with FilesystemManager
+- **Contributors**: @ncrispino @a5507203 @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.15] - 2025-09-05
 
 ### Added

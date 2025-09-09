@@ -1,0 +1,194 @@
+        <!-- Slide 14: Benchmarking Results -->
+        <div class="slide">
+            <div class="icon">📊</div>
+            <h2>Benchmarking: Preliminary Results</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666;">
+                <em>Scientific evaluation across graduate-level reasoning, instruction-following, and narrative tasks</em>
+            </div>
+            
+            <!-- Visual Performance Chart -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin: 30px 0;">
+                <!-- GPQA-Diamond Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">🧪 GPQA-Diamond</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Graduate Physics/Chemistry</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 87.4%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">87.4% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 85.9%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">85.9%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok 4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 85.4%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">85.4%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 84.8%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">84.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 68.2%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">68.2%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IFEval Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">📋 IFEval</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Instruction Following</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 88%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">88.0% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 87.4%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">87.4%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok 4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 84.7%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">84.7%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 66%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">66.0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 63.6%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">63.6%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MuSR Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">📖 MuSR</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Narrative Reasoning</div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 69.6%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">69.6% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 69.2%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">69.2%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 68.3%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">68.3%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok 4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 67.6%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">67.6%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 62.8%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">62.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overall Performance Summary -->
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 20px; display: inline-block; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">🏆 Overall Champion</div>
+                    <div style="font-size: 2.2em; font-weight: bold; margin: 10px 0;">MassGen: 81.2%</div>
+                    <div style="font-size: 0.9em; opacity: 0.9;">Wins 2/3 benchmarks • Statistically significant</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px;">
+                <div style="background: #d4edda; padding: 15px; border-radius: 12px; border-left: 4px solid #27ae60; flex: 1; max-width: 260px;">
+                    <strong style="color: #155724; font-size: 1em;">✅ Key Results:</strong><br>
+                    <div style="color: #155724; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • <strong>Highest on 2/3</strong> benchmarks<br>
+                        • <strong>Best overall</strong> average<br>
+                        • <strong>Consistent</strong> performance
+                    </div>
+                </div>
+                <div style="background: #fff3cd; padding: 15px; border-radius: 12px; border-left: 4px solid #f39c12; flex: 1; max-width: 260px;">
+                    <strong style="color: #856404; font-size: 1em;">📈 Statistical:</strong><br>
+                    <div style="color: #856404; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • vs Claude: <strong>p = 1.4e-07</strong> ⭐⭐⭐<br>
+                        • vs Gemini: <strong>p = 1.1e-28</strong> ⭐⭐⭐<br>
+                        • Not due to chance
+                    </div>
+                </div>
+                <div style="background: #d1ecf1; padding: 15px; border-radius: 12px; border-left: 4px solid #17a2b8; flex: 1; max-width: 260px;">
+                    <strong style="color: #0c5460; font-size: 1em;">🔬 Research Gap:</strong><br>
+                    <div style="color: #0c5460; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • <strong>Oracle:</strong> 95.5% (GPQA)<br>
+                        • <strong>Actual:</strong> 87.4%<br>
+                        • <strong>Potential:</strong> 8.1 points
+                    </div>
+                </div>
+            </div>
+        </div>

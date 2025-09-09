@@ -26,7 +26,7 @@ import re
 import time
 import hashlib
 from typing import Dict, List, Any, AsyncGenerator, Optional, Literal, Callable, Awaitable
-from .base import LLMBackend, StreamChunk
+from .base import LLMBackend, StreamChunk, FilesystemSupport
 from ..logger_config import logger, log_backend_activity, log_backend_agent_message, log_stream_chunk, log_tool_call
 
 try:
@@ -454,9 +454,9 @@ class GeminiBackend(LLMBackend):
         )
         self.search_count = 0
         self.code_execution_count = 0
-
-        # MCP integration
-        self.mcp_servers = kwargs.pop("mcp_servers", [])
+        
+        # MCP integration (filesystem MCP server may have been injected by base class)
+        self.mcp_servers = self.config.get("mcp_servers", [])
         self.allowed_tools = kwargs.pop("allowed_tools", None)
         self.exclude_tools = kwargs.pop("exclude_tools", None)
         self._mcp_client: Optional[MultiMCPClient] = None
@@ -1191,7 +1191,8 @@ Make your decision and include the JSON at the very end of your response."""
             excluded_params = {
                 "enable_web_search", "enable_code_execution", "agent_id", "session_id",
                 # MCP-specific parameters that should not be passed to Gemini
-                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto", "type", "allowed_tools", "exclude_tools"
+                # TODO: Place this somewhere we can import from when extending MCP support to other backends
+                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto", "type", "allowed_tools", "exclude_tools", "cwd", "agent_temporary_workspace"
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
@@ -1882,6 +1883,10 @@ Make your decision and include the JSON at the very end of your response."""
     def get_provider_name(self) -> str:
         """Get the provider name."""
         return "Gemini"
+    
+    def get_filesystem_support(self) -> FilesystemSupport:
+        """Gemini supports filesystem through MCP servers."""
+        return FilesystemSupport.MCP
 
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by Gemini."""
