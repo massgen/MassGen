@@ -40,7 +40,7 @@ def build_presentation(presentation_name):
             "Case Study - Success Through Collaboration", 
             "Case Study - When Coordination Fails",
             "Coordination Psychology - Voting Behavior",
-            "Evolution - v0.0.1 to v0.0.15",
+            "Evolution - v0.0.1 to v0.0.16",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
             "Research & Learning Applications",
@@ -66,7 +66,7 @@ def build_presentation(presentation_name):
             "Case Study - Success Through Collaboration", 
             "Case Study - When Coordination Fails",
             "Coordination Psychology - Voting Behavior",
-            "Evolution - v0.0.1 to v0.0.15",
+            "Evolution - v0.0.1 to v0.0.16",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
             "Columbia Research Applications",
@@ -92,7 +92,7 @@ def build_presentation(presentation_name):
             "Case Study - Success Through Collaboration", 
             "Case Study - When Coordination Fails",
             "Coordination Psychology - Voting Behavior",
-            "Evolution - v0.0.1 to v0.0.15",
+            "Evolution - v0.0.1 to v0.0.16",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
             "Research & Learning Applications",
@@ -189,15 +189,19 @@ def build_presentation(presentation_name):
         print(f"Available types: {', '.join(slide_configs.keys())}")
         return
     
-    # Start building the HTML
-    html_content = load_component("head")
+    # Start building the HTML with presentation-specific head
+    head_component = f"head-{presentation_name}" if presentation_name in ["columbia", "aibuilders"] else "head"
+    html_content = load_component(head_component)
     html_content += "\n<body>\n    <div class=\"slideshow-container\">\n"
     
     # Add all slides for this presentation
     slides = slide_configs[presentation_name]
-    for slide in slides:
+    for i, slide in enumerate(slides):
         slide_content = load_component(slide)
         if slide_content:
+            # Add blank line separator before each slide (except the first)
+            if i > 0:
+                html_content += "\n"
             html_content += slide_content + "\n"
     
     # Add navigation and closing tags
@@ -206,13 +210,21 @@ def build_presentation(presentation_name):
     # Load navigation and inject slide titles
     nav_content = load_component("navigation")
     if nav_content and presentation_name in slide_titles:
-        # Replace the slide titles in the navigation
-        titles_json = json.dumps(slide_titles[presentation_name])
+        # Format slide titles with proper indentation (one per line)
+        titles_list = slide_titles[presentation_name]
+        formatted_titles = "[\n"
+        for i, title in enumerate(titles_list):
+            formatted_titles += f'            "{title}"'
+            if i < len(titles_list) - 1:
+                formatted_titles += ","
+            formatted_titles += "\n"
+        formatted_titles += "        ]"
+        
         # Replace the hardcoded titles array in the navigation
         import re
         nav_content = re.sub(
             r'const slideTitles = \[.*?\];',
-            f'const slideTitles = {titles_json};',
+            f'const slideTitles = {formatted_titles};',
             nav_content,
             flags=re.DOTALL
         )

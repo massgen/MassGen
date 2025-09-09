@@ -136,6 +136,8 @@ class ResponseBackend(LLMBackend):
                 "enable_code_interpreter",
                 "agent_id",
                 "session_id",
+                "cwd",
+                "agent_temporary_workspace"
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:

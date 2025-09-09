@@ -155,7 +155,9 @@ class AzureOpenAIBackend(LLMBackend):
                 "tools",
                 "agent_id",
                 "session_id",
-                "type"
+                "type",
+                "cwd",
+                "agent_temporary_workspace"
             }
             for key, value in kwargs.items():
                 if key not in excluded_params and value is not None:
