@@ -37,14 +37,14 @@ MassGen v0.0.16 introduces unified filesystem support for Gemini agents through 
 <h2 id="evaluation-design">📝 Evaluation Design</h2> 
 
 ### Prompt
-"Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
+"Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 
 ### Configuration
 Prior to v0.0.16, Gemini agents had no filesystem access capabilities, making them unable to create files or collaborate with Claude Code agents that rely on workspace sharing.
 
 ### Baseline Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
+uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 ```
 
 ### Expected Result
@@ -145,7 +145,7 @@ The test execution demonstrates:
 
 <h3 id="unified-filesystem-manager">🗂️ Unified Filesystem Manager - The Core Innovation</h3>
 
-**Major Breakthrough**: Introduction of the `FilesystemManager` class provides unified filesystem access across all backends.
+**Major Breakthrough**: Introduction of the `FilesystemManager` class provides unified filesystem access (currently implemented for Gemini and Claude Code backends, with architecture designed for future expansion).
 
 **Key Evidence from Logs:**
 ```
@@ -327,9 +327,9 @@ MassGen v0.0.16 represents a **fundamental breakthrough** in multi-agent system 
 ## Key Achievements
 
 ### 🔧 **Technical Innovation**
-- **FilesystemManager Class**: Provides unified filesystem abstraction across all backends
-- **MCP Integration**: Clean, extensible approach to filesystem operations via Model Context Protocol
-- **Cross-Backend Workspace Sharing**: First-time collaboration between different backend types
+- **FilesystemManager Class**: Provides unified filesystem abstraction (currently Gemini and Claude Code, extensible to all backends)
+- **MCP Integration**: Clean approach to filesystem operations via Model Context Protocol for Gemini agents
+- **Cross-Backend Workspace Sharing**: First-time collaboration between Gemini and Claude Code backends
 
 ### 🤝 **Collaborative Excellence** 
 - **Backend Parity**: Gemini agents now have equivalent filesystem capabilities to Claude Code agents
@@ -337,15 +337,15 @@ MassGen v0.0.16 represents a **fundamental breakthrough** in multi-agent system 
 - **Enhanced Quality**: Cross-backend collaboration produces superior results than single-backend workflows
 
 ### 📈 **System Evolution**
-- **Unified Configuration**: Identical `cwd` syntax across all backends for consistency
-- **Enhanced Orchestration**: Sophisticated workspace management with automatic synchronization
-- **Future-Ready Architecture**: Extensible foundation for adding filesystem support to any backend
+- **Unified Configuration**: Identical `cwd` syntax for Gemini and Claude Code backends (extensible to all backends in future)
+- **Enhanced Orchestration**: Sophisticated workspace management with automatic synchronization between supported backends
+- **Future-Ready Architecture**: Extensible foundation designed to add filesystem support to all backends
 
 ## Impact Assessment
 
-This release transforms MassGen from a **multi-backend orchestrator** to a truly **unified multi-agent platform** where agents can collaborate seamlessly regardless of their underlying technology. The educational content creation task demonstrates how cross-backend collaboration produces comprehensive, high-quality results that exceed what individual agents could achieve in isolation.
+This release transforms MassGen by enabling **cross-backend collaboration** between Gemini and Claude Code agents through unified filesystem support. The educational content creation task demonstrates how collaboration between these two backend types produces comprehensive, high-quality results that exceed what individual agents could achieve in isolation.
 
-The v0.0.16 unified filesystem support establishes the foundation for **unlimited multi-agent collaboration** across the entire spectrum of AI models and backends, positioning MassGen as the premier platform for complex, collaborative AI workflows.
+The v0.0.16 unified filesystem support establishes the foundation for expanding multi-agent collaboration. Currently supporting Gemini and Claude Code backends, the extensible architecture is designed to power all backends in future releases, positioning MassGen as the premier platform for complex, collaborative AI workflows.
 
 ---
 
@@ -353,9 +353,9 @@ The v0.0.16 unified filesystem support establishes the foundation for **unlimite
 
 | Feature | Status | Implementation | Notes |
 |---------|---------|---------------|--------|
-| FilesystemManager Class | ✅ Complete | `massgen/mcp_tools/filesystem_manager.py` | Unified filesystem abstraction |
+| FilesystemManager Class | ✅ Complete | `massgen/mcp_tools/filesystem_manager.py` | Unified filesystem for Gemini & Claude Code |
 | MCP Filesystem Integration | ✅ Complete | MCP server auto-configuration | Gemini agents gain filesystem access |
-| Unified Configuration Syntax | ✅ Complete | Identical `cwd` support across backends | Configuration consistency achieved |
+| Unified Configuration Syntax | ✅ Complete | Identical `cwd` support for Gemini & Claude Code | Ready for future backend expansion |
 | Enhanced Logging & Orchestration | ✅ Complete | Timestamped versioning | Comprehensive workflow tracking |
 | Educational Content Case Study | ✅ Complete | 25-slide comprehensive RL presentation | Quality demonstrates collaboration benefits |
 
