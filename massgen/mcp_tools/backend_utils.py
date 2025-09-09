@@ -13,7 +13,8 @@ import json
 try:
     from .exceptions import (
         MCPError, MCPConnectionError, MCPTimeoutError, MCPServerError,
-        MCPValidationError, MCPAuthenticationError, MCPResourceError
+        MCPValidationError, MCPAuthenticationError, MCPResourceError,
+        MCPConfigurationError
     )
     from .config_validator import MCPConfigValidator
     from .circuit_breaker import CircuitBreakerConfig
@@ -26,6 +27,7 @@ except ImportError:
     MCPValidationError = ValueError
     MCPAuthenticationError = Exception
     MCPResourceError = Exception
+    MCPConfigurationError = Exception
     MCPConfigValidator = None
     CircuitBreakerConfig = None
     MultiMCPClient = None
@@ -311,22 +313,13 @@ class MCPConfigHelper:
             return None
 
         try:
-            if transport_type == "http":
-                # HTTP transport typically needs more tolerance for network issues
-                config = CircuitBreakerConfig(
-                    max_failures=5,
-                    reset_time_seconds=60,
-                    backoff_multiplier=2,
-                    max_backoff_multiplier=16
-                )
-            else:
-                # Standard configuration for MCP tools (stdio/streamable-http)
-                config = CircuitBreakerConfig(
-                    max_failures=3,
-                    reset_time_seconds=30,
-                    backoff_multiplier=2,
-                    max_backoff_multiplier=8
-                )
+            # Standard configuration for MCP tools (stdio/streamable-http)
+            config = CircuitBreakerConfig(
+                max_failures=3,
+                reset_time_seconds=30,
+                backoff_multiplier=2,
+                max_backoff_multiplier=8
+            )
 
             log_mcp_activity(backend_name, "created circuit breaker config", {"transport_type": transport_type}, agent_id=agent_id)
             return config
@@ -666,27 +659,42 @@ class MCPSetupManager:
         return normalized
 
     @staticmethod
-    def separate_servers_by_transport_type(servers: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    def separate_servers_by_transport_type(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Separate servers to return only stdio and streamable-http servers.
+        
+        Args:
+            servers: List of server configurations
+            
+        Returns:
+            List containing only stdio and streamable-http servers
+        """
         mcp_tools_servers = []
-        http_servers = []
 
         for server in servers:
             transport_type = (server.get("type") or "").lower()
             server_name = server.get("name", "unnamed")
 
             if not transport_type:
-                logger.warning("MCP server missing type field", extra={"server_name": server_name, "supported_types": ["stdio", "streamable-http", "http"], "action": "skipping"})
+                logger.warning("MCP server missing type field", extra={"server_name": server_name, "supported_types": ["stdio", "streamable-http"], "action": "skipping"})
                 continue
 
             if transport_type in ["stdio", "streamable-http"]:
                 # Both stdio and streamable-http use MultiMCPClient
                 mcp_tools_servers.append(server)
             elif transport_type == "http":
-                http_servers.append(server)
+                raise MCPConfigurationError(
+                    f"HTTP MCP transport type is not supported for server '{server_name}'. "
+                    f"Supported types: 'stdio', 'streamable-http'.",
+                    context="transport_validation"
+                )
             else:
-                logger.warning("MCP unknown transport type", extra={"transport_type": transport_type, "server_name": server_name, "supported_types": ["stdio", "streamable-http", "http"], "action": "skipping"})
+                raise MCPConfigurationError(
+                    f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. "
+                    f"Supported types: 'stdio', 'streamable-http'.",
+                    context="transport_validation"
+                )
 
-        return mcp_tools_servers, http_servers
+        return mcp_tools_servers
 
     @staticmethod
     def separate_stdio_streamable_servers(servers: List[Dict[str, Any]], backend_name: Optional[str] = None, agent_id: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -706,8 +714,6 @@ class MCPSetupManager:
             transport_type = server.get("type", "").lower()
             if transport_type in ["stdio", "streamable-http"]:
                 stdio_streamable.append(server)
-            else:
-                log_mcp_activity(backend_name, "excluding server from stdio/streamable-http processing", {"transport_type": transport_type, "server_name": server.get('name', 'unnamed')}, agent_id=agent_id)
 
         return stdio_streamable
 
