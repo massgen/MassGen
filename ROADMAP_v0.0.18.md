@@ -24,7 +24,6 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 #### 1.1 Generic Chat Completions MCP Integration (REQUIRED)
 - [ ] Extend existing MCP framework to ChatCompletionsBackend base class
 - [ ] Add MCP support for providers not yet covered 
-- [ ] Reuse function calling bridge patterns from OpenAI/Gemini implementations
 - [ ] Test with existing filesystem manager and MCP servers
 
 #### 1.2 Provider-Specific MCP Adaptations (REQUIRED)
@@ -34,8 +33,8 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - [ ] Test cross-provider MCP server compatibility
 
 #### 1.3 Chat Completions MCP Testing and Documentation (REQUIRED)
-- [ ] Extend existing MCP test suite for new providers
-- [ ] Create provider-specific MCP configuration examples
+- [ ] Extend existing MCP test suite for new llm providers
+- [ ] Create the provider-specific MCP configuration examples
 - [ ] Benchmark MCP performance across all providers
 - [ ] Document any provider-specific limitations or considerations
 
@@ -45,9 +44,7 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 #### 2.1 Step-by-Step Orchestration Logging (REQUIRED)
 - [ ] Add clear indicators for each collaboration phase (task distribution → parallel work → consensus building → final answer)
 - [ ] Enhance existing log_orchestrator_activity with collaboration phase context
-- [ ] Add timing information for each collaboration phase
 - [ ] Create visual collaboration flow in logs for easier debugging
-- [ ] Improve correlation between agent activities and orchestration phases
 
 #### 2.2 Architecture Documentation (REQUIRED)
 - [ ] Create `/docs/architecture/` directory structure
@@ -57,11 +54,9 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
   - Backend abstraction layer and provider integrations
   - MCP tool execution flow across different backends
 - [ ] Document key architectural decisions and design patterns
-- [ ] Establish CI/CD process for keeping diagram updated
 
 #### 2.3 Monitoring and Observability (REQUIRED)
 - [ ] Add performance metrics for orchestration stages
-- [ ] Implement health checks for critical components
 - [ ] Create dashboard-ready log output format
 - [ ] Add telemetry for system bottleneck identification
 
@@ -69,48 +64,39 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 **Goal**: Improve developer experience when debugging and viewing long outputs
 
 #### 3.1 Scroll and Display Fixes (OPTIONAL)
-- [ ] Fix scroll issues for long generated results
-- [ ] Implement pagination for extensive outputs
-- [ ] Add better viewport management
-- [ ] Improve text wrapping and formatting
-- [ ] Fix overflow issues in terminal displays
+- [ ] Improve scroll functionality for long generated results beyond current ellipsis handling
+- [ ] Implement pagination system for extensive outputs with configurable page sizes
+- [ ] Add better viewport management with dynamic content windowing
+- [ ] Enhance scrolling support beyond current base scrolling in `max_content_lines`
 
 #### 3.2 Debug Experience Enhancement (OPTIONAL)
-- [ ] Enhance debug output formatting
-- [ ] Add filtering options for debug logs
-- [ ] Improve error message clarity
-- [ ] Better stack trace presentation
-- [ ] Add contextual debugging information
+- [ ] Improve error message clarity with structured error reporting
+- [ ] Better stack trace presentation with Rich syntax highlighting
+- [ ] Add contextual debugging information with component relationship mapping
+- [ ] Implement interactive debug mode with real-time log filtering
 
 #### 3.3 UI Performance (OPTIONAL)
-- [ ] Optimize rendering for large outputs
-- [ ] Implement lazy loading where appropriate
-- [ ] Add configurable display limits
-- [ ] Improve memory usage for long sessions
+- [ ] Implement lazy loading for extensive content with progressive rendering
+- [ ] Add configurable display limits with user-defined content truncation
+- [ ] Optimize rendering performance for long outputs with content virtualization
+- [ ] Implement progressive content loading with buffering strategies
 
 ### 🎯 Milestone 4: Organized MCP Logging (OPTIONAL)
 **Goal**: Make MCP-related logs more structured and readable
 
 #### 4.1 MCP Log Structure (OPTIONAL)
-- [ ] Enhance existing MCP logging from v0.0.15 with better organization
-- [ ] Categorize MCP logs by operation type:
-  - Discovery operations
-  - Tool execution
-  - Result processing
-- [ ] Add MCP-specific log levels and prefixes
-- [ ] Implement consistent formatting across all MCP operations
+- [ ] Expand existing categorization to include:
+  - Discovery operations (server discovery, tool registration)
+  - Tool execution workflow stages
+  - Result processing and validation steps
+- [ ] Enhance MCP-specific log prefixes beyond current "MCP:" format
+- [ ] Add operation-specific log levels for granular filtering
+- [ ] Implement structured JSON logging format for MCP operations
 
 #### 4.2 MCP Log Management (OPTIONAL)
-- [ ] Build on existing logger_config.py to add MCP-specific filters
-- [ ] Add option for separate MCP log file alongside main logs
-- [ ] Implement log rotation specific to MCP operations
-- [ ] Create MCP log viewer/search utility
-
-#### 4.3 MCP Debugging Tools (OPTIONAL)
-- [ ] Create MCP operation timeline view
-- [ ] Add performance metrics per operation
-- [ ] Implement success/failure statistics
-- [ ] Create troubleshooting guide for MCP issues
+- [ ] Add MCP-specific filters to existing logger_config.py infrastructure
+- [ ] Create dedicated MCP log file separation alongside main session logs
+- [ ] Implement MCP-specific log rotation with retention policies
 
 ## Success Criteria
 
@@ -143,7 +129,7 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 ### Dependencies
 - **Chat Completions APIs**: All provider APIs with function calling support
 - **MCP Library**: Continued compatibility with Python `mcp` package
-- **Backend Systems**: Existing OpenAI MCP support from v0.0.17
+- **Backend Systems**: Existing MCP support from v0.0.15
 - **Logging Infrastructure**: Python logging framework enhancements
 
 ### Risks & Mitigations
