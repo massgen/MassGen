@@ -7,22 +7,20 @@ import os
 import logging
 import json
 import asyncio
-import random
-import re
 from typing import Dict, List, Any, AsyncGenerator, Optional, Callable, Literal
 from .base import LLMBackend, StreamChunk, FilesystemSupport
-from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
-
-logger = logging.getLogger(__name__)
+from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk,logger
 
 # MCP integration imports
 try:
     from ..mcp_tools import (
         MultiMCPClient, MCPError, MCPConnectionError, MCPCircuitBreaker,
         MCPConfigurationError, MCPValidationError, MCPTimeoutError, MCPServerError,
-        MCPConfigValidator, validate_url
+        MCPConfigValidator, Function, MCPErrorHandler, MCPSetupManager, MCPResourceManager, 
+        MCPExecutionManager, MCPRetryHandler, MCPMessageManager, 
+        MCPConfigHelper, MCPCircuitBreakerManager
     )
-except ImportError as e:  # MCP not installed or import failed within mcp_tools
+except ImportError as e:  # MCP not installed or import failed
     logger.warning(f"MCP import failed: {e}")
     MultiMCPClient = None  # type: ignore[assignment]
     MCPError = ImportError  # type: ignore[assignment]
@@ -33,11 +31,15 @@ except ImportError as e:  # MCP not installed or import failed within mcp_tools
     MCPValidationError = ImportError  # type: ignore[assignment]
     MCPTimeoutError = ImportError  # type: ignore[assignment]
     MCPServerError = ImportError  # type: ignore[assignment]
-    validate_url = None
-
-
-# Import common utilities
-from ..mcp_tools import Function, MCPErrorHandler
+    Function = None  # type: ignore[assignment]
+    MCPErrorHandler = None  # type: ignore[assignment]
+    MCPSetupManager = None  # type: ignore[assignment]
+    MCPResourceManager = None  # type: ignore[assignment]
+    MCPExecutionManager = None  # type: ignore[assignment]
+    MCPRetryHandler = None  # type: ignore[assignment]
+    MCPMessageManager = None  # type: ignore[assignment]
+    MCPConfigHelper = None  # type: ignore[assignment]
+    MCPCircuitBreakerManager = None  # type: ignore[assignment]
 
 
 class ResponseBackend(LLMBackend):
@@ -58,44 +60,26 @@ class ResponseBackend(LLMBackend):
         self._mcp_tool_calls_count = 0
         self._mcp_tool_failures = 0
 
-        # Circuit breakers for different transport types with explicit configuration
+        # Circuit breaker for MCP tools (stdio + streamable-http) with explicit configuration
         self._mcp_tools_circuit_breaker = None  # For stdio + streamable-http
-        self._http_circuit_breaker = None       # For OpenAI native http
         self._circuit_breakers_enabled = MCPCircuitBreaker is not None
         
-        # Initialize circuit breakers if available
+        # Initialize circuit breaker if available
         if self._circuit_breakers_enabled:
-            from ..mcp_tools import MCPConfigHelper
-
-            # Use shared utility to build circuit breaker configurations
+            # Use shared utility to build circuit breaker configuration
             mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools")
-            http_config = MCPConfigHelper.build_circuit_breaker_config("http")
 
             if mcp_tools_config:
                 self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config)
+                logger.info("Circuit breaker initialized for MCP tools")
             else:
-                logger.warning("MCP tools circuit breaker config not available")
-                self._mcp_tools_circuit_breaker = None
-
-            if http_config:
-                self._http_circuit_breaker = MCPCircuitBreaker(http_config)
-            else:
-                logger.warning("HTTP circuit breaker config not available")
-                self._http_circuit_breaker = None
-
-            if not (mcp_tools_config or http_config):
-                logger.warning("No circuit breaker configs available, disabling circuit breaker functionality")
+                logger.warning("MCP tools circuit breaker config not available, disabling circuit breaker functionality")
                 self._circuit_breakers_enabled = False
-            else:
-                logger.info("Circuit breakers initialized for MCP transport types")
         else:
             logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
 
         # Transport Types:
         # - "stdio" & "streamable-http": Use our mcp_tools folder (MultiMCPClient)
-        # - "http": Use OpenAI's native MCP client
-        self._mcp_tools_servers: List[Dict[str, Any]] = []    # stdio + streamable-http servers (use our MultiMCPClient)
-        self._http_servers: List[Dict[str, Any]] = []         # Native OpenAI HTTP MCP servers
 
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
         self.functions: Dict[str, Function] = {}
@@ -110,62 +94,6 @@ class ResponseBackend(LLMBackend):
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get('agent_id', None)
 
-        # Separate MCP servers by transport type if any are configured
-        if self.mcp_servers:
-            self._separate_mcp_servers_by_transport_type()
-
-    def _normalize_mcp_servers(self) -> List[Dict[str, Any]]:
-        """Validate and normalize mcp_servers into a list of dicts."""
-        from ..mcp_tools import MCPSetupManager
-        return MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
-
-    def _separate_mcp_servers_by_transport_type(self) -> None:
-        """
-        Separate MCP servers into local execution and HTTP transport types.
-        
-        Transport Types:
-        - "stdio" & "streamable-http": Local execution MCP servers (both use MultiMCPClient)
-        - "http": Native OpenAI HTTP MCP servers (direct OpenAI ↔ External server)
-        """
-        validated_servers = self._normalize_mcp_servers()
-
-        for server in validated_servers:
-            transport_type = server.get("type")
-            server_name = server.get("name", "unnamed")
-
-            if not transport_type:
-                logger.warning(
-                    f"MCP server '{server_name}' missing required 'type' field. "
-                    f"Supported types: 'stdio', 'http', 'streamable-http'. Skipping server."
-                )
-                continue
-
-            if transport_type in ["stdio", "streamable-http"]:
-                
-                self._mcp_tools_servers.append(server)
-            elif transport_type == "http":  # Native OpenAI HTTP MCP
-                self._http_servers.append(server)
-            else:
-                logger.warning(
-                    f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. "
-                    f"Supported types: 'stdio', 'http', 'streamable-http'. Skipping server."
-                )
-
-    @staticmethod
-    def _get_mcp_error_info(error: Exception) -> tuple[str, str, str]:
-        """Get standardized MCP error information."""
-        return MCPErrorHandler.get_error_details(error)
-
-    def _log_mcp_error(self, error: Exception, context: str) -> None:
-        """Log MCP errors with specific error type messaging."""
-        MCPErrorHandler.log_error(error, context)
-
-    async def _handle_mcp_retry_error(
-        self, error: Exception, retry_count: int, max_retries: int
-    ) -> tuple[bool, AsyncGenerator[StreamChunk, None]]:
-        """Handle MCP retry errors with specific messaging and fallback logic."""
-        from ..mcp_tools import MCPRetryHandler
-        return await MCPRetryHandler.handle_retry_error(error, retry_count, max_retries, StreamChunk)
 
     async def _handle_mcp_error_and_fallback(
         self,
@@ -180,7 +108,7 @@ class ResponseBackend(LLMBackend):
             self._mcp_tool_failures += 1
             call_index_snapshot = self._mcp_tool_calls_count
 
-        log_type, user_message, _ = self._get_mcp_error_info(error)
+        log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
 
      
         logger.warning(
@@ -196,7 +124,7 @@ class ResponseBackend(LLMBackend):
         # Build non-MCP configuration and stream fallback
         fallback_params = dict(api_params)
 
-        # Remove any HTTP MCP tools from the tools list
+        # Remove any MCP tools from the tools list
         if "tools" in fallback_params:
             non_mcp_tools = [
                 tool
@@ -220,7 +148,6 @@ class ResponseBackend(LLMBackend):
     ) -> str:
         """Execute MCP function with exponential backoff retry logic."""
         import json
-        from ..mcp_tools import MCPExecutionManager
 
         # Convert JSON string to dict for shared utility
         try:
@@ -241,12 +168,12 @@ class ResponseBackend(LLMBackend):
 
         # Circuit breaker callback
         async def circuit_breaker_callback(event: str, error_msg: str) -> None:
+            # For individual function calls, we don't have server configurations readily available
+            # The circuit breaker manager should handle this gracefully with empty server list
             if event == "failure":
-                from ..mcp_tools import MCPCircuitBreakerManager
-                await MCPCircuitBreakerManager.record_event(self._mcp_tools_servers, self._mcp_tools_circuit_breaker, "failure", error_msg, backend_name=self.backend_name, agent_id=self.agent_id)
+                await MCPCircuitBreakerManager.record_event([], self._mcp_tools_circuit_breaker, "failure", error_msg, backend_name=self.backend_name, agent_id=self.agent_id)
             else:
-                from ..mcp_tools import MCPCircuitBreakerManager
-                await MCPCircuitBreakerManager.record_event(self._mcp_tools_servers, self._mcp_tools_circuit_breaker, "success", backend_name=self.backend_name, agent_id=self.agent_id)
+                await MCPCircuitBreakerManager.record_event([], self._mcp_tools_circuit_breaker, "success", backend_name=self.backend_name, agent_id=self.agent_id)
 
         result = await MCPExecutionManager.execute_function_with_retry(
             function_name=function_name,
@@ -265,15 +192,40 @@ class ResponseBackend(LLMBackend):
 
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
-        if not self._mcp_tools_servers or self._mcp_initialized:
+        if not self.mcp_servers or self._mcp_initialized:
             return
 
-        from ..mcp_tools import MCPResourceManager
-
         try:
+            # Normalize and separate MCP servers by transport type using mcp_tools utilities
+            normalized_servers = MCPSetupManager.normalize_mcp_servers(
+                self.mcp_servers, backend_name=self.backend_name, agent_id=self.agent_id
+            )
+            mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(
+                normalized_servers, backend_name=self.backend_name, agent_id=self.agent_id
+            )
+            
+            if not mcp_tools_servers:
+                logger.info("No stdio/streamable-http servers configured")
+                return
+
+            # Apply circuit breaker filtering before connection attempts  
+            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
+                    mcp_tools_servers, self._mcp_tools_circuit_breaker,
+                    backend_name=self.backend_name, agent_id=self.agent_id
+                )
+                if not filtered_servers:
+                    logger.warning("All MCP servers blocked by circuit breaker during setup")
+                    return
+                if len(filtered_servers) < len(mcp_tools_servers):
+                    logger.info(f"Circuit breaker filtered {len(mcp_tools_servers) - len(filtered_servers)} servers during setup")
+                servers_to_use = filtered_servers
+            else:
+                servers_to_use = mcp_tools_servers
+
             # Setup MCP client using consolidated utilities
             self._mcp_client = await MCPResourceManager.setup_mcp_client(
-                servers=self._mcp_tools_servers,
+                servers=servers_to_use,
                 allowed_tools=self.allowed_tools,
                 exclude_tools=self.exclude_tools,
                 circuit_breaker=self._mcp_tools_circuit_breaker,
@@ -285,7 +237,7 @@ class ResponseBackend(LLMBackend):
             # Guard after client setup
             if not self._mcp_client:
                 self._mcp_initialized = False
-                logger.warning("MCP client setup failed, falling back to HTTP/no-MCP streaming paths")
+                logger.warning("MCP client setup failed, falling back to no-MCP streaming")
                 return  # fall back to HTTP/no-MCP streaming paths
 
             # Convert tools to functions using consolidated utility
@@ -301,7 +253,35 @@ class ResponseBackend(LLMBackend):
                 f"Successfully initialized MCP mcp_tools sessions with {len(self.functions)} tools converted to functions"
             )
 
+            # Record success for circuit breaker
+            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client:
+                try:
+                    connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, 'get_server_names') else []
+                    if connected_server_names:
+                        connected_server_configs = [
+                            server for server in servers_to_use
+                            if server.get("name") in connected_server_names
+                        ]
+                        if connected_server_configs:
+                            await MCPCircuitBreakerManager.record_success(
+                                connected_server_configs, self._mcp_tools_circuit_breaker,
+                                backend_name=self.backend_name, agent_id=self.agent_id
+                            )
+                except Exception as cb_error:
+                    logger.warning(f"Failed to record circuit breaker success: {cb_error}")
+
         except Exception as e:
+            # Record failure for circuit breaker
+            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                try:
+                    await MCPCircuitBreakerManager.record_failure(
+                        servers_to_use if 'servers_to_use' in locals() else mcp_tools_servers if 'mcp_tools_servers' in locals() else [],
+                        self._mcp_tools_circuit_breaker, str(e),
+                        backend_name=self.backend_name, agent_id=self.agent_id
+                    )
+                except Exception as cb_error:
+                    logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
+
             logger.warning(f"Failed to setup MCP sessions: {e}")
             self._mcp_client = None
             self._mcp_initialized = False
@@ -322,82 +302,6 @@ class ResponseBackend(LLMBackend):
         )
         return converted_tools
 
-    async def _convert_http_servers_to_openai_format(self) -> List[Dict[str, Any]]:
-        """Convert HTTP MCP servers to OpenAI native MCP format."""
-        converted_servers = []
-
-        for server in self._http_servers:
-            server_name = server.get("name", "unnamed")
-
-            # Apply circuit breaker filtering for HTTP server
-            if not self._should_include_http_server(server_name):
-                continue
-
-            server_url = server.get("url")
-            if not server_url:
-                logger.warning(
-                    f"HTTP MCP server {server_name} missing URL, skipping"
-                )
-                continue
-
-            # Validate URL if validate_url is available
-            if validate_url is not None:
-                try:
-                    # Allow localhost/private IPs to support dev/test environments
-                    validate_url(
-                        server_url,
-                        allow_localhost=True,
-                        allow_private_ips=True
-                    )
-                except ValueError as e:
-                    logger.warning(f"Invalid URL for HTTP MCP server {server_name}: {e}")
-                    
-                    # Record failure for invalid URL using consolidated utility
-                    from ..mcp_tools import MCPCircuitBreakerManager
-                    server_dict = {"name": server_name}
-                    await MCPCircuitBreakerManager.record_event([server_dict], self._http_circuit_breaker, "failure", f"Invalid URL: {e}", backend_name=self.backend_name, agent_id=self.agent_id)
-                    continue
-
-            # Convert to OpenAI native MCP format
-            openai_server = {
-                "type": "mcp",
-                "server_label": server_name,
-                "server_url": server_url,
-                "require_approval": server.get("require_approval", "never"),
-            }
-
-            # Add allowed_tools if present
-            if "allowed_tools" in server:
-                openai_server["allowed_tools"] = server["allowed_tools"]
-
-            # Add authorization if present with environment variable substitution
-            if "authorization" in server:
-                authorization_value = server["authorization"]
-                logger.debug(f"Processing authorization for HTTP MCP server {server_name}")
-                
-                # Apply environment variable substitution using existing pattern
-                if isinstance(authorization_value, str) and '${' in authorization_value:
-                    
-                    def replace_env_var(match):
-                        var_name = match.group(1)
-                        env_value = os.environ.get(var_name)
-                        if env_value is None or env_value.strip() == "":
-                            raise ValueError(f"Required environment variable '{var_name}' is not set for HTTP MCP server {server_name} authorization")
-                        return env_value
-                    
-                    original_value = authorization_value
-                    authorization_value = re.sub(r'\$\{([A-Z_][A-Z0-9_]*)\}', replace_env_var, authorization_value)
-                    logger.debug(f"Environment variable substitution for {server_name}: {original_value} -> {authorization_value}")
-                
-                openai_server["authorization"] = authorization_value
-                logger.info(f"Added authorization to HTTP MCP server {server_name}")
-
-            converted_servers.append(openai_server)
-
-        logger.debug(
-            f"Converted {len(converted_servers)} HTTP MCP servers to OpenAI format"
-        )
-        return converted_servers
 
     async def _build_response_api_params(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], all_params: Dict[str, Any]
@@ -444,14 +348,6 @@ class ResponseBackend(LLMBackend):
                 api_params["tools"].extend(mcp_tools)
                 logger.info(f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to OpenAI Response API")
 
-        # Add HTTP MCP servers as native MCP tools
-        if self._http_servers:
-            http_mcp_tools = await self._convert_http_servers_to_openai_format()
-            if http_mcp_tools:
-                if "tools" not in api_params:
-                    api_params["tools"] = []
-                api_params["tools"].extend(http_mcp_tools)
-                logger.info(f"Added {len(http_mcp_tools)} HTTP MCP servers to OpenAI tools")
 
         # Add provider tools (web search, code interpreter) if enabled
         provider_tools = []
@@ -549,193 +445,6 @@ class ResponseBackend(LLMBackend):
 
         return converted_messages
 
-    def _trim_message_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Trim message history to prevent unbounded growth in MCP execution loop."""
-        from ..mcp_tools import MCPMessageManager
-        max_items = getattr(self, '_max_mcp_message_history', 200)
-        return MCPMessageManager.trim_message_history(messages, max_items)
-
-    async def stream_with_mcp(
-        self, client, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
-    ) -> AsyncGenerator[StreamChunk, None]:
-
-        """Stream response with stdio MCP function call execution loop."""
-        max_iterations = 10  # Prevent infinite loops
-        current_messages = self._trim_message_history(messages.copy())
-
-        # Yield MCP session initiation status
-        if self.functions:
-            yield StreamChunk(
-                type="mcp_status",
-                status="mcp_tools_initiated",
-                content=f"🔧 [MCP] {len(self.functions)} tools available",
-                source="mcp_session"
-            )
-
-        for iteration in range(max_iterations):
-            logger.info(f"MCP function call iteration {iteration + 1}/{max_iterations}")
-
-            # Build API params for this iteration
-            all_params = {**self.config, **kwargs}
-            api_params = await self._build_response_api_params(current_messages, tools, all_params)
-
-            # Start streaming
-            stream = await client.responses.create(**api_params)
-
-            # Track function calls in this iteration
-            captured_function_calls = []
-            current_function_call = None
-            content = ""
-            response_completed = False
-
-            async for chunk in stream:
-                if hasattr(chunk, "type"):
-                    # Detect function call start
-                    if (chunk.type == "response.output_item.added" and
-                        hasattr(chunk, "item") and chunk.item and
-                        getattr(chunk.item, "type", None) == "function_call"):
-
-                        current_function_call = {
-                            "call_id": getattr(chunk.item, "call_id", ""),
-                            "name": getattr(chunk.item, "name", ""),
-                            "arguments": ""
-                        }
-                        logger.info(f"Function call detected: {current_function_call['name']}")
-
-                    # Accumulate function arguments
-                    elif (chunk.type == "response.function_call_arguments.delta" and
-                          current_function_call is not None):
-                        delta = getattr(chunk, "delta", "")
-                        current_function_call["arguments"] += delta
-
-                    # Function call completed
-                    elif (chunk.type == "response.output_item.done" and
-                          current_function_call is not None):
-                        captured_function_calls.append(current_function_call)
-                        current_function_call = None
-
-                    # Handle regular content and other events
-                    elif chunk.type == "response.output_text.delta":
-                        delta = getattr(chunk, "delta", "")
-                        content += delta
-                        yield StreamChunk(type="content", content=delta)
-
-                    # Handle other streaming events (reasoning, provider tools, etc.)
-                    else:
-                        # Pass through other chunk types
-                        yield self._process_stream_chunk(chunk)
-
-                    # Response completed
-                    if chunk.type == "response.completed":
-                        response_completed = True
-                        if captured_function_calls:
-                            # Execute captured function calls
-                            break  # Exit chunk loop to execute functions
-                        else:
-                            # No function calls, we're done
-                            yield StreamChunk(type="done")
-                            return
-
-            # Execute any captured function calls
-            if captured_function_calls:
-                # Check if any of the function calls are NOT MCP functions
-                non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self.functions]
-
-                if non_mcp_functions:
-                    logger.info(f"Non-MCP function calls detected: {[call['name'] for call in non_mcp_functions]}. Exiting MCP execution loop.")
-                    yield StreamChunk(type="done")
-                    return
-
-                # Execute only MCP function calls
-                mcp_functions_executed = False
-                for call in captured_function_calls:
-                    function_name = call["name"]
-                    if function_name in self.functions:
-                        # Yield MCP tool call status
-                        yield StreamChunk(
-                            type="mcp_status", 
-                            status="mcp_tool_called",
-                            content=f"🔧 [MCP Tool] Calling {function_name}...",
-                            source=f"mcp_{function_name}"
-                        )
-                        
-                        # Execute MCP function with retry and exponential backoff
-                        result = await self._execute_mcp_function_with_retry(
-                            function_name, call["arguments"]
-                        )
-
-                        # Add both the function call and the function call output to messages
-                      
-                        current_messages.append({
-                            "type": "function_call",
-                            "call_id": call["call_id"],
-                            "name": function_name,
-                            "arguments": call["arguments"]
-                        })
-                        current_messages.append({
-                            "type": "function_call_output",
-                            "call_id": call["call_id"],
-                            "output": str(result)
-                        })
-
-                        logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
-                        
-                        # Yield MCP tool response status
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_tool_response", 
-                            content=f"✅ [MCP Tool] {function_name} completed",
-                            source=f"mcp_{function_name}"
-                        )
-                        
-                        mcp_functions_executed = True
-
-                        # Trim history after each execution to bound memory usage
-                        current_messages = self._trim_message_history(current_messages)
-
-                # After executing MCP functions, continue to next iteration to get the final response
-                if mcp_functions_executed:
-                    continue
-                else:
-                    # No MCP functions were executed, exit the loop
-                    yield StreamChunk(type="done")
-                    return
-            elif response_completed:
-                # Response completed with no function calls - we're truly done
-                yield StreamChunk(
-                    type="mcp_status", 
-                    status="mcp_session_complete",
-                    content="✅ [MCP] Session completed",
-                    source="mcp_session"
-                )
-                yield StreamChunk(type="done")
-                return
-            else:
-                # No function calls and response not completed - continue
-                continue
-
-        # Max iterations reached
-        logger.warning(f"Max MCP function call iterations ({max_iterations}) reached")
-        yield StreamChunk(
-            type="mcp_status", 
-            status="mcp_session_complete",
-            content="✅ [MCP] Session completed (max iterations reached)",
-            source="mcp_session"
-        )
-        yield StreamChunk(type="done")
-
-    async def stream_without_mcp(
-        self, client, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
-    ) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response without stdio MCP function execution (HTTP-only or no MCP)."""
-        all_params = {**self.config, **kwargs}
-        api_params = await self._build_response_api_params(messages, tools, all_params)
-
-        stream = await client.responses.create(**api_params)
-
-        async for chunk in stream:
-            yield self._process_stream_chunk(chunk)
-
     def _process_stream_chunk(self, chunk) -> StreamChunk:
         """Process individual stream chunks and convert to StreamChunk format."""
         if not hasattr(chunk, "type"):
@@ -831,10 +540,188 @@ class ResponseBackend(LLMBackend):
         # Default chunk - this should not happen for valid responses
         return StreamChunk(type="content", content="")
 
+    async def _stream_mcp_recursive(
+        self,
+        current_messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]], 
+        client,
+        **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Recursively stream MCP responses, executing function calls as needed."""
+        
+        # Build API params for this iteration
+        all_params = {**self.config, **kwargs}
+        api_params = await self._build_response_api_params(current_messages, tools, all_params)
+
+        # Start streaming
+        stream = await client.responses.create(**api_params)
+
+        # Track function calls in this iteration
+        captured_function_calls = []
+        current_function_call = None
+        response_completed = False
+
+        async for chunk in stream:
+            if hasattr(chunk, "type"):
+                # Detect function call start
+                if (chunk.type == "response.output_item.added" and
+                    hasattr(chunk, "item") and chunk.item and
+                    getattr(chunk.item, "type", None) == "function_call"):
+
+                    current_function_call = {
+                        "call_id": getattr(chunk.item, "call_id", ""),
+                        "name": getattr(chunk.item, "name", ""),
+                        "arguments": ""
+                    }
+                    logger.info(f"Function call detected: {current_function_call['name']}")
+
+                # Accumulate function arguments
+                elif (chunk.type == "response.function_call_arguments.delta" and
+                      current_function_call is not None):
+                    delta = getattr(chunk, "delta", "")
+                    current_function_call["arguments"] += delta
+
+                # Function call completed
+                elif (chunk.type == "response.output_item.done" and
+                      current_function_call is not None):
+                    captured_function_calls.append(current_function_call)
+                    current_function_call = None
+
+                # Handle regular content and other events
+                elif chunk.type == "response.output_text.delta":
+                    delta = getattr(chunk, "delta", "")
+                    yield StreamChunk(type="content", content=delta)
+
+                # Handle other streaming events (reasoning, provider tools, etc.)
+                else:
+                    # Pass through other chunk types
+                    yield self._process_stream_chunk(chunk)
+
+                # Response completed
+                if chunk.type == "response.completed":
+                    response_completed = True
+                    if captured_function_calls:
+                        # Execute captured function calls and recurse
+                        break  # Exit chunk loop to execute functions
+                    else:
+                        # No function calls, we're done (base case)
+                        yield StreamChunk(type="done")
+                        return
+
+        # Execute any captured function calls
+        if captured_function_calls and response_completed:
+            # Check if any of the function calls are NOT MCP functions
+            non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self.functions]
+
+            if non_mcp_functions:
+                logger.info(f"Non-MCP function calls detected: {[call['name'] for call in non_mcp_functions]}. Ending MCP processing.")
+                yield StreamChunk(type="done")
+                return
+
+            # Check circuit breaker status before executing MCP functions
+            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                # Get current mcp_tools servers using utility functions
+                normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
+                mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
+                
+                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
+                    mcp_tools_servers, self._mcp_tools_circuit_breaker
+                )
+                if not filtered_servers:
+                    logger.warning("All MCP servers blocked by circuit breaker")
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="mcp_blocked",
+                        content="⚠️ [MCP] All servers blocked by circuit breaker",
+                        source="circuit_breaker"
+                    )
+                    yield StreamChunk(type="done")
+                    return
+
+            # Execute only MCP function calls
+            mcp_functions_executed = False
+            updated_messages = current_messages.copy()
+            
+            for call in captured_function_calls:
+                function_name = call["name"]
+                if function_name in self.functions:
+                    # Yield MCP tool call status
+                    yield StreamChunk(
+                        type="mcp_status", 
+                        status="mcp_tool_called",
+                        content=f"🔧 [MCP Tool] Calling {function_name}...",
+                        source=f"mcp_{function_name}"
+                    )
+                    
+                    try:
+                        # Execute MCP function with retry and exponential backoff
+                        result = await self._execute_mcp_function_with_retry(
+                            function_name, call["arguments"]
+                        )
+                        
+                        # Check if function failed after all retries
+                        if isinstance(result, str) and result.startswith("Error:"):
+                            # Log failure and skip to next function
+                            logger.warning(f"MCP function {function_name} failed after retries: {result}")
+                            continue
+                            
+                    except Exception as e:
+                        # Only catch unexpected non-MCP system errors
+                        logger.error(f"Unexpected error in MCP function execution: {e}")
+                        continue
+
+                    # Add both the function call and the function call output to messages
+                    updated_messages.append({
+                        "type": "function_call",
+                        "call_id": call["call_id"],
+                        "name": function_name,
+                        "arguments": call["arguments"]
+                    })
+                    updated_messages.append({
+                        "type": "function_call_output",
+                        "call_id": call["call_id"],
+                        "output": str(result)
+                    })
+
+                    logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
+                    
+                    # Yield MCP tool response status
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="mcp_tool_response", 
+                        content=f"✅ [MCP Tool] {function_name} completed",
+                        source=f"mcp_{function_name}"
+                    )
+                    
+                    mcp_functions_executed = True
+
+            # Trim history after function executions to bound memory usage
+            if mcp_functions_executed:
+                updated_messages = MCPMessageManager.trim_message_history(updated_messages, self._max_mcp_message_history)
+                
+                # Recursive call with updated messages
+                async for chunk in self._stream_mcp_recursive(updated_messages, tools, client, **kwargs):
+                    yield chunk
+            else:
+                # No MCP functions were executed, we're done
+                yield StreamChunk(type="done")
+                return
+                
+        elif response_completed:
+            # Response completed with no function calls - we're done (base case)
+            yield StreamChunk(
+                type="mcp_status", 
+                status="mcp_session_complete",
+                content="✅ [MCP] Session completed",
+                source="mcp_session"
+            )
+            yield StreamChunk(type="done")
+            return
+
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using OpenAI Response API with MCP integration."""
+        """Stream response using OpenAI Response API with unified MCP/non-MCP processing."""
         
         agent_id = kwargs.get('agent_id', None)
         
@@ -845,59 +732,174 @@ class ResponseBackend(LLMBackend):
             agent_id=agent_id
         )
         
-        # Use async context manager for proper MCP resource management
-        async with self:
-            try:
+        # Catch setup errors by wrapping the context manager itself
+        try:
+            # Use async context manager for proper MCP resource management
+            async with self:
                 import openai
 
                 client = openai.AsyncOpenAI(api_key=self.api_key)
 
-                # Yield MCP connection status if MCP tools are available
-                if self.functions and self._mcp_tools_servers:
-                    yield StreamChunk(
-                        type="mcp_status",
-                        status="mcp_connected", 
-                        content=f"✅ [MCP] Connected to {len(self._mcp_tools_servers)} servers",
-                        source="mcp_setup"
-                    )
-
-                # Choose streaming mode based on MCP availability
-                if self.functions:
-                    
-                    logger.info("Using stdio MCP execution mode")
-                    async for chunk in self.stream_with_mcp(client, messages, tools, **kwargs):
-                        yield chunk
-                else:
-                
-                    logger.info("Using HTTP-only MCP mode")
-                    async for chunk in self.stream_without_mcp(client, messages, tools, **kwargs):
-                        yield chunk
-
-            except Exception as e:
-                # Enhanced error handling for MCP-related errors
-                if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
-                    self._log_mcp_error(e, "streaming")
-                    yield StreamChunk(
-                        type="mcp_status",
-                        status="mcp_error", 
-                        content=f"⚠️ [MCP Error] {str(e)}",
-                        source="mcp_error"
-                    )
-                    yield StreamChunk(
-                        type="content",
-                        content=f"\n⚠️ MCP error: {str(e)}; continuing without MCP tools\n"
-                    )
-                else:
-                    logger.error(f"Streaming error: {e}")
-                    yield StreamChunk(type="error", error=str(e))
-              
-            finally:
-                # Ensure the underlying HTTP client is properly closed to avoid event loop issues
                 try:
-                    if hasattr(client, 'aclose'):
+                    # Determine if MCP processing is needed
+                    use_mcp = bool(self.functions)
+
+                    # If MCP is configured but unavailable, inform the user and fall back
+                    if self.mcp_servers and not use_mcp:
+                        yield StreamChunk(
+                            type="mcp_status",
+                            status="mcp_unavailable",
+                            content="⚠️ [MCP] Setup failed or no tools available; continuing without MCP",
+                            source="mcp_setup"
+                        )
+
+                    # Yield MCP connection status if MCP tools are available
+                    if use_mcp and self.mcp_servers:
+                        # Count only stdio/streamable-http servers for display
+                        normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
+                        mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
+                        if mcp_tools_servers:
+                            yield StreamChunk(
+                                type="mcp_status",
+                                status="mcp_connected", 
+                                content=f"✅ [MCP] Connected to {len(mcp_tools_servers)} servers",
+                                source="mcp_setup"
+                            )
+
+                    if use_mcp:
+                        # MCP MODE: Recursive function call detection and execution
+                        logger.info("Using recursive MCP execution mode")
+                        
+                        current_messages = MCPMessageManager.trim_message_history(messages.copy(), 200)
+
+                        # Yield MCP session initiation status
+                        yield StreamChunk(
+                            type="mcp_status",
+                            status="mcp_tools_initiated",
+                            content=f"🔧 [MCP] {len(self.functions)} tools available",
+                            source="mcp_session"
+                        )
+
+                        # Start recursive MCP streaming
+                        async for chunk in self._stream_mcp_recursive(current_messages, tools, client, **kwargs):
+                            yield chunk
+
+                    else:
+                        # NON-MCP MODE: Simple passthrough streaming
+                        logger.info("Using no-MCP mode")
+                        
+                        all_params = {**self.config, **kwargs}
+                        api_params = await self._build_response_api_params(messages, tools, all_params)
+
+                        stream = await client.responses.create(**api_params)
+
+                        async for chunk in stream:
+                            yield self._process_stream_chunk(chunk)
+
+                except Exception as e:
+                    # Enhanced error handling for MCP-related errors during streaming
+                    if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
+                        # Record failure for circuit breaker
+                        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                            try:
+                                # Get current mcp_tools servers for circuit breaker failure recording
+                                normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
+                                mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
+                                
+                                await MCPCircuitBreakerManager.record_failure(
+                                    mcp_tools_servers, self._mcp_tools_circuit_breaker, str(e),
+                                    backend_name=self.backend_name, agent_id=agent_id
+                                )
+                            except Exception as cb_error:
+                                logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
+
+                        # Use local error handling function
+                        all_params = {**self.config, **kwargs}
+                        api_params = await self._build_response_api_params(messages, tools, all_params)
+                        
+                        # Get provider tools for fallback
+                        provider_tools = []
+                        enable_web_search = all_params.get("enable_web_search", False)
+                        enable_code_interpreter = all_params.get("enable_code_interpreter", False)
+                        if enable_web_search:
+                            provider_tools.append({"type": "web_search"})
+                        if enable_code_interpreter:
+                            provider_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
+                        
+                        # Use inline fallback logic instead of deleted stream_without_mcp method
+                        async def fallback_stream(params):
+                            stream = await client.responses.create(**params)
+                            async for chunk in stream:
+                                yield self._process_stream_chunk(chunk)
+                        
+                        async for chunk in self._handle_mcp_error_and_fallback(
+                            e, api_params, provider_tools, fallback_stream
+                        ):
+                            yield chunk
+                    else:
+                        logger.error(f"Streaming error: {e}")
+                        yield StreamChunk(type="error", error=str(e))
+                
+                finally:
+                    # Ensure the underlying HTTP client is properly closed to avoid event loop issues
+                    try:
+                        if hasattr(client, 'aclose'):
+                            await client.aclose()
+                    except Exception:
+                        # Suppress cleanup errors so we don't mask primary exceptions
+                        pass
+        except Exception as e:
+            # Handle exceptions that occur during MCP setup (__aenter__) or teardown
+            # Provide a clear user-facing message and fall back to non-MCP streaming
+            try:
+                import openai
+                client = openai.AsyncOpenAI(api_key=self.api_key)
+
+                all_params = {**self.config, **kwargs}
+                api_params = await self._build_response_api_params(messages, tools, all_params)
+
+                # Get provider tools for fallback
+                provider_tools = []
+                enable_web_search = all_params.get("enable_web_search", False)
+                enable_code_interpreter = all_params.get("enable_code_interpreter", False)
+                if enable_web_search:
+                    provider_tools.append({"type": "web_search"})
+                if enable_code_interpreter:
+                    provider_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
+
+                # Fallback stream that bypasses MCP entirely
+                async def fallback_stream(params):
+                    stream = await client.responses.create(**params)
+                    async for chunk in stream:
+                        yield self._process_stream_chunk(chunk)
+
+                if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
+                    async for chunk in self._handle_mcp_error_and_fallback(
+                        e, api_params, provider_tools, fallback_stream
+                    ):
+                        yield chunk
+                else:
+                    # Generic setup error: still notify if MCP was configured
+                    if self.mcp_servers:
+                        yield StreamChunk(
+                            type="mcp_status",
+                            status="mcp_unavailable",
+                            content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
+                            source="mcp_setup"
+                        )
+
+                    # Proceed with non-MCP streaming
+                    stream = await client.responses.create(**api_params)
+                    async for chunk in stream:
+                        yield self._process_stream_chunk(chunk)
+            except Exception as inner_e:
+                logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
+                yield StreamChunk(type="error", error=str(inner_e))
+            finally:
+                try:
+                    if 'client' in locals() and hasattr(client, 'aclose'):
                         await client.aclose()
                 except Exception:
-                    # Suppress cleanup errors so we don't mask primary exceptions
                     pass
 
     def get_provider_name(self) -> str:
@@ -1004,8 +1006,6 @@ class ResponseBackend(LLMBackend):
 
     async def cleanup_mcp(self) -> None:
         """Cleanup MCP connections."""
-        from ..mcp_tools import MCPResourceManager
-        
         if self._mcp_client:
             await MCPResourceManager.cleanup_mcp_client(
                 self._mcp_client,
@@ -1016,109 +1016,9 @@ class ResponseBackend(LLMBackend):
             self._mcp_initialized = False
             self.functions.clear()
     
-    def _apply_mcp_tools_circuit_breaker_filtering(
-        self, servers: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Apply circuit breaker filtering to mcp_tools servers."""
-        from ..mcp_tools import MCPCircuitBreakerManager
-
-        if not self._circuit_breakers_enabled or not self._mcp_tools_circuit_breaker:
-            logger.info("Circuit breaker not enabled for mcp_tools servers")
-            return servers
-
-        return MCPCircuitBreakerManager.apply_circuit_breaker_filtering(servers, self._mcp_tools_circuit_breaker)
-    
-    def _should_include_http_server(self, server_name: str) -> bool:
-        """Check if HTTP server should be included based on circuit breaker state.
-        
-        Returns:
-            True if server should be included, False if it should be skipped
-        """
-        if not self._circuit_breakers_enabled or not self._http_circuit_breaker:
-            logger.info(f"Circuit breaker not enabled for HTTP server {server_name}")
-            return True
-        
-        try:
-            should_skip = self._http_circuit_breaker.should_skip_server(server_name)
-            
-            if should_skip:
-                logger.info(f"Circuit breaker: Skipping HTTP MCP server {server_name}")
-                return False
-            else:
-                logger.info(f"Circuit breaker: Allowing HTTP MCP server {server_name}")
-                return True
-        except Exception as cb_error:
-            logger.warning(f"Circuit breaker should_skip_server failed for HTTP server {server_name}: {cb_error}")
-            # Default to allowing the server if circuit breaker fails
-            return True
-    
-    async def get_circuit_breaker_status(self) -> Dict[str, Dict[str, Any]]:
-        """Get current status of all circuit breakers.
-        
-        Returns:
-            Dict with circuit breaker status for each transport type:
-            {
-                "mcp_tools": {
-                    "enabled": bool,
-                    "servers": {
-                        "server_name": {
-                            "would_skip": bool
-                        }
-                    }
-                },
-                "http": {...}
-            }
-        """
-        status = {
-            "mcp_tools": {
-                "enabled": self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker is not None,
-                "servers": {}
-            },
-            "http": {
-                "enabled": self._circuit_breakers_enabled and self._http_circuit_breaker is not None,
-                "servers": {}
-            }
-        }
-        
-        # Get mcp_tools circuit breaker status
-        if self._mcp_tools_circuit_breaker:
-            for server in self._mcp_tools_servers:
-                server_name = server.get("name", "unnamed")
-                # Check if the server would be skipped by circuit breaker
-                try:
-                    would_skip = self._mcp_tools_circuit_breaker.should_skip_server(server_name)
-                    status["mcp_tools"]["servers"][server_name] = {
-                        "would_skip": would_skip
-                    }
-                except Exception as cb_error:
-                    logger.warning(f"Circuit breaker should_skip_server failed for mcp_tools server {server_name}: {cb_error}")
-                    # Default to not skipping if circuit breaker fails
-                    status["mcp_tools"]["servers"][server_name] = {
-                        "would_skip": False
-                    }
-        
-        # Get HTTP circuit breaker status
-        if self._http_circuit_breaker:
-            for server in self._http_servers:
-                server_name = server.get("name", "unnamed")
-                try:
-                    would_skip = self._http_circuit_breaker.should_skip_server(server_name)
-                    status["http"]["servers"][server_name] = {
-                        "would_skip": would_skip
-                    }
-                except Exception as cb_error:
-                    logger.warning(f"Circuit breaker should_skip_server failed for HTTP server {server_name}: {cb_error}")
-                    # Default to not skipping if circuit breaker fails
-                    status["http"]["servers"][server_name] = {
-                        "would_skip": False
-                    }
-        
-        return status
 
     async def __aenter__(self) -> "ResponseBackend":
         """Async context manager entry."""
-        from ..mcp_tools import MCPResourceManager
-        
         # Initialize MCP tools if configured
         await MCPResourceManager.setup_mcp_context_manager(
             self, backend_name=self.backend_name, agent_id=self.agent_id
@@ -1132,8 +1032,6 @@ class ResponseBackend(LLMBackend):
         exc_tb: Optional[object],
     ) -> None:
         """Async context manager exit with automatic resource cleanup."""
-        from ..mcp_tools import MCPResourceManager
-        
         await MCPResourceManager.cleanup_mcp_context_manager(
             self, logger_instance=logger,
             backend_name=self.backend_name, agent_id=self.agent_id
