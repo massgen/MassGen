@@ -84,8 +84,6 @@ class ConfigurationError(Exception):
     pass
 
 
-
-
 def load_config_file(config_path: str) -> Dict[str, Any]:
     """Load configuration from YAML or JSON file."""
     path = Path(config_path)
@@ -241,7 +239,9 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         raise ConfigurationError(f"Unsupported backend type: {backend_type}")
 
 
-def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None) -> Dict[str, ConfigurableAgent]:
+def create_agents_from_config(
+    config: Dict[str, Any], orchestrator_config: Optional[Dict[str, Any]] = None
+) -> Dict[str, ConfigurableAgent]:
     """Create agents from configuration."""
     agents = {}
 
@@ -270,8 +270,10 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
         # Add orchestrator context for filesystem setup if available
         if orchestrator_config and "agent_temporary_workspace" in orchestrator_config:
-            backend_config["agent_temporary_workspace"] = orchestrator_config["agent_temporary_workspace"]
-        
+            backend_config["agent_temporary_workspace"] = orchestrator_config[
+                "agent_temporary_workspace"
+            ]
+
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}
 
@@ -294,7 +296,7 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             agent_config = AgentConfig(backend_params=backend_config)
 
         agent_config.agent_id = agent_data.get("id", f"agent{i}")
-        
+
         # Route system_message to backend-specific system prompt parameter
         system_msg = agent_data.get("system_message")
         if system_msg:
@@ -386,16 +388,18 @@ async def run_question_with_history(
         orchestrator_config = AgentConfig()
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
-        
+
         # Get context sharing parameters from kwargs (if present in config)
         snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
-        
+        agent_temporary_workspace = kwargs.get("orchestrator", {}).get(
+            "agent_temporary_workspace"
+        )
+
         orchestrator = Orchestrator(
-            agents=agents, 
+            agents=agents,
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
-            agent_temporary_workspace=agent_temporary_workspace
+            agent_temporary_workspace=agent_temporary_workspace,
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -473,16 +477,18 @@ async def run_single_question(
         orchestrator_config = AgentConfig()
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
-        
+
         # Get context sharing parameters from kwargs (if present in config)
         snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
-        
+        agent_temporary_workspace = kwargs.get("orchestrator", {}).get(
+            "agent_temporary_workspace"
+        )
+
         orchestrator = Orchestrator(
-            agents=agents, 
+            agents=agents,
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
-            agent_temporary_workspace=agent_temporary_workspace
+            agent_temporary_workspace=agent_temporary_workspace,
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -773,8 +779,9 @@ Environment Variables:
 
     # Always setup logging (will save INFO to file, console output depends on debug flag)
     from .logger_config import setup_logging, logger
+
     setup_logging(debug=args.debug)
-    
+
     if args.debug:
         logger.info("Debug mode enabled")
         logger.debug(f"Command line arguments: {vars(args)}")
@@ -810,7 +817,9 @@ Environment Variables:
                 base_url=args.base_url,
             )
             if args.debug:
-                logger.debug(f"Created simple config with backend: {backend}, model: {model}")
+                logger.debug(
+                    f"Created simple config with backend: {backend}, model: {model}"
+                )
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
 
         # Apply command-line overrides
@@ -837,6 +846,7 @@ Environment Variables:
         # Create agents
         if args.debug:
             from .logger_config import logger
+
             logger.debug("Creating agents from config...")
         # Extract orchestrator config for agent setup
         orchestrator_cfg = config.get("orchestrator", {})
@@ -844,9 +854,10 @@ Environment Variables:
 
         if not agents:
             raise ConfigurationError("No agents configured")
-        
+
         if args.debug:
             from .logger_config import logger
+
             logger.debug(f"Created {len(agents)} agent(s): {list(agents.keys())}")
 
         # Create timeout config from settings and put it in kwargs
@@ -856,7 +867,7 @@ Environment Variables:
         )
 
         kwargs = {"timeout_config": timeout_config}
-        
+
         # Add orchestrator configuration if present
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]

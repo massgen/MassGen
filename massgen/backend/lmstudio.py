@@ -22,7 +22,11 @@ import lmstudio as lms
 
 from .chat_completions import ChatCompletionsBackend
 from .base import StreamChunk
-from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
+from ..logger_config import (
+    log_backend_activity,
+    log_backend_agent_message,
+    log_stream_chunk,
+)
 
 
 class LMStudioBackend(ChatCompletionsBackend):
@@ -47,21 +51,21 @@ class LMStudioBackend(ChatCompletionsBackend):
         the generic ChatCompletions implementation while preserving our defaults.
         """
         # Extract agent_id for logging
-        agent_id = kwargs.get('agent_id', None)
-        
+        agent_id = kwargs.get("agent_id", None)
+
         log_backend_activity(
             "LM Studio",
             "Starting stream_with_tools",
             {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id
+            agent_id=agent_id,
         )
-        
+
         # Log messages being sent
         log_backend_agent_message(
             agent_id or "default",
             "SEND",
             {"messages": messages, "tools": len(tools) if tools else 0},
-            backend_name="LM Studio"
+            backend_name="LM Studio",
         )
 
         # Ensure LM Studio defaults
@@ -76,16 +80,20 @@ class LMStudioBackend(ChatCompletionsBackend):
                         agent_id or "default",
                         "RECV",
                         {"content": chunk.content},
-                        backend_name="LM Studio"
+                        backend_name="LM Studio",
                     )
-                    log_stream_chunk("backend.lmstudio", "content", chunk.content, agent_id)
+                    log_stream_chunk(
+                        "backend.lmstudio", "content", chunk.content, agent_id
+                    )
                 elif chunk.type == "error":
                     log_stream_chunk("backend.lmstudio", "error", chunk.error, agent_id)
                 elif chunk.type == "tool_calls":
-                    log_stream_chunk("backend.lmstudio", "tool_calls", chunk.tool_calls, agent_id)
+                    log_stream_chunk(
+                        "backend.lmstudio", "tool_calls", chunk.tool_calls, agent_id
+                    )
                 elif chunk.type == "done":
                     log_stream_chunk("backend.lmstudio", "done", None, agent_id)
-                
+
                 yield chunk
         except Exception as e:
             error_msg = f"LM Studio backend error: {str(e)}"
@@ -97,7 +105,7 @@ class LMStudioBackend(ChatCompletionsBackend):
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         return "LM Studio"
-        
+
     def get_supported_builtin_tools(self) -> List[str]:  # type: ignore[override]
         # LM Studio (local OpenAI-compatible) does not provide provider-builtins
         return []
