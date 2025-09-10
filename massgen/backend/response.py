@@ -670,18 +670,34 @@ class ResponseBackend(LLMBackend):
                         logger.error(f"Unexpected error in MCP function execution: {e}")
                         continue
 
-                    # Add both the function call and the function call output to messages
-                    updated_messages.append({
+                    # Add function call to messages and yield as StreamChunk
+                    function_call_msg = {
                         "type": "function_call",
                         "call_id": call["call_id"],
                         "name": function_name,
                         "arguments": call["arguments"]
-                    })
-                    updated_messages.append({
+                    }
+                    updated_messages.append(function_call_msg)
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="function_call",
+                        content=f"Arguments for Calling {function_name}: {call["arguments"]}",
+                        source=f"mcp_{function_name}"
+                    )
+                    
+                    # Add function output to messages and yield as StreamChunk
+                    function_output_msg = {
                         "type": "function_call_output",
                         "call_id": call["call_id"],
                         "output": str(result)
-                    })
+                    }
+                    updated_messages.append(function_output_msg)
+                    yield StreamChunk(
+                        type="mcp_status",
+                        status="function_call_output",
+                        content=f"Results for Calling {function_name}: {str(result)}",
+                        source=f"mcp_{function_name}"
+                    )
 
                     logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
                     
