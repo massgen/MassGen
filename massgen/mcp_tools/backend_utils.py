@@ -574,7 +574,7 @@ class MCPResourceManager:
         """
         if client:
             try:
-                await client.cleanup()
+                await client.disconnect()
                 log_mcp_activity(backend_name, "client cleanup completed", {}, agent_id=agent_id)
             except Exception as e:
                 log_mcp_activity(backend_name, "error during client cleanup", {"error": str(e)}, agent_id=agent_id)
