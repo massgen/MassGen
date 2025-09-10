@@ -40,18 +40,35 @@ MassGen v0.0.16 introduces unified filesystem support for Gemini agents through 
 "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 
 ### Configuration
+
 Prior to v0.0.16, Gemini agents had no filesystem access capabilities, making them unable to create files or collaborate with Claude Code agents that rely on workspace sharing.
+
+```yaml
+agents:
+  - id: "gemini_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+
+  - id: "claude_code"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-20250514"
+      cwd: "claude_code_workspace"
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+```
 
 ### Baseline Command
 ```bash
 uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 ```
-
-### Expected Result
-Before v0.0.16, this command would fail because:
-1. Gemini agents had no filesystem access or file creation capabilities
-2. No cross-backend workspace sharing between Gemini and Claude Code agents
-3. Limited collaboration due to separate backend ecosystems
 
 <h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
 
@@ -129,6 +146,8 @@ uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test
 - **Orchestrator**: Creates and manages `temp_workspaces/` for all agents, maintains `snapshots/` for state preservation, handles automatic cross-agent workspace synchronization
 
 <h2 id="demo">🎥 Demo</h2>
+
+[![MassGen v0.0.16 Gemini file system integration Demo](https://img.youtube.com/vi/KWpo7bUSw_s/0.jpg)](https://youtu.be/KWpo7bUSw_s)
 
 The test execution demonstrates:
 1. **Parallel Agent Initialization**: Both agents start simultaneously with filesystem access
@@ -294,7 +313,7 @@ Through the unified filesystem, Claude Code agent accessed Gemini's work and cre
 - **From Claude's Breadth**: Incorporated comprehensive RL algorithm coverage and mathematical formalism
 - **Emergent Quality**: Created unified narrative that neither agent could achieve alone
 
-**Technical Demonstration:**
+**Final Content Provenance:**
 ```latex
 \documentclass{beamer}
 \usetheme{Madrid}
