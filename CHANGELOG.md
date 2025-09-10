@@ -5,6 +5,36 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.17] - 2025-09-10
+
+### Added
+- **OpenAI Backend MCP Support**: Extended MCP (Model Context Protocol) integration to OpenAI backend
+  - Full MCP tool discovery and execution capabilities for OpenAI models
+  - Support for both stdio and HTTP-based MCP servers with OpenAI
+  - Seamless integration with existing OpenAI function calling
+  - Robust error handling and retry mechanisms
+
+- **MCP Configuration Examples**: New YAML configurations for OpenAI MCP usage
+  - `gpt5_mini_mcp_test.yaml`: Basic OpenAI MCP testing with test server
+  - `gpt5_mini_mcp_example.yaml`: Weather service integration example for OpenAI
+  - `gpt5_mini_streamable_http_test.yaml`: HTTP transport testing for OpenAI MCP
+  - Enhanced existing multi-agent configurations with OpenAI MCP support
+
+- **Documentation**: Added case studies and technical documentation
+  - `unified-filesystem-mcp-integration.md`: Case study demonstrating unified filesystem capabilities with MCP integration across multiple backends (from v0.0.16)
+  - `MCP_INTEGRATION_RESPONSE_BACKEND.md`: Technical documentation for MCP integration with response backends
+
+### Changed
+- **Backend Enhancements**: Improved MCP support across backends
+  - Extended MCP integration from Gemini and Claude Code to include OpenAI backend
+  - Unified MCP tool handling across all supported backends
+  - Enhanced error reporting and debugging for MCP operations
+
+### Technical Details
+- **New Features**: OpenAI backend MCP integration
+- **Documentation**: Added case study for unified filesystem MCP integration
+- **Contributors**: @praneeth999 @qidanrui @sonichi @ncrispino @a5507203 @Henry-811 and the MassGen team
+
 ## [0.0.16] - 2025-09-08
 
 ### Added
