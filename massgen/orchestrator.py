@@ -1363,7 +1363,8 @@ class Orchestrator(ChatAgent):
                             yield ("result", ("answer", content))
                             yield ("done", None)
                             return
-
+                        elif tool_name.startswith("mcp"):
+                            pass
                         else:
                             # Non-workflow tools not yet implemented
                             yield (

@@ -142,7 +142,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError(
                 "OpenAI API key not found. Set OPENAI_API_KEY or provide " "in config."
             )
-        return ResponseBackend(api_key=api_key)
+        return ResponseBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "grok":
         api_key = kwargs.get("api_key") or os.getenv("XAI_API_KEY")

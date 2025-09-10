@@ -312,6 +312,28 @@ def log_backend_activity(backend_name: str, activity: str, details: dict = None,
         log.opt(colors=True).debug("<yellow>⚙️ [{}] {}: {}</yellow>", log_name, activity, details or {})
 
 
+def log_mcp_activity(backend_name: str, message: str, details: dict = None, agent_id: str = None):
+    """
+    Log MCP (Model Context Protocol) activities at INFO level.
+    
+    Args:
+        backend_name: Name of the backend (e.g., "claude", "openai")
+        message: Description of the MCP activity
+        details: Additional details as dictionary
+        agent_id: Optional ID of the agent using this backend
+    """
+    func_name, line_num = _get_caller_info()
+    
+    if agent_id:
+        log_name = f"{agent_id}.{backend_name}"
+        log = logger.bind(name=f"{log_name}:{func_name}:{line_num}")
+    else:
+        log_name = backend_name
+        log = logger.bind(name=f"backend.{backend_name}:{func_name}:{line_num}")
+
+    log.info("MCP: {} - {}", message, details or {})
+
+
 def log_tool_call(agent_id: str, tool_name: str, arguments: dict, result: Any = None, backend_name: str = None):
     """
     Log tool calls made by agents.
@@ -436,6 +458,7 @@ __all__ = [
     "log_orchestrator_agent_message",
     "log_backend_agent_message",
     "log_backend_activity",
+    "log_mcp_activity",
     "log_tool_call",
     "log_coordination_step",
     "log_stream_chunk"
