@@ -281,11 +281,11 @@ class AgentConfig:
 
         Examples:
             Basic configuration using environment variables::
-            
+
                 config = AgentConfig.create_azure_openai_config("gpt-4")
 
             Custom endpoint and API key::
-            
+
                 config = AgentConfig.create_azure_openai_config(
                     deployment_name="gpt-4-turbo",
                     endpoint="https://your-resource.openai.azure.com/",
@@ -336,26 +336,27 @@ class AgentConfig:
 
         Examples:
             Maximum power configuration (recommended)::
-            
+
                 config = AgentConfig.create_claude_code_config()
 
             Custom security restrictions::
-            
+
                 config = AgentConfig.create_claude_code_config(
                     disallowed_tools=["Bash(rm*)", "Bash(sudo*)", "WebSearch"]
                 )
 
             Development task with custom directory::
-            
+
                 config = AgentConfig.create_claude_code_config(
                     cwd="/path/to/project",
                     system_prompt="You are an expert developer assistant."
                 )
 
-            # Legacy allowed_tools approach (not recommended)
-            config = AgentConfig.create_claude_code_config(
-                allowed_tools=["Read", "Write", "Edit", "Bash"]
-            )
+            Legacy allowed_tools approach (not recommended)::
+
+                config = AgentConfig.create_claude_code_config(
+                    allowed_tools=["Read", "Write", "Edit", "Bash"]
+                )
         """
         backend_params = {"model": model, **kwargs}
 

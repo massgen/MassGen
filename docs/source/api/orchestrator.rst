@@ -5,19 +5,3 @@ Orchestrator API
    :members:
    :undoc-members:
    :show-inheritance:
-
-Orchestrator Class
-------------------
-
-.. autoclass:: massgen.orchestrator.Orchestrator
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Orchestration Strategies
-------------------------
-
-.. automodule:: massgen.strategies
-   :members:
-   :undoc-members:
-   :show-inheritance:
