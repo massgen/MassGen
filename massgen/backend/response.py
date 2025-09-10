@@ -445,7 +445,7 @@ class ResponseBackend(LLMBackend):
 
         return converted_messages
 
-    def _process_stream_chunk(self, chunk) -> StreamChunk:
+    def _process_stream_chunk(self, chunk, agent_id) -> StreamChunk:
         """Process individual stream chunks and convert to StreamChunk format."""
         if not hasattr(chunk, "type"):
             return StreamChunk(type="content", content="")
@@ -454,9 +454,17 @@ class ResponseBackend(LLMBackend):
 
         # Handle different chunk types
         if chunk_type == "response.output_text.delta" and hasattr(chunk, "delta"):
+            log_backend_agent_message(
+                agent_id or "default",
+                "RECV",
+                {"content": chunk.delta},
+                backend_name=self.get_provider_name()
+            )
+            log_stream_chunk("backend.response", "content", chunk.delta, agent_id)
             return StreamChunk(type="content", content=chunk.delta)
 
         elif chunk_type == "response.reasoning_text.delta" and hasattr(chunk, "delta"):
+            log_stream_chunk("backend.response", "reasoning", chunk.delta, agent_id)
             return StreamChunk(
                 type="reasoning",
                 content=f"🧠 [Reasoning] {chunk.delta}",
@@ -467,6 +475,7 @@ class ResponseBackend(LLMBackend):
 
         elif chunk_type == "response.reasoning_text.done":
             reasoning_text = getattr(chunk, "text", "")
+            log_stream_chunk("backend.response", "reasoning_done", reasoning_text, agent_id)
             return StreamChunk(
                 type="reasoning_done",
                 content=f"\n🧠 [Reasoning Complete]\n",
@@ -476,6 +485,7 @@ class ResponseBackend(LLMBackend):
             )
 
         elif chunk_type == "response.reasoning_summary_text.delta" and hasattr(chunk, "delta"):
+            log_stream_chunk("backend.response", "reasoning_summary", chunk.delta, agent_id)
             return StreamChunk(
                 type="reasoning_summary",
                 content=chunk.delta,
@@ -486,6 +496,7 @@ class ResponseBackend(LLMBackend):
 
         elif chunk_type == "response.reasoning_summary_text.done":
             summary_text = getattr(chunk, "text", "")
+            log_stream_chunk("backend.response", "reasoning_summary_done", summary_text, agent_id)
             return StreamChunk(
                 type="reasoning_summary_done",
                 content=f"\n📋 [Reasoning Summary Complete]\n",
@@ -496,19 +507,86 @@ class ResponseBackend(LLMBackend):
 
         # Provider tool events
         elif chunk_type == "response.web_search_call.in_progress":
+            log_stream_chunk("backend.response", "web_search", "Starting search", agent_id)
             return StreamChunk(type="content", content=f"\n🔍 [Provider Tool: Web Search] Starting search...")
         elif chunk_type == "response.web_search_call.searching":
+            log_stream_chunk("backend.response", "web_search", "Searching", agent_id)
             return StreamChunk(type="content", content=f"\n🔍 [Provider Tool: Web Search] Searching...")
         elif chunk_type == "response.web_search_call.completed":
+            log_stream_chunk("backend.response", "web_search", "Search completed", agent_id)
             return StreamChunk(type="content", content=f"\n✅ [Provider Tool: Web Search] Search completed")
 
         elif chunk_type == "response.code_interpreter_call.in_progress":
+            log_stream_chunk("backend.response", "code_interpreter", "Starting execution", agent_id)
             return StreamChunk(type="content", content=f"\n💻 [Provider Tool: Code Interpreter] Starting execution...")
         elif chunk_type == "response.code_interpreter_call.executing":
+            log_stream_chunk("backend.response", "code_interpreter", "Executing", agent_id)
             return StreamChunk(type="content", content=f"\n💻 [Provider Tool: Code Interpreter] Executing...")
         elif chunk_type == "response.code_interpreter_call.completed":
+            log_stream_chunk("backend.response", "code_interpreter", "Execution completed", agent_id)
             return StreamChunk(type="content", content=f"\n✅ [Provider Tool: Code Interpreter] Execution completed")
+        elif chunk.type == "response.output_item.done":
+            # Get search query or executed code details - show them right after completion
+            if hasattr(chunk, "item") and chunk.item:
+                if (
+                    hasattr(chunk.item, "type")
+                    and chunk.item.type == "web_search_call"
+                ):
+                    if hasattr(chunk.item, "action") and (
+                        "query" in chunk.item.action
+                    ):
+                        search_query = chunk.item.action["query"]
+                        if search_query:
+                            log_stream_chunk("backend.response", "search_query", search_query, agent_id)
+                            return StreamChunk(
+                                type="content",
+                                content=f"\n🔍 [Search Query] '{search_query}'\n",
+                            )
+                elif (
+                    hasattr(chunk.item, "type")
+                    and chunk.item.type == "code_interpreter_call"
+                ):
+                    if hasattr(chunk.item, "code") and chunk.item.code:
+                        # Format code as a proper code block - don't assume language
+                        log_stream_chunk("backend.response", "code_executed", chunk.item.code, agent_id)
+                        return StreamChunk(
+                            type="content",
+                            content=f"💻 [Code Executed]\n```\n{chunk.item.code}\n```\n",
+                        )
 
+                    # Also show the execution output if available
+                    if (
+                        hasattr(chunk.item, "outputs")
+                        and chunk.item.outputs
+                    ):
+                        for output in chunk.item.outputs:
+                            output_text = None
+                            if hasattr(output, "text") and output.text:
+                                output_text = output.text
+                            elif (
+                                hasattr(output, "content")
+                                and output.content
+                            ):
+                                output_text = output.content
+                            elif hasattr(output, "data") and output.data:
+                                output_text = str(output.data)
+                            elif isinstance(output, str):
+                                output_text = output
+                            elif isinstance(output, dict):
+                                # Handle dict format outputs
+                                if "text" in output:
+                                    output_text = output["text"]
+                                elif "content" in output:
+                                    output_text = output["content"]
+                                elif "data" in output:
+                                    output_text = str(output["data"])
+
+                            if output_text and output_text.strip():
+                                log_stream_chunk("backend.response", "code_result", output_text.strip(), agent_id)
+                                return StreamChunk(
+                                    type="content",
+                                    content=f"📊 [Result] {output_text.strip()}\n",
+                                )
         # MCP events
         elif chunk_type == "response.mcp_list_tools.started":
             return StreamChunk(type="content", content="\n🔧 [MCP] Listing available tools...")
@@ -530,12 +608,58 @@ class ResponseBackend(LLMBackend):
             error_msg = getattr(chunk, "error", "unknown error")
             return StreamChunk(type="content", content=f"\n❌ [MCP] Tool '{tool_name}' failed: {error_msg}")
 
-        elif chunk_type == "response.completed":
+        elif chunk.type == "response.completed":
+            # Extract and yield tool calls from the complete response
             if hasattr(chunk, "response"):
                 response_dict = self._convert_to_dict(chunk.response)
-                return StreamChunk(type="complete_response", response=response_dict)
-            else:
-                return StreamChunk(type="done")
+
+                # Handle builtin tool results from output array with simple content format
+                if (
+                    isinstance(response_dict, dict)
+                    and "output" in response_dict
+                ):
+                    for item in response_dict["output"]:
+                        if item.get("type") == "code_interpreter_call":
+                            # Code execution result
+                            status = item.get("status", "unknown")
+                            code = item.get("code", "")
+                            outputs = item.get("outputs")
+                            content = (
+                                f"\n🔧 Code Interpreter [{status.title()}]"
+                            )
+                            if code:
+                                content += f": {code}"
+                            if outputs:
+                                content += f" → {outputs}"
+
+                            log_stream_chunk("backend.response", "code_interpreter_result", content, agent_id)
+                            return StreamChunk(
+                                type="content", content=content
+                            )
+                        elif item.get("type") == "web_search_call":
+                            # Web search result
+                            status = item.get("status", "unknown")
+                            # Query is in action.query, not directly in item
+                            query = item.get("action", {}).get("query", "")
+                            results = item.get("results")
+
+                            # Only show web search completion if query is present
+                            if query:
+                                content = f"\n🔧 Web Search [{status.title()}]: {query}"
+                                if results:
+                                    content += (
+                                        f" → Found {len(results)} results"
+                                    )
+                                log_stream_chunk("backend.response", "web_search_result", content, agent_id)
+                                return StreamChunk(
+                                    type="tool", content=content
+                                )
+
+                # Yield the complete response for internal use
+                log_stream_chunk("backend.response", "complete_response", "Response completed", agent_id)
+                return StreamChunk(
+                    type="complete_response", response=response_dict
+                )
 
         # Default chunk - this should not happen for valid responses
         return StreamChunk(type="content", content="")
@@ -553,6 +677,7 @@ class ResponseBackend(LLMBackend):
         all_params = {**self.config, **kwargs}
         api_params = await self._build_response_api_params(current_messages, tools, all_params)
 
+        agent_id = kwargs['agent_id']
         # Start streaming
         stream = await client.responses.create(**api_params)
 
@@ -594,8 +719,8 @@ class ResponseBackend(LLMBackend):
 
                 # Handle other streaming events (reasoning, provider tools, etc.)
                 else:
-                    # Pass through other chunk types
-                    yield self._process_stream_chunk(chunk)
+                    result = self._process_stream_chunk(chunk, agent_id)
+                    yield result
 
                 # Response completed
                 if chunk.type == "response.completed":
@@ -810,7 +935,7 @@ class ResponseBackend(LLMBackend):
                         stream = await client.responses.create(**api_params)
 
                         async for chunk in stream:
-                            yield self._process_stream_chunk(chunk)
+                            yield self._process_stream_chunk(chunk, agent_id)
 
                 except Exception as e:
                     # Enhanced error handling for MCP-related errors during streaming
@@ -846,7 +971,7 @@ class ResponseBackend(LLMBackend):
                         async def fallback_stream(params):
                             stream = await client.responses.create(**params)
                             async for chunk in stream:
-                                yield self._process_stream_chunk(chunk)
+                                yield self._process_stream_chunk(chunk, agent_id)
                         
                         async for chunk in self._handle_mcp_error_and_fallback(
                             e, api_params, provider_tools, fallback_stream
@@ -887,7 +1012,7 @@ class ResponseBackend(LLMBackend):
                 async def fallback_stream(params):
                     stream = await client.responses.create(**params)
                     async for chunk in stream:
-                        yield self._process_stream_chunk(chunk)
+                        yield self._process_stream_chunk(chunk, agent_id)
 
                 if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
                     async for chunk in self._handle_mcp_error_and_fallback(
@@ -907,7 +1032,7 @@ class ResponseBackend(LLMBackend):
                     # Proceed with non-MCP streaming
                     stream = await client.responses.create(**api_params)
                     async for chunk in stream:
-                        yield self._process_stream_chunk(chunk)
+                        yield self._process_stream_chunk(chunk, agent_id)
             except Exception as inner_e:
                 logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
                 yield StreamChunk(type="error", error=str(inner_e))
