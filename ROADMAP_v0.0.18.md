@@ -24,7 +24,6 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 #### 1.1 Generic Chat Completions MCP Integration (REQUIRED)
 - [ ] Extend existing MCP framework to ChatCompletionsBackend base class
 - [ ] Add MCP support for providers not yet covered 
-- [ ] Reuse function calling bridge patterns from OpenAI/Gemini implementations
 - [ ] Test with existing filesystem manager and MCP servers
 
 #### 1.2 Provider-Specific MCP Adaptations (REQUIRED)
@@ -45,7 +44,6 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 #### 2.1 Step-by-Step Orchestration Logging (REQUIRED)
 - [ ] Add clear indicators for each collaboration phase (task distribution → parallel work → consensus building → final answer)
 - [ ] Enhance existing log_orchestrator_activity with collaboration phase context
-- [ ] Add timing information for each collaboration phase
 - [ ] Create visual collaboration flow in logs for easier debugging
 - [ ] Improve correlation between agent activities and orchestration phases
 
