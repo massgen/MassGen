@@ -164,6 +164,7 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - [ ] Enhanced logging validated through testing
 - [ ] Documentation updates for all new features
 
+
 ## Dependencies & Risks
 
 ### Dependencies
@@ -204,9 +205,11 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 | 3 | Optional Features | Code execution, debugging, MCP logging | ⏳ **PENDING** |
 | 4 | Release Preparation | Final testing and v0.0.18 release | ⏳ **PENDING** |
 
+
 ## Getting Started
 
 ### For Contributors
+
 1. Review Chat Completions API documentation for various providers
 2. Understand existing MCP architecture from v0.0.17
 3. Test with MCP servers using different backend providers
@@ -224,3 +227,4 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 ---
 
 *This roadmap represents our commitment to universal MCP support across all backend types, improving system observability through enhanced logging and architectural documentation, while providing optional enhancements for developer experience and new capabilities like safe code execution.*
+
