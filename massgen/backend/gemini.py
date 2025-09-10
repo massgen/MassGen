@@ -55,6 +55,20 @@ except ImportError:  # MCP not installed or import failed within mcp_tools
     MCPTimeoutError = ImportError  # type: ignore[assignment]
     MCPServerError = ImportError  # type: ignore[assignment]
 
+# Import MCP backend utilities
+try:
+    from ..mcp_tools.backend_utils import (
+        MCPErrorHandler, MCPSetupManager, MCPMessageManager, 
+        MCPCircuitBreakerManager, MCPExecutionManager, MCPConfigHelper
+    )
+except ImportError:
+    MCPErrorHandler = None  # type: ignore[assignment]
+    MCPSetupManager = None  # type: ignore[assignment]
+    MCPMessageManager = None  # type: ignore[assignment]
+    MCPCircuitBreakerManager = None  # type: ignore[assignment]
+    MCPExecutionManager = None  # type: ignore[assignment]
+    MCPConfigHelper = None  # type: ignore[assignment]
+
 
 class ActionType(enum.Enum):
     """Action types for structured output."""
@@ -469,14 +483,19 @@ class GeminiBackend(LLMBackend):
 
         # Initialize circuit breaker if enabled
         if self._circuit_breakers_enabled:
+            # Fail fast if required utilities are missing
+            if MCPCircuitBreakerManager is None:
+                raise RuntimeError("Circuit breakers enabled but MCPCircuitBreakerManager is not available")
+            
             try:
                 from ..mcp_tools.circuit_breaker import MCPCircuitBreaker
-                from ..mcp_tools.backend_utils import MCPConfigHelper
-
                 # Use shared utility to build circuit breaker configuration
-                mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools", backend_name="gemini")
+                if MCPConfigHelper is not None:
+                    mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools", backend_name="gemini")
+                else:
+                    mcp_tools_config = None
                 if mcp_tools_config:
-                    self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config, backend_name="gemini")
+                    self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config, backend_name="gemini", agent_id=self.agent_id)
                     log_backend_activity("gemini", "Circuit breaker initialized for MCP tools", {"enabled": True}, agent_id=self.agent_id)
                 else:
                     log_backend_activity("gemini", "Circuit breaker config unavailable", {"fallback": "disabled"}, agent_id=self.agent_id)
@@ -490,10 +509,6 @@ class GeminiBackend(LLMBackend):
                 "pydantic is required for Gemini backend. Install with: pip install pydantic"
             )
 
-    def _normalize_mcp_servers(self) -> List[Dict[str, Any]]:
-        """Validate and normalize mcp_servers into a list of dicts."""
-        from ..mcp_tools.backend_utils import MCPSetupManager
-        return MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
 
     async def _setup_mcp_with_status_stream(self, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
         """Initialize MCP client with status streaming."""
@@ -609,13 +624,17 @@ class GeminiBackend(LLMBackend):
             else:
                 log_backend_activity("gemini", "MCP validation skipped", {"reason": "validator_unavailable"}, agent_id=agent_id)
 
-            normalized_servers = self._normalize_mcp_servers()
+            # Instead of the current fallback logic
+            normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
             log_backend_activity("gemini", "Setting up MCP sessions", {"server_count": len(normalized_servers)}, agent_id=agent_id)
             if status_callback:
                 await status_callback("info", {"message": f"Setting up MCP sessions for {len(normalized_servers)} servers"})
 
             # Apply circuit breaker filtering before connection attempts
-            filtered_servers = self._apply_mcp_tools_circuit_breaker_filtering(normalized_servers, agent_id=agent_id)
+            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(normalized_servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
+            else:
+                filtered_servers = normalized_servers
             if not filtered_servers:
                 log_backend_activity("gemini", "All MCP servers blocked by circuit breaker", {}, agent_id=agent_id)
                 if status_callback:
@@ -657,7 +676,8 @@ class GeminiBackend(LLMBackend):
 
             if not connected_server_names:
                 # Treat as connection failure: no active servers
-                await self._record_mcp_tools_failure(filtered_servers, "No servers connected", agent_id=agent_id)    
+                if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                    await MCPCircuitBreakerManager.record_failure(filtered_servers, self._mcp_tools_circuit_breaker, "No servers connected", backend_name="gemini", agent_id=agent_id)    
                 
                 log_backend_activity( "gemini", "MCP connection failed: no servers connected", {}, agent_id=agent_id)
                 if status_callback:
@@ -671,7 +691,8 @@ class GeminiBackend(LLMBackend):
                 if server.get("name") in connected_server_names
             ]
             if connected_server_configs:
-                await self._record_mcp_tools_success(connected_server_configs, agent_id=agent_id)
+                if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                    await MCPCircuitBreakerManager.record_success(connected_server_configs, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
 
             self._mcp_initialized = True
             log_backend_activity(
@@ -685,7 +706,8 @@ class GeminiBackend(LLMBackend):
 
         except Exception as e:
             # Record failure for circuit breaker
-            await self._record_mcp_tools_failure(self.mcp_servers, str(e), agent_id=agent_id)
+            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                await MCPCircuitBreakerManager.record_failure(self.mcp_servers, self._mcp_tools_circuit_breaker, str(e), backend_name="gemini", agent_id=agent_id)
 
             # Enhanced error handling for different MCP error types
             if isinstance(e, RuntimeError) and "MCP configuration" in str(e):
@@ -917,10 +939,6 @@ Make your decision and include the JSON at the very end of your response."""
 
         return []
 
-    def _mcp_error_details(self, error: Exception, context: Optional[str] = None, *, log: bool = False) -> tuple[str, str, str]:
-        """Return standardized MCP error info and optionally log."""
-        from ..mcp_tools.backend_utils import MCPErrorHandler
-        return MCPErrorHandler.get_error_details(error, context, log=log)
 
     async def _handle_mcp_retry_error(
         self, error: Exception, retry_count: int, max_retries: int
@@ -930,7 +948,7 @@ Make your decision and include the JSON at the very end of your response."""
         Returns:
             tuple: (should_continue_retrying, error_chunks_generator)
         """
-        log_type, user_message, _ = self._mcp_error_details(error)
+        log_type, user_message, _ = MCPErrorHandler.get_error_details(error, None, log=False)
         
         # Log the retry attempt
         log_backend_activity(
@@ -966,7 +984,7 @@ Make your decision and include the JSON at the very end of your response."""
         """Handle MCP errors with specific messaging"""
         self._mcp_tool_failures += 1
 
-        log_type, user_message, _ = self._mcp_error_details(error)
+        log_type, user_message, _ = MCPErrorHandler.get_error_details(error, None, log=False)
 
         # Log with specific error type
         log_backend_activity(
@@ -986,64 +1004,20 @@ Make your decision and include the JSON at the very end of your response."""
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
 
-    def _trim_message_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Trim message history to prevent unbounded growth in MCP execution loop."""
-        from ..mcp_tools.backend_utils import MCPMessageManager
-        max_items = getattr(self, '_max_mcp_message_history', 200)
-        return MCPMessageManager.trim_message_history(messages, max_items)
 
-    def _is_transient_error(self, error: Exception) -> bool:
-        """Determine if an error is transient and should be retried."""
-        from ..mcp_tools.backend_utils import MCPErrorHandler
-        return MCPErrorHandler.is_transient_error(error)
 
-    def _log_mcp_error(self, error: Exception, context: str, agent_id: Optional[str] = None) -> None:
-        """Log MCP error with appropriate level and context."""
-        from ..mcp_tools.backend_utils import MCPErrorHandler
-        MCPErrorHandler.log_error(error, context, backend_name="gemini", agent_id=agent_id)
 
-    def _apply_mcp_tools_circuit_breaker_filtering(self, servers: List[Dict[str, Any]], agent_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Filter MCP tools servers based on circuit breaker state."""
-        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
 
-        if not self._circuit_breakers_enabled or not self._mcp_tools_circuit_breaker:
-            return servers
 
-        return MCPCircuitBreakerManager.apply_circuit_breaker_filtering(servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
 
-    async def _record_mcp_tools_success(self, servers: List[Dict[str, Any]], agent_id: Optional[str] = None) -> None:
-        """Record successful MCP tools operation for circuit breaker."""
-        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
-
-        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-            await MCPCircuitBreakerManager.record_success(servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
-
-    async def _record_mcp_tools_failure(self, servers: List[Dict[str, Any]], error_message: str, agent_id: Optional[str] = None) -> None:
-        """Record connection failure for mcp_tools servers in circuit breaker."""
-        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
-
-        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-            await MCPCircuitBreakerManager.record_failure(servers, self._mcp_tools_circuit_breaker, error_message, backend_name="gemini", agent_id=agent_id)
-
-    async def _record_mcp_tools_event(
-        self,
-        servers: List[Dict[str, Any]],
-        event: Literal["success", "failure"],
-        error_message: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> None:
-        """Record success/failure for mcp_tools servers in circuit breaker."""
-        from ..mcp_tools.backend_utils import MCPCircuitBreakerManager
-
-        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-            await MCPCircuitBreakerManager.record_event(servers, self._mcp_tools_circuit_breaker, event, error_message, backend_name="gemini", agent_id=agent_id)
 
     async def _execute_mcp_function_with_retry(
         self, function_name: str, args: Dict[str, Any], agent_id: Optional[str] = None
     ) -> Any:
         """Execute MCP function with exponential backoff retry logic."""
-        from ..mcp_tools.backend_utils import MCPExecutionManager
-
+        if MCPExecutionManager is None:
+            raise RuntimeError("MCPExecutionManager is not available - MCP backend utilities are missing")
+        
         # Stats callback for tracking
         async def stats_callback(action: str) -> int:
             if action == "increment_calls":
@@ -1057,7 +1031,8 @@ Make your decision and include the JSON at the very end of your response."""
         # Circuit breaker callback
         async def circuit_breaker_callback(event: str, error_msg: str) -> None:
             if event == "failure":
-                await self._record_mcp_tools_failure(self.mcp_servers, error_msg, agent_id=agent_id)
+                if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                    await MCPCircuitBreakerManager.record_failure(self.mcp_servers, self._mcp_tools_circuit_breaker, error_msg, backend_name="gemini", agent_id=agent_id)
             else:
                 # Record success only for currently connected servers
                 connected_names: List[str] = []
@@ -1069,7 +1044,8 @@ Make your decision and include the JSON at the very end of your response."""
 
                 if connected_names:
                     servers_to_record = [{"name": name} for name in connected_names]
-                    await self._record_mcp_tools_success(servers_to_record, agent_id=agent_id)
+                    if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                        await MCPCircuitBreakerManager.record_success(servers_to_record, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
 
         return await MCPExecutionManager.execute_function_with_retry(
             function_name=function_name,
@@ -1096,6 +1072,18 @@ Make your decision and include the JSON at the very end of your response."""
             {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
             agent_id=agent_id
         )
+        
+        # Only trim when MCP tools will be used
+        if (self.mcp_servers and 
+            MCPMessageManager is not None and 
+            hasattr(self, '_max_mcp_message_history') and 
+            self._max_mcp_message_history > 0):
+            original_count = len(messages)
+            messages = MCPMessageManager.trim_message_history(messages, self._max_mcp_message_history)
+            if len(messages) < original_count:
+                log_backend_activity("gemini", "Trimmed MCP message history", 
+                    {"original": original_count, "trimmed": len(messages), "limit": self._max_mcp_message_history}, 
+                    agent_id=agent_id)
         
         try:
             from google import genai
@@ -1255,7 +1243,10 @@ Make your decision and include the JSON at the very end of your response."""
                                 )  # Progressive backoff
 
                             # Apply circuit breaker filtering before retry attempts
-                            filtered_retry_servers = self._apply_mcp_tools_circuit_breaker_filtering(self.mcp_servers, agent_id=agent_id)
+                            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                                filtered_retry_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(self.mcp_servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
+                            else:
+                                filtered_retry_servers = self.mcp_servers
                             if not filtered_retry_servers:
                                 log_backend_activity(
                                     "gemini",
@@ -1299,7 +1290,8 @@ Make your decision and include the JSON at the very end of your response."""
                             )
 
                             # Record success for circuit breaker
-                            await self._record_mcp_tools_success(filtered_retry_servers, agent_id=agent_id)
+                            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                                await MCPCircuitBreakerManager.record_success(filtered_retry_servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
                             mcp_connected = True
                             log_backend_activity(
                                 "gemini",
@@ -1325,7 +1317,8 @@ Make your decision and include the JSON at the very end of your response."""
                             Exception,
                         ) as e:
                             # Record failure for circuit breaker
-                            await self._record_mcp_tools_failure(self.mcp_servers, str(e), agent_id=agent_id)
+                            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+                                await MCPCircuitBreakerManager.record_failure(self.mcp_servers, self._mcp_tools_circuit_breaker, str(e), backend_name="gemini", agent_id=agent_id)
 
                             (
                                 should_continue,
@@ -2003,7 +1996,7 @@ Make your decision and include the JSON at the very end of your response."""
                 MCPError,
                 Exception,
             ) as e:
-                self._mcp_error_details(e, "disconnect", log=True)
+                MCPErrorHandler.get_error_details(e, "disconnect", log=True)
             finally:
                 self._mcp_client = None
                 self._mcp_initialized = False

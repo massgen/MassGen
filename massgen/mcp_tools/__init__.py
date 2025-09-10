@@ -19,7 +19,7 @@ from .exceptions import (
     MCPConfigurationError, MCPResourceError,
     handle_mcp_error, format_error_chain
 )
-from .security import prepare_command, sanitize_tool_name
+from .security import prepare_command, sanitize_tool_name, validate_url
 from .config_validator import MCPConfigValidator, validate_mcp_integration
 from mcp import types as mcp_types
 
@@ -60,6 +60,7 @@ __all__ = [
     # Security utilities
     "prepare_command",
     "sanitize_tool_name",
+    "validate_url",
 
     # Configuration validation
     "MCPConfigValidator",

@@ -34,9 +34,6 @@ class ConnectionState(Enum):
     FAILED = "failed"
 
 
-
-
-
 def _ensure_timedelta(value: Union[int, float, timedelta], default_seconds: float) -> timedelta:
     """
     Ensure a value is converted to timedelta for consistent timeout handling.
@@ -254,7 +251,10 @@ class MCPClient:
                     # Simple environment variable substitution for patterns like ${VAR_NAME}
                     def replace_env_var(match):
                         var_name = match.group(1)
-                        return os.environ.get(var_name, match.group(0))  # Return original if not found
+                        value = os.environ.get(var_name)
+                        if value is None or value.strip() == "":
+                            raise ValueError(f"Required environment variable '{var_name}' is not set")
+                        return value
                     
                     env[key] = re.sub(r'\$\{([A-Z_][A-Z0-9_]*)\}', replace_env_var, value)
 
@@ -816,7 +816,50 @@ class MultiMCPClient:
         if self._initialized:
             return
 
-        # Create connection tasks for parallel execution
+        # Determine which servers need connection (not already connected)
+        servers_to_connect = []
+        connected_clients = {}
+        
+        # First, check existing clients and reuse connected ones
+        for server_config in self.server_configs:
+            server_name = server_config["name"]
+            existing_client = self.clients.get(server_name)
+            
+            # If client exists and is connected, reuse it
+            if existing_client and existing_client.is_connected():
+                logger.debug(f"Reusing already connected client for server: {server_name}")
+                connected_clients[server_name] = existing_client
+                # Re-register tools, resources, and prompts for consistency
+                for tool_name, tool in existing_client.tools.items():
+                    prefixed_name = sanitize_tool_name(tool_name, server_name)
+                    if prefixed_name not in self.tools:
+                        self.tools[prefixed_name] = tool
+                    else:
+                        logger.warning(f"Tool name collision: '{prefixed_name}' already exists from server '{server_name}'. "
+                                       f"Overwriting with tool from server '{server_name}'")
+                    self._tool_to_client[prefixed_name] = server_name
+                
+                for uri, resource in existing_client.resources.items():
+                    if uri not in self.resources:
+                        self.resources[uri] = resource
+                    else:
+                        logger.warning(f"Resource name collision: '{uri}' already exists from server '{server_name}'. "
+                                       f"Overwriting with resource from server '{server_name}'")
+                    
+                for prompt_name, prompt in existing_client.prompts.items():
+                    prefixed_name = f"mcp__{server_name}__{prompt_name}"
+                    self.prompts[prefixed_name] = prompt
+            else:
+                # Server needs connection
+                servers_to_connect.append(server_config)
+                # Remove any disconnected client from tracking
+                if existing_client:
+                    logger.debug(f"Client for server {server_name} is not connected, will reconnect")
+                    await existing_client.disconnect() # Explicitly disconnect the client
+        
+        logger.info(f"Found {len(connected_clients)} already connected servers, {len(servers_to_connect)} servers need connection")
+
+        # Create connection tasks only for servers that need connection
         async def _connect_single_server(server_config: Dict[str, Any]) -> tuple[str, Optional[MCPClient]]:
             """Connect to a single server and return (server_name, client) or (server_name, None) on failure."""
             server_name = server_config["name"]
@@ -827,15 +870,16 @@ class MultiMCPClient:
                 return server_name, None
 
             try:
-                # Create client for this server
+                
+                    # Create new client (disconnected clients are handled in the calling method)
                 client = MCPClient(
-                    server_config,
-                    timeout_seconds=self.timeout_seconds,
-                    allowed_tools=self.allowed_tools,
-                    exclude_tools=self.exclude_tools,
-                    status_callback=self.status_callback,
-                )
-
+                        server_config,
+                        timeout_seconds=self.timeout_seconds,
+                        allowed_tools=self.allowed_tools,
+                        exclude_tools=self.exclude_tools,
+                        status_callback=self.status_callback,
+                    )
+                
                 # Connect the client (this will start its background manager)
                 await client.connect()
                 logger.info(f"Successfully connected to MCP server: {server_name}")
@@ -849,55 +893,57 @@ class MultiMCPClient:
                 self._circuit_breaker.record_failure(server_name)
                 return server_name, None
 
-        # Execute all connections in parallel
-        connection_tasks = [_connect_single_server(config) for config in self.server_configs]
-        connection_results = await asyncio.gather(*connection_tasks, return_exceptions=True)
+        # Execute connections in parallel only for servers that need connection
+        if servers_to_connect:
+            connection_tasks = [_connect_single_server(config) for config in servers_to_connect]
+            connection_results = await asyncio.gather(*connection_tasks, return_exceptions=True)
 
-        connected_clients = {}
-        for result in connection_results:
-            if isinstance(result, Exception):
-                logger.error(f"Connection task failed with exception: {result}")
-                continue
+            for result in connection_results:
+                if isinstance(result, Exception):
+                    logger.error(f"Connection task failed with exception: {result}")
+                    continue
 
-            server_name, client = result
-            if client is not None:
-                connected_clients[server_name] = client
+                server_name, client = result
+                if client is not None:
+                    connected_clients[server_name] = client
 
-                # Register tools with server prefix
-                for tool_name, tool in client.tools.items():
-                    prefixed_name = sanitize_tool_name(tool_name, server_name)
+                    # Register tools with server prefix
+                    for tool_name, tool in client.tools.items():
+                        prefixed_name = sanitize_tool_name(tool_name, server_name)
 
-                    # Check for tool name collisions
-                    if prefixed_name in self.tools:
-                        existing_server = self._tool_to_client.get(prefixed_name, "unknown")
-                        logger.warning(
-                            f"Tool name collision: '{prefixed_name}' already exists from server '{existing_server}'. "
-                            f"Overwriting with tool from server '{server_name}'"
-                        )
+                        # Check for tool name collisions
+                        if prefixed_name in self.tools:
+                            existing_server = self._tool_to_client.get(prefixed_name, "unknown")
+                            logger.warning(
+                                f"Tool name collision: '{prefixed_name}' already exists from server '{existing_server}'. "
+                                f"Overwriting with tool from server '{server_name}'"
+                            )
 
-                    self.tools[prefixed_name] = tool
-                    self._tool_to_client[prefixed_name] = server_name
+                        self.tools[prefixed_name] = tool
+                        self._tool_to_client[prefixed_name] = server_name
 
-                # Register resources
-                for uri, resource in client.resources.items():
-                    self.resources[uri] = resource
+                    # Register resources
+                    for uri, resource in client.resources.items():
+                        self.resources[uri] = resource
 
-                # Register prompts with server prefix (consistent with tool naming)
-                for prompt_name, prompt in client.prompts.items():
-                    # Use consistent naming pattern: mcp__server__prompt
-                    prefixed_name = f"mcp__{server_name}__{prompt_name}"
+                    # Register prompts with server prefix (consistent with tool naming)
+                    for prompt_name, prompt in client.prompts.items():
+                        # Use consistent naming pattern: mcp__server__prompt
+                        prefixed_name = f"mcp__{server_name}__{prompt_name}"
 
-                    # Check for prompt name collisions
-                    if prefixed_name in self.prompts:
-                        logger.warning(
-                            f"Prompt name collision: '{prefixed_name}' already exists. "
-                            f"Overwriting with prompt from server '{server_name}'"
-                        )
+                        # Check for prompt name collisions
+                        if prefixed_name in self.prompts:
+                            logger.warning(
+                                f"Prompt name collision: '{prefixed_name}' already exists. "
+                                f"Overwriting with prompt from server '{server_name}'"
+                            )
 
-                    self.prompts[prefixed_name] = prompt
+                        self.prompts[prefixed_name] = prompt
 
-                logger.info(f"Registered server '{server_name}' with {len(client.tools)} tools, "
-                           f"{len(client.resources)} resources, {len(client.prompts)} prompts")
+                    logger.info(f"Registered server '{server_name}' with {len(client.tools)} tools, "
+                               f"{len(client.resources)} resources, {len(client.prompts)} prompts")
+        else:
+            logger.info("No servers need connection, all servers are already connected")
 
         # Only set clients dict after all connections are attempted
         self.clients = connected_clients
