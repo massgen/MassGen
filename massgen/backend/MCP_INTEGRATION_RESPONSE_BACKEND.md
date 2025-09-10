@@ -102,46 +102,77 @@ async def _execute_mcp_function_with_retry(
 
 ## Execution Flow
 
-### 1. **Initialization**
+### 1. **Enhanced Initialization with Error Recovery**
 1. Parse MCP server configurations
 2. Separate servers by transport type
 3. Initialize circuit breakers for each transport
-4. Setup MultiMCPClient for stdio/streamable-http servers
+4. **Setup MultiMCPClient with error capture**:
+   - Try to establish MCP connections
+   - **Catch setup errors at top level** (no longer silently swallowed)
+   - **Emit user-visible status messages** for setup failures
+   - **Fall back gracefully** to non-MCP mode if setup fails
+5. **Report connection status** to user via StreamChunk messages
 
-### 2. **Tool Processing**
+### 2. **Intelligent Tool Processing**
 1. Convert stdio/streamable-http tools to OpenAI function format
 2. Convert http servers to OpenAI native MCP format
 3. Apply circuit breaker filtering
-4. Combine with provider tools (web search, code interpreter)
+4. **Check MCP availability** and notify if tools are unavailable
+5. Combine with provider tools (web search, code interpreter)
 
-### 3. **Request Processing**
+### 3. **Request Processing with Multi-Level Fallback**
 1. Choose execution mode based on available servers
 2. Build API parameters with appropriate tool formats
-3. Execute request with chosen transport
-4. Handle streaming responses and function calls
+3. **Handle setup-phase errors**: If MCP setup failed, use non-MCP streaming
+4. Execute request with chosen transport
+5. **Handle streaming-phase errors**: If MCP fails during execution, fall back to non-MCP
+6. Handle streaming responses and function calls
 
-### 4. **Function Execution Loop** (stdio + streamable-http)
+### 4. **Robust Function Execution Loop** (stdio + streamable-http)
 1. Detect function calls in streaming response
-2. Execute functions with retry logic
+2. Execute functions with retry logic and exponential backoff
 3. Update message history with results
-4. Continue iteration until completion or max iterations reached
+4. **Handle function execution failures**: Continue with other functions or fall back
+5. Continue iteration until completion or max iterations reached
+6. **Provide status updates** for each execution step
 
 ## Error Handling and Recovery
 
-### 1. **Circuit Breaker Integration**
-- **Failure Detection**: Automatic detection of server failures
-- **Temporary Exclusion**: Failed servers are temporarily excluded
-- **Gradual Recovery**: Servers are gradually reintroduced after cooldown
+### 1. **Multi-Phase Error Detection**
+The system implements comprehensive error handling across two critical phases:
 
-### 2. **Retry Mechanisms**
-- **Exponential Backoff**: Increasing delays between retries
-- **Maximum Retry Limits**: Prevent infinite retry loops
-- **Error Categorization**: Different handling for different error types
+#### Setup Phase Error Handling (`__aenter__`)
+- **Silent Error Capture**: MCP setup errors in `__aenter__` are now caught at the top level
+- **User-Visible Notifications**: Clear status messages inform users when MCP setup fails
+- **Graceful Fallback**: Automatic fallback to non-MCP streaming when setup errors occur
+- **Error Propagation**: Setup errors no longer get silently swallowed
 
-### 3. **Graceful Degradation**
+#### Runtime Phase Error Handling (Streaming)
+- **Circuit Breaker Integration**: Automatic detection of server failures during streaming
+- **Temporary Exclusion**: Failed servers are temporarily excluded with status tracking
+- **Gradual Recovery**: Servers are gradually reintroduced after cooldown periods
+
+### 2. **Enhanced Retry Mechanisms**
+- **Exponential Backoff**: Increasing delays between retries for function calls
+- **Maximum Retry Limits**: Prevent infinite retry loops with configurable limits
+- **Error Categorization**: Different handling for MCP-specific vs generic errors
+- **Function-Level Retries**: Individual MCP function calls have dedicated retry logic
+
+### 3. **Advanced Graceful Degradation**
 - **Transport Isolation**: Failure in one transport doesn't affect others
-- **Fallback Paths**: Automatic fallback to non-MCP tools when needed
-- **User-Friendly Messages**: Clear error communication to users
+- **Multi-Level Fallback**: Setup errors → streaming errors → non-MCP mode
+- **User-Friendly Messages**: Clear, contextual error communication:
+  ```python
+  # Setup failure notification
+  "⚠️ [MCP] Setup failed; continuing without MCP"
+
+  # Runtime error with MCP tools
+  "⚠️ [MCP Tool] Connection failed; falling back to non-MCP tools"
+
+  # Successful MCP connection
+  "✅ [MCP] Connected to {n} servers"
+  ```
+- **Provider Tool Preservation**: Web search and code interpreter tools remain available during MCP failures
 
 ## Configuration Example
 
