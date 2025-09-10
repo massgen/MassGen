@@ -145,7 +145,7 @@ class ResponseBackend(LLMBackend):
 
     async def _execute_mcp_function_with_retry(
         self, function_name: str, arguments_json: str, max_retries: int = 3
-    ) -> str:
+    ) -> List[str, Any]:
         """Execute MCP function with exponential backoff retry logic."""
         import json
 
@@ -188,7 +188,7 @@ class ResponseBackend(LLMBackend):
         # Convert result to string for response.py compatibility
         if isinstance(result, dict) and "error" in result:
             return f"Error: {result['error']}"
-        return str(result)
+        return str(result), result
 
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
@@ -780,7 +780,7 @@ class ResponseBackend(LLMBackend):
                     
                     try:
                         # Execute MCP function with retry and exponential backoff
-                        result = await self._execute_mcp_function_with_retry(
+                        result, result_obj = await self._execute_mcp_function_with_retry(
                             function_name, call["arguments"]
                         )
                         
@@ -820,7 +820,7 @@ class ResponseBackend(LLMBackend):
                     yield StreamChunk(
                         type="mcp_status",
                         status="function_call_output",
-                        content=f"Results for Calling {function_name}: {str(result)}",
+                        content=f"Results for Calling {function_name}: {str(result_obj.content[0].text)}",
                         source=f"mcp_{function_name}"
                     )
 
