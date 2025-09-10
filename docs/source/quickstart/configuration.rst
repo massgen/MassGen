@@ -1,242 +1,158 @@
 Configuration
 =============
 
-MassGen provides flexible configuration options for agents, orchestrators, and system behavior.
-
-Agent Configuration
--------------------
-
-Basic Configuration
-~~~~~~~~~~~~~~~~~~~
-
-Configure agents with various parameters:
-
-.. code-block:: python
-
-   from massgen import Agent
-   from massgen.backends import OpenAIBackend
-
-   agent = Agent(
-       name="ExpertAgent",
-       backend=OpenAIBackend(
-           model="gpt-4",
-           temperature=0.7,
-           max_tokens=2000
-       ),
-       role="Domain expert",
-       system_prompt="You are an expert in data science...",
-       tools=[],
-       max_retries=3
-   )
-
-Backend-Specific Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Each backend supports specific configuration:
-
-.. code-block:: python
-
-   # OpenAI configuration
-   openai_backend = OpenAIBackend(
-       model="gpt-4",
-       api_key="your-key",  # or use environment variable
-       temperature=0.5,
-       top_p=0.9,
-       frequency_penalty=0.0,
-       presence_penalty=0.0
-   )
-
-   # Anthropic configuration
-   anthropic_backend = AnthropicBackend(
-       model="claude-3-opus",
-       api_key="your-key",
-       max_tokens=4096,
-       temperature=0.7
-   )
-
-   # Google configuration  
-   google_backend = GoogleBackend(
-       model="gemini-pro",
-       api_key="your-key",
-       temperature=0.8,
-       top_k=40
-   )
-
-Orchestrator Configuration
---------------------------
-
-Configure orchestration behavior:
-
-.. code-block:: python
-
-   from massgen import Orchestrator
-
-   orchestrator = Orchestrator(
-       agents=agents,
-       strategy="consensus",
-       max_rounds=5,
-       consensus_threshold=0.75,
-       timeout=300,  # seconds
-       verbose=True,
-       log_level="INFO"
-   )
-
-Configuration Files
--------------------
-
-YAML Configuration
-~~~~~~~~~~~~~~~~~~
-
-Use YAML files for complex configurations:
-
-.. code-block:: yaml
-
-   # config.yaml
-   agents:
-     - name: ResearchAgent
-       backend:
-         type: openai
-         model: gpt-4
-         temperature: 0.7
-       role: Research specialist
-       
-     - name: AnalysisAgent
-       backend:
-         type: anthropic
-         model: claude-3-opus
-         temperature: 0.5
-       role: Data analyst
-
-   orchestrator:
-     strategy: parallel
-     max_rounds: 3
-     consensus_threshold: 0.8
-
-Load configuration:
-
-.. code-block:: python
-
-   from massgen import load_config
-
-   config = load_config("config.yaml")
-   orchestrator = config.create_orchestrator()
+MassGen supports multiple configuration methods to set up your API keys and customize agent behavior.
 
 Environment Variables
 ---------------------
 
-MassGen supports environment variables for sensitive data:
+The recommended way to configure API keys is through environment variables. Create a `.env` file in your project root:
 
 .. code-block:: bash
 
-   # .env file
-   MASSGEN_LOG_LEVEL=DEBUG
-   MASSGEN_DEFAULT_STRATEGY=consensus
-   MASSGEN_TIMEOUT=600
+   # OpenAI
+   OPENAI_API_KEY=your-openai-api-key
    
-   # API Keys
-   OPENAI_API_KEY=sk-...
-   ANTHROPIC_API_KEY=sk-ant-...
-   GOOGLE_API_KEY=...
-   XAI_API_KEY=...
+   # Anthropic Claude
+   ANTHROPIC_API_KEY=your-anthropic-api-key
+   
+   # Google Gemini
+   GOOGLE_API_KEY=your-google-api-key
+   
+   # xAI Grok
+   XAI_API_KEY=your-xai-api-key
+   
+   # Cerebras
+   CEREBRAS_API_KEY=your-cerebras-api-key
 
-Advanced Configuration
-----------------------
+Configuration File
+------------------
 
-Custom Prompts
+Create a `config.yaml` file for more detailed configuration:
+
+.. code-block:: yaml
+
+   agents:
+     - name: Claude
+       backend: claude
+       model: claude-3-opus-20240229
+       temperature: 0.7
+       max_tokens: 4096
+     
+     - name: GPT
+       backend: openai
+       model: gpt-4
+       temperature: 0.8
+       max_tokens: 4096
+     
+     - name: Gemini
+       backend: gemini
+       model: gemini-pro
+       temperature: 0.9
+   
+   orchestrator:
+     strategy: consensus
+     max_rounds: 5
+     timeout: 300
+
+Loading Configuration
+---------------------
+
+Load configuration in your code:
+
+.. code-block:: python
+
+   from massgen import load_config
+   import os
+   from dotenv import load_dotenv
+   
+   # Load environment variables
+   load_dotenv()
+   
+   # Load configuration file
+   config = load_config("config.yaml")
+   
+   # Create agents from configuration
+   agents = config.create_agents()
+
+Backend-Specific Configuration
+-------------------------------
+
+OpenAI-Compatible Backends
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   backend = ChatCompletionsBackend(
+       api_key=os.getenv("OPENAI_API_KEY"),
+       base_url="https://api.openai.com/v1",
+       model="gpt-4",
+       temperature=0.7,
+       max_tokens=4096
+   )
+
+Claude Backend
 ~~~~~~~~~~~~~~
 
-Configure custom system prompts:
+.. code-block:: python
+
+   from massgen.backend import ClaudeBackend
+   
+   backend = ClaudeBackend(
+       api_key=os.getenv("ANTHROPIC_API_KEY"),
+       model="claude-3-opus-20240229",
+       max_tokens=4096
+   )
+
+Gemini Backend
+~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   agent = Agent(
-       name="CustomAgent",
-       backend=backend,
-       system_prompt="""
-       You are a specialized agent with expertise in {domain}.
-       Your responses should be:
-       1. Accurate and well-researched
-       2. Concise but comprehensive
-       3. Include relevant examples
-       """.format(domain="machine learning")
+   from massgen.backend import GeminiBackend
+   
+   backend = GeminiBackend(
+       api_key=os.getenv("GOOGLE_API_KEY"),
+       model="gemini-pro",
+       temperature=0.9
    )
 
-Tool Configuration
-~~~~~~~~~~~~~~~~~~
+Advanced Settings
+-----------------
 
-Configure tools with specific parameters:
+Orchestration Strategies
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Configure different orchestration strategies:
 
 .. code-block:: python
 
-   from massgen.tools import WebSearch, Calculator
-
-   web_search = WebSearch(
-       max_results=10,
-       timeout=30,
-       safe_search=True
-   )
-
-   calculator = Calculator(
-       precision=10,
-       scientific_mode=True
-   )
-
-   agent = Agent(
-       name="ToolAgent",
-       backend=backend,
-       tools=[web_search, calculator]
-   )
+   # Sequential processing
+   orchestrator = Orchestrator(agents=agents, strategy="sequential")
+   
+   # Parallel processing
+   orchestrator = Orchestrator(agents=agents, strategy="parallel")
+   
+   # Consensus building
+   orchestrator = Orchestrator(agents=agents, strategy="consensus")
 
 Logging Configuration
 ~~~~~~~~~~~~~~~~~~~~~
 
-Configure logging behavior:
+Configure logging for debugging:
 
 .. code-block:: python
 
    import logging
-   from massgen import configure_logging
-
-   configure_logging(
-       level=logging.DEBUG,
-       format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-       output_file='massgen.log'
+   
+   logging.basicConfig(
+       level=logging.INFO,
+       format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
    )
-
-Performance Tuning
-------------------
-
-Optimize for different scenarios:
-
-.. code-block:: python
-
-   # For speed
-   fast_config = {
-       "strategy": "parallel",
-       "max_rounds": 2,
-       "timeout": 60,
-       "cache_enabled": True
-   }
-
-   # For accuracy
-   accurate_config = {
-       "strategy": "consensus",
-       "max_rounds": 5,
-       "consensus_threshold": 0.9,
-       "verification_enabled": True
-   }
-
-   # For cost efficiency
-   efficient_config = {
-       "strategy": "sequential",
-       "max_tokens": 1000,
-       "model": "gpt-3.5-turbo",
-       "cache_enabled": True
-   }
 
 Next Steps
 ----------
 
-* :doc:`../user_guide/concepts` - Understand core concepts
-* :doc:`../user_guide/backends` - Explore backend options
-* :doc:`../user_guide/advanced_usage` - Advanced configuration techniques
+* :doc:`../user_guide/concepts` - Deep dive into MassGen concepts
+* :doc:`../user_guide/backends` - Explore all available backends
+* :doc:`../examples/index` - See complete examples

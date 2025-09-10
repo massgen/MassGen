@@ -15,7 +15,7 @@ Core Components
 ---------------
 
 .. automodule:: massgen
-   :members:
+   :members: Orchestrator, AgentConfig
    :undoc-members:
    :show-inheritance:
 

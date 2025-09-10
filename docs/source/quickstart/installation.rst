@@ -1,14 +1,14 @@
 Installation
 ============
 
-This guide will help you install MassGen and get started with multi-agent orchestration.
+Prerequisites
+-------------
 
-Requirements
-------------
+MassGen requires Python 3.10 or higher. You can check your Python version with:
 
-* Python 3.10 or higher
-* pip package manager
-* API keys for the LLM providers you want to use
+.. code-block:: bash
+
+   python --version
 
 Installation Methods
 --------------------
@@ -16,16 +16,31 @@ Installation Methods
 Using pip
 ~~~~~~~~~
 
-Install MassGen directly from PyPI:
+Install MassGen from PyPI:
 
 .. code-block:: bash
 
    pip install massgen
 
+For development with all optional dependencies:
+
+.. code-block:: bash
+
+   pip install massgen[all]
+
+Using uv
+~~~~~~~~
+
+For faster installation with uv:
+
+.. code-block:: bash
+
+   uv add massgen
+
 From Source
 ~~~~~~~~~~~
 
-Clone the repository and install in development mode:
+Clone the repository and install:
 
 .. code-block:: bash
 
@@ -33,50 +48,17 @@ Clone the repository and install in development mode:
    cd MassGen
    pip install -e .
 
-Installing Documentation Dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To build the documentation locally:
-
-.. code-block:: bash
-
-   pip install massgen[docs]
-   # or
-   pip install -r docs/requirements-docs.txt
-
-Setting Up API Keys
---------------------
-
-MassGen supports multiple LLM providers. Set up your API keys as environment variables:
-
-.. code-block:: bash
-
-   export OPENAI_API_KEY="your-openai-key"
-   export ANTHROPIC_API_KEY="your-anthropic-key"
-   export GOOGLE_API_KEY="your-google-key"
-   export XAI_API_KEY="your-xai-key"
-
-Or create a `.env` file in your project root:
-
-.. code-block:: text
-
-   OPENAI_API_KEY=your-openai-key
-   ANTHROPIC_API_KEY=your-anthropic-key
-   GOOGLE_API_KEY=your-google-key
-   XAI_API_KEY=your-xai-key
-
 Verifying Installation
 ----------------------
 
-Verify that MassGen is installed correctly:
+After installation, verify MassGen is correctly installed:
 
 .. code-block:: bash
 
-   python -c "import massgen; print(massgen.__version__)"
+   massgen --version
 
 Next Steps
 ----------
 
 * :doc:`first_agent` - Create your first multi-agent system
-* :doc:`configuration` - Learn about configuration options
-* :doc:`../user_guide/concepts` - Understand MassGen's core concepts
+* :doc:`configuration` - Configure API keys and settings

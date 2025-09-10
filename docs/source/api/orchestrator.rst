@@ -9,7 +9,7 @@ Orchestrator API
 Orchestrator Class
 ------------------
 
-.. autoclass:: massgen.Orchestrator
+.. autoclass:: massgen.orchestrator.Orchestrator
    :members:
    :undoc-members:
    :show-inheritance:

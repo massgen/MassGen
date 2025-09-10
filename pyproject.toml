@@ -44,7 +44,7 @@ dependencies = [
     "claude-code-sdk>=0.0.19",
     "loguru>=0.7.0",
     "mcp>=1.12.0",
-    "aiohttp>=3.8.0"
+    "aiohttp>=3.8.0",
 ]
 
 [project.optional-dependencies]
@@ -207,3 +207,13 @@ exclude_lines = [
 [tool.bandit]
 exclude_dirs = ["tests", "future_mass"]
 skips = ["B101", "B601"]  # Skip assert_used and shell_injection for test files
+
+[dependency-groups]
+dev = [
+    "linkify-it-py>=2.0.3",
+    "myst-parser>=4.0.1",
+    "sphinx>=8.1.3",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-design>=0.6.1",
+    "sphinx-rtd-theme>=3.0.2",
+]

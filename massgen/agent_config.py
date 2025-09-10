@@ -280,15 +280,17 @@ class AgentConfig:
             **kwargs: Additional backend parameters (e.g., temperature, max_tokens)
 
         Examples:
-            # Basic configuration using environment variables
-            config = AgentConfig.create_azure_openai_config("gpt-4")
+            Basic configuration using environment variables::
+            
+                config = AgentConfig.create_azure_openai_config("gpt-4")
 
-            # Custom endpoint and API key
-            config = AgentConfig.create_azure_openai_config(
-                deployment_name="gpt-4-turbo",
-                endpoint="https://your-resource.openai.azure.com/",
-                api_key="your-api-key"
-            )
+            Custom endpoint and API key::
+            
+                config = AgentConfig.create_azure_openai_config(
+                    deployment_name="gpt-4-turbo",
+                    endpoint="https://your-resource.openai.azure.com/",
+                    api_key="your-api-key"
+                )
         """
         backend_params = {
             "type": "azure_openai",
@@ -333,19 +335,22 @@ class AgentConfig:
             **kwargs: Additional backend parameters
 
         Examples:
-            # Maximum power configuration (recommended)
-            config = AgentConfig.create_claude_code_config()
+            Maximum power configuration (recommended)::
+            
+                config = AgentConfig.create_claude_code_config()
 
-            # Custom security restrictions
-            config = AgentConfig.create_claude_code_config(
-                disallowed_tools=["Bash(rm*)", "Bash(sudo*)", "WebSearch"]
-            )
+            Custom security restrictions::
+            
+                config = AgentConfig.create_claude_code_config(
+                    disallowed_tools=["Bash(rm*)", "Bash(sudo*)", "WebSearch"]
+                )
 
-            # Development task with custom directory
-            config = AgentConfig.create_claude_code_config(
-                cwd="/path/to/project",
-                system_prompt="You are an expert developer assistant."
-            )
+            Development task with custom directory::
+            
+                config = AgentConfig.create_claude_code_config(
+                    cwd="/path/to/project",
+                    system_prompt="You are an expert developer assistant."
+                )
 
             # Legacy allowed_tools approach (not recommended)
             config = AgentConfig.create_claude_code_config(
