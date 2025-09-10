@@ -249,7 +249,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
 | **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
-| **OpenAI API** | ✅ | ✅ | ❌ | ✅ | Web search, code interpreter, **MCP integration** |
+| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
 | **ZAI API** | ❌ | ❌ | ❌ | ❌ | - |
 
 ### 4. 🏃 Run MassGen
@@ -276,19 +276,19 @@ All the models with a default backend can be found [here](massgen/utils.py).
 **Quick Examples - Try These Now:**
 ```bash
 # Simple weather query using MCP-enabled OpenAI/GPT-5
-uv run python -m massgen.cli --config massgen/configs/gpt5_mini_mcp_example.yaml "What's the weather in Tokyo?"
+uv run python -m massgen.cli --config gpt5_mini_mcp_example.yaml "What's the weather in Tokyo?"
 
 # Test MCP server connection with OpenAI
-uv run python -m massgen.cli --config massgen/configs/gpt5_mini_mcp_test.yaml "Test the MCP tools - show me what you can do"
+uv run python -m massgen.cli --config gpt5_mini_mcp_test.yaml "Test the MCP tools - show me what you can do"
 
 # Test MCP with streamable-http server
 # First start the HTTP test server:
 uv run python massgen/tests/test_http_mcp_server.py
 # Then try:
-uv run python -m massgen.cli --config massgen/configs/gpt5_mini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
+uv run python -m massgen.cli --config gpt5_mini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
 
 # Multi-agent setup with OpenAI MCP and Claude Code
-uv run python -m massgen.cli --config massgen/configs/gpt5mini_claude_code_discord_mcp_example.yaml "Work together to analyze the latest tech trends"
+uv run python -m massgen.cli --config gpt5mini_claude_code_discord_mcp_example.yaml "Work together to analyze the latest tech trends"
 ```
 
 **What's happening:** OpenAI models (GPT-4, GPT-5 series) now have full MCP support with automatic tool discovery and execution, matching Gemini's capabilities for unified MCP integration.
@@ -298,21 +298,21 @@ uv run python -m massgen.cli --config massgen/configs/gpt5mini_claude_code_disco
 **Quick Examples - Try These Now:**
 ```bash
 # Simple weather query using MCP-enabled Gemini
-uv run python -m massgen.cli --config massgen/configs/gemini_mcp_example.yaml "What's the weather in Tokyo?"
+uv run python -m massgen.cli --config gemini_mcp_example.yaml "What's the weather in Tokyo?"
 
 # Travel research with multiple MCP servers (Airbnb + Brave Search)
 # First, set BRAVE_API_KEY in your .env file, then:
-uv run python -m massgen.cli --config massgen/configs/multimcp_gemini.yaml "Find safe neighborhoods in Paris and suggest Airbnb stays for 2 people next week"
+uv run python -m massgen.cli --config multimcp_gemini.yaml "Find safe neighborhoods in Paris and suggest Airbnb stays for 2 people next week"
 
 # Test MCP server connection
 # Test server: massgen/tests/mcp_test_server.py (the config below will run it automatically)
-uv run python -m massgen.cli --config massgen/configs/gemini_mcp_test.yaml "Test the MCP tools - show me what you can do"
+uv run python -m massgen.cli --config gemini_mcp_test.yaml "Test the MCP tools - show me what you can do"
 
 # Test MCP with streamable-http server
 # First start the HTTP test server:
 uv run python massgen/tests/test_http_mcp_server.py
 # Then try:
-uv run python -m massgen.cli --config massgen/configs/gemini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
+uv run python -m massgen.cli --config gemini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
 ```
 
 **What's happening:** Gemini automatically discovers and uses tools from configured MCP servers (weather data, web search, Airbnb listings, etc.) without manual tool calling.
@@ -841,7 +841,7 @@ Version 0.0.17 extended MCP (Model Context Protocol) support to OpenAI backend, 
 #### OpenAI MCP Integration
 - **Full MCP Support for OpenAI/GPT Models**: Complete MCP tool discovery and execution for GPT-4, GPT-5, and other OpenAI models
 - **Unified MCP Architecture**: Consistent MCP support across OpenAI, Gemini, and Claude Code backends
-- **Comprehensive Documentation**: Added case studies and technical documentation for MCP integration
+- **Documentation for MCP Integration**: Added case studies and technical documentation for MCP integration
 
 #### Key Capabilities
 - **Multi-Backend MCP**: Seamless MCP tool usage across different model providers
@@ -897,12 +897,11 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.18 Roadmap
 
-Version 0.0.18 focuses on **universal MCP support and system observability**, extending MCP to all backend types while improving debugging and monitoring capabilities. Key priorities include:
+Version 0.0.18 focuses on **universal MCP support and system observability**, extending MCP to the ChatCompletions backend while improving debugging and monitoring capabilities. Key priorities include:
 
 #### Required Features
-- **Chat Completions MCP Support**: Extend MCP integration to all Chat Completions backends (Cerebras, Together AI, Fireworks, Groq, etc.)
-- **Orchestration Pipeline Logging & Architecture**: Enhanced logging with pipeline stages and comprehensive architecture documentation
-- **Code Execution Support**: Enable safe code execution with appropriate security measures
+- **Chat Completions MCP Support**: Extend MCP integration to all Chat Completions backends
+- **Step-by-Step Orchestration Logging**: Clear logging that shows each phase of agent collaboration (task distribution → parallel work → consensus building → final answer) with detailed architecture documentation
 - **Enhanced Debugging & UI**: Fix scroll issues and improve long output handling
 - **Organized MCP Logging**: Structure and improve readability of MCP-related logs
 

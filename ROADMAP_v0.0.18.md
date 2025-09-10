@@ -5,18 +5,16 @@
 Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, improving system observability through enhanced logging and architecture documentation, and enhancing developer experience**, building on the OpenAI MCP support introduced in v0.0.17. Key enhancements include:
 
 - **Chat Completions MCP Support** (Required): 🔌 Full MCP integration for all Chat Completions backends
-- **Orchestration Pipeline Logging & Architecture** (Required): 📊 Enhanced logging and architectural documentation
-- **Code Execution Support** (Optional): 💻 Enable code execution with safety measures
+- **Step-by-Step Orchestration Logging** (Required): 📊 Clear logging that shows each phase of agent collaboration with architectural documentation
 - **Enhanced Debugging & UI** (Optional): 📱 Fix scroll issues and improve long output handling
 - **Organized MCP Logging** (Optional): 📚 Better structure and readability for MCP logs
 
 ## Key Technical Priorities
 
 1. **Chat Completions MCP Support** (REQUIRED): Extend MCP to all Chat Completions-based backends
-2. **Orchestration Pipeline Logging & Architecture** (REQUIRED): Improve visibility and maintain architectural documentation
-3. **Code Execution Support** (OPTIONAL): Enable code execution with appropriate safety measures
-4. **Enhanced Debugging & UI** (OPTIONAL): Fix scroll issues and improve developer experience
-5. **Organized MCP Logging** (OPTIONAL): Structure and improve MCP-related log readability
+2. **Step-by-Step Orchestration Logging** (REQUIRED): Clear logging showing each phase of agent collaboration with architectural documentation
+3. **Enhanced Debugging & UI** (OPTIONAL): Fix scroll issues and improve developer experience
+4. **Organized MCP Logging** (OPTIONAL): Structure and improve MCP-related log readability
 
 ## Key Milestones
 
@@ -41,15 +39,15 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - [ ] Benchmark MCP performance across all providers
 - [ ] Document any provider-specific limitations or considerations
 
-### 🎯 Milestone 2: Orchestration Pipeline Logging & Architecture (REQUIRED)
-**Goal**: Improve visibility into the orchestration pipeline and maintain architectural documentation
+### 🎯 Milestone 2: Step-by-Step Orchestration Logging (REQUIRED)
+**Goal**: Provide clear visibility into each phase of agent collaboration and maintain architectural documentation
 
-#### 2.1 Enhanced Orchestration Pipeline Logging (REQUIRED)
-- [ ] Add stage indicators for orchestration phases (initialization, coordination, evaluation, final presentation)
-- [ ] Enhance existing log_orchestrator_activity with pipeline stage context
-- [ ] Add timing information for each pipeline stage
-- [ ] Create visual pipeline flow in logs for easier debugging
-- [ ] Improve correlation between agent activities and orchestration stages
+#### 2.1 Step-by-Step Orchestration Logging (REQUIRED)
+- [ ] Add clear indicators for each collaboration phase (task distribution → parallel work → consensus building → final answer)
+- [ ] Enhance existing log_orchestrator_activity with collaboration phase context
+- [ ] Add timing information for each collaboration phase
+- [ ] Create visual collaboration flow in logs for easier debugging
+- [ ] Improve correlation between agent activities and orchestration phases
 
 #### 2.2 Architecture Documentation (REQUIRED)
 - [ ] Create `/docs/architecture/` directory structure
@@ -67,57 +65,33 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - [ ] Create dashboard-ready log output format
 - [ ] Add telemetry for system bottleneck identification
 
-### 🎯 Milestone 3: Code Execution Support (OPTIONAL)
-**Goal**: Enable code execution capabilities with appropriate safety measures
-
-#### 3.1 Code Execution Infrastructure (OPTIONAL)
-- [ ] Investigate available code execution options:
-  - Sandboxed environments
-  - Container-based execution
-  - Process isolation methods
-- [ ] Design safety framework for code execution
-- [ ] Implement execution environment setup
-
-#### 3.2 Safety and Security (OPTIONAL)
-- [ ] Implement user consent mechanisms
-- [ ] Add configuration for enabling/disabling execution
-- [ ] Create resource limits and timeouts
-- [ ] Implement audit logging for executed code
-- [ ] Add security scanning for malicious patterns
-
-#### 3.3 Integration and Testing (OPTIONAL)
-- [ ] Integrate with existing tool infrastructure
-- [ ] Add code execution as MCP tool option
-- [ ] Create test suite for safe execution
-- [ ] Document security best practices
-
-### 🎯 Milestone 4: Enhanced Debugging & UI (OPTIONAL)
+### 🎯 Milestone 3: Enhanced Debugging & UI (OPTIONAL)
 **Goal**: Improve developer experience when debugging and viewing long outputs
 
-#### 4.1 Scroll and Display Fixes (OPTIONAL)
+#### 3.1 Scroll and Display Fixes (OPTIONAL)
 - [ ] Fix scroll issues for long generated results
 - [ ] Implement pagination for extensive outputs
 - [ ] Add better viewport management
 - [ ] Improve text wrapping and formatting
 - [ ] Fix overflow issues in terminal displays
 
-#### 4.2 Debug Experience Enhancement (OPTIONAL)
+#### 3.2 Debug Experience Enhancement (OPTIONAL)
 - [ ] Enhance debug output formatting
 - [ ] Add filtering options for debug logs
 - [ ] Improve error message clarity
 - [ ] Better stack trace presentation
 - [ ] Add contextual debugging information
 
-#### 4.3 UI Performance (OPTIONAL)
+#### 3.3 UI Performance (OPTIONAL)
 - [ ] Optimize rendering for large outputs
 - [ ] Implement lazy loading where appropriate
 - [ ] Add configurable display limits
 - [ ] Improve memory usage for long sessions
 
-### 🎯 Milestone 5: Organized MCP Logging (OPTIONAL)
+### 🎯 Milestone 4: Organized MCP Logging (OPTIONAL)
 **Goal**: Make MCP-related logs more structured and readable
 
-#### 5.1 MCP Log Structure (OPTIONAL)
+#### 4.1 MCP Log Structure (OPTIONAL)
 - [ ] Enhance existing MCP logging from v0.0.15 with better organization
 - [ ] Categorize MCP logs by operation type:
   - Discovery operations
@@ -126,13 +100,13 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - [ ] Add MCP-specific log levels and prefixes
 - [ ] Implement consistent formatting across all MCP operations
 
-#### 5.2 MCP Log Management (OPTIONAL)
+#### 4.2 MCP Log Management (OPTIONAL)
 - [ ] Build on existing logger_config.py to add MCP-specific filters
 - [ ] Add option for separate MCP log file alongside main logs
 - [ ] Implement log rotation specific to MCP operations
 - [ ] Create MCP log viewer/search utility
 
-#### 5.3 MCP Debugging Tools (OPTIONAL)
+#### 4.3 MCP Debugging Tools (OPTIONAL)
 - [ ] Create MCP operation timeline view
 - [ ] Add performance metrics per operation
 - [ ] Implement success/failure statistics
@@ -147,7 +121,6 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - [ ] Backward compatibility with all existing v0.0.17 configurations
 
 ### Functional Requirements (OPTIONAL)
-- [ ] Code execution support with safety measures (if feasible)
 - [ ] Fixed scroll issues and improved display for long results
 - [ ] Organized and structured MCP logging system
 
@@ -172,14 +145,12 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - **MCP Library**: Continued compatibility with Python `mcp` package
 - **Backend Systems**: Existing OpenAI MCP support from v0.0.17
 - **Logging Infrastructure**: Python logging framework enhancements
-- **Execution Environment**: Sandbox/container for code execution (optional)
 
 ### Risks & Mitigations
 1. **Provider API Differences**: *Mitigation*: Abstract through unified interface
-2. **Code Execution Security**: *Mitigation*: Multiple safety layers and user consent
-3. **Performance Degradation**: *Mitigation*: Benchmarking and optimization
-4. **Architecture Documentation Maintenance**: *Mitigation*: Automated diagram generation
-5. **Backend Compatibility**: *Mitigation*: Comprehensive cross-provider testing
+2. **Performance Degradation**: *Mitigation*: Benchmarking and optimization
+3. **Architecture Documentation Maintenance**: *Mitigation*: Automated diagram generation
+4. **Backend Compatibility**: *Mitigation*: Comprehensive cross-provider testing
 
 ## Post-v0.0.18 Considerations
 
@@ -202,7 +173,7 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 |------|-------|------------------|--------|
 | 1 | Chat Completions MCP | Generic backend MCP implementation | ⏳ **PENDING** |
 | 2 | Orchestration & Architecture | Enhanced logging and architecture diagram | ⏳ **PENDING** |
-| 3 | Optional Features | Code execution, debugging, MCP logging | ⏳ **PENDING** |
+| 3 | Optional Features | Enhanced debugging/UI, organized MCP logging | ⏳ **PENDING** |
 | 4 | Release Preparation | Final testing and v0.0.18 release | ⏳ **PENDING** |
 
 
@@ -221,10 +192,9 @@ Version 0.0.18 focuses on **extending MCP support to Chat Completions backends, 
 - All existing v0.0.17 configurations will continue to work unchanged
 - Enhanced orchestration logging will improve system visibility
 - Architecture documentation will help understand system design
-- Optional features will enhance developer experience
-- Code execution capabilities may be available with safety controls
+- Optional features will enhance developer experience with better debugging and UI
 
 ---
 
-*This roadmap represents our commitment to universal MCP support across all backend types, improving system observability through enhanced logging and architectural documentation, while providing optional enhancements for developer experience and new capabilities like safe code execution.*
+*This roadmap represents our commitment to universal MCP support across Chat Completions backends, improving system observability through enhanced logging and architectural documentation, while providing optional enhancements for developer experience through better debugging and UI improvements.*
 

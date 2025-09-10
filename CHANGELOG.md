@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `gpt5_mini_streamable_http_test.yaml`: HTTP transport testing for OpenAI MCP
   - Enhanced existing multi-agent configurations with OpenAI MCP support
 
-- **Documentation**: Added comprehensive case studies and technical documentation
+- **Documentation**: Added case studies and technical documentation
   - `unified-filesystem-mcp-integration.md`: Case study demonstrating unified filesystem capabilities with MCP integration across multiple backends (from v0.0.16)
   - `MCP_INTEGRATION_RESPONSE_BACKEND.md`: Technical documentation for MCP integration with response backends
 
@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 - **New Features**: OpenAI backend MCP integration
 - **Documentation**: Added case study for unified filesystem MCP integration
-- **Contributors**: @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+- **Contributors**: @praneeth999 @qidanrui @sonichi @ncrispino @a5507203 @Henry-811 and the MassGen team
 
 ## [0.0.16] - 2025-09-08
 
