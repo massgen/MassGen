@@ -387,6 +387,7 @@ class CoordinationTracker:
 
     def set_final_agent(self, agent_id: str, vote_summary: str, all_answers: Dict[str, str]):
         """Record when final agent is selected."""
+        print(f"DEBUG: set_final_agent called with agent_id={agent_id}")
         self.final_winner = agent_id
         self.final_context = {
             "vote_summary": vote_summary,
@@ -395,7 +396,15 @@ class CoordinationTracker:
         }
         # log this
         print(f"DEBUG: setting final agent {agent_id} with context: {self.final_context}")
-        self._add_event("final_agent_selected", agent_id, "Selected as final presenter", self.final_context)
+        print(f"DEBUG: events list before adding final_agent_selected: {len(self.events)} events")
+        try:
+            self._add_event("final_agent_selected", agent_id, "Selected as final presenter", self.final_context)
+            print(f"DEBUG: events list after adding final_agent_selected: {len(self.events)} events")
+            print(f"DEBUG: last event added: {self.events[-1].event_type if self.events else 'no events'}")
+        except Exception as e:
+            print(f"ERROR in _add_event: {e}")
+            import traceback
+            traceback.print_exc()
 
     def set_final_answer(self, agent_id: str, final_answer: str, snapshot_timestamp: Optional[str] = None):
         """Record the final answer presentation.
