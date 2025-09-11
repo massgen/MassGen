@@ -25,9 +25,24 @@ import asyncio
 import re
 import time
 import hashlib
-from typing import Dict, List, Any, AsyncGenerator, Optional, Literal, Callable, Awaitable
+from typing import (
+    Dict,
+    List,
+    Any,
+    AsyncGenerator,
+    Optional,
+    Literal,
+    Callable,
+    Awaitable,
+)
 from .base import LLMBackend, StreamChunk, FilesystemSupport
-from ..logger_config import logger, log_backend_activity, log_backend_agent_message, log_stream_chunk, log_tool_call
+from ..logger_config import (
+    logger,
+    log_backend_activity,
+    log_backend_agent_message,
+    log_stream_chunk,
+    log_tool_call,
+)
 
 try:
     from pydantic import BaseModel, Field
@@ -58,8 +73,12 @@ except ImportError:  # MCP not installed or import failed within mcp_tools
 # Import MCP backend utilities
 try:
     from ..mcp_tools.backend_utils import (
-        MCPErrorHandler, MCPSetupManager, MCPMessageManager, 
-        MCPCircuitBreakerManager, MCPExecutionManager, MCPConfigHelper
+        MCPErrorHandler,
+        MCPSetupManager,
+        MCPMessageManager,
+        MCPCircuitBreakerManager,
+        MCPExecutionManager,
+        MCPConfigHelper,
     )
 except ImportError:
     MCPErrorHandler = None  # type: ignore[assignment]
@@ -111,63 +130,63 @@ class CoordinationResponse(BaseModel):
 class MCPResponseTracker:
     """
     Tracks MCP tool responses across streaming chunks to handle deduplication.
-    
+
     Similar to MCPCallTracker but for tracking tool responses to avoid duplicate output.
     """
-    
+
     def __init__(self):
         """Initialize the tracker with empty storage."""
         self.processed_responses = set()  # Store hashes of processed responses
         self.response_history = []  # Store all unique responses with timestamps
-        
+
     def get_response_hash(self, tool_name: str, tool_response: Any) -> str:
         """
         Generate a unique hash for a tool response based on name and response content.
-        
+
         Args:
             tool_name: Name of the tool that responded
             tool_response: Response from the tool
-            
+
         Returns:
             MD5 hash string identifying this specific response
         """
         # Create a deterministic string representation
         content = f"{tool_name}:{str(tool_response)}"
         return hashlib.md5(content.encode()).hexdigest()
-    
+
     def is_new_response(self, tool_name: str, tool_response: Any) -> bool:
         """
         Check if this is a new tool response we haven't seen before.
-        
+
         Args:
             tool_name: Name of the tool that responded
             tool_response: Response from the tool
-            
+
         Returns:
             True if this is a new response, False if already processed
         """
         response_hash = self.get_response_hash(tool_name, tool_response)
         return response_hash not in self.processed_responses
-    
+
     def add_response(self, tool_name: str, tool_response: Any) -> Dict[str, Any]:
         """
         Add a new response to the tracker.
-        
+
         Args:
             tool_name: Name of the tool that responded
             tool_response: Response from the tool
-            
+
         Returns:
             Dictionary containing response details and timestamp
         """
         response_hash = self.get_response_hash(tool_name, tool_response)
         self.processed_responses.add(response_hash)
-        
+
         record = {
             "tool_name": tool_name,
             "response": tool_response,
             "hash": response_hash,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
         self.response_history.append(record)
         return record
@@ -176,51 +195,51 @@ class MCPResponseTracker:
 class MCPCallTracker:
     """
     Tracks MCP tool calls across streaming chunks to handle deduplication.
-    
+
     Uses hashing to identify unique tool calls and timestamps to track when they occurred.
     This ensures we don't double-count the same tool call appearing in multiple chunks.
     """
-    
+
     def __init__(self):
         """Initialize the tracker with empty storage."""
         self.processed_calls = set()  # Store hashes of processed calls
         self.call_history = []  # Store all unique calls with timestamps
         self.last_chunk_calls = []  # Track calls from the last chunk for deduplication
         self.dedup_window = 0.5  # Time window in seconds for deduplication
-        
+
     def get_call_hash(self, tool_name: str, tool_args: Dict[str, Any]) -> str:
         """
         Generate a unique hash for a tool call based on name and arguments.
-        
+
         Args:
             tool_name: Name of the tool being called
             tool_args: Arguments passed to the tool
-            
+
         Returns:
             MD5 hash string identifying this specific call
         """
         # Create a deterministic string representation
         content = f"{tool_name}:{json.dumps(tool_args, sort_keys=True)}"
         return hashlib.md5(content.encode()).hexdigest()
-    
+
     def is_new_call(self, tool_name: str, tool_args: Dict[str, Any]) -> bool:
         """
         Check if this is a new tool call we haven't seen before.
-        
+
         Uses a time-window based approach: identical calls within the dedup_window
         are considered duplicates (likely from streaming chunks), while those outside
         the window are considered new calls (likely intentional repeated calls).
-        
+
         Args:
             tool_name: Name of the tool being called
             tool_args: Arguments passed to the tool
-            
+
         Returns:
             True if this is a new call, False if we've seen it before
         """
         call_hash = self.get_call_hash(tool_name, tool_args)
         current_time = time.time()
-        
+
         # Check if this call exists in recent history within the dedup window
         for call in self.call_history[-10:]:  # Check last 10 calls for efficiency
             if call.get("hash") == call_hash:
@@ -229,19 +248,19 @@ class MCPCallTracker:
                     # This is likely a duplicate from streaming chunks
                     return False
                 # If outside the window, treat as a new intentional call
-        
+
         # Mark as processed
         self.processed_calls.add(call_hash)
         return True
-    
+
     def add_call(self, tool_name: str, tool_args: Dict[str, Any]) -> Dict[str, Any]:
         """
         Add a new tool call to the history.
-        
+
         Args:
             tool_name: Name of the tool being called
             tool_args: Arguments passed to the tool
-            
+
         Returns:
             Dictionary containing the call details with timestamp and hash
         """
@@ -250,52 +269,54 @@ class MCPCallTracker:
             "arguments": tool_args,
             "timestamp": time.time(),
             "hash": self.get_call_hash(tool_name, tool_args),
-            "sequence": len(self.call_history)  # Add sequence number for ordering
+            "sequence": len(self.call_history),  # Add sequence number for ordering
         }
         self.call_history.append(call_record)
-        
+
         # Clean up old history to prevent memory growth
         if len(self.call_history) > 100:
             self.call_history = self.call_history[-50:]
-        
+
         return call_record
-    
+
     def get_summary(self) -> str:
         """
         Get a summary of all tracked tool calls.
-        
+
         Returns:
             Human-readable summary of tool usage
         """
         if not self.call_history:
             return "No MCP tools called"
-        
+
         tool_names = [call["name"] for call in self.call_history]
         unique_tools = list(dict.fromkeys(tool_names))  # Preserve order
-        return f"Used {len(self.call_history)} MCP tool calls: {', '.join(unique_tools)}"
+        return (
+            f"Used {len(self.call_history)} MCP tool calls: {', '.join(unique_tools)}"
+        )
 
 
 class MCPResponseExtractor:
     """
     Extracts MCP tool calls and responses from Gemini SDK stream chunks.
-    
+
     This class parses the internal SDK chunks to capture:
     - function_call parts (tool invocations)
     - function_response parts (tool results)
     - Paired call-response data for tracking complete tool executions
     """
-    
+
     def __init__(self):
         """Initialize the extractor with empty storage."""
         self.mcp_calls = []  # All tool calls
         self.mcp_responses = []  # All tool responses
         self.call_response_pairs = []  # Matched call-response pairs
         self._pending_call = None  # Track current call awaiting response
-    
+
     def extract_function_call(self, function_call) -> Optional[Dict[str, Any]]:
         """
         Extract tool call information from SDK function_call object.
-        
+
         Tries multiple methods to extract data from different SDK versions:
         1. Direct attributes (name, args)
         2. Dictionary-like interface (get method)
@@ -304,11 +325,11 @@ class MCPResponseExtractor:
         """
         tool_name = None
         tool_args = None
-        
+
         # Method 1: Direct attributes
         tool_name = getattr(function_call, "name", None)
         tool_args = getattr(function_call, "args", None)
-        
+
         # Method 2: Dictionary-like object
         if tool_name is None:
             try:
@@ -317,7 +338,7 @@ class MCPResponseExtractor:
                     tool_args = function_call.get("args", None)
             except:
                 pass
-        
+
         # Method 3: __dict__ inspection
         if tool_name is None:
             try:
@@ -327,7 +348,7 @@ class MCPResponseExtractor:
                     tool_args = fc_dict.get("args", None)
             except:
                 pass
-        
+
         # Method 4: Protobuf _pb attribute
         if tool_name is None:
             try:
@@ -339,33 +360,33 @@ class MCPResponseExtractor:
                         tool_args = pb.args
             except:
                 pass
-        
+
         if tool_name:
             call_data = {
                 "name": tool_name,
                 "arguments": tool_args or {},
                 "timestamp": time.time(),
-                "raw": str(function_call)[:200]  # Truncate for logging
+                "raw": str(function_call)[:200],  # Truncate for logging
             }
             self.mcp_calls.append(call_data)
             self._pending_call = call_data
             return call_data
-        
+
         return None
-    
+
     def extract_function_response(self, function_response) -> Optional[Dict[str, Any]]:
         """
         Extract tool response information from SDK function_response object.
-        
+
         Uses same extraction methods as function_call for consistency.
         """
         tool_name = None
         tool_response = None
-        
+
         # Method 1: Direct attributes
         tool_name = getattr(function_response, "name", None)
         tool_response = getattr(function_response, "response", None)
-        
+
         # Method 2: Dictionary-like object
         if tool_name is None:
             try:
@@ -374,7 +395,7 @@ class MCPResponseExtractor:
                     tool_response = function_response.get("response", None)
             except:
                 pass
-        
+
         # Method 3: __dict__ inspection
         if tool_name is None:
             try:
@@ -384,7 +405,7 @@ class MCPResponseExtractor:
                     tool_response = fr_dict.get("response", None)
             except:
                 pass
-        
+
         # Method 4: Protobuf _pb attribute
         if tool_name is None:
             try:
@@ -396,30 +417,33 @@ class MCPResponseExtractor:
                         tool_response = pb.response
             except:
                 pass
-        
+
         if tool_name:
             response_data = {
                 "name": tool_name,
                 "response": tool_response or {},
                 "timestamp": time.time(),
-                "raw": str(function_response)[:500]  # Truncate for logging
+                "raw": str(function_response)[:500],  # Truncate for logging
             }
             self.mcp_responses.append(response_data)
-            
+
             # Pair with pending call if names match
             if self._pending_call and self._pending_call["name"] == tool_name:
-                self.call_response_pairs.append({
-                    "call": self._pending_call,
-                    "response": response_data,
-                    "duration": response_data["timestamp"] - self._pending_call["timestamp"],
-                    "paired_at": time.time()
-                })
+                self.call_response_pairs.append(
+                    {
+                        "call": self._pending_call,
+                        "response": response_data,
+                        "duration": response_data["timestamp"]
+                        - self._pending_call["timestamp"],
+                        "paired_at": time.time(),
+                    }
+                )
                 self._pending_call = None
-            
+
             return response_data
-        
+
         return None
-    
+
     def get_summary(self) -> Dict[str, Any]:
         """
         Get a summary of all extracted MCP tool interactions.
@@ -431,11 +455,13 @@ class MCPResponseExtractor:
             "pending_call": self._pending_call is not None,
             "tool_names": list(set(call["name"] for call in self.mcp_calls)),
             "average_duration": (
-                sum(pair["duration"] for pair in self.call_response_pairs) / len(self.call_response_pairs)
-                if self.call_response_pairs else 0
-            )
+                sum(pair["duration"] for pair in self.call_response_pairs)
+                / len(self.call_response_pairs)
+                if self.call_response_pairs
+                else 0
+            ),
         }
-    
+
     def clear(self):
         """Clear all stored data."""
         self.mcp_calls.clear()
@@ -454,7 +480,7 @@ class GeminiBackend(LLMBackend):
         )
         self.search_count = 0
         self.code_execution_count = 0
-        
+
         # MCP integration (filesystem MCP server may have been injected by base class)
         self.mcp_servers = self.config.get("mcp_servers", [])
         self.allowed_tools = kwargs.pop("allowed_tools", None)
@@ -466,7 +492,7 @@ class GeminiBackend(LLMBackend):
         self._mcp_tool_calls_count = 0
         self._mcp_tool_failures = 0
         self._mcp_tool_successes = 0
-        
+
         # MCP Response Extractor for capturing tool interactions
         self.mcp_extractor = MCPResponseExtractor()
 
@@ -478,30 +504,52 @@ class GeminiBackend(LLMBackend):
         self._circuit_breakers_enabled = kwargs.pop("circuit_breaker_enabled", True)
         self._mcp_tools_circuit_breaker = None
 
-        # Initialize agent_id for use throughout the class 
+        # Initialize agent_id for use throughout the class
         self.agent_id = kwargs.get("agent_id", None)
 
         # Initialize circuit breaker if enabled
         if self._circuit_breakers_enabled:
             # Fail fast if required utilities are missing
             if MCPCircuitBreakerManager is None:
-                raise RuntimeError("Circuit breakers enabled but MCPCircuitBreakerManager is not available")
-            
+                raise RuntimeError(
+                    "Circuit breakers enabled but MCPCircuitBreakerManager is not available"
+                )
+
             try:
                 from ..mcp_tools.circuit_breaker import MCPCircuitBreaker
+
                 # Use shared utility to build circuit breaker configuration
                 if MCPConfigHelper is not None:
-                    mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools", backend_name="gemini")
+                    mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config(
+                        "mcp_tools", backend_name="gemini"
+                    )
                 else:
                     mcp_tools_config = None
                 if mcp_tools_config:
-                    self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config, backend_name="gemini", agent_id=self.agent_id)
-                    log_backend_activity("gemini", "Circuit breaker initialized for MCP tools", {"enabled": True}, agent_id=self.agent_id)
+                    self._mcp_tools_circuit_breaker = MCPCircuitBreaker(
+                        mcp_tools_config, backend_name="gemini", agent_id=self.agent_id
+                    )
+                    log_backend_activity(
+                        "gemini",
+                        "Circuit breaker initialized for MCP tools",
+                        {"enabled": True},
+                        agent_id=self.agent_id,
+                    )
                 else:
-                    log_backend_activity("gemini", "Circuit breaker config unavailable", {"fallback": "disabled"}, agent_id=self.agent_id)
+                    log_backend_activity(
+                        "gemini",
+                        "Circuit breaker config unavailable",
+                        {"fallback": "disabled"},
+                        agent_id=self.agent_id,
+                    )
                     self._circuit_breakers_enabled = False
             except ImportError:
-                log_backend_activity("gemini", "Circuit breaker import failed", {"fallback": "disabled"}, agent_id=self.agent_id)
+                log_backend_activity(
+                    "gemini",
+                    "Circuit breaker import failed",
+                    {"fallback": "disabled"},
+                    agent_id=self.agent_id,
+                )
                 self._circuit_breakers_enabled = False
 
         if BaseModel is None:
@@ -509,26 +557,27 @@ class GeminiBackend(LLMBackend):
                 "pydantic is required for Gemini backend. Install with: pip install pydantic"
             )
 
-
-    async def _setup_mcp_with_status_stream(self, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
+    async def _setup_mcp_with_status_stream(
+        self, agent_id: Optional[str] = None
+    ) -> AsyncGenerator[StreamChunk, None]:
         """Initialize MCP client with status streaming."""
         status_queue: asyncio.Queue[StreamChunk] = asyncio.Queue()
-        
+
         async def status_callback(status: str, details: Dict[str, Any]) -> None:
             """Callback to queue status updates as StreamChunks."""
             chunk = StreamChunk(
                 type="mcp_status",
                 status=status,
                 content=details.get("message", ""),
-                source="mcp_tools"
+                source="mcp_tools",
             )
             await status_queue.put(chunk)
-        
+
         # Start the actual setup in background
         setup_task = asyncio.create_task(
             self._setup_mcp_tools_internal(agent_id, status_callback)
         )
-        
+
         # Yield status updates while setup is running
         while not setup_task.done():
             try:
@@ -536,7 +585,7 @@ class GeminiBackend(LLMBackend):
                 yield chunk
             except asyncio.TimeoutError:
                 continue
-        
+
         # Wait for setup to complete and handle any final errors
         try:
             await setup_task
@@ -545,9 +594,9 @@ class GeminiBackend(LLMBackend):
                 type="mcp_status",
                 status="error",
                 content=f"MCP setup failed: {e}",
-                source="mcp_tools"
+                source="mcp_tools",
             )
-    
+
     async def _setup_mcp_tools(self, agent_id: Optional[str] = None) -> None:
         """Initialize MCP client (sessions only) - backward compatibility."""
         if not self.mcp_servers or self._mcp_initialized:
@@ -555,17 +604,31 @@ class GeminiBackend(LLMBackend):
         # Consume status updates without yielding them
         async for _ in self._setup_mcp_with_status_stream(agent_id):
             pass
-    
-    async def _setup_mcp_tools_internal(self, agent_id: Optional[str] = None, status_callback: Optional[Callable[[str, Dict[str, Any]], Awaitable[None]]] = None) -> None:
+
+    async def _setup_mcp_tools_internal(
+        self,
+        agent_id: Optional[str] = None,
+        status_callback: Optional[
+            Callable[[str, Dict[str, Any]], Awaitable[None]]
+        ] = None,
+    ) -> None:
         """Internal MCP setup logic."""
         if not self.mcp_servers or self._mcp_initialized:
             return
 
         if MultiMCPClient is None:
             reason = "MCP import failed - MultiMCPClient not available"
-            log_backend_activity("gemini", "MCP import failed", {"reason": reason, "fallback": "workflow_tools"}, agent_id=agent_id)
+            log_backend_activity(
+                "gemini",
+                "MCP import failed",
+                {"reason": reason, "fallback": "workflow_tools"},
+                agent_id=agent_id,
+            )
             if status_callback:
-                await status_callback("error", {"message": "MCP import failed - falling back to workflow tools"})
+                await status_callback(
+                    "error",
+                    {"message": "MCP import failed - falling back to workflow tools"},
+                )
             # Clear MCP servers to prevent further attempts
             self.mcp_servers = []
             return
@@ -575,15 +638,15 @@ class GeminiBackend(LLMBackend):
             validated_config = {
                 "mcp_servers": self.mcp_servers,
                 "allowed_tools": self.allowed_tools,
-                "exclude_tools": self.exclude_tools
+                "exclude_tools": self.exclude_tools,
             }
-            
+
             if MCPConfigValidator is not None:
                 try:
                     backend_config = {
                         "mcp_servers": self.mcp_servers,
                         "allowed_tools": self.allowed_tools,
-                        "exclude_tools": self.exclude_tools
+                        "exclude_tools": self.exclude_tools,
                     }
                     # Use the comprehensive validator class for enhanced validation
                     validator = MCPConfigValidator()
@@ -593,58 +656,149 @@ class GeminiBackend(LLMBackend):
                     self.mcp_servers = validated_config.get(
                         "mcp_servers", self.mcp_servers
                     )
-                    log_backend_activity("gemini", "MCP configuration validated", {"server_count": len(self.mcp_servers)}, agent_id=agent_id)
+                    log_backend_activity(
+                        "gemini",
+                        "MCP configuration validated",
+                        {"server_count": len(self.mcp_servers)},
+                        agent_id=agent_id,
+                    )
                     if status_callback:
-                        await status_callback("info", {"message": f"MCP configuration validated: {len(self.mcp_servers)} servers"})
+                        await status_callback(
+                            "info",
+                            {
+                                "message": f"MCP configuration validated: {len(self.mcp_servers)} servers"
+                            },
+                        )
 
                     # Log validated server names for debugging
-                    if True: 
-                        server_names = [server.get("name", "unnamed") for server in self.mcp_servers]
-                        log_backend_activity("gemini", "MCP servers validated", {"servers": server_names}, agent_id=agent_id)
+                    if True:
+                        server_names = [
+                            server.get("name", "unnamed") for server in self.mcp_servers
+                        ]
+                        log_backend_activity(
+                            "gemini",
+                            "MCP servers validated",
+                            {"servers": server_names},
+                            agent_id=agent_id,
+                        )
                 except MCPConfigurationError as e:
-                    log_backend_activity("gemini", "MCP configuration validation failed", {"error": e.original_message}, agent_id=agent_id)
+                    log_backend_activity(
+                        "gemini",
+                        "MCP configuration validation failed",
+                        {"error": e.original_message},
+                        agent_id=agent_id,
+                    )
                     if status_callback:
-                        await status_callback("error", {"message": f"Invalid MCP configuration: {e.original_message}"})
+                        await status_callback(
+                            "error",
+                            {
+                                "message": f"Invalid MCP configuration: {e.original_message}"
+                            },
+                        )
                     self._mcp_client = None  # Clear client state for consistency
-                    raise RuntimeError(f"Invalid MCP configuration: {e.original_message}") from e
+                    raise RuntimeError(
+                        f"Invalid MCP configuration: {e.original_message}"
+                    ) from e
                 except MCPValidationError as e:
-                    log_backend_activity("gemini", "MCP validation failed", {"error": e.original_message}, agent_id=agent_id)
+                    log_backend_activity(
+                        "gemini",
+                        "MCP validation failed",
+                        {"error": e.original_message},
+                        agent_id=agent_id,
+                    )
                     if status_callback:
-                        await status_callback("error", {"message": f"MCP validation error: {e.original_message}"})
+                        await status_callback(
+                            "error",
+                            {"message": f"MCP validation error: {e.original_message}"},
+                        )
                     self._mcp_client = None  # Clear client state for consistency
-                    raise RuntimeError(f"MCP validation error: {e.original_message}") from e
+                    raise RuntimeError(
+                        f"MCP validation error: {e.original_message}"
+                    ) from e
                 except Exception as e:
                     if isinstance(e, (ImportError, AttributeError)):
-                        log_backend_activity("gemini", "MCP validation unavailable", {"reason": str(e)}, agent_id=agent_id)
+                        log_backend_activity(
+                            "gemini",
+                            "MCP validation unavailable",
+                            {"reason": str(e)},
+                            agent_id=agent_id,
+                        )
                         # Don't clear client for import errors - validation just unavailable
                     else:
-                        log_backend_activity("gemini", "MCP validation error", {"error": str(e)}, agent_id=agent_id)
+                        log_backend_activity(
+                            "gemini",
+                            "MCP validation error",
+                            {"error": str(e)},
+                            agent_id=agent_id,
+                        )
                         self._mcp_client = None  # Clear client state for consistency
-                        raise RuntimeError(f"MCP configuration validation failed: {e}") from e
+                        raise RuntimeError(
+                            f"MCP configuration validation failed: {e}"
+                        ) from e
             else:
-                log_backend_activity("gemini", "MCP validation skipped", {"reason": "validator_unavailable"}, agent_id=agent_id)
+                log_backend_activity(
+                    "gemini",
+                    "MCP validation skipped",
+                    {"reason": "validator_unavailable"},
+                    agent_id=agent_id,
+                )
 
             # Instead of the current fallback logic
             normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
-            log_backend_activity("gemini", "Setting up MCP sessions", {"server_count": len(normalized_servers)}, agent_id=agent_id)
+            log_backend_activity(
+                "gemini",
+                "Setting up MCP sessions",
+                {"server_count": len(normalized_servers)},
+                agent_id=agent_id,
+            )
             if status_callback:
-                await status_callback("info", {"message": f"Setting up MCP sessions for {len(normalized_servers)} servers"})
+                await status_callback(
+                    "info",
+                    {
+                        "message": f"Setting up MCP sessions for {len(normalized_servers)} servers"
+                    },
+                )
 
             # Apply circuit breaker filtering before connection attempts
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(normalized_servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
+                filtered_servers = (
+                    MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
+                        normalized_servers,
+                        self._mcp_tools_circuit_breaker,
+                        backend_name="gemini",
+                        agent_id=agent_id,
+                    )
+                )
             else:
                 filtered_servers = normalized_servers
             if not filtered_servers:
-                log_backend_activity("gemini", "All MCP servers blocked by circuit breaker", {}, agent_id=agent_id)
+                log_backend_activity(
+                    "gemini",
+                    "All MCP servers blocked by circuit breaker",
+                    {},
+                    agent_id=agent_id,
+                )
                 if status_callback:
-                    await status_callback("warning", {"message": "All MCP servers blocked by circuit breaker"})
+                    await status_callback(
+                        "warning",
+                        {"message": "All MCP servers blocked by circuit breaker"},
+                    )
                 return
 
             if len(filtered_servers) < len(normalized_servers):
-                log_backend_activity("gemini", "Circuit breaker filtered servers", {"filtered_count": len(normalized_servers) - len(filtered_servers)}, agent_id=agent_id)
+                log_backend_activity(
+                    "gemini",
+                    "Circuit breaker filtered servers",
+                    {"filtered_count": len(normalized_servers) - len(filtered_servers)},
+                    agent_id=agent_id,
+                )
                 if status_callback:
-                    await status_callback("warning", {"message": f"Circuit breaker filtered {len(normalized_servers) - len(filtered_servers)} servers"})
+                    await status_callback(
+                        "warning",
+                        {
+                            "message": f"Circuit breaker filtered {len(normalized_servers) - len(filtered_servers)} servers"
+                        },
+                    )
 
             # Extract tool filtering parameters from validated config
             allowed_tools = validated_config.get("allowed_tools")
@@ -652,9 +806,19 @@ class GeminiBackend(LLMBackend):
 
             # Log tool filtering if configured
             if allowed_tools:
-                log_backend_activity("gemini", "MCP tool filtering configured", {"allowed_tools": allowed_tools}, agent_id=agent_id)
+                log_backend_activity(
+                    "gemini",
+                    "MCP tool filtering configured",
+                    {"allowed_tools": allowed_tools},
+                    agent_id=agent_id,
+                )
             if exclude_tools:
-                log_backend_activity("gemini", "MCP tool filtering configured", {"exclude_tools": exclude_tools}, agent_id=agent_id)
+                log_backend_activity(
+                    "gemini",
+                    "MCP tool filtering configured",
+                    {"exclude_tools": exclude_tools},
+                    agent_id=agent_id,
+                )
 
             # Create client with status callback
             self._mcp_client = MultiMCPClient(
@@ -662,9 +826,9 @@ class GeminiBackend(LLMBackend):
                 timeout_seconds=30,
                 allowed_tools=allowed_tools,
                 exclude_tools=exclude_tools,
-                status_callback=status_callback
+                status_callback=status_callback,
             )
-            
+
             # Connect the client
             await self._mcp_client.connect()
 
@@ -677,37 +841,65 @@ class GeminiBackend(LLMBackend):
             if not connected_server_names:
                 # Treat as connection failure: no active servers
                 if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                    await MCPCircuitBreakerManager.record_failure(filtered_servers, self._mcp_tools_circuit_breaker, "No servers connected", backend_name="gemini", agent_id=agent_id)    
-                
-                log_backend_activity( "gemini", "MCP connection failed: no servers connected", {}, agent_id=agent_id)
+                    await MCPCircuitBreakerManager.record_failure(
+                        filtered_servers,
+                        self._mcp_tools_circuit_breaker,
+                        "No servers connected",
+                        backend_name="gemini",
+                        agent_id=agent_id,
+                    )
+
+                log_backend_activity(
+                    "gemini",
+                    "MCP connection failed: no servers connected",
+                    {},
+                    agent_id=agent_id,
+                )
                 if status_callback:
-                    await status_callback("error", {"message": "MCP connection failed: no servers connected"})
+                    await status_callback(
+                        "error",
+                        {"message": "MCP connection failed: no servers connected"},
+                    )
                 self._mcp_client = None
                 return
 
             # Record success ONLY for servers that actually connected
             connected_server_configs = [
-                server for server in filtered_servers
+                server
+                for server in filtered_servers
                 if server.get("name") in connected_server_names
             ]
             if connected_server_configs:
                 if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                    await MCPCircuitBreakerManager.record_success(connected_server_configs, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
+                    await MCPCircuitBreakerManager.record_success(
+                        connected_server_configs,
+                        self._mcp_tools_circuit_breaker,
+                        backend_name="gemini",
+                        agent_id=agent_id,
+                    )
 
             self._mcp_initialized = True
             log_backend_activity(
-                "gemini",
-                "MCP sessions initialized successfully",
-                {},
-                agent_id=agent_id
+                "gemini", "MCP sessions initialized successfully", {}, agent_id=agent_id
             )
             if status_callback:
-                await status_callback("success", {"message": f"MCP sessions initialized successfully with {len(connected_server_names)} servers"})
+                await status_callback(
+                    "success",
+                    {
+                        "message": f"MCP sessions initialized successfully with {len(connected_server_names)} servers"
+                    },
+                )
 
         except Exception as e:
             # Record failure for circuit breaker
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                await MCPCircuitBreakerManager.record_failure(self.mcp_servers, self._mcp_tools_circuit_breaker, str(e), backend_name="gemini", agent_id=agent_id)
+                await MCPCircuitBreakerManager.record_failure(
+                    self.mcp_servers,
+                    self._mcp_tools_circuit_breaker,
+                    str(e),
+                    backend_name="gemini",
+                    agent_id=agent_id,
+                )
 
             # Enhanced error handling for different MCP error types
             if isinstance(e, RuntimeError) and "MCP configuration" in str(e):
@@ -717,10 +909,13 @@ class GeminiBackend(LLMBackend):
                     "gemini",
                     "MCP connection failed during setup",
                     {"error": str(e)},
-                    agent_id=agent_id
+                    agent_id=agent_id,
                 )
                 if status_callback:
-                    await status_callback("error", {"message": f"Failed to establish MCP connections: {e}"})
+                    await status_callback(
+                        "error",
+                        {"message": f"Failed to establish MCP connections: {e}"},
+                    )
                 self._mcp_client = None
                 raise RuntimeError(f"Failed to establish MCP connections: {e}") from e
             elif isinstance(e, MCPTimeoutError):
@@ -728,10 +923,12 @@ class GeminiBackend(LLMBackend):
                     "gemini",
                     "MCP connection timeout during setup",
                     {"error": str(e)},
-                    agent_id=agent_id
+                    agent_id=agent_id,
                 )
                 if status_callback:
-                    await status_callback("error", {"message": f"MCP connection timeout: {e}"})
+                    await status_callback(
+                        "error", {"message": f"MCP connection timeout: {e}"}
+                    )
                 self._mcp_client = None
                 raise RuntimeError(f"MCP connection timeout: {e}") from e
             elif isinstance(e, MCPServerError):
@@ -739,10 +936,12 @@ class GeminiBackend(LLMBackend):
                     "gemini",
                     "MCP server error during setup",
                     {"error": str(e)},
-                    agent_id=agent_id
+                    agent_id=agent_id,
                 )
                 if status_callback:
-                    await status_callback("error", {"message": f"MCP server error: {e}"})
+                    await status_callback(
+                        "error", {"message": f"MCP server error: {e}"}
+                    )
                 self._mcp_client = None
                 raise RuntimeError(f"MCP server error: {e}") from e
             elif isinstance(e, MCPError):
@@ -750,10 +949,12 @@ class GeminiBackend(LLMBackend):
                     "gemini",
                     "MCP error during setup",
                     {"error": str(e)},
-                    agent_id=agent_id
+                    agent_id=agent_id,
                 )
                 if status_callback:
-                    await status_callback("error", {"message": f"MCP error during setup: {e}"})
+                    await status_callback(
+                        "error", {"message": f"MCP error during setup: {e}"}
+                    )
                 self._mcp_client = None
                 return
 
@@ -762,10 +963,12 @@ class GeminiBackend(LLMBackend):
                     "gemini",
                     "MCP session setup failed",
                     {"error": str(e)},
-                    agent_id=agent_id
+                    agent_id=agent_id,
                 )
                 if status_callback:
-                    await status_callback("error", {"message": f"MCP session setup failed: {e}"})
+                    await status_callback(
+                        "error", {"message": f"MCP session setup failed: {e}"}
+                    )
                 self._mcp_client = None
 
     def detect_coordination_tools(self, tools: List[Dict[str, Any]]) -> bool:
@@ -939,7 +1142,6 @@ Make your decision and include the JSON at the very end of your response."""
 
         return []
 
-
     async def _handle_mcp_retry_error(
         self, error: Exception, retry_count: int, max_retries: int
     ) -> tuple[bool, AsyncGenerator[StreamChunk, None]]:
@@ -948,14 +1150,16 @@ Make your decision and include the JSON at the very end of your response."""
         Returns:
             tuple: (should_continue_retrying, error_chunks_generator)
         """
-        log_type, user_message, _ = MCPErrorHandler.get_error_details(error, None, log=False)
-        
+        log_type, user_message, _ = MCPErrorHandler.get_error_details(
+            error, None, log=False
+        )
+
         # Log the retry attempt
         log_backend_activity(
             "gemini",
             f"MCP {log_type} on retry",
             {"attempt": retry_count, "error": str(error)},
-            agent_id=self.agent_id
+            agent_id=self.agent_id,
         )
 
         # Check if we've exhausted retries
@@ -984,7 +1188,9 @@ Make your decision and include the JSON at the very end of your response."""
         """Handle MCP errors with specific messaging"""
         self._mcp_tool_failures += 1
 
-        log_type, user_message, _ = MCPErrorHandler.get_error_details(error, None, log=False)
+        log_type, user_message, _ = MCPErrorHandler.get_error_details(
+            error, None, log=False
+        )
 
         # Log with specific error type
         log_backend_activity(
@@ -995,7 +1201,7 @@ Make your decision and include the JSON at the very end of your response."""
                 "error_type": log_type,
                 "error": str(error),
             },
-            agent_id=self.agent_id
+            agent_id=self.agent_id,
         )
 
         # Yield user-friendly error message
@@ -1004,20 +1210,15 @@ Make your decision and include the JSON at the very end of your response."""
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
 
-
-
-
-
-
-
-
     async def _execute_mcp_function_with_retry(
         self, function_name: str, args: Dict[str, Any], agent_id: Optional[str] = None
     ) -> Any:
         """Execute MCP function with exponential backoff retry logic."""
         if MCPExecutionManager is None:
-            raise RuntimeError("MCPExecutionManager is not available - MCP backend utilities are missing")
-        
+            raise RuntimeError(
+                "MCPExecutionManager is not available - MCP backend utilities are missing"
+            )
+
         # Stats callback for tracking
         async def stats_callback(action: str) -> int:
             if action == "increment_calls":
@@ -1032,7 +1233,13 @@ Make your decision and include the JSON at the very end of your response."""
         async def circuit_breaker_callback(event: str, error_msg: str) -> None:
             if event == "failure":
                 if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                    await MCPCircuitBreakerManager.record_failure(self.mcp_servers, self._mcp_tools_circuit_breaker, error_msg, backend_name="gemini", agent_id=agent_id)
+                    await MCPCircuitBreakerManager.record_failure(
+                        self.mcp_servers,
+                        self._mcp_tools_circuit_breaker,
+                        error_msg,
+                        backend_name="gemini",
+                        agent_id=agent_id,
+                    )
             else:
                 # Record success only for currently connected servers
                 connected_names: List[str] = []
@@ -1044,8 +1251,16 @@ Make your decision and include the JSON at the very end of your response."""
 
                 if connected_names:
                     servers_to_record = [{"name": name} for name in connected_names]
-                    if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                        await MCPCircuitBreakerManager.record_success(servers_to_record, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
+                    if (
+                        self._circuit_breakers_enabled
+                        and self._mcp_tools_circuit_breaker
+                    ):
+                        await MCPCircuitBreakerManager.record_success(
+                            servers_to_record,
+                            self._mcp_tools_circuit_breaker,
+                            backend_name="gemini",
+                            agent_id=agent_id,
+                        )
 
         return await MCPExecutionManager.execute_function_with_retry(
             function_name=function_name,
@@ -1054,7 +1269,7 @@ Make your decision and include the JSON at the very end of your response."""
             max_retries=3,
             stats_callback=stats_callback,
             circuit_breaker_callback=circuit_breaker_callback,
-            logger_instance=logger
+            logger_instance=logger,
         )
 
     async def stream_with_tools(
@@ -1062,29 +1277,40 @@ Make your decision and include the JSON at the very end of your response."""
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using Gemini API with structured output for coordination and MCP tool support."""
         # Use instance agent_id (from __init__) or get from kwargs if not set
-        agent_id = self.agent_id or kwargs.get('agent_id', None)
+        agent_id = self.agent_id or kwargs.get("agent_id", None)
         client = None
         stream = None
-        
+
         log_backend_activity(
             "gemini",
             "Starting stream_with_tools",
             {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id
+            agent_id=agent_id,
         )
-        
+
         # Only trim when MCP tools will be used
-        if (self.mcp_servers and 
-            MCPMessageManager is not None and 
-            hasattr(self, '_max_mcp_message_history') and 
-            self._max_mcp_message_history > 0):
+        if (
+            self.mcp_servers
+            and MCPMessageManager is not None
+            and hasattr(self, "_max_mcp_message_history")
+            and self._max_mcp_message_history > 0
+        ):
             original_count = len(messages)
-            messages = MCPMessageManager.trim_message_history(messages, self._max_mcp_message_history)
+            messages = MCPMessageManager.trim_message_history(
+                messages, self._max_mcp_message_history
+            )
             if len(messages) < original_count:
-                log_backend_activity("gemini", "Trimmed MCP message history", 
-                    {"original": original_count, "trimmed": len(messages), "limit": self._max_mcp_message_history}, 
-                    agent_id=agent_id)
-        
+                log_backend_activity(
+                    "gemini",
+                    "Trimmed MCP message history",
+                    {
+                        "original": original_count,
+                        "trimmed": len(messages),
+                        "limit": self._max_mcp_message_history,
+                    },
+                    agent_id=agent_id,
+                )
+
         try:
             from google import genai
 
@@ -1157,42 +1383,52 @@ Make your decision and include the JSON at the very end of your response."""
 
             # Use google-genai package
             client = genai.Client(api_key=self.api_key)
-            
+
             # Setup builtin tools (only when not using SDK MCP sessions)
             builtin_tools = []
             if enable_web_search:
-                    try:
-                        from google.genai import types
+                try:
+                    from google.genai import types
 
-                        grounding_tool = types.Tool(google_search=types.GoogleSearch())
-                        builtin_tools.append(grounding_tool)
-                    except ImportError:
-                        yield StreamChunk(
-                            type="content",
-                            content="\n⚠️  Web search requires google.genai.types\n",
-                        )
+                    grounding_tool = types.Tool(google_search=types.GoogleSearch())
+                    builtin_tools.append(grounding_tool)
+                except ImportError:
+                    yield StreamChunk(
+                        type="content",
+                        content="\n⚠️  Web search requires google.genai.types\n",
+                    )
 
             if enable_code_execution:
-                    try:
-                        from google.genai import types
+                try:
+                    from google.genai import types
 
-                        code_tool = types.Tool(code_execution=types.ToolCodeExecution())
-                        builtin_tools.append(code_tool)
-                    except ImportError:
-                        yield StreamChunk(
-                            type="content",
-                            content="\n⚠️  Code execution requires google.genai.types\n",
-                        )
+                    code_tool = types.Tool(code_execution=types.ToolCodeExecution())
+                    builtin_tools.append(code_tool)
+                except ImportError:
+                    yield StreamChunk(
+                        type="content",
+                        content="\n⚠️  Code execution requires google.genai.types\n",
+                    )
 
             # Build config with direct parameter passthrough
             config = {}
 
             # Direct passthrough of all parameters except those handled separately
             excluded_params = {
-                "enable_web_search", "enable_code_execution", "agent_id", "session_id",
+                "enable_web_search",
+                "enable_code_execution",
+                "agent_id",
+                "session_id",
                 # MCP-specific parameters that should not be passed to Gemini
                 # TODO: Place this somewhere we can import from when extending MCP support to other backends
-                "use_multi_mcp", "mcp_servers", "mcp_sdk_auto", "type", "allowed_tools", "exclude_tools", "cwd", "agent_temporary_workspace"
+                "use_multi_mcp",
+                "mcp_servers",
+                "mcp_sdk_auto",
+                "type",
+                "allowed_tools",
+                "exclude_tools",
+                "cwd",
+                "agent_temporary_workspace",
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
@@ -1226,16 +1462,18 @@ Make your decision and include the JSON at the very end of your response."""
                                 log_backend_activity(
                                     "gemini",
                                     "MCP connection retry",
-                                    {"attempt": retry_count, "max_retries": max_mcp_retries},
+                                    {
+                                        "attempt": retry_count,
+                                        "max_retries": max_mcp_retries,
+                                    },
                                     agent_id=agent_id,
-                
                                 )
                                 # Yield retry status
                                 yield StreamChunk(
                                     type="mcp_status",
                                     status="mcp_retry",
                                     content=f"Retrying MCP connection (attempt {retry_count}/{max_mcp_retries})",
-                                    source="mcp_tools"
+                                    source="mcp_tools",
                                 )
                                 # Brief delay between retries
                                 await asyncio.sleep(
@@ -1243,8 +1481,16 @@ Make your decision and include the JSON at the very end of your response."""
                                 )  # Progressive backoff
 
                             # Apply circuit breaker filtering before retry attempts
-                            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                                filtered_retry_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(self.mcp_servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
+                            if (
+                                self._circuit_breakers_enabled
+                                and self._mcp_tools_circuit_breaker
+                            ):
+                                filtered_retry_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
+                                    self.mcp_servers,
+                                    self._mcp_tools_circuit_breaker,
+                                    backend_name="gemini",
+                                    agent_id=agent_id,
+                                )
                             else:
                                 filtered_retry_servers = self.mcp_servers
                             if not filtered_retry_servers:
@@ -1253,14 +1499,13 @@ Make your decision and include the JSON at the very end of your response."""
                                     "All MCP servers blocked during retry",
                                     {},
                                     agent_id=agent_id,
-                
                                 )
                                 # Yield blocked status
                                 yield StreamChunk(
                                     type="mcp_status",
                                     status="mcp_blocked",
                                     content="All MCP servers blocked by circuit breaker",
-                                    source="mcp_tools"
+                                    source="mcp_tools",
                                 )
                                 using_sdk_mcp = False
                                 break
@@ -1270,11 +1515,17 @@ Make your decision and include the JSON at the very end of your response."""
                             if MCPConfigValidator is not None:
                                 try:
                                     validator = MCPConfigValidator()
-                                    validated_config_retry = validator.validate_backend_mcp_config(
-                                        backend_config
+                                    validated_config_retry = (
+                                        validator.validate_backend_mcp_config(
+                                            backend_config
+                                        )
                                     )
-                                    allowed_tools_retry = validated_config_retry.get("allowed_tools")
-                                    exclude_tools_retry = validated_config_retry.get("exclude_tools")
+                                    allowed_tools_retry = validated_config_retry.get(
+                                        "allowed_tools"
+                                    )
+                                    exclude_tools_retry = validated_config_retry.get(
+                                        "exclude_tools"
+                                    )
                                 except Exception:
                                     allowed_tools_retry = None
                                     exclude_tools_retry = None
@@ -1286,26 +1537,33 @@ Make your decision and include the JSON at the very end of your response."""
                                 filtered_retry_servers,
                                 timeout_seconds=30,
                                 allowed_tools=allowed_tools_retry,
-                                exclude_tools=exclude_tools_retry
+                                exclude_tools=exclude_tools_retry,
                             )
 
                             # Record success for circuit breaker
-                            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                                await MCPCircuitBreakerManager.record_success(filtered_retry_servers, self._mcp_tools_circuit_breaker, backend_name="gemini", agent_id=agent_id)
+                            if (
+                                self._circuit_breakers_enabled
+                                and self._mcp_tools_circuit_breaker
+                            ):
+                                await MCPCircuitBreakerManager.record_success(
+                                    filtered_retry_servers,
+                                    self._mcp_tools_circuit_breaker,
+                                    backend_name="gemini",
+                                    agent_id=agent_id,
+                                )
                             mcp_connected = True
                             log_backend_activity(
                                 "gemini",
                                 "MCP connection successful on retry",
                                 {"attempt": retry_count},
                                 agent_id=agent_id,
-            
                             )
                             # Yield success status
                             yield StreamChunk(
                                 type="mcp_status",
                                 status="mcp_connected",
                                 content=f"MCP connection successful on attempt {retry_count}",
-                                source="mcp_tools"
+                                source="mcp_tools",
                             )
                             break
 
@@ -1317,8 +1575,17 @@ Make your decision and include the JSON at the very end of your response."""
                             Exception,
                         ) as e:
                             # Record failure for circuit breaker
-                            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                                await MCPCircuitBreakerManager.record_failure(self.mcp_servers, self._mcp_tools_circuit_breaker, str(e), backend_name="gemini", agent_id=agent_id)
+                            if (
+                                self._circuit_breakers_enabled
+                                and self._mcp_tools_circuit_breaker
+                            ):
+                                await MCPCircuitBreakerManager.record_failure(
+                                    self.mcp_servers,
+                                    self._mcp_tools_circuit_breaker,
+                                    str(e),
+                                    backend_name="gemini",
+                                    agent_id=agent_id,
+                                )
 
                             (
                                 should_continue,
@@ -1354,10 +1621,12 @@ Make your decision and include the JSON at the very end of your response."""
             log_backend_agent_message(
                 agent_id or "default",
                 "SEND",
-                {"content": full_content, "builtin_tools": len(builtin_tools) if builtin_tools else 0},
-                backend_name="gemini"
+                {
+                    "content": full_content,
+                    "builtin_tools": len(builtin_tools) if builtin_tools else 0,
+                },
+                backend_name="gemini",
             )
-
 
             # Use streaming for real-time response
             full_content_text = ""
@@ -1377,44 +1646,49 @@ Make your decision and include the JSON at the very end of your response."""
 
                     # Track MCP tool usage attempt
                     self._mcp_tool_calls_count += 1
-                    
+
                     # Get available tools from MCP client
                     available_tools = []
                     if self._mcp_client:
                         available_tools = list(self._mcp_client.tools.keys())
-                    
+
                     log_backend_activity(
                         "gemini",
                         "MCP tool call initiated",
                         {
                             "call_number": self._mcp_tool_calls_count,
                             "session_count": len(mcp_sessions),
-                            "available_tools": available_tools[:],  # Log first 10 tools for brevity
-                            "total_tools": len(available_tools)
+                            "available_tools": available_tools[
+                                :
+                            ],  # Log first 10 tools for brevity
+                            "total_tools": len(available_tools),
                         },
                         agent_id=agent_id,
-    
                     )
-                    
+
                     # Log MCP tool usage (SDK handles actual tool calling automatically)
                     log_tool_call(
                         agent_id,
                         "mcp_session_tools",
                         {
-                            "session_count": len(mcp_sessions), 
+                            "session_count": len(mcp_sessions),
                             "call_number": self._mcp_tool_calls_count,
-                            "available_tools": available_tools
+                            "available_tools": available_tools,
                         },
-                        backend_name="gemini"
+                        backend_name="gemini",
                     )
-                    
+
                     # Yield detailed MCP status as StreamChunk
-                    tools_info = f" ({len(available_tools)} tools available)" if available_tools else ""
+                    tools_info = (
+                        f" ({len(available_tools)} tools available)"
+                        if available_tools
+                        else ""
+                    )
                     yield StreamChunk(
                         type="mcp_status",
                         status="mcp_tools_initiated",
                         content=f"MCP tool call initiated (call #{self._mcp_tool_calls_count}){tools_info}: {', '.join(available_tools[:5])}{'...' if len(available_tools) > 5 else ''}",
-                        source="mcp_tools"
+                        source="mcp_tools",
                     )
 
                     # Use async streaming call with sessions (SDK supports auto-calling MCP here)
@@ -1427,110 +1701,165 @@ Make your decision and include the JSON at the very end of your response."""
                     mcp_tracker = MCPCallTracker()
                     mcp_response_tracker = MCPResponseTracker()
                     mcp_tools_used = []  # Keep for backward compatibility
-                    
+
                     # Iterate over the asynchronous stream to get chunks as they arrive
                     async for chunk in stream:
                         # ============================================
                         # 1. Process MCP function calls/responses
                         # ============================================
-                        if hasattr(chunk, "automatic_function_calling_history") and chunk.automatic_function_calling_history:
-                            for history_item in chunk.automatic_function_calling_history:
+                        if (
+                            hasattr(chunk, "automatic_function_calling_history")
+                            and chunk.automatic_function_calling_history
+                        ):
+                            for (
+                                history_item
+                            ) in chunk.automatic_function_calling_history:
                                 if hasattr(history_item, "parts"):
                                     for part in history_item.parts:
                                         # Check for function_call part
-                                        if hasattr(part, "function_call") and part.function_call:
+                                        if (
+                                            hasattr(part, "function_call")
+                                            and part.function_call
+                                        ):
                                             # Use MCPResponseExtractor to extract call data
-                                            call_data = self.mcp_extractor.extract_function_call(part.function_call)
-                                            
+                                            call_data = self.mcp_extractor.extract_function_call(
+                                                part.function_call
+                                            )
+
                                             if call_data:
                                                 tool_name = call_data["name"]
                                                 tool_args = call_data["arguments"]
-                                                
+
                                                 # Check if this is a new call using the tracker
-                                                if mcp_tracker.is_new_call(tool_name, tool_args):
+                                                if mcp_tracker.is_new_call(
+                                                    tool_name, tool_args
+                                                ):
                                                     # Add to tracker history
-                                                    call_record = mcp_tracker.add_call(tool_name, tool_args)
-                                                    
+                                                    call_record = mcp_tracker.add_call(
+                                                        tool_name, tool_args
+                                                    )
+
                                                     # Add to legacy list for compatibility
-                                                    mcp_tools_used.append({
-                                                        "name": tool_name,
-                                                        "arguments": tool_args,
-                                                        "timestamp": call_record["timestamp"]
-                                                    })
-                                                    
+                                                    mcp_tools_used.append(
+                                                        {
+                                                            "name": tool_name,
+                                                            "arguments": tool_args,
+                                                            "timestamp": call_record[
+                                                                "timestamp"
+                                                            ],
+                                                        }
+                                                    )
+
                                                     # Format timestamp for display
-                                                    timestamp_str = time.strftime('%H:%M:%S', time.localtime(call_record["timestamp"]))
-                                                    
+                                                    timestamp_str = time.strftime(
+                                                        "%H:%M:%S",
+                                                        time.localtime(
+                                                            call_record["timestamp"]
+                                                        ),
+                                                    )
+
                                                     # Yield detailed MCP tool call information
                                                     yield StreamChunk(
                                                         type="mcp_status",
                                                         status="mcp_tool_called",
                                                         content=f"🔧 MCP Tool Called: {tool_name} at {timestamp_str} with args: {json.dumps(tool_args, indent=2)}",
-                                                        source="mcp_tools"
+                                                        source="mcp_tools",
                                                     )
-                                                    
+
                                                     # Log the specific tool call
                                                     log_tool_call(
                                                         agent_id,
                                                         tool_name,
                                                         tool_args,
-                                                        backend_name="gemini"
+                                                        backend_name="gemini",
                                                     )
-                                        
+
                                         # Check for function_response part
-                                        elif hasattr(part, "function_response") and part.function_response:
+                                        elif (
+                                            hasattr(part, "function_response")
+                                            and part.function_response
+                                        ):
                                             # Use MCPResponseExtractor to extract response data
-                                            response_data = self.mcp_extractor.extract_function_response(part.function_response)
-                                            
+                                            response_data = self.mcp_extractor.extract_function_response(
+                                                part.function_response
+                                            )
+
                                             if response_data:
                                                 tool_name = response_data["name"]
-                                                tool_response = response_data["response"]
-                                                
+                                                tool_response = response_data[
+                                                    "response"
+                                                ]
+
                                                 # Check if this is a new response using the tracker
-                                                if mcp_response_tracker.is_new_response(tool_name, tool_response):
+                                                if mcp_response_tracker.is_new_response(
+                                                    tool_name, tool_response
+                                                ):
                                                     # Add to tracker history
-                                                    response_record = mcp_response_tracker.add_response(tool_name, tool_response)
-                                                    
+                                                    response_record = mcp_response_tracker.add_response(
+                                                        tool_name, tool_response
+                                                    )
+
                                                     # Extract text content from CallToolResult
                                                     response_text = None
-                                                    if isinstance(tool_response, dict) and 'result' in tool_response:
-                                                        result = tool_response['result']
+                                                    if (
+                                                        isinstance(tool_response, dict)
+                                                        and "result" in tool_response
+                                                    ):
+                                                        result = tool_response["result"]
                                                         # Check if result has content attribute (CallToolResult object)
-                                                        if hasattr(result, 'content') and result.content:
+                                                        if (
+                                                            hasattr(result, "content")
+                                                            and result.content
+                                                        ):
                                                             # Get the first content item (TextContent object)
-                                                            first_content = result.content[0]
+                                                            first_content = (
+                                                                result.content[0]
+                                                            )
                                                             # Extract the text attribute
-                                                            if hasattr(first_content, 'text'):
-                                                                response_text = first_content.text
-                                                    
+                                                            if hasattr(
+                                                                first_content, "text"
+                                                            ):
+                                                                response_text = (
+                                                                    first_content.text
+                                                                )
+
                                                     # Use extracted text or fallback to string representation
                                                     if response_text is None:
-                                                        response_text = str(tool_response)
-                                                    
+                                                        response_text = str(
+                                                            tool_response
+                                                        )
+
                                                     # Format timestamp for display
-                                                    timestamp_str = time.strftime('%H:%M:%S', time.localtime(response_record["timestamp"]))
-                                                    
+                                                    timestamp_str = time.strftime(
+                                                        "%H:%M:%S",
+                                                        time.localtime(
+                                                            response_record["timestamp"]
+                                                        ),
+                                                    )
+
                                                     # Yield MCP tool response information
                                                     yield StreamChunk(
                                                         type="mcp_status",
                                                         status="mcp_tool_response",
                                                         content=f"✅ MCP Tool Response from {tool_name} at {timestamp_str}: {response_text}",
-                                                        source="mcp_tools"
+                                                        source="mcp_tools",
                                                     )
-                                                    
+
                                                     # Log the tool response
                                                     log_backend_activity(
                                                         "gemini",
                                                         "MCP tool response received",
                                                         {
                                                             "tool_name": tool_name,
-                                                            "response_preview": str(tool_response)[:]
+                                                            "response_preview": str(
+                                                                tool_response
+                                                            )[:],
                                                         },
-                                                        agent_id=agent_id
+                                                        agent_id=agent_id,
                                                     )
 
                             # Track successful MCP tool execution (only on first chunk with MCP history)
-                            if not hasattr(self, '_mcp_stream_started'):
+                            if not hasattr(self, "_mcp_stream_started"):
                                 self._mcp_tool_successes += 1
                                 self._mcp_stream_started = True
                                 log_backend_activity(
@@ -1544,17 +1873,20 @@ Make your decision and include the JSON at the very end of your response."""
                                 log_tool_call(
                                     agent_id,
                                     "mcp_session_tools",
-                                    {"session_count": len(mcp_sessions), "call_number": self._mcp_tool_calls_count},
+                                    {
+                                        "session_count": len(mcp_sessions),
+                                        "call_number": self._mcp_tool_calls_count,
+                                    },
                                     result="success",
-                                    backend_name="gemini"
+                                    backend_name="gemini",
                                 )
-                                
+
                                 # Yield MCP success status as StreamChunk
                                 yield StreamChunk(
                                     type="mcp_status",
                                     status="mcp_tools_success",
                                     content=f"MCP tool call succeeded (call #{self._mcp_tool_calls_count})",
-                                    source="mcp_tools"
+                                    source="mcp_tools",
                                 )
 
                         # ============================================
@@ -1564,31 +1896,37 @@ Make your decision and include the JSON at the very end of your response."""
                             chunk_text = chunk.text
                             full_content_text += chunk_text
                             log_backend_agent_message(
-                               agent_id,
-                               "RECV",
+                                agent_id,
+                                "RECV",
                                 {"content": chunk_text},
-                                backend_name="gemini"
-                             )
-                            log_stream_chunk("backend.gemini", "content", chunk_text, agent_id)
+                                backend_name="gemini",
+                            )
+                            log_stream_chunk(
+                                "backend.gemini", "content", chunk_text, agent_id
+                            )
                             yield StreamChunk(type="content", content=chunk_text)
 
                     # Reset stream tracking
-                    if hasattr(self, '_mcp_stream_started'):
-                        delattr(self, '_mcp_stream_started')
+                    if hasattr(self, "_mcp_stream_started"):
+                        delattr(self, "_mcp_stream_started")
 
                     # Add MCP usage indicator with detailed summary using tracker
                     tools_summary = mcp_tracker.get_summary()
                     if not tools_summary or tools_summary == "No MCP tools called":
-                        tools_summary = "MCP session completed (no tools explicitly called)"
+                        tools_summary = (
+                            "MCP session completed (no tools explicitly called)"
+                        )
                     else:
                         tools_summary = f"MCP session complete - {tools_summary}"
-                    
-                    log_stream_chunk("backend.gemini", "mcp_indicator", tools_summary, agent_id)
+
+                    log_stream_chunk(
+                        "backend.gemini", "mcp_indicator", tools_summary, agent_id
+                    )
                     yield StreamChunk(
                         type="mcp_status",
                         status="mcp_session_complete",
                         content=f"MCP session complete - {tools_summary}",
-                        source="mcp_tools"
+                        source="mcp_tools",
                     )
                 except (
                     MCPConnectionError,
@@ -1613,14 +1951,19 @@ Make your decision and include the JSON at the very end of your response."""
                     stream = await client.aio.models.generate_content_stream(
                         model=model_name, contents=full_content, config=manual_config
                     )
-                    
+
                     async for chunk in stream:
                         # Process text content
                         if hasattr(chunk, "text") and chunk.text:
                             chunk_text = chunk.text
                             full_content_text += chunk_text
                             # Log fallback content chunks
-                            log_stream_chunk("backend.gemini", "fallback_content", chunk_text, agent_id)
+                            log_stream_chunk(
+                                "backend.gemini",
+                                "fallback_content",
+                                chunk_text,
+                                agent_id,
+                            )
                             yield StreamChunk(type="content", content=chunk_text)
 
             else:
@@ -1629,7 +1972,7 @@ Make your decision and include the JSON at the very end of your response."""
                 stream = await client.aio.models.generate_content_stream(
                     model=model_name, contents=full_content, config=config
                 )
-                
+
                 async for chunk in stream:
                     # ============================================
                     # 1. Process text content
@@ -1639,16 +1982,17 @@ Make your decision and include the JSON at the very end of your response."""
                         full_content_text += chunk_text
 
                         # Enhanced logging for non-MCP streaming chunks
-                        log_stream_chunk("backend.gemini", "content", chunk_text, agent_id)
+                        log_stream_chunk(
+                            "backend.gemini", "content", chunk_text, agent_id
+                        )
                         log_backend_agent_message(
                             agent_id,
                             "RECV",
                             {"content": chunk_text},
-                            backend_name="gemini"
+                            backend_name="gemini",
                         )
 
                         yield StreamChunk(type="content", content=chunk_text)
-
 
             content = full_content_text
 
@@ -1679,17 +2023,21 @@ Make your decision and include the JSON at the very end of your response."""
                     if tool_calls:
                         tool_calls_detected = tool_calls
                         # Log conversion to tool calls (summary)
-                        log_stream_chunk("backend.gemini", "tool_calls", tool_calls, agent_id)
+                        log_stream_chunk(
+                            "backend.gemini", "tool_calls", tool_calls, agent_id
+                        )
 
                         # Log each coordination tool call for analytics/debugging
                         try:
                             for tool_call in tool_calls:
                                 log_tool_call(
                                     agent_id,
-                                    tool_call.get("function", {}).get("name", "unknown_coordination_tool"),
+                                    tool_call.get("function", {}).get(
+                                        "name", "unknown_coordination_tool"
+                                    ),
                                     tool_call.get("function", {}).get("arguments", {}),
                                     result="coordination_tool_called",
-                                    backend_name="gemini"
+                                    backend_name="gemini",
                                 )
                         except Exception:
                             # Ensure logging does not interrupt flow
@@ -1743,13 +2091,27 @@ Make your decision and include the JSON at the very end of your response."""
                     # Only show indicators if search was actually used
                     if search_actually_used:
                         # Enhanced web search logging
-                        log_stream_chunk("backend.gemini", "web_search_result", {"queries": search_queries, "results_integrated": True}, agent_id)
+                        log_stream_chunk(
+                            "backend.gemini",
+                            "web_search_result",
+                            {"queries": search_queries, "results_integrated": True},
+                            agent_id,
+                        )
                         log_tool_call(
                             agent_id,
                             "google_search_retrieval",
-                            {"queries": search_queries, "chunks_found": len(candidate.grounding_metadata.grounding_chunks) if hasattr(candidate.grounding_metadata, 'grounding_chunks') else 0},
+                            {
+                                "queries": search_queries,
+                                "chunks_found": len(
+                                    candidate.grounding_metadata.grounding_chunks
+                                )
+                                if hasattr(
+                                    candidate.grounding_metadata, "grounding_chunks"
+                                )
+                                else 0,
+                            },
                             result="search_completed",
-                            backend_name="gemini"
+                            backend_name="gemini",
                         )
                         yield StreamChunk(
                             type="content",
@@ -1758,7 +2120,12 @@ Make your decision and include the JSON at the very end of your response."""
 
                         # Show search queries
                         for query in search_queries:
-                            log_stream_chunk("backend.gemini", "web_search_result", {"queries": search_queries, "results_integrated": True}, agent_id)
+                            log_stream_chunk(
+                                "backend.gemini",
+                                "web_search_result",
+                                {"queries": search_queries, "results_integrated": True},
+                                agent_id,
+                            )
                             yield StreamChunk(
                                 type="content", content=f"🔍 [Search Query] '{query}'\n"
                             )
@@ -1792,7 +2159,12 @@ Make your decision and include the JSON at the very end of your response."""
 
                     if code_parts:
                         # Code execution was actually used
-                        log_stream_chunk("backend.gemini", "code_execution", "Code executed", agent_id)
+                        log_stream_chunk(
+                            "backend.gemini",
+                            "code_execution",
+                            "Code executed",
+                            agent_id,
+                        )
 
                         # Log code execution as a tool call event
                         try:
@@ -1801,7 +2173,7 @@ Make your decision and include the JSON at the very end of your response."""
                                 "code_execution",
                                 {"code_parts_count": len(code_parts)},
                                 result="code_executed",
-                                backend_name="gemini"
+                                backend_name="gemini",
                             )
                         except Exception:
                             pass
@@ -1814,14 +2186,32 @@ Make your decision and include the JSON at the very end of your response."""
                         for part in code_parts:
                             if part.startswith("Code: "):
                                 code_content = part[6:]  # Remove "Code: " prefix
-                                log_stream_chunk("backend.gemini", "code_execution_result", {"code_parts": len(code_parts), "execution_successful": True, "snippet": code_content}, agent_id)
+                                log_stream_chunk(
+                                    "backend.gemini",
+                                    "code_execution_result",
+                                    {
+                                        "code_parts": len(code_parts),
+                                        "execution_successful": True,
+                                        "snippet": code_content,
+                                    },
+                                    agent_id,
+                                )
                                 yield StreamChunk(
                                     type="content",
                                     content=f"💻 [Code Executed]\n```python\n{code_content}\n```\n",
                                 )
                             elif part.startswith("Result: "):
                                 result_content = part[8:]  # Remove "Result: " prefix
-                                log_stream_chunk("backend.gemini", "code_execution_result", {"code_parts": len(code_parts), "execution_successful": True, "result": result_content}, agent_id)
+                                log_stream_chunk(
+                                    "backend.gemini",
+                                    "code_execution_result",
+                                    {
+                                        "code_parts": len(code_parts),
+                                        "execution_successful": True,
+                                        "result": result_content,
+                                    },
+                                    agent_id,
+                                )
                                 yield StreamChunk(
                                     type="content",
                                     content=f"📊 [Result] {result_content}\n",
@@ -1837,7 +2227,10 @@ Make your decision and include the JSON at the very end of your response."""
                     "tool_calls_yielded",
                     {
                         "tool_count": len(tool_calls_detected),
-                        "tool_names": [tc.get("function", {}).get("name") for tc in tool_calls_detected],
+                        "tool_names": [
+                            tc.get("function", {}).get("name")
+                            for tc in tool_calls_detected
+                        ],
                     },
                     agent_id,
                 )
@@ -1852,7 +2245,10 @@ Make your decision and include the JSON at the very end of your response."""
             log_stream_chunk(
                 "backend.gemini",
                 "complete_message",
-                {"content_length": len(content.strip()), "has_tool_calls": bool(tool_calls_detected)},
+                {
+                    "content_length": len(content.strip()),
+                    "has_tool_calls": bool(tool_calls_detected),
+                },
                 agent_id,
             )
             yield StreamChunk(
@@ -1864,7 +2260,12 @@ Make your decision and include the JSON at the very end of your response."""
         except Exception as e:
             error_msg = f"Gemini API error: {e}"
             # Enhanced error logging with structured details
-            log_stream_chunk("backend.gemini", "stream_error", {"error_type": type(e).__name__, "error_message": str(e)}, agent_id)
+            log_stream_chunk(
+                "backend.gemini",
+                "stream_error",
+                {"error_type": type(e).__name__, "error_message": str(e)},
+                agent_id,
+            )
             yield StreamChunk(type="error", error=error_msg)
         finally:
             # Cleanup resources
@@ -1877,13 +2278,13 @@ Make your decision and include the JSON at the very end of your response."""
                     "gemini",
                     "MCP cleanup failed",
                     {"error": str(e)},
-                    agent_id=self.agent_id
+                    agent_id=self.agent_id,
                 )
 
     def get_provider_name(self) -> str:
         """Get the provider name."""
         return "Gemini"
-    
+
     def get_filesystem_support(self) -> FilesystemSupport:
         """Gemini supports filesystem through MCP servers."""
         return FilesystemSupport.MCP
@@ -1933,11 +2334,11 @@ Make your decision and include the JSON at the very end of your response."""
     def get_mcp_results(self) -> Dict[str, Any]:
         """
         Get all captured MCP tool calls and responses.
-        
+
         Returns:
             Dict containing:
             - calls: List of all MCP tool calls
-            - responses: List of all MCP tool responses  
+            - responses: List of all MCP tool responses
             - pairs: List of matched call-response pairs
             - summary: Statistical summary of interactions
         """
@@ -1945,31 +2346,31 @@ Make your decision and include the JSON at the very end of your response."""
             "calls": self.mcp_extractor.mcp_calls,
             "responses": self.mcp_extractor.mcp_responses,
             "pairs": self.mcp_extractor.call_response_pairs,
-            "summary": self.mcp_extractor.get_summary()
+            "summary": self.mcp_extractor.get_summary(),
         }
-    
+
     def get_mcp_paired_results(self) -> List[Dict[str, Any]]:
         """
         Get only the paired MCP tool calls and responses.
-        
+
         Returns:
             List of dictionaries containing matched call-response pairs
         """
         return self.mcp_extractor.call_response_pairs
-    
+
     def get_mcp_summary(self) -> Dict[str, Any]:
         """
         Get a summary of MCP tool interactions.
-        
+
         Returns:
             Dictionary with statistics about MCP tool usage
         """
         return self.mcp_extractor.get_summary()
-    
+
     def clear_mcp_results(self):
         """Clear all stored MCP interaction data."""
         self.mcp_extractor.clear()
-    
+
     def reset_tool_usage(self):
         """Reset tool usage tracking."""
         self.search_count = 0
@@ -1988,7 +2389,9 @@ Make your decision and include the JSON at the very end of your response."""
         if self._mcp_client:
             try:
                 await self._mcp_client.disconnect()
-                log_backend_activity("gemini", "MCP client disconnected", {}, agent_id=self.agent_id)
+                log_backend_activity(
+                    "gemini", "MCP client disconnected", {}, agent_id=self.agent_id
+                )
             except (
                 MCPConnectionError,
                 MCPTimeoutError,
@@ -2003,50 +2406,72 @@ Make your decision and include the JSON at the very end of your response."""
 
     async def _cleanup_resources(self, stream, client):
         """Cleanup google-genai resources to avoid unclosed aiohttp sessions."""
-        # Close stream 
+        # Close stream
         try:
             if stream is not None:
-                close_fn = getattr(stream, 'aclose', None) or getattr(stream, 'close', None)
+                close_fn = getattr(stream, "aclose", None) or getattr(
+                    stream, "close", None
+                )
                 if close_fn is not None:
                     maybe = close_fn()
-                    if hasattr(maybe, '__await__'):
+                    if hasattr(maybe, "__await__"):
                         await maybe
         except Exception as e:
-            log_backend_activity("gemini", "Stream cleanup failed", {"error": str(e)}, agent_id=self.agent_id)
+            log_backend_activity(
+                "gemini",
+                "Stream cleanup failed",
+                {"error": str(e)},
+                agent_id=self.agent_id,
+            )
 
         # Close internal async transport if exposed
         try:
-            if client is not None and hasattr(client, 'aio') and client.aio is not None:
+            if client is not None and hasattr(client, "aio") and client.aio is not None:
                 aio_obj = client.aio
-                for method_name in ('close', 'stop'):
+                for method_name in ("close", "stop"):
                     method = getattr(aio_obj, method_name, None)
                     if method:
                         maybe = method()
-                        if hasattr(maybe, '__await__'):
+                        if hasattr(maybe, "__await__"):
                             await maybe
                         break
         except Exception as e:
-            log_backend_activity("gemini", "Client AIO cleanup failed", {"error": str(e)}, agent_id=self.agent_id)
+            log_backend_activity(
+                "gemini",
+                "Client AIO cleanup failed",
+                {"error": str(e)},
+                agent_id=self.agent_id,
+            )
 
         # Close client
         try:
             if client is not None:
-                for method_name in ('aclose', 'close'):
+                for method_name in ("aclose", "close"):
                     method = getattr(client, method_name, None)
                     if method:
                         maybe = method()
-                        if hasattr(maybe, '__await__'):
+                        if hasattr(maybe, "__await__"):
                             await maybe
                         break
         except Exception as e:
-            log_backend_activity("gemini", "Client cleanup failed", {"error": str(e)}, agent_id=self.agent_id)
+            log_backend_activity(
+                "gemini",
+                "Client cleanup failed",
+                {"error": str(e)},
+                agent_id=self.agent_id,
+            )
 
     async def __aenter__(self) -> "GeminiBackend":
         """Async context manager entry."""
         try:
             await self._setup_mcp_tools(agent_id=self.agent_id)
         except Exception as e:
-            log_backend_activity("gemini", "MCP setup failed during context entry", {"error": str(e)}, agent_id=self.agent_id)
+            log_backend_activity(
+                "gemini",
+                "MCP setup failed during context entry",
+                {"error": str(e)},
+                agent_id=self.agent_id,
+            )
         return self
 
     async def __aexit__(
@@ -2061,4 +2486,9 @@ Make your decision and include the JSON at the very end of your response."""
         try:
             await self.cleanup_mcp()
         except Exception as e:
-            log_backend_activity("gemini", "Backend cleanup error", {"error": str(e)}, agent_id=self.agent_id)
+            log_backend_activity(
+                "gemini",
+                "Backend cleanup error",
+                {"error": str(e)},
+                agent_id=self.agent_id,
+            )

@@ -873,18 +873,25 @@ class ChatCompletionsBackend(LLMBackend):
                         # Plain text content
                         if getattr(delta, "content", None):
                             # handle reasoning first
-                            reasoning_chunk = self._handle_reasoning_transition(log_prefix, agent_id)
-                            if reasoning_chunk:
-                                yield reasoning_chunk
+                            reasoning_active_key = f"_reasoning_active"
+                            if hasattr(self, reasoning_active_key):
+                                if getattr(self, reasoning_active_key) == True:
+                                    setattr(self, reasoning_active_key, False)
+                                    log_stream_chunk(
+                                        log_prefix, "reasoning_done", "", agent_id
+                                    )
+                                    yield StreamChunk(type="reasoning_done", content="")
                             content_chunk = delta.content
                             content += content_chunk
                             log_backend_agent_message(
                                 agent_id or "default",
                                 "RECV",
                                 {"content": content_chunk},
-                                backend_name=provider_name
+                                backend_name=provider_name,
                             )
-                            log_stream_chunk(log_prefix, "content", content_chunk, agent_id)
+                            log_stream_chunk(
+                                log_prefix, "content", content_chunk, agent_id
+                            )
                             yield StreamChunk(type="content", content=content_chunk)
 
                         # Provider-specific reasoning/thinking streams (non-standard OpenAI fields)
@@ -893,7 +900,9 @@ class ChatCompletionsBackend(LLMBackend):
                             setattr(self, reasoning_active_key, True)
                             thinking_delta = getattr(delta, "reasoning_content")
                             if thinking_delta:
-                                log_stream_chunk(log_prefix, "reasoning", thinking_delta, agent_id)
+                                log_stream_chunk(
+                                    log_prefix, "reasoning", thinking_delta, agent_id
+                                )
                                 yield StreamChunk(
                                     type="reasoning",
                                     content=thinking_delta,
@@ -971,7 +980,9 @@ class ChatCompletionsBackend(LLMBackend):
                                     }
                                 )
 
-                            log_stream_chunk(log_prefix, "tool_calls", final_tool_calls, agent_id)
+                            log_stream_chunk(
+                                log_prefix, "tool_calls", final_tool_calls, agent_id
+                            )
                             yield StreamChunk(
                                 type="tool_calls", tool_calls=final_tool_calls
                             )
@@ -993,7 +1004,9 @@ class ChatCompletionsBackend(LLMBackend):
                         elif choice.finish_reason in ["stop", "length"]:
                             if search_sources_used > 0:
                                 search_complete_msg = f"\n✅ [Live Search Complete] Used {search_sources_used} sources\n"
-                                log_stream_chunk(log_prefix, "content", search_complete_msg, agent_id)
+                                log_stream_chunk(
+                                    log_prefix, "content", search_complete_msg, agent_id
+                                )
                                 yield StreamChunk(
                                     type="content",
                                     content=search_complete_msg,
@@ -1005,7 +1018,9 @@ class ChatCompletionsBackend(LLMBackend):
                                     citation_text = "\n📚 **Citations:**\n"
                                     for i, citation in enumerate(chunk.citations, 1):
                                         citation_text += f"{i}. {citation}\n"
-                                    log_stream_chunk(log_prefix, "content", citation_text, agent_id)
+                                    log_stream_chunk(
+                                        log_prefix, "content", citation_text, agent_id
+                                    )
                                     yield StreamChunk(
                                         type="content", content=citation_text
                                     )
@@ -1029,7 +1044,9 @@ class ChatCompletionsBackend(LLMBackend):
                         search_sources_used = chunk.usage.num_sources_used
                         if enable_web_search:
                             search_msg = f"\n📊 [Live Search] Using {search_sources_used} sources for real-time data\n"
-                            log_stream_chunk(log_prefix, "content", search_msg, agent_id)
+                            log_stream_chunk(
+                                log_prefix, "content", search_msg, agent_id
+                            )
                             yield StreamChunk(
                                 type="content",
                                 content=search_msg,
@@ -1038,9 +1055,7 @@ class ChatCompletionsBackend(LLMBackend):
             except Exception as chunk_error:
                 error_msg = f"Chunk processing error: {chunk_error}"
                 log_stream_chunk(log_prefix, "error", error_msg, agent_id)
-                yield StreamChunk(
-                    type="error", error=error_msg
-                )
+                yield StreamChunk(type="error", error=error_msg)
                 continue
 
         # Fallback in case stream ends without finish_reason
@@ -1077,15 +1092,15 @@ class ChatCompletionsBackend(LLMBackend):
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using OpenAI-compatible Chat Completions API with conditional MCP support."""
-        # Use instance agent_id for logging
-        agent_id = self.agent_id
+        """Stream response using OpenAI-compatible Chat Completions API."""
+        # Extract agent_id for logging
+        agent_id = kwargs.get("agent_id", None)
 
         log_backend_activity(
             self.get_provider_name(),
             "Starting stream_with_tools",
             {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id
+            agent_id=agent_id,
         )
 
         # Check if MCP is configured

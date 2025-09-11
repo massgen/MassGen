@@ -21,7 +21,11 @@ import os
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .chat_completions import ChatCompletionsBackend
 from .base import StreamChunk
-from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
+from ..logger_config import (
+    log_backend_activity,
+    log_backend_agent_message,
+    log_stream_chunk,
+)
 
 
 class GrokBackend(ChatCompletionsBackend):
@@ -37,24 +41,24 @@ class GrokBackend(ChatCompletionsBackend):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using xAI's OpenAI-compatible API."""
         # Extract agent_id for logging
-        agent_id = kwargs.get('agent_id', None)
-        
+        agent_id = kwargs.get("agent_id", None)
+
         log_backend_activity(
             self.get_provider_name(),
             "Starting stream_with_tools",
             {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id
+            agent_id=agent_id,
         )
-        
+
         # Convert messages for Grok API compatibility
         grok_messages = self._convert_messages_for_grok(messages)
-        
+
         # Log messages being sent
         log_backend_agent_message(
             agent_id or "default",
             "SEND",
             {"messages": grok_messages, "tools": len(tools) if tools else 0},
-            backend_name=self.get_provider_name()
+            backend_name=self.get_provider_name(),
         )
 
         try:
@@ -87,7 +91,7 @@ class GrokBackend(ChatCompletionsBackend):
                 "agent_id",
                 "session_id",
                 "cwd",
-                "agent_temporary_workspace" 
+                "agent_temporary_workspace",
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
@@ -129,7 +133,7 @@ class GrokBackend(ChatCompletionsBackend):
         finally:
             # Ensure the underlying HTTP client is properly closed to avoid event loop issues
             try:
-                if hasattr(client, 'aclose'):
+                if hasattr(client, "aclose"):
                     await client.aclose()
             except Exception:
                 # Suppress cleanup errors so we don't mask primary exceptions
