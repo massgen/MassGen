@@ -43,7 +43,7 @@ def build_presentation(presentation_name):
             "Evolution - v0.0.1 to v0.0.16",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
-            "Research & Learning Applications",
+            "Applications",
             "Getting Started - 60 Seconds",
             "Vision - Exponential Intelligence",
             "Call to Action - Join Revolution"
@@ -95,7 +95,7 @@ def build_presentation(presentation_name):
             "Evolution - v0.0.1 to v0.0.16",
             "Early Adopters - Community Growth",
             "Demo - Live Examples",
-            "Research & Learning Applications",
+            "Applications",
             "Getting Started - 60 Seconds",
             "Vision - Exponential Intelligence",
             "Call to Action - Join Revolution"
@@ -125,7 +125,7 @@ def build_presentation(presentation_name):
             "slide-evolution-from-v001",
             "slide-early-adopters",
             "slide-live-demo-examples",
-            "slide-research-learning-applications",  # Generic research
+            "slide-applications",  # Generic applications
             "slide-getting-started",
             "slide-roadmap-vision",
             "slide-call-to-action-m2l"
@@ -177,7 +177,7 @@ def build_presentation(presentation_name):
             "slide-evolution-from-v001",
             "slide-early-adopters",
             "slide-live-demo-examples",
-            "slide-research-learning-applications",  # Generic research
+            "slide-applications",  # Generic applications
             "slide-getting-started",
             "slide-roadmap-vision",
             "slide-call-to-action-aibuilders"
