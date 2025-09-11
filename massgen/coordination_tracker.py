@@ -389,11 +389,28 @@ class CoordinationTracker:
         """Record when final agent is selected."""
         print(f"DEBUG: set_final_agent called with agent_id={agent_id}")
         self.final_winner = agent_id
+        
+        # Convert agent IDs to their answer labels
+        answer_labels = []
+        answers_with_labels = {}
+        for aid, answer_content in all_answers.items():
+            if aid in self.answers_by_agent and self.answers_by_agent[aid]:
+                # Get the latest non-final answer label for this agent
+                latest_answer = None
+                for answer in self.answers_by_agent[aid]:
+                    if not answer.is_final:
+                        latest_answer = answer
+                if latest_answer:
+                    answer_labels.append(latest_answer.label)
+                    answers_with_labels[latest_answer.label] = answer_content
+        
         self.final_context = {
             "vote_summary": vote_summary,
-            "all_answers": list(all_answers.keys()),
-            "answers_for_context": all_answers  # Full answers provided to final agent
+            "all_answers": answer_labels,  # Now contains labels like ["agent1.1", "agent2.1"]
+            "answers_for_context": answers_with_labels  # Now keyed by labels
         }
+        # # increment final agent's round to a special "final" round
+        # self.agent_rounds[agent_id] += 1
         # log this
         print(f"DEBUG: setting final agent {agent_id} with context: {self.final_context}")
         print(f"DEBUG: events list before adding final_agent_selected: {len(self.events)} events")
@@ -449,10 +466,15 @@ class CoordinationTracker:
 
     def start_final_round(self, selected_agent_id: str):
         """Start the final presentation round."""
+        print(f"DEBUG: start_final_round called for {selected_agent_id}")
+        print(f"DEBUG: agent_rounds before increment: {self.agent_rounds}")
         self.is_final_round = True
-        # Increment the selected agent to a special "final" round
-        self.agent_rounds[selected_agent_id] += 1
-        final_round = self.agent_rounds[selected_agent_id]
+        # Set the final round to be max round across all agents + 1
+        max_round = self.get_max_round()
+        final_round = max_round + 1
+        self.agent_rounds[selected_agent_id] = final_round
+        print(f"DEBUG: agent_rounds after setting final round: {self.agent_rounds}")
+        print(f"DEBUG: final_round = {final_round}")
         self.final_winner = selected_agent_id
         
         # Mark winner as starting final presentation
