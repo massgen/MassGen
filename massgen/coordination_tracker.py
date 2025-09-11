@@ -87,8 +87,12 @@ class CoordinationTracker:
         
         # Coordination iteration tracking
         self.current_iteration: int = 0
-        self.current_round: int = 0  # Increments when restart triggered (new answer set)
+        self.agent_rounds: Dict[str, int] = {}  # Per-agent round tracking - increments when restart completed
+        self.agent_round_context: Dict[str, Dict[int, List[str]]] = {}  # What context each agent had in each round
         self.iteration_available_labels: List[str] = []  # Frozen snapshot of available answer labels for current iteration
+        
+        # Restart tracking - track pending restarts per agent
+        self.pending_agent_restarts: Dict[str, bool] = {}  # agent_id -> is restart pending
         
         # Session info
         self.start_time: Optional[float] = None
@@ -99,6 +103,11 @@ class CoordinationTracker:
         self.final_context: Optional[Dict[str, Any]] = None  # Context provided to final agent
         self.is_final_round: bool = False  # Track if we're in the final presentation round
         self.user_prompt: Optional[str] = None  # Store the initial user prompt
+        
+        # Canonical ID/Label mappings - coordination tracker is the single source of truth
+        self.agent_id_to_anon: Dict[str, str] = {}  # gpt5nano_1 -> agent1
+        self.anon_to_agent_id: Dict[str, str] = {}  # agent1 -> gpt5nano_1
+        self.agent_context_labels: Dict[str, List[str]] = {}  # Track what labels each agent can see
         
         # Answer formatting settings
         self.preview_length = 150  # Default preview length for answers
@@ -113,7 +122,49 @@ class CoordinationTracker:
         self.answers_by_agent = {aid: [] for aid in agent_ids}
         self.user_prompt = user_prompt
         
+        # Initialize per-agent round tracking
+        self.agent_rounds = {aid: 0 for aid in agent_ids}
+        self.agent_round_context = {aid: {0: []} for aid in agent_ids}  # Each agent starts in round 0 with empty context
+        self.pending_agent_restarts = {aid: False for aid in agent_ids}
+        
+        # Set up canonical mappings - coordination tracker is single source of truth
+        self.agent_id_to_anon = {aid: f"agent{i+1}" for i, aid in enumerate(agent_ids)}
+        self.anon_to_agent_id = {v: k for k, v in self.agent_id_to_anon.items()}
+        self.agent_context_labels = {aid: [] for aid in agent_ids}
+        
         self._add_event("session_start", None, f"Started with agents: {agent_ids}")
+
+    # Canonical mapping utility methods
+    def get_anonymous_id(self, agent_id: str) -> str:
+        """Get anonymous ID (agent1, agent2) for a full agent ID."""
+        return self.agent_id_to_anon.get(agent_id, agent_id)
+    
+    def get_full_agent_id(self, anon_id: str) -> str:
+        """Get full agent ID for an anonymous ID."""
+        return self.anon_to_agent_id.get(anon_id, anon_id)
+    
+    def get_agent_context_labels(self, agent_id: str) -> List[str]:
+        """Get the answer labels this agent can currently see."""
+        return self.agent_context_labels.get(agent_id, []).copy()
+    
+    def get_latest_answer_label(self, agent_id: str) -> Optional[str]:
+        """Get the latest answer label for an agent."""
+        if agent_id in self.answers_by_agent and self.answers_by_agent[agent_id]:
+            return self.answers_by_agent[agent_id][-1].label
+        return None
+    
+    def get_agent_round(self, agent_id: str) -> int:
+        """Get the current round for a specific agent."""
+        return self.agent_rounds.get(agent_id, 0)
+    
+    def get_max_round(self) -> int:
+        """Get the highest round number across all agents (for backward compatibility)."""
+        return max(self.agent_rounds.values()) if self.agent_rounds else 0
+    
+    @property
+    def current_round(self) -> int:
+        """Backward compatibility property that returns the maximum round across all agents."""
+        return self.get_max_round()
 
     def start_new_iteration(self):
         """Start a new coordination iteration."""
@@ -129,6 +180,18 @@ class CoordinationTracker:
         self._add_event("iteration_start", None, f"Starting coordination iteration {self.current_iteration}", 
                        {"iteration": self.current_iteration, "available_answers": self.iteration_available_labels.copy()})
 
+    def end_iteration(self, reason: str, details: Dict[str, Any] = None):
+        """Record how an iteration ended."""
+        context = {
+            "iteration": self.current_iteration,
+            "end_reason": reason,
+            "available_answers": self.iteration_available_labels.copy()
+        }
+        if details:
+            context.update(details)
+            
+        self._add_event("iteration_end", None, f"Iteration {self.current_iteration} ended: {reason}", context)
+
     def set_user_prompt(self, prompt: str):
         """Set or update the user prompt."""
         self.user_prompt = prompt
@@ -137,14 +200,33 @@ class CoordinationTracker:
         """Record when an agent changes status."""
         self._add_event("status_change", agent_id, f"Changed to status: {new_status.value}")
 
-    def track_agent_context(self, agent_id: str, answers: Dict[str, str], conversation_history: Optional[Dict[str, Any]] = None, agent_full_context: Optional[str] = None):
+    def track_agent_context(self, agent_id: str, answers: Dict[str, str], conversation_history: Optional[Dict[str, Any]] = None, agent_full_context: Optional[str] = None, snapshot_dir: Optional[str] = None):
         """Record when an agent receives context.
 
-        TODO: Saving full context, want to find a structured way to save this. This is crucial so we can reconstruct what the agent saw. How about we save this in the timestamp'd snapshot folder for the agent? Recall that for each decision (action, vote) the orchestrator creates a timestamped folder for the agent. We can save the full context there as context.txt. Then, we just need to track in the snapshot_mappings.json file that this context.txt exists for that action/vote. And it should be apparent that the context.txt is the context used for that action/vote.
-
+        Args:
+            agent_id: The agent receiving context
+            answers: Dict of agent_id -> answer content
+            conversation_history: Optional conversation history
+            agent_full_context: Optional full context string/dict to save
+            snapshot_dir: Optional directory path to save context.txt
         """
+        # Convert full agent IDs to their corresponding answer labels using canonical mappings
+        answer_labels = []
+        for answering_agent_id in answers.keys():
+            if answering_agent_id in self.answers_by_agent and self.answers_by_agent[answering_agent_id]:
+                # Get the most recent answer's label
+                latest_answer = self.answers_by_agent[answering_agent_id][-1]
+                answer_labels.append(latest_answer.label)
+        
+        # Update this agent's context labels using canonical mapping
+        self.agent_context_labels[agent_id] = answer_labels.copy()
+        
+        # Use anonymous agent IDs for the event context
+        anon_answering_agents = [self.agent_id_to_anon.get(aid, aid) for aid in answers.keys()]
+        
         context = {
-            "available_answers": list(answers.keys()),
+            "available_answers": anon_answering_agents,  # Anonymous IDs for backward compat
+            "available_answer_labels": answer_labels.copy(),  # Store actual labels in event
             "answer_count": len(answers),
             "has_conversation_history": bool(conversation_history)
         }
@@ -152,33 +234,51 @@ class CoordinationTracker:
                        f"Received context with {len(answers)} answers", context)
 
     def track_restart_signal(self, triggering_agent: str, agents_restarted: List[str]):
-        """Record when a restart is triggered."""
-        # Log restart event with current round first (before incrementing)
-        context = {"affected_agents": agents_restarted, "new_round": self.current_round + 1}
+        """Record when a restart is triggered - but don't increment rounds yet."""
+        # Mark affected agents as having pending restarts
+        for agent_id in agents_restarted:
+            if True:  # agent_id != triggering_agent:  # Triggering agent doesn't restart themselves
+                self.pending_agent_restarts[agent_id] = True
+        
+        # Log restart event (no round increment yet)
+        context = {"affected_agents": agents_restarted, "triggering_agent": triggering_agent}
         self._add_event("restart_triggered", triggering_agent, 
-                       f"Triggered restart affecting {len(agents_restarted)} agents - Starting round {self.current_round + 1}", context)
-        
-        # Now increment round since we have a new answer triggering restart
-        self.current_round += 1
+                       f"Triggered restart affecting {len(agents_restarted)} agents", context)
 
-        # We don't do the below approach as "done" may only have 1 event and that is the event with NEW_ANSWER that causes the restart. So, if we try to track pending restarts we need some logic to track what else is in done versus not, which causes extra complexity, which is unnecessary bc we know a restart just ends all current work and starts fresh.
-        # Track which agents need to restart and ensure that all do indeed restart before incrementing round
-        # self.pending_restarts: Set[str] = set(agents_restarted)  #  - {triggering_agent}  # bc the triggering agent won't restart
+    def complete_agent_restart(self, agent_id: str):
+        """Record when an agent has completed its restart and increment their round.
         
-        # Below should be done already.
-        # # Mark all restarting agents as RESTARTING status
-        # for agent_id in agents_restarted:
-        #     if agent_id != triggering_agent:  # Triggering agent already has ANSWERED status
-        #         self.change_status(agent_id, AgentStatus.RESTARTING)
-
-    # def agent_restarted(self, agent_id: str):
-    #     """Record when an agent has completed its restart. If all have restarted, increment round."""
-    #     self.change_status(agent_id, AgentStatus.RESTARTING)
-    #     self.pending_restarts.remove(agent_id)
-    #     if not self.pending_restarts:
-    #         # All agents have restarted - increment round
-    #         self.current_round += 1
-    #         self._add_event("restart_complete", None, f"All agents restarted - Now in round {self.current_round}")
+        Args:
+            agent_id: The agent that completed restart
+        """
+        print(f"DEBUG: complete_agent_restart called for {agent_id}")
+        print(f"DEBUG: pending_agent_restarts = {self.pending_agent_restarts}")
+        print(f"DEBUG: agent_rounds before = {self.agent_rounds}")
+        
+        if not self.pending_agent_restarts.get(agent_id, False):
+            # This agent wasn't pending a restart, nothing to do
+            print(f"DEBUG: {agent_id} was not pending restart, skipping")
+            return
+            
+        # Mark restart as completed
+        self.pending_agent_restarts[agent_id] = False
+        
+        # Increment this agent's round
+        self.agent_rounds[agent_id] += 1
+        new_round = self.agent_rounds[agent_id]
+        
+        print(f"DEBUG: {agent_id} round incremented to {new_round}")
+        
+        # Store the context this agent will work with in their new round
+        if agent_id not in self.agent_round_context:
+            self.agent_round_context[agent_id] = {}
+        
+        # Log restart completion
+        context = {
+            "agent_round": new_round,
+        }
+        self._add_event("restart_completed", agent_id, 
+                       f"Completed restart - now in round {new_round}", context)
 
     def add_agent_answer(self, agent_id: str, answer: str, snapshot_timestamp: Optional[str] = None):
         """Record when an agent provides a new answer.
@@ -214,7 +314,7 @@ class CoordinationTracker:
                 "agent_id": agent_id,
                 "timestamp": snapshot_timestamp,
                 "iteration": self.current_iteration,
-                "round": self.current_round,
+                "round": self.get_agent_round(agent_id),
                 "path": f"{agent_id}/{snapshot_timestamp}/answer.txt"
             }
         
@@ -272,7 +372,7 @@ class CoordinationTracker:
                 "voted_for": voted_for,
                 "voted_for_label": voted_for_label,
                 "iteration": self.current_iteration,
-                "round": self.current_round,
+                "round": self.get_agent_round(agent_id),
                 "path": f"{agent_id}/{snapshot_timestamp}/vote.json"
             }
         
@@ -293,6 +393,8 @@ class CoordinationTracker:
             "all_answers": list(all_answers.keys()),
             "answers_for_context": all_answers  # Full answers provided to final agent
         }
+        # log this
+        print(f"DEBUG: setting final agent {agent_id} with context: {self.final_context}")
         self._add_event("final_agent_selected", agent_id, "Selected as final presenter", self.final_context)
 
     def set_final_answer(self, agent_id: str, final_answer: str, snapshot_timestamp: Optional[str] = None):
@@ -328,7 +430,7 @@ class CoordinationTracker:
                 "agent_id": agent_id,
                 "timestamp": snapshot_timestamp,
                 "iteration": self.current_iteration,
-                "round": self.current_round,
+                "round": self.get_agent_round(agent_id),
                 "path": f"final/{agent_id}/answer.txt" if snapshot_timestamp == "final" else f"{agent_id}/{snapshot_timestamp}/answer.txt"
             }
         
@@ -339,16 +441,17 @@ class CoordinationTracker:
     def start_final_round(self, selected_agent_id: str):
         """Start the final presentation round."""
         self.is_final_round = True
-        # Increment to a special "final" round
-        self.current_round += 1
+        # Increment the selected agent to a special "final" round
+        self.agent_rounds[selected_agent_id] += 1
+        final_round = self.agent_rounds[selected_agent_id]
         self.final_winner = selected_agent_id
         
         # Mark winner as starting final presentation
         self.change_status(selected_agent_id, AgentStatus.STREAMING)
         
         self._add_event("final_round_start", selected_agent_id, 
-                       f"Starting final presentation round {self.current_round}", 
-                       {"round_type": "final"})
+                       f"Starting final presentation round {final_round}", 
+                       {"round_type": "final", "final_round": final_round})
 
     def track_agent_action(self, agent_id: str, action_type, details: str = ""):
         """Track any agent action using ActionType enum."""
@@ -371,7 +474,12 @@ class CoordinationTracker:
             context = {}
         context = context.copy()  # Don't modify the original
         context["iteration"] = self.current_iteration
-        context["round"] = self.current_round
+        
+        # Include agent-specific round if agent_id is provided, otherwise use max round for backward compatibility
+        if agent_id:
+            context["round"] = self.get_agent_round(agent_id)
+        else:
+            context["round"] = self.get_max_round()
         
         event = CoordinationEvent(
             timestamp=time.time(),
@@ -439,7 +547,7 @@ class CoordinationTracker:
             "agent_count": len(self.agent_ids)
         }
     
-    def save_coordination_logs(self, log_dir, format_style="both"):
+    def save_coordination_logs(self, log_dir):
         """Save all coordination data and create timeline visualization.
         
         Args:
@@ -462,56 +570,47 @@ class CoordinationTracker:
                 with open(snapshot_mappings_file, 'w', encoding='utf-8') as f:
                     json.dump(self.snapshot_mappings, f, indent=2, default=str)
             
-            # Save all answers with labels
-            answers_file = log_dir / "answers.json"
-            with open(answers_file, 'w', encoding='utf-8') as f:
-                # Include both the dictionary and the detailed list
-                answers_data = {
-                    "all_answers": self.all_answers,  # label -> content mapping
-                    "by_agent": {
-                        agent_id: [
-                            {
-                                "label": answer.label,
-                                "content": answer.content,
-                                "timestamp": answer.timestamp,
-                                "is_final": answer.is_final
-                            } for answer in answers
-                        ] for agent_id, answers in self.answers_by_agent.items()
-                    }
-                }
-                json.dump(answers_data, f, indent=2, default=str)
+            # # Save all answers with labels
+            # answers_file = log_dir / "answers.json"
+            # with open(answers_file, 'w', encoding='utf-8') as f:
+            #     # Include both the dictionary and the detailed list
+            #     answers_data = {
+            #         "all_answers": self.all_answers,  # label -> content mapping
+            #         "by_agent": {
+            #             agent_id: [
+            #                 {
+            #                     "label": answer.label,
+            #                     "content": answer.content,
+            #                     "timestamp": answer.timestamp,
+            #                     "is_final": answer.is_final
+            #                 } for answer in answers
+            #             ] for agent_id, answers in self.answers_by_agent.items()
+            #         }
+            #     }
+            #     json.dump(answers_data, f, indent=2, default=str)
             
             # Individual answer files are now saved by orchestrator with proper timestamps
             # The snapshot_mappings.json file tracks the mapping from labels to filesystem paths
             
             # Save votes
-            if self.votes:
-                votes_file = log_dir / "votes.json"
-                with open(votes_file, 'w', encoding='utf-8') as f:
-                    votes_data = [
-                        {
-                            "voter_id": vote.voter_id,
-                            "voted_for": vote.voted_for,
-                            "voted_for_label": vote.voted_for_label,
-                            "voter_anon_id": vote.voter_anon_id,
-                            "reason": vote.reason,
-                            "timestamp": vote.timestamp,
-                            "available_answers": vote.available_answers
-                        } for vote in self.votes
-                    ]
-                    json.dump(votes_data, f, indent=2, default=str)
-            
-            # Create timeline visualization
-            self._create_timeline_file(log_dir)
-            
-            # Create simplified agent-grouped timeline
-            self._create_simplified_timeline_file(log_dir)
+            # if self.votes:
+            #     votes_file = log_dir / "votes.json"
+            #     with open(votes_file, 'w', encoding='utf-8') as f:
+            #         votes_data = [
+            #             {
+            #                 "voter_id": vote.voter_id,
+            #                 "voted_for": vote.voted_for,
+            #                 "voted_for_label": vote.voted_for_label,
+            #                 "voter_anon_id": vote.voter_anon_id,
+            #                 "reason": vote.reason,
+            #                 "timestamp": vote.timestamp,
+            #                 "available_answers": vote.available_answers
+            #             } for vote in self.votes
+            #         ]
+            #         json.dump(votes_data, f, indent=2, default=str)
             
             # Create round-based timeline based on format preference
-            if format_style in ["old", "both"]:
-                self._create_round_timeline_file_old(log_dir)
-            if format_style in ["new", "both"]:
-                self._create_round_timeline_file(log_dir)
+            self._create_round_timeline_file(log_dir)
             
             print(f"💾 Coordination logs saved to: {log_dir}")
             
@@ -764,7 +863,7 @@ class CoordinationTracker:
             # Summary stats
             summary = self.get_summary()
             f.write(f"Duration: {summary['duration']:.1f}s | ")
-            f.write(f"Rounds: {self.current_round + 1} | ")
+            f.write(f"Rounds: {self.get_max_round() + 1} | ")
             f.write(f"Winner: {summary['final_winner'] or 'None'}\n\n")
             
             # Generate rounds for table display
@@ -783,78 +882,178 @@ class CoordinationTracker:
             f.write("=" * 120 + "\n")
     
     def _generate_rounds_for_table(self) -> List[Dict[str, Any]]:
-        """Generate round steps from events for table visualization."""
+        """Generate round steps from events for table visualization.
+        
+        Instead of grouping by round numbers (which can be confusing with per-agent rounds),
+        create logical phases based on the chronological flow of events.
+        """
         rounds = []
         
         # Sort events by timestamp
         sorted_events = sorted(self.events, key=lambda e: e.timestamp)
         
-        # Group events by round
-        events_by_round = {}
+        # Create logical phases based on event sequence
+        phases = []
+        current_phase = {"events": [], "type": "answering", "round_num": 0}
+        
+        # Find key transition points to determine phases
         for event in sorted_events:
             if event.event_type in ["session_start", "session_end"]:
                 continue
-            round_num = event.context.get("round", 0) if event.context else 0
-            if round_num not in events_by_round:
-                events_by_round[round_num] = []
-            events_by_round[round_num].append(event)
+                
+            if event.event_type == "new_answer":
+                # Each new answer potentially starts a new phase
+                if current_phase["events"] and any(e.event_type == "new_answer" for e in current_phase["events"]):
+                    # Previous phase already had an answer, start new phase
+                    phases.append(current_phase)
+                    current_phase = {"events": [event], "type": "answering", "round_num": len(phases)}
+                else:
+                    # Add to current answering phase
+                    current_phase["events"].append(event)
+                    
+            elif event.event_type == "vote_cast":
+                # Voting events go in a separate voting phase
+                if current_phase["type"] != "voting":
+                    # Start new voting phase
+                    if current_phase["events"]:
+                        phases.append(current_phase)
+                    current_phase = {"events": [event], "type": "voting", "round_num": len(phases)}
+                else:
+                    # Add to current voting phase
+                    current_phase["events"].append(event)
+                    
+            elif event.event_type in ["final_round_start", "final_answer"]:
+                # Final events go in final phase
+                if current_phase["type"] != "final":
+                    if current_phase["events"]:
+                        phases.append(current_phase)
+                    current_phase = {"events": [event], "type": "final", "round_num": len(phases)}
+                else:
+                    current_phase["events"].append(event)
+            else:
+                # Other events (context_received, status_change, etc.) join current phase
+                current_phase["events"].append(event)
         
-        # Initialize context tracking across all rounds  
-        global_agent_context = {aid: [] for aid in self.agent_ids}
+        # Add the last phase
+        if current_phase["events"]:
+            phases.append(current_phase)
         
-        # Process each round
-        for round_num in sorted(events_by_round.keys()):
-            events = events_by_round[round_num]
+        # Track context history across rounds for each agent
+        agent_context_history = {aid: [] for aid in self.agent_ids}
+        
+        # Convert phases to display rounds  
+        for phase in phases:
+            round_num = phase["round_num"]
+            events = phase["events"]
+            phase_type = phase["type"]
             
             # Initialize round data
             round_data = {
                 "round": round_num,
                 "events": events,  # Store the events for this round
-                "agents": {aid: {"status": AgentStatus.ANSWERING.value.upper(), "context": global_agent_context[aid].copy(), "details": ""} for aid in self.agent_ids},
-                "is_final": False
+                "agents": {aid: {"status": AgentStatus.ANSWERING.value.upper(), "context": [], "details": ""} for aid in self.agent_ids},
+                "is_final": (phase_type == "final"),
+                "phase_type": phase_type
             }
             
             # Process events in this round
             main_event = None
             main_event_type = ""
             
-            # First pass: Find the main event that defines this round
-            new_answer_event = None
+            # First pass: Find all event types and context updates
+            new_answer_events = []  # Collect ALL new_answer events, not just the last one
             vote_events = []
             restart_event = None
             final_events = []
+            context_events = {}  # agent_id -> context_received event
             
             for event in events:
                 if event.event_type == "new_answer":
-                    new_answer_event = event
+                    new_answer_events.append(event)  # Collect all answers, don't overwrite
                 elif event.event_type == "vote_cast":
                     vote_events.append(event)
                 elif event.event_type == "restart_triggered":
                     restart_event = event
                 elif event.event_type in ["final_round_start", "final_answer"]:
                     final_events.append(event)
+                elif event.event_type == "context_received":
+                    # Track what context each agent received in this round
+                    context_events[event.agent_id] = event
+            
+            # Update agent contexts based on context_received events
+            # But ONLY if the agent is NOT providing a new answer in this same round
+            # (since context should show what they had BEFORE producing the answer)
+            for aid, ctx_event in context_events.items():
+                if ctx_event.context:
+                    # Check if this agent is also providing an answer in the same round
+                    agent_answering_in_round = any(event.agent_id == aid for event in new_answer_events)
+                    
+                    if not agent_answering_in_round:
+                        # Agent is not answering in this round, so show their current context
+                        if "available_answer_labels" in ctx_event.context:
+                            new_context = ctx_event.context["available_answer_labels"]
+                            round_data["agents"][aid]["context"] = new_context
+                            # Update context history for future rounds
+                            agent_context_history[aid] = new_context.copy()
+                        elif "available_answers" in ctx_event.context:
+                            # Fallback for older events that don't have labels
+                            new_context = ctx_event.context["available_answers"]
+                            round_data["agents"][aid]["context"] = new_context
+                            agent_context_history[aid] = new_context.copy()
+                    else:
+                        # Agent IS answering in this round, show context they had BEFORE this round
+                        round_data["agents"][aid]["context"] = agent_context_history[aid].copy()
+                        
+                        # Update their context history with new context for next round
+                        if "available_answer_labels" in ctx_event.context:
+                            agent_context_history[aid] = ctx_event.context["available_answer_labels"].copy()
+                        elif "available_answers" in ctx_event.context:
+                            agent_context_history[aid] = ctx_event.context["available_answers"].copy()
+            
+            # For agents without context_received events in this round, use their context history
+            for aid in self.agent_ids:
+                if aid not in context_events and aid in round_data["agents"]:
+                    round_data["agents"][aid]["context"] = agent_context_history[aid].copy()
             
             # Determine the main event for this round
-            if new_answer_event:
-                # This round shows the new answer
-                label = new_answer_event.context.get("label", "unknown") if new_answer_event.context else "unknown"
-                main_event_type = f"NEW ANSWER: {label}"
-                main_event = new_answer_event
-                
-                # Update answering agent
-                round_data["agents"][new_answer_event.agent_id] = {
-                    "status": f"NEW ANSWER: {label}",
-                    "context": global_agent_context[new_answer_event.agent_id].copy(),
-                    "details": f"Provided answer {label}"
-                }
-                
-                # Update global context for ALL agents (including the answering agent)
-                # They will see this answer in future rounds after restart
-                for aid in self.agent_ids:
-                    if label not in global_agent_context[aid]:
-                        global_agent_context[aid].append(label)
-                    if aid != new_answer_event.agent_id:
-                        round_data["agents"][aid]["details"] = "Waiting for coordination to continue..."
+            if new_answer_events:
+                # This round shows new answers - handle multiple answers in same round
+                if len(new_answer_events) == 1:
+                    # Single answer in this round
+                    answer_event = new_answer_events[0]
+                    label = answer_event.context.get("label", "unknown") if answer_event.context else "unknown"
+                    main_event_type = f"NEW ANSWER: {label}"
+                    main_event = answer_event
+                    
+                    # Update answering agent
+                    existing_context = round_data["agents"][answer_event.agent_id].get("context", [])
+                    round_data["agents"][answer_event.agent_id] = {
+                        "status": f"NEW ANSWER: {label}",
+                        "context": existing_context,
+                        "details": f"Provided answer {label}"
+                    }
+                    
+                    # Update other agents status
+                    for aid in self.agent_ids:
+                        if aid != answer_event.agent_id:
+                            round_data["agents"][aid]["details"] = "Waiting for coordination to continue..."
+                else:
+                    # Multiple answers in this round - show all of them
+                    answer_labels = []
+                    for answer_event in new_answer_events:
+                        label = answer_event.context.get("label", "unknown") if answer_event.context else "unknown"
+                        answer_labels.append(label)
+                        
+                        # Update each answering agent
+                        existing_context = round_data["agents"][answer_event.agent_id].get("context", [])
+                        round_data["agents"][answer_event.agent_id] = {
+                            "status": f"NEW ANSWER: {label}",
+                            "context": existing_context,
+                            "details": f"Provided answer {label}"
+                        }
+                    
+                    main_event_type = f"MULTIPLE ANSWERS: {', '.join(answer_labels)}"
+                    main_event = new_answer_events[0]  # Use first for reference
                 
                 # IMPORTANT: Check if this answer also triggered a restart in the same round
                 # if restart_event and restart_event.agent_id == new_answer_event.agent_id:
@@ -892,9 +1091,11 @@ class CoordinationTracker:
                 for vote_event in vote_events:
                     if vote_event.context:
                         voted_for_label = vote_event.context.get("voted_for_label", vote_event.context.get("voted_for", "unknown"))
+                        # Keep existing context from context_received event
+                        existing_context = round_data["agents"][vote_event.agent_id].get("context", [])
                         round_data["agents"][vote_event.agent_id] = {
                             "status": f"VOTE: {voted_for_label}",
-                            "context": global_agent_context[vote_event.agent_id].copy(),
+                            "context": existing_context,  # Use context from context_received event
                             "details": f"Selected: {voted_for_label}"
                         }
             
@@ -912,9 +1113,11 @@ class CoordinationTracker:
                     main_event = final_answer_event
                     
                     # Update final agent
+                    # Keep existing context from context_received event
+                    existing_context = round_data["agents"][final_answer_event.agent_id].get("context", [])
                     round_data["agents"][final_answer_event.agent_id] = {
                         "status": f"FINAL ANSWER: {label}",
-                        "context": global_agent_context[final_answer_event.agent_id].copy(),
+                        "context": existing_context,  # Use context from context_received event
                         "details": "Presented final answer"
                     }
                     
@@ -952,9 +1155,11 @@ class CoordinationTracker:
                 # Update all affected agents (not including the triggering agent)
                 for aid in affected:
                     if aid != restart_event.agent_id:  # Don't override triggering agent
+                        # Keep existing context from context_received event
+                        existing_context = round_data["agents"][aid].get("context", [])
                         round_data["agents"][aid] = {
                             "status": AgentStatus.RESTARTING.value.upper(),
-                            "context": global_agent_context[aid].copy(),
+                            "context": existing_context,  # Use context from context_received event
                             "details": "Previous work discarded, restarting with new context"
                         }
             
@@ -1013,8 +1218,9 @@ class CoordinationTracker:
                 agent_info = round_data["agents"].get(aid, {})
                 cell_lines = []
                 
-                # Main status line (no "Status:" label, just the status)
+                # Get status and context first
                 status = agent_info.get("status", "IDLE")
+                context = agent_info.get("context", [])
                 
                 # Format status: keep special statuses as-is, but make basic statuses lowercase with parentheses
                 basic_statuses = [
@@ -1032,20 +1238,20 @@ class CoordinationTracker:
                     # Keep special statuses like "NEW ANSWER: agent1.1" as-is
                     formatted_status = status
                 
+                # Add context FIRST (since it leads to the action)
+                if context:
+                    context_str = ", ".join(context)
+                    context_str = self.format_answer_preview(context_str, max_length=45)
+                    cell_lines.append(f"Context: [{context_str}]")
+                else:
+                    cell_lines.append("Context: []")
+                
+                # Then add the status/action
                 cell_lines.append(formatted_status)
                 
-                # Context-specific information based on status
+                # Add specific information based on status
                 if "NEW ANSWER:" in status:
-                    # Agent is providing an answer
-                    context = agent_info.get("context", [])
-                    if context:
-                        context_str = ", ".join(context)
-                        context_str = self.format_answer_preview(context_str, max_length=45)
-                        cell_lines.append(f"Context: [{context_str}]")
-                    else:
-                        cell_lines.append("Context: []")
-                    
-                    # Add answer preview
+                    # Agent is providing an answer - add answer preview
                     import re
                     match = re.search(r'(agent\d+\.\d+|agent\d+\.final)', status)
                     if match:
@@ -1056,42 +1262,26 @@ class CoordinationTracker:
                             cell_lines.append(f"Preview: {preview}")
                 
                 elif "VOTE:" in status:
-                    # Agent is voting
-                    # Find vote options from the voting event
-                    vote_options = []
+                    # Agent is voting - add vote reason and options
                     vote_reason = ""
+                    vote_options = []
                     for vote in self.votes:
                         if vote.voter_id == aid and vote.available_answers:
                             vote_options = vote.available_answers
                             vote_reason = vote.reason or ""
                             break
                     
+                    if vote_reason:
+                        vote_reason = self.format_answer_preview(vote_reason, max_length=45)
+                        cell_lines.append(f"Reason: {vote_reason}")
+                    
                     if vote_options:
                         options_str = ", ".join(vote_options)
                         options_str = self.format_answer_preview(options_str, max_length=45)
                         cell_lines.append(f"Options: [{options_str}]")
-                    
-                    if vote_reason:
-                        vote_reason = self.format_answer_preview(vote_reason, max_length=45)
-                        cell_lines.append(f"Reason: {vote_reason}")
                 
                 elif "FINAL ANSWER:" in status:
-                    # Agent is presenting final answer - use complete context from final_context if available
-                    if self.final_context and "answers_for_context" in self.final_context:
-                        # Use the complete context provided to the final agent
-                        context_answers = list(self.final_context["answers_for_context"].keys())
-                        context_str = ", ".join(context_answers)
-                        context_str = self.format_answer_preview(context_str, max_length=45)
-                        cell_lines.append(f"Context: [{context_str}]")
-                    else:
-                        # Fallback to agent_info context
-                        context = agent_info.get("context", [])
-                        if context:
-                            context_str = ", ".join(context)
-                            context_str = self.format_answer_preview(context_str, max_length=45)
-                            cell_lines.append(f"Context: [{context_str}]")
-                    
-                    # Add final answer preview
+                    # Agent is presenting final answer - add final answer preview
                     import re
                     match = re.search(r'(agent\d+\.\d+|agent\d+\.final)', status)
                     if match:
@@ -1102,27 +1292,12 @@ class CoordinationTracker:
                             cell_lines.append(f"Preview: {preview}")
                 
                 elif status == AgentStatus.RESTARTING.value.upper() or formatted_status == f"({AgentStatus.RESTARTING.value})":
-                    # Agent is restarting
-                    context = agent_info.get("context", [])
-                    if context:
-                        context_str = ", ".join(context)
-                        context_str = self.format_answer_preview(context_str, max_length=45)
-                        cell_lines.append(f"Context: [{context_str}]")
+                    # Agent is restarting - add restart info
                     cell_lines.append("Restarting with new context")
                 
                 elif status == "TERMINATED":
-                    # Agent is done (but status is already formatted as "(terminated)")
+                    # Agent is done - no additional info needed
                     pass
-                
-                else:
-                    # Default case (ANSWERING, IDLE, etc.)
-                    context = agent_info.get("context", [])
-                    if context:
-                        context_str = ", ".join(context)
-                        context_str = self.format_answer_preview(context_str, max_length=45)
-                        cell_lines.append(f"Context: [{context_str}]")
-                    else:
-                        cell_lines.append("Context: []")
                 
                 agent_cells.append(cell_lines)
             
@@ -1201,318 +1376,6 @@ class CoordinationTracker:
         # Table footer
         f.write("+" + "-" * (total_width - 1) + "+")
 
-    def _create_round_timeline_file_old(self, log_dir):
-        """Create a round-focused timeline with text-based display (original format)."""
-        round_file = log_dir / "coordination_rounds_old.txt"
-        
-        with open(round_file, 'w', encoding='utf-8') as f:
-            # Header
-            f.write("=" * 120 + "\n")
-            f.write("MASSGEN COORDINATION ROUNDS\n")
-            f.write("=" * 120 + "\n\n")
-            
-            # Description
-            f.write("DESCRIPTION:\n")
-            f.write("This shows coordination organized by rounds (stable answer set windows).\n")
-            f.write("A new round starts when any agent provides a new answer.\n\n")
-            
-            # Agent mapping
-            f.write("AGENT MAPPING:\n")
-            for i, agent_id in enumerate(self.agent_ids):
-                f.write(f"  Agent{i+1} = {agent_id}\n")
-            f.write("\n")
-            
-            # Summary stats
-            summary = self.get_summary()
-            f.write(f"Duration: {summary['duration']:.1f}s | ")
-            f.write(f"Rounds: {self.current_round + 1} | ")
-            f.write(f"Winner: {summary['final_winner'] or 'None'}\n\n")
-            
-            # Sort events by timestamp
-            sorted_events = sorted(self.events, key=lambda e: e.timestamp)
-            
-            # Group events by round
-            events_by_round = {}
-            for event in sorted_events:
-                if event.event_type in ["session_start", "session_end"]:
-                    continue
-                round_num = event.context.get("round", 0) if event.context else 0
-                if round_num not in events_by_round:
-                    events_by_round[round_num] = {
-                        "events": [],
-                        "iterations": set(),
-                        "start_time": None,
-                        "end_time": None,
-                        "answers": {},
-                        "votes": {},
-                        "trigger": None
-                    }
-                
-                round_data = events_by_round[round_num]
-                round_data["events"].append(event)
-                
-                # Track iteration numbers in this round
-                if event.context:
-                    round_data["iterations"].add(event.context.get("iteration", 0))
-                
-                # Track timing
-                if round_data["start_time"] is None:
-                    round_data["start_time"] = event.timestamp
-                round_data["end_time"] = event.timestamp
-                
-                # Track answers and votes
-                if event.event_type == "new_answer":
-                    label = event.context.get("label", "unknown") if event.context else "unknown"
-                    round_data["answers"][event.agent_id] = label
-                elif event.event_type == "vote_cast":
-                    if event.context:
-                        # Store the label for display
-                        voted_for_label = event.context.get("voted_for_label", event.context.get("voted_for", "unknown"))
-                        round_data["votes"][event.agent_id] = voted_for_label
-                elif event.event_type == "restart_triggered":
-                    # This triggers the next round - capture the transition info
-                    if event.context:
-                        next_round = event.context.get("new_round", round_num + 1)
-                        round_data["trigger"] = f"{self._get_agent_display_name(event.agent_id)} triggered restart → Round {next_round}"
-            
-            # Display rounds
-            for round_num in sorted(events_by_round.keys()):
-                round_data = events_by_round[round_num]
-                duration = round_data["end_time"] - round_data["start_time"] if round_data["start_time"] else 0
-                iteration_range = f"{min(round_data['iterations'])}-{max(round_data['iterations'])}" if round_data["iterations"] else "0"
-                
-                # Check if this is a final round
-                is_final_round = any(e.event_type == "final_round_start" for e in round_data["events"])
-                round_type = "FINAL ROUND" if is_final_round else f"ROUND {round_num}"
-                
-                f.write("=" * 80 + "\n")
-                f.write(f"{round_type}\n")
-                if is_final_round:
-                    f.write(f"Duration: {duration:.2f}s | Iterations: {iteration_range} | Events: {len(round_data['events'])}\n")
-                    f.write("Final presentation by selected winner\n")
-                else:
-                    f.write(f"Duration: {duration:.2f}s | Iterations: {iteration_range} | Events: {len(round_data['events'])}\n")
-                f.write("-" * 80 + "\n\n")
-                
-                # Key events in this round
-                f.write("KEY EVENTS:\n")
-                for event in round_data["events"]:
-                    # Only show important events
-                    if event.event_type in ["new_answer", "vote_cast", "restart_triggered", "agent_error", "agent_timeout", "final_round_start"]:
-                        agent_display = self._get_agent_display_name(event.agent_id) if event.agent_id else "System"
-                        timestamp_str = datetime.fromtimestamp(event.timestamp).strftime("%H:%M:%S")
-                        
-                        if event.event_type == "new_answer":
-                            label = event.context.get("label", "unknown") if event.context else "unknown"
-                            f.write(f"  [{timestamp_str}] {agent_display}: PROVIDED ANSWER ({label})\n")
-                        elif event.event_type == "vote_cast":
-                            if event.context:
-                                voted_for_label = event.context.get("voted_for_label", event.context.get("voted_for", "unknown"))
-                                f.write(f"  [{timestamp_str}] {agent_display}: VOTED FOR {voted_for_label}\n")
-                        elif event.event_type == "restart_triggered":
-                            if event.context:
-                                next_round = event.context.get("new_round", round_num + 1)
-                                f.write(f"  [{timestamp_str}] {agent_display}: TRIGGERED RESTART → Round {next_round}\n")
-                        elif event.event_type == "agent_error":
-                            f.write(f"  [{timestamp_str}] {agent_display}: ERROR\n")
-                        elif event.event_type == "agent_timeout":
-                            f.write(f"  [{timestamp_str}] {agent_display}: TIMEOUT\n")
-                        elif event.event_type == "final_round_start":
-                            f.write(f"  [{timestamp_str}] {agent_display}: STARTED FINAL PRESENTATION\n")
-                
-                f.write("\n")
-                
-                # Round summary
-                f.write("ROUND SUMMARY:\n")
-                if is_final_round:
-                    f.write(f"  Final presenter: {self._get_agent_display_name(self.final_winner)}\n")
-                    
-                    # Show the actual final answer that was presented
-                    final_label = None
-                    final_content = None
-                    agent_num = self.agent_ids.index(self.final_winner) + 1
-                    final_label = f"agent{agent_num}.final"
-                    final_content = self.all_answers.get(final_label)
-                    
-                    if final_content:
-                        preview = self.format_answer_preview(final_content, max_length=200)
-                        f.write(f"  Final answer presented:\n")
-                        f.write(f"    {final_label}: {preview}\n")
-                    
-                    # Show context provided to final agent (from self.final_context)
-                    if self.final_context and "answers_for_context" in self.final_context:
-                        f.write(f"  Context provided to final agent:\n")
-                        for label, answer_content in self.final_context["answers_for_context"].items():
-                            preview = self.format_answer_preview(answer_content, max_length=150)
-                            f.write(f"    {label}: {preview}\n")
-                    
-                    f.write(f"  Outcome: Final presentation completed\n")
-                else:
-                    if round_data["answers"]:
-                        f.write(f"  Answers provided:\n")
-                        for agent_id, label in round_data["answers"].items():
-                            # Get answer preview using consistent formatting
-                            content = self.all_answers.get(label, "")
-                            preview = self.format_answer_preview(content, max_length=100)
-                            f.write(f"    {label}: {preview}\n")
-                    else:
-                        f.write(f"  Answers provided: []\n")
-                        
-                    if round_data["votes"]:
-                        f.write(f"  Votes cast:\n")
-                        
-                        # Show available answer options (get from first vote in this round)
-                        first_vote_in_round = None
-                        for vote in self.votes:
-                            if vote.voter_id in round_data["votes"]:
-                                first_vote_in_round = vote
-                                break
-                        
-                        if first_vote_in_round and first_vote_in_round.available_answers:
-                            f.write(f"    Available answers: {first_vote_in_round.available_answers}\n")
-                        
-                        for voter, voted_for_label in round_data["votes"].items():
-                            # Find the vote with full details for the reason
-                            vote_details = None
-                            for vote in self.votes:
-                                if vote.voter_id == voter and vote.voted_for_label == voted_for_label:
-                                    vote_details = vote
-                                    break
-                            
-                            voter_display = self._get_agent_display_name(voter)
-                            if vote_details:
-                                reason = vote_details.reason or "No reason"
-                                f.write(f"    {voter_display} → {voted_for_label} ({reason})\n")
-                            else:
-                                # Fallback without reason
-                                f.write(f"    {voter_display} → {voted_for_label} (No reason available)\n")
-                    
-                    if round_data["trigger"]:
-                        f.write(f"  Outcome: {round_data['trigger']}\n")
-                    elif round_data["votes"]:
-                        f.write(f"  Outcome: All agents voted\n")
-                    else:
-                        f.write(f"  Outcome: In progress or incomplete\n")
-                
-                f.write("\n")
-            
-            f.write("=" * 100 + "\n")
-
-    def _generate_timeline_steps(self) -> List[Dict[str, Any]]:
-        """Generate timeline steps from events for visualization."""
-        steps = []
-        step_num = 0
-        
-        # Track what each agent can see (context)
-        agent_context = {aid: [] for aid in self.agent_ids}
-        # Track current status
-        agent_status = {aid: "ANSWERING" for aid in self.agent_ids}
-        
-        # Step 0: Coordination start
-        steps.append({
-            "step": step_num,
-            "event": "COORDINATION START",
-            "agents": {
-                aid: {
-                    "status": "ANSWERING",
-                    "context": [],
-                    "details": "Starting to work on task"
-                } for aid in self.agent_ids
-            }
-        })
-        step_num += 1
-        
-        # Sort events by timestamp
-        sorted_events = sorted(self.events, key=lambda e: e.timestamp)
-        
-        for event in sorted_events:
-            if event.event_type == "new_answer":
-                label = event.context.get("label", "unknown")
-                
-                # Update context for all agents
-                for aid in self.agent_ids:
-                    if aid != event.agent_id and label not in agent_context[aid]:
-                        agent_context[aid].append(label)
-                
-                steps.append({
-                    "step": step_num,
-                    "event": f"NEW ANSWER: {label}",
-                    "agents": {
-                        aid: {
-                            "status": f"NEW: {label}" if aid == event.agent_id else agent_status[aid],
-                            "context": agent_context[aid].copy(),
-                            "details": f"Provided answer {label}" if aid == event.agent_id else "Waiting for coordination to continue..."
-                        } for aid in self.agent_ids
-                    }
-                })
-                # Update status
-                agent_status[event.agent_id] = "idle"
-                step_num += 1
-                
-            elif event.event_type == "restart_triggered":
-                affected = event.context.get("affected_agents", [])
-                
-                steps.append({
-                    "step": step_num, 
-                    "event": f"RESTART triggered by {self._get_agent_display_name(event.agent_id)}",
-                    "agents": {
-                        aid: {
-                            "status": "RESTART" if aid in affected else agent_status[aid],
-                            "context": agent_context[aid].copy(),
-                            "details": "Previous work discarded, restarting with new context" if aid in affected 
-                                      else ("Triggered restart" if aid == event.agent_id else agent_status.get(aid, "idle"))
-                        } for aid in self.agent_ids
-                    }
-                })
-                # Update status
-                for aid in affected:
-                    agent_status[aid] = "ANSWERING"
-                step_num += 1
-                
-            elif event.event_type == "vote_cast":
-                voted_for = event.context.get("voted_for", "unknown")
-                reason = event.context.get("reason", "")
-                
-                # Check if we need to create a new voting phase step
-                if not steps or "VOTING PHASE" not in steps[-1]["event"]:
-                    steps.append({
-                        "step": step_num,
-                        "event": "VOTING PHASE (system-wide)",
-                        "agents": {
-                            aid: {
-                                "status": f"VOTE: {voted_for}" if aid == event.agent_id else "VOTING",
-                                "context": agent_context[aid].copy(),
-                                "details": f"Selected: {voted_for}" if aid == event.agent_id else "Evaluating available options..."
-                            } for aid in self.agent_ids
-                        }
-                    })
-                    step_num += 1
-                else:
-                    # Update existing voting step
-                    steps[-1]["agents"][event.agent_id] = {
-                        "status": f"VOTE: {voted_for}",
-                        "context": agent_context[event.agent_id].copy(),
-                        "details": f"Selected: {voted_for}\nReasoning: {reason[:100]}..."
-                    }
-                    
-            elif event.event_type == "final_answer":
-                label = event.context.get("label", "unknown")
-                
-                steps.append({
-                    "step": step_num,
-                    "event": f"FINAL ANSWER: {label}",
-                    "agents": {
-                        aid: {
-                            "status": f"FINAL: {label}" if aid == event.agent_id else "TERMINATED",
-                            "context": agent_context[aid].copy(),
-                            "details": f"Presented final answer" if aid == event.agent_id else ""
-                        } for aid in self.agent_ids
-                    }
-                })
-                step_num += 1
-        
-        return steps
-    
     def _get_agent_display_name(self, agent_id: str) -> str:
         """Get display name for agent (Agent1, Agent2, etc.)."""
         if agent_id in self.agent_ids:
