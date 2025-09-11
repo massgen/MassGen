@@ -13,6 +13,15 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 import textwrap
 
+try:
+    from rich.table import Table
+    from rich.console import Console
+    from rich.text import Text
+    from rich import box
+    RICH_AVAILABLE = True
+except ImportError:
+    RICH_AVAILABLE = False
+
 
 @dataclass
 class AgentState:
@@ -396,9 +405,8 @@ class CoordinationTableBuilder:
                             winner_name = self.final_winner
                         
                         winner_text = f"{winner_name} selected as winner"
-                        winner_row = "| WINNER   |"
-                        winner_width = cell_width * num_agents + (num_agents - 1)
-                        winner_row += winner_text.center(winner_width) + "|"
+                        winner_width = total_width - 1  # Full table width minus the outer borders
+                        winner_row = "|" + winner_text.center(winner_width) + "|"
                         lines.append(winner_row)
                     
                     # Solid line before FINAL
@@ -414,6 +422,204 @@ class CoordinationTableBuilder:
         lines.append("+" + "-" * (total_width - 2) + "+")
         
         return "\n".join(lines)
+    
+    def generate_rich_table(self) -> Optional["Table"]:
+        """Generate a Rich table with proper formatting and colors."""
+        if not RICH_AVAILABLE:
+            return None
+            
+        # Create main table with individual agent columns
+        table = Table(
+            box=box.DOUBLE_EDGE, 
+            show_header=True, 
+            header_style="bold bright_white on blue", 
+            expand=True,
+            padding=(0, 1),
+            title=f"[bold bright_cyan]Multi-Agent Coordination Flow[/bold bright_cyan]",
+            title_style="bold bright_cyan"
+        )
+        
+        # Add columns with individual agents
+        table.add_column("Round", style="bold bright_white", width=14, justify="center")
+        for agent in self.agents:
+            # Create readable agent names
+            if '_' in agent:
+                parts = agent.split('_')
+                agent_name = f"Agent{parts[-1]}"
+            else:
+                agent_name = agent
+            table.add_column(agent_name, style="white", justify="center", ratio=1)
+        
+        # Add user question row - create a nested table to achieve true spanning
+        from rich.table import Table as InnerTable
+        inner_question_table = InnerTable(box=None, show_header=False, expand=True, padding=(0, 0))
+        inner_question_table.add_column("Question", justify="center", ratio=1)
+        inner_question_table.add_row(f"[bold bright_yellow]{self.user_question}[/bold bright_yellow]")
+        
+        question_cells = [""]  # Empty round column
+        question_cells.append(inner_question_table)
+        # Fill remaining columns with empty strings - Rich will merge them visually
+        for i in range(len(self.agents) - 1):
+            question_cells.append("")
+        table.add_row(*question_cells)
+        
+        # Add separator row
+        separator_cells = ["[dim bright_blue]════════════[/dim bright_blue]"] + ["[dim bright_blue]" + "═" * 88 + "[/dim bright_blue]" for _ in self.agents]
+        table.add_row(*separator_cells)
+        
+        # Process each round
+        for i, round_data in enumerate(self.rounds):
+            # Get content for each agent
+            agent_contents = {}
+            max_lines = 0
+            
+            for agent in self.agents:
+                content = self._build_rich_agent_cell_content(
+                    round_data.agent_states[agent], 
+                    round_data.round_type,
+                    agent,
+                    round_data.round_num
+                )
+                agent_contents[agent] = content
+                max_lines = max(max_lines, len(content))
+            
+            # Build round rows
+            for line_idx in range(max_lines):
+                row_cells = []
+                
+                # Round label (only on first line)
+                if line_idx == 0:
+                    if round_data.round_type == "FINAL":
+                        round_label = "[bold bright_green]🏁 FINAL 🏁[/bold bright_green]"
+                    else:
+                        round_label = f"[bold bright_cyan]🔄 {round_data.round_type} 🔄[/bold bright_cyan]"
+                    row_cells.append(round_label)
+                else:
+                    row_cells.append("")
+                
+                # Agent cells (individual columns)
+                for agent in self.agents:
+                    content_lines = agent_contents[agent]
+                    if line_idx < len(content_lines):
+                        row_cells.append(content_lines[line_idx])
+                    else:
+                        row_cells.append("")
+                
+                table.add_row(*row_cells)
+            
+            # Round separator
+            if i < len(self.rounds) - 1:
+                next_round = self.rounds[i + 1]
+                if next_round.round_type == "FINAL":
+                    # Winner announcement - simulate spanning
+                    if self.final_winner:
+                        # Try to create readable agent name
+                        if '_' in self.final_winner:
+                            parts = self.final_winner.split('_')
+                            winner_name = f"Agent{parts[-1]}"
+                        else:
+                            winner_name = self.final_winner
+                        
+                        winner_announcement = f"🏆 {winner_name} selected as winner 🏆"
+                        # Create nested table for winner announcement spanning
+                        inner_winner_table = InnerTable(box=None, show_header=False, expand=True, padding=(0, 0))
+                        inner_winner_table.add_column("Winner", justify="center", ratio=1)
+                        inner_winner_table.add_row(f"[bold bright_green]{winner_announcement}[/bold bright_green]")
+                        
+                        winner_cells = [""]  # Empty round column
+                        winner_cells.append(inner_winner_table)
+                        # Fill remaining columns with empty strings
+                        for i in range(len(self.agents) - 1):
+                            winner_cells.append("")
+                        table.add_row(*winner_cells)
+                    
+                    # Solid line before FINAL
+                    separator_cells = ["[dim bright_green]────────────[/dim bright_green]"] + ["[dim bright_green]" + "─" * 88 + "[/dim bright_green]" for _ in self.agents]
+                    table.add_row(*separator_cells)
+                else:
+                    # Wavy line between regular rounds
+                    separator_cells = ["[dim bright_cyan]~~~~~~~~~~~~[/dim bright_cyan]"] + ["[dim bright_cyan]" + "~" * 88 + "[/dim bright_cyan]" for _ in self.agents]
+                    table.add_row(*separator_cells)
+        
+        return table
+    
+    def _build_rich_agent_cell_content(self, agent_state: AgentState, round_type: str, 
+                                      agent_id: str, round_num: int) -> List[str]:
+        """Build Rich-formatted content for an agent's cell in a round."""
+        lines = []
+        
+        # Determine if we should show context
+        show_context = (
+            (agent_state.current_answer and not agent_state.vote) or
+            agent_state.has_final_answer or
+            agent_state.status in ["streaming", "answering"]
+        )
+        
+        # Don't show context for terminated agents in FINAL round
+        if round_type == "FINAL" and agent_state.status == "completed":
+            show_context = False
+        
+        # Add context with better styling
+        if show_context:
+            if agent_state.context:
+                context_items = ', '.join(agent_state.context)
+                context_str = f"📋 Context: [{context_items}]"
+            else:
+                context_str = "📋 Context: []"
+            lines.append(f"[dim bright_blue]{context_str}[/dim bright_blue]")
+        
+        # Add content based on what happened in this round with enhanced styling
+        if agent_state.vote:
+            # Agent voted in this round
+            if agent_state.context:
+                options_items = ', '.join(agent_state.context)
+                options_str = f"📊 Options: [{options_items}]"
+                lines.append(f"[dim bright_magenta]{options_str}[/dim bright_magenta]")
+            vote_str = f"🗳️  VOTE: {agent_state.vote}"
+            lines.append(f"[bold bright_cyan]{vote_str}[/bold bright_cyan]")
+            if agent_state.vote_reason:
+                reason = agent_state.vote_reason[:65] + "..." if len(agent_state.vote_reason) > 68 else agent_state.vote_reason
+                reason_str = f"💭 Reason: {reason}"
+                lines.append(f"[italic dim]{reason_str}[/italic dim]")
+        
+        elif round_type == "FINAL":
+            # Final presentation round
+            if agent_state.has_final_answer:
+                final_str = f"🎯 FINAL ANSWER: {agent_state.current_answer}"
+                lines.append(f"[bold bright_green]{final_str}[/bold bright_green]")
+                if agent_state.answer_preview:
+                    preview_str = f"👁️  Preview: {agent_state.answer_preview}"
+                    lines.append(f"[dim bright_white]{preview_str}[/dim bright_white]")
+                else:
+                    lines.append(f"[dim red]👁️  Preview: [Answer not available][/dim red]")
+            elif agent_state.status == "completed":
+                lines.append(f"[dim red]❌ (terminated)[/dim red]")
+            else:
+                lines.append(f"[dim yellow]⏳ (waiting)[/dim yellow]")
+        
+        elif agent_state.current_answer and not agent_state.vote:
+            # Agent provided an answer in this round
+            answer_str = f"✨ NEW ANSWER: {agent_state.current_answer}"
+            lines.append(f"[bold bright_green]{answer_str}[/bold bright_green]")
+            if agent_state.answer_preview:
+                preview_str = f"👁️  Preview: {agent_state.answer_preview}"
+                lines.append(f"[dim bright_white]{preview_str}[/dim bright_white]")
+            else:
+                lines.append(f"[dim red]👁️  Preview: [Answer not available][/dim red]")
+        
+        elif agent_state.status in ["streaming", "answering"]:
+            lines.append(f"[bold yellow]🔄 (answering)[/bold yellow]")
+        
+        elif agent_state.status == "voted":
+            lines.append(f"[dim bright_cyan]✅ (voted)[/dim bright_cyan]")
+        
+        elif agent_state.status == "answered":
+            lines.append(f"[dim bright_green]✅ (answered)[/dim bright_green]")
+        
+        else:
+            lines.append(f"[dim]⏳ (waiting)[/dim]")
+        
+        return lines
 
 
 def main():
@@ -431,18 +637,29 @@ def main():
         
         # Build and print table
         builder = CoordinationTableBuilder(events)
-        table = builder.generate_table()
         
-        # Add line numbers if desired (optional)
-        lines = table.split('\n')
-        max_line_num = len(lines)
-        numbered_lines = []
-        for i, line in enumerate(lines, 1):
-            # Right-align line numbers (counting down)
-            line_num = str(max_line_num - i + 1).rjust(3)
-            numbered_lines.append(f"{line_num} {line}")
-        
-        print("\n".join(numbered_lines))
+        # Try to use Rich table first, fallback to plain text
+        if RICH_AVAILABLE:
+            rich_table = builder.generate_rich_table()
+            if rich_table:
+                console = Console()
+                console.print(rich_table)
+            else:
+                # Fallback to plain table
+                table = builder.generate_table()
+                print(table)
+        else:
+            # Use plain table with line numbers
+            table = builder.generate_table()
+            lines = table.split('\n')
+            max_line_num = len(lines)
+            numbered_lines = []
+            for i, line in enumerate(lines, 1):
+                # Right-align line numbers (counting down)
+                line_num = str(max_line_num - i + 1).rjust(3)
+                numbered_lines.append(f"{line_num} {line}")
+            
+            print("\n".join(numbered_lines))
         
     except FileNotFoundError:
         print(f"Error: Could not find file '{filename}'")

@@ -1696,18 +1696,6 @@ class Orchestrator(ChatAgent):
 
             final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
 
-            # Hacky way, but we do need something here else it will mess up `get_status` and trickle down.
-            # self.coordination_tracker.final_winner = self._selected_agent
-
-            # # Track iterations during final answer presentation (even for stored answers)
-            # self.coordination_tracker.start_new_iteration()  # Iteration for winner selection
-            
-            # # Track final answer and set winner (with "final" as the timestamp since this is stored answer)
-            # self.coordination_tracker.set_final_answer(self._selected_agent, final_answer, snapshot_timestamp="final")
-            
-            # # Mark final presentation as completed
-            # self.coordination_tracker.change_status(self._selected_agent, AgentStatus.COMPLETED)
-
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
 
@@ -1837,9 +1825,6 @@ class Orchestrator(ChatAgent):
         self, selected_agent_id: str, vote_results: Dict[str, Any]
     ) -> AsyncGenerator[StreamChunk, None]:
         """Ask the winning agent to present their final answer with voting context."""
-        # Debug: Track that we entered final presentation
-        self.coordination_tracker._add_event("debug", None, f"get_final_presentation called for {selected_agent_id}")
-        
         # Start tracking the final round
         self.coordination_tracker.start_final_round(selected_agent_id)
         
