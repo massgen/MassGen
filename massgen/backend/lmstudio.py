@@ -22,20 +22,13 @@ import lmstudio as lms
 
 from .chat_completions import ChatCompletionsBackend
 from .base import StreamChunk
-from ..logger_config import (
-    log_backend_activity,
-    log_backend_agent_message,
-    log_stream_chunk,
-)
 
 
 class LMStudioBackend(ChatCompletionsBackend):
     """LM Studio backend (OpenAI-compatible, local server)."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
-        super().__init__(
-            api_key="lm-studio", **kwargs
-        )  # Override to avoid environment-variable enforcement; LM Studio accepts any key
+        super().__init__(api_key="lm-studio",  **kwargs)    # Override to avoid environment-variable enforcement; LM Studio accepts any key
         self.start_lmstudio_server(**kwargs)
 
     # Local server usage is typically free; report zero cost
@@ -50,61 +43,15 @@ class LMStudioBackend(ChatCompletionsBackend):
         LM Studio does not require special message conversions; this delegates to
         the generic ChatCompletions implementation while preserving our defaults.
         """
-        # Extract agent_id for logging
-        agent_id = kwargs.get("agent_id", None)
 
-        log_backend_activity(
-            "LM Studio",
-            "Starting stream_with_tools",
-            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id,
-        )
-
-        # Log messages being sent
-        log_backend_agent_message(
-            agent_id or "default",
-            "SEND",
-            {"messages": messages, "tools": len(tools) if tools else 0},
-            backend_name="LM Studio",
-        )
-
-        # Ensure LM Studio defaults
+         # Ensure LM Studio defaults
         base_url = kwargs.get("base_url", "http://localhost:1234/v1")
         kwargs["base_url"] = base_url
 
-        try:
-            async for chunk in super().stream_with_tools(messages, tools, **kwargs):
-                # Log stream chunks
-                if chunk.type == "content" and chunk.content:
-                    log_backend_agent_message(
-                        agent_id or "default",
-                        "RECV",
-                        {"content": chunk.content},
-                        backend_name="LM Studio",
-                    )
-                    log_stream_chunk(
-                        "backend.lmstudio", "content", chunk.content, agent_id
-                    )
-                elif chunk.type == "error":
-                    log_stream_chunk("backend.lmstudio", "error", chunk.error, agent_id)
-                elif chunk.type == "tool_calls":
-                    log_stream_chunk(
-                        "backend.lmstudio", "tool_calls", chunk.tool_calls, agent_id
-                    )
-                elif chunk.type == "done":
-                    log_stream_chunk("backend.lmstudio", "done", None, agent_id)
+        async for chunk in super().stream_with_tools(messages, tools, **kwargs):
+            yield chunk
 
-                yield chunk
-        except Exception as e:
-            error_msg = f"LM Studio backend error: {str(e)}"
-            log_stream_chunk("backend.lmstudio", "error", error_msg, agent_id)
-            yield StreamChunk(type="error", error=error_msg)
-
-        # self.end_lmstudio_server()
-
-    def get_provider_name(self) -> str:
-        """Get the name of this provider."""
-        return "LM Studio"
+        #self.end_lmstudio_server()
 
     def get_supported_builtin_tools(self) -> List[str]:  # type: ignore[override]
         # LM Studio (local OpenAI-compatible) does not provide provider-builtins
@@ -113,6 +60,7 @@ class LMStudioBackend(ChatCompletionsBackend):
     def estimate_tokens(self, text: str) -> int:  # type: ignore[override]
         # Simple heuristic consistent with ChatCompletionsBackend
         return int(len(text.split()) * 1.3)
+
 
     def start_lmstudio_server(self, **kwargs):
         """Start LM Studio server after checking CLI and model availability."""
@@ -127,77 +75,101 @@ class LMStudioBackend(ChatCompletionsBackend):
                     subprocess.run(["brew", "install", "lmstudio"], check=True)
                 elif system == "linux":
                     # Download and install for Linux
-                    subprocess.run(
-                        ["curl", "-sSL", "https://lmstudio.ai/install.sh", "|", "sh"],
-                        shell=True,
-                        check=True,
-                    )
+                    subprocess.run([
+                        "curl", "-sSL", 
+                        "https://lmstudio.ai/install.sh", 
+                        "|", "sh"
+                    ], shell=True, check=True)
                 elif system == "windows":
                     # Windows installation via PowerShell
-                    subprocess.run(
-                        [
-                            "powershell",
-                            "-Command",
-                            "iwr -useb https://lmstudio.ai/install.ps1 | iex",
-                        ],
-                        check=True,
-                    )
+                    subprocess.run([
+                        "powershell", "-Command",
+                        "iwr -useb https://lmstudio.ai/install.ps1 | iex"
+                    ], check=True)
                 else:
                     raise Exception(f"Unsupported platform: {system}")
             except subprocess.CalledProcessError as e:
                 raise Exception(f"Failed to install LM Studio CLI: {e}")
+        
 
-        # Start the server (synchronously)
+        # Start the server (in background/detached mode)
         try:
-            # Start LM Studio server
-            subprocess.run(["lms", "server", "start"], check=True)
-
+            # Start LM Studio server in background
+            # Use Popen instead of run to avoid blocking
+            process = subprocess.Popen(
+                ["lms", "server", "start"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            
             # Wait a bit for server to start
-            time.sleep(2)
-
-            print("LM Studio server started successfully.")
+            time.sleep(3)
+            
+            # Check if process started successfully
+            if process.poll() is None:
+                print("LM Studio server started successfully (running in background).")
+            else:
+                stdout, stderr = process.communicate(timeout=1)
+                if stdout:
+                    print(f"Server output: {stdout}")
+                if stderr:
+                    print(f"Server error: {stderr}")
+                print("LM Studio server started successfully.")
         except Exception as e:
             raise Exception(f"Failed to start LM Studio server: {e}")
-
+        
         # Check if model exists locally
-        model_name = kwargs.get("model", "")
+        model_name = kwargs.get('model', '')
         if model_name:
             try:
                 # List available models using lms list
                 downloaded = lms.list_downloaded_models()
-
+                
                 # Check if model is in the list
-                if model_name not in downloaded:
+                model_keys = [m.model_key for m in downloaded]
+                if model_name not in model_keys:
                     print(f"Model '{model_name}' not found locally. Downloading...")
                     # Download the model using lms get
-                    subprocess.run(["lms", "get", model_name], check=True)
+                    subprocess.run(
+                        ["lms", "get", model_name], 
+                        check=True
+                    )
                     print(f"Model '{model_name}' downloaded successfully.")
-
-            except subprocess.CalledProcessError as e:
-                print(f"Warning: Could not check/download/load model: {e}")
-
+                
+            except Exception as e:
+                print(f"Warning: Could not check/download model: {e}")
+            
             try:
                 # List available models using lms list
                 loaded = lms.list_loaded_models()
-
+                
                 # Check if model is in the list
-                if model_name not in loaded:
+                # LLM objects have 'identifier' attribute, not 'model_key'
+                loaded_identifiers = [m.identifier for m in loaded]
+                if model_name not in loaded_identifiers:
                     print(f"Model '{model_name}' not loaded. Loading...")
-                    # Download the model using lms get
-                    subprocess.run(["lms", "load", model_name], check=True)
+                    # Load the model using lms load
+                    subprocess.run(
+                        ["lms", "load", model_name], 
+                        check=True
+                    )
                     print(f"Model '{model_name}' loaded successfully.")
+                
+            except Exception as e:
+                print(f"Warning: Could not check/load model: {e}")
 
-            except subprocess.CalledProcessError as e:
-                print(f"Warning: Could not check/download/load model: {e}")
 
     def end_lmstudio_server(self):
         """Stop the LM Studio server after receiving all chunks."""
         try:
             # Use lms server end command as specified in requirement
             result = subprocess.run(
-                ["lms", "server", "end"], capture_output=True, text=True
+                ["lms", "server", "end"],
+                capture_output=True,
+                text=True
             )
-
+            
             if result.returncode == 0:
                 print("LM Studio server ended successfully.")
             else:
@@ -206,3 +178,5 @@ class LMStudioBackend(ChatCompletionsBackend):
                 print("LM Studio server stopped successfully.")
         except Exception as e:
             print(f"Warning: Failed to end LM Studio server: {e}")
+
+
