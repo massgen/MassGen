@@ -912,7 +912,7 @@ Version 0.0.19 focuses on **enhanced system observability, code execution capabi
 
 Key technical approach:
 - **Hierarchical Log Organization**: Structured MCP logging with Connection, Tool Discovery, Execution, Error Handling, and Performance categories
-- **End-to-End Tracing**: MCP operation trace IDs and session correlation across servers and tools
+- **End-to-End Tracing**: MCP trace context and session ID propagation across servers and tools
 - **Advanced Debugging Tools**: Timeline views, analytics, performance benchmarking, and granular filtering
 
 For detailed milestones and technical specifications, see the [full v0.0.19 roadmap](ROADMAP_v0.0.19.md).
