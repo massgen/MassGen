@@ -591,7 +591,7 @@ class CoordinationTracker:
             
             # Generate coordination table using the new table generator
             try:
-                self._generate_coordination_table(log_dir, events_data)
+                self._generate_coordination_table(log_dir, session_data)
             except Exception as e:
                 print(f"Warning: Could not generate coordination table: {e}")
             
@@ -600,15 +600,15 @@ class CoordinationTracker:
         except Exception as e:
             print(f"Failed to save coordination logs: {e}")
     
-    def _generate_coordination_table(self, log_dir, events_data):
+    def _generate_coordination_table(self, log_dir, session_data):
         """Generate coordination table using the create_coordination_table.py module."""
         try:
             # Import the table builder
             from create_coordination_table import CoordinationTableBuilder
             
-            # Create the table directly from events data
-            builder = CoordinationTableBuilder(events_data)
-            table_content = builder.generate_table()
+            # Create the event-driven table directly from session data (includes metadata)
+            builder = CoordinationTableBuilder(session_data)
+            table_content = builder.generate_event_table()
             
             # Save the table to a file
             table_file = log_dir / "coordination_table.txt"

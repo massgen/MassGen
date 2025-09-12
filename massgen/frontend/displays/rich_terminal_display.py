@@ -2536,15 +2536,27 @@ class RichTerminalDisplay(TerminalDisplay):
                 print("No coordination tracker available")
                 return
 
-            # Get events data
+            # Get events data with session metadata
             events_data = [event.to_dict() for event in tracker.events]
+            
+            # Create session data with metadata (same format as saved file)
+            session_data = {
+                "session_metadata": {
+                    "user_prompt": tracker.user_prompt,
+                    "agent_ids": tracker.agent_ids,
+                    "start_time": tracker.start_time,
+                    "end_time": tracker.end_time,
+                    "final_winner": tracker.final_winner
+                },
+                "events": events_data
+            }
             
             # Import and use the table generator
             from create_coordination_table import CoordinationTableBuilder
             
-            # Generate Rich table directly
-            builder = CoordinationTableBuilder(events_data)
-            rich_table = builder.generate_rich_table()
+            # Generate Rich event table directly
+            builder = CoordinationTableBuilder(session_data)
+            rich_table = builder.generate_rich_event_table()
             
             if rich_table:
                 # Clear screen and display the Rich table directly
@@ -2576,8 +2588,8 @@ class RichTerminalDisplay(TerminalDisplay):
                 # Add separator instead of clearing screen
                 self.console.print("\n" + "=" * 80 + "\n")
             else:
-                # Fallback to text version if Rich not available
-                table_content = builder.generate_table()
+                # Fallback to event table text version if Rich not available
+                table_content = builder.generate_event_table()
                 table_panel = Panel(
                     table_content,
                     title="[bold bright_green]📊 COORDINATION TABLE[/bold bright_green]",

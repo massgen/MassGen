@@ -286,7 +286,8 @@ class CoordinationTableBuilder:
             if agent_state.has_final_answer:
                 lines.append(f"FINAL ANSWER: {agent_state.current_answer}")
                 if agent_state.answer_preview:
-                    lines.append(f"Preview: {agent_state.answer_preview}")
+                    clean_preview = agent_state.answer_preview.replace('\n', ' ').strip()
+                    lines.append(f"Preview: {clean_preview}")
                 else:
                     lines.append("Preview: [Answer not available]")
             elif agent_state.status == "completed":
@@ -298,7 +299,8 @@ class CoordinationTableBuilder:
             # Agent provided an answer in this round
             lines.append(f"NEW ANSWER: {agent_state.current_answer}")
             if agent_state.answer_preview:
-                lines.append(f"Preview: {agent_state.answer_preview}")
+                clean_preview = agent_state.answer_preview.replace('\n', ' ').strip()
+                lines.append(f"Preview: {clean_preview}")
             else:
                 lines.append("Preview: [Answer not available]")
         
@@ -497,7 +499,8 @@ class CoordinationTableBuilder:
                     # Context already shown when streaming started
                     event_lines.append(f"🎯 FINAL ANSWER: {label}")
                     if agent_states[agent_id]["preview"]:
-                        event_lines.append(f"👁️  Preview: {agent_states[agent_id]['preview']}")
+                        clean_preview = agent_states[agent_id]["preview"].replace('\n', ' ').strip()
+                        event_lines.append(f"👁️  Preview: {clean_preview}")
                     
                     lines.extend(self._create_multi_line_event_row(event_num, agent_id, event_lines, agent_states, cell_width))
                     # No separator after last event - bottom border will follow
@@ -717,6 +720,52 @@ class CoordinationTableBuilder:
         lines.append(totals_row)
         
         return lines
+    
+    def _create_legend_section(self, cell_width: int) -> list:
+        """Create legend/explanation section at the top"""
+        lines = []
+        
+        # Title
+        lines.append("")
+        lines.append("Multi-Agent Coordination Events Log")
+        lines.append("=" * 50)
+        lines.append("")
+        
+        # Event symbols
+        lines.append("📋 EVENT SYMBOLS:")
+        lines.append("  💭 Started streaming    - Agent begins thinking/processing")
+        lines.append("  ✨ NEW ANSWER           - Agent provides a labeled answer") 
+        lines.append("  🗳️  VOTE                - Agent votes for an answer")
+        lines.append("  💭 Reason               - Reasoning behind the vote")
+        lines.append("  👁️  Preview             - Content of the answer")
+        lines.append("  🔁 RESTART TRIGGERED    - Agent requests to restart")
+        lines.append("  ✅ RESTART COMPLETED    - Agent finishes restart")
+        lines.append("  🎯 FINAL ANSWER         - Winner provides final response")
+        lines.append("  🏆 Winner selected      - System announces winner")
+        lines.append("")
+        
+        # Status symbols  
+        lines.append("📊 STATUS SYMBOLS:")
+        lines.append("  💭 (streaming)          - Currently thinking/processing")
+        lines.append("  ⏳ (waiting)            - Idle, waiting for turn")
+        lines.append("  ✅ (answered)           - Has provided an answer")
+        lines.append("  ✅ (voted)              - Has cast a vote")
+        lines.append("  ❌ (terminated)         - Eliminated from competition")
+        lines.append("  🎯 (final answer given) - Winner completed final answer")
+        lines.append("")
+        
+        # Terms
+        lines.append("📖 TERMS:")
+        lines.append("  Context       - Available answer options agent can see")
+        lines.append("  Restart       - Agent starts over (clears memory)")
+        lines.append("  Event         - Chronological action in the coordination")
+        lines.append("  Answer Labels - Each answer gets a unique ID (agent1.1, agent2.1, etc.)")
+        lines.append("                  Format: agent{N}.{attempt} where N=agent number, attempt=try number")
+        lines.append("                  Example: agent1.1 = Agent1's 1st answer, agent2.1 = Agent2's 1st answer")
+        lines.append("  agent1.final  - Special label for the winner's final answer")
+        lines.append("")
+        
+        return lines
 
     def generate_table(self) -> str:
         """Generate the formatted table"""
@@ -829,6 +878,238 @@ class CoordinationTableBuilder:
         lines.append("+" + "-" * (total_width - 2) + "+")
         
         return "\n".join(lines)
+    
+    def generate_rich_event_table(self) -> Optional["Table"]:
+        """Generate a rich event-driven table"""
+        try:
+            from rich.table import Table
+            from rich.console import Console
+            from rich.text import Text
+            from rich import box
+        except ImportError:
+            return None
+        
+        # Create the main table
+        table = Table(
+            title="[bold cyan]Multi-Agent Coordination Events[/bold cyan]",
+            box=box.DOUBLE_EDGE,
+            expand=True,
+            show_lines=True
+        )
+        
+        # Add columns
+        table.add_column("Event", style="bold yellow", width=8, justify="center")
+        for agent in self.agents:
+            if '_' in agent:
+                parts = agent.split('_')
+                agent_name = f"Agent{parts[-1]}"
+            else:
+                agent_name = agent
+            table.add_column(agent_name, style="white", width=45, justify="center")
+        
+        # Add user question as header
+        question_row = ["[bold cyan]USER[/bold cyan]"]
+        question_text = f"[bold white]{self.user_question}[/bold white]"
+        for _ in range(len(self.agents)):
+            question_row.append(question_text)
+        table.add_row(*question_row)
+        
+        # Process events chronologically
+        agent_states = {agent: {"status": "idle", "context": [], "answer": None, "vote": None, "preview": None, "last_streaming_logged": False} for agent in self.agents}
+        event_num = 1
+        
+        for event in self.events:
+            event_type = event["event_type"]
+            agent_id = event.get("agent_id")
+            context = event.get("context", {})
+            
+            # Skip session-level events
+            if not agent_id or agent_id not in self.agents:
+                # Handle system events like winner selection
+                if event_type == "final_agent_selected":
+                    winner_name = "Agent1" if "1" in agent_id else "Agent2"
+                    winner_row = ["[bold green]🏆[/bold green]"]
+                    winner_text = Text(f"🏆 {winner_name} selected as winner 🏆", style="bold green", justify="center")
+                    for _ in range(len(self.agents)):
+                        winner_row.append(winner_text)
+                    table.add_row(*winner_row)
+                continue
+                
+            # Handle agent events
+            if event_type == "status_change":
+                status = event.get("details", "").replace("Changed to status: ", "")
+                old_status = agent_states[agent_id]["status"]
+                agent_states[agent_id]["status"] = status
+                
+                # Only log first streaming
+                if status in ["streaming", "answering"]:
+                    if old_status == "voted":
+                        pass  # Skip post-vote streaming
+                    elif old_status not in ["streaming", "answering"] or not agent_states[agent_id]["last_streaming_logged"]:
+                        row = self._create_rich_event_row(event_num, agent_id, agent_states, "streaming_start")
+                        if row:
+                            table.add_row(*row)
+                            event_num += 1
+                        agent_states[agent_id]["last_streaming_logged"] = True
+                        
+            elif event_type == "context_received":
+                labels = context.get("available_answer_labels", [])
+                agent_states[agent_id]["context"] = labels
+                
+            elif event_type == "restart_triggered":
+                row = self._create_rich_event_row(event_num, agent_id, agent_states, "restart_triggered")
+                if row:
+                    table.add_row(*row)
+                    event_num += 1
+                    
+            elif event_type == "restart_completed":
+                agent_round = context.get("agent_round", context.get("round", 0))
+                row = self._create_rich_event_row(event_num, agent_id, agent_states, "restart_completed", agent_round)
+                if row:
+                    table.add_row(*row)
+                    event_num += 1
+                agent_states[agent_id]["last_streaming_logged"] = False
+                    
+            elif event_type == "new_answer":
+                label = context.get("label")
+                if label:
+                    agent_states[agent_id]["answer"] = label
+                    agent_states[agent_id]["status"] = "answered"
+                    agent_states[agent_id]["last_streaming_logged"] = False
+                    preview = self.agent_answers.get(agent_id, "")
+                    agent_states[agent_id]["preview"] = preview
+                    row = self._create_rich_event_row(event_num, agent_id, agent_states, "new_answer", label, preview)
+                    if row:
+                        table.add_row(*row)
+                        event_num += 1
+                    
+            elif event_type == "vote_cast":
+                vote = context.get("voted_for_label")
+                reason = context.get("reason", "")
+                if vote:
+                    agent_states[agent_id]["vote"] = vote
+                    agent_states[agent_id]["status"] = "voted"
+                    agent_states[agent_id]["last_streaming_logged"] = False
+                    row = self._create_rich_event_row(event_num, agent_id, agent_states, "vote", vote, reason)
+                    if row:
+                        table.add_row(*row)
+                        event_num += 1
+                        
+            elif event_type == "final_answer":
+                label = context.get("label")
+                if label:
+                    agent_states[agent_id]["status"] = "final"
+                    preview = agent_states[agent_id].get("preview", "")
+                    row = self._create_rich_event_row(event_num, agent_id, agent_states, "final_answer", label, preview)
+                    if row:
+                        table.add_row(*row)
+                        event_num += 1
+        
+        # Add summary section
+        self._add_rich_summary(table, agent_states)
+        
+        return table
+    
+    def _create_rich_event_row(self, event_num: int, active_agent: str, agent_states: dict, event_type: str, *args) -> list:
+        """Create a rich table row for an event"""
+        row = [f"[bold yellow]E{event_num}[/bold yellow]"]
+        
+        for agent in self.agents:
+            if agent == active_agent:
+                # Active agent performing the event
+                if event_type == "streaming_start":
+                    context = agent_states[agent]["context"]
+                    context_str = f"[dim blue]📋 Context: \\[{', '.join(context)}][/dim blue]\n" if context else "[dim blue]📋 Context: \\[][/dim blue]\n"
+                    cell = context_str + "[bold cyan]💭 Started streaming[/bold cyan]"
+                elif event_type == "restart_triggered":
+                    cell = "[bold yellow]🔁 RESTART TRIGGERED[/bold yellow]"
+                elif event_type == "restart_completed":
+                    cell = f"[bold green]✅ RESTART COMPLETED (Restart {args[0]})[/bold green]"
+                elif event_type == "new_answer":
+                    label, preview = args[0], args[1] if len(args) > 1 else ""
+                    cell = f"[bold green]✨ NEW ANSWER: {label}[/bold green]"
+                    if preview:
+                        clean_preview = preview.replace('\n', ' ').strip()
+                        cell += f"\n[dim white]👁️  Preview: {clean_preview}[/dim white]"
+                elif event_type == "vote":
+                    vote, reason = args[0], args[1] if len(args) > 1 else ""
+                    cell = f"[bold cyan]🗳️  VOTE: {vote}[/bold cyan]"
+                    if reason:
+                        clean_reason = reason.replace('\n', ' ').strip()
+                        reason_preview = clean_reason[:50] + "..." if len(clean_reason) > 50 else clean_reason
+                        cell += f"\n[italic dim]💭 Reason: {reason_preview}[/italic dim]"
+                elif event_type == "final_answer":
+                    label, preview = args[0], args[1] if len(args) > 1 else ""
+                    cell = f"[bold green]🎯 FINAL ANSWER: {label}[/bold green]"
+                    if preview:
+                        clean_preview = preview.replace('\n', ' ').strip()
+                        cell += f"\n[dim white]👁️  Preview: {clean_preview}[/dim white]"
+                else:
+                    cell = ""
+                row.append(cell)
+            else:
+                # Other agents showing status
+                status = agent_states[agent]["status"]
+                if status == "answered":
+                    if agent_states[agent]["answer"]:
+                        cell = f"[green]✅ Answered: {agent_states[agent]['answer']}[/green]"
+                    else:
+                        cell = "[green]✅ (answered)[/green]"
+                elif status == "voted":
+                    cell = "[green]✅ (voted)[/green]"
+                elif status in ["streaming", "answering"]:
+                    cell = f"[cyan]🔄 ({status})[/cyan]"
+                elif status == "terminated":
+                    cell = "[red]❌ (terminated)[/red]"
+                elif status == "final":
+                    cell = "[bold green]🎯 (final answer given)[/bold green]"
+                elif status == "idle":
+                    cell = "[dim]⏳ (waiting)[/dim]"
+                else:
+                    cell = f"[dim]({status})[/dim]"
+                row.append(cell)
+        
+        return row
+    
+    def _add_rich_summary(self, table: Any, agent_states: dict) -> None:
+        """Add summary statistics to the rich table"""
+        # Calculate statistics
+        total_answers = sum(1 for agent in self.agents if agent_states[agent]["answer"])
+        total_votes = sum(1 for agent in self.agents if agent_states[agent]["vote"])
+        total_restarts = len([e for e in self.events if e["event_type"] == "restart_completed"])
+        
+        # Summary header
+        summary_row = ["[bold magenta]SUMMARY[/bold magenta]"]
+        for agent in self.agents:
+            agent_name = f"Agent{agent.split('_')[-1]}" if '_' in agent else agent
+            summary_row.append(f"[bold magenta]{agent_name}[/bold magenta]")
+        table.add_row(*summary_row)
+        
+        # Stats for each agent
+        stats_row = ["[bold]Stats[/bold]"]
+        for agent in self.agents:
+            answer_count = 1 if agent_states[agent]["answer"] else 0
+            vote_count = 1 if agent_states[agent]["vote"] else 0
+            restart_count = len([e for e in self.events if e["event_type"] == "restart_completed" and e.get("agent_id") == agent])
+            
+            status = agent_states[agent]["status"]
+            if status == "final":
+                status_str = "[bold green]🏆 Winner[/bold green]"
+            elif status == "terminated":
+                status_str = "[red]❌ Eliminated[/red]"
+            else:
+                status_str = f"[dim]{status}[/dim]"
+            
+            stats = f"{answer_count} answer, {vote_count} vote, {restart_count} restarts\n{status_str}"
+            stats_row.append(stats)
+        table.add_row(*stats_row)
+        
+        # Overall totals
+        totals_row = ["[bold]TOTALS[/bold]"]
+        totals_text = f"[bold cyan]{total_answers} answers, {total_votes} votes, {total_restarts} restarts[/bold cyan]"
+        for _ in range(len(self.agents)):
+            totals_row.append(totals_text)
+        table.add_row(*totals_row)
     
     def generate_rich_table(self) -> Optional["Table"]:
         """Generate a Rich table with proper formatting and colors."""
@@ -1054,13 +1335,13 @@ def main():
         
         # Try to use Rich table first, fallback to plain text
         if RICH_AVAILABLE:
-            rich_table = builder.generate_rich_table()
+            rich_table = builder.generate_rich_event_table()
             if rich_table:
                 console = Console()
                 console.print(rich_table)
             else:
-                # Fallback to plain table
-                table = builder.generate_table()
+                # Fallback to plain event table
+                table = builder.generate_event_table()
                 print(table)
         else:
             # Use event-driven plain table as default

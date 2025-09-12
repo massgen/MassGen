@@ -295,26 +295,13 @@ class Orchestrator(ChatAgent):
 
     def save_coordination_logs(self):
         """Public method to save coordination logs after final presentation is complete."""
-        try:
-            print(f"DEBUG: save_coordination_logs called")
-            print(f"DEBUG: coordination_tracker events count = {len(self.coordination_tracker.events)}")
-            
-            # End the coordination session
-            self.coordination_tracker._end_session()
-            
-            # Save coordination logs using the coordination tracker
-            log_session_dir = get_log_session_dir()
-            print(f"DEBUG: log_session_dir = {log_session_dir}")
-            if log_session_dir:
-                print(f"DEBUG: Calling save_coordination_logs with {log_session_dir}")
-                self.coordination_tracker.save_coordination_logs(log_session_dir)
-                print(f"DEBUG: save_coordination_logs completed")
-            else:
-                print("DEBUG: log_session_dir is None, not saving coordination logs")
-        except Exception as e:
-            print(f"ERROR saving coordination logs: {e}")
-            import traceback
-            traceback.print_exc()
+        # End the coordination session
+        self.coordination_tracker._end_session()
+        
+        # Save coordination logs using the coordination tracker
+        log_session_dir = get_log_session_dir()
+        if log_session_dir:
+            self.coordination_tracker.save_coordination_logs(log_session_dir)
 
     async def _coordinate_agents_with_timeout(
         self, conversation_context: Optional[Dict[str, Any]] = None
