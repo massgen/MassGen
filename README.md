@@ -889,7 +889,7 @@ uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_cas
 - `Bash`: Execute shell commands for file operations
 - `Grep`: Search within files using patterns
 - `Glob`: Find files by pattern matching
-- `Ls`: list file information in current dictionary
+- `Ls`: list file information in current directory
 - `TodoWrite`: Task management and file tracking
 
 
