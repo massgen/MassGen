@@ -833,24 +833,27 @@ MassGen provides comprehensive file system support through multiple backends, en
 **Basic Workspace Setup:**
 ```yaml
 agents:
-  - id: "file_agent"
+  - id: "claude code agent"
     backend:
       type: "claude_code"
-      cwd: "my_workspace"  # Working directory for file operations
+      model: "claude-sonnet-4-20250514"
+      cwd: "ccworkspace"  # Isolated workspace for claude code agent 
 ```
 
 **Multi-Agent Workspace Isolation:**
 ```yaml
 agents:
-  - id: "agent_1"
+  - id: "claude code agent"
     backend:
       type: "claude_code"
-      cwd: "workspace1"  # Isolated workspace for agent 1
+      model: "claude-sonnet-4-20250514"
+      cwd: "ccworkspace"  # Isolated workspace for claude code agent 
       
-  - id: "agent_2" 
+  - id: "gemini agent" 
     backend:
       type: "gemini"
-      cwd: "workspace2"  # Separate workspace for agent 2
+      model: "gemini-2.5-flash"
+      cwd: "gmworkspace"  # Isolated workspace for gemini agent
 
 orchestrator:
   snapshot_storage: "snapshots"              # Shared snapshots directory
@@ -879,7 +882,6 @@ uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_cas
 
 #### Available File Operations
 
-**Claude Code Backend Tools:**
 - `Read`: Read files from filesystem
 - `Write`: Write files to filesystem  
 - `Edit`: Edit existing files with precise replacements
@@ -887,12 +889,13 @@ uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_cas
 - `Bash`: Execute shell commands for file operations
 - `Grep`: Search within files using patterns
 - `Glob`: Find files by pattern matching
+- `Ls`: list file information in current dictionary
 - `TodoWrite`: Task management and file tracking
 
 
 #### Security Considerations:
 
-- Avoid incremental IDs (e.g., `agent1`, `agent2`) in production to prevent ID exposure during voting
+- Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
 - Restrict file access using MCP server configurations when needed
 
 
