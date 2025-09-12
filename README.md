@@ -250,7 +250,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
 | **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
 | **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ❌ | ❌ | - |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
 
 ### 4. 🏃 Run MassGen
 
