@@ -565,11 +565,23 @@ class CoordinationTracker:
             log_dir = Path(log_dir)
             log_dir.mkdir(parents=True, exist_ok=True)
             
-            # Save raw events
+            # Save raw events with session metadata
             events_file = log_dir / "coordination_events.json"
             with open(events_file, 'w', encoding='utf-8') as f:
                 events_data = [event.to_dict() for event in self.events]
-                json.dump(events_data, f, indent=2, default=str)
+                
+                # Include session metadata at the beginning of the JSON
+                session_data = {
+                    "session_metadata": {
+                        "user_prompt": self.user_prompt,
+                        "agent_ids": self.agent_ids,
+                        "start_time": self.start_time,
+                        "end_time": self.end_time,
+                        "final_winner": self.final_winner
+                    },
+                    "events": events_data
+                }
+                json.dump(session_data, f, indent=2, default=str)
             
             # Save snapshot mappings to track filesystem snapshots
             if self.snapshot_mappings:

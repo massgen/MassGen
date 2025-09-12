@@ -223,7 +223,8 @@ class Orchestrator(ChatAgent):
         if self.workflow_phase == "idle":
             # New task - start MassGen coordination with full context
             self.current_task = user_message
-            self.coordination_tracker.set_user_prompt(self.current_task)
+            # Reinitialize session with user prompt now that we have it
+            self.coordination_tracker.initialize_session(list(self.agents.keys()), self.current_task)
             self.workflow_phase = "coordinating"
 
             async for chunk in self._coordinate_agents_with_timeout(
