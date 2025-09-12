@@ -900,7 +900,7 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.19 Roadmap
 
-Version 0.0.19 focuses on **enhanced system observability, code execution capabilities, and improved developer experience**, building on the universal MCP support from v0.0.18. Key priorities include:
+Version 0.0.19 focuses on **enhanced system observability, code execution capabilities, and improved developer experience**, building on the extended MCP support from v0.0.18. Key priorities include:
 
 #### Required Features
 - **Step-by-Step Orchestration Logging**: Enhanced logging with detailed phase tracking, timing metrics, and agent collaboration visualization
