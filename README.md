@@ -922,7 +922,7 @@ Version 0.0.18 achieved **comprehensive MCP support** by extending MCP integrati
 #### Expanded MCP Integration
 - **Complete Chat Completions MCP Support**: Extended MCP to all Chat Completions providers (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter)
 - **Cross-Provider Function Calling Compatibility**: Seamless MCP tool execution across different AI providers
-- **Enhanced Provider Support**: Improved ZAI/Zhipu.ai backend with China endpoint support, enhanced LMStudio backend with better model tracking
+- **Enhanced Provider Support**: Improved LMStudio backend with better model tracking
 
 #### Enhanced Configuration and Examples
 - **9 New MCP Configuration Examples**: GPT-OSS, Qwen API, and Qwen Local configurations for comprehensive MCP testing

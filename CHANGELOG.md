@@ -19,10 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Qwen API configurations: `qwen_api_mcp_example.yaml`, `qwen_api_mcp_test.yaml`, `qwen_api_streamable_http_test.yaml`
   - Qwen Local configurations: `qwen_local_mcp_example.yaml`, `qwen_local_mcp_test.yaml`, `qwen_local_streamable_http_test.yaml`
 
-- **Enhanced ZAI Provider Support**: Extended ZAI/Zhipu.ai backend capabilities
-  - Added China endpoint support (bigmodel.cn) in addition to existing global endpoint (z.ai)
-  - Improved CLI backend detection to recognize both ZAI endpoints
-
 - **Enhanced LMStudio Backend**: Improved local model support
   - Better tracking of attempted model loads
   - Improved server output handling and error reporting
