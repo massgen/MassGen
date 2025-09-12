@@ -356,7 +356,7 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 
 # Debug mode for troubleshooting (NEW in v0.0.13)
 uv run python -m massgen.cli --model claude-3-5-sonnet-latest --debug "What is machine learning?"
-uv run python -m massgen.cli --config three_agents_default.yaml --debug "Debug multi-agent coordination"
+uv run python -m massgen.cli --config three_agents_default.yaml --debug "Summarize latest news of github.com/Leezekun/MassGen"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
