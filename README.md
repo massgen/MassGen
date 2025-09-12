@@ -824,6 +824,79 @@ uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_aut
 uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Test the checkout flow on an e-commerce site and generate a detailed test report"
 ```
 
+### 6. 📁 File System Operations & Workspace Management
+
+MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
+
+#### File System Configuration
+
+**Basic Workspace Setup:**
+```yaml
+agents:
+  - id: "file_agent"
+    backend:
+      type: "claude_code"
+      cwd: "my_workspace"  # Working directory for file operations
+```
+
+**Multi-Agent Workspace Isolation:**
+```yaml
+agents:
+  - id: "agent_1"
+    backend:
+      type: "claude_code"
+      cwd: "workspace1"  # Isolated workspace for agent 1
+      
+  - id: "agent_2" 
+    backend:
+      type: "gemini"
+      cwd: "workspace2"  # Separate workspace for agent 2
+
+orchestrator:
+  snapshot_storage: "snapshots"              # Shared snapshots directory
+  agent_temporary_workspace: "temp_workspaces" # Temporary workspace management
+```
+
+#### File System Examples
+
+**File Analysis and Processing:**
+```bash
+# Analyze codebase structure and generate documentation
+uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Analyze all Python files in the current directory, create a project structure overview, and generate API documentation"
+
+# Log file analysis and reporting
+uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Parse application logs from logs/ directory, identify error patterns, and create a summary report with recommendations"
+```
+
+**Multi-Agent File Collaboration:**
+```bash
+# Code review and refactoring with multiple agents
+uv run python -m massgen.cli --config massgen/configs/claude_code_flash2.5.yaml "Review all JavaScript files in src/, identify code quality issues, and implement improvements across multiple files"
+
+# Data processing pipeline with file operations
+uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_casestudy.yaml "Process CSV files in data/ directory, clean the data, perform analysis, and generate visualization reports"
+```
+
+#### Available File Operations
+
+**Claude Code Backend Tools:**
+- `Read`: Read files from filesystem
+- `Write`: Write files to filesystem  
+- `Edit`: Edit existing files with precise replacements
+- `MultiEdit`: Perform multiple edits in one operation
+- `Bash`: Execute shell commands for file operations
+- `Grep`: Search within files using patterns
+- `Glob`: Find files by pattern matching
+- `TodoWrite`: Task management and file tracking
+
+
+#### Security Considerations:
+
+- Avoid incremental IDs (e.g., `agent1`, `agent2`) in production to prevent ID exposure during voting
+- Restrict file access using MCP server configurations when needed
+
+
+
 ---
 
 ## 🗺️ Roadmap
