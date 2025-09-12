@@ -57,7 +57,7 @@ class AgentConfig:
     def custom_system_instruction(self) -> Optional[str]:
         """
         DEPRECATED: Use backend-specific system prompt parameters instead.
-        
+
         For Claude Code: use append_system_prompt or system_prompt in backend_params
         For other backends: use their respective system prompt parameters
         """
@@ -66,10 +66,10 @@ class AgentConfig:
                 "custom_system_instruction is deprecated. Use backend-specific "
                 "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
         return self._custom_system_instruction
-    
+
     @custom_system_instruction.setter
     def custom_system_instruction(self, value: Optional[str]) -> None:
         if value is not None:
@@ -77,7 +77,7 @@ class AgentConfig:
                 "custom_system_instruction is deprecated. Use backend-specific "
                 "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
         self._custom_system_instruction = value
 

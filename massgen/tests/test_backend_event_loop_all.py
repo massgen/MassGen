@@ -167,12 +167,16 @@ async def test_claude_backend_stream_closes_client(monkeypatch):
         return client
 
     # Inject fake anthropic module for dynamic import inside function
-    monkeypatch.setitem(sys.modules, "anthropic", SimpleNamespace(AsyncAnthropic=_factory))
+    monkeypatch.setitem(
+        sys.modules, "anthropic", SimpleNamespace(AsyncAnthropic=_factory)
+    )
 
     backend = ClaudeBackend()
     messages = [{"role": "user", "content": "hi"}]
 
-    async for _ in backend.stream_with_tools(messages, tools=[], model="claude-3.7-sonnet"):
+    async for _ in backend.stream_with_tools(
+        messages, tools=[], model="claude-3.7-sonnet"
+    ):
         pass
 
     assert len(created) == 1

@@ -5,6 +5,43 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.18] - 2025-09-12
+
+### Added
+- **Chat Completions MCP Support**: Extended MCP (Model Context Protocol) integration to ChatCompletions-based backends
+  - Full MCP support for all Chat Completions providers (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter)
+  - Filesystem support through MCP servers (`FilesystemSupport.MCP`) for Chat Completions backend
+  - Cross-provider function calling compatibility enabling seamless MCP tool execution across different providers
+  - Universal MCP server compatibility with existing stdio and streamable-http transports
+
+- **New MCP Configuration Examples**: Added 9 new Chat Completions MCP configurations
+  - GPT-OSS configurations: `gpt_oss_mcp_example.yaml`, `gpt_oss_mcp_test.yaml`, `gpt_oss_streamable_http_test.yaml`
+  - Qwen API configurations: `qwen_api_mcp_example.yaml`, `qwen_api_mcp_test.yaml`, `qwen_api_streamable_http_test.yaml`
+  - Qwen Local configurations: `qwen_local_mcp_example.yaml`, `qwen_local_mcp_test.yaml`, `qwen_local_streamable_http_test.yaml`
+
+- **Enhanced ZAI Provider Support**: Extended ZAI/Zhipu.ai backend capabilities
+  - Added China endpoint support (bigmodel.cn) in addition to existing global endpoint (z.ai)
+  - Improved CLI backend detection to recognize both ZAI endpoints
+
+- **Enhanced LMStudio Backend**: Improved local model support
+  - Better tracking of attempted model loads
+  - Improved server output handling and error reporting
+
+### Changed
+- **Backend Architecture**: Major MCP framework expansion
+  - Extended existing v0.0.15 MCP infrastructure to support all ChatCompletions providers
+  - Refactored `chat_completions.py` with 1200+ lines of MCP integration code
+  - Enhanced error handling and retry mechanisms for provider-specific quirks
+
+- **CLI Improvements**: Better backend creation and provider detection
+  - Enhanced backend creation logic for improved provider handling
+  - Better system message handling for different backend types
+
+### Technical Details
+- **Main Feature**: Chat Completions MCP integration enabling all providers to use MCP tools
+- **Files Modified**: 20+ files across backend, mcp_tools, configurations, and CLI
+- **Contributors**: @praneeth999 @qidanrui @sonichi @a5507203 @ncrispino @Henry-811 and the MassGen team
+
 ## [0.0.17] - 2025-09-10
 
 ### Added
