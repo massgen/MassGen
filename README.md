@@ -882,6 +882,8 @@ uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_cas
 
 #### Available File Operations
 
+**Claude Code Backend** has built-in file system support with the following operations:
+
 - `Read`: Read files from filesystem
 - `Write`: Write files to filesystem  
 - `Edit`: Edit existing files with precise replacements
@@ -889,9 +891,12 @@ uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_cas
 - `Bash`: Execute shell commands for file operations
 - `Grep`: Search within files using patterns
 - `Glob`: Find files by pattern matching
-- `Ls`: list file information in current directory
+- `Ls`: List file information in current directory
 - `TodoWrite`: Task management and file tracking
 
+**Other Backends** (Gemini, OpenAI, etc.) support file operations through MCP servers. See the complete list of supported operations at:
+
+https://github.com/modelcontextprotocol/servers/blob/main/src%2Ffilesystem%2FREADME.md
 
 #### Security Considerations:
 
