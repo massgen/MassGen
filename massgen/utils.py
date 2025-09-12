@@ -5,7 +5,6 @@ class ActionType(Enum):
     NEW_ANSWER = "answer"
     VOTE = "vote"
     VOTE_IGNORED = "vote_ignored"  # Vote was cast but ignored due to restart
-    RESTART = "restart"  # Agent restarting due to new answers from others
     ERROR = "error"
     TIMEOUT = "timeout"
     CANCELLED = "cancelled"
@@ -21,11 +20,6 @@ class AgentStatus(Enum):
     ERROR = "error"  # encountered an error
     TIMEOUT = "timeout"  # timed out
     COMPLETED = "completed"  # finished all work -- will not be called again
-
-class EventType(Enum):
-    """All types of events that can occur during orchestration."""
-    RESTART = "restart"
-    CHANGE_CONTEXT = "change_context"  # changes the input context for all agents
 
 MODEL_MAPPINGS = {
     "openai": [

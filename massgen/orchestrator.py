@@ -352,9 +352,6 @@ class Orchestrator(ChatAgent):
 
             # Force cleanup of any active agent streams and tasks
             await self._cleanup_active_coordination()
-        finally:
-            # Cleanup without saving logs yet - logs will be saved after final presentation
-            print(f"DEBUG: Finally block in _coordinate_agents_with_timeout - cleanup only")
 
         # Handle timeout by jumping to final presentation
         if self.is_orchestrator_timeout:
@@ -365,64 +362,55 @@ class Orchestrator(ChatAgent):
         self, conversation_context: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
-        print(f"DEBUG: _coordinate_agents started")
-        print(f"DEBUG: coordination_tracker initialized: {self.coordination_tracker is not None}")
-        print(f"DEBUG: coordination_tracker events before: {len(self.coordination_tracker.events) if self.coordination_tracker else 0}")
+        log_coordination_step(
+            "Starting multi-agent coordination",
+            {"agents": list(self.agents.keys()), "has_context": conversation_context is not None}
+        )
+        log_stream_chunk("orchestrator", "content", "🚀 Starting multi-agent coordination...\n\n", self.orchestrator_id)
+        yield StreamChunk(
+            type="content",
+            content="🚀 Starting multi-agent coordination...\n\n",
+            source=self.orchestrator_id,
+        )
+
+        votes = {}  # Track votes: voter_id -> {"agent_id": voted_for, "reason": reason}
+
+        # Initialize all agents with has_voted = False and set restart flags
+        for agent_id in self.agents.keys():
+            self.agent_states[agent_id].has_voted = False
+            self.agent_states[agent_id].restart_pending = True
+
+        log_stream_chunk("orchestrator", "content", "## 📋 Agents Coordinating\n", self.orchestrator_id)
+        yield StreamChunk(
+            type="content",
+            content="## 📋 Agents Coordinating\n",
+            source=self.orchestrator_id,
+        )
+
+        # Start streaming coordination with real-time agent output
+        async for chunk in self._stream_coordination_with_agents(
+            votes, conversation_context
+        ):
+            yield chunk
+
+        # Determine final agent based on votes
+        current_answers = {
+            aid: state.answer
+            for aid, state in self.agent_states.items()
+            if state.answer
+        }
+        self._selected_agent = self._determine_final_agent_from_votes(
+            votes, current_answers
+        )
         
-        try:
-            log_coordination_step(
-                "Starting multi-agent coordination",
-                {"agents": list(self.agents.keys()), "has_context": conversation_context is not None}
-            )
-            log_stream_chunk("orchestrator", "content", "🚀 Starting multi-agent coordination...\n\n", self.orchestrator_id)
-            yield StreamChunk(
-                type="content",
-                content="🚀 Starting multi-agent coordination...\n\n",
-                source=self.orchestrator_id,
-            )
-
-            votes = {}  # Track votes: voter_id -> {"agent_id": voted_for, "reason": reason}
-
-            # Initialize all agents with has_voted = False and set restart flags
-            for agent_id in self.agents.keys():
-                self.agent_states[agent_id].has_voted = False
-                self.agent_states[agent_id].restart_pending = True
-
-            log_stream_chunk("orchestrator", "content", "## 📋 Agents Coordinating\n", self.orchestrator_id)
-            yield StreamChunk(
-                type="content",
-                content="## 📋 Agents Coordinating\n",
-                source=self.orchestrator_id,
-            )
-
-            # Start streaming coordination with real-time agent output
-            async for chunk in self._stream_coordination_with_agents(
-                votes, conversation_context
-            ):
-                yield chunk
-
-            # Determine final agent based on votes
-            current_answers = {
-                aid: state.answer
-                for aid, state in self.agent_states.items()
-                if state.answer
-            }
-            self._selected_agent = self._determine_final_agent_from_votes(
-                votes, current_answers
-            )
-            
-            log_coordination_step(
-                "Final agent selected",
-                {"selected_agent": self._selected_agent, "votes": votes}
-            )
-            
-            # Present final answer
-            async for chunk in self._present_final_answer():
-                yield chunk
-
-        finally:
-            # Cleanup is now handled in _coordinate_agents_with_timeout
-            print(f"DEBUG: _coordinate_agents finally block - cleanup handled by parent")
+        log_coordination_step(
+            "Final agent selected",
+            {"selected_agent": self._selected_agent, "votes": votes}
+        )
+        
+        # Present final answer
+        async for chunk in self._present_final_answer():
+            yield chunk
 
     async def _stream_coordination_with_agents(
         self,
@@ -454,15 +442,6 @@ class Orchestrator(ChatAgent):
             # Start new coordination iteration
             self.coordination_tracker.start_new_iteration()
             
-            # DEBUG: Log active_streams state to understand restart issue
-            active_agents = list(active_streams.keys())
-            logger.info(f"[DEBUG] Iteration {self.coordination_tracker.current_iteration}: active_streams = {active_agents}")
-            for agent_id in self.agents.keys():
-                restart_pending = self.agent_states[agent_id].restart_pending
-                has_voted = self.agent_states[agent_id].has_voted
-                is_killed = self.agent_states[agent_id].is_killed
-                logger.info(f"[DEBUG] Agent {agent_id}: restart_pending={restart_pending}, has_voted={has_voted}, is_killed={is_killed}, in_active_streams={agent_id in active_streams}")
-            
             # Check for orchestrator timeout - stop spawning new agents
             if self.is_orchestrator_timeout:
                 break
@@ -478,7 +457,6 @@ class Orchestrator(ChatAgent):
                     and not self.agent_states[agent_id].has_voted
                     and not self.agent_states[agent_id].is_killed
                 ):
-                    logger.info(f"[DEBUG] Starting _stream_agent_execution for {agent_id} with {len(current_answers)} answers: {list(current_answers.keys())}")
                     active_streams[agent_id] = self._stream_agent_execution(
                         agent_id,
                         self.current_task,
@@ -671,10 +649,7 @@ class Orchestrator(ChatAgent):
                     state.has_voted = False
                 votes.clear()
                 restart_triggered_id = agent_id  # Last agent to provide new answer
-                # Signal ALL agents to gracefully restart
-                from datetime import datetime
-                restart_time = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                
+
                 for agent_id in self.agent_states.keys():
                     self.agent_states[agent_id].restart_pending = True
 
@@ -938,9 +913,6 @@ class Orchestrator(ChatAgent):
     def _check_restart_pending(self, agent_id: str) -> bool:
         """Check if agent should restart and yield restart message if needed. This will always be called when exiting out of _stream_agent_execution()."""
         restart_pending = self.agent_states[agent_id].restart_pending
-        logger.info(f"[DEBUG_RESTART] Agent {agent_id}: _check_restart_pending called, restart_pending={restart_pending}")
-        # if restart_pending:
-        #     self.coordination_tracker.agent_restarted(agent_id)
         return restart_pending
 
     def _normalize_workspace_paths_in_answers(self, answers: Dict[str, str], viewing_agent_id: Optional[str] = None) -> Dict[str, str]:
@@ -1209,21 +1181,6 @@ class Orchestrator(ChatAgent):
             # Track all the context used for this agent execution
             self.coordination_tracker.track_agent_context(agent_id, answers, conversation.get("conversation_history", []), conversation)
             
-            # If this agent was pending a restart, now complete it with the new context
-            # Store this info so we can use it when recording answers
-            # if agent_was_pending_restart and self.coordination_tracker:
-            #     # Get answer labels that this agent can see
-            #     answer_labels = []
-            #     if answers:
-            #         for answering_agent_id in answers.keys():
-            #             if answering_agent_id in self.coordination_tracker.answers_by_agent:
-            #                 if self.coordination_tracker.answers_by_agent[answering_agent_id]:
-            #                     latest_answer = self.coordination_tracker.answers_by_agent[answering_agent_id][-1]
-            #                     answer_labels.append(latest_answer.label)
-                
-            #     # Complete the restart with the new context
-            #     self.coordination_tracker.complete_agent_restart(agent_id, answer_labels)
-                
             # Store the context in agent state for later use when saving snapshots
             self.agent_states[agent_id].last_context = conversation
             
@@ -1266,7 +1223,7 @@ class Orchestrator(ChatAgent):
                     return
 
                 # Stream agent response with workflow tools
-                # TODO: Modify context so it has enforcement_msg if needed?
+                # TODO: Need to still log this redo enforcement msg in the context.txt, and this & others in the coordination tracker.
                 if attempt == 0:
                     # First attempt: orchestrator provides initial conversation
                     # But we need the agent to have this in its history for subsequent calls
@@ -1298,14 +1255,6 @@ class Orchestrator(ChatAgent):
                 logger.info(f"[Orchestrator] Agent {agent_id} starting to stream chat response...")
 
                 async for chunk in chat_stream:
-                    # NVM, below breaks it. I though tit would fix race condition.
-                    # Check for restart signal during streaming to catch mid-execution restarts
-                    # if self._check_restart_pending(agent_id):
-                    #     logger.info(f"[Orchestrator] Agent {agent_id} terminating mid-stream due to restart signal")
-                    #     yield ("content", f"🔄 [{agent_id}] Gracefully restarting due to new answers from other agents\n")
-                    #     yield ("done", None)
-                    #     return
-                    
                     if chunk.type == "content":
                         response_text += chunk.content
                         # Stream agent content directly - source field handles attribution
@@ -1679,9 +1628,6 @@ class Orchestrator(ChatAgent):
             and self._selected_agent in self.agent_states
             and self.agent_states[self._selected_agent].answer
         ):
-            # Always start final round tracking
-            # self.coordination_tracker.start_final_round(self._selected_agent)
-
             final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
 
             # Add to conversation history
