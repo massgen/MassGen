@@ -419,9 +419,9 @@ class CoordinationTableBuilder:
                 # Don't create a separate row for context, it will be shown with answers/votes
                     
             elif event_type == "restart_triggered":
-                # Show restart trigger event
-                lines.extend(self._create_event_row(event_num, agent_id, f"🔁 RESTART TRIGGERED", agent_states, cell_width))
-                add_separator("-")
+                # Show restart trigger event spanning both columns (it's a coordination event)
+                agent_name = f"Agent{agent_id.split('_')[-1]}" if '_' in agent_id else agent_id
+                lines.extend(self._create_system_row(f"🔁 {agent_name} RESTART TRIGGERED", cell_width))
                 event_num += 1
                 
             elif event_type == "restart_completed":
@@ -529,18 +529,18 @@ class CoordinationTableBuilder:
                 # This agent is performing the event
                 cell_content = event_description
             else:
-                # Show current status for other agents
+                # Show current status for other agents - prioritize active states
                 status = agent_states[agent]["status"]
-                if status == "answered":
+                if status in ["streaming", "answering"]:
+                    cell_content = f"🔄 ({status})"
+                elif status == "voted":
+                    # Just show voted status without the value to avoid confusion
+                    cell_content = "✅ (voted)"
+                elif status == "answered":
                     if agent_states[agent]["answer"]:
                         cell_content = f"✅ Answered: {agent_states[agent]['answer']}"
                     else:
                         cell_content = "✅ (answered)"
-                elif status == "voted":
-                    # Just show voted status without the value to avoid confusion
-                    cell_content = "✅ (voted)"
-                elif status in ["streaming", "answering"]:
-                    cell_content = f"🔄 ({status})"
                 elif status == "terminated":
                     cell_content = "❌ (terminated)"
                 elif status == "final":
@@ -574,19 +574,19 @@ class CoordinationTableBuilder:
                     # This agent is performing the event
                     cell_content = event_line
                 else:
-                    # Show current status for other agents (only on first line)
+                    # Show current status for other agents (only on first line) - prioritize active states
                     if line_idx == 0:
                         status = agent_states[agent]["status"]
-                        if status == "answered":
+                        if status in ["streaming", "answering"]:
+                            cell_content = f"🔄 ({status})"
+                        elif status == "voted":
+                            # Just show voted status without the value to avoid confusion
+                            cell_content = "✅ (voted)"
+                        elif status == "answered":
                             if agent_states[agent]["answer"]:
                                 cell_content = f"✅ Answered: {agent_states[agent]['answer']}"
                             else:
                                 cell_content = "✅ (answered)"
-                        elif status == "voted":
-                            # Just show voted status without the value to avoid confusion
-                            cell_content = "✅ (voted)"
-                        elif status in ["streaming", "answering"]:
-                            cell_content = f"🔄 ({status})"
                         elif status == "terminated":
                             cell_content = "❌ (terminated)"
                         elif status == "final":
@@ -923,16 +923,26 @@ class CoordinationTableBuilder:
             agent_id = event.get("agent_id")
             context = event.get("context", {})
             
+            # Handle system events that span both columns
+            if event_type == "final_agent_selected":
+                winner_name = "Agent1" if "1" in agent_id else "Agent2"
+                winner_row = ["[bold green]🏆[/bold green]"]
+                winner_text = Text(f"🏆 {winner_name} selected as winner 🏆", style="bold green", justify="center")
+                for _ in range(len(self.agents)):
+                    winner_row.append(winner_text)
+                table.add_row(*winner_row)
+                continue
+            elif event_type == "restart_triggered" and agent_id and agent_id in self.agents:
+                agent_name = f"Agent{agent_id.split('_')[-1]}" if '_' in agent_id else agent_id
+                restart_row = ["[bold yellow]🔁[/bold yellow]"]
+                restart_text = Text(f"🔁 {agent_name} RESTART TRIGGERED", style="bold yellow", justify="center")
+                for _ in range(len(self.agents)):
+                    restart_row.append(restart_text)
+                table.add_row(*restart_row)
+                continue
+            
             # Skip session-level events
             if not agent_id or agent_id not in self.agents:
-                # Handle system events like winner selection
-                if event_type == "final_agent_selected":
-                    winner_name = "Agent1" if "1" in agent_id else "Agent2"
-                    winner_row = ["[bold green]🏆[/bold green]"]
-                    winner_text = Text(f"🏆 {winner_name} selected as winner 🏆", style="bold green", justify="center")
-                    for _ in range(len(self.agents)):
-                        winner_row.append(winner_text)
-                    table.add_row(*winner_row)
                 continue
                 
             # Handle agent events
@@ -956,12 +966,6 @@ class CoordinationTableBuilder:
                 labels = context.get("available_answer_labels", [])
                 agent_states[agent_id]["context"] = labels
                 
-            elif event_type == "restart_triggered":
-                row = self._create_rich_event_row(event_num, agent_id, agent_states, "restart_triggered")
-                if row:
-                    table.add_row(*row)
-                    event_num += 1
-                    
             elif event_type == "restart_completed":
                 agent_round = context.get("agent_round", context.get("round", 0))
                 row = self._create_rich_event_row(event_num, agent_id, agent_states, "restart_completed", agent_round)
@@ -1021,8 +1025,6 @@ class CoordinationTableBuilder:
                     context = agent_states[agent]["context"]
                     context_str = f"[dim blue]📋 Context: \\[{', '.join(context)}][/dim blue]\n" if context else "[dim blue]📋 Context: \\[][/dim blue]\n"
                     cell = context_str + "[bold cyan]💭 Started streaming[/bold cyan]"
-                elif event_type == "restart_triggered":
-                    cell = "[bold yellow]🔁 RESTART TRIGGERED[/bold yellow]"
                 elif event_type == "restart_completed":
                     cell = f"[bold green]✅ RESTART COMPLETED (Restart {args[0]})[/bold green]"
                 elif event_type == "new_answer":
@@ -1048,17 +1050,17 @@ class CoordinationTableBuilder:
                     cell = ""
                 row.append(cell)
             else:
-                # Other agents showing status
+                # Other agents showing status - prioritize active states
                 status = agent_states[agent]["status"]
-                if status == "answered":
+                if status in ["streaming", "answering"]:
+                    cell = f"[cyan]🔄 ({status})[/cyan]"
+                elif status == "voted":
+                    cell = "[green]✅ (voted)[/green]"
+                elif status == "answered":
                     if agent_states[agent]["answer"]:
                         cell = f"[green]✅ Answered: {agent_states[agent]['answer']}[/green]"
                     else:
                         cell = "[green]✅ (answered)[/green]"
-                elif status == "voted":
-                    cell = "[green]✅ (voted)[/green]"
-                elif status in ["streaming", "answering"]:
-                    cell = f"[cyan]🔄 ({status})[/cyan]"
                 elif status == "terminated":
                     cell = "[red]❌ (terminated)[/red]"
                 elif status == "final":

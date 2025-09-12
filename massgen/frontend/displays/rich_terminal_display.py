@@ -2559,31 +2559,39 @@ class RichTerminalDisplay(TerminalDisplay):
             rich_table = builder.generate_rich_event_table()
             
             if rich_table:
-                # Clear screen and display the Rich table directly
-                self.console.clear()
+                # Use Rich's pager for scrollable display
+                from rich.console import Console
+                from rich.text import Text
+                from rich.panel import Panel
+                
+                # Create a temporary console for paging
+                temp_console = Console()
+                
+                # Create content to display
+                content = []
                 
                 # Add title
                 title_text = Text()
                 title_text.append("📊 COORDINATION TABLE", style="bold bright_green")
-                title_text.append("\nPress Enter to return to agent selector", style="dim")
+                title_text.append("\n\nNavigation: ↑/↓ or j/k to scroll, q to quit", style="dim cyan")
                 
                 title_panel = Panel(
                     title_text,
-                    border_style=self.colors["primary"],
+                    border_style="bright_blue",
                     padding=(1, 2),
                 )
                 
-                self.console.print(title_panel)
-                self.console.print()
+                content.append(title_panel)
+                content.append("")  # Empty line
+                content.append(rich_table)
                 
-                # Display the Rich table
-                self.console.print(rich_table)
-                
-                # Wait for user input
+                # Display with pager (scrollable)
                 try:
-                    input("\nPress Enter to return to agent selector...")
-                except (EOFError, KeyboardInterrupt):
-                    pass  # Handle cases where input is not available
+                    with temp_console.pager(styles=True):
+                        for item in content:
+                            temp_console.print(item)
+                except (KeyboardInterrupt, EOFError):
+                    pass  # Handle user interruption gracefully
                 
                 # Add separator instead of clearing screen
                 self.console.print("\n" + "=" * 80 + "\n")
