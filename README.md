@@ -905,8 +905,6 @@ Version 0.0.19 focuses on **enhanced system observability, code execution capabi
 #### Required Features
 - **Step-by-Step Orchestration Logging**: Enhanced logging with detailed phase tracking, timing metrics, and agent collaboration visualization
 - **Organized MCP Logging**: Hierarchical MCP log categorization with structured formats, trace IDs, and advanced debugging tools
-
-#### Optional Features
 - **Code Execution Support**: Secure code execution with sandboxing, filesystem integration, and safety measures
 - **Enhanced UI & Debugging**: Fix scroll issues for long outputs, improve navigation, and add debugging enhancements
 
