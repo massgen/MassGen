@@ -374,9 +374,7 @@ Present the best possible coordinated answer by combining the strengths from all
         """Build complete initial conversation for MassGen evaluation."""
         # Use agent's custom system message if provided, otherwise use default evaluation message
         if base_system_message:
-            system_message = (
-                f"{self.evaluation_system_message()}\n\n#Special Requirement\n{base_system_message}"
-            )
+            system_message = f"{self.evaluation_system_message()}\n\n#Special Requirement\n{base_system_message}"
         else:
             system_message = self.evaluation_system_message()
 
