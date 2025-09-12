@@ -1524,6 +1524,11 @@ class RichTerminalDisplay(TerminalDisplay):
                     "  s: Inspect the orchestrator working log including the voting process\n",
                     style=self.colors["warning"],
                 )
+                
+                options_text.append(
+                    "  r: Display coordination table (new format)\n",
+                    style=self.colors["warning"],
+                )
 
                 # Add option to show final presentation if it's stored
                 if self._stored_final_presentation and self._stored_presentation_agent:
@@ -1550,6 +1555,8 @@ class RichTerminalDisplay(TerminalDisplay):
                         self._show_agent_full_content(self._agent_keys[choice])
                     elif choice == "s":
                         self._show_system_status()
+                    elif choice == "r":
+                        self.display_coordination_table()
                     elif choice == "f" and self._stored_final_presentation:
                         self._redisplay_final_presentation()
                     elif choice == "q":
@@ -1608,6 +1615,12 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Add separator
         self.console.print("\n" + "=" * 80 + "\n")
+
+    def _show_coordination_rounds_table(self):
+        """Display the coordination rounds table with rich formatting."""
+        # Use the improved coordination table display
+        self.display_coordination_table()
+
 
     def _show_system_status(self):
         """Display system status from txt file."""
@@ -2503,6 +2516,94 @@ class RichTerminalDisplay(TerminalDisplay):
                 transient=False,
             )
             self.live.start()
+
+    def display_coordination_table(self):
+        """Display the coordination table showing the full coordination flow."""
+        try:
+            # Stop live display temporarily
+            was_live = self.live is not None
+            if self.live:
+                self.live.stop()
+                self.live = None
+
+            # Get coordination events from orchestrator
+            if not hasattr(self, 'orchestrator') or not self.orchestrator:
+                print("No orchestrator available for table generation")
+                return
+
+            tracker = getattr(self.orchestrator, 'coordination_tracker', None)
+            if not tracker:
+                print("No coordination tracker available")
+                return
+
+            # Get events data
+            events_data = [event.to_dict() for event in tracker.events]
+            
+            # Import and use the table generator
+            from create_coordination_table import CoordinationTableBuilder
+            
+            # Generate Rich table directly
+            builder = CoordinationTableBuilder(events_data)
+            rich_table = builder.generate_rich_table()
+            
+            if rich_table:
+                # Clear screen and display the Rich table directly
+                self.console.clear()
+                
+                # Add title
+                title_text = Text()
+                title_text.append("📊 COORDINATION TABLE", style="bold bright_green")
+                title_text.append("\nPress Enter to return to agent selector", style="dim")
+                
+                title_panel = Panel(
+                    title_text,
+                    border_style=self.colors["primary"],
+                    padding=(1, 2),
+                )
+                
+                self.console.print(title_panel)
+                self.console.print()
+                
+                # Display the Rich table
+                self.console.print(rich_table)
+                
+                # Wait for user input
+                try:
+                    input("\nPress Enter to return to agent selector...")
+                except (EOFError, KeyboardInterrupt):
+                    pass  # Handle cases where input is not available
+                
+                # Add separator instead of clearing screen
+                self.console.print("\n" + "=" * 80 + "\n")
+            else:
+                # Fallback to text version if Rich not available
+                table_content = builder.generate_table()
+                table_panel = Panel(
+                    table_content,
+                    title="[bold bright_green]📊 COORDINATION TABLE[/bold bright_green]",
+                    border_style=self.colors["success"],
+                    box=DOUBLE,
+                    expand=False,
+                )
+                self.console.print("\n")
+                self.console.print(table_panel)
+                self.console.print()
+
+            # Restart live display if it was active
+            if was_live:
+                self.live = Live(
+                    self._create_layout(),
+                    console=self.console,
+                    refresh_per_second=self.refresh_rate,
+                    vertical_overflow="ellipsis",
+                    transient=False,
+                )
+                self.live.start()
+
+        except Exception as e:
+            print(f"Error displaying coordination table: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def display_final_presentation(
         self,
