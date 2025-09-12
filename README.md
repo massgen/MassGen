@@ -90,15 +90,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.17](#recent-achievements-v0017)
-  - [v0.0.3 - v0.0.16](#previous-achievements-v003-v0016)
+  - [v0.0.18](#recent-achievements-v0018)
+  - [v0.0.3 - v0.0.17](#previous-achievements-v003-v0017)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.18 Roadmap](#v0018-roadmap)
+- [v0.0.19 Roadmap](#v0019-roadmap)
 </details>
 
 <details open>
@@ -832,22 +832,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.17)
+### Recent Achievements (v0.0.18)
 
-**🎉 Released: September 10, 2025**
+**🎉 Released: September 12, 2025**
 
-Version 0.0.17 extended MCP (Model Context Protocol) support to OpenAI backend, expanding the unified tool ecosystem:
+Version 0.0.18 achieved **comprehensive MCP support** by extending MCP integration to all Chat Completions backends, making MCP tools available across most providers:
 
-#### OpenAI MCP Integration
-- **Full MCP Support for OpenAI/GPT Models**: Complete MCP tool discovery and execution for GPT-4, GPT-5, and other OpenAI models
-- **Unified MCP Architecture**: Consistent MCP support across OpenAI, Gemini, and Claude Code backends
-- **Documentation for MCP Integration**: Added case studies and technical documentation for MCP integration
+#### Expanded MCP Integration
+- **Complete Chat Completions MCP Support**: Extended MCP to all Chat Completions providers (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter)
+- **Cross-Provider Function Calling Compatibility**: Seamless MCP tool execution across different AI providers
+- **Enhanced Provider Support**: Improved ZAI/Zhipu.ai backend with China endpoint support, enhanced LMStudio backend with better model tracking
 
-#### Key Capabilities
-- **Multi-Backend MCP**: Seamless MCP tool usage across different model providers
-- **Enhanced Debugging**: Improved error messages and debugging information for MCP operations
+#### Enhanced Configuration and Examples
+- **9 New MCP Configuration Examples**: GPT-OSS, Qwen API, and Qwen Local configurations for comprehensive MCP testing
+- **Filesystem Support**: MCP-based filesystem operations for Chat Completions backends
+- **Broad MCP Server Compatibility**: Support for both stdio and streamable-http transports across Chat Completions providers
 
-### Previous Achievements (v0.0.3-v0.0.16)
+### Previous Achievements (v0.0.3-v0.0.17)
+
+✅ **OpenAI MCP Integration (v0.0.17)**: Extended MCP (Model Context Protocol) support to OpenAI backend with full tool discovery and execution capabilities for GPT models, unified MCP architecture across multiple backends, and enhanced debugging
 
 ✅ **Unified Filesystem Support with MCP Integration (v0.0.16)**: Complete `FilesystemManager` class providing unified filesystem access for Gemini and Claude Code backends, with MCP-based operations for file manipulation and cross-agent collaboration
 
@@ -895,22 +898,24 @@ Version 0.0.17 extended MCP (Model Context Protocol) support to OpenAI backend, 
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.18 Roadmap
+### v0.0.19 Roadmap
 
-Version 0.0.18 focuses on **universal MCP support and system observability**, extending MCP to the ChatCompletions backend while improving debugging and monitoring capabilities. Key priorities include:
+Version 0.0.19 focuses on **enhanced system observability, code execution capabilities, and improved developer experience**, building on the universal MCP support from v0.0.18. Key priorities include:
 
 #### Required Features
-- **Chat Completions MCP Support**: Extend MCP integration to all Chat Completions backends
-- **Step-by-Step Orchestration Logging**: Clear logging that shows each phase of agent collaboration (task distribution → parallel work → consensus building → final answer) with detailed architecture documentation
-- **Enhanced Debugging & UI**: Fix scroll issues and improve long output handling
-- **Organized MCP Logging**: Structure and improve readability of MCP-related logs
+- **Step-by-Step Orchestration Logging**: Enhanced logging with detailed phase tracking, timing metrics, and agent collaboration visualization
+- **Organized MCP Logging**: Hierarchical MCP log categorization with structured formats, trace IDs, and advanced debugging tools
+
+#### Optional Features
+- **Code Execution Support**: Secure code execution with sandboxing, filesystem integration, and safety measures
+- **Enhanced UI & Debugging**: Fix scroll issues for long outputs, improve navigation, and add debugging enhancements
 
 Key technical approach:
-- **Generic Backend Integration**: Extend MCP framework to ChatCompletionsBackend base class
-- **Architecture Documentation**: Create comprehensive diagrams and documentation in `/docs/architecture/`
-- **Enhanced Observability**: Add pipeline stage indicators and performance metrics
+- **Hierarchical Log Organization**: Structured MCP logging with Connection, Tool Discovery, Execution, Error Handling, and Performance categories
+- **End-to-End Tracing**: MCP operation trace IDs and session correlation across servers and tools
+- **Advanced Debugging Tools**: Timeline views, analytics, performance benchmarking, and granular filtering
 
-For detailed milestones and technical specifications, see the [full v0.0.18 roadmap](ROADMAP_v0.0.18.md).
+For detailed milestones and technical specifications, see the [full v0.0.19 roadmap](ROADMAP_v0.0.19.md).
 
 ---
 
