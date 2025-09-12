@@ -148,7 +148,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError(
                 "Grok API key not found. Set XAI_API_KEY or provide in config."
             )
-        return GrokBackend(api_key=api_key)
+        return GrokBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "claude":
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
@@ -156,7 +156,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             raise ConfigurationError(
                 "Claude API key not found. Set ANTHROPIC_API_KEY or provide in config."
             )
-        return ClaudeBackend(api_key=api_key)
+        return ClaudeBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "gemini":
         api_key = (
@@ -182,27 +182,54 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                     raise ConfigurationError(
                         "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
                     )
-            elif base_url and "z.ai" in base_url:
+            elif base_url and "together.ai" in base_url:
+                api_key = os.getenv("TOGETHER_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Together AI API key not found. Set TOGETHER_API_KEY or provide in config."
+                    )
+            elif base_url and "fireworks.xyz" in base_url:
+                api_key = os.getenv("FIREWORKS_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Fireworks AI API key not found. Set FIREWORKS_API_KEY or provide in config."
+                    )
+            elif base_url and "groq.com" in base_url:
+                api_key = os.getenv("GROQ_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Groq API key not found. Set GROQ_API_KEY or provide in config."
+                    )
+            elif base_url and "nebius.com" in base_url:
+                api_key = os.getenv("NEBIUS_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Nebius AI Studio API key not found. Set NEBIUS_API_KEY or provide in config."
+                    )
+            elif base_url and "openrouter.ai" in base_url:
+                api_key = os.getenv("OPENROUTER_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "OpenRouter API key not found. Set OPENROUTER_API_KEY or provide in config."
+                    )
+            elif base_url and ("z.ai" in base_url or "bigmodel.cn" in base_url):
                 api_key = os.getenv("ZAI_API_KEY")
                 if not api_key:
                     raise ConfigurationError(
                         "ZAI API key not found. Set ZAI_API_KEY or provide in config."
                     )
 
-        return ChatCompletionsBackend(api_key=api_key)
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "zai":
-        # ZAI uses OpenAI-compatible Chat Completions at a custom base_url
+        # ZAI (Zhipu.ai) uses OpenAI-compatible Chat Completions at a custom base_url
+        # Supports both global (z.ai) and China (bigmodel.cn) endpoints
         api_key = kwargs.get("api_key") or os.getenv("ZAI_API_KEY")
         if not api_key:
             raise ConfigurationError(
                 "ZAI API key not found. Set ZAI_API_KEY or provide in config."
             )
-        return ChatCompletionsBackend(api_key=api_key)
-
-        # ChatCompletionsBackend now handles provider-specific API key detection internally
-        # Just pass through all kwargs including api_key and base_url
-        return ChatCompletionsBackend(**kwargs)
+        return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "lmstudio":
         # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
