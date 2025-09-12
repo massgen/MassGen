@@ -29,6 +29,7 @@ class LMStudioBackend(ChatCompletionsBackend):
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key="lm-studio",  **kwargs)    # Override to avoid environment-variable enforcement; LM Studio accepts any key
+        self._models_attempted = set()  # Track models this instance has attempted to load
         self.start_lmstudio_server(**kwargs)
 
     # Local server usage is typically free; report zero cost
@@ -114,7 +115,13 @@ class LMStudioBackend(ChatCompletionsBackend):
                 if stdout:
                     print(f"Server output: {stdout}")
                 if stderr:
-                    print(f"Server error: {stderr}")
+                    stderr_lower = stderr.lower()
+                    if "success" in stderr_lower or "running on port" in stderr_lower:
+                        print(f"Server info: {stderr.strip()}")
+                    elif "warning" in stderr_lower or "warn" in stderr_lower:
+                        print(f"Server warning: {stderr.strip()}")
+                    else:
+                        print(f"Server error: {stderr.strip()}")
                 print("LM Studio server started successfully.")
         except Exception as e:
             raise Exception(f"Failed to start LM Studio server: {e}")
@@ -141,6 +148,14 @@ class LMStudioBackend(ChatCompletionsBackend):
                 print(f"Warning: Could not check/download model: {e}")
             
             try:
+                # Check if this instance already attempted to load this model
+                if model_name in self._models_attempted:
+                    print(f"Model '{model_name}' load already attempted by this instance.")
+                    return
+                
+                # Add brief wait to allow model to finish loading after download
+                time.sleep(5)
+                
                 # List available models using lms list
                 loaded = lms.list_loaded_models()
                 
@@ -149,15 +164,23 @@ class LMStudioBackend(ChatCompletionsBackend):
                 loaded_identifiers = [m.identifier for m in loaded]
                 if model_name not in loaded_identifiers:
                     print(f"Model '{model_name}' not loaded. Loading...")
+                    # Mark model as attempted before loading to prevent race conditions
+                    self._models_attempted.add(model_name)
                     # Load the model using lms load
                     subprocess.run(
                         ["lms", "load", model_name], 
                         check=True
                     )
                     print(f"Model '{model_name}' loaded successfully.")
+                else:
+                    print(f"Model '{model_name}' is already loaded.")
+                    # Mark as attempted since it's already available
+                    self._models_attempted.add(model_name)
                 
+            except subprocess.CalledProcessError as e:
+                print(f"Warning: Failed to load model '{model_name}': {e}")
             except Exception as e:
-                print(f"Warning: Could not check/load model: {e}")
+                print(f"Warning: Could not check loaded models: {e}")
 
 
     def end_lmstudio_server(self):
