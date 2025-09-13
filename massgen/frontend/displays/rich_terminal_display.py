@@ -1526,7 +1526,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 )
                 
                 options_text.append(
-                    "  r: Display coordination table (new format)\n",
+                    "  r: Display coordination table to see the full history of agent interactions and decisions\n",
                     style=self.colors["warning"],
                 )
 
@@ -2554,11 +2554,13 @@ class RichTerminalDisplay(TerminalDisplay):
             # Import and use the table generator
             from create_coordination_table import CoordinationTableBuilder
             
-            # Generate Rich event table directly
+            # Generate Rich event table with legend
             builder = CoordinationTableBuilder(session_data)
-            rich_table = builder.generate_rich_event_table()
+            result = builder.generate_rich_event_table()
             
-            if rich_table:
+            if result:
+                legend, rich_table = result  # Unpack tuple
+                
                 # Use Rich's pager for scrollable display
                 from rich.console import Console
                 from rich.text import Text
@@ -2583,6 +2585,12 @@ class RichTerminalDisplay(TerminalDisplay):
                 
                 content.append(title_panel)
                 content.append("")  # Empty line
+                
+                # Add legend if available
+                if legend:
+                    content.append(legend)
+                    content.append("")  # Empty line
+                    
                 content.append(rich_table)
                 
                 # Display with pager (scrollable)

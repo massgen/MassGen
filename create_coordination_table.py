@@ -721,9 +721,41 @@ class CoordinationTableBuilder:
         
         return lines
     
+    def _get_legend_content(self) -> dict:
+        """Get legend content as structured data to be formatted by different displays"""
+        return {
+            "event_symbols": [
+                ("💭 Started streaming", "Agent begins thinking/processing"),
+                ("✨ NEW ANSWER", "Agent provides a labeled answer"),
+                ("🗳️  VOTE", "Agent votes for an answer"),
+                ("💭 Reason", "Reasoning behind the vote"),
+                ("👁️  Preview", "Content of the answer"),
+                ("🔁 RESTART TRIGGERED", "Agent requests to restart"),
+                ("✅ RESTART COMPLETED", "Agent finishes restart"),
+                ("🎯 FINAL ANSWER", "Winner provides final response"),
+                ("🏆 Winner selected", "System announces winner"),
+            ],
+            "status_symbols": [
+                ("💭 (streaming)", "Currently thinking/processing"),
+                ("⏳ (waiting)", "Idle, waiting for turn"),
+                ("✅ (answered)", "Has provided an answer"),
+                ("✅ (voted)", "Has cast a vote"),
+                ("❌ (terminated)", "Eliminated from competition"),
+                ("🎯 (final answer given)", "Winner completed final answer"),
+            ],
+            "terms": [
+                ("Context", "Available answer options agent can see"),
+                ("Restart", "Agent starts over (clears memory)"),
+                ("Event", "Chronological action in the coordination"),
+                ("Answer Labels", "Each answer gets a unique ID (agent1.1, agent2.1, etc.)\n                  Format: agent{N}.{attempt} where N=agent number, attempt=try number\n                  Example: agent1.1 = Agent1's 1st answer, agent2.1 = Agent2's 1st answer"),
+                ("agent1.final", "Special label for the winner's final answer"),
+            ]
+        }
+    
     def _create_legend_section(self, cell_width: int) -> list:
-        """Create legend/explanation section at the top"""
+        """Create legend/explanation section at the top for plain text"""
         lines = []
+        legend_data = self._get_legend_content()
         
         # Title
         lines.append("")
@@ -733,36 +765,30 @@ class CoordinationTableBuilder:
         
         # Event symbols
         lines.append("📋 EVENT SYMBOLS:")
-        lines.append("  💭 Started streaming    - Agent begins thinking/processing")
-        lines.append("  ✨ NEW ANSWER           - Agent provides a labeled answer") 
-        lines.append("  🗳️  VOTE                - Agent votes for an answer")
-        lines.append("  💭 Reason               - Reasoning behind the vote")
-        lines.append("  👁️  Preview             - Content of the answer")
-        lines.append("  🔁 RESTART TRIGGERED    - Agent requests to restart")
-        lines.append("  ✅ RESTART COMPLETED    - Agent finishes restart")
-        lines.append("  🎯 FINAL ANSWER         - Winner provides final response")
-        lines.append("  🏆 Winner selected      - System announces winner")
+        for symbol, description in legend_data["event_symbols"]:
+            # Pad symbol to consistent width (24 chars) for alignment
+            padded = f"  {symbol}".ljust(28)
+            lines.append(f"{padded}- {description}")
         lines.append("")
         
         # Status symbols  
         lines.append("📊 STATUS SYMBOLS:")
-        lines.append("  💭 (streaming)          - Currently thinking/processing")
-        lines.append("  ⏳ (waiting)            - Idle, waiting for turn")
-        lines.append("  ✅ (answered)           - Has provided an answer")
-        lines.append("  ✅ (voted)              - Has cast a vote")
-        lines.append("  ❌ (terminated)         - Eliminated from competition")
-        lines.append("  🎯 (final answer given) - Winner completed final answer")
+        for symbol, description in legend_data["status_symbols"]:
+            padded = f"  {symbol}".ljust(28)
+            lines.append(f"{padded}- {description}")
         lines.append("")
         
         # Terms
         lines.append("📖 TERMS:")
-        lines.append("  Context       - Available answer options agent can see")
-        lines.append("  Restart       - Agent starts over (clears memory)")
-        lines.append("  Event         - Chronological action in the coordination")
-        lines.append("  Answer Labels - Each answer gets a unique ID (agent1.1, agent2.1, etc.)")
-        lines.append("                  Format: agent{N}.{attempt} where N=agent number, attempt=try number")
-        lines.append("                  Example: agent1.1 = Agent1's 1st answer, agent2.1 = Agent2's 1st answer")
-        lines.append("  agent1.final  - Special label for the winner's final answer")
+        for term, description in legend_data["terms"]:
+            if "\n" in description:
+                # Handle multi-line descriptions
+                first_line = description.split("\n")[0]
+                lines.append(f"  {term.ljust(13)} - {first_line}")
+                for line in description.split("\n")[1:]:
+                    lines.append(f"  {line}")
+            else:
+                lines.append(f"  {term.ljust(13)} - {description}")
         lines.append("")
         
         return lines
@@ -879,8 +905,58 @@ class CoordinationTableBuilder:
         
         return "\n".join(lines)
     
-    def generate_rich_event_table(self) -> Optional["Table"]:
-        """Generate a rich event-driven table"""
+    def _create_rich_legend(self) -> Optional["Panel"]:
+        """Create Rich legend panel using shared legend content"""
+        try:
+            from rich.text import Text
+            from rich.panel import Panel
+            from rich import box
+        except ImportError:
+            return None
+            
+        legend_data = self._get_legend_content()
+        content = Text()
+        
+        # Event symbols
+        content.append("📋 EVENT SYMBOLS:\n", style="bold bright_blue")
+        for symbol, description in legend_data["event_symbols"]:
+            padded = f"  {symbol}".ljust(28)
+            content.append(f"{padded}- {description}\n", style="dim white")
+        content.append("\n")
+        
+        # Status symbols
+        content.append("📊 STATUS SYMBOLS:\n", style="bold bright_green")
+        for symbol, description in legend_data["status_symbols"]:
+            padded = f"  {symbol}".ljust(28)
+            content.append(f"{padded}- {description}\n", style="dim white")
+        content.append("\n")
+        
+        # Terms
+        content.append("📖 TERMS:\n", style="bold bright_yellow")
+        for term, description in legend_data["terms"]:
+            if "\n" in description:
+                # Handle multi-line descriptions
+                lines = description.split("\n")
+                content.append(f"  {term.ljust(13)} - {lines[0]}\n", style="dim white")
+                for line in lines[1:]:
+                    content.append(f"  {line}\n", style="dim white")
+            else:
+                content.append(f"  {term.ljust(13)} - {description}\n", style="dim white")
+        
+        return Panel(
+            content,
+            title="[bold bright_cyan]📋 COORDINATION GUIDE[/bold bright_cyan]",
+            border_style="bright_cyan",
+            box=box.ROUNDED,
+            padding=(1, 2)
+        )
+    
+    def generate_rich_event_table(self) -> Optional[tuple]:
+        """Generate a rich event-driven table with legend
+        
+        Returns:
+            Tuple of (legend_panel, table) or None if Rich not available
+        """
         try:
             from rich.table import Table
             from rich.console import Console
@@ -888,6 +964,9 @@ class CoordinationTableBuilder:
             from rich import box
         except ImportError:
             return None
+        
+        # Create legend first
+        legend = self._create_rich_legend()
         
         # Create the main table
         table = Table(
@@ -1012,7 +1091,8 @@ class CoordinationTableBuilder:
         # Add summary section
         self._add_rich_summary(table, agent_states)
         
-        return table
+        # Return both legend and table
+        return (legend, table)
     
     def _create_rich_event_row(self, event_num: int, active_agent: str, agent_states: dict, event_type: str, *args) -> list:
         """Create a rich table row for an event"""

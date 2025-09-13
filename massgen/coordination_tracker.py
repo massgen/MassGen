@@ -17,6 +17,7 @@ from typing import Dict, List, Optional, Any, Set, Tuple
 from dataclasses import dataclass, field
 from pathlib import Path
 from .utils import AgentStatus, ActionType
+from .logger_config import logger
 
 @dataclass
 class CoordinationEvent:
@@ -593,12 +594,10 @@ class CoordinationTracker:
             try:
                 self._generate_coordination_table(log_dir, session_data)
             except Exception as e:
-                print(f"Warning: Could not generate coordination table: {e}")
-            
-            print(f"💾 Coordination logs saved to: {log_dir}")
+                logger.warning(f"Warning: Could not generate coordination table: {e}")
             
         except Exception as e:
-            print(f"Failed to save coordination logs: {e}")
+            logger.warning("Failed to save coordination logs: {e}")
     
     def _generate_coordination_table(self, log_dir, session_data):
         """Generate coordination table using the create_coordination_table.py module."""
@@ -615,12 +614,10 @@ class CoordinationTracker:
             with open(table_file, 'w', encoding='utf-8') as f:
                 f.write(table_content)
             
-            print(f"📊 Coordination table saved to: {table_file}")
+            logger.info(f"Coordination table generated at {table_file}")
             
         except Exception as e:
-            print(f"Error generating coordination table: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.warning(f"Error generating coordination table: {e}")
     
     def _get_agent_id_from_label(self, label: str) -> str:
         """Extract agent_id from a label like 'agent1.1' or 'agent2.final'."""
