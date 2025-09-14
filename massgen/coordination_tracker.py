@@ -15,15 +15,44 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Set, Tuple
 from dataclasses import dataclass, field
+from enum import Enum
+import copy
 from pathlib import Path
+
 from .utils import AgentStatus, ActionType
 from .logger_config import logger
+
+class EventType(str, Enum):
+    SESSION_START = "session_start"
+    SESSION_END = "session_end"
+    ITERATION_START = "iteration_start"
+    ITERATION_END = "iteration_end"
+    STATUS_CHANGE = "status_change"
+    CONTEXT_RECEIVED = "context_received"
+    RESTART_TRIGGERED = "restart_triggered"
+    RESTART_COMPLETED = "restart_completed"
+    NEW_ANSWER = "new_answer"
+    VOTE_CAST = "vote_cast"
+    FINAL_AGENT_SELECTED = "final_agent_selected"
+    FINAL_ANSWER = "final_answer"
+    FINAL_ROUND_START = "final_round_start"
+
+    AGENT_ERROR = "agent_error"
+    AGENT_TIMEOUT = "agent_timeout"
+    AGENT_CANCELLED = "agent_cancelled"
+
+ACTION_TO_EVENT = {
+    ActionType.ERROR: EventType.AGENT_ERROR,
+    ActionType.TIMEOUT: EventType.AGENT_TIMEOUT,
+    ActionType.CANCELLED: EventType.AGENT_CANCELLED,
+}
+
 
 @dataclass
 class CoordinationEvent:
     """A single coordination event with timestamp."""
     timestamp: float
-    event_type: str
+    event_type: EventType
     agent_id: Optional[str] = None
     details: str = ""
     context: Optional[Dict[str, Any]] = None
@@ -133,7 +162,7 @@ class CoordinationTracker:
         self.anon_to_agent_id = {v: k for k, v in self.agent_id_to_anon.items()}
         self.agent_context_labels = {aid: [] for aid in agent_ids}
         
-        self._add_event("session_start", None, f"Started with agents: {agent_ids}")
+        self._add_event(EventType.SESSION_START, None, f"Started with agents: {agent_ids}")
 
     # Canonical mapping utility methods
     def get_anonymous_id(self, agent_id: str) -> str:
@@ -178,20 +207,20 @@ class CoordinationTracker:
                 latest_answer = answers_list[-1]  # Get most recent answer
                 self.iteration_available_labels.append(latest_answer.label)  # e.g., "agent1.1"
         
-        self._add_event("iteration_start", None, f"Starting coordination iteration {self.current_iteration}", 
-                       {"iteration": self.current_iteration, "available_answers": self.iteration_available_labels.copy()})
+        self._add_event(EventType.ITERATION_START, None, f"Starting coordination iteration {self.current_iteration}", 
+                       {"iteration": self.current_iteration, "available_answers": self.iteration_available_labels.deepcopy()})
 
     def end_iteration(self, reason: str, details: Dict[str, Any] = None):
         """Record how an iteration ended."""
         context = {
             "iteration": self.current_iteration,
             "end_reason": reason,
-            "available_answers": self.iteration_available_labels.copy()
+            "available_answers": self.iteration_available_labels.deepcopy()
         }
         if details:
             context.update(details)
             
-        self._add_event("iteration_end", None, f"Iteration {self.current_iteration} ended: {reason}", context)
+        self._add_event(EventType.ITERATION_END, None, f"Iteration {self.current_iteration} ended: {reason}", context)
 
     def set_user_prompt(self, prompt: str):
         """Set or update the user prompt."""
@@ -199,7 +228,7 @@ class CoordinationTracker:
 
     def change_status(self, agent_id: str, new_status: AgentStatus):
         """Record when an agent changes status."""
-        self._add_event("status_change", agent_id, f"Changed to status: {new_status.value}")
+        self._add_event(EventType.STATUS_CHANGE, agent_id, f"Changed to status: {new_status.value}")
 
     def track_agent_context(self, agent_id: str, answers: Dict[str, str], conversation_history: Optional[Dict[str, Any]] = None, agent_full_context: Optional[str] = None, snapshot_dir: Optional[str] = None):
         """Record when an agent receives context.
@@ -220,18 +249,18 @@ class CoordinationTracker:
                 answer_labels.append(latest_answer.label)
         
         # Update this agent's context labels using canonical mapping
-        self.agent_context_labels[agent_id] = answer_labels.copy()
+        self.agent_context_labels[agent_id] = answer_labels.deepcopy()
         
         # Use anonymous agent IDs for the event context
         anon_answering_agents = [self.agent_id_to_anon.get(aid, aid) for aid in answers.keys()]
         
         context = {
             "available_answers": anon_answering_agents,  # Anonymous IDs for backward compat
-            "available_answer_labels": answer_labels.copy(),  # Store actual labels in event
+            "available_answer_labels": answer_labels.deepcopy(),  # Store actual labels in event
             "answer_count": len(answers),
             "has_conversation_history": bool(conversation_history)
         }
-        self._add_event("context_received", agent_id, 
+        self._add_event(EventType.CONTEXT_RECEIVED, agent_id, 
                        f"Received context with {len(answers)} answers", context)
 
     def track_restart_signal(self, triggering_agent: str, agents_restarted: List[str]):
@@ -243,7 +272,7 @@ class CoordinationTracker:
         
         # Log restart event (no round increment yet)
         context = {"affected_agents": agents_restarted, "triggering_agent": triggering_agent}
-        self._add_event("restart_triggered", triggering_agent, 
+        self._add_event(EventType.RESTART_TRIGGERED, triggering_agent, 
                        f"Triggered restart affecting {len(agents_restarted)} agents", context)
 
     def complete_agent_restart(self, agent_id: str):
@@ -271,7 +300,7 @@ class CoordinationTracker:
         context = {
             "agent_round": new_round,
         }
-        self._add_event("restart_completed", agent_id, 
+        self._add_event(EventType.RESTART_COMPLETED, agent_id, 
                        f"Completed restart - now in round {new_round}", context)
 
     def add_agent_answer(self, agent_id: str, answer: str, snapshot_timestamp: Optional[str] = None):
@@ -314,7 +343,7 @@ class CoordinationTracker:
         
         # Record event with label (important info) but no preview (that's for display only)
         context = {"label": label}
-        self._add_event("new_answer", agent_id, f"Provided answer {label}", context)
+        self._add_event(EventType.NEW_ANSWER, agent_id, f"Provided answer {label}", context)
 
     def add_agent_vote(self, agent_id: str, vote_data: Dict[str, Any], snapshot_timestamp: Optional[str] = None):
         """Record when an agent votes.
@@ -333,6 +362,9 @@ class CoordinationTracker:
         
         # Find the voted-for answer label (agent1.1, agent2.1, etc.)
         voted_for_label = "unknown"
+        if voted_for not in self.agent_ids:
+            logger.warning(f"Vote from {agent_id} for unknown agent {voted_for}")
+
         if voted_for in self.agent_ids:
             # Find the latest answer from the voted-for agent at vote time
             voted_agent_answers = self.answers_by_agent.get(voted_for, [])
@@ -347,7 +379,7 @@ class CoordinationTracker:
             voter_anon_id=voter_anon_id,
             reason=reason,
             timestamp=time.time(),
-            available_answers=self.iteration_available_labels.copy()
+            available_answers=self.iteration_available_labels.deepcopy()
         )
         self.votes.append(vote)
         
@@ -375,9 +407,9 @@ class CoordinationTracker:
             "voted_for": voted_for,  # Real agent ID for compatibility
             "voted_for_label": voted_for_label,  # Answer label for display
             "reason": reason,
-            "available_answers": self.iteration_available_labels.copy()
+            "available_answers": self.iteration_available_labels.deepcopy()
         }
-        self._add_event("vote_cast", agent_id, f"Voted for {voted_for_label}", context)
+        self._add_event(EventType.VOTE_CAST, agent_id, f"Voted for {voted_for_label}", context)
 
     def set_final_agent(self, agent_id: str, vote_summary: str, all_answers: Dict[str, str]):
         """Record when final agent is selected."""
@@ -402,7 +434,7 @@ class CoordinationTracker:
             "all_answers": answer_labels,  # Now contains labels like ["agent1.1", "agent2.1"]
             "answers_for_context": answers_with_labels  # Now keyed by labels
         }
-        self._add_event("final_agent_selected", agent_id, "Selected as final presenter", self.final_context)
+        self._add_event(EventType.FINAL_AGENT_SELECTED, agent_id, "Selected as final presenter", self.final_context)
 
     def set_final_answer(self, agent_id: str, final_answer: str, snapshot_timestamp: Optional[str] = None):
         """Record the final answer presentation.
@@ -443,7 +475,7 @@ class CoordinationTracker:
         
         # Record event with label only (no preview)
         context = {"label": label, **(self.final_context or {})}
-        self._add_event("final_answer", agent_id, f"Presented final answer {label}", context)
+        self._add_event(EventType.FINAL_ANSWER, agent_id, f"Presented final answer {label}", context)
 
     def start_final_round(self, selected_agent_id: str):
         """Start the final presentation round."""
@@ -457,7 +489,7 @@ class CoordinationTracker:
         # Mark winner as starting final presentation
         self.change_status(selected_agent_id, AgentStatus.STREAMING)
         
-        self._add_event("final_round_start", selected_agent_id, 
+        self._add_event(EventType.FINAL_ROUND_START, selected_agent_id, 
                        f"Starting final presentation round {final_round}", 
                        {"round_type": "final", "final_round": final_round})
 
@@ -467,20 +499,25 @@ class CoordinationTracker:
             # For answers, details should be the actual answer content
             self.add_agent_answer(agent_id, details)
         elif action_type == ActionType.VOTE:
+            if voted_for not in self.agent_ids:
+                logger.warning(f"Vote from {agent_id} for unknown agent {voted_for}")
+
             # For votes, details should be vote data dict - but this needs to be handled separately
             # since add_agent_vote expects a dict, not a string
             pass  # Use add_agent_vote directly
         else:
-            # For errors, timeouts, cancellations
-            action_name = action_type.value.upper()
-            self._add_event(f"agent_{action_type.value}", agent_id, f"{action_name}: {details}" if details else action_name)
+            event_type = ACTION_TO_EVENT.get(action_type)
+            if event_type is None:
+                raise ValueError(f"Unsupported ActionType: {action_type}")
+            message = f"{action_type.value.upper()}: {details}" if details else action_type.value.upper()
+            self._add_event(event_type, agent_id, message)
 
-    def _add_event(self, event_type: str, agent_id: Optional[str], details: str, context: Optional[Dict[str, Any]] = None):
+    def _add_event(self, event_type: EventType, agent_id: Optional[str], details: str, context: Optional[Dict[str, Any]] = None):
         """Internal method to add an event."""
         # Automatically include current iteration and round in context
         if context is None:
             context = {}
-        context = context.copy()  # Don't modify the original
+        context = context.deepcopy()  # Don't modify the original
         context["iteration"] = self.current_iteration
         
         # Include agent-specific round if agent_id is provided, otherwise use max round for backward compatibility
@@ -502,7 +539,7 @@ class CoordinationTracker:
         """Mark the end of the coordination session."""
         self.end_time = time.time()
         duration = self.end_time - (self.start_time or self.end_time)
-        self._add_event("session_end", None, f"Session completed in {duration:.1f}s")
+        self._add_event(EventType.SESSION_END, None, f"Session completed in {duration:.1f}s")
     
     def get_all_answers(self) -> Dict[str, str]:
         """Get all answers as a label->content dictionary."""
@@ -536,15 +573,16 @@ class CoordinationTracker:
         length = max_length if max_length is not None else self.preview_length
         
         # Only add ellipsis if we're actually truncating
-        if len(content) <= length:
-            return content
-        else:
-            return content[:length].rstrip() + "..."
+        #keep whole words
+        if len(content) > length:
+            truncated = content[:length].rsplit(" ", 1)[0]
+            return truncated + "..."
+        return content
     
     def get_summary(self) -> Dict[str, Any]:
         """Get session summary statistics."""
         duration = (self.end_time or time.time()) - (self.start_time or time.time())
-        restart_count = len([e for e in self.events if e.event_type == "restart_triggered"])
+        restart_count = len([e for e in self.events if e.event_type == EventType.RESTART_TRIGGERED])
         
         return {
             "duration": duration,
@@ -594,10 +632,10 @@ class CoordinationTracker:
             try:
                 self._generate_coordination_table(log_dir, session_data)
             except Exception as e:
-                logger.warning(f"Warning: Could not generate coordination table: {e}")
+                logger.warning(f"Warning: Could not generate coordination table: {e}", exc_info=True)
             
         except Exception as e:
-            logger.warning("Failed to save coordination logs: {e}")
+            logger.warning(f"Failed to save coordination logs: {e}", exc_info=True)
     
     def _generate_coordination_table(self, log_dir, session_data):
         """Generate coordination table using the create_coordination_table.py module."""
@@ -617,7 +655,7 @@ class CoordinationTracker:
             logger.info(f"Coordination table generated at {table_file}")
             
         except Exception as e:
-            logger.warning(f"Error generating coordination table: {e}")
+            logger.warning(f"Error generating coordination table: {e}", exc_info=True)
     
     def _get_agent_id_from_label(self, label: str) -> str:
         """Extract agent_id from a label like 'agent1.1' or 'agent2.final'."""
