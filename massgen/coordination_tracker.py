@@ -360,6 +360,9 @@ class CoordinationTracker:
         
         # Find the voted-for answer label (agent1.1, agent2.1, etc.)
         voted_for_label = "unknown"
+        if voted_for not in self.agent_ids:
+            logger.warning(f"Vote from {agent_id} for unknown agent {voted_for}")
+
         if voted_for in self.agent_ids:
             # Find the latest answer from the voted-for agent at vote time
             voted_agent_answers = self.answers_by_agent.get(voted_for, [])
@@ -494,6 +497,9 @@ class CoordinationTracker:
             # For answers, details should be the actual answer content
             self.add_agent_answer(agent_id, details)
         elif action_type == ActionType.VOTE:
+            if voted_for not in self.agent_ids:
+                logger.warning(f"Vote from {agent_id} for unknown agent {voted_for}")
+
             # For votes, details should be vote data dict - but this needs to be handled separately
             # since add_agent_vote expects a dict, not a string
             pass  # Use add_agent_vote directly
@@ -565,10 +571,10 @@ class CoordinationTracker:
         length = max_length if max_length is not None else self.preview_length
         
         # Only add ellipsis if we're actually truncating
-        if len(content) <= length:
-            return content
-        else:
-            return content[:length].rstrip() + "..."
+        if len(content) > length:
+            truncated = content[:length].rsplit(" ", 1)[0]
+            return truncated + "..."
+        return content
     
     def get_summary(self) -> Dict[str, Any]:
         """Get session summary statistics."""
@@ -623,10 +629,10 @@ class CoordinationTracker:
             try:
                 self._generate_coordination_table(log_dir, session_data)
             except Exception as e:
-                logger.warning(f"Warning: Could not generate coordination table: {e}")
+                logger.warning(f"Warning: Could not generate coordination table: {e}", exc_info=True)
             
         except Exception as e:
-            logger.warning(f"Failed to save coordination logs: {e}")
+            logger.warning(f"Failed to save coordination logs: {e}", exc_info=True)
     
     def _generate_coordination_table(self, log_dir, session_data):
         """Generate coordination table using the create_coordination_table.py module."""
@@ -646,7 +652,7 @@ class CoordinationTracker:
             logger.info(f"Coordination table generated at {table_file}")
             
         except Exception as e:
-            logger.warning(f"Error generating coordination table: {e}")
+            logger.warning(f"Error generating coordination table: {e}", exc_info=True)
     
     def _get_agent_id_from_label(self, label: str) -> str:
         """Extract agent_id from a label like 'agent1.1' or 'agent2.final'."""
