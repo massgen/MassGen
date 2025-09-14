@@ -2552,7 +2552,7 @@ class RichTerminalDisplay(TerminalDisplay):
             }
             
             # Import and use the table generator
-            from create_coordination_table import CoordinationTableBuilder
+            from massgen.frontend.create_coordination_table import CoordinationTableBuilder
             
             # Generate Rich event table with legend
             builder = CoordinationTableBuilder(session_data)
