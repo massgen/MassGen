@@ -71,7 +71,6 @@ class AgentAnswer:
     agent_id: str
     content: str
     timestamp: float
-    is_final: bool = False
     
     @property
     def label(self) -> str:
@@ -106,15 +105,15 @@ class CoordinationTracker:
         # Event log - chronological record of everything that happens
         self.events: List[CoordinationEvent] = []
         
-        # Answer tracking with labeling
-        self.answers_by_agent: Dict[str, List[AgentAnswer]] = {}  # agent_id -> list of answers
-        self.all_answers: Dict[str, str] = {}  # label -> content mapping for easy lookup
+        # Answer tracking
+        self.answers_by_agent: Dict[str, List[AgentAnswer]] = {}  # agent_id -> list of regular answers
+        self.final_answers: Dict[str, AgentAnswer] = {}  # agent_id -> final answer
         
         # Vote tracking
         self.votes: List[AgentVote] = []
         
         # Coordination iteration tracking
-        self.current_iteration: int = 0
+        self.current_iteration: int = 0  # Represents iteration in the loop within orchestrator for async first completed
         self.agent_rounds: Dict[str, int] = {}  # Per-agent round tracking - increments when restart completed
         self.agent_round_context: Dict[str, Dict[int, List[str]]] = {}  # What context each agent had in each round
         self.iteration_available_labels: List[str] = []  # Frozen snapshot of available answer labels for current iteration
@@ -126,22 +125,35 @@ class CoordinationTracker:
         self.start_time: Optional[float] = None
         self.end_time: Optional[float] = None
         self.agent_ids: List[str] = []
-        self.pending_restarts: Set[str] = set()  # Agents that need to restart for current round
         self.final_winner: Optional[str] = None
         self.final_context: Optional[Dict[str, Any]] = None  # Context provided to final agent
         self.is_final_round: bool = False  # Track if we're in the final presentation round
         self.user_prompt: Optional[str] = None  # Store the initial user prompt
         
-        # Canonical ID/Label mappings - coordination tracker is the single source of truth
-        self.agent_id_to_anon: Dict[str, str] = {}  # gpt5nano_1 -> agent1
-        self.anon_to_agent_id: Dict[str, str] = {}  # agent1 -> gpt5nano_1
+        # Agent mappings - coordination tracker is the single source of truth
         self.agent_context_labels: Dict[str, List[str]] = {}  # Track what labels each agent can see
-        
-        # Answer formatting settings
-        self.preview_length = 150  # Default preview length for answers
         
         # Snapshot mapping - tracks filesystem snapshots for answers/votes
         self.snapshot_mappings: Dict[str, Dict[str, Any]] = {}  # label/vote_id -> snapshot info
+    
+    def _make_snapshot_path(self, kind: str, agent_id: str, timestamp: str) -> str:
+        """Generate standardized snapshot paths.
+        
+        Args:
+            kind: Type of snapshot ('answer', 'vote', 'final_answer', etc.)
+            agent_id: The agent ID
+            timestamp: The timestamp or 'final' for final answers
+            
+        Returns:
+            The formatted path string
+        """
+        if kind == "final_answer" and timestamp == "final":
+            return f"final/{agent_id}/answer.txt"
+        if kind == "answer":
+            return f"{agent_id}/{timestamp}/answer.txt"
+        if kind == "vote":
+            return f"{agent_id}/{timestamp}/vote.json"
+        return f"{agent_id}/{timestamp}/{kind}.txt"
 
     def initialize_session(self, agent_ids: List[str], user_prompt: Optional[str] = None):
         """Initialize a new coordination session."""
@@ -155,21 +167,22 @@ class CoordinationTracker:
         self.agent_round_context = {aid: {0: []} for aid in agent_ids}  # Each agent starts in round 0 with empty context
         self.pending_agent_restarts = {aid: False for aid in agent_ids}
         
-        # Set up canonical mappings - coordination tracker is single source of truth
-        self.agent_id_to_anon = {aid: f"agent{i+1}" for i, aid in enumerate(agent_ids)}
-        self.anon_to_agent_id = {v: k for k, v in self.agent_id_to_anon.items()}
+        # Initialize agent context tracking
         self.agent_context_labels = {aid: [] for aid in agent_ids}
         
         self._add_event(EventType.SESSION_START, None, f"Started with agents: {agent_ids}")
 
-    # Canonical mapping utility methods
+    # Agent ID utility methods
     def get_anonymous_id(self, agent_id: str) -> str:
         """Get anonymous ID (agent1, agent2) for a full agent ID."""
-        return self.agent_id_to_anon.get(agent_id, agent_id)
+        agent_num = self._get_agent_number(agent_id)
+        return f"agent{agent_num}" if agent_num else agent_id
     
-    def get_full_agent_id(self, anon_id: str) -> str:
-        """Get full agent ID for an anonymous ID."""
-        return self.anon_to_agent_id.get(anon_id, anon_id)
+    def _get_agent_number(self, agent_id: str) -> Optional[int]:
+        """Get the 1-based number for an agent (1, 2, 3, etc.)."""
+        if agent_id in self.agent_ids:
+            return self.agent_ids.index(agent_id) + 1
+        return None
     
     def get_agent_context_labels(self, agent_id: str) -> List[str]:
         """Get the answer labels this agent can currently see."""
@@ -185,15 +198,11 @@ class CoordinationTracker:
         """Get the current round for a specific agent."""
         return self.agent_rounds.get(agent_id, 0)
     
-    def get_max_round(self) -> int:
-        """Get the highest round number across all agents (for backward compatibility)."""
+    @property
+    def max_round(self) -> int:
+        """Get the highest round number across all agents."""
         return max(self.agent_rounds.values()) if self.agent_rounds else 0
     
-    @property
-    def current_round(self) -> int:
-        """Backward compatibility property that returns the maximum round across all agents."""
-        return self.get_max_round()
-
     def start_new_iteration(self):
         """Start a new coordination iteration."""
         self.current_iteration += 1
@@ -250,7 +259,7 @@ class CoordinationTracker:
         self.agent_context_labels[agent_id] = answer_labels.copy()
         
         # Use anonymous agent IDs for the event context
-        anon_answering_agents = [self.agent_id_to_anon.get(aid, aid) for aid in answers.keys()]
+        anon_answering_agents = [self.get_anonymous_id(aid) for aid in answers.keys()]
         
         context = {
             "available_answers": anon_answering_agents,  # Anonymous IDs for backward compat
@@ -313,19 +322,17 @@ class CoordinationTracker:
         agent_answer = AgentAnswer(
             agent_id=agent_id,
             content=answer,
-            timestamp=time.time(),
-            is_final=False
+            timestamp=time.time()
         )
         
         # Auto-generate label based on agent position and answer count
-        agent_num = self.agent_ids.index(agent_id) + 1
+        agent_num = self._get_agent_number(agent_id)
         answer_num = len(self.answers_by_agent[agent_id]) + 1
         label = f"agent{agent_num}.{answer_num}"
         agent_answer.label = label
         
         # Store the answer
         self.answers_by_agent[agent_id].append(agent_answer)
-        self.all_answers[label] = answer  # Quick lookup by label
         
         # Track snapshot mapping if provided
         if snapshot_timestamp:
@@ -336,7 +343,7 @@ class CoordinationTracker:
                 "timestamp": snapshot_timestamp,
                 "iteration": self.current_iteration,
                 "round": self.get_agent_round(agent_id),
-                "path": f"{agent_id}/{snapshot_timestamp}/answer.txt"
+                "path": self._make_snapshot_path("answer", agent_id, snapshot_timestamp)
             }
         
         # Record event with label (important info) but no preview (that's for display only)
@@ -356,7 +363,7 @@ class CoordinationTracker:
         reason = vote_data.get("reason", "")
         
         # Convert real agent IDs to anonymous IDs and answer labels
-        voter_anon_id = self._get_anonymous_agent_id(agent_id)
+        voter_anon_id = self.get_anonymous_id(agent_id)
         
         # Find the voted-for answer label (agent1.1, agent2.1, etc.)
         voted_for_label = "unknown"
@@ -384,7 +391,7 @@ class CoordinationTracker:
         # Track snapshot mapping if provided
         if snapshot_timestamp:
             # Create a meaningful vote label similar to answer labels
-            agent_num = self.agent_ids.index(agent_id) + 1 if agent_id in self.agent_ids else 0
+            agent_num = self._get_agent_number(agent_id) or 0
             vote_num = len([v for v in self.votes if v.voter_id == agent_id])
             vote_label = f"agent{agent_num}.vote{vote_num}"
             
@@ -397,7 +404,7 @@ class CoordinationTracker:
                 "voted_for_label": voted_for_label,
                 "iteration": self.current_iteration,
                 "round": self.get_agent_round(agent_id),
-                "path": f"{agent_id}/{snapshot_timestamp}/vote.json"
+                "path": self._make_snapshot_path("vote", agent_id, snapshot_timestamp)
             }
         
         # Record event - only essential info in context
@@ -418,12 +425,9 @@ class CoordinationTracker:
         answers_with_labels = {}
         for aid, answer_content in all_answers.items():
             if aid in self.answers_by_agent and self.answers_by_agent[aid]:
-                # Get the latest non-final answer label for this agent
-                latest_answer = None
-                for answer in self.answers_by_agent[aid]:
-                    if not answer.is_final:
-                        latest_answer = answer
-                if latest_answer:
+                # Get the latest answer label for this agent from regular answers
+                if self.answers_by_agent[aid]:
+                    latest_answer = self.answers_by_agent[aid][-1]
                     answer_labels.append(latest_answer.label)
                     answers_with_labels[latest_answer.label] = answer_content
         
@@ -446,18 +450,16 @@ class CoordinationTracker:
         final_answer_obj = AgentAnswer(
             agent_id=agent_id,
             content=final_answer,
-            timestamp=time.time(),
-            is_final=True
+            timestamp=time.time()
         )
         
         # Auto-generate final label
-        agent_num = self.agent_ids.index(agent_id) + 1
+        agent_num = self._get_agent_number(agent_id)
         label = f"agent{agent_num}.final"
         final_answer_obj.label = label
         
-        # Store the final answer
-        self.answers_by_agent[agent_id].append(final_answer_obj)
-        self.all_answers[label] = final_answer
+        # Store the final answer separately
+        self.final_answers[agent_id] = final_answer_obj
         
         # Track snapshot mapping if provided
         if snapshot_timestamp:
@@ -468,7 +470,7 @@ class CoordinationTracker:
                 "timestamp": snapshot_timestamp,
                 "iteration": self.current_iteration,
                 "round": self.get_agent_round(agent_id),
-                "path": f"final/{agent_id}/answer.txt" if snapshot_timestamp == "final" else f"{agent_id}/{snapshot_timestamp}/answer.txt"
+                "path": self._make_snapshot_path("final_answer", agent_id, snapshot_timestamp)
             }
         
         # Record event with label only (no preview)
@@ -479,8 +481,7 @@ class CoordinationTracker:
         """Start the final presentation round."""
         self.is_final_round = True
         # Set the final round to be max round across all agents + 1
-        max_round = self.get_max_round()
-        final_round = max_round + 1
+        final_round = self.max_round + 1
         self.agent_rounds[selected_agent_id] = final_round
         self.final_winner = selected_agent_id
         
@@ -497,9 +498,6 @@ class CoordinationTracker:
             # For answers, details should be the actual answer content
             self.add_agent_answer(agent_id, details)
         elif action_type == ActionType.VOTE:
-            if voted_for not in self.agent_ids:
-                logger.warning(f"Vote from {agent_id} for unknown agent {voted_for}")
-
             # For votes, details should be vote data dict - but this needs to be handled separately
             # since add_agent_vote expects a dict, not a string
             pass  # Use add_agent_vote directly
@@ -518,11 +516,11 @@ class CoordinationTracker:
         context = context.copy()  # Don't modify the original
         context["iteration"] = self.current_iteration
         
-        # Include agent-specific round if agent_id is provided, otherwise use max round for backward compatibility
+        # Include agent-specific round if agent_id is provided, otherwise use max round
         if agent_id:
             context["round"] = self.get_agent_round(agent_id)
         else:
-            context["round"] = self.get_max_round()
+            context["round"] = self.max_round
         
         event = CoordinationEvent(
             timestamp=time.time(),
@@ -539,42 +537,18 @@ class CoordinationTracker:
         duration = self.end_time - (self.start_time or self.end_time)
         self._add_event(EventType.SESSION_END, None, f"Session completed in {duration:.1f}s")
     
-    def get_all_answers(self) -> Dict[str, str]:
+    @property
+    def all_answers(self) -> Dict[str, str]:
         """Get all answers as a label->content dictionary."""
-        return self.all_answers.copy()
-    
-    def get_answers_for_display(self, max_preview_length: int = 150) -> Dict[str, Dict[str, Any]]:
-        """Get answers with preview for display purposes."""
-        display_answers = {}
-        for label, content in self.all_answers.items():
-            preview = content[:max_preview_length] + "..." if len(content) > max_preview_length else content
-            display_answers[label] = {
-                "content": content,
-                "preview": preview,
-                "is_final": label.endswith(".final")
-            }
-        return display_answers
-    
-    def format_answer_preview(self, content: str, max_length: Optional[int] = None) -> str:
-        """Format answer content for display with consistent preview length and ellipsis handling.
-        
-        Args:
-            content: The full answer content
-            max_length: Override default preview length (uses self.preview_length if None)
-            
-        Returns:
-            Formatted preview string with ellipsis only if actually truncated
-        """
-        if not content:
-            return "No content"
-        
-        length = max_length if max_length is not None else self.preview_length
-        
-        # Only add ellipsis if we're actually truncating
-        if len(content) > length:
-            truncated = content[:length].rsplit(" ", 1)[0]
-            return truncated + "..."
-        return content
+        result = {}
+        # Add regular answers
+        for answers in self.answers_by_agent.values():
+            for answer in answers:
+                result[answer.label] = answer.content
+        # Add final answers
+        for answer in self.final_answers.values():
+            result[answer.label] = answer.content
+        return result
     
     def get_summary(self) -> Dict[str, Any]:
         """Get session summary statistics."""
@@ -585,7 +559,7 @@ class CoordinationTracker:
             "duration": duration,
             "total_events": len(self.events),
             "total_restarts": restart_count,
-            "total_answers": len([label for label in self.all_answers if not label.endswith(".final")]),
+            "total_answers": sum(len(answers) for answers in self.answers_by_agent.values()),
             "final_winner": self.final_winner,
             "agent_count": len(self.agent_ids)
         }
@@ -656,7 +630,6 @@ class CoordinationTracker:
     
     def _get_agent_id_from_label(self, label: str) -> str:
         """Extract agent_id from a label like 'agent1.1' or 'agent2.final'."""
-        # Extract agent number from label
         import re
         match = re.match(r'agent(\d+)', label)
         if match:
@@ -667,12 +640,6 @@ class CoordinationTracker:
     
     def _get_agent_display_name(self, agent_id: str) -> str:
         """Get display name for agent (Agent1, Agent2, etc.)."""
-        if agent_id in self.agent_ids:
-            return f"Agent{self.agent_ids.index(agent_id) + 1}"
-        return agent_id
+        agent_num = self._get_agent_number(agent_id)
+        return f"Agent{agent_num}" if agent_num else agent_id
     
-    def _get_anonymous_agent_id(self, agent_id: str) -> str:
-        """Get anonymous agent ID (agent1, agent2, etc.) for an agent."""
-        if agent_id in self.agent_ids:
-            return f"agent{self.agent_ids.index(agent_id) + 1}"
-        return "unknown"
