@@ -273,6 +273,7 @@ class RichTerminalDisplay(TerminalDisplay):
         # File-based output system
         # Use centralized log session directory
         from massgen.logger_config import get_log_session_dir
+
         log_session_dir = get_log_session_dir()
         self.output_dir = kwargs.get("output_dir", log_session_dir / "agent_outputs")
         self.agent_files = {}
@@ -2288,7 +2289,7 @@ class RichTerminalDisplay(TerminalDisplay):
         """Write content to agent's individual txt file."""
         if agent_id not in self.agent_files:
             return
-        
+
         # Skip debug content from txt files
         if content_type == "debug":
             return
@@ -2686,7 +2687,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 content = getattr(chunk, "content", "") or ""
                 chunk_type = getattr(chunk, "type", "")
                 source = getattr(chunk, "source", selected_agent)
-                
+
                 # Skip debug chunks from display but still log them
                 if chunk_type == "debug":
                     # Debug info is logged elsewhere but not displayed in final presentation

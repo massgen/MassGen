@@ -280,7 +280,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         #
         # Consider:
         # 1. Your original response and how it can be refined
-        # 2. Valuable insights from other agents' answers that should be incorporated  
+        # 2. Valuable insights from other agents' answers that should be incorporated
         # 3. Feedback received through the voting process
         # 4. Ensuring clarity, completeness, and comprehensiveness for the final audience
         #
@@ -374,10 +374,10 @@ Present the best possible coordinated answer by combining the strengths from all
         """Build complete initial conversation for MassGen evaluation."""
         # Use agent's custom system message if provided, otherwise use default evaluation message
         if base_system_message:
-            system_message = f"{base_system_message}\n\n{self.evaluation_system_message()}"
+            system_message = f"{self.evaluation_system_message()}\n\n#Special Requirement\n{base_system_message}"
         else:
             system_message = self.evaluation_system_message()
-            
+
         return {
             "system_message": system_message,
             "user_message": self.build_evaluation_message(task, agent_summaries),
@@ -398,7 +398,7 @@ Present the best possible coordinated answer by combining the strengths from all
             system_message = f"{base_system_message}\n\n{self.system_message_with_context(conversation_history)}"
         else:
             system_message = self.system_message_with_context(conversation_history)
-            
+
         return {
             "system_message": system_message,
             "user_message": self.build_coordination_context(
@@ -439,12 +439,10 @@ Based on the coordination process above, present your final answer:"""
         return messages
 
     def filesystem_system_message(
-        self, 
-        main_workspace: Optional[str] = None,
-        temp_workspace: Optional[str] = None
+        self, main_workspace: Optional[str] = None, temp_workspace: Optional[str] = None
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
-        
+
         Args:
             main_workspace: Path to agent's main workspace
             temp_workspace: Path to temporary workspace for context sharing
@@ -454,29 +452,65 @@ Based on the coordination process above, present your final answer:"""
 
         # Build workspace information
         workspace_info = []
-        if main_workspace: 
-            workspace_info.append(f"1. **Your Main Workspace**: `{main_workspace}`") 
-            workspace_info.append(" - IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.") 
-            workspace_info.append(" - DO NOT look in your working directory for agent information - it's exclusively for creating YOUR OWN new work.") 
-            workspace_info.append(" - Use this for creating your own files and outputs if providing a new answer")
-            workspace_info.append(" - When providing a new answer, ensure you save any relevant files or outputs in your main workspace. Then, give a summary of your work in the answer content. Do NOT repeat the full file contents in your answer.")
-            workspace_info.append(f" - Do NOT copy any files from the temporary workspace to your main workspace to use them. The only thing that should go in your main workspace is YOUR OWN work for your new answer.")
+        if main_workspace:
+            workspace_info.append(f"1. **Your Main Workspace**: `{main_workspace}`")
+            workspace_info.append(
+                " - IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory."
+            )
+            workspace_info.append(
+                " - DO NOT look in your working directory for agent information - it's exclusively for creating YOUR OWN new work."
+            )
+            workspace_info.append(
+                " - Use this for creating your own files and outputs if providing a new answer"
+            )
+            workspace_info.append(
+                " - When providing a new answer, ensure you save any relevant files or outputs in your main workspace. Then, give a summary of your work in the answer content. Do NOT repeat the full file contents in your answer."
+            )
+            workspace_info.append(
+                f" - Do NOT copy any files from the temporary workspace to your main workspace to use them. The only thing that should go in your main workspace is YOUR OWN work for your new answer."
+            )
 
-        if temp_workspace: 
-            workspace_info.append(f"2. **Context Workspace**: `{temp_workspace}`") 
-            workspace_info.append(f" - Context: You have access to a reference temporary workspace that contains work from yourself and other agents for REFERENCE ONLY.") 
-            workspace_info.append(" - CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace.") 
-            workspace_info.append(" - You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work.") 
-            workspace_info.append(" - When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well.") 
-            workspace_info.append(" - You do NOT need to copy any files from the temporary workspace to your main workspace to use them. You can read and execute them directly from the temporary workspace.")
-            workspace_info.append(" - For voting, you can review all agents' work here and use this context to make an informed voting decision.") 
-            workspace_info.append(" - Files organized by anonymous agent IDs (agent1/, agent2/, etc.)") 
-            workspace_info.append(" - IMPORTANT: Each agent works in their own separate workspace") 
-            workspace_info.append(" - File paths in answers have been normalized to show where you can access their work") 
-            workspace_info.append(" - All agents' work is equally valid regardless of which workspace directory they used") 
-            workspace_info.append(" - Focus on evaluating the content and quality of their work, not the specific paths") 
+        if temp_workspace:
+            workspace_info.append(f"2. **Context Workspace**: `{temp_workspace}`")
+            workspace_info.append(
+                f" - Context: You have access to a reference temporary workspace that contains work from yourself and other agents for REFERENCE ONLY."
+            )
+            workspace_info.append(
+                " - CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace."
+            )
+            workspace_info.append(
+                " - You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work."
+            )
+            workspace_info.append(
+                " - When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well."
+            )
+            workspace_info.append(
+                " - You do NOT need to copy any files from the temporary workspace to your main workspace to use them. You can read and execute them directly from the temporary workspace."
+            )
+            workspace_info.append(
+                " - For voting, you can review all agents' work here and use this context to make an informed voting decision."
+            )
+            workspace_info.append(
+                " - Files organized by anonymous agent IDs (agent1/, agent2/, etc.)"
+            )
+            workspace_info.append(
+                " - IMPORTANT: Each agent works in their own separate workspace"
+            )
+            workspace_info.append(
+                " - File paths in answers have been normalized to show where you can access their work"
+            )
+            workspace_info.append(
+                " - All agents' work is equally valid regardless of which workspace directory they used"
+            )
+            workspace_info.append(
+                " - Focus on evaluating the content and quality of their work, not the specific paths"
+            )
 
-        workspace_section = "\n".join(workspace_info) if workspace_info else "- Check your available directories using filesystem tools"     
+        workspace_section = (
+            "\n".join(workspace_info)
+            if workspace_info
+            else "- Check your available directories using filesystem tools"
+        )
 
         return f"""## Filesystem Access
 
@@ -493,6 +527,8 @@ You have access to filesystem operations through MCP tools allowing you to read 
 - When referencing others' work, read from context directories first
 - Create meaningful file names and directory structure
 """
+
+
 # ### IMPORTANT Evaluation Note:
 # When evaluating other agents' work, focus on the CONTENT and FUNCTIONALITY of their files. Each agent works in their own isolated workspace - this is correct behavior. The paths shown in their answers are normalized so you can access and verify their work. Judge based on code quality, correctness, and completeness, not on which workspace directory was used.
 

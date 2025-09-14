@@ -201,7 +201,7 @@ class CoordinationUI:
                     if source and status:
                         self.display.update_agent_status(source, status)
                     continue
-                
+
                 # Filter out debug chunks from display
                 elif chunk_type == "debug":
                     # Log debug info but don't display it
@@ -438,10 +438,15 @@ class CoordinationUI:
 
             # Get the final presentation content (synthesis) or fall back to stored answer
             orchestrator_final_answer = None
-            
+
             # First try to get the synthesized final presentation content
-            if hasattr(orchestrator, "_final_presentation_content") and orchestrator._final_presentation_content:
-                orchestrator_final_answer = orchestrator._final_presentation_content.strip()
+            if (
+                hasattr(orchestrator, "_final_presentation_content")
+                and orchestrator._final_presentation_content
+            ):
+                orchestrator_final_answer = (
+                    orchestrator._final_presentation_content.strip()
+                )
             elif (
                 selected_agent
                 and hasattr(orchestrator, "agent_states")
@@ -482,7 +487,12 @@ class CoordinationUI:
 
             # Finalize session
             if self.logger:
-                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
+                session_info = self.logger.finalize_session(
+                    final_result
+                    if "final_result" in locals()
+                    else (final_answer if "final_answer" in locals() else ""),
+                    success=True,
+                )
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -537,7 +547,12 @@ class CoordinationUI:
             print()
 
             if self.logger:
-                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
+                session_info = self.logger.finalize_session(
+                    final_result
+                    if "final_result" in locals()
+                    else (final_answer if "final_answer" in locals() else ""),
+                    success=True,
+                )
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"
@@ -632,7 +647,7 @@ class CoordinationUI:
                     if source and status:
                         self.display.update_agent_status(source, status)
                     continue
-                
+
                 # Filter out debug chunks from display
                 elif chunk_type == "debug":
                     # Log debug info but don't display it
@@ -901,7 +916,12 @@ class CoordinationUI:
 
             # Finalize session
             if self.logger:
-                session_info = self.logger.finalize_session(final_result if 'final_result' in locals() else (final_answer if 'final_answer' in locals() else ""), success=True)
+                session_info = self.logger.finalize_session(
+                    final_result
+                    if "final_result" in locals()
+                    else (final_answer if "final_answer" in locals() else ""),
+                    success=True,
+                )
                 print(f"💾 Session log: {session_info['filename']}")
                 print(
                     f"⏱️  Duration: {session_info['duration']:.1f}s | Chunks: {session_info['total_chunks']} | Events: {session_info['orchestrator_events']}"

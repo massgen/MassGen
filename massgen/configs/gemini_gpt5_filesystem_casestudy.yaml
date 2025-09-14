@@ -1,0 +1,30 @@
+# uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_casestudy.yaml "Build a game where users see a diverse set of up-to-date small, static coding puzzles related to common coding bugs. Then, award them points if they can clearly spot the error in the code. Use Vite with a package.json with minimal dependencies."
+# please do `npm install && npm run dev` to run the Vite projects
+agents:
+  - id: "gemini"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace1"  # Working directory for file operations
+      enable_web_search: true
+
+  - id: "gpt-5"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      text: 
+        verbosity: "medium"
+      reasoning:
+        effort: "low"
+        summary: "auto"
+      cwd: "workspace2"  # this is for the desired version
+      enable_web_search: true
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+

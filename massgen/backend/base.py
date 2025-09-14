@@ -12,6 +12,7 @@ from enum import Enum
 
 class FilesystemSupport(Enum):
     """Types of filesystem support for backends."""
+
     NONE = "none"  # No filesystem support
     NATIVE = "native"  # Built-in filesystem tools (like Claude Code)
     MCP = "mcp"  # Filesystem support through MCP servers
@@ -60,7 +61,7 @@ class LLMBackend(ABC):
         self.api_key = api_key
         self.config = kwargs
         self.token_usage = TokenUsage()
-        
+
         # Filesystem manager integration
         self.filesystem_manager = None
         cwd = kwargs.get("cwd")
@@ -69,29 +70,29 @@ class LLMBackend(ABC):
             if filesystem_support == FilesystemSupport.MCP:
                 # Backend supports MCP - inject filesystem MCP server
                 from ..mcp_tools.filesystem_manager import FilesystemManager
-                
+
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd,
-                    agent_temporary_workspace_parent=temp_workspace_parent
+                    cwd=cwd, agent_temporary_workspace_parent=temp_workspace_parent
                 )
-                
+
                 # Inject filesystem MCP server into configuration
                 self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
             elif filesystem_support == FilesystemSupport.NATIVE:
                 # Backend has native filesystem support - create manager but don't inject MCP
                 from ..mcp_tools.filesystem_manager import FilesystemManager
-                
-                # Get temporary workspace parent from kwargs if available  
+
+                # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd,
-                    agent_temporary_workspace_parent=temp_workspace_parent
+                    cwd=cwd, agent_temporary_workspace_parent=temp_workspace_parent
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
-                raise ValueError(f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration.")
+                raise ValueError(
+                    f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration."
+                )
         else:
             self.filesystem_manager = None
 
@@ -155,15 +156,15 @@ class LLMBackend(ABC):
     def reset_token_usage(self):
         """Reset token usage tracking."""
         self.token_usage = TokenUsage()
-    
+
     def get_filesystem_support(self) -> FilesystemSupport:
         """
         Get the type of filesystem support this backend provides.
-        
+
         Returns:
             FilesystemSupport: The type of filesystem support
             - NONE: No filesystem capabilities
-            - NATIVE: Built-in filesystem tools (like Claude Code)  
+            - NATIVE: Built-in filesystem tools (like Claude Code)
             - MCP: Can use filesystem through MCP servers
         """
         # By default, backends have no filesystem support

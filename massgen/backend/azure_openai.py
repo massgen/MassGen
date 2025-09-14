@@ -8,7 +8,11 @@ Uses the official Azure OpenAI client for proper Azure integration.
 import os
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk
-from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk
+from ..logger_config import (
+    log_backend_activity,
+    log_backend_agent_message,
+    log_stream_chunk,
+)
 
 
 class AzureOpenAIBackend(LLMBackend):
@@ -49,15 +53,15 @@ class AzureOpenAIBackend(LLMBackend):
             **kwargs: Additional parameters including model (deployment name)
         """
         # Extract agent_id for logging
-        agent_id = kwargs.get('agent_id', None)
-        
+        agent_id = kwargs.get("agent_id", None)
+
         log_backend_activity(
             self.get_provider_name(),
             "Starting stream_with_tools",
             {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id
+            agent_id=agent_id,
         )
-        
+
         try:
             # Merge constructor config with stream kwargs (stream kwargs take priority)
             all_params = {**self.config, **kwargs}
@@ -121,13 +125,13 @@ class AzureOpenAIBackend(LLMBackend):
                 if has_workflow_tools
                 else messages
             )
-            
+
             # Log messages being sent
             log_backend_agent_message(
                 agent_id or "default",
                 "SEND",
                 {"messages": modified_messages, "tools": len(tools) if tools else 0},
-                backend_name=self.get_provider_name()
+                backend_name=self.get_provider_name(),
             )
 
             # Prepare API parameters
@@ -157,7 +161,7 @@ class AzureOpenAIBackend(LLMBackend):
                 "session_id",
                 "type",
                 "cwd",
-                "agent_temporary_workspace"
+                "agent_temporary_workspace",
             }
             for key, value in kwargs.items():
                 if key not in excluded_params and value is not None:
@@ -184,15 +188,22 @@ class AzureOpenAIBackend(LLMBackend):
                             agent_id or "default",
                             "RECV",
                             {"content": accumulated_content},
-                            backend_name=self.get_provider_name()
+                            backend_name=self.get_provider_name(),
                         )
-                        log_stream_chunk("backend.azure_openai", "content", accumulated_content, agent_id)
+                        log_stream_chunk(
+                            "backend.azure_openai",
+                            "content",
+                            accumulated_content,
+                            agent_id,
+                        )
                         yield StreamChunk(type="content", content=accumulated_content)
                         accumulated_content = ""
                 elif converted.type != "content":
                     # Log non-content chunks
                     if converted.type == "error":
-                        log_stream_chunk("backend.azure_openai", "error", converted.error, agent_id)
+                        log_stream_chunk(
+                            "backend.azure_openai", "error", converted.error, agent_id
+                        )
                     elif converted.type == "done":
                         log_stream_chunk("backend.azure_openai", "done", None, agent_id)
                     # Yield non-content chunks immediately
@@ -205,9 +216,11 @@ class AzureOpenAIBackend(LLMBackend):
                     agent_id or "default",
                     "RECV",
                     {"content": accumulated_content},
-                    backend_name=self.get_provider_name()
+                    backend_name=self.get_provider_name(),
                 )
-                log_stream_chunk("backend.azure_openai", "content", accumulated_content, agent_id)
+                log_stream_chunk(
+                    "backend.azure_openai", "content", accumulated_content, agent_id
+                )
                 yield StreamChunk(type="content", content=accumulated_content)
 
             # After streaming is complete, check if we have workflow tool calls
@@ -216,7 +229,12 @@ class AzureOpenAIBackend(LLMBackend):
                     complete_response
                 )
                 if workflow_tool_calls:
-                    log_stream_chunk("backend.azure_openai", "tool_calls", workflow_tool_calls, agent_id)
+                    log_stream_chunk(
+                        "backend.azure_openai",
+                        "tool_calls",
+                        workflow_tool_calls,
+                        agent_id,
+                    )
                     yield StreamChunk(type="tool_calls", tool_calls=workflow_tool_calls)
                     last_yield_type = "tool_calls"
 

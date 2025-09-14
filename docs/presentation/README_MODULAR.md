@@ -30,7 +30,7 @@ docs/presentation/
 │   ├── slide-evolution-from-v001.html
 │   ├── slide-early-adopters.html
 │   ├── slide-live-demo-examples.html
-│   ├── slide-research-learning-applications.html     # Generic
+│   ├── slide-applications.html                       # Generic applications
 │   ├── slide-columbia-research-applications.html     # Columbia-specific  
 │   ├── slide-getting-started.html
 │   ├── slide-roadmap-vision.html
