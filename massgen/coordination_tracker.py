@@ -15,10 +15,12 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Set, Tuple
 from dataclasses import dataclass, field
+from enum import Enum
+import copy
 from pathlib import Path
+
 from .utils import AgentStatus, ActionType
 from .logger_config import logger
-from enum import Enum
 
 class EventType(str, Enum):
     SESSION_START = "session_start"
@@ -206,14 +208,14 @@ class CoordinationTracker:
                 self.iteration_available_labels.append(latest_answer.label)  # e.g., "agent1.1"
         
         self._add_event(EventType.ITERATION_START, None, f"Starting coordination iteration {self.current_iteration}", 
-                       {"iteration": self.current_iteration, "available_answers": self.iteration_available_labels.copy()})
+                       {"iteration": self.current_iteration, "available_answers": self.iteration_available_labels.deepcopy()})
 
     def end_iteration(self, reason: str, details: Dict[str, Any] = None):
         """Record how an iteration ended."""
         context = {
             "iteration": self.current_iteration,
             "end_reason": reason,
-            "available_answers": self.iteration_available_labels.copy()
+            "available_answers": self.iteration_available_labels.deepcopy()
         }
         if details:
             context.update(details)
@@ -247,14 +249,14 @@ class CoordinationTracker:
                 answer_labels.append(latest_answer.label)
         
         # Update this agent's context labels using canonical mapping
-        self.agent_context_labels[agent_id] = answer_labels.copy()
+        self.agent_context_labels[agent_id] = answer_labels.deepcopy()
         
         # Use anonymous agent IDs for the event context
         anon_answering_agents = [self.agent_id_to_anon.get(aid, aid) for aid in answers.keys()]
         
         context = {
             "available_answers": anon_answering_agents,  # Anonymous IDs for backward compat
-            "available_answer_labels": answer_labels.copy(),  # Store actual labels in event
+            "available_answer_labels": answer_labels.deepcopy(),  # Store actual labels in event
             "answer_count": len(answers),
             "has_conversation_history": bool(conversation_history)
         }
@@ -377,7 +379,7 @@ class CoordinationTracker:
             voter_anon_id=voter_anon_id,
             reason=reason,
             timestamp=time.time(),
-            available_answers=self.iteration_available_labels.copy()
+            available_answers=self.iteration_available_labels.deepcopy()
         )
         self.votes.append(vote)
         
@@ -405,7 +407,7 @@ class CoordinationTracker:
             "voted_for": voted_for,  # Real agent ID for compatibility
             "voted_for_label": voted_for_label,  # Answer label for display
             "reason": reason,
-            "available_answers": self.iteration_available_labels.copy()
+            "available_answers": self.iteration_available_labels.deepcopy()
         }
         self._add_event(EventType.VOTE_CAST, agent_id, f"Voted for {voted_for_label}", context)
 
@@ -515,7 +517,7 @@ class CoordinationTracker:
         # Automatically include current iteration and round in context
         if context is None:
             context = {}
-        context = context.copy()  # Don't modify the original
+        context = context.deepcopy()  # Don't modify the original
         context["iteration"] = self.current_iteration
         
         # Include agent-specific round if agent_id is provided, otherwise use max round for backward compatibility
@@ -571,6 +573,7 @@ class CoordinationTracker:
         length = max_length if max_length is not None else self.preview_length
         
         # Only add ellipsis if we're actually truncating
+        #keep whole words
         if len(content) > length:
             truncated = content[:length].rsplit(" ", 1)[0]
             return truncated + "..."
