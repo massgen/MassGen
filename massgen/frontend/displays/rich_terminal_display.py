@@ -1525,7 +1525,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     "  s: Inspect the orchestrator working log including the voting process\n",
                     style=self.colors["warning"],
                 )
-                
+
                 options_text.append(
                     "  r: Display coordination table to see the full history of agent interactions and decisions\n",
                     style=self.colors["warning"],
@@ -1621,7 +1621,6 @@ class RichTerminalDisplay(TerminalDisplay):
         """Display the coordination rounds table with rich formatting."""
         # Use the improved coordination table display
         self.display_coordination_table()
-
 
     def _show_system_status(self):
         """Display system status from txt file."""
@@ -2528,18 +2527,18 @@ class RichTerminalDisplay(TerminalDisplay):
                 self.live = None
 
             # Get coordination events from orchestrator
-            if not hasattr(self, 'orchestrator') or not self.orchestrator:
+            if not hasattr(self, "orchestrator") or not self.orchestrator:
                 print("No orchestrator available for table generation")
                 return
 
-            tracker = getattr(self.orchestrator, 'coordination_tracker', None)
+            tracker = getattr(self.orchestrator, "coordination_tracker", None)
             if not tracker:
                 print("No coordination tracker available")
                 return
 
             # Get events data with session metadata
             events_data = [event.to_dict() for event in tracker.events]
-            
+
             # Create session data with metadata (same format as saved file)
             session_data = {
                 "session_metadata": {
@@ -2547,53 +2546,57 @@ class RichTerminalDisplay(TerminalDisplay):
                     "agent_ids": tracker.agent_ids,
                     "start_time": tracker.start_time,
                     "end_time": tracker.end_time,
-                    "final_winner": tracker.final_winner
+                    "final_winner": tracker.final_winner,
                 },
-                "events": events_data
+                "events": events_data,
             }
-            
+
             # Import and use the table generator
-            from massgen.frontend.displays.create_coordination_table import CoordinationTableBuilder
-            
+            from massgen.frontend.displays.create_coordination_table import (
+                CoordinationTableBuilder,
+            )
+
             # Generate Rich event table with legend
             builder = CoordinationTableBuilder(session_data)
             result = builder.generate_rich_event_table()
-            
+
             if result:
                 legend, rich_table = result  # Unpack tuple
-                
+
                 # Use Rich's pager for scrollable display
                 from rich.console import Console
                 from rich.text import Text
                 from rich.panel import Panel
-                
+
                 # Create a temporary console for paging
                 temp_console = Console()
-                
+
                 # Create content to display
                 content = []
-                
+
                 # Add title
                 title_text = Text()
                 title_text.append("📊 COORDINATION TABLE", style="bold bright_green")
-                title_text.append("\n\nNavigation: ↑/↓ or j/k to scroll, q to quit", style="dim cyan")
-                
+                title_text.append(
+                    "\n\nNavigation: ↑/↓ or j/k to scroll, q to quit", style="dim cyan"
+                )
+
                 title_panel = Panel(
                     title_text,
                     border_style="bright_blue",
                     padding=(1, 2),
                 )
-                
+
                 content.append(title_panel)
                 content.append("")  # Empty line
-                
+
                 # Add legend if available
                 if legend:
                     content.append(legend)
                     content.append("")  # Empty line
-                    
+
                 content.append(rich_table)
-                
+
                 # Display with pager (scrollable)
                 try:
                     with temp_console.pager(styles=True):
@@ -2601,7 +2604,7 @@ class RichTerminalDisplay(TerminalDisplay):
                             temp_console.print(item)
                 except (KeyboardInterrupt, EOFError):
                     pass  # Handle user interruption gracefully
-                
+
                 # Add separator instead of clearing screen
                 self.console.print("\n" + "=" * 80 + "\n")
             else:
@@ -2632,6 +2635,7 @@ class RichTerminalDisplay(TerminalDisplay):
         except Exception as e:
             print(f"Error displaying coordination table: {e}")
             import traceback
+
             traceback.print_exc()
 
     async def display_final_presentation(

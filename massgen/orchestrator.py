@@ -40,6 +40,7 @@ from .logger_config import (
     get_log_session_dir,  # Import to get log directory
 )
 
+
 @dataclass
 class AgentState:
     """Runtime state for an agent during coordination.
@@ -59,7 +60,10 @@ class AgentState:
     restart_pending: bool = False
     is_killed: bool = False
     timeout_reason: Optional[str] = None
-    last_context: Optional[Dict[str, Any]] = None  # Store the context sent to this agent
+    last_context: Optional[
+        Dict[str, Any]
+    ] = None  # Store the context sent to this agent
+
 
 class Orchestrator(ChatAgent):
     """
@@ -155,11 +159,11 @@ class Orchestrator(ChatAgent):
         # Context sharing for agents with filesystem support
         self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
-        
+
         # Coordination tracking - always enabled for analysis/debugging
         self.coordination_tracker = CoordinationTracker()
         self.coordination_tracker.initialize_session(list(agents.keys()))
-        
+
         # Create snapshot storage and workspace directories if specified
         if snapshot_storage:
             self._snapshot_storage = snapshot_storage
@@ -226,7 +230,9 @@ class Orchestrator(ChatAgent):
             # New task - start MassGen coordination with full context
             self.current_task = user_message
             # Reinitialize session with user prompt now that we have it
-            self.coordination_tracker.initialize_session(list(self.agents.keys()), self.current_task)
+            self.coordination_tracker.initialize_session(
+                list(self.agents.keys()), self.current_task
+            )
             self.workflow_phase = "coordinating"
 
             async for chunk in self._coordinate_agents_with_timeout(
@@ -301,7 +307,7 @@ class Orchestrator(ChatAgent):
         """Public method to save coordination logs after final presentation is complete."""
         # End the coordination session
         self.coordination_tracker._end_session()
-        
+
         # Save coordination logs using the coordination tracker
         log_session_dir = get_log_session_dir()
         if log_session_dir:
@@ -352,7 +358,9 @@ class Orchestrator(ChatAgent):
             # Track timeout for all agents that were still working
             for agent_id in self.agent_states.keys():
                 if not self.agent_states[agent_id].has_voted:
-                    self.coordination_tracker.track_agent_action(agent_id, ActionType.TIMEOUT, self.timeout_reason)
+                    self.coordination_tracker.track_agent_action(
+                        agent_id, ActionType.TIMEOUT, self.timeout_reason
+                    )
 
             # Force cleanup of any active agent streams and tasks
             await self._cleanup_active_coordination()
@@ -425,7 +433,7 @@ class Orchestrator(ChatAgent):
             "Final agent selected",
             {"selected_agent": self._selected_agent, "votes": votes},
         )
-        
+
         # Present final answer
         async for chunk in self._present_final_answer():
             yield chunk
@@ -459,7 +467,7 @@ class Orchestrator(ChatAgent):
         while not all(state.has_voted for state in self.agent_states.values()):
             # Start new coordination iteration
             self.coordination_tracker.start_new_iteration()
-            
+
             # Check for orchestrator timeout - stop spawning new agents
             if self.is_orchestrator_timeout:
                 break
@@ -503,7 +511,9 @@ class Orchestrator(ChatAgent):
             reset_signal = False
             voted_agents = {}
             answered_agents = {}
-            completed_agent_ids = set()  # Track all agents whose tasks completed, i.e., done, error, result.
+            completed_agent_ids = (
+                set()
+            )  # Track all agents whose tasks completed, i.e., done, error, result.
 
             # Process completed stream chunks
             for task in done:
@@ -535,7 +545,12 @@ class Orchestrator(ChatAgent):
                         result_type, result_data = chunk_data
                         # Result ends the agent's current stream
                         completed_agent_ids.add(agent_id)
-                        log_stream_chunk("orchestrator", f"result.{result_type}", result_data, agent_id)
+                        log_stream_chunk(
+                            "orchestrator",
+                            f"result.{result_type}",
+                            result_data,
+                            agent_id,
+                        )
 
                         # Emit agent completion status immediately upon result
                         yield StreamChunk(
@@ -550,9 +565,17 @@ class Orchestrator(ChatAgent):
                             # Agent provided an answer (initial or improved)
                             agent = self.agents.get(agent_id)
                             # Get the context that was sent to this agent
-                            agent_context = self.agent_states[agent_id].last_context if agent_id in self.agent_states else None
+                            agent_context = (
+                                self.agent_states[agent_id].last_context
+                                if agent_id in self.agent_states
+                                else None
+                            )
                             # Save snapshot (of workspace and answer) when agent provides new answer
-                            answer_timestamp = await self._save_agent_snapshot(agent_id, answer_content=result_data, context_data=agent_context)
+                            answer_timestamp = await self._save_agent_snapshot(
+                                agent_id,
+                                answer_content=result_data,
+                                context_data=agent_context,
+                            )
                             if agent and agent.backend.filesystem_manager:
                                 agent.backend.filesystem_manager.log_current_state(
                                     "after providing answer"
@@ -561,7 +584,11 @@ class Orchestrator(ChatAgent):
 
                             answered_agents[agent_id] = result_data
                             # Pass timestamp to coordination_tracker for mapping
-                            self.coordination_tracker.add_agent_answer(agent_id, result_data, snapshot_timestamp=answer_timestamp)
+                            self.coordination_tracker.add_agent_answer(
+                                agent_id,
+                                result_data,
+                                snapshot_timestamp=answer_timestamp,
+                            )
                             reset_signal = True
                             log_stream_chunk(
                                 "orchestrator",
@@ -569,9 +596,14 @@ class Orchestrator(ChatAgent):
                                 "✅ Answer provided\n",
                                 agent_id,
                             )
-                            
+
                             # Track new answer event
-                            log_stream_chunk("orchestrator", "content", "✅ Answer provided\n", agent_id)
+                            log_stream_chunk(
+                                "orchestrator",
+                                "content",
+                                "✅ Answer provided\n",
+                                agent_id,
+                            )
                             yield StreamChunk(
                                 type="content",
                                 content=f"✅ Answer provided\n",
@@ -585,10 +617,18 @@ class Orchestrator(ChatAgent):
                                 voted_for = result_data.get("agent_id", "<unknown>")
                                 reason = result_data.get("reason", "No reason provided")
                                 # Track the ignored vote action
-                                self.coordination_tracker.track_agent_action(agent_id, ActionType.VOTE_IGNORED, 
-                                    f"Voted for {voted_for} but ignored due to restart")
+                                self.coordination_tracker.track_agent_action(
+                                    agent_id,
+                                    ActionType.VOTE_IGNORED,
+                                    f"Voted for {voted_for} but ignored due to restart",
+                                )
                                 # Save in coordination tracker that we waste a vote due to restart
-                                log_stream_chunk("orchestrator", "content", f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers", agent_id)
+                                log_stream_chunk(
+                                    "orchestrator",
+                                    "content",
+                                    f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
+                                    agent_id,
+                                )
                                 yield StreamChunk(
                                     type="content",
                                     content=f"🔄 Vote for [{voted_for}] ignored (reason: {reason}) - restarting due to new answers",
@@ -597,7 +637,9 @@ class Orchestrator(ChatAgent):
                                 # yield StreamChunk(type="content", content="🔄 Vote ignored - restarting due to new answers", source=agent_id)
                             else:
                                 # Save vote snapshot
-                                vote_timestamp = await self._save_agent_vote(agent_id, result_data)
+                                vote_timestamp = await self._save_agent_vote(
+                                    agent_id, result_data
+                                )
                                 # Log workspaces for current agent
                                 agent = self.agents.get(agent_id)
                                 if agent and agent.backend.filesystem_manager:
@@ -608,12 +650,21 @@ class Orchestrator(ChatAgent):
                                     )
                                 voted_agents[agent_id] = result_data
                                 # Pass timestamp to coordination_tracker for mapping
-                                self.coordination_tracker.add_agent_vote(agent_id, result_data, snapshot_timestamp=vote_timestamp)
-                                
+                                self.coordination_tracker.add_agent_vote(
+                                    agent_id,
+                                    result_data,
+                                    snapshot_timestamp=vote_timestamp,
+                                )
+
                                 # Track new vote event
                                 voted_for = result_data.get("agent_id", "<unknown>")
                                 reason = result_data.get("reason", "No reason provided")
-                                log_stream_chunk("orchestrator", "content", f"✅ Vote recorded for [{result_data['agent_id']}]", agent_id)
+                                log_stream_chunk(
+                                    "orchestrator",
+                                    "content",
+                                    f"✅ Vote recorded for [{result_data['agent_id']}]",
+                                    agent_id,
+                                )
                                 yield StreamChunk(
                                     type="content",
                                     content=f"✅ Vote recorded for [{result_data['agent_id']}]",
@@ -622,14 +673,18 @@ class Orchestrator(ChatAgent):
 
                     elif chunk_type == "error":
                         # Agent error
-                        self.coordination_tracker.track_agent_action(agent_id, ActionType.ERROR, chunk_data)
+                        self.coordination_tracker.track_agent_action(
+                            agent_id, ActionType.ERROR, chunk_data
+                        )
                         # Error ends the agent's current stream
                         completed_agent_ids.add(agent_id)
                         log_stream_chunk("orchestrator", "error", chunk_data, agent_id)
                         yield StreamChunk(
                             type="content", content=f"❌ {chunk_data}", source=agent_id
                         )
-                        log_stream_chunk("orchestrator", "agent_status", "completed", agent_id)
+                        log_stream_chunk(
+                            "orchestrator", "agent_status", "completed", agent_id
+                        )
                         yield StreamChunk(
                             type="agent_status",
                             source=agent_id,
@@ -668,9 +723,13 @@ class Orchestrator(ChatAgent):
                         await self._close_agent_stream(agent_id, active_streams)
 
                 except Exception as e:
-                    self.coordination_tracker.track_agent_action(agent_id, ActionType.ERROR, f"Stream error - {e}")
+                    self.coordination_tracker.track_agent_action(
+                        agent_id, ActionType.ERROR, f"Stream error - {e}"
+                    )
                     completed_agent_ids.add(agent_id)
-                    log_stream_chunk("orchestrator", "error", f"❌ Stream error - {e}", agent_id)
+                    log_stream_chunk(
+                        "orchestrator", "error", f"❌ Stream error - {e}", agent_id
+                    )
                     yield StreamChunk(
                         type="content",
                         content=f"❌ Stream error - {e}",
@@ -690,7 +749,9 @@ class Orchestrator(ChatAgent):
                     self.agent_states[agent_id].restart_pending = True
 
                 # Track restart signals
-                self.coordination_tracker.track_restart_signal(restart_triggered_id, list(self.agent_states.keys()))
+                self.coordination_tracker.track_restart_signal(
+                    restart_triggered_id, list(self.agent_states.keys())
+                )
                 # Note that the agent that sent the restart signal had its stream end so we should mark as completed. NOTE the below breaks it.
                 self.coordination_tracker.complete_agent_restart(restart_triggered_id)
             # Set has_voted = True for agents that voted (only if no reset signal)
@@ -706,7 +767,9 @@ class Orchestrator(ChatAgent):
             # Update status based on what actions agents took
             for agent_id in completed_agent_ids:
                 if agent_id in answered_agents:
-                    self.coordination_tracker.change_status(agent_id, AgentStatus.ANSWERED)
+                    self.coordination_tracker.change_status(
+                        agent_id, AgentStatus.ANSWERED
+                    )
                 elif agent_id in voted_agents:
                     self.coordination_tracker.change_status(agent_id, AgentStatus.VOTED)
                 # Errors and timeouts are already tracked via track_agent_action
@@ -714,7 +777,11 @@ class Orchestrator(ChatAgent):
         # Cancel any remaining tasks and close streams, as all agents have voted (no more new answers)
         for agent_id, task in active_tasks.items():
             if not task.done():
-                self.coordination_tracker.track_agent_action(agent_id, ActionType.CANCELLED, "All agents voted - coordination complete")
+                self.coordination_tracker.track_agent_action(
+                    agent_id,
+                    ActionType.CANCELLED,
+                    "All agents voted - coordination complete",
+                )
             task.cancel()
         for agent_id in list(active_streams.keys()):
             await self._close_agent_stream(agent_id, active_streams)
@@ -767,8 +834,14 @@ class Orchestrator(ChatAgent):
             )
         )
         return str(workspace_path) if workspace_path else None
-    
-    async def _save_agent_snapshot(self, agent_id: str, answer_content: str = None, is_final: bool = False, context_data: Any = None) -> None:
+
+    async def _save_agent_snapshot(
+        self,
+        agent_id: str,
+        answer_content: str = None,
+        is_final: bool = False,
+        context_data: Any = None,
+    ) -> None:
         """
         Save a snapshot of an agent's working directory and answer with the same timestamp.
 
@@ -776,7 +849,7 @@ class Orchestrator(ChatAgent):
         - agent_id/timestamp/workspace/ - Contains the workspace files
         - agent_id/timestamp/answer.txt - Contains the answer text
         - agent_id/timestamp/context.txt - Contains the context used (if provided)
-        
+
         Args:
             agent_id: ID of the agent
             answer_content: The answer content to save (if provided)
@@ -815,26 +888,35 @@ class Orchestrator(ChatAgent):
 
                     # Write the answer content
                     answer_file.write_text(answer_content)
-                    logger.info(f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}")
-                    
+                    logger.info(
+                        f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}"
+                    )
+
                     # Save context if provided
                     if context_data:
                         try:
                             import json
+
                             context_file = timestamped_dir / "context.txt"
-                            
+
                             # Handle different types of context data
                             if isinstance(context_data, dict):
                                 # Pretty print dict/JSON data
-                                context_file.write_text(json.dumps(context_data, indent=2, default=str))
+                                context_file.write_text(
+                                    json.dumps(context_data, indent=2, default=str)
+                                )
                             else:
                                 # Save as string
                                 context_file.write_text(str(context_data))
-                            
-                            logger.info(f"[Orchestrator._save_agent_snapshot] Saved context to {context_file}")
+
+                            logger.info(
+                                f"[Orchestrator._save_agent_snapshot] Saved context to {context_file}"
+                            )
                         except Exception as ce:
-                            logger.warning(f"[Orchestrator._save_agent_snapshot] Failed to save context for {agent_id}: {ce}")
-                            
+                            logger.warning(
+                                f"[Orchestrator._save_agent_snapshot] Failed to save context for {agent_id}: {ce}"
+                            )
+
             except Exception as e:
                 logger.warning(
                     f"[Orchestrator._save_agent_snapshot] Failed to save answer for {agent_id}: {e}"
@@ -849,108 +931,160 @@ class Orchestrator(ChatAgent):
                 timestamp=timestamp if not is_final else None, is_final=is_final
             )
         else:
-            logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager")
-        
+            logger.info(
+                f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager"
+            )
+
         # Return the timestamp for tracking
         return timestamp if not is_final else "final"
-    
+
     async def _save_agent_vote(self, agent_id: str, vote_data: Dict[str, Any]) -> str:
         """
         TODO: I believe this can just be merged into _save_agent_snapshot() now, since we also might want to save the current workspace?
 
         Save an agent's vote with timestamp.
-        
+
         Creates a timestamped directory structure:
         - agent_id/timestamp/vote.json - Contains the vote data
-        
+
         Args:
             agent_id: ID of the agent
             vote_data: The vote data to save (voted_for, reason, etc.)
-            
+
         Returns:
             The timestamp used for this snapshot
         """
         from datetime import datetime
         import json
         import time
-        
-        logger.info(f"[Orchestrator._save_agent_vote] Called for agent_id={agent_id}, vote_data={vote_data}")
-        
+
+        logger.info(
+            f"[Orchestrator._save_agent_vote] Called for agent_id={agent_id}, vote_data={vote_data}"
+        )
+
         # Generate timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        
+
         log_session_dir = get_log_session_dir()
-        logger.info(f"[Orchestrator._save_agent_vote] log_session_dir = {log_session_dir}")
-        
+        logger.info(
+            f"[Orchestrator._save_agent_vote] log_session_dir = {log_session_dir}"
+        )
+
         if log_session_dir:
             try:
                 # Create timestamped directory for vote
                 timestamped_dir = log_session_dir / agent_id / timestamp
                 timestamped_dir.mkdir(parents=True, exist_ok=True)
                 vote_file = timestamped_dir / "vote.json"
-                
+
                 # Get current state for context
                 current_answers = {
-                    aid: state.answer 
-                    for aid, state in self.agent_states.items() 
+                    aid: state.answer
+                    for aid, state in self.agent_states.items()
                     if state.answer
                 }
-                
+
                 # Create anonymous agent mapping
                 agent_mapping = {}
                 for i, real_id in enumerate(sorted(self.agents.keys()), 1):
                     agent_mapping[f"agent{i}"] = real_id
-                
+
                 # Build comprehensive vote data
                 comprehensive_vote_data = {
                     "voter_id": agent_id,
-                    "voter_anon_id": next((anon for anon, real in agent_mapping.items() if real == agent_id), agent_id),
+                    "voter_anon_id": next(
+                        (
+                            anon
+                            for anon, real in agent_mapping.items()
+                            if real == agent_id
+                        ),
+                        agent_id,
+                    ),
                     "voted_for": vote_data.get("agent_id", "unknown"),
-                    "voted_for_anon": next((anon for anon, real in agent_mapping.items() if real == vote_data.get("agent_id")), "unknown"),
+                    "voted_for_anon": next(
+                        (
+                            anon
+                            for anon, real in agent_mapping.items()
+                            if real == vote_data.get("agent_id")
+                        ),
+                        "unknown",
+                    ),
                     "reason": vote_data.get("reason", ""),
                     "timestamp": timestamp,
                     "unix_timestamp": time.time(),
-                    "iteration": self.coordination_tracker.current_iteration if self.coordination_tracker else None,
-                    "round": self.coordination_tracker.get_max_round() if self.coordination_tracker else None,
+                    "iteration": self.coordination_tracker.current_iteration
+                    if self.coordination_tracker
+                    else None,
+                    "round": self.coordination_tracker.get_max_round()
+                    if self.coordination_tracker
+                    else None,
                     "available_options": list(current_answers.keys()),
-                    "available_options_anon": [next((anon for anon, real in agent_mapping.items() if real == aid), aid) for aid in sorted(current_answers.keys())],
+                    "available_options_anon": [
+                        next(
+                            (
+                                anon
+                                for anon, real in agent_mapping.items()
+                                if real == aid
+                            ),
+                            aid,
+                        )
+                        for aid in sorted(current_answers.keys())
+                    ],
                     "agent_mapping": agent_mapping,
                     "vote_context": {
                         "total_agents": len(self.agents),
                         "agents_with_answers": len(current_answers),
-                        "current_task": self.current_task
-                    }
+                        "current_task": self.current_task,
+                    },
                 }
-                
+
                 # Write the comprehensive vote data
-                with open(vote_file, 'w', encoding='utf-8') as f:
+                with open(vote_file, "w", encoding="utf-8") as f:
                     json.dump(comprehensive_vote_data, f, indent=2)
-                logger.info(f"[Orchestrator._save_agent_vote] Saved comprehensive vote to {vote_file}")
-                
+                logger.info(
+                    f"[Orchestrator._save_agent_vote] Saved comprehensive vote to {vote_file}"
+                )
+
                 # Save the context that was sent to this agent
-                if agent_id in self.agent_states and self.agent_states[agent_id].last_context:
+                if (
+                    agent_id in self.agent_states
+                    and self.agent_states[agent_id].last_context
+                ):
                     try:
                         context_file = timestamped_dir / "context.txt"
                         context_data = self.agent_states[agent_id].last_context
-                        
+
                         # Pretty print the context
                         if isinstance(context_data, dict):
-                            context_file.write_text(json.dumps(context_data, indent=2, default=str))
+                            context_file.write_text(
+                                json.dumps(context_data, indent=2, default=str)
+                            )
                         else:
                             context_file.write_text(str(context_data))
-                        
-                        logger.info(f"[Orchestrator._save_agent_vote] Saved context to {context_file}")
+
+                        logger.info(
+                            f"[Orchestrator._save_agent_vote] Saved context to {context_file}"
+                        )
                     except Exception as ce:
-                        logger.warning(f"[Orchestrator._save_agent_vote] Failed to save context for {agent_id}: {ce}")
+                        logger.warning(
+                            f"[Orchestrator._save_agent_vote] Failed to save context for {agent_id}: {ce}"
+                        )
             except Exception as e:
                 import traceback
-                logger.error(f"[Orchestrator._save_agent_vote] Failed to save vote for {agent_id}: {e}")
-                logger.error(f"[Orchestrator._save_agent_vote] Traceback: {traceback.format_exc()}")
+
+                logger.error(
+                    f"[Orchestrator._save_agent_vote] Failed to save vote for {agent_id}: {e}"
+                )
+                logger.error(
+                    f"[Orchestrator._save_agent_vote] Traceback: {traceback.format_exc()}"
+                )
         else:
-            logger.warning(f"[Orchestrator._save_agent_vote] log_session_dir is None, skipping vote save")
-        
+            logger.warning(
+                f"[Orchestrator._save_agent_vote] log_session_dir is None, skipping vote save"
+            )
+
         return timestamp
-    
+
     async def _close_agent_stream(
         self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
     ) -> None:
@@ -1079,7 +1213,9 @@ class Orchestrator(ChatAgent):
                 if not task.done():
                     # Only track if not already tracked by timeout above
                     if not self.is_orchestrator_timeout:
-                        self.coordination_tracker.track_agent_action(agent_id, ActionType.CANCELLED, "Coordination cleanup")
+                        self.coordination_tracker.track_agent_action(
+                            agent_id, ActionType.CANCELLED, "Coordination cleanup"
+                        )
                     task.cancel()
                     try:
                         await task
@@ -1201,7 +1337,7 @@ class Orchestrator(ChatAgent):
         if self.agent_states[agent_id].restart_pending:
             # Track restart_pending transition (True → False) - restart processed
             self.coordination_tracker.complete_agent_restart(agent_id)
-        
+
         self.agent_states[agent_id].restart_pending = False
 
         # Copy all agents' snapshots to temp workspace for context sharing
@@ -1279,11 +1415,16 @@ class Orchestrator(ChatAgent):
                 )
 
             # Track all the context used for this agent execution
-            self.coordination_tracker.track_agent_context(agent_id, answers, conversation.get("conversation_history", []), conversation)
-            
+            self.coordination_tracker.track_agent_context(
+                agent_id,
+                answers,
+                conversation.get("conversation_history", []),
+                conversation,
+            )
+
             # Store the context in agent state for later use when saving snapshots
             self.agent_states[agent_id].last_context = conversation
-            
+
             # Log the messages being sent to the agent with backend info
             backend_name = None
             if hasattr(agent, "backend") and hasattr(
@@ -1755,7 +1896,7 @@ class Orchestrator(ChatAgent):
             return ("error", str(e))
 
     async def _present_final_answer(self) -> AsyncGenerator[StreamChunk, None]:
-        """Present the final coordinated answer.""" 
+        """Present the final coordinated answer."""
         log_stream_chunk("orchestrator", "content", "## 🎯 Final Coordinated Answer\n")
         yield StreamChunk(type="content", content="## 🎯 Final Coordinated Answer\n")
 
@@ -1939,7 +2080,7 @@ class Orchestrator(ChatAgent):
         """Ask the winning agent to present their final answer with voting context."""
         # Start tracking the final round
         self.coordination_tracker.start_final_round(selected_agent_id)
-        
+
         if selected_agent_id not in self.agents:
             log_stream_chunk(
                 "orchestrator", "error", f"Selected agent {selected_agent_id} not found"
@@ -2010,8 +2151,10 @@ class Orchestrator(ChatAgent):
             if aid != selected_agent_id:
                 self.coordination_tracker.change_status(aid, AgentStatus.COMPLETED)
 
-        self.coordination_tracker.set_final_agent(selected_agent_id, voting_summary, all_answers)
-        
+        self.coordination_tracker.set_final_agent(
+            selected_agent_id, voting_summary, all_answers
+        )
+
         # Add workspace context information to system message if workspace was restored
         if agent.backend.filesystem_manager and temp_workspace_path:
             main_workspace = str(
@@ -2039,7 +2182,7 @@ class Orchestrator(ChatAgent):
             },
             {"role": "user", "content": presentation_content},
         ]
-        
+
         # Store the final context in agent state for saving
         self.agent_states[selected_agent_id].last_context = {
             "messages": presentation_messages,
@@ -2049,10 +2192,18 @@ class Orchestrator(ChatAgent):
             "complete_vote_results": vote_results,  # Include ALL vote data
             "vote_counts": vote_counts,
             "voter_details": voter_details,
-            "all_votes": {aid: state.votes for aid, state in self.agent_states.items() if state.votes}  # All individual votes
+            "all_votes": {
+                aid: state.votes
+                for aid, state in self.agent_states.items()
+                if state.votes
+            },  # All individual votes
         }
-        
-        log_stream_chunk("orchestrator", "status", f"🎤  [{selected_agent_id}] presenting final answer\n")
+
+        log_stream_chunk(
+            "orchestrator",
+            "status",
+            f"🎤  [{selected_agent_id}] presenting final answer\n",
+        )
         yield StreamChunk(
             type="status",
             content=f"🎤  [{selected_agent_id}] presenting final answer\n",
@@ -2060,7 +2211,7 @@ class Orchestrator(ChatAgent):
 
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         presentation_content = ""
-        
+
         # Track final round iterations (each chunk is like an iteration)
         try:
             async for chunk in agent.chat(presentation_messages, reset_chat=True):
@@ -2069,7 +2220,9 @@ class Orchestrator(ChatAgent):
                 # Use the same streaming approach as regular coordination
                 if chunk.type == "content" and chunk.content:
                     presentation_content += chunk.content
-                    log_stream_chunk("orchestrator", "content", chunk.content, selected_agent_id)
+                    log_stream_chunk(
+                        "orchestrator", "content", chunk.content, selected_agent_id
+                    )
                     yield StreamChunk(
                         type="content", content=chunk.content, source=selected_agent_id
                     )
@@ -2097,7 +2250,9 @@ class Orchestrator(ChatAgent):
                         summary_index=getattr(chunk, "summary_index", None),
                     )
                     # Use the same format as main coordination for consistency
-                    log_stream_chunk("orchestrator", chunk.type, chunk.content, selected_agent_id)
+                    log_stream_chunk(
+                        "orchestrator", chunk.type, chunk.content, selected_agent_id
+                    )
                     yield reasoning_chunk
                 elif chunk.type == "backend_status":
                     import json
@@ -2109,38 +2264,64 @@ class Orchestrator(ChatAgent):
     Final Session ID: {session_id}.
     """
 
-                    log_stream_chunk("orchestrator", "content", content, selected_agent_id)
+                    log_stream_chunk(
+                        "orchestrator", "content", content, selected_agent_id
+                    )
                     yield StreamChunk(
                         type="content", content=content, source=selected_agent_id
                     )
                 elif chunk.type == "mcp_status":
                     # Handle MCP status messages in final presentation
                     mcp_content = f"🔧 MCP: {chunk.content}"
-                    log_stream_chunk("orchestrator", "content", mcp_content, selected_agent_id)
+                    log_stream_chunk(
+                        "orchestrator", "content", mcp_content, selected_agent_id
+                    )
                     yield StreamChunk(
                         type="content", content=mcp_content, source=selected_agent_id
                     )
 
                 elif chunk.type == "done":
                     # Save the final workspace snapshot (from final workspace directory)
-                    final_answer = presentation_content.strip() if presentation_content.strip() else self.agent_states[selected_agent_id].answer  # fallback to stored answer if no content generated
-                    final_context = self.agent_states[selected_agent_id].last_context if selected_agent_id in self.agent_states else None
-                    await self._save_agent_snapshot(self._selected_agent, answer_content=final_answer, is_final=True, context_data=final_context)
-                    
+                    final_answer = (
+                        presentation_content.strip()
+                        if presentation_content.strip()
+                        else self.agent_states[selected_agent_id].answer
+                    )  # fallback to stored answer if no content generated
+                    final_context = (
+                        self.agent_states[selected_agent_id].last_context
+                        if selected_agent_id in self.agent_states
+                        else None
+                    )
+                    await self._save_agent_snapshot(
+                        self._selected_agent,
+                        answer_content=final_answer,
+                        is_final=True,
+                        context_data=final_context,
+                    )
+
                     # Track the final answer in coordination tracker
-                    self.coordination_tracker.set_final_answer(selected_agent_id, final_answer, snapshot_timestamp="final")
-                    
+                    self.coordination_tracker.set_final_answer(
+                        selected_agent_id, final_answer, snapshot_timestamp="final"
+                    )
+
                     log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                     yield StreamChunk(type="done", source=selected_agent_id)
                 elif chunk.type == "error":
-                    log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
+                    log_stream_chunk(
+                        "orchestrator", "error", chunk.error, selected_agent_id
+                    )
                     yield StreamChunk(
                         type="error", error=chunk.error, source=selected_agent_id
                     )
                 # Pass through other chunk types as-is but with source
                 else:
                     if hasattr(chunk, "source"):
-                        log_stream_chunk("orchestrator", chunk.type, getattr(chunk, "content", ""), selected_agent_id)
+                        log_stream_chunk(
+                            "orchestrator",
+                            chunk.type,
+                            getattr(chunk, "content", ""),
+                            selected_agent_id,
+                        )
                         yield StreamChunk(
                             type=chunk.type,
                             content=getattr(chunk, "content", ""),
@@ -2152,7 +2333,12 @@ class Orchestrator(ChatAgent):
                             },
                         )
                     else:
-                        log_stream_chunk("orchestrator", chunk.type, getattr(chunk, "content", ""), selected_agent_id)
+                        log_stream_chunk(
+                            "orchestrator",
+                            chunk.type,
+                            getattr(chunk, "content", ""),
+                            selected_agent_id,
+                        )
                         yield StreamChunk(
                             type=chunk.type,
                             content=getattr(chunk, "content", ""),
@@ -2174,7 +2360,9 @@ class Orchestrator(ChatAgent):
                 stored_answer = self.agent_states[selected_agent_id].answer
                 if stored_answer:
                     fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
-                    log_stream_chunk("orchestrator", "content", fallback_content, selected_agent_id)
+                    log_stream_chunk(
+                        "orchestrator", "content", fallback_content, selected_agent_id
+                    )
                     yield StreamChunk(
                         type="content",
                         content=fallback_content,
@@ -2182,15 +2370,22 @@ class Orchestrator(ChatAgent):
                     )
                     self._final_presentation_content = stored_answer
                 else:
-                    log_stream_chunk("orchestrator", "error", "\n❌ No content generated for final presentation and no stored answer available.", selected_agent_id)
+                    log_stream_chunk(
+                        "orchestrator",
+                        "error",
+                        "\n❌ No content generated for final presentation and no stored answer available.",
+                        selected_agent_id,
+                    )
                     yield StreamChunk(
                         type="content",
                         content="\n❌ No content generated for final presentation and no stored answer available.",
                         source=selected_agent_id,
                     )
-                
+
             # Mark final round as completed
-            self.coordination_tracker.change_status(selected_agent_id, AgentStatus.COMPLETED)
+            self.coordination_tracker.change_status(
+                selected_agent_id, AgentStatus.COMPLETED
+            )
 
             # Save logs
             self.save_coordination_logs()
