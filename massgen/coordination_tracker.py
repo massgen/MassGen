@@ -641,7 +641,7 @@ class CoordinationTracker:
         """Generate coordination table using the create_coordination_table.py module."""
         try:
             # Import the table builder
-            from massgen.frontend.create_coordination_table import CoordinationTableBuilder
+            from massgen.frontend.displays.create_coordination_table import CoordinationTableBuilder
             
             # Create the event-driven table directly from session data (includes metadata)
             builder = CoordinationTableBuilder(session_data)
