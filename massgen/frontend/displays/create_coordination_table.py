@@ -61,6 +61,7 @@ class CoordinationTableBuilder:
             self.session_metadata = {}
 
         self.agents = self._extract_agents()
+        self.agent_mapping = self._create_agent_mapping()
         self.agent_answers = self._extract_answer_previews()
         self.final_winner = self._find_final_winner()
         self.final_round_num = self._find_final_round_number()
@@ -77,12 +78,19 @@ class CoordinationTableBuilder:
                 agents.add(agent_id)
         return sorted(list(agents))
 
+    def _create_agent_mapping(self) -> Dict[str, str]:
+        """Create explicit mapping from agent_id to agent_number for answer labels"""
+        mapping = {}
+        for i, agent_id in enumerate(self.agents, 1):
+            mapping[agent_id] = str(i)
+        return mapping
+
     def _extract_user_question(self) -> str:
         """Extract the user question from session metadata"""
         return self.session_metadata.get("user_prompt", "No user prompt found")
 
     def _extract_answer_previews(self) -> Dict[str, str]:
-        """Extract the actual answer text for each agent"""
+        """Extract the actual answer text for each agent using explicit mapping"""
         answers = {}
 
         # Try to get from final_agent_selected event
@@ -91,18 +99,25 @@ class CoordinationTableBuilder:
                 context = event.get("context", {})
                 answers_for_context = context.get("answers_for_context", {})
 
-                # Map answers to agents
-                for key, answer in answers_for_context.items():
-                    # Handle both formats: "agent1.1" or "gpt5nano_1"
-                    if key in self.agents:
-                        answers[key] = answer
+                # Map answers to agents using explicit agent mapping
+                for label, answer in answers_for_context.items():
+                    # Direct match: label is an agent_id
+                    if label in self.agents:
+                        answers[label] = answer
                     else:
-                        # Try to map label to agent
-                        for agent in self.agents:
-                            agent_num = agent.split("_")[-1] if "_" in agent else agent
-                            if f"agent{agent_num}" in key or key == agent:
-                                answers[agent] = answer
-                                break
+                        # Map answer label to agent using our explicit mapping
+                        # For labels like "agent1.1", extract the number and find matching agent
+                        if label.startswith("agent") and "." in label:
+                            try:
+                                # Extract agent number from label (e.g., "agent1.1" -> "1")
+                                agent_num = label.split(".")[0][5:]  # Remove "agent" prefix
+                                # Find agent with this number in our mapping
+                                for agent_id, mapped_num in self.agent_mapping.items():
+                                    if mapped_num == agent_num:
+                                        answers[agent_id] = answer
+                                        break
+                            except (IndexError, ValueError):
+                                continue
 
         return answers
 
@@ -374,11 +389,9 @@ class CoordinationTableBuilder:
         # Header row
         header = "|   Event  |"
         for agent in self.agents:
-            if "_" in agent:
-                parts = agent.split("_")
-                agent_name = f"Agent{parts[-1]}"
-            else:
-                agent_name = agent
+            # Use format "Agent 1 (full_agent_id)"
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num} ({agent})"
             header += self._format_cell(agent_name, cell_width) + "|"
         lines.append(header)
 
@@ -477,9 +490,8 @@ class CoordinationTableBuilder:
 
             elif event_type == "restart_triggered":
                 # Show restart trigger event spanning both columns (it's a coordination event)
-                agent_name = (
-                    f"Agent{agent_id.split('_')[-1]}" if "_" in agent_id else agent_id
-                )
+                agent_num = self.agent_mapping.get(agent_id, "?")
+                agent_name = f"Agent {agent_num}"
                 lines.extend(
                     self._create_system_row(
                         f"🔁 {agent_name} RESTART TRIGGERED", cell_width
@@ -751,7 +763,8 @@ class CoordinationTableBuilder:
         # Count per-agent stats
         agent_stats = {}
         for agent in self.agents:
-            agent_name = f"Agent{agent.split('_')[-1]}" if "_" in agent else agent
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num}"
             agent_stats[agent_name] = {
                 "answers": 1 if agent_states[agent]["answer"] else 0,
                 "votes": 1 if agent_states[agent]["vote"] else 0,
@@ -765,9 +778,8 @@ class CoordinationTableBuilder:
                 and event.get("agent_id") in self.agents
             ):
                 agent_id = event["agent_id"]
-                agent_name = (
-                    f"Agent{agent_id.split('_')[-1]}" if "_" in agent_id else agent_id
-                )
+                agent_num = self.agent_mapping.get(agent_id, "?")
+                agent_name = f"Agent {agent_num}"
                 if agent_name not in agent_stats:
                     agent_stats[agent_name] = {"restarts": 0}
                 if "restarts" not in agent_stats[agent_name]:
@@ -781,7 +793,8 @@ class CoordinationTableBuilder:
         # Summary header
         summary_header = "|  SUMMARY |"
         for agent in self.agents:
-            agent_name = f"Agent{agent.split('_')[-1]}" if "_" in agent else agent
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num}"
             summary_header += self._format_cell(agent_name, cell_width) + "|"
         lines.append(summary_header)
 
@@ -791,7 +804,8 @@ class CoordinationTableBuilder:
         # Answers row
         answers_row = "| Answers  |"
         for agent in self.agents:
-            agent_name = f"Agent{agent.split('_')[-1]}" if "_" in agent else agent
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num}"
             count = agent_stats.get(agent_name, {}).get("answers", 0)
             answers_row += (
                 self._format_cell(
@@ -804,7 +818,8 @@ class CoordinationTableBuilder:
         # Votes row
         votes_row = "| Votes    |"
         for agent in self.agents:
-            agent_name = f"Agent{agent.split('_')[-1]}" if "_" in agent else agent
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num}"
             count = agent_stats.get(agent_name, {}).get("votes", 0)
             votes_row += (
                 self._format_cell(
@@ -817,7 +832,8 @@ class CoordinationTableBuilder:
         # Restarts row
         restarts_row = "| Restarts |"
         for agent in self.agents:
-            agent_name = f"Agent{agent.split('_')[-1]}" if "_" in agent else agent
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num}"
             count = agent_stats.get(agent_name, {}).get("restarts", 0)
             restarts_row += (
                 self._format_cell(
@@ -830,7 +846,8 @@ class CoordinationTableBuilder:
         # Final status row
         status_row = "| Status   |"
         for agent in self.agents:
-            agent_name = f"Agent{agent.split('_')[-1]}" if "_" in agent else agent
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num}"
             status = agent_states[agent]["status"]
             if status == "final":
                 display = "🏆 Winner"
@@ -952,11 +969,8 @@ class CoordinationTableBuilder:
         header = "|  Round   |"
         for agent in self.agents:
             # Try to create readable agent names
-            if "_" in agent:
-                parts = agent.split("_")
-                agent_name = f"Agent{parts[-1]}"
-            else:
-                agent_name = agent
+            # Use the full agent name as provided by user configuration
+            agent_name = agent
             header += self._format_cell(agent_name, cell_width) + "|"
         lines.append(header)
 
@@ -1025,10 +1039,10 @@ class CoordinationTableBuilder:
 
                     # Winner announcement row
                     if self.final_winner:
-                        # Try to create readable agent name
-                        if "_" in self.final_winner:
-                            parts = self.final_winner.split("_")
-                            winner_name = f"Agent{parts[-1]}"
+                        # Use agent mapping for consistent naming
+                        agent_number = agent_mapping.get(self.final_winner)
+                        if agent_number:
+                            winner_name = f"Agent {agent_number}"
                         else:
                             winner_name = self.final_winner
 
@@ -1133,11 +1147,9 @@ class CoordinationTableBuilder:
         # Add columns
         table.add_column("Event", style="bold yellow", width=8, justify="center")
         for agent in self.agents:
-            if "_" in agent:
-                parts = agent.split("_")
-                agent_name = f"Agent{parts[-1]}"
-            else:
-                agent_name = agent
+            # Use format "Agent 1 (full_agent_id)"
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num} ({agent})"
             table.add_column(agent_name, style="white", width=45, justify="center")
 
         # Add user question as header
@@ -1184,9 +1196,8 @@ class CoordinationTableBuilder:
                 and agent_id
                 and agent_id in self.agents
             ):
-                agent_name = (
-                    f"Agent{agent_id.split('_')[-1]}" if "_" in agent_id else agent_id
-                )
+                agent_num = self.agent_mapping.get(agent_id, "?")
+                agent_name = f"Agent {agent_num}"
                 restart_row = ["[bold yellow]🔁[/bold yellow]"]
                 restart_text = Text(
                     f"🔁 {agent_name} RESTART TRIGGERED",
@@ -1376,7 +1387,8 @@ class CoordinationTableBuilder:
         # Summary header
         summary_row = ["[bold magenta]SUMMARY[/bold magenta]"]
         for agent in self.agents:
-            agent_name = f"Agent{agent.split('_')[-1]}" if "_" in agent else agent
+            agent_num = self.agent_mapping.get(agent, "?")
+            agent_name = f"Agent {agent_num}"
             summary_row.append(f"[bold magenta]{agent_name}[/bold magenta]")
         table.add_row(*summary_row)
 
@@ -1433,11 +1445,8 @@ class CoordinationTableBuilder:
         table.add_column("Round", style="bold bright_white", width=14, justify="center")
         for agent in self.agents:
             # Create readable agent names
-            if "_" in agent:
-                parts = agent.split("_")
-                agent_name = f"Agent{parts[-1]}"
-            else:
-                agent_name = agent
+            # Use the full agent name as provided by user configuration
+            agent_name = agent
             # Use fixed width instead of ratio to prevent truncation
             table.add_column(
                 agent_name, style="white", justify="center", width=40, overflow="fold"
@@ -1515,10 +1524,10 @@ class CoordinationTableBuilder:
                 if next_round.round_type == "FINAL":
                     # Winner announcement - simulate spanning
                     if self.final_winner:
-                        # Try to create readable agent name
-                        if "_" in self.final_winner:
-                            parts = self.final_winner.split("_")
-                            winner_name = f"Agent{parts[-1]}"
+                        # Use agent mapping for consistent naming
+                        agent_number = agent_mapping.get(self.final_winner)
+                        if agent_number:
+                            winner_name = f"Agent {agent_number}"
                         else:
                             winner_name = self.final_winner
 
