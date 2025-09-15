@@ -5,6 +5,33 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.19] - 2025-09-15
+
+### Added
+- **Coordination Tracking System**: Comprehensive tracking of multi-agent coordination events
+  - New `coordination_tracker.py` with `CoordinationTracker` class for capturing agent state transitions
+  - Event-based tracking with timestamps and context preservation
+  - Support for recording answers, votes, and coordination phases
+  - New `create_coordination_table.py` standalone utility for generating coordination reports
+
+- **Enhanced Agent Status Management**: New enums for better state tracking
+  - Added `ActionType` enum in `massgen/utils.py`: NEW_ANSWER, VOTE, VOTE_IGNORED, ERROR, TIMEOUT, CANCELLED
+  - Added `AgentStatus` enum in `massgen/utils.py`: STREAMING, ANSWERING, VOTING, VOTED, ANSWERED, RESTARTING, ERROR, TIMEOUT, COMPLETED
+  - Improved state machine for agent coordination lifecycle
+
+### Changed
+- **Frontend Display Enhancements**: Improved terminal interface with coordination visualization
+  - Modified `massgen/frontend/displays/rich_terminal_display.py` to add coordination table display method
+  - Added new terminal menu option 'r' to display coordination table
+  - Enhanced menu system with better organization of debugging tools
+  - Support for rich-formatted tables showing agent interactions across rounds
+
+### Technical Details
+- **Commits**: 20+ commits including coordination tracking system and frontend enhancements
+- **Files Modified**: 5+ files across coordination tracking, frontend displays, and utilities
+- **New Features**: Coordination event tracking with visualization capabilities
+- **Contributors**: @ncrispino @qidanrui @sonichi @a5507203 @Henry-811 and the MassGen team
+
 ## [0.0.18] - 2025-09-12
 
 ### Added
@@ -18,10 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - GPT-OSS configurations: `gpt_oss_mcp_example.yaml`, `gpt_oss_mcp_test.yaml`, `gpt_oss_streamable_http_test.yaml`
   - Qwen API configurations: `qwen_api_mcp_example.yaml`, `qwen_api_mcp_test.yaml`, `qwen_api_streamable_http_test.yaml`
   - Qwen Local configurations: `qwen_local_mcp_example.yaml`, `qwen_local_mcp_test.yaml`, `qwen_local_streamable_http_test.yaml`
-
-- **Enhanced ZAI Provider Support**: Extended ZAI/Zhipu.ai backend capabilities
-  - Added China endpoint support (bigmodel.cn) in addition to existing global endpoint (z.ai)
-  - Improved CLI backend detection to recognize both ZAI endpoints
 
 - **Enhanced LMStudio Backend**: Improved local model support
   - Better tracking of attempted model loads
