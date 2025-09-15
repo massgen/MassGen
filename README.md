@@ -90,8 +90,8 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.18](#recent-achievements-v0018)
-  - [v0.0.3 - v0.0.17](#previous-achievements-v003-v0017)
+  - [v0.0.19](#recent-achievements-v0019)
+  - [v0.0.3 - v0.0.18](#previous-achievements-v003-v0018)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
@@ -913,23 +913,31 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.18)
+### Recent Achievements (v0.0.19)
 
-**🎉 Released: September 12, 2025**
+**🎉 Released: September 15, 2025**
 
-Version 0.0.18 achieved **comprehensive MCP support** by extending MCP integration to all Chat Completions backends, making MCP tools available across most providers:
+Version 0.0.19 introduces **comprehensive coordination tracking and visualization** to provide unprecedented visibility into multi-agent collaboration:
 
-#### Expanded MCP Integration
-- **Complete Chat Completions MCP Support**: Extended MCP to all Chat Completions providers (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter)
-- **Cross-Provider Function Calling Compatibility**: Seamless MCP tool execution across different AI providers
-- **Enhanced Provider Support**: Improved LMStudio backend with better model tracking
 
-#### Enhanced Configuration and Examples
-- **9 New MCP Configuration Examples**: GPT-OSS, Qwen API, and Qwen Local configurations for comprehensive MCP testing
-- **Filesystem Support**: MCP-based filesystem operations for Chat Completions backends
-- **Broad MCP Server Compatibility**: Support for both stdio and streamable-http transports across Chat Completions providers
+#### Coordination Tracking System
+- **Event-Based Tracking**: New `CoordinationTracker` class captures all agent state transitions, votes, and coordination phases with timestamps
+- **Enhanced Agent Status Management**: Comprehensive `ActionType` and `AgentStatus` enums for precise state tracking throughout agent lifecycle
+- **Coordination Event Serialization**: Complete coordination history recording for analysis, debugging, and replay capabilities
 
-### Previous Achievements (v0.0.3-v0.0.17)
+#### Interactive Visualization
+- **Coordination Table Display**: New terminal menu option 'r' for rich-formatted table showing agent interactions across rounds
+- **Real-time Coordination Monitoring**: Visual representation of voting patterns, consensus building, and agent collaboration flow  
+- **Standalone Coordination Reports**: Utility for generating detailed coordination analysis reports
+
+#### Developer Experience Enhancements
+- **Enhanced Terminal Interface**: Improved menu system with better organization of debugging and inspection tools
+- **Comprehensive State Machine**: Precise tracking of STREAMING, ANSWERING, VOTING, VOTED, ANSWERED, RESTARTING states
+- **Advanced Debugging Capabilities**: Complete visibility into multi-agent coordination patterns and decision-making processes
+
+### Previous Achievements (v0.0.3-v0.0.18)
+
+✅ **Comprehensive MCP Integration (v0.0.18)**: Extended MCP to all Chat Completions backends (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter), cross-provider function calling compatibility, 9 new MCP configuration examples
 
 ✅ **OpenAI MCP Integration (v0.0.17)**: Extended MCP (Model Context Protocol) support to OpenAI backend with full tool discovery and execution capabilities for GPT models, unified MCP architecture across multiple backends, and enhanced debugging
 
@@ -979,22 +987,25 @@ Version 0.0.18 achieved **comprehensive MCP support** by extending MCP integrati
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.19 Roadmap
+### v0.0.20 Roadmap
 
-Version 0.0.19 focuses on **enhanced system observability, code execution capabilities, and improved developer experience**, building on the extended MCP support from v0.0.18. Key priorities include:
+Version 0.0.20 focuses on **context path configuration and workspace mirroring**, building on the coordination tracking system from v0.0.19. Key priorities include:
 
 #### Required Features
-- **Step-by-Step Orchestration Logging**: Enhanced logging with detailed phase tracking, timing metrics, and agent collaboration visualization
-- **Organized MCP Logging**: Hierarchical MCP log categorization with structured formats, trace IDs, and advanced debugging tools
-- **Code Execution Support**: Secure code execution with sandboxing, filesystem integration, and safety measures
-- **Enhanced UI & Debugging**: Fix scroll issues for long outputs, improve navigation, and add debugging enhancements
+- **Context Path Configuration**: Enable agents to access user-specified files and folders with explicit read/write permissions
+- **Workspace Mirroring**: Intelligent workspace structure that mirrors original file organization with common root detection
+- **Cross-Drive Support**: Seamless handling of files from different drives and projects with permission-based access control
+
+#### Optional Features
+- **Enhanced MCP Logging**: Hierarchical MCP log organization with structured formats and performance metrics
+- **Advanced Debugging**: Fix scroll issues for long outputs, keyboard navigation, and enhanced display capabilities
 
 Key technical approach:
-- **Hierarchical Log Organization**: Structured MCP logging with Connection, Tool Discovery, Execution, Error Handling, and Performance categories
-- **End-to-End Tracing**: MCP trace context and session ID propagation across servers and tools
-- **Advanced Debugging Tools**: Timeline views, analytics, performance benchmarking, and granular filtering
+- **Permission-Based Access**: Read/write permissions for granular control over file modifications
+- **In-Place Referencing**: No file copying required - agents reference originals directly to save disk space
+- **Safe Development Workflow**: All changes develop in isolated workspace first, then applied based on permissions
 
-For detailed milestones and technical specifications, see the [full v0.0.19 roadmap](ROADMAP_v0.0.19.md).
+For detailed milestones and technical specifications, see the [full v0.0.20 roadmap](ROADMAP_v0.0.20.md).
 
 ---
 
