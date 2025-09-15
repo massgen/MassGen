@@ -935,7 +935,15 @@ class ResponseBackend(LLMBackend):
                         stream = await client.responses.create(**api_params)
 
                         async for chunk in stream:
-                            yield self._process_stream_chunk(chunk, agent_id)
+                            processed = self._process_stream_chunk(chunk, agent_id)
+                            if processed.type == "complete_response":
+                                # Yield the complete response first
+                                yield processed
+                                # Then signal completion with done chunk
+                                log_stream_chunk("backend.response", "done", None, agent_id)
+                                yield StreamChunk(type="done")
+                            else:
+                                yield processed
 
                 except Exception as e:
                     # Enhanced error handling for MCP-related errors during streaming
