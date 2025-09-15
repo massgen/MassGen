@@ -989,21 +989,21 @@ We welcome community contributions to achieve these goals.
 
 ### v0.0.20 Roadmap
 
-Version 0.0.20 focuses on **external file support and advanced debugging capabilities**, building on the coordination tracking system from v0.0.19. Key priorities include:
+Version 0.0.20 focuses on **context path configuration and workspace mirroring**, building on the coordination tracking system from v0.0.19. Key priorities include:
 
 #### Required Features
-- **External File Support**: CLI arguments (`--file`, `--files`, `--dir`) for providing context files to agents
-- **Temporary File Management**: Organized storage in `.massgen/temp` with session-based directories and automatic cleanup
-- **File Format Support**: Comprehensive support for text, code, documents, images, and data files with validation
+- **Context Path Configuration**: Enable agents to access user-specified files and folders with explicit read/write permissions
+- **Workspace Mirroring**: Intelligent workspace structure that mirrors original file organization with common root detection
+- **Cross-Drive Support**: Seamless handling of files from different drives and projects with permission-based access control
 
 #### Optional Features
 - **Enhanced MCP Logging**: Hierarchical MCP log organization with structured formats and performance metrics
 - **Advanced Debugging**: Fix scroll issues for long outputs, keyboard navigation, and enhanced display capabilities
 
 Key technical approach:
-- **Session-Based Storage**: Timestamp and UUID-based temporary directories for file organization
-- **Security First**: File validation, size limits, and safe handling of user-provided content
-- **Cross-Platform Compatibility**: Robust file handling across different operating systems
+- **Permission-Based Access**: Read/write permissions for granular control over file modifications
+- **In-Place Referencing**: No file copying required - agents reference originals directly to save disk space
+- **Safe Development Workflow**: All changes develop in isolated workspace first, then applied based on permissions
 
 For detailed milestones and technical specifications, see the [full v0.0.20 roadmap](ROADMAP_v0.0.20.md).
 
