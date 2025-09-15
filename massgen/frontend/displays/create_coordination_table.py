@@ -70,7 +70,13 @@ class CoordinationTableBuilder:
         self.user_question = self._extract_user_question()
 
     def _extract_agents(self) -> List[str]:
-        """Extract unique agent IDs from events"""
+        """Extract unique agent IDs from events using original orchestrator order"""
+        # First try to get agent order from session metadata
+        metadata_agents = self.session_metadata.get("agent_ids", [])
+        if metadata_agents:
+            return metadata_agents
+
+        # Fallback: extract from events and sort for consistency
         agents = set()
         for event in self.events:
             agent_id = event.get("agent_id")
