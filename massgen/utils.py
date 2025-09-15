@@ -16,8 +16,6 @@ class AgentStatus(Enum):
     """All types of states an agent can be in during coordination."""
 
     STREAMING = "streaming"  # actively streaming content/reasoning
-    ANSWERING = "answering"  # in the process of providing an answer
-    VOTING = "voting"  # in the process of voting
     VOTED = "voted"  # has cast their vote for this round
     ANSWERED = "answered"  # has provided an answer this round
     RESTARTING = "restarting"  # restarting due to new answer from another agent
