@@ -919,6 +919,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 Version 0.0.19 introduces **comprehensive coordination tracking and visualization** to provide unprecedented visibility into multi-agent collaboration:
 
+
 #### Coordination Tracking System
 - **Event-Based Tracking**: New `CoordinationTracker` class captures all agent state transitions, votes, and coordination phases with timestamps
 - **Enhanced Agent Status Management**: Comprehensive `ActionType` and `AgentStatus` enums for precise state tracking throughout agent lifecycle

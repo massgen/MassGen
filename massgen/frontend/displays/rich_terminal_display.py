@@ -1526,6 +1526,11 @@ class RichTerminalDisplay(TerminalDisplay):
                     style=self.colors["warning"],
                 )
 
+                options_text.append(
+                    "  r: Display coordination table to see the full history of agent interactions and decisions\n",
+                    style=self.colors["warning"],
+                )
+
                 # Add option to show final presentation if it's stored
                 if self._stored_final_presentation and self._stored_presentation_agent:
                     options_text.append(
@@ -1551,6 +1556,8 @@ class RichTerminalDisplay(TerminalDisplay):
                         self._show_agent_full_content(self._agent_keys[choice])
                     elif choice == "s":
                         self._show_system_status()
+                    elif choice == "r":
+                        self.display_coordination_table()
                     elif choice == "f" and self._stored_final_presentation:
                         self._redisplay_final_presentation()
                     elif choice == "q":
@@ -1609,6 +1616,11 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Add separator
         self.console.print("\n" + "=" * 80 + "\n")
+
+    def _show_coordination_rounds_table(self):
+        """Display the coordination rounds table with rich formatting."""
+        # Use the improved coordination table display
+        self.display_coordination_table()
 
     def _show_system_status(self):
         """Display system status from txt file."""
@@ -2504,6 +2516,127 @@ class RichTerminalDisplay(TerminalDisplay):
                 transient=False,
             )
             self.live.start()
+
+    def display_coordination_table(self):
+        """Display the coordination table showing the full coordination flow."""
+        try:
+            # Stop live display temporarily
+            was_live = self.live is not None
+            if self.live:
+                self.live.stop()
+                self.live = None
+
+            # Get coordination events from orchestrator
+            if not hasattr(self, "orchestrator") or not self.orchestrator:
+                print("No orchestrator available for table generation")
+                return
+
+            tracker = getattr(self.orchestrator, "coordination_tracker", None)
+            if not tracker:
+                print("No coordination tracker available")
+                return
+
+            # Get events data with session metadata
+            events_data = [event.to_dict() for event in tracker.events]
+
+            # Create session data with metadata (same format as saved file)
+            session_data = {
+                "session_metadata": {
+                    "user_prompt": tracker.user_prompt,
+                    "agent_ids": tracker.agent_ids,
+                    "start_time": tracker.start_time,
+                    "end_time": tracker.end_time,
+                    "final_winner": tracker.final_winner,
+                },
+                "events": events_data,
+            }
+
+            # Import and use the table generator
+            from massgen.frontend.displays.create_coordination_table import (
+                CoordinationTableBuilder,
+            )
+
+            # Generate Rich event table with legend
+            builder = CoordinationTableBuilder(session_data)
+            result = builder.generate_rich_event_table()
+
+            if result:
+                legend, rich_table = result  # Unpack tuple
+
+                # Use Rich's pager for scrollable display
+                from rich.console import Console
+                from rich.text import Text
+                from rich.panel import Panel
+
+                # Create a temporary console for paging
+                temp_console = Console()
+
+                # Create content to display
+                content = []
+
+                # Add title
+                title_text = Text()
+                title_text.append("📊 COORDINATION TABLE", style="bold bright_green")
+                title_text.append(
+                    "\n\nNavigation: ↑/↓ or j/k to scroll, q to quit", style="dim cyan"
+                )
+
+                title_panel = Panel(
+                    title_text,
+                    border_style="bright_blue",
+                    padding=(1, 2),
+                )
+
+                content.append(title_panel)
+                content.append("")  # Empty line
+
+                # Add legend if available
+                if legend:
+                    content.append(legend)
+                    content.append("")  # Empty line
+
+                content.append(rich_table)
+
+                # Display with pager (scrollable)
+                try:
+                    with temp_console.pager(styles=True):
+                        for item in content:
+                            temp_console.print(item)
+                except (KeyboardInterrupt, EOFError):
+                    pass  # Handle user interruption gracefully
+
+                # Add separator instead of clearing screen
+                self.console.print("\n" + "=" * 80 + "\n")
+            else:
+                # Fallback to event table text version if Rich not available
+                table_content = builder.generate_event_table()
+                table_panel = Panel(
+                    table_content,
+                    title="[bold bright_green]📊 COORDINATION TABLE[/bold bright_green]",
+                    border_style=self.colors["success"],
+                    box=DOUBLE,
+                    expand=False,
+                )
+                self.console.print("\n")
+                self.console.print(table_panel)
+                self.console.print()
+
+            # Restart live display if it was active
+            if was_live:
+                self.live = Live(
+                    self._create_layout(),
+                    console=self.console,
+                    refresh_per_second=self.refresh_rate,
+                    vertical_overflow="ellipsis",
+                    transient=False,
+                )
+                self.live.start()
+
+        except Exception as e:
+            print(f"Error displaying coordination table: {e}")
+            import traceback
+
+            traceback.print_exc()
 
     async def display_final_presentation(
         self,
