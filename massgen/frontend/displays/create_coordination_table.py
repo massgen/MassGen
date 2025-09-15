@@ -594,8 +594,9 @@ class CoordinationTableBuilder:
                     row_added = True
 
             elif event_type == "final_agent_selected":
-                # Show winner selection
-                winner_name = "Agent1" if "1" in agent_id else "Agent2"
+                # Show winner selection using agent mapping
+                agent_num = self.agent_mapping.get(agent_id, "?")
+                winner_name = f"Agent {agent_num}"
                 lines.extend(
                     self._create_system_row(
                         f"🏆 {winner_name} selected as winner", cell_width
@@ -1202,7 +1203,8 @@ class CoordinationTableBuilder:
 
             # Handle system events that span both columns
             if event_type == "final_agent_selected":
-                winner_name = "Agent1" if "1" in agent_id else "Agent2"
+                agent_num = self.agent_mapping.get(agent_id, "?")
+                winner_name = f"Agent {agent_num}"
                 winner_row = ["[bold green]🏆[/bold green]"]
                 winner_text = Text(
                     f"🏆 {winner_name} selected as winner 🏆",
