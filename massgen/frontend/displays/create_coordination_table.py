@@ -368,8 +368,16 @@ class CoordinationTableBuilder:
 
     def generate_event_table(self) -> str:
         """Generate an event-driven formatted table"""
-        cell_width = 60
         num_agents = len(self.agents)
+        # Dynamic cell width based on number of agents
+        if num_agents <= 2:
+            cell_width = 60
+        elif num_agents == 3:
+            cell_width = 40
+        elif num_agents == 4:
+            cell_width = 30
+        else:  # 5+ agents
+            cell_width = 25
         total_width = 10 + (cell_width + 1) * num_agents + 1
 
         lines = []
@@ -907,7 +915,7 @@ class CoordinationTableBuilder:
                 ("Event", "Chronological action in the coordination"),
                 (
                     "Answer Labels",
-                    "Each answer gets a unique ID (agent1.1, agent2.1, etc.)\n                  Format: agent{N}.{attempt} where N=agent number, attempt=try number\n                  Example: agent1.1 = Agent1's 1st answer, agent2.1 = Agent2's 1st answer",
+                    "Each answer gets a unique ID (agent1.1, agent2.1, etc.)\n                  Format: agent{N}.{attempt} where N=agent number, attempt=new answer number\n                  Example: agent1.1 = Agent1's 1st answer, agent2.1 = Agent2's 1st answer",
                 ),
                 ("agent1.final", "Special label for the winner's final answer"),
             ],
@@ -956,8 +964,16 @@ class CoordinationTableBuilder:
 
     def generate_table(self) -> str:
         """Generate the formatted table"""
-        cell_width = 60
         num_agents = len(self.agents)
+        # Dynamic cell width based on number of agents
+        if num_agents <= 2:
+            cell_width = 60
+        elif num_agents == 3:
+            cell_width = 40
+        elif num_agents == 4:
+            cell_width = 30
+        else:  # 5+ agents
+            cell_width = 25
         total_width = 10 + (cell_width + 1) * num_agents + 1
 
         lines = []
