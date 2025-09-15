@@ -1346,7 +1346,12 @@ class CoordinationTableBuilder:
                     cell = f"[bold green]✨ NEW ANSWER: {label}[/bold green]"
                     if preview:
                         clean_preview = preview.replace("\n", " ").strip()
-                        cell += f"\n[dim white]👁️  Preview: {clean_preview}[/dim white]"
+                        preview_truncated = (
+                            clean_preview[:80] + "..."
+                            if len(clean_preview) > 80
+                            else clean_preview
+                        )
+                        cell += f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
                 elif event_type == "vote":
                     vote, reason = args[0], args[1] if len(args) > 1 else ""
                     cell = f"[bold cyan]🗳️  VOTE: {vote}[/bold cyan]"
@@ -1363,7 +1368,12 @@ class CoordinationTableBuilder:
                     cell = f"[bold green]🎯 FINAL ANSWER: {label}[/bold green]"
                     if preview:
                         clean_preview = preview.replace("\n", " ").strip()
-                        cell += f"\n[dim white]👁️  Preview: {clean_preview}[/dim white]"
+                        preview_truncated = (
+                            clean_preview[:80] + "..."
+                            if len(clean_preview) > 80
+                            else clean_preview
+                        )
+                        cell += f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
                 else:
                     cell = ""
                 row.append(cell)
@@ -1640,7 +1650,12 @@ class CoordinationTableBuilder:
                     clean_preview = agent_state.answer_preview.replace(
                         "\n", " "
                     ).strip()
-                    preview_str = f"👁️  Preview: {clean_preview}"
+                    preview_truncated = (
+                        clean_preview[:80] + "..."
+                        if len(clean_preview) > 80
+                        else clean_preview
+                    )
+                    preview_str = f"👁️  Preview: {preview_truncated}"
                     lines.append(f"[dim white]{preview_str}[/dim white]")
                 else:
                     lines.append(
@@ -1658,7 +1673,12 @@ class CoordinationTableBuilder:
             if agent_state.answer_preview:
                 # Clean up newlines in preview
                 clean_preview = agent_state.answer_preview.replace("\n", " ").strip()
-                preview_str = f"👁️  Preview: {clean_preview}"
+                preview_truncated = (
+                    clean_preview[:80] + "..."
+                    if len(clean_preview) > 80
+                    else clean_preview
+                )
+                preview_str = f"👁️  Preview: {preview_truncated}"
                 lines.append(f"[dim white]{preview_str}[/dim white]")
             else:
                 lines.append(f"[dim red]👁️  Preview: [Answer not available][/dim red]")
