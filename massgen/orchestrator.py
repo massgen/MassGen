@@ -585,6 +585,7 @@ class Orchestrator(ChatAgent):
                                 result_data,
                                 snapshot_timestamp=answer_timestamp,
                             )
+                            restart_triggered_id = agent_id  # Last agent to provide new answer
                             reset_signal = True
                             log_stream_chunk(
                                 "orchestrator",
@@ -741,7 +742,6 @@ class Orchestrator(ChatAgent):
                 for state in self.agent_states.values():
                     state.has_voted = False
                 votes.clear()
-                restart_triggered_id = agent_id  # Last agent to provide new answer
 
                 for agent_id in self.agent_states.keys():
                     self.agent_states[agent_id].restart_pending = True
