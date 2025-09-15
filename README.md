@@ -699,7 +699,9 @@ uv run python -m massgen.cli --config three_agents_default.yaml
 
 **Interactive Mode Features:**
 - **Multi-turn conversations**: Multiple agents collaborate to chat with you in an ongoing conversation
-- **Real-time feedback**: Displays real-time agent and system status
+- **Real-time coordination tracking**: Live visualization of agent interactions, votes, and decision-making processes
+- **Interactive coordination table**: Press `r` to view complete history of agent coordination events and state transitions
+- **Real-time feedback**: Displays real-time agent and system status with enhanced coordination visualization
 - **Clear conversation history**: Type `/clear` to reset the conversation and start fresh
 - **Easy exit**: Type `/quit`, `/exit`, `/q`, or press `Ctrl+C` to stop
 
