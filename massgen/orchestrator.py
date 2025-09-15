@@ -2172,177 +2172,179 @@ class Orchestrator(ChatAgent):
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         presentation_content = ""
 
-        # Track final round iterations (each chunk is like an iteration)
-        async for chunk in agent.chat(presentation_messages, reset_chat=True):
-            # Start new iteration for this chunk
-            self.coordination_tracker.start_new_iteration()
-            # Use the same streaming approach as regular coordination
-            if chunk.type == "content" and chunk.content:
-                presentation_content += chunk.content
-                log_stream_chunk(
-                    "orchestrator", "content", chunk.content, selected_agent_id
-                )
-                yield StreamChunk(
-                    type="content", content=chunk.content, source=selected_agent_id
-                )
-            elif chunk.type in [
-                "reasoning",
-                "reasoning_done",
-                "reasoning_summary",
-                "reasoning_summary_done",
-            ]:
-                # Stream reasoning content with proper attribution (same as main coordination)
-                reasoning_chunk = StreamChunk(
-                    type=chunk.type,
-                    content=chunk.content,
-                    source=selected_agent_id,
-                    reasoning_delta=getattr(chunk, "reasoning_delta", None),
-                    reasoning_text=getattr(chunk, "reasoning_text", None),
-                    reasoning_summary_delta=getattr(
-                        chunk, "reasoning_summary_delta", None
-                    ),
-                    reasoning_summary_text=getattr(
-                        chunk, "reasoning_summary_text", None
-                    ),
-                    item_id=getattr(chunk, "item_id", None),
-                    content_index=getattr(chunk, "content_index", None),
-                    summary_index=getattr(chunk, "summary_index", None),
-                )
-                # Use the same format as main coordination for consistency
-                log_stream_chunk(
-                    "orchestrator", chunk.type, chunk.content, selected_agent_id
-                )
-                yield reasoning_chunk
-            elif chunk.type == "backend_status":
-                import json
-
-                status_json = json.loads(chunk.content)
-                cwd = status_json["cwd"]
-                session_id = status_json["session_id"]
-                content = f"""Final Temp Working directory: {cwd}.
-Final Session ID: {session_id}.
-"""
-
-                log_stream_chunk(
-                    "orchestrator", "content", content, selected_agent_id
-                )
-                yield StreamChunk(
-                    type="content", content=content, source=selected_agent_id
-                )
-            elif chunk.type == "mcp_status":
-                # Handle MCP status messages in final presentation
-                mcp_content = f"🔧 MCP: {chunk.content}"
-                log_stream_chunk(
-                    "orchestrator", "content", mcp_content, selected_agent_id
-                )
-                yield StreamChunk(
-                    type="content", content=mcp_content, source=selected_agent_id
-                )
-
-            elif chunk.type == "done":
-                # Save the final workspace snapshot (from final workspace directory)
-                final_answer = (
-                    presentation_content.strip()
-                    if presentation_content.strip()
-                    else self.agent_states[selected_agent_id].answer
-                )  # fallback to stored answer if no content generated
-                final_context = self.get_last_context(selected_agent_id)
-                await self._save_agent_snapshot(
-                    self._selected_agent,
-                    answer_content=final_answer,
-                    is_final=True,
-                    context_data=final_context,
-                )
-
-                # Track the final answer in coordination tracker
-                self.coordination_tracker.set_final_answer(
-                    selected_agent_id, final_answer, snapshot_timestamp="final"
-                )
-
-                log_stream_chunk("orchestrator", "done", None, selected_agent_id)
-                yield StreamChunk(type="done", source=selected_agent_id)
-            elif chunk.type == "error":
-                log_stream_chunk(
-                    "orchestrator", "error", chunk.error, selected_agent_id
-                )
-                yield StreamChunk(
-                    type="error", error=chunk.error, source=selected_agent_id
-                )
-            # Pass through other chunk types as-is but with source
-            else:
-                if hasattr(chunk, "source"):
+        try:
+            # Track final round iterations (each chunk is like an iteration)
+            async for chunk in agent.chat(presentation_messages, reset_chat=True):
+                # Start new iteration for this chunk
+                self.coordination_tracker.start_new_iteration()
+                # Use the same streaming approach as regular coordination
+                if chunk.type == "content" and chunk.content:
+                    presentation_content += chunk.content
                     log_stream_chunk(
-                        "orchestrator",
-                        chunk.type,
-                        getattr(chunk, "content", ""),
-                        selected_agent_id,
+                        "orchestrator", "content", chunk.content, selected_agent_id
                     )
                     yield StreamChunk(
-                        type=chunk.type,
-                        content=getattr(chunk, "content", ""),
-                        source=selected_agent_id,
-                        **{
-                            k: v
-                            for k, v in chunk.__dict__.items()
-                            if k not in ["type", "content", "source"]
-                        },
+                        type="content", content=chunk.content, source=selected_agent_id
                     )
+                elif chunk.type in [
+                    "reasoning",
+                    "reasoning_done",
+                    "reasoning_summary",
+                    "reasoning_summary_done",
+                ]:
+                    # Stream reasoning content with proper attribution (same as main coordination)
+                    reasoning_chunk = StreamChunk(
+                        type=chunk.type,
+                        content=chunk.content,
+                        source=selected_agent_id,
+                        reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                        reasoning_text=getattr(chunk, "reasoning_text", None),
+                        reasoning_summary_delta=getattr(
+                            chunk, "reasoning_summary_delta", None
+                        ),
+                        reasoning_summary_text=getattr(
+                            chunk, "reasoning_summary_text", None
+                        ),
+                        item_id=getattr(chunk, "item_id", None),
+                        content_index=getattr(chunk, "content_index", None),
+                        summary_index=getattr(chunk, "summary_index", None),
+                    )
+                    # Use the same format as main coordination for consistency
+                    log_stream_chunk(
+                        "orchestrator", chunk.type, chunk.content, selected_agent_id
+                    )
+                    yield reasoning_chunk
+                elif chunk.type == "backend_status":
+                    import json
+
+                    status_json = json.loads(chunk.content)
+                    cwd = status_json["cwd"]
+                    session_id = status_json["session_id"]
+                    content = f"""Final Temp Working directory: {cwd}.
+    Final Session ID: {session_id}.
+    """
+
+                    log_stream_chunk(
+                        "orchestrator", "content", content, selected_agent_id
+                    )
+                    yield StreamChunk(
+                        type="content", content=content, source=selected_agent_id
+                    )
+                elif chunk.type == "mcp_status":
+                    # Handle MCP status messages in final presentation
+                    mcp_content = f"🔧 MCP: {chunk.content}"
+                    log_stream_chunk(
+                        "orchestrator", "content", mcp_content, selected_agent_id
+                    )
+                    yield StreamChunk(
+                        type="content", content=mcp_content, source=selected_agent_id
+                    )
+
+                elif chunk.type == "done":
+                    # Save the final workspace snapshot (from final workspace directory)
+                    final_answer = (
+                        presentation_content.strip()
+                        if presentation_content.strip()
+                        else self.agent_states[selected_agent_id].answer
+                    )  # fallback to stored answer if no content generated
+                    final_context = self.get_last_context(selected_agent_id)
+                    await self._save_agent_snapshot(
+                        self._selected_agent,
+                        answer_content=final_answer,
+                        is_final=True,
+                        context_data=final_context,
+                    )
+
+                    # Track the final answer in coordination tracker
+                    self.coordination_tracker.set_final_answer(
+                        selected_agent_id, final_answer, snapshot_timestamp="final"
+                    )
+
+                    log_stream_chunk("orchestrator", "done", None, selected_agent_id)
+                    yield StreamChunk(type="done", source=selected_agent_id)
+                elif chunk.type == "error":
+                    log_stream_chunk(
+                        "orchestrator", "error", chunk.error, selected_agent_id
+                    )
+                    yield StreamChunk(
+                        type="error", error=chunk.error, source=selected_agent_id
+                    )
+                # Pass through other chunk types as-is but with source
+                else:
+                    if hasattr(chunk, "source"):
+                        log_stream_chunk(
+                            "orchestrator",
+                            chunk.type,
+                            getattr(chunk, "content", ""),
+                            selected_agent_id,
+                        )
+                        yield StreamChunk(
+                            type=chunk.type,
+                            content=getattr(chunk, "content", ""),
+                            source=selected_agent_id,
+                            **{
+                                k: v
+                                for k, v in chunk.__dict__.items()
+                                if k not in ["type", "content", "source"]
+                            },
+                        )
+                    else:
+                        log_stream_chunk(
+                            "orchestrator",
+                            chunk.type,
+                            getattr(chunk, "content", ""),
+                            selected_agent_id,
+                        )
+                        yield StreamChunk(
+                            type=chunk.type,
+                            content=getattr(chunk, "content", ""),
+                            source=selected_agent_id,
+                            **{
+                                k: v
+                                for k, v in chunk.__dict__.items()
+                                if k not in ["type", "content", "source"]
+                            },
+                        )
+
+        finally:
+            # Store the final presentation content for logging
+            if presentation_content.strip():
+                # Store the synthesized final answer
+                self._final_presentation_content = presentation_content.strip()
+            else:
+                # If no content was generated, use the stored answer as fallback
+                stored_answer = self.agent_states[selected_agent_id].answer
+                if stored_answer:
+                    fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
+                    log_stream_chunk(
+                        "orchestrator", "content", fallback_content, selected_agent_id
+                    )
+                    yield StreamChunk(
+                        type="content",
+                        content=fallback_content,
+                        source=selected_agent_id,
+                    )
+                    self._final_presentation_content = stored_answer
                 else:
                     log_stream_chunk(
                         "orchestrator",
-                        chunk.type,
-                        getattr(chunk, "content", ""),
+                        "error",
+                        "\n❌ No content generated for final presentation and no stored answer available.",
                         selected_agent_id,
                     )
                     yield StreamChunk(
-                        type=chunk.type,
-                        content=getattr(chunk, "content", ""),
+                        type="content",
+                        content="\n❌ No content generated for final presentation and no stored answer available.",
                         source=selected_agent_id,
-                        **{
-                            k: v
-                            for k, v in chunk.__dict__.items()
-                            if k not in ["type", "content", "source"]
-                        },
                     )
 
-        # Store the final presentation content for logging
-        if presentation_content.strip():
-            # Store the synthesized final answer
-            self._final_presentation_content = presentation_content.strip()
-        else:
-            # If no content was generated, use the stored answer as fallback
-            stored_answer = self.agent_states[selected_agent_id].answer
-            if stored_answer:
-                fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
-                log_stream_chunk(
-                    "orchestrator", "content", fallback_content, selected_agent_id
-                )
-                yield StreamChunk(
-                    type="content",
-                    content=fallback_content,
-                    source=selected_agent_id,
-                )
-                self._final_presentation_content = stored_answer
-            else:
-                log_stream_chunk(
-                    "orchestrator",
-                    "error",
-                    "\n❌ No content generated for final presentation and no stored answer available.",
-                    selected_agent_id,
-                )
-                yield StreamChunk(
-                    type="content",
-                    content="\n❌ No content generated for final presentation and no stored answer available.",
-                    source=selected_agent_id,
-                )
+            # Mark final round as completed
+            self.coordination_tracker.change_status(
+                selected_agent_id, AgentStatus.COMPLETED
+            )
 
-        # Mark final round as completed
-        self.coordination_tracker.change_status(
-            selected_agent_id, AgentStatus.COMPLETED
-        )
-
-        # Save logs
-        self.save_coordination_logs()
+            # Save logs
+            self.save_coordination_logs()
 
     def _get_vote_results(self) -> Dict[str, Any]:
         """Get current vote results and statistics."""

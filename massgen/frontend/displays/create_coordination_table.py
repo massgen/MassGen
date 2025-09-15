@@ -213,10 +213,13 @@ class CoordinationTableBuilder:
 
                     elif event_type == "final_answer":
                         agent_state.has_final_answer = True
-                        agent_state.current_answer = context.get("label")
+                        label = context.get("label")
+                        agent_state.current_answer = f"Final answer provided ({label})"
                         agent_state.is_final = True
+                        # Try to get the actual answer content if available
                         if agent_id in self.agent_answers:
                             agent_state.answer_preview = self.agent_answers[agent_id]
+                            agent_state.current_answer = self.agent_answers[agent_id]
 
                     elif event_type == "final_agent_selected":
                         agent_state.is_selected_winner = True
@@ -227,7 +230,7 @@ class CoordinationTableBuilder:
                         )
                         agent_state.status = status
 
-        # Mark non-winner as terminated in FINAL round
+        # Mark non-winner as completed in FINAL round
         if self.final_winner and self.final_round_num in rounds:
             for agent in self.agents:
                 if agent != self.final_winner:
@@ -282,7 +285,7 @@ class CoordinationTableBuilder:
             in ["streaming", "answering"]  # Agent is actively working
         )
 
-        # Don't show context for terminated agents in FINAL round
+        # Don't show context for completed agents in FINAL round
         if round_type == "FINAL" and agent_state.status == "completed":
             show_context = False
 
@@ -321,7 +324,7 @@ class CoordinationTableBuilder:
                 else:
                     lines.append("Preview: [Answer not available]")
             elif agent_state.status == "completed":
-                lines.append("(terminated)")
+                lines.append("(completed)")
             else:
                 lines.append("(waiting)")
 
@@ -572,15 +575,19 @@ class CoordinationTableBuilder:
                         f"🏆 {winner_name} selected as winner", cell_width
                     )
                 )
-                # Update other agents to terminated status
+                # Update other agents to completed status
                 for other_agent in self.agents:
                     if other_agent != agent_id:
-                        agent_states[other_agent]["status"] = "terminated"
+                        agent_states[other_agent]["status"] = "completed"
 
             elif event_type == "final_answer":
                 label = context.get("label")
                 if label:
                     agent_states[agent_id]["status"] = "final"
+
+                    # Ensure preview is available for final answer
+                    if not agent_states[agent_id]["preview"] and agent_id in self.agent_answers:
+                        agent_states[agent_id]["preview"] = self.agent_answers[agent_id]
 
                     # Create multi-line event with final answer
                     event_lines = []
@@ -597,7 +604,7 @@ class CoordinationTableBuilder:
                             event_num, agent_id, event_lines, agent_states, cell_width
                         )
                     )
-                    # No separator after last event - bottom border will follow
+                    add_separator("-")  # Add separator after event
                     event_num += 1
                     row_added = True
 
@@ -642,8 +649,8 @@ class CoordinationTableBuilder:
                         cell_content = f"✅ Answered: {agent_states[agent]['answer']}"
                     else:
                         cell_content = "✅ (answered)"
-                elif status == "terminated":
-                    cell_content = "❌ (terminated)"
+                elif status == "completed":
+                    cell_content = "✅ (completed)"
                 elif status == "final":
                     cell_content = "🎯 (final answer given)"
                 elif status == "idle":
@@ -697,8 +704,8 @@ class CoordinationTableBuilder:
                                 )
                             else:
                                 cell_content = "✅ (answered)"
-                        elif status == "terminated":
-                            cell_content = "❌ (terminated)"
+                        elif status == "completed":
+                            cell_content = "✅ (completed)"
                         elif status == "final":
                             cell_content = "🎯 (final answer given)"
                         elif status == "idle":
@@ -827,8 +834,8 @@ class CoordinationTableBuilder:
             status = agent_states[agent]["status"]
             if status == "final":
                 display = "🏆 Winner"
-            elif status == "terminated":
-                display = "❌ Eliminated"
+            elif status == "completed":
+                display = "✅ Completed"
             elif status == "voted":
                 display = "✅ Voted"
             else:
@@ -874,7 +881,7 @@ class CoordinationTableBuilder:
                 ("⏳ (waiting)", "Idle, waiting for turn"),
                 ("✅ (answered)", "Has provided an answer"),
                 ("✅ (voted)", "Has cast a vote"),
-                ("❌ (terminated)", "Eliminated from competition"),
+                ("✅ (completed)", "Task completed"),
                 ("🎯 (final answer given)", "Winner completed final answer"),
             ],
             "terms": [
@@ -1345,8 +1352,8 @@ class CoordinationTableBuilder:
                         cell = f"[green]✅ Answered: {agent_states[agent]['answer']}[/green]"
                     else:
                         cell = "[green]✅ (answered)[/green]"
-                elif status == "terminated":
-                    cell = "[red]❌ (terminated)[/red]"
+                elif status == "completed":
+                    cell = "[green]✅ (completed)[/green]"
                 elif status == "final":
                     cell = "[bold green]🎯 (final answer given)[/bold green]"
                 elif status == "idle":
@@ -1390,8 +1397,8 @@ class CoordinationTableBuilder:
             status = agent_states[agent]["status"]
             if status == "final":
                 status_str = "[bold green]🏆 Winner[/bold green]"
-            elif status == "terminated":
-                status_str = "[red]❌ Eliminated[/red]"
+            elif status == "completed":
+                status_str = "[green]✅ Completed[/green]"
             else:
                 status_str = f"[dim]{status}[/dim]"
 
@@ -1561,7 +1568,7 @@ class CoordinationTableBuilder:
             or agent_state.status in ["streaming", "answering"]
         )
 
-        # Don't show context for terminated agents in FINAL round
+        # Don't show context for completed agents in FINAL round
         if round_type == "FINAL" and agent_state.status == "completed":
             show_context = False
 
@@ -1615,7 +1622,7 @@ class CoordinationTableBuilder:
                         f"[dim red]👁️  Preview: [Answer not available][/dim red]"
                     )
             elif agent_state.status == "completed":
-                lines.append(f"[dim red]❌ (terminated)[/dim red]")
+                lines.append(f"[dim green]✅ (completed)[/dim green]")
             else:
                 lines.append(f"[dim yellow]⏳ (waiting)[/dim yellow]")
 
