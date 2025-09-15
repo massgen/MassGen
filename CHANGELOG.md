@@ -12,11 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New `coordination_tracker.py` with `CoordinationTracker` class for capturing agent state transitions
   - Event-based tracking with timestamps and context preservation
   - Support for recording answers, votes, and coordination phases
-  - New `create_coordination_table.py` standalone utility for generating coordination reports
+  - New `create_coordination_table.py` utility in `massgen/frontend/displays/` for generating coordination reports
 
 - **Enhanced Agent Status Management**: New enums for better state tracking
   - Added `ActionType` enum in `massgen/utils.py`: NEW_ANSWER, VOTE, VOTE_IGNORED, ERROR, TIMEOUT, CANCELLED
-  - Added `AgentStatus` enum in `massgen/utils.py`: STREAMING, ANSWERING, VOTING, VOTED, ANSWERED, RESTARTING, ERROR, TIMEOUT, COMPLETED
+  - Added `AgentStatus` enum in `massgen/utils.py`: STREAMING, VOTED, ANSWERED, RESTARTING, ERROR, TIMEOUT, COMPLETED
   - Improved state machine for agent coordination lifecycle
 
 ### Changed
