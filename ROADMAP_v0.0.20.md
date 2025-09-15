@@ -2,87 +2,94 @@
 
 ## Overview
 
-Version 0.0.20 focuses on **enhancing user interaction with external file support, improving debugging experience, and further refining MCP logging organization**, building on the improvements introduced in v0.0.19. Key enhancements include:
+Version 0.0.20 focuses on **enhancing user interaction with context path configuration, improving debugging experience, and further refining MCP logging organization**, building on the improvements introduced in v0.0.19. Key enhancements include:
 
-- **External File Support** (Required): 📁 Enable users to provide additional context files via command line
-- **Temporary File Management** (Required): 🗂️ Organized storage of user-provided files in `.massgen/temp`
+- **Context Path Configuration** (Required): 📁 Enable agents to access user-specified files and folders with explicit permission control
+- **Workspace Mirroring System** (Required): 🗂️ Intelligent workspace structure that mirrors original file organization
 - **Enhanced Debugging & Display** (Optional): 🔍 Fix scroll issues for long generated results
 - **Advanced MCP Logging** (Optional): 📊 Further improve MCP log organization and diagnostics
 
 ## Key Technical Priorities
 
-1. **External File Support** (REQUIRED): Enable users to provide context files via command line
-2. **Temporary File Management** (REQUIRED): Implement `.massgen/temp` directory for session file storage
+1. **Context Path Configuration** (REQUIRED): Enable agents to access user-specified files with read/write permissions
+2. **Workspace Mirroring System** (REQUIRED): Create intelligent workspace structure with common root detection
 3. **Enhanced MCP Logging** (OPTIONAL): Further improve MCP log organization beyond v0.0.19
 4. **Debugging & Display** (OPTIONAL): Fix scroll issues and improve long output handling
 
 ## Key Milestones
 
-### 🎯 Milestone 1: External File Support (REQUIRED)
-**Goal**: Enable users to provide additional context files through command line interface
+### 🎯 Milestone 1: Context Path Configuration (REQUIRED)
+**Goal**: Enable agents to access user-specified files and folders with explicit permission control
 
-#### 1.1 Command Line Interface Enhancement (OPTIONAL)
-- [ ] Add `--file` argument for single file input
-- [ ] Add `--files` argument for multiple file input (comma-separated)
-- [ ] Add `--dir` argument for directory input
-- [ ] Implement file validation and existence checking
-- [ ] Support both relative and absolute paths
-- [ ] Add file size limits and security validation
+#### 1.1 Configuration-Based File Access (REQUIRED)
+- [ ] Add `context_paths` field to agent configuration with path and permission settings
+- [ ] Enable referencing files in-place without copying to save disk space
+- [ ] Support both single files and entire directories
+- [ ] Handle cross-drive and cross-project paths seamlessly
 
-**Example Commands**:
-```bash
-# Single file
-massgen --config config.yaml --file document.pdf "Summarize this document"
-
-# Multiple files
-massgen --config config.yaml --files file1.txt,file2.py,image.png "Analyze these files"
-
-# Directory
-massgen --config config.yaml --dir ./project "Review this codebase"
+**Configuration Example**:
+```yaml
+agents:
+  - id: "web_developer"
+    backend:
+      type: "claude_code"
+      cwd: "agent_workspace"
+      context_paths:
+        - path: "C:/Users/project/src/styles"
+          permission: "write"  # Can modify original files
+        - path: "C:/Users/project/public/index.html"
+          permission: "read"   # Reference only
 ```
 
-#### 1.2 File Format Support (REQUIRED)
-- [ ] Text files (.txt, .md, .rst)
-- [ ] Code files (.py, .js, .ts, .java, etc.)
-- [ ] Documents (.pdf, .docx)
-- [ ] Images (.png, .jpg, .gif)
-- [ ] Data files (.json, .yaml, .csv)
-- [ ] Automatic MIME type detection
+#### 1.2 Use Case Coverage (REQUIRED)
+- [ ] Single file editing with direct modification capability
+- [ ] Single project folder access for comprehensive updates
+- [ ] Multiple files from same project with mixed permissions
+- [ ] Cross-project integration with files from different locations
+- [ ] Cross-drive operations for complex migration tasks
 
-### 🎯 Milestone 2: Temporary File Management (REQUIRED)
-**Goal**: Implement organized storage system for user-provided files
+### 🎯 Milestone 2: Workspace Mirroring & Permission System (REQUIRED)
+**Goal**: Create intelligent workspace structure that mirrors original file organization with permission-based access control
 
-#### 2.1 Directory Structure Implementation (REQUIRED)
-- [ ] Create `.massgen/temp/` base directory
-- [ ] Implement session-based subdirectories with timestamps
-- [ ] Create separate folders for user files and processed content
-- [ ] Add file size limits: e.g. 10MB per file, 100MB total per session
+#### 2.1 Workspace Structure Mirroring (REQUIRED)
+- [ ] Automatic common root detection for clean workspace organization
+- [ ] Strip common paths to avoid deep nesting when possible
+- [ ] Preserve full path structure when files come from different roots/drives
+- [ ] Create workspace that mirrors original project structure
+- [ ] Maintain clear mapping between workspace and original locations
 
-**Directory Structure Example**:
+**Common Root Example**:
 ```
-.massgen/
-└── temp/
-    └── session_[timestamp]_[uuid]/
-        ├── user_files/
-        │   ├── file1.txt
-        │   ├── file2.py
-        │   └── image.png
-        ├── processed/
-        │   └── extracted_text.md
-        └── metadata.json
+# Input paths all under C:/Users/project/
+workspace/
+  src/
+    main.css           # Modified version
+  components/
+    Header.jsx         # Modified version
+  package.json         # Reference copy
 ```
 
-#### 2.2 Session Management (REQUIRED)
-- [ ] Automatic session ID generation with timestamp
-- [ ] File tracking with original paths and sizes
-- [ ] Session metadata recording (start time, user, config)
-- [ ] Concurrent session support without conflicts
+**Cross-Drive Example**:
+```
+# Input paths from C:/ and D:/ drives
+workspace/
+  C/Users/website/src/main.css
+  D/projects/shared/utils.js
+```
 
-#### 2.3 Cleanup Mechanisms (REQUIRED)
-- [ ] Auto-cleanup after session completion
-- [ ] Configurable retention period (default: 7 days)
-- [ ] Manual cleanup command (`massgen --cleanup`)
-- [ ] Size-based cleanup when storage exceeds limit
+#### 2.2 Permission Management System (REQUIRED)
+- [ ] Implement read permission for reference-only files
+- [ ] Implement write permission for modifiable files
+- [ ] Track permission metadata for each context path
+- [ ] Enforce permissions during final file application
+- [ ] Prevent unintended changes to sensitive files
+
+#### 2.3 Safe Development Workflow (REQUIRED)
+- [ ] All changes develop in isolated workspace first
+- [ ] Final agent applies changes based on write permissions
+- [ ] No file copying required - reference originals in-place
+- [ ] Automatic conflict detection and resolution
+- [ ] Rollback capability for failed operations
 
 ### 🎯 Milestone 3: Advanced MCP Logging Organization (OPTIONAL)
 **Goal**: Build upon v0.0.19 MCP logging with enhanced structure and diagnostics
@@ -135,9 +142,9 @@ massgen --config config.yaml --dir ./project "Review this codebase"
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
-- [ ] External file support via CLI with multiple input methods
-- [ ] Organized temporary file storage in `.massgen/temp`
-- [ ] Automatic session cleanup and file management
+- [ ] Context path configuration with read/write permission control
+- [ ] Workspace mirroring with common root detection and cross-drive support
+- [ ] In-place file referencing without copying for disk space efficiency
 - [ ] Backward compatibility with all existing v0.0.19 configurations
 
 ### Functional Requirements (OPTIONAL)
@@ -192,8 +199,8 @@ massgen --config config.yaml --dir ./project "Review this codebase"
 
 | Week | Focus | Key Deliverables | Status |
 |------|-------|------------------|--------|
-| 1 | External File Support | CLI arguments, file validation | ⏳ **PENDING** |
-| 1 | Temp File Management | `.massgen/temp` structure, cleanup | ⏳ **PENDING** |
+| 1 | Context Path Configuration | YAML configuration, permission system | ⏳ **PENDING** |
+| 1 | Workspace Mirroring | Common root detection, cross-drive support | ⏳ **PENDING** |
 | 2 | MCP Logging Enhancement | Hierarchical logs, performance metrics | ⏳ **PENDING** |
 | 2 | Optional Features | Scroll support, debug improvements | ⏳ **PENDING** |
 | 3 | Testing & Documentation | Integration tests, user guides | ⏳ **PENDING** |
@@ -203,19 +210,20 @@ massgen --config config.yaml --dir ./project "Review this codebase"
 
 ### For Contributors
 
-1. Review existing CLI argument parsing in `cli.py`
+1. Review existing agent configuration system for context_paths integration
 2. Understand current MCP logging from v0.0.19
-3. Test file handling edge cases and security
+3. Test workspace mirroring with various path combinations
 4. Contribute to scroll support implementation
-5. Help design intuitive file management UX
+5. Help design intuitive permission-based file access UX
 
 ### For Users
-- v0.0.20 will enable easy file sharing with agents via CLI
-- All files will be organized in `.massgen/temp` automatically
+- v0.0.20 will enable precise file access control via context_paths configuration
+- Agents can work with your files in-place without copying entire projects
+- Cross-drive and cross-project file integration becomes seamless
 - MCP logs will be even more readable and helpful
 - Long outputs will be scrollable (if optional features implemented)
 - All v0.0.19 configurations continue to work unchanged
 
 ---
 
-*This roadmap represents our commitment to enhancing user interaction through external file support, improving the debugging experience with better scroll handling, and continuing to refine MCP logging organization for optimal troubleshooting.*
+*This roadmap represents our commitment to enhancing user interaction through context path configuration, improving the debugging experience with better scroll handling, and continuing to refine MCP logging organization for optimal troubleshooting.*
