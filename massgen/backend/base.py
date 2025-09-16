@@ -105,6 +105,14 @@ class LLMBackend(ABC):
                 raise ValueError(
                     f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration."
                 )
+
+            # Auto-register filesystem permission hooks with Function hook system
+            if self.filesystem_manager:
+                try:
+                    from ..mcp_tools.permission_bridge import FilesystemManagerBridge
+                    FilesystemManagerBridge.ensure_filesystem_hooks_registered(self)
+                except ImportError:
+                    pass  # Hook system not available, continue without it
         else:
             self.filesystem_manager = None
 

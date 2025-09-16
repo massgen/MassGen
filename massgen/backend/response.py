@@ -187,7 +187,8 @@ class ResponseBackend(LLMBackend):
 
         # Convert result to string for response.py compatibility
         if isinstance(result, dict) and "error" in result:
-            return f"Error: {result['error']}"
+            error_msg = f"Error: {result['error']}"
+            return error_msg, result
         return str(result), result
 
     async def _setup_mcp_tools(self) -> None:
