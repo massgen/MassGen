@@ -439,13 +439,17 @@ Based on the coordination process above, present your final answer:"""
         return messages
 
     def filesystem_system_message(
-        self, main_workspace: Optional[str] = None, temp_workspace: Optional[str] = None
+        self,
+        main_workspace: Optional[str] = None,
+        temp_workspace: Optional[str] = None,
+        context_paths: Optional[List[Dict[str, str]]] = None
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
         Args:
             main_workspace: Path to agent's main workspace
             temp_workspace: Path to temporary workspace for context sharing
+            context_paths: List of context paths with their permissions
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -505,6 +509,19 @@ Based on the coordination process above, present your final answer:"""
             workspace_info.append(
                 " - Focus on evaluating the content and quality of their work, not the specific paths"
             )
+
+        # Add context paths if available
+        if context_paths:
+            workspace_info.append("3. **Context Paths**: Additional paths with specific permissions")
+            for path_config in context_paths:
+                path = path_config.get("path", "")
+                permission = path_config.get("permission", "read")
+                if path:
+                    workspace_info.append(f" - `{path}` ({permission}-only)")
+                    if permission == "read":
+                        workspace_info.append(f"   - You can read files from this location but cannot modify them")
+                    else:
+                        workspace_info.append(f"   - You have full {permission} access to this location")
 
         workspace_section = (
             "\n".join(workspace_info)
