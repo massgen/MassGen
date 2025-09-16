@@ -44,9 +44,13 @@ from .backend_utils import (
 from .converters import MCPConverters, MCPFormatValidator
 
 # Hook system for function call interception
-from .hooks import HookType, FunctionHook, PermissionHook, HookResult
-from .hook_manager import FunctionHookManager, function_hook_manager
-from .permission_bridge import PathPermissionBridge, FilesystemManagerBridge, setup_backend_permission_hooks
+from .hooks import (
+    HookType, FunctionHook, HookResult,
+    FunctionHookManager, function_hook_manager,
+    PermissionClientSession, convert_sessions_to_permission_sessions,
+)
+# Permission management
+from .filesystem_manager import PathPermissionManagerHook
 
 __all__ = [
     # Core client classes
@@ -91,12 +95,11 @@ __all__ = [
     # Hook system
     "HookType",
     "FunctionHook",
-    "PermissionHook",
     "HookResult",
     "FunctionHookManager",
     "function_hook_manager",
-    # Permission bridge system
-    "PathPermissionBridge",
-    "FilesystemManagerBridge",
-    "setup_backend_permission_hooks",
+    "PermissionClientSession",
+    "convert_sessions_to_permission_sessions",
+    # Permission management
+    "PathPermissionManagerHook",
 ]

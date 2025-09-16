@@ -106,15 +106,33 @@ class LLMBackend(ABC):
                     f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration."
                 )
 
-            # Auto-register filesystem permission hooks with Function hook system
+            # Auto-setup permission hooks for function-based backends (default)
             if self.filesystem_manager:
-                try:
-                    from ..mcp_tools.permission_bridge import FilesystemManagerBridge
-                    FilesystemManagerBridge.ensure_filesystem_hooks_registered(self)
-                except ImportError:
-                    pass  # Hook system not available, continue without it
+                self._setup_permission_hooks()
         else:
             self.filesystem_manager = None
+
+    def _setup_permission_hooks(self):
+        """Setup permission hooks for function-based backends (default behavior)."""
+        try:
+            from ..mcp_tools.hooks import function_hook_manager, HookType
+            from ..mcp_tools.filesystem_manager import PathPermissionManagerHook
+
+            # Create permission hook using the filesystem manager's permission manager
+            permission_hook = PathPermissionManagerHook(
+                self.filesystem_manager.path_permission_manager
+            )
+
+            # Register as global hook for all functions
+            function_hook_manager.register_global_hook(HookType.PRE_CALL, permission_hook)
+
+            logger.debug(f"[{self.get_provider_name()}] Function-based permission hooks registered")
+
+        except ImportError:
+            # Hook system not available, continue without it
+            logger.debug(f"[{self.get_provider_name()}] Hook system not available, skipping permission setup")
+        except Exception as e:
+            logger.error(f"[{self.get_provider_name()}] Failed to setup permission hooks: {e}")
 
     @classmethod
     def get_base_excluded_config_params(cls) -> set:

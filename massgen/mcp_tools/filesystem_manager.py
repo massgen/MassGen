@@ -1001,3 +1001,51 @@ class FilesystemManager:
             shutil.rmtree(p)
         except Exception as e:
             logger.warning(f"[FilesystemManager] cleanup failed for {p}: {e}")
+
+
+# Hook implementation for PathPermissionManager
+class PathPermissionManagerHook:
+    """
+    Simple FunctionHook implementation that uses PathPermissionManager.
+
+    This bridges the PathPermissionManager to the FunctionHook system.
+    """
+
+    def __init__(self, path_permission_manager):
+        self.name = "path_permission_hook"
+        self.path_permission_manager = path_permission_manager
+
+    async def execute(self, function_name: str, arguments: str, context=None, **kwargs):
+        """Execute permission check using PathPermissionManager."""
+        try:
+            # Import hook result here to avoid circular imports
+            from .hooks import HookResult
+
+            # Parse arguments from JSON string
+            import json
+            try:
+                tool_args = json.loads(arguments) if arguments else {}
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"[PathPermissionManagerHook] Invalid JSON arguments for {function_name}: {e}")
+                tool_args = {}
+
+            # Call the existing pre_tool_use_hook method
+            allowed, reason = await self.path_permission_manager.pre_tool_use_hook(
+                function_name, tool_args
+            )
+
+            if not allowed:
+                logger.info(f"[PathPermissionManagerHook] Blocked {function_name}: {reason}")
+
+            return HookResult(
+                allowed=allowed,
+                metadata={"reason": reason} if reason else {}
+            )
+
+        except Exception as e:
+            logger.error(f"[PathPermissionManagerHook] Error checking permissions for {function_name}: {e}")
+            # Fail closed - deny access on permission check errors
+            return HookResult(
+                allowed=False,
+                metadata={"error": str(e), "reason": "Permission check failed"}
+            )

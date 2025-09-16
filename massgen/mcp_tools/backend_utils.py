@@ -50,8 +50,7 @@ except ImportError:
 
 # Import hook system
 try:
-    from .hooks import HookType, FunctionHook
-    from .hook_manager import function_hook_manager
+    from .hooks import HookType, FunctionHook, function_hook_manager
 except ImportError:
     HookType = None
     FunctionHook = None
@@ -846,15 +845,6 @@ class MCPResourceManager:
 
         functions = {}
         hook_mgr = hook_manager or function_hook_manager
-
-        # Auto-register filesystem permission hooks if available
-        # This happens once per convert_tools_to_functions call
-        try:
-            from .permission_bridge import FilesystemManagerBridge
-            # Note: We don't have direct access to backend instance here,
-            # so we'll register via backend initialization instead
-        except ImportError:
-            pass
 
         for tool_name, tool in mcp_client.tools.items():
             try:

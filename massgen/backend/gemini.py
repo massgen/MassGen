@@ -552,6 +552,10 @@ class GeminiBackend(LLMBackend):
                 )
                 self._circuit_breakers_enabled = False
 
+    def _setup_permission_hooks(self):
+        """Override base class - Gemini uses session-based permissions, not function hooks."""
+        logger.debug("[Gemini] Using session-based permissions, skipping function hook setup")
+
         if BaseModel is None:
             raise ImportError(
                 "pydantic is required for Gemini backend. Install with: pip install pydantic"
@@ -1634,22 +1638,20 @@ Make your decision and include the JSON at the very end of your response."""
                     if not mcp_sessions:
                         raise RuntimeError("No active MCP sessions available")
 
-                    # Check if we need to convert sessions to permission sessions
-                    has_filesystem_manager = hasattr(self, 'filesystem_manager') and self.filesystem_manager
-                    has_permission_manager = (has_filesystem_manager and
-                                            hasattr(self.filesystem_manager, 'path_permission_manager'))
-
-                    logger.debug(f"[Gemini] Permission manager available: {has_permission_manager}")
-
-                    if has_permission_manager:
+                    # Convert sessions to permission sessions if filesystem manager is available
+                    if hasattr(self, 'filesystem_manager') and self.filesystem_manager:
                         logger.info(f"[Gemini] Converting {len(mcp_sessions)} MCP sessions to permission sessions")
-                        from massgen.mcp_tools.permission_wrapper import convert_sessions_to_permission_sessions
-                        mcp_sessions = convert_sessions_to_permission_sessions(
-                            mcp_sessions,
-                            self.filesystem_manager.path_permission_manager
-                        )
+                        try:
+                            from ..mcp_tools.hooks import convert_sessions_to_permission_sessions
+                            mcp_sessions = convert_sessions_to_permission_sessions(
+                                mcp_sessions,
+                                self.filesystem_manager.path_permission_manager
+                            )
+                        except Exception as e:
+                            logger.error(f"[Gemini] Failed to convert sessions to permission sessions: {e}")
+                            # Continue with regular sessions on error
                     else:
-                        logger.debug("[Gemini] No permission manager found, using standard sessions")
+                        logger.debug("[Gemini] No filesystem manager found, using standard sessions")
 
                     # Apply sessions as tools, do not mix with builtin or function_declarations
                     session_config = dict(config)
