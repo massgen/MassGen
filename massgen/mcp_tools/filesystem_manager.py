@@ -18,6 +18,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Optional, List, Any
 from ..logger_config import logger, get_log_session_dir
+from .context_path_manager import PathPermissionManager, Permission
 
 
 class FilesystemManager:
@@ -34,6 +35,8 @@ class FilesystemManager:
         self,
         cwd: str,
         agent_temporary_workspace_parent: str = None,
+        context_paths: List[Dict[str, Any]] = None,
+        write_access_enabled: bool = False,
     ):
         """
         Initialize FilesystemManager.
@@ -41,10 +44,21 @@ class FilesystemManager:
         Args:
             cwd: Working directory path for the agent
             agent_temporary_workspace_parent: Parent directory for temporary workspaces
+            context_paths: List of context path configurations for access control
+            write_access_enabled: Whether write access is enabled for this agent
         """
         self.agent_id = (
             None  # Will be set by orchestrator via setup_orchestration_paths
         )
+
+        # Initialize path permission manager
+        self.path_permission_manager = PathPermissionManager(
+            write_access_enabled=write_access_enabled
+        )
+
+        # Add context paths if provided
+        if context_paths:
+            self.path_permission_manager.add_context_paths(context_paths)
 
         # Set agent_temporary_workspace_parent first, before calling _setup_workspace
         self.agent_temporary_workspace_parent = agent_temporary_workspace_parent
@@ -61,6 +75,11 @@ class FilesystemManager:
 
         # Setup main working directory (now that agent_temporary_workspace_parent is set)
         self.cwd = self._setup_workspace(cwd)
+
+        # Add workspace to path manager (workspace is typically writable)
+        self.path_permission_manager.add_path(
+            self.cwd, Permission.WRITE, "workspace"
+        )
 
         # Orchestration-specific paths (set by setup_orchestration_paths)
         self.snapshot_storage = None  # Path for storing workspace snapshots
@@ -101,6 +120,11 @@ class FilesystemManager:
         if agent_temporary_workspace and self.agent_id:
             self.agent_temporary_workspace = self._setup_workspace(
                 self.agent_temporary_workspace_parent / self.agent_id
+            )
+
+            # Add temporary workspace to path manager (read-only)
+            self.path_permission_manager.add_path(
+                self.agent_temporary_workspace, Permission.READ, "temp_workspace"
             )
 
         # Also setup log directories if we have an agent_id
@@ -146,7 +170,7 @@ class FilesystemManager:
         Returns:
             Dictionary with MCP server configuration for filesystem access
         """
-        # Build MCP server configuration with access to both workspaces
+        # Build MCP server configuration with all managed paths
         config = {
             "name": "filesystem",
             "type": "stdio",
@@ -154,13 +178,11 @@ class FilesystemManager:
             "args": [
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
-                str(self.cwd),  # Main workspace directory
             ],
         }
 
-        # Add temporary workspace parent if it exists (for context sharing)
-        if self.agent_temporary_workspace_parent:
-            config["args"].append(str(self.agent_temporary_workspace_parent))
+        # Add all managed paths from path permission manager
+        config["args"].extend(self.path_permission_manager.get_mcp_filesystem_paths())
 
         return config
 
@@ -192,6 +214,43 @@ class FilesystemManager:
         backend_config["mcp_servers"] = mcp_servers
 
         return backend_config
+
+    def get_pre_tool_hooks(self) -> Dict[str, List]:
+        """
+        Get pre-tool hooks configuration for MCP clients.
+
+        Returns:
+            Dict mapping hook types to lists of hook functions
+        """
+        from .client import HookType
+
+        async def mcp_hook_wrapper(tool_name: str, tool_args: Dict[str, Any]) -> bool:
+            """Wrapper to adapt our hook signature to MCP client expectations."""
+            allowed, reason = await self.path_permission_manager.pre_tool_use_hook(tool_name, tool_args)
+            if not allowed and reason:
+                logger.warning(f"[FilesystemManager] Tool blocked: {tool_name} - {reason}")
+            return allowed
+
+        return {HookType.PRE_TOOL_USE: [mcp_hook_wrapper]}
+
+    def get_claude_code_hooks_config(self) -> Dict[str, Any]:
+        """
+        Get Claude Code SDK hooks configuration.
+
+        Returns:
+            Hooks configuration dict for ClaudeCodeOptions
+        """
+        return self.path_permission_manager.get_claude_code_hooks_config()
+
+    def enable_write_access(self) -> None:
+        """
+        Enable write access for this filesystem manager.
+
+        This should be called for final agents to allow them to modify
+        files with write permissions in their context paths.
+        """
+        self.path_permission_manager.write_access_enabled = True
+        logger.info("[FilesystemManager] Write access enabled - agent can now modify files with write permissions")
 
     async def save_snapshot(
         self, timestamp: Optional[str] = None, is_final: bool = False

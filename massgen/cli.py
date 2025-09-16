@@ -296,10 +296,18 @@ def create_agents_from_config(
             )
 
         # Add orchestrator context for filesystem setup if available
-        if orchestrator_config and "agent_temporary_workspace" in orchestrator_config:
-            backend_config["agent_temporary_workspace"] = orchestrator_config[
-                "agent_temporary_workspace"
-            ]
+        if orchestrator_config:
+            if "agent_temporary_workspace" in orchestrator_config:
+                backend_config["agent_temporary_workspace"] = orchestrator_config[
+                    "agent_temporary_workspace"
+                ]
+            # Add orchestrator-level context_paths to all agents
+            if "context_paths" in orchestrator_config:
+                # Merge orchestrator context_paths with agent-specific ones
+                agent_context_paths = backend_config.get("context_paths", [])
+                orchestrator_context_paths = orchestrator_config["context_paths"]
+                # Orchestrator paths take precedence, then agent-specific paths
+                backend_config["context_paths"] = orchestrator_context_paths + agent_context_paths
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}

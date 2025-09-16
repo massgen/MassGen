@@ -86,12 +86,9 @@ class GrokBackend(ChatCompletionsBackend):
             }
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {
+            excluded_params = self.get_base_excluded_config_params() | {
+                # Grok specific exclusions
                 "enable_web_search",
-                "agent_id",
-                "session_id",
-                "cwd",
-                "agent_temporary_workspace",
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:

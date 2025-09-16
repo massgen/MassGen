@@ -35,6 +35,13 @@ class ConnectionState(Enum):
     FAILED = "failed"
 
 
+# Hook types reference: https://docs.anthropic.com/en/docs/claude-code/sdk/sdk-python#hook-types
+class HookType(Enum):
+    """Available hook types for MCP tool execution."""
+
+    PRE_TOOL_USE = "PreToolUse"
+
+
 def _ensure_timedelta(
     value: Union[int, float, timedelta], default_seconds: float
 ) -> timedelta:
@@ -96,6 +103,7 @@ class MCPClient:
         status_callback: Optional[
             Callable[[str, Dict[str, Any]], Awaitable[None]]
         ] = None,
+        hooks: Optional[Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]] = None,
     ):
         """
         Initialize MCP client.
@@ -112,6 +120,7 @@ class MCPClient:
             allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
             status_callback: Optional async callback for status updates
+            hooks: Optional dict mapping hook types to lists of hook functions
         """
         # Validate and sanitize configuration
         self.config = MCPConfigValidator.validate_server_config(server_config)
@@ -121,6 +130,7 @@ class MCPClient:
         self.exclude_tools = exclude_tools
         self.use_official_library = True
         self.status_callback = status_callback
+        self.hooks = hooks or {}
         self.tools: Dict[str, mcp_types.Tool] = {}
         self.resources: Dict[str, mcp_types.Resource] = {}
         self.prompts: Dict[str, mcp_types.Prompt] = {}
@@ -619,8 +629,33 @@ class MCPClient:
                 context={"tool_name": tool_name, "server_name": self.name},
             ) from e
 
+        # Execute pre-tool hooks
+        pre_tool_hooks = self.hooks.get(HookType.PRE_TOOL_USE, [])
+        # Log hook execution
         logger.debug(
-            f"Calling tool {tool_name} on {self.name} with arguments: {validated_arguments}"
+            f"Executing {len(pre_tool_hooks)} pre-tool hooks for {tool_name} on {self.name}"
+        )
+        for hook in pre_tool_hooks:
+            try:
+                allowed = await hook(tool_name, validated_arguments)
+                if not allowed:
+                    raise MCPValidationError(
+                        f"Tool call blocked by pre-tool hook",
+                        field="tool_name",
+                        value=tool_name,
+                        context={"arguments": validated_arguments, "server_name": self.name},
+                    )
+            except Exception as e:
+                if isinstance(e, MCPValidationError):
+                    raise  # Re-raise validation errors from hooks
+                logger.warning(
+                    f"Pre-tool hook error for {tool_name} on {self.name}: {e}",
+                    exc_info=True
+                )
+                # Hook errors don't block execution unless they explicitly raise MCPValidationError
+
+        logger.debug(
+            f"Calling tool {tool_name} on {self.name} with arguments: {validated_arguments}, {self.hooks=}"
         )
 
         # Send tool call start status if callback is available
@@ -630,7 +665,7 @@ class MCPClient:
                 {
                     "server": self.name,
                     "tool": tool_name,
-                    "message": f"Calling tool '{tool_name}' on server '{self.name}'",
+                    "message": f"Calling tool '{tool_name}' on server '{self.name}, {self.hooks=}'",
                     "arguments": validated_arguments,
                 },
             )
@@ -864,6 +899,7 @@ class MultiMCPClient:
         status_callback: Optional[
             Callable[[str, Dict[str, Any]], Awaitable[None]]
         ] = None,
+        hooks: Optional[Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]] = {},
     ):
         """
         Initialize MultiMCP client.
@@ -874,6 +910,7 @@ class MultiMCPClient:
             allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
             status_callback: Optional async callback for status updates
+            hooks: Optional dict mapping hook types to lists of hook functions
         """
         self.server_configs = [
             MCPConfigValidator.validate_server_config(config)
@@ -884,6 +921,7 @@ class MultiMCPClient:
         self.allowed_tools = allowed_tools
         self.exclude_tools = exclude_tools
         self.status_callback = status_callback
+        self.hooks = hooks
 
         # Client management
         self.clients: Dict[str, MCPClient] = {}
@@ -1013,6 +1051,7 @@ class MultiMCPClient:
                     allowed_tools=self.allowed_tools,
                     exclude_tools=self.exclude_tools,
                     status_callback=self.status_callback,
+                    hooks=self.hooks,
                 )
 
                 # Connect the client (this will start its background manager)

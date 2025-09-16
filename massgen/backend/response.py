@@ -314,17 +314,12 @@ class ResponseBackend(LLMBackend):
         api_params = {"input": converted_messages, "stream": True}
 
         # Direct passthrough of all parameters except those handled separately
-        excluded_params = {
+        excluded_params = self.get_base_excluded_config_params() | {
+            # Response backend specific exclusions
             "enable_web_search",
             "enable_code_interpreter",
-            "agent_id",
-            "session_id",
-            "type",  # Used for MCP server configuration
-            "mcp_servers",  # MCP-specific parameter
-            "allowed_tools",  # Tool filtering parameter
-            "exclude_tools",  # Tool filtering parameter
-            "cwd",  # Current working directory
-            "agent_temporary_workspace",  # Agent temporary workspace
+            "allowed_tools",
+            "exclude_tools",
         }
         for key, value in all_params.items():
             if key not in excluded_params and value is not None:

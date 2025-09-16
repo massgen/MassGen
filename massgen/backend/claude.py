@@ -234,13 +234,10 @@ class ClaudeBackend(LLMBackend):
                 api_params["tools"] = combined_tools
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {
+            excluded_params = self.get_base_excluded_config_params() | {
+                # Claude specific exclusions
                 "enable_web_search",
                 "enable_code_execution",
-                "agent_id",
-                "session_id",
-                "cwd",
-                "agent_temporary_workspace",
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
