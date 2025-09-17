@@ -5,6 +5,37 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.20] - 2025-09-17
+
+### Added
+- **Claude Backend MCP Support**: Extended MCP (Model Context Protocol) integration to Claude backend
+  - Filesystem support through MCP servers (`FilesystemSupport.MCP`) for Claude backend
+  - Support for both stdio and HTTP-based MCP servers with Claude Messages API
+  - Seamless integration with existing Claude function calling and tool use
+  - Recursive execution model allowing Claude to autonomously chain multiple tool calls in sequence without user intervention
+  - Enhanced error handling and retry mechanisms for Claude MCP operations
+
+- **MCP Configuration Examples**: New YAML configurations for Claude MCP usage
+  - `claude_mcp_test.yaml`: Basic Claude MCP testing with test server
+  - `claude_mcp_example.yaml`: Claude MCP integration example
+  - `claude_streamable_http_test.yaml`: HTTP transport testing for Claude MCP
+
+- **Documentation**: Enhanced MCP technical documentation
+  - `MCP_IMPLEMENTATION_CLAUDE_BACKEND.md`: Complete technical documentation for Claude MCP integration
+  - Detailed architecture diagrams and implementation guides
+
+### Changed
+- **Backend Enhancements**: Improved MCP support across backends
+  - Extended MCP integration from Gemini and Chat Completions to include Claude backend
+  - Enhanced error reporting and debugging for MCP operations
+  - Added Kimi/Moonshot API key support in Chat Completions backend
+
+### Technical Details
+- **New Features**: Claude backend MCP integration with recursive execution model
+- **Files Modified**: Claude backend modules (`claude.py`), MCP tools, configuration examples
+- **MCP Coverage**: Major backends now support MCP (Claude, Gemini, Chat Completions including OpenAI)
+- **Contributors**: @praneeth999 @qidanrui @sonichi @ncrispino @Henry-811 MassGen development team
+
 ## [0.0.19] - 2025-09-15
 
 ### Added

@@ -90,15 +90,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.19](#recent-achievements-v0019)
-  - [v0.0.3 - v0.0.18](#previous-achievements-v003-v0018)
+  - [v0.0.20](#recent-achievements-v0020)
+  - [v0.0.3 - v0.0.19](#previous-achievements-v003-v0019)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.19 Roadmap](#v0019-roadmap)
+- [v0.0.21 Roadmap](#v0021-roadmap)
 </details>
 
 <details open>
@@ -246,7 +246,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
 | **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
 | **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
@@ -293,6 +293,25 @@ uv run python -m massgen.cli --config gpt5mini_claude_code_discord_mcp_example.y
 ```
 
 **What's happening:** OpenAI models (GPT-4, GPT-5 series) now have full MCP support with automatic tool discovery and execution, matching Gemini's capabilities for unified MCP integration.
+
+#### 🆕 Claude with MCP Tools (NEW in v0.0.20)
+
+**Quick Examples - Try These Now:**
+```bash
+# Simple MCP testing with Claude using recursive execution
+uv run python -m massgen.cli --config claude_mcp_test.yaml "Test the MCP tools by calling mcp_echo with text 'Hello MassGen' and add_numbers with 46 and 52"
+
+# Weather query using MCP-enabled Claude
+uv run python -m massgen.cli --config claude_mcp_example.yaml "What's the weather in Tokyo and Paris? Compare the conditions."
+
+# Test MCP with streamable-http server  
+# First start the HTTP test server:
+uv run python massgen/tests/test_http_mcp_server.py
+# Then try:
+uv run python -m massgen.cli --config claude_streamable_http_test.yaml "Test the MCP tools with Claude - show me what you can do"
+```
+
+**What's happening:** Claude models now feature **recursive execution** - they can autonomously chain multiple MCP tool calls in sequence, enabling sophisticated multi-step workflows that weren't possible with single-turn MCP implementations.
 
 #### 🆕 Gemini with MCP Tools (NEW in v0.0.15)
 
@@ -419,7 +438,7 @@ agents:  # Multiple agents (alternative to 'agent')
 
 Detailed parameters for each agent's backend can be specified using the following configuration formats:
 
-#### Chatcompletion
+#### Chatcompletion (v0.0.18+ with MCP Support)
 
 ```yaml
 backend:
@@ -429,9 +448,37 @@ backend:
   api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
   max_tokens: 2500                   # Maximum response length
+  
+  # MCP (Model Context Protocol) servers configuration (v0.0.18+)
+  mcp_servers:
+    # Weather server
+    weather:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "@fak111/weather-mcp"]
+    
+    # Test server for basic MCP functionality
+    test_server:
+      type: "stdio"
+      command: "python"
+      args: ["-u", "-m", "massgen.tests.mcp_test_server"]
+    
+    # Example streamable-http MCP server
+    test_http_server:
+      type: "streamable-http"
+      url: "http://localhost:5173/sse"  # URL for streamable-http transport
+  
+  # Tool configuration (MCP tools are auto-discovered)
+  allowed_tools:                        # Optional: whitelist specific tools
+    - "mcp__weather__get_current_weather"
+    - "mcp__test_server__mcp_echo"
+    - "mcp__test_server__add_numbers"
+  
+  exclude_tools:                        # Optional: blacklist specific tools
+    - "mcp__test_server__current_time"
 ```
 
-#### Claude
+#### Claude (v0.0.20+ with MCP Support)
 
 ```yaml
 backend:
@@ -442,6 +489,34 @@ backend:
   max_tokens: 2500                   # Maximum response length
   enable_web_search: true            # Web search capability
   enable_code_execution: true        # Code execution capability
+  
+  # MCP (Model Context Protocol) servers configuration (v0.0.20+)
+  mcp_servers:
+    # Test server for basic MCP functionality
+    test_server:
+      type: "stdio"
+      command: "python"
+      args: ["-u", "-m", "massgen.tests.mcp_test_server"]
+    
+    # Weather server
+    weather:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "@fak111/weather-mcp"]
+    
+    # Example streamable-http MCP server
+    test_http_server:
+      type: "streamable-http"
+      url: "http://localhost:5173/sse"  # URL for streamable-http transport
+  
+  # Tool configuration (MCP tools are auto-discovered)
+  allowed_tools:                        # Optional: whitelist specific tools
+    - "mcp__test_server__mcp_echo"
+    - "mcp__test_server__add_numbers"
+    - "mcp__weather__get_current_weather"
+  
+  exclude_tools:                        # Optional: blacklist specific tools
+    - "mcp__test_server__current_time"
 ```
 
 #### Gemini (v0.0.15+ with MCP Support)
@@ -916,29 +991,29 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.19)
+### Recent Achievements (v0.0.20)
 
-**🎉 Released: September 15, 2025**
+**🎉 Released: September 17, 2025**
 
-Version 0.0.19 introduces **comprehensive coordination tracking and visualization** to provide unprecedented visibility into multi-agent collaboration:
+Version 0.0.20 introduces **Claude Backend MCP Support** with recursive execution capabilities, extending MCP integration to cover most major backends:
 
+#### Claude MCP Integration
+- **Recursive Execution Model**: Claude can autonomously chain multiple tool calls in sequence without user intervention, completing complex multi-step tasks in a single interaction
+- **Full MCP Protocol and Filesystem Support**: Execute MCP and support Filesystem for Claude models
+- **Enhanced Error Handling**: Robust retry mechanisms and circuit breaker patterns for reliable MCP operations
+- **Comprehensive Documentation**: Complete technical documentation and configuration examples for Claude MCP integration
 
-#### Coordination Tracking System
-- **Event-Based Tracking**: New `CoordinationTracker` class captures all agent state transitions, votes, and coordination phases with timestamps
-- **Enhanced Agent Status Management**: Comprehensive `ActionType` and `AgentStatus` enums for precise state tracking throughout agent lifecycle
-- **Coordination Event Serialization**: Complete coordination history recording for analysis, debugging, and replay capabilities
+#### Extended MCP Coverage
+- **Major Backend Support**: MCP integration now available across Claude, Gemini, Chat Completions (including OpenAI)
+- **Unified Tool Ecosystem**: Consistent MCP configuration patterns and tool handling across supported backends
+- **Configuration Examples**: New YAML configurations for Claude MCP testing and integration (claude_mcp_test.yaml, claude_mcp_example.yaml, claude_streamable_http_test.yaml)
 
-#### Interactive Visualization
-- **Coordination Table Display**: New terminal menu option 'r' for rich-formatted table showing agent interactions across rounds
-- **Real-time Coordination Monitoring**: Visual representation of voting patterns, consensus building, and agent collaboration flow  
-- **Standalone Coordination Reports**: Utility for generating detailed coordination analysis reports
+#### Chat Completions Backend Enhancements
+- **Kimi/Moonshot API Support**: Added support for Kimi API with both moonshot.ai and moonshot.cn endpoints using MOONSHOT_API_KEY or KIMI_API_KEY environment variables
 
-#### Developer Experience Enhancements
-- **Enhanced Terminal Interface**: Improved menu system with better organization of debugging and inspection tools
-- **Comprehensive State Machine**: Precise tracking of STREAMING, ANSWERING, VOTING, VOTED, ANSWERED, RESTARTING states
-- **Advanced Debugging Capabilities**: Complete visibility into multi-agent coordination patterns and decision-making processes
+### Previous Achievements (v0.0.3-v0.0.19)
 
-### Previous Achievements (v0.0.3-v0.0.18)
+✅ **Comprehensive Coordination Tracking (v0.0.19)**: Complete coordination tracking and visualization system with event-based tracking, interactive coordination table display, and advanced debugging capabilities for multi-agent collaboration patterns
 
 ✅ **Comprehensive MCP Integration (v0.0.18)**: Extended MCP to all Chat Completions backends (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter), cross-provider function calling compatibility, 9 new MCP configuration examples
 
@@ -990,25 +1065,24 @@ Version 0.0.19 introduces **comprehensive coordination tracking and visualizatio
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.20 Roadmap
+### v0.0.21 Roadmap
 
-Version 0.0.20 focuses on **context path configuration and workspace mirroring**, building on the coordination tracking system from v0.0.19. Key priorities include:
+Version 0.0.21 continues the foundation established in v0.0.20 by completing context path configuration and workspace mirroring systems, while introducing **Grok MCP Support**. Key priorities include:
 
 #### Required Features
-- **Context Path Configuration**: Enable agents to access user-specified files and folders with explicit read/write permissions
-- **Workspace Mirroring**: Intelligent workspace structure that mirrors original file organization with common root detection
-- **Cross-Drive Support**: Seamless handling of files from different drives and projects with permission-based access control
-
-#### Optional Features
-- **Enhanced MCP Logging**: Hierarchical MCP log organization with structured formats and performance metrics
-- **Advanced Debugging**: Fix scroll issues for long outputs, keyboard navigation, and enhanced display capabilities
+- **Context Path Configuration**: Complete implementation of user-specified file and folder access with explicit read/write permission control
+- **Workspace Mirroring System**: Finalize intelligent workspace structure that mirrors original file organization with common root detection
+- **Grok MCP Support**: Implement comprehensive MCP capabilities for Grok backend with full tool discovery and execution
+- **Enhanced Debugging & Display**: Fix scroll issues for long generated results and improve debugging experience with keyboard navigation
+- **Advanced MCP Analytics**: Real-time dashboard for MCP performance monitoring and optimization
 
 Key technical approach:
 - **Permission-Based Access**: Read/write permissions for granular control over file modifications
 - **In-Place Referencing**: No file copying required - agents reference originals directly to save disk space
+- **Extended MCP Coverage**: Achieve MCP support across major backend providers (Grok MCP implementation)
 - **Safe Development Workflow**: All changes develop in isolated workspace first, then applied based on permissions
 
-For detailed milestones and technical specifications, see the [full v0.0.20 roadmap](ROADMAP_v0.0.20.md).
+For detailed milestones and technical specifications, see the [full v0.0.21 roadmap](ROADMAP_V0.0.21.md).
 
 ---
 
