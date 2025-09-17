@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Claude Backend MCP Support**: Extended MCP (Model Context Protocol) integration to Claude backend
+  - Filesystem support through MCP servers (`FilesystemSupport.MCP`) for Claude backend
   - Support for both stdio and HTTP-based MCP servers with Claude Messages API
   - Seamless integration with existing Claude function calling and tool use
   - Recursive execution model allowing Claude to autonomously chain multiple tool calls in sequence without user intervention

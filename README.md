@@ -999,7 +999,7 @@ Version 0.0.20 introduces **Claude Backend MCP Support** with recursive executio
 
 #### Claude MCP Integration
 - **Recursive Execution Model**: Claude can autonomously chain multiple tool calls in sequence without user intervention, completing complex multi-step tasks in a single interaction
-- **Full MCP Protocol Support**: Execute MCP for Claude models with both stdio and HTTP transports
+- **Full MCP Protocol and Filesystem Support**: Execute MCP and support Filesystem for Claude models
 - **Enhanced Error Handling**: Robust retry mechanisms and circuit breaker patterns for reliable MCP operations
 - **Comprehensive Documentation**: Complete technical documentation and configuration examples for Claude MCP integration
 
