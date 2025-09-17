@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **New Features**: Claude backend MCP integration with recursive execution model
 - **Files Modified**: Claude backend modules (`claude.py`), MCP tools, configuration examples
 - **MCP Coverage**: Major backends now support MCP (Claude, Gemini, Chat Completions including OpenAI)
-- **Contributors**: @praneeth999 @qidanrui @sonichi @Henry-811 MassGen development team
+- **Contributors**: @praneeth999 @qidanrui @sonichi @ncrispino @Henry-811 MassGen development team
 
 ## [0.0.19] - 2025-09-15
 
