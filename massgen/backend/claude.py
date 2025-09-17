@@ -726,6 +726,30 @@ class ClaudeBackend(LLMBackend):
             
             updated_messages = current_messages.copy()
             
+            # Build assistant message with tool_use blocks for all MCP tool calls
+            assistant_content = []
+            if content:  # Add text content if any
+                assistant_content.append({"type": "text", "text": content})
+            
+            for tool_call in mcp_tool_calls:
+                tool_name = tool_call["function"]["name"]
+                tool_args = tool_call["function"]["arguments"]
+                tool_id = tool_call["id"]
+                
+                assistant_content.append({
+                    "type": "tool_use",
+                    "id": tool_id,
+                    "name": tool_name,
+                    "input": tool_args,
+                })
+            
+            # Append the assistant message with tool uses
+            updated_messages.append({
+                "role": "assistant",
+                "content": assistant_content
+            })
+            
+            # Now execute the MCP tool calls and append results
             for tool_call in mcp_tool_calls:
                 function_name = tool_call["function"]["name"]
 

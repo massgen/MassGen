@@ -3,13 +3,13 @@
 # Prerequisites:
 # 1. Start the test MCP server: python massgen/tests/test_http_mcp_server.py
 # 2. Verify server is running at http://localhost:8000/mcp
-# 3. Run: uv run python -m massgen.cli --config configs/gemini_streamable_http_test.yaml "Run a complete system check - events, birthdays, random data, and server status"
+# 3. Run: uv run python -m massgen.cli --config configs/claude_streamable_http_test.yaml "Run a complete system check - events, birthdays, random data, and server status"
 
 agents:
-  - id: "gpt5_mini_mcp_weather"
+  - id: "claude_mcp_streamable_http"
     backend:
-      type: "openai"
-      model: "gpt-5-mini"
+      type: "claude"
+      model: "claude-sonnet-4-20250514"  # Model name
       mcp_servers:
         - name: "streamable_http_server"
           type: "streamable-http"
