@@ -1,15 +1,15 @@
-# MassGen Configuration: gpt with Streamable HTTP MCP Integration
+# MassGen Configuration: Grok with Streamable HTTP MCP Integration
 # This configuration tests the streamable-http transport for MCP servers
 # Prerequisites:
 # 1. Start the test MCP server: python massgen/tests/test_http_mcp_server.py
 # 2. Verify server is running at http://localhost:8000/mcp
-# 3. Run: uv run python -m massgen.cli --config configs/gpt5_mini_streamable_http_test.yaml "Run a complete system check - events, birthdays, random data, and server status"
+# 3. Run: uv run python -m massgen.cli --config configs/grok3_mini_streamable_http_test.yaml "Run a complete system check - events, birthdays, random data, and server status"
 
 agents:
-  - id: "gpt5_mini_mcp_weather"
+  - id: "grok3_mini_mcp_http"
     backend:
-      type: "openai"
-      model: "gpt-5-mini"
+      type: "grok"
+      model: "grok-3-mini"
       mcp_servers:
         - name: "streamable_http_server"
           type: "streamable-http"

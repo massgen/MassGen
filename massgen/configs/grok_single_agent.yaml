@@ -1,0 +1,20 @@
+# Usage: uv run python -m massgen.cli --config grok_single_agent.yaml "List today's news in Seattle"
+agent:
+  id: "grok_agent"
+  # system_message: "You are a helpful AI assistant powered by Google Gemini."
+  backend:
+    type: "grok"
+    model: "grok-3-mini"
+    enable_web_search: false
+    extra_body:
+        search_parameters:
+           mode: "auto"                 # Search strategy (see Grok API docs for valid values)
+           return_citations: true       # Include search result citations
+           max_search_results: 3        # Max number of search results to return
+    # enable_code_execution: true
+  system_message: "You are a helpful assistant"
+
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
