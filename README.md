@@ -246,7 +246,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
 | **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API**  | ✅ | ✅ | ❌ | ✅ | Web search, code interpreter, **MCP integration** |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
 | **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
@@ -999,7 +999,7 @@ Version 0.0.20 introduces **Claude Backend MCP Support** with recursive executio
 
 #### Claude MCP Integration
 - **Recursive Execution Model**: Claude can autonomously chain multiple tool calls in sequence without user intervention, completing complex multi-step tasks in a single interaction
-- **Full MCP Protocol Support**: Execute MCP for Claude models (Claude 3.5, Claude 3, Claude 4) with both stdio and HTTP transports
+- **Full MCP Protocol Support**: Execute MCP for Claude models with both stdio and HTTP transports
 - **Enhanced Error Handling**: Robust retry mechanisms and circuit breaker patterns for reliable MCP operations
 - **Comprehensive Documentation**: Complete technical documentation and configuration examples for Claude MCP integration
 
