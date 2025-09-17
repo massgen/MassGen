@@ -97,19 +97,14 @@ class ChatCompletionsBackend(LLMBackend):
     """
 
     # Parameters to exclude when building API requests
-    EXCLUDED_API_PARAMS = {
+    # Merge base class exclusions with backend-specific ones
+    EXCLUDED_API_PARAMS = LLMBackend.get_base_excluded_config_params().union({
+        "base_url",  # Used for client initialization, not API calls
         "enable_web_search",
         "enable_code_interpreter",
-        "agent_id",
-        "session_id",
-        "type",
-        "base_url",  # Used for MCP server configuration
-        "mcp_servers",  # MCP-specific parameter
         "allowed_tools",  # Tool filtering parameter
         "exclude_tools",  # Tool filtering parameter
-        "cwd",  # Current working directory
-        "agent_temporary_workspace",  # Agent temporary workspace
-    }
+    })
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
