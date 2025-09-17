@@ -116,7 +116,9 @@ class CoordinationTableBuilder:
                         if label.startswith("agent") and "." in label:
                             try:
                                 # Extract agent number from label (e.g., "agent1.1" -> "1")
-                                agent_num = label.split(".")[0][5:]  # Remove "agent" prefix
+                                agent_num = label.split(".")[0][
+                                    5:
+                                ]  # Remove "agent" prefix
                                 # Find agent with this number in our mapping
                                 for agent_id, mapped_num in self.agent_mapping.items():
                                     if mapped_num == agent_num:
@@ -613,7 +615,10 @@ class CoordinationTableBuilder:
                     agent_states[agent_id]["status"] = "final"
 
                     # Ensure preview is available for final answer
-                    if not agent_states[agent_id]["preview"] and agent_id in self.agent_answers:
+                    if (
+                        not agent_states[agent_id]["preview"]
+                        and agent_id in self.agent_answers
+                    ):
                         agent_states[agent_id]["preview"] = self.agent_answers[agent_id]
 
                     # Create multi-line event with final answer
@@ -1359,7 +1364,9 @@ class CoordinationTableBuilder:
                             if len(clean_preview) > 80
                             else clean_preview
                         )
-                        cell += f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
+                        cell += (
+                            f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
+                        )
                 elif event_type == "vote":
                     vote, reason = args[0], args[1] if len(args) > 1 else ""
                     cell = f"[bold cyan]🗳️  VOTE: {vote}[/bold cyan]"
@@ -1381,7 +1388,9 @@ class CoordinationTableBuilder:
                             if len(clean_preview) > 80
                             else clean_preview
                         )
-                        cell += f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
+                        cell += (
+                            f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
+                        )
                 else:
                     cell = ""
                 row.append(cell)
