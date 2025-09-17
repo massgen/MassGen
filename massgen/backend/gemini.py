@@ -556,11 +556,6 @@ class GeminiBackend(LLMBackend):
         """Override base class - Gemini uses session-based permissions, not function hooks."""
         logger.debug("[Gemini] Using session-based permissions, skipping function hook setup")
 
-        if BaseModel is None:
-            raise ImportError(
-                "pydantic is required for Gemini backend. Install with: pip install pydantic"
-            )
-
     async def _setup_mcp_with_status_stream(
         self, agent_id: Optional[str] = None
     ) -> AsyncGenerator[StreamChunk, None]:
@@ -1639,7 +1634,7 @@ Make your decision and include the JSON at the very end of your response."""
                         raise RuntimeError("No active MCP sessions available")
 
                     # Convert sessions to permission sessions if filesystem manager is available
-                    if hasattr(self, 'filesystem_manager') and self.filesystem_manager:
+                    if self.filesystem_manager:
                         logger.info(f"[Gemini] Converting {len(mcp_sessions)} MCP sessions to permission sessions")
                         try:
                             from ..mcp_tools.hooks import convert_sessions_to_permission_sessions
