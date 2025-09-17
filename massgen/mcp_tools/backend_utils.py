@@ -50,13 +50,27 @@ except ImportError:
 
 class Function:
     """Enhanced function wrapper for MCP tools across all backend APIs."""
-    
-    def __init__(self, name: str, description: str, parameters: Dict[str, Any], entrypoint: Callable[[str], Awaitable[Any]]) -> None:
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        parameters: Dict[str, Any],
+        entrypoint: Callable[[str], Awaitable[Any]],
+    ) -> None:
 
         # Validate and sanitize inputs
         self.name = name if name else "unknown_function"
-        self.description = description if description and isinstance(description, str) else f"Function: {self.name}"
-        self.parameters = parameters if parameters and isinstance(parameters, dict) else {"type": "object", "properties": {}}
+        self.description = (
+            description
+            if description and isinstance(description, str)
+            else f"Function: {self.name}"
+        )
+        self.parameters = (
+            parameters
+            if parameters and isinstance(parameters, dict)
+            else {"type": "object", "properties": {}}
+        )
         self.entrypoint = entrypoint
 
     async def call(self, input_str: str) -> Any:
@@ -80,7 +94,7 @@ class Function:
                 "name": self.name or "unknown_function",
                 "description": self.description or f"Function: {self.name}",
                 "parameters": self.parameters or {"type": "object", "properties": {}},
-            }
+            },
         }
 
     def to_claude_format(self) -> Dict[str, Any]:
@@ -783,13 +797,23 @@ class MCPResourceManager:
                 description = tool.description
                 if description is None or not isinstance(description, str):
                     description = f"MCP tool: {tool_name}"
-                    log_mcp_activity(backend_name, "tool description sanitized", {"tool_name": tool_name, "original": tool.description}, agent_id=agent_id)
+                    log_mcp_activity(
+                        backend_name,
+                        "tool description sanitized",
+                        {"tool_name": tool_name, "original": tool.description},
+                        agent_id=agent_id,
+                    )
 
                 # Validate and sanitize tool parameters
                 parameters = tool.inputSchema
                 if parameters is None or not isinstance(parameters, dict):
                     parameters = {"type": "object", "properties": {}}
-                    log_mcp_activity(backend_name, "tool parameters sanitized", {"tool_name": tool_name, "original": tool.inputSchema}, agent_id=agent_id)
+                    log_mcp_activity(
+                        backend_name,
+                        "tool parameters sanitized",
+                        {"tool_name": tool_name, "original": tool.inputSchema},
+                        agent_id=agent_id,
+                    )
 
                 function = Function(
                     name=tool_name,

@@ -90,15 +90,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.17](#recent-achievements-v0017)
-  - [v0.0.3 - v0.0.16](#previous-achievements-v003-v0016)
+  - [v0.0.19](#recent-achievements-v0019)
+  - [v0.0.3 - v0.0.18](#previous-achievements-v003-v0018)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.18 Roadmap](#v0018-roadmap)
+- [v0.0.19 Roadmap](#v0019-roadmap)
 </details>
 
 <details open>
@@ -251,7 +251,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
 | **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
 | **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ❌ | ❌ | - |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
 
 ### 4. 🏃 Run MassGen
 
@@ -357,7 +357,7 @@ uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distribut
 
 # Debug mode for troubleshooting (NEW in v0.0.13)
 uv run python -m massgen.cli --model claude-3-5-sonnet-latest --debug "What is machine learning?"
-uv run python -m massgen.cli --config three_agents_default.yaml --debug "Debug multi-agent coordination"
+uv run python -m massgen.cli --config three_agents_default.yaml --debug "Summarize latest news of github.com/Leezekun/MassGen"
 ```
 
 All available quick configuration files can be found [here](massgen/configs).
@@ -700,7 +700,9 @@ uv run python -m massgen.cli --config three_agents_default.yaml
 
 **Interactive Mode Features:**
 - **Multi-turn conversations**: Multiple agents collaborate to chat with you in an ongoing conversation
-- **Real-time feedback**: Displays real-time agent and system status
+- **Real-time coordination tracking**: Live visualization of agent interactions, votes, and decision-making processes
+- **Interactive coordination table**: Press `r` to view complete history of agent coordination events and state transitions
+- **Real-time feedback**: Displays real-time agent and system status with enhanced coordination visualization
 - **Clear conversation history**: Type `/clear` to reset the conversation and start fresh
 - **Easy exit**: Type `/quit`, `/exit`, `/q`, or press `Ctrl+C` to stop
 
@@ -825,6 +827,87 @@ uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_aut
 uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Test the checkout flow on an e-commerce site and generate a detailed test report"
 ```
 
+### 6. 📁 File System Operations & Workspace Management
+
+MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
+
+#### File System Configuration
+
+**Basic Workspace Setup:**
+```yaml
+agents:
+  - id: "claude code agent"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-20250514"
+      cwd: "ccworkspace"  # Isolated workspace for claude code agent 
+```
+
+**Multi-Agent Workspace Isolation:**
+```yaml
+agents:
+  - id: "claude code agent"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-20250514"
+      cwd: "ccworkspace"  # Isolated workspace for claude code agent 
+      
+  - id: "gemini agent" 
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "gmworkspace"  # Isolated workspace for gemini agent
+
+orchestrator:
+  snapshot_storage: "snapshots"              # Shared snapshots directory
+  agent_temporary_workspace: "temp_workspaces" # Temporary workspace management
+```
+
+#### File System Examples
+
+**File Analysis and Processing:**
+```bash
+# Analyze codebase structure and generate documentation
+uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Analyze all Python files in the current directory, create a project structure overview, and generate API documentation"
+
+# Log file analysis and reporting
+uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Parse application logs from logs/ directory, identify error patterns, and create a summary report with recommendations"
+```
+
+**Multi-Agent File Collaboration:**
+```bash
+# Code review and refactoring with multiple agents
+uv run python -m massgen.cli --config massgen/configs/claude_code_flash2.5.yaml "Review all JavaScript files in src/, identify code quality issues, and implement improvements across multiple files"
+
+# Data processing pipeline with file operations
+uv run python -m massgen.cli --config massgen/configs/gemini_gpt5_filesystem_casestudy.yaml "Process CSV files in data/ directory, clean the data, perform analysis, and generate visualization reports"
+```
+
+#### Available File Operations
+
+**Claude Code Backend** has built-in file system support with the following operations:
+
+- `Read`: Read files from filesystem
+- `Write`: Write files to filesystem  
+- `Edit`: Edit existing files with precise replacements
+- `MultiEdit`: Perform multiple edits in one operation
+- `Bash`: Execute shell commands for file operations
+- `Grep`: Search within files using patterns
+- `Glob`: Find files by pattern matching
+- `Ls`: List file information in current directory
+- `TodoWrite`: Task management and file tracking
+
+**Other Backends** (Gemini, OpenAI, etc.) support file operations through MCP servers. See the complete list of supported operations at:
+
+https://github.com/modelcontextprotocol/servers/blob/main/src%2Ffilesystem%2FREADME.md
+
+#### Security Considerations:
+
+- Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
+- Restrict file access using MCP server configurations when needed
+
+
+
 ---
 
 ## 🗺️ Roadmap
@@ -833,22 +916,33 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.17)
+### Recent Achievements (v0.0.19)
 
-**🎉 Released: September 10, 2025**
+**🎉 Released: September 15, 2025**
 
-Version 0.0.17 extended MCP (Model Context Protocol) support to OpenAI backend, expanding the unified tool ecosystem:
+Version 0.0.19 introduces **comprehensive coordination tracking and visualization** to provide unprecedented visibility into multi-agent collaboration:
 
-#### OpenAI MCP Integration
-- **Full MCP Support for OpenAI/GPT Models**: Complete MCP tool discovery and execution for GPT-4, GPT-5, and other OpenAI models
-- **Unified MCP Architecture**: Consistent MCP support across OpenAI, Gemini, and Claude Code backends
-- **Documentation for MCP Integration**: Added case studies and technical documentation for MCP integration
 
-#### Key Capabilities
-- **Multi-Backend MCP**: Seamless MCP tool usage across different model providers
-- **Enhanced Debugging**: Improved error messages and debugging information for MCP operations
+#### Coordination Tracking System
+- **Event-Based Tracking**: New `CoordinationTracker` class captures all agent state transitions, votes, and coordination phases with timestamps
+- **Enhanced Agent Status Management**: Comprehensive `ActionType` and `AgentStatus` enums for precise state tracking throughout agent lifecycle
+- **Coordination Event Serialization**: Complete coordination history recording for analysis, debugging, and replay capabilities
 
-### Previous Achievements (v0.0.3-v0.0.16)
+#### Interactive Visualization
+- **Coordination Table Display**: New terminal menu option 'r' for rich-formatted table showing agent interactions across rounds
+- **Real-time Coordination Monitoring**: Visual representation of voting patterns, consensus building, and agent collaboration flow  
+- **Standalone Coordination Reports**: Utility for generating detailed coordination analysis reports
+
+#### Developer Experience Enhancements
+- **Enhanced Terminal Interface**: Improved menu system with better organization of debugging and inspection tools
+- **Comprehensive State Machine**: Precise tracking of STREAMING, ANSWERING, VOTING, VOTED, ANSWERED, RESTARTING states
+- **Advanced Debugging Capabilities**: Complete visibility into multi-agent coordination patterns and decision-making processes
+
+### Previous Achievements (v0.0.3-v0.0.18)
+
+✅ **Comprehensive MCP Integration (v0.0.18)**: Extended MCP to all Chat Completions backends (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter), cross-provider function calling compatibility, 9 new MCP configuration examples
+
+✅ **OpenAI MCP Integration (v0.0.17)**: Extended MCP (Model Context Protocol) support to OpenAI backend with full tool discovery and execution capabilities for GPT models, unified MCP architecture across multiple backends, and enhanced debugging
 
 ✅ **Unified Filesystem Support with MCP Integration (v0.0.16)**: Complete `FilesystemManager` class providing unified filesystem access for Gemini and Claude Code backends, with MCP-based operations for file manipulation and cross-agent collaboration
 
@@ -896,22 +990,25 @@ Version 0.0.17 extended MCP (Model Context Protocol) support to OpenAI backend, 
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.18 Roadmap
+### v0.0.20 Roadmap
 
-Version 0.0.18 focuses on **universal MCP support and system observability**, extending MCP to the ChatCompletions backend while improving debugging and monitoring capabilities. Key priorities include:
+Version 0.0.20 focuses on **context path configuration and workspace mirroring**, building on the coordination tracking system from v0.0.19. Key priorities include:
 
 #### Required Features
-- **Chat Completions MCP Support**: Extend MCP integration to all Chat Completions backends
-- **Step-by-Step Orchestration Logging**: Clear logging that shows each phase of agent collaboration (task distribution → parallel work → consensus building → final answer) with detailed architecture documentation
-- **Enhanced Debugging & UI**: Fix scroll issues and improve long output handling
-- **Organized MCP Logging**: Structure and improve readability of MCP-related logs
+- **Context Path Configuration**: Enable agents to access user-specified files and folders with explicit read/write permissions
+- **Workspace Mirroring**: Intelligent workspace structure that mirrors original file organization with common root detection
+- **Cross-Drive Support**: Seamless handling of files from different drives and projects with permission-based access control
+
+#### Optional Features
+- **Enhanced MCP Logging**: Hierarchical MCP log organization with structured formats and performance metrics
+- **Advanced Debugging**: Fix scroll issues for long outputs, keyboard navigation, and enhanced display capabilities
 
 Key technical approach:
-- **Generic Backend Integration**: Extend MCP framework to ChatCompletionsBackend base class
-- **Architecture Documentation**: Create comprehensive diagrams and documentation in `/docs/architecture/`
-- **Enhanced Observability**: Add pipeline stage indicators and performance metrics
+- **Permission-Based Access**: Read/write permissions for granular control over file modifications
+- **In-Place Referencing**: No file copying required - agents reference originals directly to save disk space
+- **Safe Development Workflow**: All changes develop in isolated workspace first, then applied based on permissions
 
-For detailed milestones and technical specifications, see the [full v0.0.18 roadmap](ROADMAP_v0.0.18.md).
+For detailed milestones and technical specifications, see the [full v0.0.20 roadmap](ROADMAP_v0.0.20.md).
 
 ---
 
