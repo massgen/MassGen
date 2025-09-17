@@ -124,9 +124,6 @@ class FunctionHookManager:
         self._global_hooks = {hook_type: [] for hook_type in HookType}
 
 
-# Global hook manager instance
-function_hook_manager = FunctionHookManager()
-
 class PermissionClientSession(ClientSession):
     """
     ClientSession subclass that intercepts tool calls to apply permission hooks.
@@ -237,7 +234,6 @@ __all__ = [
     "HookResult",
     "FunctionHook",
     "FunctionHookManager",
-    "function_hook_manager",
     "PermissionClientSession",
     "convert_sessions_to_permission_sessions",
 ]

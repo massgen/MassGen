@@ -2059,7 +2059,7 @@ class Orchestrator(ChatAgent):
 
         # Enable write access for final agent on context paths. This ensures that those paths marked `write` by the user are now writable (as all previous agents were read-only).
         if agent.backend.filesystem_manager:
-            agent.backend.filesystem_manager.path_permission_manager.set_write_access_enabled(True)
+            agent.backend.filesystem_manager.path_permission_manager.set_context_write_access_enabled(True)
 
         # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work

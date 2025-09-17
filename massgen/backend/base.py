@@ -75,12 +75,12 @@ class LLMBackend(ABC):
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
-                write_access_enabled = kwargs.get("write_access_enabled", False)
+                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
-                    write_access_enabled=write_access_enabled
+                    context_write_access_enabled=context_write_access_enabled
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -93,12 +93,12 @@ class LLMBackend(ABC):
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
-                write_access_enabled = kwargs.get("write_access_enabled", False)
+                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
-                    write_access_enabled=write_access_enabled
+                    context_write_access_enabled=context_write_access_enabled
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
@@ -114,16 +114,19 @@ class LLMBackend(ABC):
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""
-        from ..mcp_tools.hooks import function_hook_manager, HookType
+        from ..mcp_tools.hooks import FunctionHookManager, HookType
         from ..mcp_tools.filesystem_manager import PathPermissionManagerHook
+
+        # Create per-agent hook manager
+        self.function_hook_manager = FunctionHookManager()
 
         # Create permission hook using the filesystem manager's permission manager
         permission_hook = PathPermissionManagerHook(
             self.filesystem_manager.path_permission_manager
         )
 
-        # Register as global hook for all functions
-        function_hook_manager.register_global_hook(HookType.PRE_CALL, permission_hook)
+        # Register hook on this agent's hook manager only
+        self.function_hook_manager.register_global_hook(HookType.PRE_CALL, permission_hook)
 
     @classmethod
     def get_base_excluded_config_params(cls) -> set:
@@ -142,7 +145,7 @@ class LLMBackend(ABC):
             "cwd",
             "agent_temporary_workspace",
             "context_paths",
-            "write_access_enabled",
+            "context_write_access_enabled",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",

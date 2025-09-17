@@ -46,7 +46,7 @@ from .converters import MCPConverters, MCPFormatValidator
 # Hook system for function call interception
 from .hooks import (
     HookType, FunctionHook, HookResult,
-    FunctionHookManager, function_hook_manager,
+    FunctionHookManager,
     PermissionClientSession, convert_sessions_to_permission_sessions,
 )
 # Permission management
@@ -97,7 +97,6 @@ __all__ = [
     "FunctionHook",
     "HookResult",
     "FunctionHookManager",
-    "function_hook_manager",
     "PermissionClientSession",
     "convert_sessions_to_permission_sessions",
     # Permission management

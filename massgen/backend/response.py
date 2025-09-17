@@ -246,7 +246,8 @@ class ResponseBackend(LLMBackend):
                 MCPResourceManager.convert_tools_to_functions(
                     self._mcp_client,
                     backend_name=self.backend_name,
-                    agent_id=self.agent_id
+                    agent_id=self.agent_id,
+                    hook_manager=getattr(self, 'function_hook_manager', None),
                 )
             )
             self._mcp_initialized = True

@@ -50,11 +50,10 @@ except ImportError:
 
 # Import hook system
 try:
-    from .hooks import HookType, FunctionHook, function_hook_manager
+    from .hooks import HookType, FunctionHook
 except ImportError:
     HookType = None
     FunctionHook = None
-    function_hook_manager = None
 
 
 class Function:
@@ -844,7 +843,7 @@ class MCPResourceManager:
             return {}
 
         functions = {}
-        hook_mgr = hook_manager or function_hook_manager
+        hook_mgr = hook_manager  # No fallback to global - each agent must provide its own
 
         for tool_name, tool in mcp_client.tools.items():
             try:

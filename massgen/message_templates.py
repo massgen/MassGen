@@ -512,16 +512,20 @@ Based on the coordination process above, present your final answer:"""
 
         # Add context paths if available
         if context_paths:
-            workspace_info.append("3. **Context Paths**: Additional paths with specific permissions")
+            workspace_info.append("3. **Additional Context Paths**: Additional paths with specific permissions")
+            workspace_info.append(" - IMPORTANT: You may have different permissions on these paths than other agents, so always think about your permissions instead of assuming they are the same as others.")
             for path_config in context_paths:
                 path = path_config.get("path", "")
                 permission = path_config.get("permission", "read")
                 if path:
-                    workspace_info.append(f" - `{path}` ({permission}-only)")
                     if permission == "read":
+                        workspace_info.append(f" - `{path}` (read-only)")
                         workspace_info.append(f"   - You can read files from this location but cannot modify them")
+                        workspace_info.append(f"   - Either the user or another agent with write access will modify files here, if needed. For now, place any desired edits or new files in your main workspace")
                     else:
+                        workspace_info.append(f" - `{path}` (read/write)")
                         workspace_info.append(f"   - You have full {permission} access to this location")
+                        workspace_info.append(f"   - Previous agents may have wanted to write files here but could not due to permission restrictions. They may have written files in their main workspace instead and are relying on you to move them here if needed")
 
         workspace_section = (
             "\n".join(workspace_info)

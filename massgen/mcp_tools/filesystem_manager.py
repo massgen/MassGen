@@ -56,21 +56,21 @@ class PathPermissionManager:
     - Path access control
     """
 
-    def __init__(self, write_access_enabled: bool = False):
+    def __init__(self, context_write_access_enabled: bool = False):
         """
         Initialize path permission manager.
 
         Args:
-            write_access_enabled: Whether write access is enabled for this agent
+            context_write_access_enabled: Whether write access is enabled for context paths (workspace paths always have write access). If False, we change all context paths to read-only. Can be later updated with set_context_write_access_enabled(), in which case all existing context paths will be updated accordingly so that those that were "write" in YAML become writable again.
         """
         self.managed_paths: List[ManagedPath] = []
-        self.write_access_enabled = write_access_enabled
+        self.context_write_access_enabled = context_write_access_enabled
 
         # Cache for quick permission lookups
         self._permission_cache: Dict[Path, Permission] = {}
 
         logger.info(
-            f"[PathPermissionManager] Initialized with write_access_enabled={write_access_enabled}"
+            f"[PathPermissionManager] Initialized with context_write_access_enabled={context_write_access_enabled}"
         )
 
     def add_path(self, path: Path, permission: Permission, path_type: str) -> None:
@@ -114,29 +114,33 @@ class PathPermissionManager:
                 })
         return context_paths
 
-    def set_write_access_enabled(self, enabled: bool) -> None:
+    def set_context_write_access_enabled(self, enabled: bool) -> None:
         """
-        Update write access setting and recalculate context path permissions.
+        Update write access setting for context paths and recalculate their permissions.
+        Note: Workspace paths always have write access regardless of this setting.
 
         Args:
-            enabled: Whether to enable write access
+            enabled: Whether to enable write access for context paths
         """
-        if self.write_access_enabled == enabled:
+        if self.context_write_access_enabled == enabled:
             return  # No change needed
 
-        logger.info(f"[PathPermissionManager] Setting write_access_enabled to {enabled}")
-        self.write_access_enabled = enabled
+        logger.info(f"[PathPermissionManager] Setting context_write_access_enabled to {enabled}")
+        logger.info(f"[PathPermissionManager] Before update: {self.managed_paths=}")
+        self.context_write_access_enabled = enabled
 
         # Recalculate permissions for existing context paths
         for mp in self.managed_paths:
             if mp.path_type == "context" and mp.original_permission:
-                # Update permission based on new write_access_enabled setting
+                # Update permission based on new context_write_access_enabled setting
                 if enabled:
                     mp.permission = mp.original_permission
                     logger.debug(f"[PathPermissionManager] Restored original permission for {mp.path}: {mp.permission.value}")
                 else:
                     mp.permission = Permission.READ
                     logger.debug(f"[PathPermissionManager] Forced read-only for {mp.path}")
+
+        logger.info(f"[PathPermissionManager] Updated context path permissions based on context_write_access_enabled={enabled}, now is {self.managed_paths=}")
 
         # Clear permission cache to force recalculation
         self._permission_cache.clear()
@@ -150,7 +154,7 @@ class PathPermissionManager:
                 Format: [{"path": "C:/project/src", "permission": "write"}, ...]
 
         Note: During coordination, all context paths are read-only regardless of YAML settings.
-              Only the final agent with write_access_enabled=True can write to paths marked as "write".
+              Only the final agent with context_write_access_enabled=True can write to paths marked as "write".
         """
         for config in context_paths:
             path_str = config.get("path", "")
@@ -167,9 +171,9 @@ class PathPermissionManager:
                 logger.warning(f"[PathPermissionManager] Invalid permission '{permission_str}', using 'read'")
                 yaml_permission = Permission.READ
 
-            # For context paths: only final agent (write_access_enabled=True) gets original permissions
+            # For context paths: only final agent (context_write_access_enabled=True) gets original permissions
             # All coordination agents get read-only access regardless of YAML
-            if self.write_access_enabled:
+            if self.context_write_access_enabled:
                 actual_permission = yaml_permission
                 logger.debug(f"[PathPermissionManager] Final agent: context path {path} gets {actual_permission.value} permission")
             else:
@@ -203,11 +207,13 @@ class PathPermissionManager:
 
         # Check cache first
         if resolved_path in self._permission_cache:
+            logger.debug(f"[PathPermissionManager] Permission cache hit for {resolved_path}: {self._permission_cache[resolved_path].value}")
             return self._permission_cache[resolved_path]
 
         # Find containing managed path
         for managed_path in self.managed_paths:
             if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
+                logger.debug(f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}) -- {self.managed_paths=}")
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission
 
@@ -277,26 +283,20 @@ class PathPermissionManager:
         # Extract file path from arguments
         file_path = self._extract_file_path(tool_args)
         if not file_path:
-            # Can't determine path, err on the side of caution
-            if not self.write_access_enabled:
-                return (False, f"Write tool '{tool_name}' blocked (write access not enabled)")
+            # Can't determine path - allow it (likely workspace or other non-context path)
             return (True, None)
 
         path = Path(file_path).resolve()
         permission = self.get_permission(path)
+        logger.debug(f"[PathPermissionManager] Validating write tool '{tool_name}' for path: {path} with permission: {permission}")
 
-        # No permission means not in context paths
+        # No permission means not in context paths (workspace paths are always allowed)
         if permission is None:
-            # Check if it's in the workspace (always allowed)
-            # This will be handled by checking if path is under workspace root
             return (True, None)
 
-        # Check write permission
+        # Check write permission (permission is already set correctly based on context_write_access_enabled)
         if permission == Permission.WRITE:
-            if self.write_access_enabled:
-                return (True, None)
-            else:
-                return (False, f"Write to '{path}' blocked (write access not enabled for this agent)")
+            return (True, None)
         else:
             return (False, f"No write permission for '{path}' (read-only context path)")
 
@@ -313,7 +313,7 @@ class PathPermissionManager:
         ]
 
         # File modification patterns to check when write access disabled
-        if not self.write_access_enabled:
+        if not self.context_write_access_enabled:
             write_patterns = [
                 ">", ">>",  # Redirects
                 "mv ", "move ", "cp ", "copy ",
@@ -332,7 +332,7 @@ class PathPermissionManager:
                             return (False, f"Command would modify read-only context path: {path}")
 
                     if not self._has_write_permissions():
-                        return (False, f"File modification commands blocked (write access not enabled)")
+                        return (False, f"File modification commands blocked (context write access not enabled)")
 
         # Always block dangerous commands
         for pattern in dangerous_patterns:
@@ -406,10 +406,10 @@ class PathPermissionManager:
             emoji = "📝" if managed_path.permission == Permission.WRITE else "👁️"
             lines.append(f"  {emoji} {managed_path.path} ({managed_path.permission.value}, {managed_path.path_type})")
 
-        if not self.write_access_enabled:
+        if not self.context_write_access_enabled:
             if self._has_write_permissions():
-                lines.append("\n   Write operations are blocked (write access not enabled)")
-                lines.append("    Files will be modifiable when write access is enabled")
+                lines.append("\n   Write operations are blocked (context write access not enabled)")
+                lines.append("    Files will be modifiable when context write access is enabled")
             else:
                 lines.append("\n   All managed paths are read-only")
 
@@ -508,7 +508,7 @@ class FilesystemManager:
         cwd: str,
         agent_temporary_workspace_parent: str = None,
         context_paths: List[Dict[str, Any]] = None,
-        write_access_enabled: bool = False,
+        context_write_access_enabled: bool = False,
     ):
         """
         Initialize FilesystemManager.
@@ -517,7 +517,7 @@ class FilesystemManager:
             cwd: Working directory path for the agent
             agent_temporary_workspace_parent: Parent directory for temporary workspaces
             context_paths: List of context path configurations for access control
-            write_access_enabled: Whether write access is enabled for this agent
+            context_write_access_enabled: Whether write access is enabled for context paths
         """
         self.agent_id = (
             None  # Will be set by orchestrator via setup_orchestration_paths
@@ -525,7 +525,7 @@ class FilesystemManager:
 
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
-            write_access_enabled=write_access_enabled
+            context_write_access_enabled=context_write_access_enabled
         )
 
         # Add context paths if provided
@@ -551,6 +551,10 @@ class FilesystemManager:
         # Add workspace to path manager (workspace is typically writable)
         self.path_permission_manager.add_path(
             self.cwd, Permission.WRITE, "workspace"
+        )
+        # Add temporary workspace to path manager (read-only)
+        self.path_permission_manager.add_path(
+            self.agent_temporary_workspace_parent, Permission.READ, "temp_workspace"
         )
 
         # Orchestration-specific paths (set by setup_orchestration_paths)
@@ -592,11 +596,6 @@ class FilesystemManager:
         if agent_temporary_workspace and self.agent_id:
             self.agent_temporary_workspace = self._setup_workspace(
                 self.agent_temporary_workspace_parent / self.agent_id
-            )
-
-            # Add temporary workspace to path manager (read-only)
-            self.path_permission_manager.add_path(
-                self.agent_temporary_workspace, Permission.READ, "temp_workspace"
             )
 
         # Also setup log directories if we have an agent_id
@@ -721,8 +720,8 @@ class FilesystemManager:
         This should be called for final agents to allow them to modify
         files with write permissions in their context paths.
         """
-        self.path_permission_manager.write_access_enabled = True
-        logger.info("[FilesystemManager] Write access enabled - agent can now modify files with write permissions")
+        self.path_permission_manager.context_write_access_enabled = True
+        logger.info("[FilesystemManager] Context write access enabled - agent can now modify files with write permissions")
 
     async def save_snapshot(
         self, timestamp: Optional[str] = None, is_final: bool = False
