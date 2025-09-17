@@ -1,7 +1,6 @@
 # Usage: uv run python -m massgen.cli --config grok_single_agent.yaml "List today's news in Seattle"
 agent:
   id: "grok_agent"
-  # system_message: "You are a helpful AI assistant powered by Google Gemini."
   backend:
     type: "grok"
     model: "grok-3-mini"
