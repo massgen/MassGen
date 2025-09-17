@@ -521,7 +521,7 @@ Based on the coordination process above, present your final answer:"""
                     if permission == "read":
                         workspace_info.append(f" - `{path}` (read-only)")
                         workspace_info.append(f"   - You can read files from this location but cannot modify them")
-                        workspace_info.append(f"   - Either the user or another agent with write access will modify files here, if needed. For now, place any desired edits or new files in your main workspace")
+                        workspace_info.append(f"   - If you want to add or modify files here, place them in your main workspace instead and someone with write access can move them later")
                     else:
                         workspace_info.append(f" - `{path}` (read/write)")
                         workspace_info.append(f"   - You have full {permission} access to this location")

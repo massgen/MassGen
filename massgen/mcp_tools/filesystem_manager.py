@@ -432,11 +432,13 @@ class PathPermissionManager:
         Returns:
             Hook response dict with permission decision
         """
+        logger.info(f"[PathPermissionManager] PreToolUse hook called for tool_use_id={tool_use_id}, input_data={input_data}")
+
         tool_name = input_data.get('tool_name', '')
         tool_input = input_data.get('tool_input', {})
 
         # Use our existing validation logic
-        allowed, reason = self.pre_tool_use_hook(tool_name, tool_input)
+        allowed, reason = await self.pre_tool_use_hook(tool_name, tool_input)
 
         if not allowed:
             logger.warning(f"[PathPermissionManager] Blocked {tool_name}: {reason}")
@@ -457,7 +459,7 @@ class PathPermissionManager:
         Returns:
             Hooks configuration dict for ClaudeCodeOptions
         """
-        if not self.context_paths:
+        if not self.managed_paths:
             return {}
 
         # Import here to avoid dependency issues if SDK not available
