@@ -1205,11 +1205,22 @@ class RichTerminalDisplay(TerminalDisplay):
     def _restore_terminal_settings(self):
         """Restore original terminal settings."""
         try:
-            if UNIX_TERMINAL_SUPPORT and self._original_settings and sys.stdin.isatty():
-                termios.tcsetattr(
-                    sys.stdin.fileno(), termios.TCSADRAIN, self._original_settings
-                )
-                self._original_settings = None
+            if UNIX_TERMINAL_SUPPORT and sys.stdin.isatty():
+                if self._original_settings:
+                    # Restore the original settings
+                    termios.tcsetattr(
+                        sys.stdin.fileno(), termios.TCSADRAIN, self._original_settings
+                    )
+                    self._original_settings = None
+                else:
+                    # If we don't have original settings, at least ensure echo is on
+                    try:
+                        current = termios.tcgetattr(sys.stdin.fileno())
+                        # Enable echo and canonical mode
+                        current[3] = current[3] | termios.ECHO | termios.ICANON
+                        termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, current)
+                    except:
+                        pass
         except:
             pass
 
