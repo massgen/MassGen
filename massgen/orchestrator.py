@@ -585,7 +585,9 @@ class Orchestrator(ChatAgent):
                                 result_data,
                                 snapshot_timestamp=answer_timestamp,
                             )
-                            restart_triggered_id = agent_id  # Last agent to provide new answer
+                            restart_triggered_id = (
+                                agent_id  # Last agent to provide new answer
+                            )
                             reset_signal = True
                             log_stream_chunk(
                                 "orchestrator",
@@ -637,7 +639,7 @@ class Orchestrator(ChatAgent):
                                 vote_timestamp = await self._save_agent_snapshot(
                                     agent_id=agent_id,
                                     vote_data=result_data,
-                                    context_data=self.get_last_context(agent_id)
+                                    context_data=self.get_last_context(agent_id),
                                 )
                                 # Log workspaces for current agent
                                 agent = self.agents.get(agent_id)
@@ -856,7 +858,7 @@ class Orchestrator(ChatAgent):
             vote_data: The vote data to save (if provided)
             is_final: If True, save as final snapshot for presentation
             context_data: The context data to save (conversation, answers, etc.)
-            
+
         Returns:
             The timestamp used for this snapshot
         """
@@ -897,7 +899,6 @@ class Orchestrator(ChatAgent):
                     logger.info(
                         f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}"
                     )
-
 
             except Exception as e:
                 logger.warning(
@@ -984,6 +985,7 @@ class Orchestrator(ChatAgent):
 
             except Exception as e:
                 import traceback
+
                 logger.error(
                     f"[Orchestrator._save_agent_snapshot] Failed to save vote for {agent_id}: {e}"
                 )
@@ -1003,7 +1005,7 @@ class Orchestrator(ChatAgent):
             logger.info(
                 f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager"
             )
-        
+
         # Save context if provided (unified context saving)
         if context_data and (answer_content or vote_data):
             try:
@@ -1013,9 +1015,9 @@ class Orchestrator(ChatAgent):
                         timestamped_dir = log_session_dir / "final" / agent_id
                     else:
                         timestamped_dir = log_session_dir / agent_id / timestamp
-                    
+
                     context_file = timestamped_dir / "context.txt"
-                    
+
                     # Handle different types of context data
                     if isinstance(context_data, dict):
                         # Pretty print dict/JSON data
@@ -1025,7 +1027,7 @@ class Orchestrator(ChatAgent):
                     else:
                         # Save as string
                         context_file.write_text(str(context_data))
-                    
+
                     logger.info(
                         f"[Orchestrator._save_agent_snapshot] Saved context to {context_file}"
                     )
@@ -1033,7 +1035,7 @@ class Orchestrator(ChatAgent):
                 logger.warning(
                     f"[Orchestrator._save_agent_snapshot] Failed to save context for {agent_id}: {ce}"
                 )
-        
+
         # Return the timestamp for tracking
         return timestamp if not is_final else "final"
 

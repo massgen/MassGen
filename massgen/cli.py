@@ -182,13 +182,13 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                     raise ConfigurationError(
                         "Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config."
                     )
-            elif base_url and "together.ai" in base_url:
+            elif base_url and "together.xyz" in base_url:
                 api_key = os.getenv("TOGETHER_API_KEY")
                 if not api_key:
                     raise ConfigurationError(
                         "Together AI API key not found. Set TOGETHER_API_KEY or provide in config."
                     )
-            elif base_url and "fireworks.xyz" in base_url:
+            elif base_url and "fireworks.ai" in base_url:
                 api_key = os.getenv("FIREWORKS_API_KEY")
                 if not api_key:
                     raise ConfigurationError(
@@ -217,6 +217,12 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 if not api_key:
                     raise ConfigurationError(
                         "ZAI API key not found. Set ZAI_API_KEY or provide in config."
+                    )
+            elif base_url and ("moonshot.ai" in base_url or "moonshot.cn" in base_url):
+                api_key = os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
+                if not api_key:
+                    raise ConfigurationError(
+                        "Kimi/Moonshot API key not found. Set MOONSHOT_API_KEY or KIMI_API_KEY or provide in config."
                     )
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
