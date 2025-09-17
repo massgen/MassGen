@@ -1008,6 +1008,9 @@ Version 0.0.20 introduces **Claude Backend MCP Support** with recursive executio
 - **Unified Tool Ecosystem**: Consistent MCP configuration patterns and tool handling across supported backends
 - **Configuration Examples**: New YAML configurations for Claude MCP testing and integration (claude_mcp_test.yaml, claude_mcp_example.yaml, claude_streamable_http_test.yaml)
 
+#### Chat Completions Backend Enhancements
+- **Kimi/Moonshot API Support**: Added support for Kimi API with both moonshot.ai and moonshot.cn endpoints using MOONSHOT_API_KEY or KIMI_API_KEY environment variables
+
 ### Previous Achievements (v0.0.3-v0.0.19)
 
 ✅ **Comprehensive Coordination Tracking (v0.0.19)**: Complete coordination tracking and visualization system with event-based tracking, interactive coordination table display, and advanced debugging capabilities for multi-agent collaboration patterns

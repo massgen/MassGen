@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Backend Enhancements**: Improved MCP support across backends
   - Extended MCP integration from Gemini and Chat Completions to include Claude backend
   - Enhanced error reporting and debugging for MCP operations
+  - Added Kimi/Moonshot API key support in Chat Completions backend
 
 ### Technical Details
 - **New Features**: Claude backend MCP integration with recursive execution model
