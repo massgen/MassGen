@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom React Mosaic theme for dark mode */
+.mosaic-root {
+  background-color: #111827 !important; /* gray-900 */
+}
+
+.mosaic-window {
+  border: 1px solid #374151 !important; /* gray-700 */
+  background-color: #1f2937 !important; /* gray-800 */
+}
+
+.mosaic-window-toolbar {
+  background-color: #111827 !important; /* gray-900 */
+  border-bottom: 1px solid #374151 !important; /* gray-700 */
+  height: 0px !important; /* Hide toolbar */
+  padding: 0 !important;
+}
+
+.mosaic-window-title {
+  display: none !important; /* Hide title */
+}
+
+.mosaic-window-body {
+  background-color: #1f2937 !important; /* gray-800 */
+  color: #e5e7eb !important; /* gray-200 */
+  padding: 0 !important;
+}
+
+.mosaic-drop-target {
+  background-color: #3b82f6 !important; /* blue-600 */
+  border: 2px dashed #60a5fa !important; /* blue-400 */
+}
+
+.mosaic-split {
+  background-color: #4b5563 !important; /* gray-600 */
+}
+
+.mosaic-split:hover {
+  background-color: #6b7280 !important; /* gray-500 */
+}
+
+/* Force 50/50 split for prompt-config mosaic */
+.mosaic-prompt-config .mosaic-tile {
+  width: 50% !important;
+}
+
+.mosaic-prompt-config .mosaic-tile:first-child {
+  left: 0% !important;
+  right: 50% !important;
+  width: 50% !important;
+}
+
+.mosaic-prompt-config .mosaic-tile:last-child {
+  left: 50% !important;
+  right: 0% !important;
+  width: 50% !important;
+}
+
+.mosaic-prompt-config .mosaic-split {
+  left: 50% !important;
+}
+
+/* Additional targeting for React Mosaic's internal structure */
+.mosaic-prompt-config > .mosaic-tile {
+  width: 50% !important;
+}
+
+.mosaic-prompt-config > .mosaic-tile:first-child {
+  width: 50% !important;
+  left: 0% !important;
+  right: 50% !important;
+}
+
+.mosaic-prompt-config > .mosaic-tile:last-child {
+  width: 50% !important;
+  left: 50% !important;
+  right: 0% !important;
+}
+
+/* Scrollbar styling for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #374151; /* gray-700 */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6b7280; /* gray-500 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af; /* gray-400 */
+}
