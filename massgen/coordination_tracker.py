@@ -420,7 +420,9 @@ class CoordinationTracker:
                 "timestamp": snapshot_timestamp,
                 "iteration": self.current_iteration,
                 "round": self.get_agent_round(agent_id),
-                "path": self._make_snapshot_path("answer", agent_id, snapshot_timestamp),
+                "path": self._make_snapshot_path(
+                    "answer", agent_id, snapshot_timestamp
+                ),
             }
 
         # Record event with label (important info) but no preview (that's for display only)
@@ -766,4 +768,3 @@ class CoordinationTracker:
         """Get display name for agent (Agent1, Agent2, etc.)."""
         agent_num = self._get_agent_number(agent_id)
         return f"Agent{agent_num}" if agent_num else agent_id
-
