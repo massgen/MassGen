@@ -4,6 +4,7 @@ export type PanelType =
   | 'prompt'
   | 'config-file'
   | 'orchestrator'
+  | 'visual-log'
   | 'agent-1'
   | 'agent-2'
   | 'agent-3'
@@ -71,6 +72,13 @@ const createAgentPanels = (): Panel[] => {
       type: 'orchestrator',
       title: '🎭 Orchestrator',
       content: '=== MassGen Orchestrator ===\nWaiting for coordination to begin...\n',
+      visible: true,
+    },
+    {
+      id: 'visual-log',
+      type: 'visual-log',
+      title: '📊 Visual Log',
+      content: '=== Agent Interaction Timeline ===\nWaiting for agent interactions...\n',
       visible: true,
     }
   ]

@@ -2,6 +2,7 @@
 
 import { usePanelStore } from '@/store/usePanelStore'
 import PanelComponent from './PanelComponent'
+import PixiVisualLog from './PixiVisualLog'
 // Mosaic import removed - using flexbox for prompt/config panels
 // import { Mosaic, MosaicWindow } from 'react-mosaic-component'
 // import 'react-mosaic-component/react-mosaic-component.css'
@@ -12,6 +13,7 @@ export default function GridLayout() {
   const promptPanel = panels.find(p => p.id === 'prompt')
   const configPanel = panels.find(p => p.id === 'config-file')
   const orchestratorPanel = panels.find(p => p.id === 'orchestrator')
+  const visualLogPanel = panels.find(p => p.id === 'visual-log')
   const agentPanels = panels.filter(p => p.type.startsWith('agent-') && p.visible)
 
   // Calculate grid dimensions
@@ -62,10 +64,13 @@ export default function GridLayout() {
           </div>
         </div>
 
-        {/* Orchestrator Panel - No strong separator, same group */}
-        <div className="h-48 p-4">
-          <div className="min-h-0 h-full">
+        {/* Bottom Panels: Orchestrator & Visual Log - side by side */}
+        <div className="h-64 p-4 flex gap-4">
+          <div className="flex-1 w-1/2 min-h-0">
             {orchestratorPanel && <PanelComponent panelId={orchestratorPanel.id} />}
+          </div>
+          <div className="flex-1 w-1/2 min-h-0">
+            {visualLogPanel && <PixiVisualLog panelId={visualLogPanel.id} />}
           </div>
         </div>
         {/* Space for future history/visual panel */}

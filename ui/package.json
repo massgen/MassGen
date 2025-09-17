@@ -9,7 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@types/pixi.js": "^5.0.0",
     "next": "15.5.3",
+    "pixi.js": "^8.13.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-mosaic-component": "^6.1.1",

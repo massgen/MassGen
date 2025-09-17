@@ -4,7 +4,7 @@ import { usePanelStore } from '@/store/usePanelStore'
 import { useState } from 'react'
 
 export default function DemoSimulation() {
-  const { streamContent, updateAgentStatus, setPhase, setPrompt, setActiveAgentCount, setConfigFile, activeAgentCount } = usePanelStore()
+  const { streamContent, updateAgentStatus, updatePanelContent, setPhase, setPrompt, setActiveAgentCount, setConfigFile, activeAgentCount } = usePanelStore()
   const [isRunning, setIsRunning] = useState(false)
 
   const runDemo = async () => {
@@ -14,28 +14,55 @@ export default function DemoSimulation() {
     // Set up demo environment (preserve current agent count)
     setPrompt("What is the best approach for building a scalable multi-agent coordination system?")
     
-    // Load a sample config file
-    const sampleConfig = `# Demo Configuration
+    // Clear all agent panels before starting demo
+    for (let i = 1; i <= 16; i++) {
+      updatePanelContent(`agent-${i}`, `Agent ${i} is initializing...\n`)
+      updateAgentStatus(`agent-${i}`, 'idle')
+    }
+    
+    // Generate dynamic config file for all active agents
+    const agentBackends = [
+      { type: "claude", model: "claude-3.5-sonnet" },
+      { type: "gemini", model: "gemini-2.5-flash" },
+      { type: "openai", model: "gpt-5-nano" },
+      { type: "grok", model: "grok-3-mini" },
+      { type: "claude", model: "claude-3.5-haiku" },
+      { type: "openai", model: "gpt-4o" },
+      { type: "gemini", model: "gemini-pro" },
+      { type: "azure", model: "gpt-4-turbo" },
+      { type: "openai", model: "gpt-5-mini" },
+      { type: "claude", model: "claude-3-opus" },
+      { type: "gemini", model: "gemini-ultra" },
+      { type: "grok", model: "grok-2" },
+      { type: "openai", model: "gpt-4" },
+      { type: "claude", model: "claude-instant" },
+      { type: "gemini", model: "gemini-flash" },
+      { type: "openai", model: "gpt-3.5-turbo" }
+    ]
+    
+    const agentRoleNames = [
+      "Architecture specialist", "Implementation expert", "Performance analyst", "Security specialist",
+      "AI coordinator", "Efficiency expert", "Network specialist", "Data engineer",
+      "DevOps engineer", "Quality assurance", "Documentation specialist", "Research analyst",
+      "Innovation lead", "Solution architect", "Process engineer", "Business analyst"
+    ]
+    
+    let configAgents = ""
+    for (let i = 1; i <= activeAgentCount; i++) {
+      const backend = agentBackends[(i - 1) % agentBackends.length]
+      const role = agentRoleNames[(i - 1) % agentRoleNames.length]
+      configAgents += `  - id: "agent-${i}"
+    backend:
+      type: "${backend.type}"
+      model: "${backend.model}"
+    system_message: "${role}"
+
+`
+    }
+    
+    const sampleConfig = `# Demo Configuration (${activeAgentCount} agents)
 agents:
-  - id: "agent-1"
-    backend:
-      type: "claude"
-      model: "claude-3.5-sonnet"
-    system_message: "Architecture specialist"
-
-  - id: "agent-2" 
-    backend:
-      type: "gemini"
-      model: "gemini-2.5-flash"
-    system_message: "Implementation expert"
-
-  - id: "agent-3"
-    backend:
-      type: "openai" 
-      model: "gpt-5-nano"
-    system_message: "Performance analyst"
-
-ui:
+${configAgents}ui:
   display_type: "grid"
   coordination_timeout: 60`
   
@@ -47,6 +74,13 @@ ui:
 
     streamContent('orchestrator', 'Demo simulation started\n')
     streamContent('orchestrator', 'Initializing agents...\n')
+    
+    // Initialize visual log
+    streamContent('visual-log', 'PHASE: STARTING\n')
+    streamContent('visual-log', 'Initializing demo with agents...\n')
+    for (let i = 1; i <= activeAgentCount; i++) {
+      streamContent('visual-log', `Agent ${i}: INITIALIZED\n`)
+    }
 
     // Phase 2: Coordinating
     setPhase('coordinating')
@@ -79,14 +113,26 @@ ui:
     ]
 
     // Stream content for each active agent
+    streamContent('visual-log', 'COORDINATION PHASE\n')
     for (let i = 1; i <= activeAgentCount; i++) {
       const role = agentRoles[(i - 1) % agentRoles.length]
       await sleep(400 + Math.random() * 400) // Random delay between 400-800ms
       streamContent(`agent-${i}`, `${role.emoji} ${role.content}\n`)
+      
+      // Add visual log entry for agent working
+      streamContent('visual-log', `Agent ${i}: working\n`)
     }
 
     await sleep(1000)
     streamContent('orchestrator', 'Agents coordinating and sharing insights...\n')
+    
+    // Visual log for cross-agent communication
+    streamContent('visual-log', 'Communication phase\n')
+    for (let i = 1; i <= activeAgentCount; i++) {
+      const targetAgent = ((i % activeAgentCount) + 1)
+      streamContent('visual-log', `Agent ${i} communicates with Agent ${targetAgent}\n`)
+      await sleep(200) // Small delay to see connections appear
+    }
 
     await sleep(800)
     // Give additional insights to all active agents
@@ -124,6 +170,12 @@ ui:
 
     await sleep(500)
     streamContent('orchestrator', '\n🗳️ Voting phase initiated\n')
+    
+    // Visual log for voting phase
+    streamContent('visual-log', 'VOTING PHASE\n')
+    for (let i = 1; i <= activeAgentCount; i++) {
+      streamContent('visual-log', `Agent ${i}: voting\n`)
+    }
 
     await sleep(1000)
     
@@ -133,6 +185,10 @@ ui:
       const approaches = ['architectural approach', 'implementation strategy', 'performance optimization', 'security measures', 'AI coordination', 'efficiency improvements']
       const approach = approaches[(targetAgent - 1) % approaches.length]
       streamContent('orchestrator', `🗳️ Agent ${i} votes for: Agent ${targetAgent}'s ${approach}\n`)
+      
+      // Visual log for each vote
+      streamContent('visual-log', `Agent ${i} votes for Agent ${targetAgent}\n`)
+      
       await sleep(200)
     }
 
@@ -141,6 +197,10 @@ ui:
     const approaches = ['architectural approach', 'implementation strategy', 'performance optimization', 'security measures', 'AI coordination', 'efficiency improvements']
     const winnerApproach = approaches[(winnerAgent - 1) % approaches.length]
     streamContent('orchestrator', `🗳️ Winner: Agent ${winnerAgent} (${winnerApproach}) - selected by orchestrator\n`)
+    
+    // Visual log for winner announcement
+    streamContent('visual-log', `Winner: Agent ${winnerAgent}\n`)
+    streamContent('visual-log', `Approach: ${winnerApproach}\n`)
 
     // Phase 4: Presenting
     setPhase('presenting')
@@ -150,18 +210,62 @@ ui:
       updateAgentStatus(`agent-${i}`, 'completed')
     }
 
+    // Visual log for completion
+    streamContent('visual-log', 'COMPLETION\n')
+    for (let i = 1; i <= activeAgentCount; i++) {
+      streamContent('visual-log', `Agent ${i}: completed\n`)
+    }
+
     await sleep(500)
     streamContent('orchestrator', '\n🎯 Final Synthesis:\n\n')
     await sleep(800)
-    streamContent('orchestrator', 'Based on agent collaboration, the optimal approach combines:\n\n')
+    streamContent('orchestrator', 'Based on agent collaboration, the optimal approach combines insights from all agents:\n\n')
+    
+    // Generate dynamic synthesis for all active agents
+    const synthesisPoints = [
+      { title: 'Event-driven Architecture', details: ['Loose coupling between agents', 'Scalable communication patterns', 'Asynchronous processing'] },
+      { title: 'Robust Implementation', details: ['Message queues for reliability', 'Circuit breakers for fault tolerance', 'Container-based isolation'] },
+      { title: 'Performance Optimization', details: ['Horizontal scaling strategies', 'Metrics-driven optimization', 'Resource allocation efficiency'] },
+      { title: 'Security Framework', details: ['Zero-trust architecture', 'Data encryption protocols', 'Access control mechanisms'] },
+      { title: 'AI Coordination', details: ['Ensemble decision making', 'Model distribution patterns', 'Training synchronization'] },
+      { title: 'Efficiency Engineering', details: ['Resource pooling strategies', 'Caching optimization', 'Network efficiency'] },
+      { title: 'Network Architecture', details: ['Load balancing strategies', 'Failover mechanisms', 'Latency optimization'] },
+      { title: 'Data Engineering', details: ['Stream processing design', 'Data consistency models', 'Batch operation efficiency'] },
+      { title: 'DevOps Integration', details: ['Container orchestration', 'CI/CD pipeline automation', 'Monitoring solutions'] },
+      { title: 'Quality Assurance', details: ['Integration testing frameworks', 'Load testing strategies', 'Fault injection methods'] },
+      { title: 'Documentation Strategy', details: ['API documentation standards', 'Architecture diagram maintenance', 'User guide development'] },
+      { title: 'Research Integration', details: ['Latest algorithm adoption', 'Industry standard compliance', 'Best practice implementation'] },
+      { title: 'Innovation Pipeline', details: ['Emerging technology evaluation', 'Optimization potential assessment', 'Scalability roadmap planning'] },
+      { title: 'Solution Architecture', details: ['Technology stack decisions', 'Integration pattern design', 'Scalability architecture'] },
+      { title: 'Process Engineering', details: ['Workflow automation opportunities', 'Efficiency improvement strategies', 'Error reduction protocols'] },
+      { title: 'Business Intelligence', details: ['Cost optimization analysis', 'ROI measurement frameworks', 'Market positioning strategies'] }
+    ]
+    
     await sleep(1000)
-    streamContent('orchestrator', '1. Event-driven Architecture (Agent 1)\n   - Loose coupling between agents\n   - Scalable communication patterns\n\n')
-    await sleep(1200)
-    streamContent('orchestrator', '2. Robust Implementation (Agent 2)\n   - Message queues for reliability\n   - Circuit breakers for fault tolerance\n   - Container-based isolation\n\n')
-    await sleep(1000)
-    streamContent('orchestrator', '3. Performance Optimization (Agent 3)\n   - Horizontal scaling strategies\n   - Metrics-driven optimization\n   - Resource allocation efficiency\n\n')
+    
+    // Show synthesis for each active agent up to the first 5 for readability
+    const maxSynthesisShow = Math.min(activeAgentCount, 5)
+    for (let i = 1; i <= maxSynthesisShow; i++) {
+      const synthesis = synthesisPoints[(i - 1) % synthesisPoints.length]
+      streamContent('orchestrator', `${i}. ${synthesis.title} (Agent ${i})\n`)
+      synthesis.details.forEach(detail => {
+        streamContent('orchestrator', `   - ${detail}\n`)
+      })
+      streamContent('orchestrator', '\n')
+      await sleep(800)
+    }
+    
+    // If more than 5 agents, add a summary line
+    if (activeAgentCount > 5) {
+      streamContent('orchestrator', `... and ${activeAgentCount - 5} additional specialized insights from remaining agents.\n\n`)
+      await sleep(500)
+    }
     await sleep(800)
     streamContent('orchestrator', '✅ Coordination complete! Multi-agent consensus achieved.\n')
+    
+    // Final visual log summary
+    streamContent('visual-log', 'SESSION COMPLETE\n')
+    streamContent('visual-log', `Final Statistics: ${activeAgentCount} agents, Winner: Agent ${winnerAgent}\n`)
 
     setIsRunning(false)
   }
