@@ -1,11 +1,11 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config configs/claude_mcp_example.yaml "whats the weather of Tokyo"
+#   uv run python -m massgen.cli --config configs/gpt5_mini_mcp_example.yaml "whats the weather of Tokyo"
 agents:
-  - id: "claude_mcp_weather"
+  - id: "gpt5_mini_mcp_weather"
     backend:
-      type: "claude"
-      model: "claude-sonnet-4-20250514"  # Model name
+      type: "openai"
+      model: "gpt-5-mini"
       mcp_servers:
         - name: "weather"
           type: "stdio"
