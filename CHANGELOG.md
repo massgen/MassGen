@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Claude Backend MCP Support**: Extended MCP (Model Context Protocol) integration to Claude backend
-  - Full MCP tool discovery and execution capabilities for Claude models (Claude 3.5, Claude 3, Claude 4)
   - Support for both stdio and HTTP-based MCP servers with Claude Messages API
   - Seamless integration with existing Claude function calling and tool use
-  - Recursive execution model enabling multi-step tool usage workflows
+  - Recursive execution model allowing Claude to autonomously chain multiple tool calls in sequence without user intervention
   - Enhanced error handling and retry mechanisms for Claude MCP operations
 
 - **MCP Configuration Examples**: New YAML configurations for Claude MCP usage

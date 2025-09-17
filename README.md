@@ -998,7 +998,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 Version 0.0.20 introduces **Claude Backend MCP Support** with recursive execution capabilities, extending MCP integration to cover most major backends:
 
 #### Claude MCP Integration
-- **Recursive Execution Model**: Advanced multi-step tool usage workflows enabling Claude to autonomously chain multiple tool calls in sequence
+- **Recursive Execution Model**: Claude can autonomously chain multiple tool calls in sequence without user intervention, completing complex multi-step tasks in a single interaction
 - **Full MCP Protocol Support**: Complete MCP tool discovery and execution for Claude models (Claude 3.5, Claude 3, Claude 4) with both stdio and HTTP transports
 - **Enhanced Error Handling**: Robust retry mechanisms and circuit breaker patterns for reliable MCP operations
 - **Comprehensive Documentation**: Complete technical documentation and configuration examples for Claude MCP integration
