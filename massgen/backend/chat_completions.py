@@ -8,6 +8,7 @@ Supported Providers and Environment Variables:
 - Together AI: TOGETHER_API_KEY
 - Fireworks AI: FIREWORKS_API_KEY
 - Groq: GROQ_API_KEY
+- Kimi/Moonshot: MOONSHOT_API_KEY or KIMI_API_KEY
 - Nebius AI Studio: NEBIUS_API_KEY
 - OpenRouter: OPENROUTER_API_KEY
 - ZAI: ZAI_API_KEY
@@ -190,6 +191,8 @@ class ChatCompletionsBackend(LLMBackend):
             return "ZAI"
         elif "nebius.com" in base_url:
             return "Nebius AI Studio"
+        elif "moonshot.ai" in base_url or "moonshot.cn" in base_url:
+            return "Kimi"
         else:
             return "ChatCompletion"
 

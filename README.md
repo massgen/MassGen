@@ -207,6 +207,7 @@ cp .env.example .env
  - [Claude](https://docs.anthropic.com/en/api/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
  - [Grok](https://docs.x.ai/docs/overview)
+ - [Kimi/Moonshot](https://platform.moonshot.ai/)
  - [OpenAI](https://platform.openai.com/api-keys)
  - [Z AI](https://docs.z.ai/guides/overview/quick-start)
 
@@ -224,7 +225,7 @@ The system currently supports multiple model providers with advanced capabilitie
 - **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
 - **Grok**: Grok-4, Grok-3, Grok-3-mini...
 - **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano)...
-- **Together AI**, **Fireworks AI**, **Groq**, **Nebius AI Studio**, **OpenRouter**: LLaMA, Mistral, Qwen...
+- **Together AI**, **Fireworks AI**, **Groq**, **Kimi/Moonshot**, **Nebius AI Studio**, **OpenRouter**: LLaMA, Mistral, Qwen...
 - **Z AI**: GLM-4.5
 
 **Local Model Support (NEW in v0.0.7):**
