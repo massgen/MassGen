@@ -39,5 +39,5 @@ agents:
       - Server status: Verify the server is healthy and reports the time.
 
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true
