@@ -524,7 +524,7 @@ Based on the coordination process above, present your final answer:"""
                         workspace_info.append(f"   - If you want to add or modify files here, place them in your main workspace instead and someone with write access can move them later. Please also note in your answer where your new files are located and which need to be moved where.")
                     else:
                         workspace_info.append(f" - `{path}` (read/write)")
-                        workspace_info.append(f"   - You have full {permission} access to this location")
+                        workspace_info.append(f"   - **Permission Change Notice**: You now have full {permission} access to this location")
                         workspace_info.append(f"   - You are the only agent with write access to this production location")
                         workspace_info.append(f"   - Other agents tested changes in isolated environments - their work needs to be deployed here. You must move or copy their successful work here to finalize it, making your own adjustments as needed.")
 

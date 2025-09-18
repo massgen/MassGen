@@ -291,6 +291,7 @@ class PathPermissionManager:
         logger.debug(f"[PathPermissionManager] Validating write tool '{tool_name}' for path: {path} with permission: {permission}")
 
         # No permission means not in context paths (workspace paths are always allowed)
+        # We note that the filesystem MCP server will block access to paths not in its config, and we explicitly mark as read-only any paths that need to be read-only, so all else is fine.
         if permission is None:
             return (True, None)
 
@@ -374,6 +375,17 @@ class PathPermissionManager:
                 if idx + 2 < len(parts):
                     # The second argument is typically the destination
                     return parts[idx + 2]
+            except (ValueError, IndexError):
+                pass
+
+        # For simple commands like touch, mkdir, echo (first argument after command)
+        if pattern in ["touch ", "mkdir ", "echo "]:
+            parts = command.split()
+            try:
+                idx = parts.index(pattern.strip())
+                if idx + 1 < len(parts):
+                    # The first argument is the target
+                    return parts[idx + 1].strip('"\'')
             except (ValueError, IndexError):
                 pass
 
