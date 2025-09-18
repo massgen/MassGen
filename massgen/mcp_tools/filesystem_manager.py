@@ -301,7 +301,11 @@ class PathPermissionManager:
             return (False, f"No write permission for '{path}' (read-only context path)")
 
     def _validate_command_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
-        """Validate command tool access."""
+        """Validate command tool access.
+
+        As of v0.0.20, only Claude Code supports execution.
+
+        """
         # Extract command from arguments
         command = tool_args.get("command", "") or tool_args.get("cmd", "")
 
@@ -313,26 +317,22 @@ class PathPermissionManager:
         ]
 
         # File modification patterns to check when write access disabled
-        if not self.context_write_access_enabled:
-            write_patterns = [
-                ">", ">>",  # Redirects
-                "mv ", "move ", "cp ", "copy ",
-                "touch ", "mkdir ", "echo ",
-                "sed -i", "perl -i",  # In-place edits
-            ]
+        write_patterns = [
+            ">", ">>",  # Redirects
+            "mv ", "move ", "cp ", "copy ",
+            "touch ", "mkdir ", "echo ",
+            "sed -i", "perl -i",  # In-place edits
+        ]
 
-            for pattern in write_patterns:
-                if pattern in command:
-                    # Try to extract the target file
-                    target_file = self._extract_file_from_command(command, pattern)
-                    if target_file:
-                        path = Path(target_file).resolve()
-                        permission = self.get_permission(path)
-                        if permission and permission == Permission.READ:
-                            return (False, f"Command would modify read-only context path: {path}")
-
-                    if not self._has_write_permissions():
-                        return (False, f"File modification commands blocked (context write access not enabled)")
+        for pattern in write_patterns:
+            if pattern in command:
+                # Try to extract the target file
+                target_file = self._extract_file_from_command(command, pattern)
+                if target_file:
+                    path = Path(target_file).resolve()
+                    permission = self.get_permission(path)
+                    if permission and permission == Permission.READ:
+                        return (False, f"Command would modify read-only context path: {path}")
 
         # Always block dangerous commands
         for pattern in dangerous_patterns:
@@ -379,10 +379,6 @@ class PathPermissionManager:
 
         return None
 
-    def _has_write_permissions(self) -> bool:
-        """Check if any managed paths have write permission."""
-        return any(path.permission == Permission.WRITE for path in self.managed_paths)
-
     def get_accessible_paths(self) -> List[Path]:
         """Get list of all accessible paths."""
         return [path.path for path in self.managed_paths]
@@ -405,13 +401,6 @@ class PathPermissionManager:
         for managed_path in self.managed_paths:
             emoji = "📝" if managed_path.permission == Permission.WRITE else "👁️"
             lines.append(f"  {emoji} {managed_path.path} ({managed_path.permission.value}, {managed_path.path_type})")
-
-        if not self.context_write_access_enabled:
-            if self._has_write_permissions():
-                lines.append("\n   Write operations are blocked (context write access not enabled)")
-                lines.append("    Files will be modifiable when context write access is enabled")
-            else:
-                lines.append("\n   All managed paths are read-only")
 
         return "\n".join(lines)
 

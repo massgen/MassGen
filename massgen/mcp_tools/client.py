@@ -655,7 +655,7 @@ class MCPClient:
                 # Hook errors don't block execution unless they explicitly raise MCPValidationError
 
         logger.debug(
-            f"Calling tool {tool_name} on {self.name} with arguments: {validated_arguments}, {self.hooks=}"
+            f"Calling tool {tool_name} on {self.name} with arguments: {validated_arguments}"
         )
 
         # Send tool call start status if callback is available
@@ -665,7 +665,7 @@ class MCPClient:
                 {
                     "server": self.name,
                     "tool": tool_name,
-                    "message": f"Calling tool '{tool_name}' on server '{self.name}, {self.hooks=}'",
+                    "message": f"Calling tool '{tool_name}' on server '{self.name}'",
                     "arguments": validated_arguments,
                 },
             )
