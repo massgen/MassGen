@@ -521,11 +521,12 @@ Based on the coordination process above, present your final answer:"""
                     if permission == "read":
                         workspace_info.append(f" - `{path}` (read-only)")
                         workspace_info.append(f"   - You can read files from this location but cannot modify them")
-                        workspace_info.append(f"   - If you want to add or modify files here, place them in your main workspace instead and someone with write access can move them later")
+                        workspace_info.append(f"   - If you want to add or modify files here, place them in your main workspace instead and someone with write access can move them later. Please also note in your answer where your new files are located and which need to be moved where.")
                     else:
                         workspace_info.append(f" - `{path}` (read/write)")
                         workspace_info.append(f"   - You have full {permission} access to this location")
-                        workspace_info.append(f"   - Previous agents may have wanted to write files here but could not due to permission restrictions. They may have written files in their main workspace instead and are relying on you to move them here if needed")
+                        workspace_info.append(f"   - You are the only agent with write access to this production location")
+                        workspace_info.append(f"   - Other agents tested changes in isolated environments - their work needs to be deployed here. You must move or copy their successful work here to finalize it, making your own adjustments as needed.")
 
         workspace_section = (
             "\n".join(workspace_info)
