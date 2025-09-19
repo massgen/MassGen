@@ -11,14 +11,18 @@ Tools provided:
 """
 
 import os
+import sys
+import argparse
 import shutil
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple
 import fnmatch
 import fastmcp
 
+mcp = fastmcp.FastMCP("Workspace Copy")
 
-app = fastmcp.FastMCP("Workspace Copy")
+# Global variable to store allowed paths (set by argument parsing)
+ALLOWED_PATHS: List[Path] = []
 
 
 def get_copy_file_pairs(
@@ -49,29 +53,35 @@ def get_copy_file_pairs(
     if exclude_patterns is None:
         exclude_patterns = []
 
-    # Get allowed paths for validation
-    allowed_sources, allowed_destinations = _get_allowed_paths()
-
     # Validate source base path
     source_base = Path(source_base_path).resolve()
     if not source_base.exists():
         raise ValueError(f"Source base path does not exist: {source_base}")
 
-    _validate_path_access(source_base, allowed_sources, "source")
+    _validate_path_access(source_base, ALLOWED_PATHS)
 
-    # Validate destination base path
-    current_workspace = os.getenv("CURRENT_WORKSPACE")
-    if not current_workspace:
-        raise ValueError("CURRENT_WORKSPACE environment variable not set")
+    # Find workspace path from allowed paths for destination validation
+    workspace = None
+    for allowed_path in ALLOWED_PATHS:
+        # Assume workspace is the path that contains our current working directory
+        # or is explicitly a workspace directory
+        try:
+            if "workspace" in str(allowed_path).lower():
+                workspace = allowed_path
+                break
+        except:
+            continue
 
-    workspace = Path(current_workspace).resolve()
+    if not workspace:
+        # Fallback: use first allowed path as workspace
+        workspace = ALLOWED_PATHS[0] if ALLOWED_PATHS else Path.cwd()
 
     if destination_base_path:
         dest_base = (workspace / destination_base_path).resolve()
     else:
         dest_base = workspace
 
-    _validate_path_access(dest_base, allowed_destinations, "destination")
+    _validate_path_access(dest_base, ALLOWED_PATHS)
 
     # Collect all file pairs
     file_pairs = []
@@ -98,62 +108,20 @@ def get_copy_file_pairs(
         dest_file = (dest_base / rel_path).resolve()
 
         # Validate destination is within allowed paths
-        _validate_path_access(dest_file, allowed_destinations, "destination")
+        _validate_path_access(dest_file, ALLOWED_PATHS)
 
         file_pairs.append((item, dest_file))
 
     return file_pairs
 
 
-def _get_allowed_paths() -> tuple[List[Path], List[Path]]:
-    """
-    Get allowed source and destination paths from environment.
-
-    Returns:
-        Tuple of (allowed_source_paths, allowed_destination_paths)
-    """
-    # Get paths from environment (set by filesystem manager)
-    temp_workspace_base = os.getenv("TEMP_WORKSPACE_BASE", "")
-    context_paths_str = os.getenv("CONTEXT_PATHS", "")
-    current_workspace = os.getenv("CURRENT_WORKSPACE", "")
-
-    allowed_sources = []
-    allowed_destinations = []
-
-    # Add temp workspace base for sources
-    if temp_workspace_base:
-        try:
-            allowed_sources.append(Path(temp_workspace_base).resolve())
-        except Exception:
-            pass
-
-    # Add context paths for sources
-    if context_paths_str:
-        for path_str in context_paths_str.split(","):
-            if path_str.strip():
-                try:
-                    allowed_sources.append(Path(path_str.strip()).resolve())
-                except Exception:
-                    pass
-
-    # Add current workspace for destinations
-    if current_workspace:
-        try:
-            allowed_destinations.append(Path(current_workspace).resolve())
-        except Exception:
-            pass
-
-    return allowed_sources, allowed_destinations
-
-
-def _validate_path_access(path: Path, allowed_paths: List[Path], path_type: str) -> None:
+def _validate_path_access(path: Path, allowed_paths: List[Path]) -> None:
     """
     Validate that a path is within allowed directories.
 
     Args:
         path: Path to validate
         allowed_paths: List of allowed base paths
-        path_type: Type for error messages ("source" or "destination")
 
     Raises:
         ValueError: If path is not within allowed directories
@@ -168,7 +136,7 @@ def _validate_path_access(path: Path, allowed_paths: List[Path], path_type: str)
         except ValueError:
             continue
 
-    raise ValueError(f"{path_type.capitalize()} path not in allowed directories: {path}")
+    raise ValueError(f"Path not in allowed directories: {path}")
 
 
 def _validate_and_resolve_paths(source_path: str, destination_path: str) -> tuple[Path, Path]:
@@ -186,29 +154,29 @@ def _validate_and_resolve_paths(source_path: str, destination_path: str) -> tupl
         ValueError: If paths are invalid
     """
     try:
-        # Get allowed paths
-        allowed_sources, allowed_destinations = _get_allowed_paths()
-
         # Validate and resolve source
         source = Path(source_path).resolve()
         if not source.exists():
             raise ValueError(f"Source path does not exist: {source}")
 
-        _validate_path_access(source, allowed_sources, "source")
+        _validate_path_access(source, ALLOWED_PATHS)
 
-        # Validate and resolve destination
-        current_workspace = os.getenv("CURRENT_WORKSPACE")
-        if not current_workspace:
-            raise ValueError("CURRENT_WORKSPACE environment variable not set")
+        # Find workspace path from allowed paths
+        workspace = None
+        for allowed_path in ALLOWED_PATHS:
+            if "workspace" in str(allowed_path).lower():
+                workspace = allowed_path
+                break
 
-        workspace = Path(current_workspace).resolve()
+        if not workspace:
+            workspace = ALLOWED_PATHS[0] if ALLOWED_PATHS else Path.cwd()
 
         if Path(destination_path).is_absolute():
             destination = Path(destination_path).resolve()
         else:
             destination = (workspace / destination_path).resolve()
 
-        _validate_path_access(destination, allowed_destinations, "destination")
+        _validate_path_access(destination, ALLOWED_PATHS)
 
         return source, destination
 
@@ -263,7 +231,7 @@ def _perform_copy(source: Path, destination: Path, overwrite: bool = False) -> D
         raise ValueError(f"Copy operation failed: {e}")
 
 
-@app.tool()
+@mcp.tool()
 def copy_file(
     source_path: str,
     destination_path: str,
@@ -293,7 +261,7 @@ def copy_file(
     }
 
 
-@app.tool()
+@mcp.tool()
 def copy_files_batch(
     source_base_path: str,
     destination_base_path: str = "",
@@ -324,29 +292,6 @@ def copy_files_batch(
         exclude_patterns = []
 
     try:
-        # Get allowed paths
-        allowed_sources, allowed_destinations = _get_allowed_paths()
-
-        # Validate source base path
-        source_base = Path(source_base_path).resolve()
-        if not source_base.exists():
-            raise ValueError(f"Source base path does not exist: {source_base}")
-
-        _validate_path_access(source_base, allowed_sources, "source")
-
-        # Validate destination base path
-        current_workspace = os.getenv("CURRENT_WORKSPACE")
-        if not current_workspace:
-            raise ValueError("CURRENT_WORKSPACE environment variable not set")
-
-        workspace = Path(current_workspace).resolve()
-
-        if destination_base_path:
-            dest_base = (workspace / destination_base_path).resolve()
-        else:
-            dest_base = workspace
-
-        _validate_path_access(dest_base, allowed_destinations, "destination")
 
         copied_files = []
         skipped_files = []
@@ -412,10 +357,13 @@ def copy_files_batch(
         }
 
 
-def main():
-    """Main entry point for the workspace copy MCP server."""
-    app.run()
-
-
 if __name__ == "__main__":
-    main()
+    # Parse command line arguments for allowed paths (like filesystem MCP)
+    parser = argparse.ArgumentParser(description="Workspace Copy MCP Server")
+    parser.add_argument("paths", nargs="*", help="Allowed directory paths")
+    args = parser.parse_args()
+
+    # Set global allowed paths
+    ALLOWED_PATHS = [Path(path).resolve() for path in args.paths]
+
+    mcp.run()

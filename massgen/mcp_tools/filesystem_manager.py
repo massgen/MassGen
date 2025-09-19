@@ -213,10 +213,11 @@ class PathPermissionManager:
         # Find containing managed path
         for managed_path in self.managed_paths:
             if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
-                logger.debug(f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}) -- {self.managed_paths=}")
+                logger.info(f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}, type: {managed_path.path_type}, original: {managed_path.original_permission})")
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission
 
+        logger.debug(f"[PathPermissionManager] No permission found for {resolved_path} in managed paths: {[(str(mp.path), mp.permission.value, mp.path_type) for mp in self.managed_paths]}")
         return None
 
     async def pre_tool_use_hook(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
@@ -309,6 +310,7 @@ class PathPermissionManager:
     def _validate_copy_files_batch(self, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate copy_files_batch by checking all destination paths after globbing."""
         try:
+            logger.debug(f"[PathPermissionManager] copy_files_batch validation - context_write_access_enabled: {self.context_write_access_enabled}")
             # Import the helper function from workspace copy server
             from .workspace_copy_server import get_copy_file_pairs
 
@@ -330,6 +332,7 @@ class PathPermissionManager:
             blocked_paths = []
             for source_file, dest_file in file_pairs:
                 permission = self.get_permission(dest_file)
+                logger.debug(f"[PathPermissionManager] copy_files_batch checking dest: {dest_file}, permission: {permission}")
                 if permission == Permission.READ:
                     blocked_paths.append(str(dest_file))
 
@@ -720,12 +723,15 @@ class FilesystemManager:
             "type": "stdio",
             "command": "python",
             "args": ["-m", "massgen.mcp_tools.workspace_copy_server"],
-            "env": {
-                "CURRENT_WORKSPACE": str(self.cwd),
-                "TEMP_WORKSPACE_BASE": str(self.agent_temporary_workspace_parent) if self.agent_temporary_workspace_parent else "",
-                "CONTEXT_PATHS": context_paths_str
-            }
+            # "command": "fastmcp",
+            # "args": ["run", "massgen/mcp_tools/workspace_copy_server.py"],
+            # "env": {
+            #     # "FASTMCP_SHOW_CLI_BANNER": "false",
+            # }
         }
+
+        # Add all managed paths from path permission manager
+        config["args"].extend(self.path_permission_manager.get_mcp_filesystem_paths())
 
         return config
 
