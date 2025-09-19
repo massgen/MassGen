@@ -187,7 +187,8 @@ class ResponseBackend(LLMBackend):
 
         # Convert result to string for response.py compatibility
         if isinstance(result, dict) and "error" in result:
-            return f"Error: {result['error']}"
+            error_msg = f"Error: {result['error']}"
+            return error_msg, result
         return str(result), result
 
     async def _setup_mcp_tools(self) -> None:
@@ -245,7 +246,8 @@ class ResponseBackend(LLMBackend):
                 MCPResourceManager.convert_tools_to_functions(
                     self._mcp_client,
                     backend_name=self.backend_name,
-                    agent_id=self.agent_id
+                    agent_id=self.agent_id,
+                    hook_manager=getattr(self, 'function_hook_manager', None),
                 )
             )
             self._mcp_initialized = True
@@ -314,17 +316,12 @@ class ResponseBackend(LLMBackend):
         api_params = {"input": converted_messages, "stream": True}
 
         # Direct passthrough of all parameters except those handled separately
-        excluded_params = {
+        excluded_params = self.get_base_excluded_config_params() | {
+            # Response backend specific exclusions
             "enable_web_search",
             "enable_code_interpreter",
-            "agent_id",
-            "session_id",
-            "type",  # Used for MCP server configuration
-            "mcp_servers",  # MCP-specific parameter
-            "allowed_tools",  # Tool filtering parameter
-            "exclude_tools",  # Tool filtering parameter
-            "cwd",  # Current working directory
-            "agent_temporary_workspace",  # Agent temporary workspace
+            "allowed_tools",
+            "exclude_tools",
         }
         for key, value in all_params.items():
             if key not in excluded_params and value is not None:

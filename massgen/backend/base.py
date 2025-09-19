@@ -73,8 +73,14 @@ class LLMBackend(ABC):
 
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
+                # Extract context paths and write access from backend config
+                context_paths = kwargs.get("context_paths", [])
+                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd, agent_temporary_workspace_parent=temp_workspace_parent
+                    cwd=cwd,
+                    agent_temporary_workspace_parent=temp_workspace_parent,
+                    context_paths=context_paths,
+                    context_write_access_enabled=context_write_access_enabled
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -85,16 +91,68 @@ class LLMBackend(ABC):
 
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
+                # Extract context paths and write access from backend config
+                context_paths = kwargs.get("context_paths", [])
+                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 self.filesystem_manager = FilesystemManager(
-                    cwd=cwd, agent_temporary_workspace_parent=temp_workspace_parent
+                    cwd=cwd,
+                    agent_temporary_workspace_parent=temp_workspace_parent,
+                    context_paths=context_paths,
+                    context_write_access_enabled=context_write_access_enabled
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
                 raise ValueError(
                     f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration."
                 )
+
+            # Auto-setup permission hooks for function-based backends (default)
+            if self.filesystem_manager:
+                self._setup_permission_hooks()
         else:
             self.filesystem_manager = None
+
+    def _setup_permission_hooks(self):
+        """Setup permission hooks for function-based backends (default behavior)."""
+        from ..mcp_tools.hooks import FunctionHookManager, HookType
+        from ..mcp_tools.filesystem_manager import PathPermissionManagerHook
+
+        # Create per-agent hook manager
+        self.function_hook_manager = FunctionHookManager()
+
+        # Create permission hook using the filesystem manager's permission manager
+        permission_hook = PathPermissionManagerHook(
+            self.filesystem_manager.path_permission_manager
+        )
+
+        # Register hook on this agent's hook manager only
+        self.function_hook_manager.register_global_hook(HookType.PRE_CALL, permission_hook)
+
+    @classmethod
+    def get_base_excluded_config_params(cls) -> set:
+        """
+        Get set of config parameters that are universally handled by base class.
+
+        These are parameters handled by the base class or orchestrator, not passed
+        directly to backend implementations. Backends should extend this set with
+        their own specific exclusions.
+
+        Returns:
+            Set of universal parameter names to exclude from backend options
+        """
+        return {
+            # Filesystem manager parameters (handled by base class)
+            "cwd",
+            "agent_temporary_workspace",
+            "context_paths",
+            "context_write_access_enabled",
+            # Backend identification (handled by orchestrator)
+            "type",
+            "agent_id",
+            "session_id",
+            # MCP configuration (handled by base class for MCP backends)
+            "mcp_servers",
+        }
 
     @abstractmethod
     async def stream_with_tools(

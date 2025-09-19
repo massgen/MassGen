@@ -448,7 +448,6 @@ class ClaudeBackend(LLMBackend):
                 logger.warning("MCPResourceManager not available")
                 return
 
-            # Setup MCP client
             self._mcp_client = await MCPResourceManager.setup_mcp_client(  # type: ignore[union-attr]
                 servers=servers_to_use,
                 allowed_tools=self.allowed_tools,
@@ -475,6 +474,7 @@ class ClaudeBackend(LLMBackend):
                     self._mcp_client,
                     backend_name=self.backend_name,
                     agent_id=self.agent_id,
+                    hook_manager=getattr(self, 'function_hook_manager', None),
                 )
             )
             self._mcp_initialized = True
@@ -601,18 +601,13 @@ class ClaudeBackend(LLMBackend):
             api_params["tools"] = combined_tools
 
         # Direct passthrough of all parameters except those handled separately
-        excluded_params = {
+        # Use base class exclusions plus Claude-specific ones
+        excluded_params = self.get_base_excluded_config_params().union({
             "enable_web_search",
             "enable_code_execution",
-            "agent_id",
-            "session_id",
-            "cwd",
-            "agent_temporary_workspace",
-            "type",
-            "mcp_servers",
             "allowed_tools",
             "exclude_tools",
-        }
+        })
         for key, value in all_params.items():
             if key not in excluded_params and value is not None:
                 api_params[key] = value
@@ -1031,7 +1026,6 @@ class ClaudeBackend(LLMBackend):
                 import anthropic
 
                 client = anthropic.AsyncAnthropic(api_key=self.api_key)
-
                 try:
                     # Determine if MCP processing is needed
                     use_mcp = bool(self.functions)

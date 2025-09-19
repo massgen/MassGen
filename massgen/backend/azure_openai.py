@@ -152,16 +152,12 @@ class AzureOpenAIBackend(LLMBackend):
 
             # Add other parameters (excluding model since we already set it)
             # Filter out unsupported Azure OpenAI parameters
-            excluded_params = {
+            excluded_params = self.get_base_excluded_config_params() | {
+                # Azure OpenAI specific exclusions
                 "model",
                 "messages",
                 "stream",
                 "tools",
-                "agent_id",
-                "session_id",
-                "type",
-                "cwd",
-                "agent_temporary_workspace",
             }
             for key, value in kwargs.items():
                 if key not in excluded_params and value is not None:

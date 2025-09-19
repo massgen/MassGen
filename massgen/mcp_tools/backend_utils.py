@@ -18,6 +18,7 @@ from ..logger_config import logger, log_mcp_activity
 import random
 import asyncio
 import json
+import time
 
 # Import MCP exceptions
 try:
@@ -47,6 +48,13 @@ except ImportError:
     CircuitBreakerConfig = None
     MultiMCPClient = None
 
+# Import hook system
+try:
+    from .hooks import HookType, FunctionHook
+except ImportError:
+    HookType = None
+    FunctionHook = None
+
 
 class Function:
     """Enhanced function wrapper for MCP tools across all backend APIs."""
@@ -57,6 +65,7 @@ class Function:
         description: str,
         parameters: Dict[str, Any],
         entrypoint: Callable[[str], Awaitable[Any]],
+        hooks: Optional[Dict] = None,
     ) -> None:
 
         # Validate and sanitize inputs
@@ -72,10 +81,73 @@ class Function:
             else {"type": "object", "properties": {}}
         )
         self.entrypoint = entrypoint
+        self.hooks = hooks or (
+            {hook_type: [] for hook_type in HookType} if HookType else {}
+        )
+
+        # Context for hook execution
+        self._backend_name = None
+        self._agent_id = None
 
     async def call(self, input_str: str) -> Any:
-        """Call the function with input string."""
-        return await self.entrypoint(input_str)
+        """Call the function with hook integration."""
+        # Fast path: no hooks registered
+        if not HookType or not self.hooks.get(HookType.PRE_CALL):
+            return await self.entrypoint(input_str)
+
+        # Build context for hooks
+        context = {
+            "function_name": self.name,
+            "timestamp": time.time(),
+            "backend": self._backend_name or "unknown",
+            "agent_id": self._agent_id
+        }
+
+        # Execute PRE_CALL hooks
+        modified_args = input_str
+        for hook in self.hooks.get(HookType.PRE_CALL, []):
+            try:
+                hook_result = await hook.execute(
+                    function_name=self.name,
+                    arguments=modified_args,
+                    context=context
+                )
+
+                # Check if hook blocks execution
+                if not hook_result.allowed:
+                    # Return proper CallToolResult format matching permission_wrapper.py
+                    reason = hook_result.metadata.get('reason', f"Hook '{hook.name}' blocked function call")
+                    error_msg = f"Permission denied for tool '{self.name}': {reason}"
+                    logger.warning(f"🚫 [Function] {error_msg}")
+
+                    # Import MCP types for proper result formatting
+                    try:
+                        from mcp import types as mcp_types
+
+                        # Return CallToolResult with error flag - same format as permission_wrapper.py
+                        return mcp_types.CallToolResult(
+                            content=[
+                                mcp_types.TextContent(
+                                    type="text",
+                                    text=f"Error: {error_msg}"
+                                )
+                            ],
+                            isError=True
+                        )
+                    except ImportError:
+                        # Fallback if MCP types not available
+                        logger.error("MCP types not available, returning string error")
+                        return f"Error: {error_msg}"
+
+                # Check if hook modified arguments
+                if hook_result.modified_args is not None:
+                    modified_args = hook_result.modified_args
+
+            except Exception as e:
+                logger.error(f"Hook {hook.name} failed for {self.name}: {e}")
+
+        # Execute the actual function
+        return await self.entrypoint(modified_args)
 
     def to_openai_format(self) -> Dict[str, Any]:
         """Convert function to OpenAI Response API format."""
@@ -751,14 +823,18 @@ class MCPResourceManager:
 
     @staticmethod
     def convert_tools_to_functions(
-        mcp_client, backend_name: Optional[str] = None, agent_id: Optional[str] = None
+        mcp_client,
+        backend_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        hook_manager = None
     ) -> Dict[str, Function]:
-        """Convert MCP tools to Function objects with standardized closure pattern.
+        """Convert MCP tools to Function objects with hook support.
 
         Args:
             mcp_client: Connected MultiMCPClient instance
             backend_name: Optional backend name for logging context
             agent_id: Optional agent ID for logging context
+            hook_manager: Optional hook manager for function hooks
 
         Returns:
             Dictionary mapping tool names to Function objects
@@ -767,6 +843,7 @@ class MCPResourceManager:
             return {}
 
         functions = {}
+        hook_mgr = hook_manager  # No fallback to global - each agent must provide its own
 
         for tool_name, tool in mcp_client.tools.items():
             try:
@@ -815,12 +892,23 @@ class MCPResourceManager:
                         agent_id=agent_id,
                     )
 
+                # Get hooks for this function
+                function_hooks = (
+                    hook_mgr.get_hooks_for_function(tool_name) if hook_mgr else {}
+                )
+
                 function = Function(
                     name=tool_name,
                     description=description,
                     parameters=parameters,
                     entrypoint=entrypoint,
+                    hooks=function_hooks,
                 )
+
+                # Set backend context
+                function._backend_name = backend_name
+                function._agent_id = agent_id
+
                 functions[function.name] = function
 
             except Exception as e:

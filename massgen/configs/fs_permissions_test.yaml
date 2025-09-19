@@ -1,0 +1,87 @@
+# Example configuration demonstrating context_paths filesystem access control
+# This config shows how agents can access user-specified files with permission control
+
+agents:
+  # - id: "claude1"
+  #   backend:
+  #     type: "claude"
+  #     model: "claude-sonnet-4-20250514"  # Model name
+  #     cwd: "workspace1"
+
+  # - id: "agent_oss"
+  #   backend:
+  #     type: "chatcompletion"
+  #     model: "openai/gpt-oss-120b"
+  #     base_url: "https://api.groq.com/openai/v1"
+  #     cwd: "workspace1"
+
+  # - id: "claude_code_agent1"
+  #   backend:
+  #     type: "claude_code"
+  #     cwd: "workspace1"  # Working directory for file operations
+
+  # - id: "grok_mini1"
+  #   backend:
+  #     type: "grok"
+  #     model: "grok-code-fast-1"
+  #     cwd: "workspace1"
+
+  # - id: "grok_mini2"
+  #   backend:
+  #     type: "grok"
+  #     model: "grok-code-fast-1"
+  #     cwd: "workspace2"
+
+  - id: "gpt5nano_1"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "low"  # Fast responses for debugging
+      cwd: "workspace1"
+
+  - id: "gpt5nano_2"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "low"  # Fast responses for debugging
+      cwd: "workspace2"
+
+  # - id: "code_analyzer"
+  #   backend:
+  #     type: "gemini"
+  #     model: "gemini-2.5-flash"
+  #     cwd: "analyzer_workspace"
+
+  # - id: "code_modifier"
+  #   backend:
+  #     type: "gemini"
+  #     model: "gemini-2.5-flash"
+  #     cwd: "modifier_workspace"
+
+  # - id: "documentation_writer"
+  #   backend:
+  #     type: "gemini"
+  #     model: "gemini-2.5-flash"
+  #     cwd: "docs_workspace"
+
+orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
+    # Context paths applied to all agents - always read-only access during orchestration, write for final agent if specified
+    context_paths:
+      - path: "/home/nick/GitHubProjects/MassGen/v0.0.21-example"
+        permission: "write"
+      # - path: "/home/nick/GitHubProjects/MassGen/testing_permissions"
+      #   # permission: "read"
+      #   permission: "write"
+
+# UI Configuration
+ui:
+  type: "rich_terminal"
+  logging_enabled: true
