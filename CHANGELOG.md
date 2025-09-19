@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Advanced Filesystem Permissions System**: Comprehensive permission management for agent file access
   - New `PathPermissionManager` class for granular permission validation
-  - Support for context paths with configurable READ/WRITE permissions
+  - User context paths with configurable READ/WRITE permissions for multi-agent file sharing
   - Test suite for permission validation in `test_path_permission_manager.py`
   - Documentation in `permissions_and_context_files.md` for implementation guide
   

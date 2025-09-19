@@ -1029,7 +1029,8 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 Version 0.0.21 introduces **Advanced Filesystem Permissions** and **Grok MCP Integration**, completing the foundation for secure, collaborative AI file operations:
 
 #### Advanced Filesystem Permissions System
-- **PathPermissionManager**: Comprehensive permission management for agent file access with granular validation
+- **Path Permission Manager**: Comprehensive permission management for agent file access with granular validation
+- **User Context Paths**: Support for configurable context paths with READ/WRITE permissions for multi-agent file sharing
 - **Context vs Final Agent Distinction**: Coordination agents get read-only access, final agent gets configured write permissions
 - **Per-Agent Permission Enforcement**: Function hooks validate file operations before execution across all backends
 - **Security Framework**: Complete test suite and documentation for safe multi-agent file operations
