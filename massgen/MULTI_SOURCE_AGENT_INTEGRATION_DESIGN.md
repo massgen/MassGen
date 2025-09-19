@@ -1614,30 +1614,199 @@ from massgen.adapters.remote import RemoteAgentAdapter
 
 ## Implementation Phases
 
-### Phase 1: Core Infrastructure
-- Create `massgen/adapters/` directory structure
-- Implement `base.py` with FrameworkAgentAdapter class
-- Implement `converters.py` with message/tool converters
-- Create `factory.py` with registry pattern
-- Add basic tests in `tests/adapters/`
+### Phase 1: Core Infrastructure (Week 1-2)
+**Goal**: Establish the foundation for framework-agnostic agent integration
 
-### Phase 2: Framework Adapters
-- Implement `frameworks/langchain_adapter.py`
-- Implement `frameworks/autogen_adapter.py`
-- Add framework-specific tests
-- Create example configurations in `configs/examples/framework_agents/`
+**Tasks**:
+- Create `massgen/adapters/` directory structure with all subdirectories
+- Implement `base.py` with:
+  - `FrameworkConfig` dataclass
+  - `FrameworkAgentAdapter` abstract base class inheriting from `LLMBackend`
+  - Core streaming and state management methods
+- Implement `converters.py` with:
+  - `MessageConverter` class for format translations
+  - `ToolConverter` class for tool schema mappings
+  - Support for OpenAI, LangChain, and AutoGen formats
+- Create `factory.py` with:
+  - `FrameworkAdapterRegistry` class
+  - `load_framework_agent()` function
+  - Dynamic adapter registration mechanism
+- Write unit tests for core components in `tests/adapters/`
+- Update `massgen/__init__.py` with new exports
 
-### Phase 3: Remote Agents
-- Implement `remote/remote_adapter.py` with HTTP/WebSocket support
-- Add `remote/cloud_adapter.py` for cloud services
-- Implement `remote/process_adapter.py` for local processes
-- Add authentication utilities in `utils/auth.py`
+**Deliverables**:
+- Working adapter base infrastructure
+- Message/tool conversion pipeline
+- Registry pattern implementation
+- 90%+ test coverage for core components
 
-### Phase 4: Advanced Features
-- Add remaining framework adapters (LangGraph, OpenAI Assistant, SmolAgent)
-- Implement streaming utilities in `utils/streaming.py`
-- Add retry logic in `utils/retry.py`
-- Create comprehensive integration tests
+### Phase 2: Black Box Agent Support (Week 2-3)
+**Goal**: Enable integration of any existing agent without framework knowledge
+
+**Tasks**:
+- Implement `blackbox/blackbox_adapter.py` with:
+  - `BlackBoxAdapter` class
+  - Protocol version negotiation
+  - Generic request/response handling
+- Create communicator implementations:
+  - `pipe_communicator.py` for stdin/stdout communication
+  - `http_communicator.py` for REST API communication
+  - `file_communicator.py` for file-based communication
+- Develop wrapper script templates:
+  - Python wrapper example (`examples/wrappers/python_wrapper.py`)
+  - Node.js wrapper example (`examples/wrappers/nodejs_wrapper.js`)
+  - Shell script wrapper (`examples/wrappers/shell_wrapper.sh`)
+- Create protocol documentation:
+  - Request/response format specification
+  - Error handling guidelines
+  - Performance best practices
+- Write integration tests with mock black box agents
+- Create example configurations for common use cases
+
+**Deliverables**:
+- Complete black box agent support
+- Multiple communication methods
+- Wrapper script templates in 3+ languages
+- Protocol specification document
+- Working examples with Docker containers
+
+### Phase 3: Popular Framework Adapters (Week 3-5)
+**Goal**: Implement adapters for the most widely-used agent frameworks
+
+**Tasks**:
+- **LangChain Adapter**:
+  - Implement `frameworks/langchain_adapter.py`
+  - Support for chains, agents, and tools
+  - Memory management integration
+  - Streaming callback implementation
+  - Test with ReAct and ConversationalAgent examples
+- **AutoGen/AG2 Adapter**:
+  - Implement `frameworks/autogen_adapter.py`
+  - AssistantAgent and UserProxyAgent support
+  - Code execution configuration
+  - Multi-agent conversation handling
+  - Test with code generation and data analysis examples
+- **OpenAI Assistants Adapter**:
+  - Implement `frameworks/openai_assistant_adapter.py`
+  - Thread management
+  - File handling and retrieval
+  - Function calling support
+  - Test with existing OpenAI assistants
+- Create framework-specific example configurations
+- Write framework-specific integration tests
+- Document framework-specific limitations and workarounds
+
+**Deliverables**:
+- 3 fully functional framework adapters
+- Framework-specific test suites
+- Example configurations for each framework
+- Performance benchmarks comparing frameworks
+
+### Phase 4: Remote and Cloud Integration (Week 4-5)
+**Goal**: Enable distributed agent architectures
+
+**Tasks**:
+- Implement `remote/remote_adapter.py` with:
+  - HTTP/HTTPS client with retry logic
+  - WebSocket client for real-time streaming
+  - SSE (Server-Sent Events) support
+  - Connection pooling and keepalive
+- Add `remote/cloud_adapter.py` with:
+  - AWS Lambda integration
+  - Google Cloud Functions support
+  - Azure Functions compatibility
+  - Generic webhook support
+- Implement `remote/process_adapter.py` with:
+  - Local subprocess management
+  - Process lifecycle control
+  - Resource monitoring
+  - Automatic restart on failure
+- Create `utils/auth.py` with:
+  - OAuth2 authentication
+  - API key management
+  - JWT token handling
+  - Custom header injection
+- Develop cloud deployment templates:
+  - Terraform configurations
+  - Kubernetes manifests
+  - Docker Compose files
+- Write stress tests for remote agents
+
+**Deliverables**:
+- Complete remote agent support
+- Cloud provider integrations
+- Authentication utilities
+- Deployment templates and guides
+- Load testing results
+
+### Phase 5: Advanced Features and Optimization (Week 5-6)
+**Goal**: Add remaining frameworks and optimize performance
+
+**Tasks**:
+- **Additional Framework Adapters**:
+  - Implement `frameworks/langgraph_adapter.py`
+  - Implement `frameworks/smolagent_adapter.py`
+  - Add support for CrewAI (if needed)
+- **Streaming and Performance**:
+  - Implement `utils/streaming.py` with queue management
+  - Add chunk batching and buffering
+  - Implement backpressure handling
+  - Add metrics collection
+- **Reliability Features**:
+  - Implement `utils/retry.py` with exponential backoff
+  - Add circuit breaker pattern
+  - Implement health checks
+  - Add connection pooling
+- **Orchestrator Enhancements**:
+  - Update orchestrator for framework agent loading
+  - Add framework-aware scheduling
+  - Implement cost-based agent selection
+  - Add framework-specific timeout handling
+- Create comprehensive documentation:
+  - Integration guide for new frameworks
+  - Performance tuning guide
+  - Troubleshooting guide
+  - API reference documentation
+
+**Deliverables**:
+- 2+ additional framework adapters
+- Performance optimization utilities
+- Reliability features
+- Complete documentation suite
+- Performance benchmarks
+
+### Phase 6: Testing and Documentation (Week 6-7)
+**Goal**: Ensure production readiness
+
+**Tasks**:
+- **Testing**:
+  - End-to-end integration tests with mixed agent teams
+  - Stress testing with 10+ concurrent agents
+  - Failure scenario testing
+  - Performance regression tests
+  - Security audit of authentication mechanisms
+- **Documentation**:
+  - Update README with framework integration examples
+  - Create migration guide from single-framework setups
+  - Write best practices guide
+  - Add troubleshooting section
+  - Create video tutorials
+- **Examples and Templates**:
+  - 10+ example configurations for different use cases
+  - Project templates for common scenarios
+  - Jupyter notebooks with demonstrations
+  - CLI tool for generating configurations
+- **Community Preparation**:
+  - Create contribution guidelines for new adapters
+  - Set up GitHub issue templates
+  - Prepare release notes
+  - Create blog post announcing the feature
+
+**Deliverables**:
+- 95%+ test coverage
+- Complete documentation
+- 10+ working examples
+- Release-ready codebase
 
 ## Example Configurations
 
