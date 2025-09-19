@@ -439,13 +439,17 @@ Based on the coordination process above, present your final answer:"""
         return messages
 
     def filesystem_system_message(
-        self, main_workspace: Optional[str] = None, temp_workspace: Optional[str] = None
+        self,
+        main_workspace: Optional[str] = None,
+        temp_workspace: Optional[str] = None,
+        context_paths: Optional[List[Dict[str, str]]] = None
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
         Args:
             main_workspace: Path to agent's main workspace
             temp_workspace: Path to temporary workspace for context sharing
+            context_paths: List of context paths with their permissions
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -505,6 +509,24 @@ Based on the coordination process above, present your final answer:"""
             workspace_info.append(
                 " - Focus on evaluating the content and quality of their work, not the specific paths"
             )
+
+        # Add context paths if available
+        if context_paths:
+            workspace_info.append("3. **Additional Context Paths**: Additional paths with specific permissions")
+            workspace_info.append(" - IMPORTANT: You may have different permissions on these paths than other agents, so always think about your permissions instead of assuming they are the same as others.")
+            for path_config in context_paths:
+                path = path_config.get("path", "")
+                permission = path_config.get("permission", "read")
+                if path:
+                    if permission == "read":
+                        workspace_info.append(f" - `{path}` (read-only)")
+                        workspace_info.append(f"   - You can read files from this location but cannot modify them")
+                        workspace_info.append(f"   - If you want to add or modify files here, place them in your main workspace instead and someone with write access can move them later. Please also note in your answer where your new files are located and which need to be moved where.")
+                    else:
+                        workspace_info.append(f" - `{path}` (read/write)")
+                        workspace_info.append(f"   - **Permission Change Notice**: You now have full {permission} access to this location")
+                        workspace_info.append(f"   - You are the only agent with write access to this production location")
+                        workspace_info.append(f"   - Other agents tested changes in isolated environments - their work needs to be deployed here. You must move or copy their successful work here to finalize it, making your own adjustments as needed.")
 
         workspace_section = (
             "\n".join(workspace_info)

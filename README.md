@@ -90,15 +90,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.20](#recent-achievements-v0020)
-  - [v0.0.3 - v0.0.19](#previous-achievements-v003-v0019)
+  - [v0.0.21](#recent-achievements-v0021)
+  - [v0.0.3 - v0.0.20](#previous-achievements-v003-v0020)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.21 Roadmap](#v0021-roadmap)
+- [v0.0.22 Roadmap](#v0022-roadmap)
 </details>
 
 <details open>
@@ -249,7 +249,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **Claude API**  | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | Web search, **MCP integration** |
 | **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
 | **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
 
@@ -336,6 +336,28 @@ uv run python -m massgen.cli --config gemini_streamable_http_test.yaml "Test the
 ```
 
 **What's happening:** Gemini automatically discovers and uses tools from configured MCP servers (weather data, web search, Airbnb listings, etc.) without manual tool calling.
+
+#### 🆕 Grok with MCP Tools (NEW in v0.0.21)
+
+**Quick Examples - Try These Now:**
+```bash
+# Simple weather query using MCP-enabled Grok
+uv run python -m massgen.cli --config grok3_mini_mcp_example.yaml "What's the weather in Tokyo?"
+
+# Test MCP server connection with Grok
+uv run python -m massgen.cli --config grok3_mini_mcp_test.yaml "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
+
+# Test MCP with streamable-http server
+# First start the HTTP test server:
+uv run python massgen/tests/test_http_mcp_server.py
+# Then try:
+uv run python -m massgen.cli --config grok3_mini_streamable_http_test.yaml "Run a complete system check - events, birthdays, random data, and server status"
+
+# Single agent Grok configuration (without MCP)
+uv run python -m massgen.cli --config grok_single_agent.yaml "List today's news in Seattle"
+```
+
+**What's happening:** Grok models now have full MCP support through the unified Chat Completions backend, with automatic filesystem support when `cwd` is provided and complete tool discovery capabilities.
 
 **Local models (NEW in v0.0.7):**
 ```bash
@@ -568,7 +590,7 @@ backend:
     - "mcp__airbnb__debug_mode"
 ```
 
-#### Grok
+#### Grok (v0.0.21+ with MCP Support)
 
 ```yaml
 backend:
@@ -578,6 +600,15 @@ backend:
   temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
   max_tokens: 2500                   # Maximum response length
   enable_web_search: true            # Web search capability (uses default: mode="auto", return_citations=true)
+  cwd: "workspace"                   # Working directory for automatic filesystem MCP support (NEW in v0.0.21)
+
+  # MCP (Model Context Protocol) servers configuration (v0.0.21+)
+  mcp_servers:
+    # Weather server
+    weather:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "@fak111/weather-mcp"]
   # OR manually specify search parameters via extra_body (conflicts with enable_web_search):
   # extra_body:
   #   search_parameters:
@@ -981,7 +1012,56 @@ https://github.com/modelcontextprotocol/servers/blob/main/src%2Ffilesystem%2FREA
 - Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
 - Restrict file access using MCP server configurations when needed
 
+---
 
+### 7. 🔗 User Context Paths
+
+User Context Paths allow you to share specific directories and files with all agents while maintaining granular permission control. This feature enables multi-agent collaboration on your existing projects without compromising security.
+
+**Key Features:**
+- **Shared Access**: All agents can access the same user-specified directories and files
+- **Permission Control**: Configure READ or WRITE access per path
+- **Role-Based Security**: Context agents get read-only access, final agent gets configured permissions
+- **Project Integration**: Work directly with your existing codebases and documentation
+
+**Configuration Example:**
+```yaml
+agents:
+  - id: "context_agent"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-20250514"
+      cwd: "workspace1"                      # Agent-specific isolated workspace
+      
+  - id: "final_agent"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      cwd: "workspace2"                      # Agent-specific isolated workspace
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  # Context paths applied to all agents with permission control
+  context_paths:
+    - path: "/home/user/project/src"
+      permission: "write"                    # Final agent can modify, context agents read-only
+    - path: "/home/user/project/docs"
+      permission: "read"                     # All agents get read-only access
+    - path: "/home/user/shared_data"
+      permission: "write"                    # Final agent can modify, context agents read-only
+```
+
+**Permission Behavior:**
+- **Context Agents**: Always get READ-only access during coordination phase, regardless of permission setting
+- **Final Agent**: Gets the configured permission (READ or WRITE) and can make actual modifications
+- **Workspace Isolation**: Each agent's `cwd` remains fully isolated and writable
+
+**Use Cases:**
+- **Code Review**: Agents analyze your source code and suggest improvements
+- **Documentation**: Agents read project docs to understand context and generate updates  
+- **Data Processing**: Agents access shared datasets and generate analysis reports
+- **Project Migration**: Agents examine existing projects and create modernized versions
 
 ---
 
@@ -991,27 +1071,33 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.20)
+### Recent Achievements (v0.0.21)
 
-**🎉 Released: September 17, 2025**
+**🎉 Released: September 19, 2025**
 
-Version 0.0.20 introduces **Claude Backend MCP Support** with recursive execution capabilities, extending MCP integration to cover most major backends:
+Version 0.0.21 introduces **Advanced Filesystem Permissions** and **Grok MCP Integration**, completing the foundation for secure, collaborative AI file operations:
 
-#### Claude MCP Integration
-- **Recursive Execution Model**: Claude can autonomously chain multiple tool calls in sequence without user intervention, completing complex multi-step tasks in a single interaction
-- **Full MCP Protocol and Filesystem Support**: Execute MCP and support Filesystem for Claude models
-- **Enhanced Error Handling**: Robust retry mechanisms and circuit breaker patterns for reliable MCP operations
-- **Comprehensive Documentation**: Complete technical documentation and configuration examples for Claude MCP integration
+#### Advanced Filesystem Permissions System
+- **Path Permission Manager**: Comprehensive permission management for agent file access with granular validation
+- **User Context Paths**: Support for configurable context paths with READ/WRITE permissions for multi-agent file sharing
+- **Context vs Final Agent Distinction**: Coordination agents get read-only access, final agent gets configured write permissions
+- **Per-Agent Permission Enforcement**: Function hooks validate file operations before execution across all backends
+- **Security Framework**: Complete test suite and documentation for safe multi-agent file operations
 
-#### Extended MCP Coverage
-- **Major Backend Support**: MCP integration now available across Claude, Gemini, Chat Completions (including OpenAI)
-- **Unified Tool Ecosystem**: Consistent MCP configuration patterns and tool handling across supported backends
-- **Configuration Examples**: New YAML configurations for Claude MCP testing and integration (claude_mcp_test.yaml, claude_mcp_example.yaml, claude_streamable_http_test.yaml)
+#### Grok MCP Integration
+- **Unified Backend Architecture**: Grok backend refactored to use Chat Completions backend for consistency
+- **Full MCP Support**: Complete MCP server support including stdio and HTTP transports
+- **Filesystem Support**: Inherits filesystem capabilities through MCP servers (automatic injection when `cwd` is provided)
+- **New Configuration Files**: 5 new configuration files including Grok MCP testing and permissions examples
 
-#### Chat Completions Backend Enhancements
-- **Kimi/Moonshot API Support**: Added support for Kimi API with both moonshot.ai and moonshot.cn endpoints using MOONSHOT_API_KEY or KIMI_API_KEY environment variables
+#### Terminal Display Enhancements
+- **Rich Terminal Display**: Configuration files now default to rich terminal for better visual output
+- **Fallback Handling**: Enhanced terminal echo restoration for Linux/alacritty/tmux compatibility
+- **Improved Reliability**: Prevents invisible text after MassGen finishes execution
 
-### Previous Achievements (v0.0.3-v0.0.19)
+### Previous Achievements (v0.0.3-v0.0.20)
+
+✅ **Claude Backend MCP Support (v0.0.20)**: Extended MCP integration to Claude backend, full MCP protocol and filesystem support, robust error handling, and comprehensive documentation
 
 ✅ **Comprehensive Coordination Tracking (v0.0.19)**: Complete coordination tracking and visualization system with event-based tracking, interactive coordination table display, and advanced debugging capabilities for multi-agent collaboration patterns
 
@@ -1065,24 +1151,26 @@ Version 0.0.20 introduces **Claude Backend MCP Support** with recursive executio
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.21 Roadmap
+### v0.0.22 Roadmap
 
-Version 0.0.21 continues the foundation established in v0.0.20 by completing context path configuration and workspace mirroring systems, while introducing **Grok MCP Support**. Key priorities include:
+Version 0.0.22 builds upon the solid foundation established in v0.0.21 by addressing key limitations in filesystem operations and enhancing code generation capabilities. Key priorities include:
 
 #### Required Features
-- **Context Path Configuration**: Complete implementation of user-specified file and folder access with explicit read/write permission control
-- **Workspace Mirroring System**: Finalize intelligent workspace structure that mirrors original file organization with common root detection
-- **Grok MCP Support**: Implement comprehensive MCP capabilities for Grok backend with full tool discovery and execution
-- **Enhanced Debugging & Display**: Fix scroll issues for long generated results and improve debugging experience with keyboard navigation
-- **Advanced MCP Analytics**: Real-time dashboard for MCP performance monitoring and optimization
+- **Enhanced Filesystem Support**: Address edit_file limitations for large files, enabling safe operations beyond the 10k character cap
+- **File Operation Capabilities**: Introduce copy_files and edit_file_copy tools for file duplication with minimal edits
+- **Memory Optimization**: Implement chunked file reading, streaming operations, and efficient diff algorithms for large file handling
+
+#### Optional Features
+- **Improved Code Task Output**: Refine system prompts and generation logic to ensure more diverse answers for coding tasks
+- **Quality Metrics**: Develop assessment tools for code generation diversity and effectiveness
 
 Key technical approach:
-- **Permission-Based Access**: Read/write permissions for granular control over file modifications
-- **In-Place Referencing**: No file copying required - agents reference originals directly to save disk space
-- **Extended MCP Coverage**: Achieve MCP support across major backend providers (Grok MCP implementation)
-- **Safe Development Workflow**: All changes develop in isolated workspace first, then applied based on permissions
+- **Streaming File Operations**: Support files up to 500MB with memory-efficient processing
+- **Safety Mechanisms**: Automatic backups, rollback functionality, and integrity checks for large file operations
+- **Copy-Edit Workflows**: Template-based file generation and batch operations for efficient development
+- **Cross-Platform Support**: Robust file operations across different operating systems
 
-For detailed milestones and technical specifications, see the [full v0.0.21 roadmap](ROADMAP_V0.0.21.md).
+For detailed milestones and technical specifications, see the [full v0.0.22 roadmap](ROADMAP_v0.0.22.md).
 
 ---
 

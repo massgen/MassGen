@@ -814,15 +814,11 @@ class ClaudeCodeBackend(LLMBackend):
         )
 
         # Filter out parameters handled separately or not for ClaudeCodeOptions
-        excluded_params = {
-            "cwd",
-            "agent_temporary_workspace",
-            "permission_mode",
-            "type",
-            "agent_id",
-            "session_id",
+        excluded_params = self.get_base_excluded_config_params() | {
+            # Claude Code specific exclusions
             "api_key",
             "allowed_tools",
+            "permission_mode",
         }
 
         # Get cwd from filesystem manager (always available since we require it in __init__)
@@ -831,16 +827,22 @@ class ClaudeCodeBackend(LLMBackend):
         ).resolve()
         self._cwd = str(cwd_option)
 
-        return ClaudeCodeOptions(
-            # No model set by default - let Claude Code decide
-            # No allowed_tools restriction - allow ALL tools for maximum
-            # power. Security is enforced through disallowed_tools only
-            cwd=cwd_option,
-            resume=self.get_current_session_id(),
-            permission_mode=permission_mode,
-            allowed_tools=allowed_tools,
+        # Get hooks configuration from filesystem manager
+        hooks_config = self.filesystem_manager.get_claude_code_hooks_config()
+
+        options = {
+            "cwd": cwd_option,
+            "resume": self.get_current_session_id(),
+            "permission_mode": permission_mode,
+            "allowed_tools": allowed_tools,
             **{k: v for k, v in options_kwargs.items() if k not in excluded_params},
-        )
+        }
+
+        # Add hooks if available
+        if hooks_config:
+            options["hooks"] = hooks_config
+
+        return ClaudeCodeOptions(**options)
 
     def create_client(self, **options_kwargs) -> ClaudeSDKClient:
         """Create ClaudeSDKClient with configurable parameters.

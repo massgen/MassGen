@@ -552,10 +552,9 @@ class GeminiBackend(LLMBackend):
                 )
                 self._circuit_breakers_enabled = False
 
-        if BaseModel is None:
-            raise ImportError(
-                "pydantic is required for Gemini backend. Install with: pip install pydantic"
-            )
+    def _setup_permission_hooks(self):
+        """Override base class - Gemini uses session-based permissions, not function hooks."""
+        logger.debug("[Gemini] Using session-based permissions, skipping function hook setup")
 
     async def _setup_mcp_with_status_stream(
         self, agent_id: Optional[str] = None
@@ -820,13 +819,14 @@ class GeminiBackend(LLMBackend):
                     agent_id=agent_id,
                 )
 
-            # Create client with status callback
+            # Create client with status callback and hooks
             self._mcp_client = MultiMCPClient(
                 filtered_servers,
                 timeout_seconds=30,
                 allowed_tools=allowed_tools,
                 exclude_tools=exclude_tools,
                 status_callback=status_callback,
+                hooks=self.filesystem_manager.get_pre_tool_hooks() if self.filesystem_manager else {},
             )
 
             # Connect the client
@@ -1414,21 +1414,14 @@ Make your decision and include the JSON at the very end of your response."""
             config = {}
 
             # Direct passthrough of all parameters except those handled separately
-            excluded_params = {
+            excluded_params = self.get_base_excluded_config_params() | {
+                # Gemini specific exclusions
                 "enable_web_search",
                 "enable_code_execution",
-                "agent_id",
-                "session_id",
-                # MCP-specific parameters that should not be passed to Gemini
-                # TODO: Place this somewhere we can import from when extending MCP support to other backends
                 "use_multi_mcp",
-                "mcp_servers",
                 "mcp_sdk_auto",
-                "type",
                 "allowed_tools",
                 "exclude_tools",
-                "cwd",
-                "agent_temporary_workspace",
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
@@ -1640,8 +1633,27 @@ Make your decision and include the JSON at the very end of your response."""
                     if not mcp_sessions:
                         raise RuntimeError("No active MCP sessions available")
 
+                    # Convert sessions to permission sessions if filesystem manager is available
+                    if self.filesystem_manager:
+                        logger.info(f"[Gemini] Converting {len(mcp_sessions)} MCP sessions to permission sessions")
+                        try:
+                            from ..mcp_tools.hooks import convert_sessions_to_permission_sessions
+                            mcp_sessions = convert_sessions_to_permission_sessions(
+                                mcp_sessions,
+                                self.filesystem_manager.path_permission_manager
+                            )
+                        except Exception as e:
+                            logger.error(f"[Gemini] Failed to convert sessions to permission sessions: {e}")
+                            # Continue with regular sessions on error
+                    else:
+                        logger.debug("[Gemini] No filesystem manager found, using standard sessions")
+
                     # Apply sessions as tools, do not mix with builtin or function_declarations
                     session_config = dict(config)
+
+                    # Log session types for debugging if needed
+                    logger.debug(f"[Gemini] Passing {len(mcp_sessions)} sessions to SDK: {[type(s).__name__ for s in mcp_sessions]}")
+
                     session_config["tools"] = mcp_sessions
 
                     # Track MCP tool usage attempt
