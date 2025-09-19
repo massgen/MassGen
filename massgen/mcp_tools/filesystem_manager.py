@@ -270,6 +270,7 @@ class PathPermissionManager:
             r".*[Mm]ove.*",       # move_file, etc.
             r".*[Dd]elete.*",     # delete operations
             r".*[Rr]emove.*",     # remove operations
+            r".*[Cc]opy.*",       # copy_file, copy_files_batch, etc.
         ]
 
         for pattern in write_patterns:
@@ -280,6 +281,10 @@ class PathPermissionManager:
 
     def _validate_write_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate write tool access."""
+        # Special handling for copy_files_batch - validate all destination paths after globbing
+        if tool_name == "copy_files_batch":
+            return self._validate_copy_files_batch(tool_args)
+
         # Extract file path from arguments
         file_path = self._extract_file_path(tool_args)
         if not file_path:
@@ -300,6 +305,44 @@ class PathPermissionManager:
             return (True, None)
         else:
             return (False, f"No write permission for '{path}' (read-only context path)")
+
+    def _validate_copy_files_batch(self, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """Validate copy_files_batch by checking all destination paths after globbing."""
+        try:
+            # Import the helper function from workspace copy server
+            from .workspace_copy_server import get_copy_file_pairs
+
+            # Get all the file pairs that would be copied
+            source_base_path = tool_args.get("source_base_path")
+            destination_base_path = tool_args.get("destination_base_path", "")
+            include_patterns = tool_args.get("include_patterns")
+            exclude_patterns = tool_args.get("exclude_patterns")
+
+            if not source_base_path:
+                return (False, "copy_files_batch requires source_base_path")
+
+            # Get all file pairs (this also validates path restrictions)
+            file_pairs = get_copy_file_pairs(
+                source_base_path, destination_base_path, include_patterns, exclude_patterns
+            )
+
+            # Check permissions for each destination path
+            blocked_paths = []
+            for source_file, dest_file in file_pairs:
+                permission = self.get_permission(dest_file)
+                if permission == Permission.READ:
+                    blocked_paths.append(str(dest_file))
+
+            if blocked_paths:
+                # Limit to first few blocked paths for readable error message
+                example_paths = blocked_paths[:3]
+                suffix = f" (and {len(blocked_paths) - 3} more)" if len(blocked_paths) > 3 else ""
+                return (False, f"No write permission for destination paths: {', '.join(example_paths)}{suffix}")
+
+            return (True, None)
+
+        except Exception as e:
+            return (False, f"copy_files_batch validation failed: {e}")
 
     def _validate_command_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate command tool access.
@@ -347,7 +390,8 @@ class PathPermissionManager:
         # Common argument names for file paths:
         # - Claude Code: file_path, notebook_path
         # - MCP filesystem: path, source, destination
-        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "source", "destination"]
+        # - Workspace copy: source_base_path, destination_base_path
+        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "source", "destination", "source_base_path", "destination_base_path"]
 
         for key in path_keys:
             if key in tool_args:
@@ -660,25 +704,62 @@ class FilesystemManager:
 
         return config
 
+    def get_workspace_copy_mcp_config(self) -> Dict[str, Any]:
+        """
+        Generate workspace copy MCP server configuration.
+
+        Returns:
+            Dictionary with MCP server configuration for workspace copying
+        """
+        # Get context paths using the existing method
+        context_paths = self.path_permission_manager.get_context_paths()
+        context_paths_str = ",".join([cp["path"] for cp in context_paths])
+
+        config = {
+            "name": "workspace_copy",
+            "type": "stdio",
+            "command": "python",
+            "args": ["-m", "massgen.mcp_tools.workspace_copy_server"],
+            "env": {
+                "CURRENT_WORKSPACE": str(self.cwd),
+                "TEMP_WORKSPACE_BASE": str(self.agent_temporary_workspace_parent) if self.agent_temporary_workspace_parent else "",
+                "CONTEXT_PATHS": context_paths_str
+            }
+        }
+
+        return config
+
     def inject_filesystem_mcp(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Inject filesystem MCP server into backend configuration.
+        Inject filesystem and workspace copy MCP servers into backend configuration.
 
         Args:
             backend_config: Original backend configuration
 
         Returns:
-            Modified configuration with filesystem MCP server added
+            Modified configuration with MCP servers added
         """
-        # Get existing mcp_servers configuration and add filesystem server if missing
+        # Get existing mcp_servers configuration
         mcp_servers = backend_config.get("mcp_servers", [])
+        existing_names = [server.get("name") for server in mcp_servers]
+
         try:
-            if "filesystem" not in [server.get("name") for server in mcp_servers]:
+            # Add filesystem server if missing
+            if "filesystem" not in existing_names:
                 mcp_servers.append(self.get_mcp_filesystem_config())
             else:
                 logger.warning(
-                    "[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present in configuration, continuing without changes"
+                    "[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present"
                 )
+
+            # Add workspace copy server if missing
+            if "workspace_copy" not in existing_names:
+                mcp_servers.append(self.get_workspace_copy_mcp_config())
+            else:
+                logger.warning(
+                    "[FilesystemManager.inject_filesystem_mcp] Custom workspace_copy MCP server already present"
+                )
+
         except Exception as e:
             logger.warning(
                 f"[FilesystemManager.inject_filesystem_mcp] Error checking existing MCP servers: {e}"
