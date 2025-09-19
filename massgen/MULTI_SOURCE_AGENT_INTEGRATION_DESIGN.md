@@ -1812,7 +1812,7 @@ from massgen.adapters.remote import RemoteAgentAdapter
 
 ### Black Box Agent Configuration Examples
 
-#### Example: Using a Pre-existing Local Agent
+#### Example 1: Using a Pre-existing Local Agent
 
 ```yaml
 # blackbox_local_agent.yaml
@@ -1849,12 +1849,13 @@ ui:
   type: "rich_terminal"
 ```
 
-Run command:
+Run commands with specific prompts:
 ```bash
-uv run massgen --config blackbox_local_agent.yaml
+uv run python -m massgen.cli --config blackbox_local_agent.yaml "Convert this request to SQL: Show me all customers who made purchases over $1000 in the last month"
+
 ```
 
-#### Example: Using a Cloud-based Black Box Agent
+#### Example 2: Using a Cloud-based Black Box Agent
 
 ```yaml
 # blackbox_cloud_agent.yaml
@@ -1890,7 +1891,13 @@ ui:
   type: "rich_terminal"
 ```
 
-#### Example: File-based Black Box Agent
+Run commands with specific prompts:
+```bash
+# Natural language to SQL
+uv run python -m massgen.cli --config blackbox_cloud_agent.yaml "Convert this request to SQL: Show me all customers who made purchases over $1000 in the last month"
+```
+
+#### Example 3: File-based Black Box Agent
 
 ```yaml
 # blackbox_file_agent.yaml
@@ -1913,6 +1920,13 @@ agents:
       trigger_command: "docker run --rm -v /shared:/data my-agent:latest"
 ```
 
+Run commands with specific prompts:
+```bash
+# Batch data transformation
+uv run python -m massgen.cli --config blackbox_file_agent.yaml "Transform the daily transaction logs from fixed-width format to JSON and apply business rules validation"
+```
+
+### Framework Agent Configuration Examples
 ### Example 1: Research Team with Mixed Frameworks
 
 ```yaml
@@ -1968,9 +1982,10 @@ ui:
   logging_enabled: true
 ```
 
-Run command:
+Run commands with specific prompts:
 ```bash
-uv run massgen --config research_mixed_team.yaml
+# Analyze market trends
+uv run python -m massgen.cli --config research_mixed_team.yaml "Analyze current market trends in renewable energy technology and identify top investment opportunities"
 ```
 
 ### Example 2: Parallel Data Science Agents
@@ -2050,12 +2065,16 @@ ui:
   logging_enabled: true
 ```
 
-Run command:
+Run commands with specific prompts:
 ```bash
-uv run massgen --config data_science_team.yaml
+# Analyze sales data and create visualizations
+uv run python -m massgen.cli --config data_science_team.yaml "Analyze the sales_data.csv file and create visualizations showing revenue trends by region and product category"
+
+# Build a predictive model for customer churn
+uv run python -m massgen.cli --config data_science_team.yaml "Build and evaluate a machine learning model to predict customer churn using the customer_behavior.parquet dataset"
 ```
 
-## Black Box Agent Use Cases and Advantages
+## Black Box Agent Advantages
 
 ### Why Use Black Box Agents?
 
