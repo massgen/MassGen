@@ -5,6 +5,45 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.21] - 2025-09-19
+
+### Added
+- **Advanced Filesystem Permissions System**: Comprehensive permission management for agent file access
+  - New `PathPermissionManager` class for granular permission validation
+  - Support for context paths with configurable READ/WRITE permissions
+  - Test suite for permission validation in `test_path_permission_manager.py`
+  - Documentation in `permissions_and_context_files.md` for implementation guide
+  
+- **Function Hook Manager**: Per-agent function call permission system
+  - Refactored `FunctionHookManager` to be per-agent rather than global
+  - Pre-tool-use hooks for validating file operations before execution
+  - Support for write permission enforcement during context agent operations
+  - Integration with all function-based backends (OpenAI, Claude, Chat Completions)
+
+- **Grok MCP Integration**: Extended MCP support to Grok backend
+  - Migrated Grok backend to inherit from Chat Completions backend
+  - Full MCP server support for Grok including stdio and HTTP transports
+  - Filesystem support through MCP servers
+  
+- **New Configuration Files**: Added test and example configurations
+  - `grok3_mini_mcp_test.yaml`: Grok MCP testing configuration
+  - `grok3_mini_mcp_example.yaml`: Grok MCP usage example
+  - `grok3_mini_streamable_http_test.yaml`: Grok HTTP streaming test
+  - `grok_single_agent.yaml`: Single Grok agent configuration
+  - `fs_permissions_test.yaml`: Filesystem permissions testing configuration
+
+### Changed
+- **Backend Architecture**: Unified backend implementations and permission support
+  - Grok backend refactored to use Chat Completions backend
+  - All backends now support per-agent permission management
+  - Enhanced context file support across Claude, Gemini, and OpenAI backends
+  
+### Technical Details
+- **Commits**: 20+ commits including permission system, Grok MCP, and terminal improvements
+- **Files Modified**: 40+ files across backends, MCP tools, permissions, and display modules
+- **New Features**: Filesystem permissions, per-agent hooks, Grok MCP via Chat Completions
+- **Contributors**: @Eric-Shang @ncrispino @qidanrui @Henry-811 and the MassGen team
+
 ## [0.0.20] - 2025-09-17
 
 ### Added
