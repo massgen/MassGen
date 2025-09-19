@@ -51,29 +51,80 @@ MassGen uses different permission enforcement strategies based on backend capabi
 
 ```yaml
 agents:
-  - id: "web_developer"
+  - id: "context_agent"
     backend:
       type: "claude_code"
-      cwd: "agent_workspace"
-      context_paths:
-        - path: "/home/user/project/src"
-          permission: "write"  # Final agent can modify
-        - path: "/home/user/project/docs"
-          permission: "read"   # Reference only
-        - path: "/home/user/project/config.json"
-          permission: "write"  # Final agent can modify
+      model: "claude-sonnet-4-20250514"
+      cwd: "workspace1"                      # Agent-specific workspace
+      
+  - id: "final_agent"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      cwd: "workspace2"                      # Agent-specific workspace
 
 orchestrator:
-  agent_temporary_workspace: "temp_workspaces"
   snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  # Context paths applied to all agents with permission control
+  context_paths:
+    - path: "/home/user/project/src"
+      permission: "write"                    # Final agent can modify, context agents read-only
+    - path: "/home/user/project/docs"
+      permission: "read"                     # All agents get read-only access
+    - path: "/home/user/shared_data"
+      permission: "write"                    # Final agent can modify, context agents read-only
 ```
 
 ### Configuration Parameters
 
-- `cwd`: Agent's primary workspace directory
-- `context_paths`: List of user-specified paths with permissions
-- `context_write_access_enabled`: Whether agent is the final agent (can write to context paths marked as "write")
+**Agent Level:**
+- `cwd`: Agent's primary workspace directory (agent-specific isolation)
+
+**Orchestrator Level:**
+- `context_paths`: List of user-specified paths with permissions applied to all agents
+  - `path`: Absolute path to directory or file
+  - `permission`: "read" or "write" - determines final agent access (context agents always read-only)
+- `snapshot_storage`: Directory for storing agent workspace snapshots
 - `agent_temporary_workspace`: Parent directory for temporary workspaces
+
+**Permission Behavior:**
+- **Context agents**: Always get READ access to context paths regardless of permission setting
+- **Final agent**: Gets the configured permission (READ or WRITE) for context paths
+- **Workspace (`cwd`)**: Always WRITE access for the owning agent
+
+### Real-World Example
+
+Based on the filesystem permissions test configuration (`fs_permissions_test.yaml`):
+
+```yaml
+agents:
+  - id: "gpt5nano_1"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      cwd: "workspace1"                      # Isolated workspace for this agent
+      
+  - id: "gpt5nano_2"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      cwd: "workspace2"                      # Separate isolated workspace
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "/home/nick/GitHubProjects/MassGen/v0.0.21-example"
+      permission: "write"                    # Final agent can modify this project directory
+```
+
+**What happens:**
+1. **Both agents** can read files from `/home/nick/GitHubProjects/MassGen/v0.0.21-example`
+2. **Context agent** (`gpt5nano_1`) gets READ-only access during coordination
+3. **Final agent** (`gpt5nano_2`) gets WRITE access and can modify project files
+4. **Each agent** has full WRITE access to their own workspace (`workspace1`, `workspace2`)
+5. **Temporary workspaces** allow agents to share context from previous coordination rounds
 
 ## Permission Validation Flow
 

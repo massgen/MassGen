@@ -1012,7 +1012,56 @@ https://github.com/modelcontextprotocol/servers/blob/main/src%2Ffilesystem%2FREA
 - Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
 - Restrict file access using MCP server configurations when needed
 
+---
 
+### 7. 🔗 User Context Paths
+
+User Context Paths allow you to share specific directories and files with all agents while maintaining granular permission control. This feature enables multi-agent collaboration on your existing projects without compromising security.
+
+**Key Features:**
+- **Shared Access**: All agents can access the same user-specified directories and files
+- **Permission Control**: Configure READ or WRITE access per path
+- **Role-Based Security**: Context agents get read-only access, final agent gets configured permissions
+- **Project Integration**: Work directly with your existing codebases and documentation
+
+**Configuration Example:**
+```yaml
+agents:
+  - id: "context_agent"
+    backend:
+      type: "claude_code"
+      model: "claude-sonnet-4-20250514"
+      cwd: "workspace1"                      # Agent-specific isolated workspace
+      
+  - id: "final_agent"
+    backend:
+      type: "openai"
+      model: "gpt-5"
+      cwd: "workspace2"                      # Agent-specific isolated workspace
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  # Context paths applied to all agents with permission control
+  context_paths:
+    - path: "/home/user/project/src"
+      permission: "write"                    # Final agent can modify, context agents read-only
+    - path: "/home/user/project/docs"
+      permission: "read"                     # All agents get read-only access
+    - path: "/home/user/shared_data"
+      permission: "write"                    # Final agent can modify, context agents read-only
+```
+
+**Permission Behavior:**
+- **Context Agents**: Always get READ-only access during coordination phase, regardless of permission setting
+- **Final Agent**: Gets the configured permission (READ or WRITE) and can make actual modifications
+- **Workspace Isolation**: Each agent's `cwd` remains fully isolated and writable
+
+**Use Cases:**
+- **Code Review**: Agents analyze your source code and suggest improvements
+- **Documentation**: Agents read project docs to understand context and generate updates  
+- **Data Processing**: Agents access shared datasets and generate analysis reports
+- **Project Migration**: Agents examine existing projects and create modernized versions
 
 ---
 
