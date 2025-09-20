@@ -60,26 +60,12 @@ def get_copy_file_pairs(
 
     _validate_path_access(source_base, ALLOWED_PATHS)
 
-    # Find workspace path from allowed paths for destination validation
-    workspace = None
-    for allowed_path in ALLOWED_PATHS:
-        # Assume workspace is the path that contains our current working directory
-        # or is explicitly a workspace directory
-        try:
-            if "workspace" in str(allowed_path).lower():
-                workspace = allowed_path
-                break
-        except:
-            continue
-
-    if not workspace:
-        # Fallback: use first allowed path as workspace
-        workspace = ALLOWED_PATHS[0] if ALLOWED_PATHS else Path.cwd()
-
+    # Handle destination base path - can be absolute or relative to any allowed path
     if destination_base_path:
-        dest_base = (workspace / destination_base_path).resolve()
+        dest_base = Path(destination_base_path).resolve()
     else:
-        dest_base = workspace
+        # No destination specified - this shouldn't happen for batch operations
+        raise ValueError("destination_base_path is required for copy_files_batch")
 
     _validate_path_access(dest_base, ALLOWED_PATHS)
 
@@ -161,21 +147,8 @@ def _validate_and_resolve_paths(source_path: str, destination_path: str) -> tupl
 
         _validate_path_access(source, ALLOWED_PATHS)
 
-        # Find workspace path from allowed paths
-        workspace = None
-        for allowed_path in ALLOWED_PATHS:
-            if "workspace" in str(allowed_path).lower():
-                workspace = allowed_path
-                break
-
-        if not workspace:
-            workspace = ALLOWED_PATHS[0] if ALLOWED_PATHS else Path.cwd()
-
-        if Path(destination_path).is_absolute():
-            destination = Path(destination_path).resolve()
-        else:
-            destination = (workspace / destination_path).resolve()
-
+        # Handle destination path - resolve and validate against allowed paths
+        destination = Path(destination_path).resolve()
         _validate_path_access(destination, ALLOWED_PATHS)
 
         return source, destination

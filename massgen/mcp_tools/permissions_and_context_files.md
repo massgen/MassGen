@@ -38,11 +38,13 @@ MassGen uses different permission enforcement strategies based on backend capabi
 - **Example**: `temp_workspaces/agent1/`, `temp_workspaces/agent2/`
 
 ### 3. Context Paths (User-specified)
-- **Purpose**: User-defined files/directories for agent access
+- **Purpose**: User-defined files/directories for agent access, e.g., for working in an existing repository
 - **Permission**: Configurable `READ` or `WRITE` per path
 - **Behavior**:
   - **Coordination agents**: Always `READ` regardless of YAML configuration
   - **Final agent**: Respects YAML configuration (`READ` or `WRITE`)
+    - For now, we assume only one context path can have `WRITE` access to avoid complexity -- this represents the case of a single project directory being modified as is default in other CLI tools. We allow multiple write paths, but have no guarantee of performance.
+    - The default behavior will be for the final agent to copy files from its workspace to the context path write directory at the end of the run, mimicking what would happen if we edited the files directly.
 - **Example**: Project source files, documentation, configuration files
 
 ## Configuration

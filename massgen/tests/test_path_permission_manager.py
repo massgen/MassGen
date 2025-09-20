@@ -24,6 +24,11 @@ from massgen.mcp_tools.filesystem_manager import (
     Permission,
     ManagedPath
 )
+from massgen.mcp_tools.workspace_copy_server import (
+    get_copy_file_pairs,
+    _validate_path_access,
+    ALLOWED_PATHS
+)
 
 
 class TestHelper:
@@ -514,7 +519,7 @@ def test_workspace_copy_tools():
         # Should block copy to readonly directory
         tool_args = {
             "source_path": str(temp_workspace_dir / "source_file.txt"),
-            "destination": str(helper.readonly_dir / "dest_file.txt")
+            "destination_path": str(helper.readonly_dir / "dest_file.txt")
         }
         allowed, reason = manager._validate_write_tool("copy_file", tool_args)
         if allowed:
@@ -588,10 +593,186 @@ def test_workspace_copy_tools():
             print(f"❌ Failed: Should extract destination_base_path, got: {extracted}")
             return False
 
+        # Test 5: Test absolute path requirement and validation
+        print("  Testing absolute path validation...")
+
+        # Workspace copy tools should validate that destination paths are within allowed directories
+        # This tests the _validate_path_access functionality that was added
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination_path": str(helper.workspace_dir / "valid_destination.txt")
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_file with valid absolute destination should be allowed. Reason: {reason}")
+            return False
+
+        # Test copy_files_batch with absolute destination_base_path
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),
+            "destination_base_path": str(helper.workspace_dir / "batch_output")
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_files_batch with valid absolute destination should be allowed. Reason: {reason}")
+            return False
+
+        # Test 6: Verify that destination paths outside allowed paths would be blocked
+        print("  Testing outside allowed paths...")
+
+        # Create a directory outside the allowed paths
+        outside_dir = helper.temp_dir / "outside_allowed"
+        outside_dir.mkdir(parents=True)
+
+        # This should be blocked because outside_dir is not in the manager's allowed paths
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination_path": str(outside_dir / "should_be_blocked.txt")
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        # Note: This might be allowed because unknown paths are allowed in the current implementation
+        # The actual path validation happens in the MCP server, not the permission manager
+        # So we're just testing the manager's file path extraction logic here
+
         print("✅ Workspace copy tool validation works correctly")
         return True
 
     finally:
+        helper.teardown()
+
+
+def test_workspace_copy_server_path_validation():
+    """Test the workspace copy server's absolute path validation logic."""
+    print("\n🏗️  Testing workspace copy server path validation...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # We need to modify ALLOWED_PATHS global for this test
+        import massgen.mcp_tools.workspace_copy_server as wc_server
+
+        # Store original ALLOWED_PATHS and set test paths
+        original_allowed_paths = wc_server.ALLOWED_PATHS.copy()
+        wc_server.ALLOWED_PATHS = [
+            helper.workspace_dir.resolve(),
+            helper.context_dir.resolve(),
+            helper.readonly_dir.resolve()
+        ]
+
+        # Create some test files
+        test_source_dir = helper.temp_dir / "source"
+        test_source_dir.mkdir()
+        (test_source_dir / "test_file.txt").write_text("test content")
+        (test_source_dir / "subdir" / "nested_file.txt").parent.mkdir(parents=True)
+        (test_source_dir / "subdir" / "nested_file.txt").write_text("nested content")
+
+        # Add source to allowed paths so we can read from it
+        wc_server.ALLOWED_PATHS.append(test_source_dir.resolve())
+
+        # Test 1: Valid absolute destination path
+        print("  Testing valid absolute destination path...")
+        try:
+            dest_path = helper.workspace_dir / "output"
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(test_source_dir),
+                destination_base_path=str(dest_path)
+            )
+            if len(file_pairs) < 2:  # Should find test_file.txt and nested_file.txt
+                print(f"❌ Failed: Expected at least 2 files, got {len(file_pairs)}")
+                return False
+            print(f"  ✓ Found {len(file_pairs)} files to copy")
+        except Exception as e:
+            print(f"❌ Failed: Valid absolute path should work. Error: {e}")
+            return False
+
+        # Test 2: Destination path outside allowed paths should fail
+        print("  Testing destination outside allowed paths...")
+        outside_dir = helper.temp_dir / "outside"
+        outside_dir.mkdir()
+
+        try:
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(test_source_dir),
+                destination_base_path=str(outside_dir / "output")
+            )
+            print("❌ Failed: Should have raised ValueError for path outside allowed directories")
+            return False
+        except ValueError as e:
+            if "Path not in allowed directories" in str(e):
+                print("  ✓ Correctly blocked path outside allowed directories")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+        except Exception as e:
+            print(f"❌ Failed: Unexpected exception: {e}")
+            return False
+
+        # Test 3: Source path outside allowed paths should fail
+        print("  Testing source outside allowed paths...")
+        outside_source = helper.temp_dir / "outside_source"
+        outside_source.mkdir()
+        (outside_source / "bad_file.txt").write_text("bad content")
+
+        try:
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(outside_source),
+                destination_base_path=str(helper.workspace_dir / "output")
+            )
+            print("❌ Failed: Should have raised ValueError for source outside allowed directories")
+            return False
+        except ValueError as e:
+            if "Path not in allowed directories" in str(e):
+                print("  ✓ Correctly blocked source outside allowed directories")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+
+        # Test 4: Empty destination_base_path should fail
+        print("  Testing empty destination_base_path...")
+        try:
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(test_source_dir),
+                destination_base_path=""
+            )
+            print("❌ Failed: Should have raised ValueError for empty destination_base_path")
+            return False
+        except ValueError as e:
+            if "destination_base_path is required" in str(e):
+                print("  ✓ Correctly required destination_base_path")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+
+        # Test 5: Test _validate_path_access directly
+        print("  Testing _validate_path_access function...")
+
+        # Valid path should not raise
+        try:
+            _validate_path_access(helper.workspace_dir / "test.txt", wc_server.ALLOWED_PATHS)
+            print("  ✓ Valid path accepted")
+        except Exception as e:
+            print(f"❌ Failed: Valid path should be accepted. Error: {e}")
+            return False
+
+        # Invalid path should raise
+        try:
+            _validate_path_access(outside_dir / "test.txt", wc_server.ALLOWED_PATHS)
+            print("❌ Failed: Invalid path should be rejected")
+            return False
+        except ValueError as e:
+            if "Path not in allowed directories" in str(e):
+                print("  ✓ Invalid path correctly rejected")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+
+        print("✅ Workspace copy server path validation works correctly")
+        return True
+
+    finally:
+        # Restore original ALLOWED_PATHS
+        wc_server.ALLOWED_PATHS = original_allowed_paths
         helper.teardown()
 
 
@@ -609,6 +790,7 @@ def main():
         test_context_write_access_toggle,
         test_extract_file_from_command,
         test_workspace_copy_tools,
+        test_workspace_copy_server_path_validation,
     ]
 
     passed = 0

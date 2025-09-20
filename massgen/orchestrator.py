@@ -1305,8 +1305,10 @@ class Orchestrator(ChatAgent):
         # Copy all agents' snapshots to temp workspace for context sharing
         workspace_path = await self._copy_all_snapshots_to_temp_workspace(agent_id)
 
-        # Log workspace state before agent starts
+        # Clear the agent's workspace to prepare for new execution
+        # This preserves the previous agent's output for logging while giving a clean slate
         if agent.backend.filesystem_manager:
+            agent.backend.filesystem_manager.clear_workspace()
             agent.backend.filesystem_manager.log_current_state("before execution")
 
         try:

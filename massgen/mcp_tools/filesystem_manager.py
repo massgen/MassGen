@@ -910,26 +910,47 @@ class FilesystemManager:
 
         except Exception as e:
             logger.exception(f"[FilesystemManager.save_snapshot] Snapshot failed: {e}")
-            # On failure, DO NOT clear the workspace and exit
             return
 
-        # --- 3. Clear the workspace, if snapshot succeeded ---
-        # As of v0.0.22, we supply copy tools, so we can now clear the workspace after snapshotting to decrease dependence on previous iterations.
-        logger.info(f"[FilesystemManager] Clearing workspace after snapshot. Current contents:")
-        for item in source_path.iterdir():
-            logger.info(f" - {item}")
-            if item.is_symlink():
-                logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
-                continue
-            if item.is_file():
-                item.unlink()
-            elif item.is_dir():
-                shutil.rmtree(item)
+        logger.info(f"[FilesystemManager] Snapshot saved successfully, workspace preserved for logs and debugging")
 
-        logger.info(f"[FilesystemManager] Cleared workspace after snapshot")
-        logger.info(f"[FilesystemManager] Workspace contents after clearing:")
-        for item in source_path.iterdir():
-            logger.info(f" - {item}")
+    def clear_workspace(self) -> None:
+        """
+        Clear the current workspace to prepare for a new agent execution.
+
+        This should be called at the START of agent execution, not at the end,
+        to preserve workspace contents for logging and debugging.
+        """
+        workspace_path = self.get_current_workspace()
+
+        if not workspace_path.exists() or not workspace_path.is_dir():
+            logger.debug(f"[FilesystemManager] Workspace does not exist or is not a directory: {workspace_path}")
+            return
+
+        # Safety checks
+        if workspace_path == Path("/") or len(workspace_path.parts) < 3:
+            logger.error(f"[FilesystemManager] Refusing to clear unsafe workspace path: {workspace_path}")
+            return
+
+        try:
+            logger.info(f"[FilesystemManager] Clearing workspace at agent startup. Current contents:")
+            items_to_clear = list(workspace_path.iterdir())
+
+            for item in items_to_clear:
+                logger.info(f" - {item}")
+                if item.is_symlink():
+                    logger.warning(f"[FilesystemManager] Skipping symlink during clear: {item}")
+                    continue
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+
+            logger.info(f"[FilesystemManager] Workspace cleared successfully, ready for new agent execution")
+
+        except Exception as e:
+            logger.error(f"[FilesystemManager] Failed to clear workspace: {e}")
+            # Don't raise - agent can still work with non-empty workspace
 
     async def copy_snapshots_to_temp_workspace(
         self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]
