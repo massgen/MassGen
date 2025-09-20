@@ -393,8 +393,8 @@ class PathPermissionManager:
         # Common argument names for file paths:
         # - Claude Code: file_path, notebook_path
         # - MCP filesystem: path, source, destination
-        # - Workspace copy: source_base_path, destination_base_path
-        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "source", "destination", "source_base_path", "destination_base_path"]
+        # - Workspace copy: source_path, destination_path, source_base_path, destination_base_path
+        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "destination", "destination_path", "destination_base_path"]  # source paths should NOT be checked bc they are always read from, not written to
 
         for key in path_keys:
             if key in tool_args:
@@ -721,13 +721,11 @@ class FilesystemManager:
         config = {
             "name": "workspace_copy",
             "type": "stdio",
-            "command": "python",
-            "args": ["-m", "massgen.mcp_tools.workspace_copy_server"],
-            # "command": "fastmcp",
-            # "args": ["run", "massgen/mcp_tools/workspace_copy_server.py"],
-            # "env": {
-            #     # "FASTMCP_SHOW_CLI_BANNER": "false",
-            # }
+            "command": "fastmcp",
+            "args": ["run", "massgen/mcp_tools/workspace_copy_server.py"],
+            "env": {
+                "FASTMCP_SHOW_CLI_BANNER": "false",
+            }
         }
 
         # Add all managed paths from path permission manager
@@ -915,17 +913,23 @@ class FilesystemManager:
             # On failure, DO NOT clear the workspace and exit
             return
 
-        # --- 3. (TODO in future): Give option to clear the workspace, if snapshot succeeded ---
-        # for item in source_path.iterdir():
-        #     if item.is_symlink():
-        #         logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
-        #         continue
-        #     if item.is_file():
-        #         item.unlink()
-        #     elif item.is_dir():
-        #         shutil.rmtree(item)
+        # --- 3. Clear the workspace, if snapshot succeeded ---
+        # As of v0.0.22, we supply copy tools, so we can now clear the workspace after snapshotting to decrease dependence on previous iterations.
+        logger.info(f"[FilesystemManager] Clearing workspace after snapshot. Current contents:")
+        for item in source_path.iterdir():
+            logger.info(f" - {item}")
+            if item.is_symlink():
+                logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
+                continue
+            if item.is_file():
+                item.unlink()
+            elif item.is_dir():
+                shutil.rmtree(item)
 
         logger.info(f"[FilesystemManager] Cleared workspace after snapshot")
+        logger.info(f"[FilesystemManager] Workspace contents after clearing:")
+        for item in source_path.iterdir():
+            logger.info(f" - {item}")
 
     async def copy_snapshots_to_temp_workspace(
         self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]

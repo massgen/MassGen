@@ -475,6 +475,126 @@ def test_extract_file_from_command():
         helper.teardown()
 
 
+def test_workspace_copy_tools():
+    """Test workspace copy tool validation."""
+    print("\n📦 Testing workspace copy tool validation...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create temp workspace directory
+        temp_workspace_dir = helper.temp_dir / "temp_workspace"
+        temp_workspace_dir.mkdir(parents=True)
+        (temp_workspace_dir / "source_file.txt").write_text("source content")
+
+        # Test 1: copy_file and copy_files are detected as write tools
+        print("  Testing copy tool detection...")
+        manager = helper.create_permission_manager(context_write_enabled=False)
+
+        copy_tools = ["copy_file", "copy_files_batch", "mcp__workspace_copy__copy_file", "mcp__workspace_copy__copy_files_batch"]
+        for tool in copy_tools:
+            if not manager._is_write_tool(tool):
+                print(f"❌ Failed: {tool} should be detected as write tool")
+                return False
+
+        # Test 2: copy_file respects destination permissions
+        print("  Testing copy_file destination permissions...")
+
+        # Should allow copy to workspace
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination_path": str(helper.workspace_dir / "dest_file.txt")
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_file to workspace should be allowed. Reason: {reason}")
+            return False
+
+        # Should block copy to readonly directory
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination": str(helper.readonly_dir / "dest_file.txt")
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if allowed:
+            print("❌ Failed: copy_file to readonly directory should be blocked")
+            return False
+
+        # IMPORTANT: Test that we CAN copy FROM read-only paths
+        print("  Testing copy FROM read-only paths...")
+        tool_args = {
+            "source_path": str(helper.readonly_dir / "readonly_file.txt"),  # Source is read-only - this is OK
+            "destination_path": str(helper.workspace_dir / "copied_from_readonly.txt")  # Dest is writable
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy FROM read-only path should be allowed. Reason: {reason}")
+            return False
+
+        # Also test copy_files_batch FROM read-only path
+        tool_args = {
+            "source_base_path": str(helper.readonly_dir),  # Source is read-only - this is OK
+            "destination_base_path": str(helper.workspace_dir / "copied_from_readonly")  # Dest is writable
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_files_batch FROM read-only path should be allowed. Reason: {reason}")
+            return False
+
+        # Test 3: copy_files_batch validation
+        print("  Testing copy_files_batch destination permissions...")
+
+        # Should check destination_base_path, not source_base_path
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),  # This is fine, just reading from here
+            "destination_base_path": str(helper.workspace_dir / "output")  # This needs write permission
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_files_batch to workspace subdirectory should be allowed. Reason: {reason}")
+            return False
+
+        # Should block copy to readonly directory
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),
+            "destination_base_path": str(helper.readonly_dir / "output")
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if allowed:
+            print("❌ Failed: copy_files_batch to readonly directory should be blocked")
+            return False
+
+        # Test 4: _extract_file_path prioritizes destination paths
+        print("  Testing _extract_file_path with copy arguments...")
+
+        # Should extract destination_path when both source and destination are present
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source.txt"),
+            "destination_path": str(helper.workspace_dir / "dest.txt")
+        }
+        extracted = manager._extract_file_path(tool_args)
+        if extracted != str(helper.workspace_dir / "dest.txt"):
+            print(f"❌ Failed: Should extract destination_path, got: {extracted}")
+            return False
+
+        # Should extract destination_base_path for batch operations
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),
+            "destination_base_path": str(helper.workspace_dir / "output")
+        }
+        extracted = manager._extract_file_path(tool_args)
+        if extracted != str(helper.workspace_dir / "output"):
+            print(f"❌ Failed: Should extract destination_base_path, got: {extracted}")
+            return False
+
+        print("✅ Workspace copy tool validation works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
 def main():
     """Run all tests."""
     print("\n" + "="*60)
@@ -488,6 +608,7 @@ def main():
         test_pre_tool_use_hook,
         test_context_write_access_toggle,
         test_extract_file_from_command,
+        test_workspace_copy_tools,
     ]
 
     passed = 0
