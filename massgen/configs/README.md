@@ -225,6 +225,45 @@ Most configurations use environment variables for API keys:
 - `tools/filesystem/claude_code_single.yaml` - Claude Code with dev tools
 - `tools/filesystem/claude_code_flash2.5.yaml` - Multi-agent with Claude Code
 
+## Naming Convention
+
+To improve clarity and discoverability, we follow this naming pattern:
+
+**Format: `{agents}_{features}_{description}.yaml`**
+
+### 1. Agents (who's participating)
+- `single-{provider}` - Single agent (e.g., `single-claude`, `single-gemini`)
+- `{provider1}-{provider2}` - Two agents (e.g., `claude-gemini`, `gemini-gpt5`)
+- `three-mixed` - Three agents from different providers
+- `team-{type}` - Specialized teams (e.g., `team-creative`, `team-research`)
+
+### 2. Features (what tools/capabilities)
+- `basic` - No special tools, just conversation
+- `mcp` - MCP server integration
+- `mcp-{service}` - Specific MCP service (e.g., `mcp-discord`, `mcp-weather`)
+- `mcp-multi` - Multiple MCP servers
+- `websearch` - Web search enabled
+- `codeexec` - Code execution/interpreter
+- `filesystem` - File operations and workspace management
+
+### 3. Description (purpose/context - optional)
+- `showcase` - Demonstration/getting started example
+- `test` - Testing configuration
+- `research` - Research and analysis tasks
+- `dev` - Development and coding tasks
+- `collab` - Collaboration example
+
+### Examples
+```
+# Current → Suggested
+three_agents_default.yaml → three-mixed_basic_showcase.yaml
+grok3_mini_mcp_example.yaml → single-grok_mcp-weather_test.yaml
+claude_code_discord_mcp_example.yaml → single-claude_mcp-discord_demo.yaml
+gpt5mini_claude_code_discord_mcp_example.yaml → claude-gpt5_mcp-discord_collab.yaml
+```
+
+**Note:** Existing configs maintain their current names for compatibility. New configs should follow this convention.
+
 ## Additional Documentation
 
 For detailed setup guides:

@@ -255,155 +255,99 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 ### 4. 🏃 Run MassGen
 
-#### Quick Test with A Single Model
+#### 🚀 Getting Started
 
-**API-based backends:**
+**1. Single Agent (Easiest Start)**
 ```bash
-uv run python -m massgen.cli --model claude-3-5-sonnet-latest "When is your knowledge up to"
-uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"
-uv run python -m massgen.cli --model grok-3-mini "When is your knowledge up to"
-uv run python -m massgen.cli --model gpt-5-nano "When is your knowledge up to"
+# Quick test with any supported model - no configuration needed
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
+uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
+uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
+```
+→ [See all single agent configs](massgen/configs/basic/single/)
 
-uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "When is your knowledge up to"
-
-# Azure OpenAI (NEW in v0.0.10, requires environment variables)
-uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "When is your knowledge up to"
+**2. Multi-Agent Collaboration (Recommended)**
+```bash
+# Three powerful agents working together - Gemini, GPT-5, and Grok
+uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml "Analyze the pros and cons of renewable energy"
 ```
 
-All the models with a default backend can be found [here](massgen/utils.py).
+**This showcases MassGen's core strength:**
+- **Gemini 2.5 Flash** - Fast research with web search
+- **GPT-5 Nano** - Advanced reasoning with code execution
+- **Grok-3 Mini** - Real-time information and alternative perspectives
 
-#### 🆕 OpenAI with MCP Tools (NEW in v0.0.17)
+→ [Explore more multi-agent setups](massgen/configs/basic/multi/)
 
-**Quick Examples - Try These Now:**
+#### 🆕 Latest Features (v0.0.21)
+
+**Advanced Filesystem Permissions & Grok MCP Integration**
 ```bash
-# Simple weather query using MCP-enabled OpenAI/GPT-5
-uv run python -m massgen.cli --config tools/mcp/gpt5_mini_mcp_example.yaml "What's the weather in Tokyo?"
+# Grok with MCP tools for weather, search, and more
+uv run python -m massgen.cli --config tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and compare it to Paris?"
 
-# Test MCP server connection with OpenAI
-uv run python -m massgen.cli --config tools/mcp/gpt5_mini_mcp_test.yaml "Test the MCP tools - show me what you can do"
+# Multi-agent file collaboration with permission control
+uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Analyze this codebase and suggest improvements"
 
-# Test MCP with streamable-http server
-# First start the HTTP test server:
-uv run python massgen/tests/test_http_mcp_server.py
-# Then try:
-uv run python -m massgen.cli --config tools/web-search/gpt5_mini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
-
-# Multi-agent setup with OpenAI MCP and Claude Code
-uv run python -m massgen.cli --config tools/mcp/gpt5mini_claude_code_discord_mcp_example.yaml "Work together to analyze the latest tech trends"
+# Advanced filesystem permissions for secure collaboration
+uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Review and refactor project files safely"
 ```
 
-**What's happening:** OpenAI models (GPT-4, GPT-5 series) now have full MCP support with automatic tool discovery and execution, matching Gemini's capabilities for unified MCP integration.
+**What's New in v0.0.21:**
+- **Grok MCP Support** - Full MCP integration with automatic filesystem support
+- **Advanced Permissions** - Granular file access control for multi-agent collaboration
+- **Context Sharing** - Claude Code agents can now share workspace snapshots
 
-#### 🆕 Claude with MCP Tools (NEW in v0.0.20)
+→ [See v0.0.21 release examples](massgen/configs/README.md#v0021-september-2025---latest)
 
-**Quick Examples - Try These Now:**
+#### Additional Examples by Provider
+
+**OpenAI (GPT-5 Series with MCP - v0.0.17+)**
 ```bash
-# Simple MCP testing with Claude using recursive execution
-uv run python -m massgen.cli --config tools/mcp/claude_mcp_test.yaml "Test the MCP tools by calling mcp_echo with text 'Hello MassGen' and add_numbers with 46 and 52"
-
-# Weather query using MCP-enabled Claude
-uv run python -m massgen.cli --config tools/mcp/claude_mcp_example.yaml "What's the weather in Tokyo and Paris? Compare the conditions."
-
-# Test MCP with streamable-http server  
-# First start the HTTP test server:
-uv run python massgen/tests/test_http_mcp_server.py
-# Then try:
-uv run python -m massgen.cli --config tools/web-search/claude_streamable_http_test.yaml "Test the MCP tools with Claude - show me what you can do"
+# GPT-5 with weather and external tools
+uv run python -m massgen.cli --config tools/mcp/gpt5_mini_mcp_example.yaml "Plan a weekend trip based on weather forecasts"
 ```
 
-**What's happening:** Claude models now feature **recursive execution** - they can autonomously chain multiple MCP tool calls in sequence, enabling sophisticated multi-step workflows that weren't possible with single-turn MCP implementations.
-
-#### 🆕 Gemini with MCP Tools (NEW in v0.0.15)
-
-**Quick Examples - Try These Now:**
+**Claude (Recursive MCP Execution - v0.0.20+)**
 ```bash
-# Simple weather query using MCP-enabled Gemini
-uv run python -m massgen.cli --config tools/mcp/gemini_mcp_example.yaml "What's the weather in Tokyo?"
-
-# Travel research with multiple MCP servers (Airbnb + Brave Search)
-# First, set BRAVE_API_KEY in your .env file, then:
-uv run python -m massgen.cli --config tools/mcp/multimcp_gemini.yaml "Find safe neighborhoods in Paris and suggest Airbnb stays for 2 people next week"
-
-# Test MCP server connection
-# Test server: massgen/tests/mcp_test_server.py (the config below will run it automatically)
-uv run python -m massgen.cli --config tools/mcp/gemini_mcp_test.yaml "Test the MCP tools - show me what you can do"
-
-# Test MCP with streamable-http server
-# First start the HTTP test server:
-uv run python massgen/tests/test_http_mcp_server.py
-# Then try:
-uv run python -m massgen.cli --config tools/web-search/gemini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
+# Claude with advanced tool chaining
+uv run python -m massgen.cli --config tools/mcp/claude_mcp_example.yaml "Research and compare weather in multiple cities"
 ```
 
-**What's happening:** Gemini automatically discovers and uses tools from configured MCP servers (weather data, web search, Airbnb listings, etc.) without manual tool calling.
-
-#### 🆕 Grok with MCP Tools (NEW in v0.0.21)
-
-**Quick Examples - Try These Now:**
+**Gemini (Multi-Server MCP - v0.0.15+)**
 ```bash
-# Simple weather query using MCP-enabled Grok
-uv run python -m massgen.cli --config grok3_mini_mcp_example.yaml "What's the weather in Tokyo?"
-
-# Test MCP server connection with Grok
-uv run python -m massgen.cli --config grok3_mini_mcp_test.yaml "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
-
-# Test MCP with streamable-http server
-# First start the HTTP test server:
-uv run python massgen/tests/test_http_mcp_server.py
-# Then try:
-uv run python -m massgen.cli --config grok3_mini_streamable_http_test.yaml "Run a complete system check - events, birthdays, random data, and server status"
-
-# Single agent Grok configuration (without MCP)
-uv run python -m massgen.cli --config providers/others/grok_single_agent.yaml "List today's news in Seattle"
+# Gemini with multiple MCP services (Airbnb + Search)
+uv run python -m massgen.cli --config tools/mcp/multimcp_gemini.yaml "Find accommodations in Paris with neighborhood analysis"
 ```
 
-**What's happening:** Grok models now have full MCP support through the unified Chat Completions backend, with automatic filesystem support when `cwd` is provided and complete tool discovery capabilities.
-
-**Local models (NEW in v0.0.7):**
+**Claude Code (Development Tools)**
 ```bash
-# Use LM Studio with automatic model management
-uv run python -m massgen.cli --config providers/local/lmstudio.yaml "Explain quantum computing"
+# Professional development environment
+uv run python -m massgen.cli --backend claude_code --model sonnet "Create a Flask web app with authentication"
 ```
 
-**CLI-based backends**:
+**Local Models (LM Studio - v0.0.7+)**
 ```bash
-# Claude Code - Native Claude Code SDK with comprehensive dev tools
-uv run python -m massgen.cli --backend claude_code --model sonnet "Can I use claude-3-5-haiku for claude code?"
-uv run python -m massgen.cli --backend claude_code --model sonnet "Debug this Python script"
+# Run open-source models locally
+uv run python -m massgen.cli --config providers/local/lmstudio.yaml "Explain machine learning concepts"
 ```
 
-`--backend` is required for CLI-based backends. Note: `--model` parameter is required but ignored for Claude Code backend (uses Claude's latest model automatically).
+→ [Browse by provider](massgen/configs/providers/) | [Browse by tools](massgen/configs/tools/) | [Browse teams](massgen/configs/teams/)
 
-#### Multiple Agents from Config
+#### Interactive Mode & Advanced Usage
+
+**Multi-Turn Conversations:**
 ```bash
-# Use configuration file
-uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
+# Start interactive chat (no initial question)
+uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml
 
-# Mixed API and CLI backends
-uv run python -m massgen.cli --config tools/filesystem/claude_code_flash2.5.yaml "find 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in markdown"
-uv run python -m massgen.cli --config tools/filesystem/claude_code_gpt5nano.yaml "find 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in markdown"
-
-# Azure OpenAI configurations (NEW in v0.0.10)
-uv run python -m massgen.cli --config providers/azure/azure_openai_single.yaml "What is machine learning?"
-uv run python -m massgen.cli --config providers/azure/azure_openai_multi.yaml "Compare different approaches to renewable energy"
-
-# MCP-enabled configurations (NEW in v0.0.9)
-uv run python -m massgen.cli --config tools/code-execution/multi_agent_playwright_automation.yaml "Browse https://github.com/Leezekun/MassGen and generate reports with screenshots"
-uv run python -m massgen.cli --config tools/mcp/claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
-uv run python -m massgen.cli --config tools/mcp/claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
-
-# Hybrid local and API-based models (NEW in v0.0.7)
-uv run python -m massgen.cli --config basic/multi/two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
-uv run python -m massgen.cli --config basic/multi/gpt5nano_glm_qwen.yaml "Design a distributed system architecture"
-
-# Debug mode for troubleshooting (NEW in v0.0.13)
-uv run python -m massgen.cli --model claude-3-5-sonnet-latest --debug "What is machine learning?"
-uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml --debug "Summarize latest news of github.com/Leezekun/MassGen"
+# Debug mode for troubleshooting
+uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml --debug "Your question"
 ```
 
 ## Configuration Files
 
-MassGen configurations are organized by features and use cases. See the [Configuration Guide](massgen/configs/CONFIG_GUIDE.md) for detailed organization and examples.
+MassGen configurations are organized by features and use cases. See the [Configuration Guide](massgen/configs/README.md) for detailed organization and examples.
 
 **Quick navigation:**
 - **Basic setups**: [Single agent](massgen/configs/basic/single/) | [Multi-agent](massgen/configs/basic/multi/)
@@ -428,7 +372,7 @@ See MCP server setup guides: [Discord MCP](massgen/configs/docs/DISCORD_MCP_SETU
 
 #### Configuration File Format
 
-MassGen supports YAML/JSON configuration files with the following structure. See the [Configuration Guide](massgen/configs/CONFIG_GUIDE.md) for organized examples:
+MassGen supports YAML/JSON configuration files with the following structure. See the [Configuration Guide](massgen/configs/README.md) for organized examples:
 
 **Single Agent Configuration:**
 
