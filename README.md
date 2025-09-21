@@ -302,16 +302,16 @@ uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml 
 
 #### Additional Examples by Provider
 
-**OpenAI (GPT-5 Series with MCP - v0.0.17+)**
-```bash
-# GPT-5 with weather and external tools
-uv run python -m massgen.cli --config tools/mcp/gpt5_mini_mcp_example.yaml "Plan a weekend trip based on weather forecasts"
-```
-
 **Claude (Recursive MCP Execution - v0.0.20+)**
 ```bash
 # Claude with advanced tool chaining
 uv run python -m massgen.cli --config tools/mcp/claude_mcp_example.yaml "Research and compare weather in multiple cities"
+```
+
+**OpenAI (GPT-5 Series with MCP - v0.0.17+)**
+```bash
+# GPT-5 with weather and external tools
+uv run python -m massgen.cli --config tools/mcp/gpt5_mini_mcp_example.yaml "Plan a weekend trip based on weather forecasts"
 ```
 
 **Gemini (Multi-Server MCP - v0.0.15+)**
