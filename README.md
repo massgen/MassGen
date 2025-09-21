@@ -298,7 +298,19 @@ uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml 
 - **Advanced Permissions** - Granular file access control for multi-agent collaboration
 - **Context Sharing** - Claude Code agents can now share workspace snapshots
 
-→ [See v0.0.21 release examples](massgen/configs/README.md#v0021-september-2025---latest)
+**Try v0.0.21 Features Now:**
+```bash
+# Grok with MCP tools - weather, search, and more
+uv run python -m massgen.cli --config tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and how does it compare to London? Also tell me about any interesting events happening in both cities this week."
+
+# Multi-agent file collaboration with permission control
+uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Analyze all Python files in this project, identify potential security issues, and create a detailed report with recommendations for improvements."
+
+# Context sharing between Claude Code agents
+uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Create a comprehensive website about fascinating facts regarding large language models. Put everything in a single index.html file with embedded CSS and make it visually appealing."
+```
+
+→ [See all release examples](massgen/configs/README.md#release-history--examples)
 
 #### Additional Examples by Provider
 
