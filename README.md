@@ -334,6 +334,43 @@ uv run python -m massgen.cli --config providers/local/lmstudio.yaml "Explain mac
 
 → [Browse by provider](massgen/configs/providers/) | [Browse by tools](massgen/configs/tools/) | [Browse teams](massgen/configs/teams/)
 
+#### Real-World Use Cases
+
+**Question Answering & Research:**
+```bash
+# Complex research with multiple perspectives
+uv run python -m massgen.cli --config basic/multi/gemini_4o_claude.yaml "What's best to do in Stockholm in October 2025"
+
+# Specific research requirements
+uv run python -m massgen.cli --config basic/multi/gemini_4o_claude.yaml "Give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025"
+```
+
+**Creative Writing:**
+```bash
+# Story generation with multiple creative agents
+uv run python -m massgen.cli --config basic/multi/gemini_4o_claude.yaml "Write a short story about a robot who discovers music"
+```
+
+**Development & Coding:**
+```bash
+# Full-stack development with file operations
+uv run python -m massgen.cli --config tools/filesystem/claude_code_single.yaml "Create a Flask web app with user authentication and database integration"
+
+# Multi-agent code review and testing
+uv run python -m massgen.cli --config tools/filesystem/claude_code_flash2.5_gptoss.yaml "Debug and optimize this React application, then write comprehensive tests"
+```
+
+**Web Automation:**
+```bash
+# Browser automation with screenshots and reporting
+uv run python -m massgen.cli --config tools/code-execution/multi_agent_playwright_automation.yaml "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
+
+# Data extraction and analysis
+uv run python -m massgen.cli --config tools/code-execution/multi_agent_playwright_automation.yaml "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
+```
+
+→ [**See detailed case studies**](docs/case_studies/README.md) with real session logs and outcomes
+
 #### Interactive Mode & Advanced Usage
 
 **Multi-Turn Conversations:**
@@ -823,9 +860,7 @@ massgen_logs/
 ##### Important Note
 The final presentation continues to be stored in each Claude Code Agent's workspace as before. After generating the final presentation, the relevant files will be copied to the `final_workspace/` directory.
 
-## 💡 Examples
-
-Here are a few examples of how you can use MassGen for different tasks:
+## 💡 Case Studies & Advanced Features
 
 ### Case Studies
 
@@ -833,59 +868,7 @@ To see how MassGen works in practice, check out these detailed case studies base
 
 - [**MassGen Case Studies**](docs/case_studies/README.md)
 
-<!-- Uncomment when we add coding agent support -->
-<!-- ### 1. 📝 Code Generation
-
-```bash
-uv run python cli.py --config examples/fast_config.yaml "Design a logo for MassGen (multi-agent scaling system for GenAI) GitHub README"
-``` -->
-
-### 1. ❓ Question Answering
-
-```bash
-# Ask a question about a complex topic
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "what's best to do in Stockholm in October 2025"
-
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
-```
-
-### 2. 🧠 Creative Writing
-
-```bash
-# Generate a short story
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
-```
-
-### 3. 🧠 Research
-```bash
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
-```
-
-### 4. 💻 Development & Coding Tasks
-```bash
-# Single agent with comprehensive development tools
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_single.yaml "Create a Flask web app with user authentication and database integration"
-
-# Multi-agent development team collaboration  
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_flash2.5_gptoss.yaml "Debug and optimize this React application, then write comprehensive tests"
-
-# Quick coding task with claude_code backend
-uv run python -m massgen.cli --backend claude_code "Refactor this Python code to use async/await and add error handling"
-```
-
-### 5. 🌐 Web Automation & Browser Tasks
-```bash
-# Multi-agent web automation with Playwright MCP
-uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "browse https://github.com/Leezekun/MassGen and suggest improvement. Include screenshots and suggestions in a PDF."
-
-# Web scraping and analysis
-uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
-
-# E-commerce testing automation
-uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Test the checkout flow on an e-commerce site and generate a detailed test report"
-```
-
-### 6. 📁 File System Operations & Workspace Management
+### File System Operations & Workspace Management
 
 MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
 
@@ -921,25 +904,6 @@ orchestrator:
   agent_temporary_workspace: "temp_workspaces" # Temporary workspace management
 ```
 
-#### File System Examples
-
-**File Analysis and Processing:**
-```bash
-# Analyze codebase structure and generate documentation
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_single.yaml "Analyze all Python files in the current directory, create a project structure overview, and generate API documentation"
-
-# Log file analysis and reporting
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_single.yaml "Parse application logs from logs/ directory, identify error patterns, and create a summary report with recommendations"
-```
-
-**Multi-Agent File Collaboration:**
-```bash
-# Code review and refactoring with multiple agents
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_flash2.5.yaml "Review all JavaScript files in src/, identify code quality issues, and implement improvements across multiple files"
-
-# Data processing pipeline with file operations
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gpt5_filesystem_casestudy.yaml "Process CSV files in data/ directory, clean the data, perform analysis, and generate visualization reports"
-```
 
 #### Available File Operations
 
@@ -966,7 +930,7 @@ https://github.com/modelcontextprotocol/servers/blob/main/src%2Ffilesystem%2FREA
 
 ---
 
-### 7. 🔗 User Context Paths
+### User Context Paths
 
 User Context Paths allow you to share specific directories and files with all agents while maintaining granular permission control. This feature enables multi-agent collaboration on your existing projects without compromising security.
 
