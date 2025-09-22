@@ -10,7 +10,9 @@ agent:
       discord:
         type: "stdio"
         command: "npx"
-        args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_TOKEN"]
+        args: ["-y", "mcp-discord", "--config", "${DISCORD_BOT_TOKEN}"]
+          env:
+            NOTION_TOKEN: "${NOTION_TOKEN_ONE}" 
 
     allowed_tools:
       - "Read"

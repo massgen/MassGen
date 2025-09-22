@@ -35,7 +35,7 @@ Currently, only Claude Code agents have filesystem access through built-in tools
 ### Key References
 - **v0.0.14 Context Sharing**: As outlined in `docs/dev_notes/v0.0.14-context.md`
 - **v0.0.16 Roadmap**: Filesystem MCP integration planned in `ROADMAP_v0.0.16.md`
-- **Claude Code Format**: Configuration pattern in `massgen/configs/claude_code_discord_mcp_example.yaml`
+- **Claude Code Format**: Configuration pattern in `massgen/configs/tools/mcp/claude_code_discord_mcp_example.yaml`
 
 ---
 
@@ -219,7 +219,7 @@ sequenceDiagram
 ### Identical Gemini Configuration (Matching Claude Code Exactly)
 
 ```yaml
-# Example: massgen/configs/gemini_filesystem_example.yaml
+# Example: massgen/configs/tools/filesystem/gemini_filesystem_example.yaml
 # IDENTICAL to Claude Code configuration format
 agents:
   - id: "gemini_filesystem_agent"

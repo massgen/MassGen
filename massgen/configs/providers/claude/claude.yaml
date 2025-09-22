@@ -1,0 +1,14 @@
+# MassGen Configuration
+# Usage:
+# uv run python -m massgen.cli --config configs/claude.yaml "add_numbers with 46 and 52"
+agents:
+  - id: "claude"
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-20250514"  # Model name
+
+    system_message: "You are a helpful assistant"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
