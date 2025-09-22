@@ -1,5 +1,5 @@
 """
-Message format converters for different LLM APIs.
+Message formatter for different LLM APIs.
 Handles conversion between OpenAI, Claude, Gemini, and Response API formats.
 """
 
@@ -9,7 +9,7 @@ import json
 from typing import Dict, List, Any
 
 
-class MessageConverter:
+class MessageFormatter:
     """
     Convert messages between different API formats.
     Supports bidirectional conversion between all major formats.
@@ -48,7 +48,7 @@ class MessageConverter:
                             # Handle other non-string types
                             converted_function[
                                 "arguments"
-                            ] = MessageConverter._serialize_tool_arguments(arguments)
+                            ] = MessageFormatter._serialize_tool_arguments(arguments)
                         # If it's already a string, keep it as-is
 
                         converted_call["function"] = converted_function
@@ -116,9 +116,9 @@ class MessageConverter:
 
                 # Convert tool calls to Claude tool use format
                 for tool_call in message["tool_calls"]:
-                    tool_name = MessageConverter.extract_tool_name(tool_call)
-                    tool_args = MessageConverter.extract_tool_arguments(tool_call)
-                    tool_id = MessageConverter.extract_tool_call_id(tool_call)
+                    tool_name = MessageFormatter.extract_tool_name(tool_call)
+                    tool_args = MessageFormatter.extract_tool_arguments(tool_call)
+                    tool_id = MessageFormatter.extract_tool_call_id(tool_call)
 
                     content.append(
                         {
@@ -274,7 +274,7 @@ class MessageConverter:
         if source_format != "openai":
             if source_format == "claude":
                 # Claude to OpenAI conversion needs special handling
-                openai_messages = MessageConverter.to_openai_format(messages)
+                openai_messages = MessageFormatter.to_openai_format(messages)
             elif source_format == "gemini":
                 # Convert Gemini to OpenAI
                 openai_messages = []
@@ -298,7 +298,7 @@ class MessageConverter:
                     
                     openai_messages.append(openai_msg)
             else:
-                openai_messages = MessageConverter.to_openai_format(messages)
+                openai_messages = MessageFormatter.to_openai_format(messages)
         else:
             openai_messages = messages
         
@@ -306,11 +306,11 @@ class MessageConverter:
         if target_format == "openai":
             return openai_messages
         elif target_format == "claude":
-            return MessageConverter.to_claude_format(openai_messages)
+            return MessageFormatter.to_claude_format(openai_messages)
         elif target_format == "gemini":
-            return MessageConverter.to_gemini_format(openai_messages)
+            return MessageFormatter.to_gemini_format(openai_messages)
         elif target_format == "response_api":
-            return MessageConverter.to_response_api_format(openai_messages)
+            return MessageFormatter.to_response_api_format(openai_messages)
         else:
             raise ValueError(f"Unknown target format: {target_format}")
         
