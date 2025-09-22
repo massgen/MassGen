@@ -147,6 +147,7 @@ def prepare_command(
             "go",
             "rust",
             "cargo",
+            "fastmcp",
             # System utilities (limited set)
             "sh",
             "bash",

@@ -763,7 +763,9 @@ class ResponseBackend(LLMBackend):
             # Execute only MCP function calls
             mcp_functions_executed = False
             updated_messages = current_messages.copy()
-            
+            # Ensure every captured function call gets a result to prevent hanging
+            processed_call_ids = set()
+
             for call in captured_function_calls:
                 function_name = call["name"]
                 if function_name in self.functions:
@@ -783,13 +785,52 @@ class ResponseBackend(LLMBackend):
                         
                         # Check if function failed after all retries
                         if isinstance(result, str) and result.startswith("Error:"):
-                            # Log failure and skip to next function
+                            # Log failure but still create tool response
                             logger.warning(f"MCP function {function_name} failed after retries: {result}")
+
+                            # Add error result to messages
+                            function_call_msg = {
+                                "type": "function_call",
+                                "call_id": call["call_id"],
+                                "name": function_name,
+                                "arguments": call["arguments"]
+                            }
+                            updated_messages.append(function_call_msg)
+
+                            error_output_msg = {
+                                "type": "function_call_output",
+                                "call_id": call["call_id"],
+                                "output": result
+                            }
+                            updated_messages.append(error_output_msg)
+
+                            processed_call_ids.add(call["call_id"])
+                            mcp_functions_executed = True
                             continue
                             
                     except Exception as e:
                         # Only catch unexpected non-MCP system errors
                         logger.error(f"Unexpected error in MCP function execution: {e}")
+                        error_msg = f"Error executing {function_name}: {str(e)}"
+
+                        # Add error result to messages
+                        function_call_msg = {
+                            "type": "function_call",
+                            "call_id": call["call_id"],
+                            "name": function_name,
+                            "arguments": call["arguments"]
+                        }
+                        updated_messages.append(function_call_msg)
+
+                        error_output_msg = {
+                            "type": "function_call_output",
+                            "call_id": call["call_id"],
+                            "output": error_msg
+                        }
+                        updated_messages.append(error_output_msg)
+
+                        processed_call_ids.add(call["call_id"])
+                        mcp_functions_executed = True
                         continue
 
                     # Add function call to messages and yield as StreamChunk
@@ -822,7 +863,8 @@ class ResponseBackend(LLMBackend):
                     )
 
                     logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
-                    
+                    processed_call_ids.add(call["call_id"])
+
                     # Yield MCP tool response status
                     yield StreamChunk(
                         type="mcp_status",
@@ -831,6 +873,28 @@ class ResponseBackend(LLMBackend):
                         source=f"mcp_{function_name}"
                     )
                     
+                    mcp_functions_executed = True
+
+            # Ensure all captured function calls have results to prevent hanging
+            for call in captured_function_calls:
+                if call["call_id"] not in processed_call_ids:
+                    logger.warning(f"Tool call {call['call_id']} for function {call['name']} was not processed - adding error result")
+
+                    # Add missing function call and error result to messages
+                    function_call_msg = {
+                        "type": "function_call",
+                        "call_id": call["call_id"],
+                        "name": call["name"],
+                        "arguments": call["arguments"]
+                    }
+                    updated_messages.append(function_call_msg)
+
+                    error_output_msg = {
+                        "type": "function_call_output",
+                        "call_id": call["call_id"],
+                        "output": f"Error: Tool call {call['call_id']} for function {call['name']} was not processed. This may indicate a validation or execution error."
+                    }
+                    updated_messages.append(error_output_msg)
                     mcp_functions_executed = True
 
             # Trim history after function executions to bound memory usage
