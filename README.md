@@ -55,7 +55,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 - [Parallel Processing](#%EF%B8%8F-system-design-1)
 - [Real-time Collaboration](#%EF%B8%8F-system-design-1)
 - [Convergence Detection](#%EF%B8%8F-system-design-1)
-- [Adaptive Coordination](#%EF%B8%8F-system-design-1)
+- [Adaptive Coordination](#%EF%B8%8F-system-design-1) 
 </details>
 
 <details open>
@@ -67,10 +67,13 @@ This project started with the "threads of thought" and "iterative refinement" id
   - [Models](#models)
   - [Tools](#tools)
 - [🏃 Run MassGen](#4--run-massgen)
-  - [Quick Test with A Single Model](#quick-test-with-a-single-model)
-  - [Multiple Agents from Config](#multiple-agents-from-config)
+  - [1. Single Agent (Easiest Start)](#1-single-agent-easiest-start)
+  - [2. Multi-Agent Collaboration (Recommended)](#2-multi-agent-collaboration-recommended)
+  - [3. Model Context Protocol (MCP)](#3-model-context-protocol-mcp)
+  - [4. File System Operations](#4-file-system-operations--workspace-management)
+  - [5. Project Integration (NEW in v0.0.21)](#5-project-integration--user-context-paths-new-in-v0021)
   - [CLI Configuration Parameters](#cli-configuration-parameters)
-  - [Configuration File Format](#configuration-file-format)
+  - [Backend Configuration Reference](#-backend-configuration-reference)
   - [Interactive Multi-Turn Mode](#interactive-multi-turn-mode)
 - [📊 View Results](#5--view-results)
   - [Real-time Display](#real-time-display)
@@ -78,12 +81,9 @@ This project started with the "threads of thought" and "iterative refinement" id
 </details>
 
 <details open>
-<summary><h3>💡 Examples</h3></summary>
+<summary><h3>💡 Case Studies & Examples</h3></summary>
 
-- [📚 Case Studies](#case-studies)
-- [❓ Question Answering](#1--question-answering)
-- [🧠 Creative Writing](#2--creative-writing)
-- [🔬 Research](#3-research)
+- [Case Studies](#-case-studies)
 </details>
 
 <details open>
@@ -259,6 +259,14 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **1. Single Agent (Easiest Start)**
 
+**Quick Start Commands:**
+```bash
+# Quick test with any supported model - no configuration needed
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
+uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
+uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
+```
+
 **Configuration:**
 
 Use the `agent` field to define a single agent with its backend and settings:
@@ -272,13 +280,7 @@ agent:
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
 ```
-**Quick Start Commands:**
-```bash
-# Quick test with any supported model - no configuration needed
-uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
-uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
-uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
-```
+
 → [See all single agent configs](massgen/configs/basic/single/)
 
 
@@ -287,6 +289,18 @@ uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI develop
 **Configuration:**
 
 Use the `agents` field to define multiple agents, each with its own backend and config:
+
+**Quick Start Commands:**
+
+```bash
+# Three powerful agents working together - Gemini, GPT-5, and Grok
+uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml "Analyze the pros and cons of renewable energy"
+```
+
+**This showcases MassGen's core strength:**
+- **Gemini 2.5 Flash** - Fast research with web search
+- **GPT-5 Nano** - Advanced reasoning with code execution
+- **Grok-3 Mini** - Real-time information and alternative perspectives
 
 ```yaml
 agents:  # Multiple agents (alternative to 'agent')
@@ -303,17 +317,6 @@ agents:  # Multiple agents (alternative to 'agent')
       ...
     system_message: "..."
 ```
-
-**Quick Start Commands:**
-```bash
-# Three powerful agents working together - Gemini, GPT-5, and Grok
-uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml "Analyze the pros and cons of renewable energy"
-```
-
-**This showcases MassGen's core strength:**
-- **Gemini 2.5 Flash** - Fast research with web search
-- **GPT-5 Nano** - Advanced reasoning with code execution
-- **Grok-3 Mini** - Real-time information and alternative perspectives
 
 → [Explore more multi-agent setups](massgen/configs/basic/multi/)
 
@@ -336,6 +339,17 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 | └─ `env` | dict | No | Environment variables to pass |
 | `allowed_tools` | list | No | Whitelist specific tools (if omitted, all tools available) |
 | `exclude_tools` | list | No | Blacklist dangerous/unwanted tools |
+
+
+**Quick Start Commands ([Check backend MCP support here](#tools)):**
+
+```bash
+# Weather service with GPT-5
+uv run python -m massgen.cli --config tools/mcp/gpt5_mini_mcp_example.yaml "What's the weather forecast for San Francisco this week?"
+
+# Multi-tool MCP with Gemini - Search + Weather + Filesystem
+uv run python -m massgen.cli --config tools/mcp/multimcp_gemini.yaml "Find the best restaurants in Paris and save the recommendations to a file"
+```
 
 **Configuration:** 
 
@@ -384,15 +398,6 @@ agents:
     - "mcp__test_server__current_time"
 ```
 
-**Quick Start Commands ([Check backend MCP support here](#tools)):**
-
-```bash
-# Weather service with GPT-5
-uv run python -m massgen.cli --config tools/mcp/gpt5_mini_mcp_example.yaml "What's the weather forecast for San Francisco this week?"
-
-# Multi-tool MCP with Gemini - Search + Weather + Filesystem
-uv run python -m massgen.cli --config tools/mcp/multimcp_gemini.yaml "Find the best restaurants in Paris and save the recommendations to a file"
-```
 → [View more MCP examples](massgen/configs/tools/mcp/)
 
 
@@ -405,8 +410,19 @@ MassGen provides comprehensive file system support through multiple backends, en
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `cwd` | string | **Yes** (for file ops) | Working directory for file operations (agent-specific workspace) |
-| `snapshot_storage` | string | No | Directory for workspace snapshots |
-| `agent_temporary_workspace` | string | No | Parent directory for temporary workspaces |
+| `snapshot_storage` | string | Yes | Directory for workspace snapshots |
+| `agent_temporary_workspace` | string | Yes | Parent directory for temporary workspaces |
+
+
+**Quick Start Commands:**
+
+```bash
+# File operations with Claude Code
+uv run python -m massgen.cli --config tools/filesystem/claude_code_single.yaml "Create a Python web scraper and save results to CSV"
+
+# Multi-agent file collaboration  
+uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Generate a comprehensive project report with charts and analysis"
+```
 
 **Configuration:**
 
@@ -435,24 +451,6 @@ orchestrator:
   snapshot_storage: "snapshots"              # Shared snapshots directory
   agent_temporary_workspace: "temp_workspaces" # Temporary workspace management
 ```
-
-**Quick Start Commands:**
-
-```bash
-# File operations with Claude Code
-uv run python -m massgen.cli --config tools/filesystem/claude_code_single.yaml "Create a Python web scraper and save results to CSV"
-
-# Multi-agent file collaboration  
-uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Generate a comprehensive project report with charts and analysis"
-```
-
-**This showcases filesystem capabilities:**
-- **Claude Code Backend** - Native file operations (Read, Write, Edit, Bash, Grep)
-- **Other Backends** - File access through MCP filesystem servers
-- **Workspace Isolation** - Each agent works in its own isolated directory
-
-→ [View more filesystem examples](massgen/configs/tools/filesystem/)
-
 **Available File Operations:**
 - **Claude Code**: Built-in tools (Read, Write, Edit, MultiEdit, Bash, Grep, Glob, LS, TodoWrite)
 - **Other Backends**: Via [MCP Filesystem Server](https://github.com/modelcontextprotocol/servers/blob/main/src%2Ffilesystem%2FREADME.md)
@@ -462,6 +460,7 @@ uv run python -m massgen.cli --config tools/filesystem/claude_code_context_shari
 - **Snapshot Storage**: Share workspace context between Claude Code agents  
 - **Temporary Workspaces**: Agents can access previous coordination results
 
+→ [View more filesystem examples](massgen/configs/tools/filesystem/)
 
 **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
@@ -474,6 +473,17 @@ Work directly with your existing projects! User Context Paths allow you to share
 | `context_paths` | list | **Yes** (for project integration) | Shared directories/files for all agents |
 | └─ `path` | string | Yes | Absolute path to your project directory or file |
 | └─ `permission` | string | Yes | Access level: `"read"` or `"write"` |
+
+
+**Quick Start Commands:**
+
+```bash
+# Code analysis and security audit
+uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Analyze all Python files in this project and create a comprehensive security audit report"
+
+# Project modernization
+uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Review this legacy codebase and create a modernization plan with updated dependencies"
+```
 
 **Configuration:**
 
@@ -514,16 +524,6 @@ orchestrator:
       permission: "write"          # Create modernized version
 ```
 
-**Quick Start Commands:**
-
-```bash
-# Code analysis and security audit
-uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Analyze all Python files in this project and create a comprehensive security audit report"
-
-# Project modernization
-uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Review this legacy codebase and create a modernization plan with updated dependencies"
-```
-
 **This showcases project integration:**
 - **Real Project Access** - Work with your actual codebases, not copies
 - **Secure Permissions** - Granular control over what agents can read/modify  
@@ -549,7 +549,9 @@ uv run python -m massgen.cli --config tools/filesystem/claude_code_context_shari
 
 ---
 
-#### 🆕 Latest Features (v0.0.21)
+#### 🆕 Latest Features (v0.0.21) 
+
+https://youtu.be/D-B38JlJKVM
 
 **Advanced Filesystem Permissions & Grok MCP Integration**
 ```bash
@@ -616,7 +618,7 @@ uv run python -m massgen.cli --config providers/local/lmstudio.yaml "Explain mac
 
 → [Browse by provider](massgen/configs/providers/) | [Browse by tools](massgen/configs/tools/) | [Browse teams](massgen/configs/teams/)
 
-#### Real-World Use Cases
+#### Additional Use Case Examples
 
 **Question Answering & Research:**
 ```bash
