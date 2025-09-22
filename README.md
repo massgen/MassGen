@@ -139,18 +139,6 @@ uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_
 ```
 [![Latest Version](https://img.youtube.com/vi/D-B38JlJKVM/0.jpg)](https://youtu.be/D-B38JlJKVM)
 
-**Advanced Filesystem Permissions & Grok MCP Integration**
-```bash
-# Grok with MCP tools for weather, search, and more
-uv run python -m massgen.cli --config tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and compare it to Paris?"
-
-# Multi-agent file collaboration with permission control
-uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Analyze this codebase and suggest improvements"
-
-# Advanced filesystem permissions for secure collaboration
-uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Review and refactor project files safely"
-```
-
 **What's New in v0.0.21:**
 - **Grok MCP Support** - Full MCP integration with automatic filesystem support
 - **Advanced Permissions** - Granular file access control for multi-agent collaboration
