@@ -213,10 +213,11 @@ class PathPermissionManager:
         # Find containing managed path
         for managed_path in self.managed_paths:
             if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
-                logger.debug(f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}) -- {self.managed_paths=}")
+                logger.info(f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}, type: {managed_path.path_type}, original: {managed_path.original_permission})")
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission
 
+        logger.debug(f"[PathPermissionManager] No permission found for {resolved_path} in managed paths: {[(str(mp.path), mp.permission.value, mp.path_type) for mp in self.managed_paths]}")
         return None
 
     async def pre_tool_use_hook(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
@@ -270,6 +271,7 @@ class PathPermissionManager:
             r".*[Mm]ove.*",       # move_file, etc.
             r".*[Dd]elete.*",     # delete operations
             r".*[Rr]emove.*",     # remove operations
+            r".*[Cc]opy.*",       # copy_file, copy_files_batch, etc.
         ]
 
         for pattern in write_patterns:
@@ -280,6 +282,10 @@ class PathPermissionManager:
 
     def _validate_write_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate write tool access."""
+        # Special handling for copy_files_batch - validate all destination paths after globbing
+        if tool_name == "copy_files_batch":
+            return self._validate_copy_files_batch(tool_args)
+
         # Extract file path from arguments
         file_path = self._extract_file_path(tool_args)
         if not file_path:
@@ -300,6 +306,46 @@ class PathPermissionManager:
             return (True, None)
         else:
             return (False, f"No write permission for '{path}' (read-only context path)")
+
+    def _validate_copy_files_batch(self, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """Validate copy_files_batch by checking all destination paths after globbing."""
+        try:
+            logger.debug(f"[PathPermissionManager] copy_files_batch validation - context_write_access_enabled: {self.context_write_access_enabled}")
+            # Import the helper function from workspace copy server
+            from .workspace_copy_server import get_copy_file_pairs
+
+            # Get all the file pairs that would be copied
+            source_base_path = tool_args.get("source_base_path")
+            destination_base_path = tool_args.get("destination_base_path", "")
+            include_patterns = tool_args.get("include_patterns")
+            exclude_patterns = tool_args.get("exclude_patterns")
+
+            if not source_base_path:
+                return (False, "copy_files_batch requires source_base_path")
+
+            # Get all file pairs (this also validates path restrictions)
+            file_pairs = get_copy_file_pairs(
+                source_base_path, destination_base_path, include_patterns, exclude_patterns
+            )
+
+            # Check permissions for each destination path
+            blocked_paths = []
+            for source_file, dest_file in file_pairs:
+                permission = self.get_permission(dest_file)
+                logger.debug(f"[PathPermissionManager] copy_files_batch checking dest: {dest_file}, permission: {permission}")
+                if permission == Permission.READ:
+                    blocked_paths.append(str(dest_file))
+
+            if blocked_paths:
+                # Limit to first few blocked paths for readable error message
+                example_paths = blocked_paths[:3]
+                suffix = f" (and {len(blocked_paths) - 3} more)" if len(blocked_paths) > 3 else ""
+                return (False, f"No write permission for destination paths: {', '.join(example_paths)}{suffix}")
+
+            return (True, None)
+
+        except Exception as e:
+            return (False, f"copy_files_batch validation failed: {e}")
 
     def _validate_command_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate command tool access.
@@ -347,7 +393,8 @@ class PathPermissionManager:
         # Common argument names for file paths:
         # - Claude Code: file_path, notebook_path
         # - MCP filesystem: path, source, destination
-        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "source", "destination"]
+        # - Workspace copy: source_path, destination_path, source_base_path, destination_base_path
+        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "destination", "destination_path", "destination_base_path"]  # source paths should NOT be checked bc they are always read from, not written to
 
         for key in path_keys:
             if key in tool_args:
@@ -547,6 +594,8 @@ class FilesystemManager:
             if not temp_parent_path.is_absolute():
                 temp_parent_path = temp_parent_path.resolve()
             self.agent_temporary_workspace_parent = temp_parent_path
+            # Clear existing temp workspace parent if it exists, else we would only clear those with the exact agent_ids in the config.
+            self.clear_temp_workspace()
 
         # Setup main working directory (now that agent_temporary_workspace_parent is set)
         self.cwd = self._setup_workspace(cwd)
@@ -660,25 +709,64 @@ class FilesystemManager:
 
         return config
 
+    def get_workspace_copy_mcp_config(self) -> Dict[str, Any]:
+        """
+        Generate workspace copy MCP server configuration.
+
+        Returns:
+            Dictionary with MCP server configuration for workspace copying
+        """
+        # Get context paths using the existing method
+        context_paths = self.path_permission_manager.get_context_paths()
+        context_paths_str = ",".join([cp["path"] for cp in context_paths])
+
+        config = {
+            "name": "workspace_copy",
+            "type": "stdio",
+            "command": "fastmcp",
+            "args": ["run", "massgen/mcp_tools/workspace_copy_server.py"],
+            "env": {
+                "FASTMCP_SHOW_CLI_BANNER": "false",
+                "WORKSPACE_PATH": str(self.cwd),  # Pass workspace path via environment
+            }
+        }
+
+        # Add all managed paths from path permission manager
+        config["args"].extend(self.path_permission_manager.get_mcp_filesystem_paths())
+
+        return config
+
     def inject_filesystem_mcp(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Inject filesystem MCP server into backend configuration.
+        Inject filesystem and workspace copy MCP servers into backend configuration.
 
         Args:
             backend_config: Original backend configuration
 
         Returns:
-            Modified configuration with filesystem MCP server added
+            Modified configuration with MCP servers added
         """
-        # Get existing mcp_servers configuration and add filesystem server if missing
+        # Get existing mcp_servers configuration
         mcp_servers = backend_config.get("mcp_servers", [])
+        existing_names = [server.get("name") for server in mcp_servers]
+
         try:
-            if "filesystem" not in [server.get("name") for server in mcp_servers]:
+            # Add filesystem server if missing
+            if "filesystem" not in existing_names:
                 mcp_servers.append(self.get_mcp_filesystem_config())
             else:
                 logger.warning(
-                    "[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present in configuration, continuing without changes"
+                    "[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present"
                 )
+
+            # Add workspace copy server if missing
+            if "workspace_copy" not in existing_names:
+                mcp_servers.append(self.get_workspace_copy_mcp_config())
+            else:
+                logger.warning(
+                    "[FilesystemManager.inject_filesystem_mcp] Custom workspace_copy MCP server already present"
+                )
+
         except Exception as e:
             logger.warning(
                 f"[FilesystemManager.inject_filesystem_mcp] Error checking existing MCP servers: {e}"
@@ -825,20 +913,87 @@ class FilesystemManager:
 
         except Exception as e:
             logger.exception(f"[FilesystemManager.save_snapshot] Snapshot failed: {e}")
-            # On failure, DO NOT clear the workspace and exit
             return
 
-        # --- 3. (TODO in future): Give option to clear the workspace, if snapshot succeeded ---
-        # for item in source_path.iterdir():
-        #     if item.is_symlink():
-        #         logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
-        #         continue
-        #     if item.is_file():
-        #         item.unlink()
-        #     elif item.is_dir():
-        #         shutil.rmtree(item)
+        logger.info(f"[FilesystemManager] Snapshot saved successfully, workspace preserved for logs and debugging")
 
-        logger.info(f"[FilesystemManager] Cleared workspace after snapshot")
+    def clear_workspace(self) -> None:
+        """
+        Clear the current workspace to prepare for a new agent execution.
+
+        This should be called at the START of agent execution, not at the end,
+        to preserve workspace contents for logging and debugging.
+        """
+        workspace_path = self.get_current_workspace()
+
+        if not workspace_path.exists() or not workspace_path.is_dir():
+            logger.debug(f"[FilesystemManager] Workspace does not exist or is not a directory: {workspace_path}")
+            return
+
+        # Safety checks
+        if workspace_path == Path("/") or len(workspace_path.parts) < 3:
+            logger.error(f"[FilesystemManager] Refusing to clear unsafe workspace path: {workspace_path}")
+            return
+
+        try:
+            logger.info(f"[FilesystemManager] Clearing workspace at agent startup. Current contents:")
+            items_to_clear = list(workspace_path.iterdir())
+
+            for item in items_to_clear:
+                logger.info(f" - {item}")
+                if item.is_symlink():
+                    logger.warning(f"[FilesystemManager] Skipping symlink during clear: {item}")
+                    continue
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+
+            logger.info(f"[FilesystemManager] Workspace cleared successfully, ready for new agent execution")
+
+        except Exception as e:
+            logger.error(f"[FilesystemManager] Failed to clear workspace: {e}")
+            # Don't raise - agent can still work with non-empty workspace
+
+    def clear_temp_workspace(self) -> None:
+        """
+        Clear the temporary workspace parent directory at orchestration startup.
+
+        This clears the entire temp workspace parent (e.g., temp_workspaces/),
+        removing all agent directories from previous runs to prevent cross-contamination.
+        """
+        if not self.agent_temporary_workspace_parent:
+            logger.debug("[FilesystemManager] No temp workspace parent configured to clear")
+            return
+
+        if not self.agent_temporary_workspace_parent.exists():
+            logger.debug(f"[FilesystemManager] Temp workspace parent does not exist: {self.agent_temporary_workspace_parent}")
+            return
+
+        # Safety checks
+        if self.agent_temporary_workspace_parent == Path("/") or len(self.agent_temporary_workspace_parent.parts) < 3:
+            logger.error(f"[FilesystemManager] Refusing to clear unsafe temp workspace parent path: {self.agent_temporary_workspace_parent}")
+            return
+
+        try:
+            logger.info(f"[FilesystemManager] Clearing temp workspace parent at orchestration startup: {self.agent_temporary_workspace_parent}")
+
+            items_to_clear = list(self.agent_temporary_workspace_parent.iterdir())
+            for item in items_to_clear:
+                logger.info(f" - Removing temp workspace item: {item}")
+                if item.is_symlink():
+                    logger.warning(f"[FilesystemManager] Skipping symlink during temp clear: {item}")
+                    continue
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+
+            logger.info(f"[FilesystemManager] Temp workspace parent cleared successfully")
+
+        except Exception as e:
+            logger.error(f"[FilesystemManager] Failed to clear temp workspace parent: {e}")
+            # Don't raise - orchestration can continue without clean temp workspace
 
     async def copy_snapshots_to_temp_workspace(
         self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]

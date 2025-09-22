@@ -44,7 +44,8 @@ dependencies = [
     "claude-code-sdk>=0.0.22",
     "loguru>=0.7.0",
     "mcp>=1.12.0",
-    "aiohttp>=3.8.0"
+    "aiohttp>=3.8.0",
+    "fastmcp>=2.12.3",
 ]
 
 [project.optional-dependencies]

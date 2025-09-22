@@ -526,7 +526,8 @@ Based on the coordination process above, present your final answer:"""
                         workspace_info.append(f" - `{path}` (read/write)")
                         workspace_info.append(f"   - **Permission Change Notice**: You now have full {permission} access to this location")
                         workspace_info.append(f"   - You are the only agent with write access to this production location")
-                        workspace_info.append(f"   - Other agents tested changes in isolated environments - their work needs to be deployed here. You must move or copy their successful work here to finalize it, making your own adjustments as needed.")
+                        workspace_info.append(f"   - Other agents tested changes in isolated environments - their work needs to be deployed here")
+                        workspace_info.append(f"   - Use the workspace copy tools to move your final work to this writable context path, with your adjustments as needed")
 
         workspace_section = (
             "\n".join(workspace_info)
