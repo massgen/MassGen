@@ -48,8 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Corrected example commands with proper paths
 
 ### Technical Details
-- **Commits**: 50+ commits including workspace copy, configuration restructuring, and documentation improvements
-- **Files Modified**: 90+ files across configs, backend, mcp_tools, and documentation
+- **Commits**: 30+ commits including workspace copy, configuration restructuring, and documentation improvements
+- **Files Modified**: 100+ files across configs, backend, mcp_tools, and documentation
 - **Major Refactoring**: Configuration file reorganization into logical categories
 - **New Documentation**: Added 762+ lines of documentation for configs and backends
 - **Contributors**: @ncrispino @qidanrui @Henry-811 and the MassGen team
