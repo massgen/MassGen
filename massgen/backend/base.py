@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Any, AsyncGenerator, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
-from .utils.token_management import TokenUsage, TokenCostCalculator
+from ..token_manager import TokenUsage, TokenCostCalculator
 from ..formatter import MessageFormatter
 
 
