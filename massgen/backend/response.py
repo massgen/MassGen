@@ -42,7 +42,7 @@ class ResponseBackend(LLMBackend):
         # Transport Types:
         # - "stdio" & "streamable-http": Use our mcp_tools folder (MultiMCPClient)
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
-        self.functions: Dict[str, Function] = {}
+        self._mcp_functions: Dict[str, Function] = {}
 
         # Thread safety for counters
         self._stats_lock = asyncio.Lock()
@@ -57,22 +57,6 @@ class ResponseBackend(LLMBackend):
         # Initialize MCP handler for consolidated MCP logic
         self.mcp_handler = MCPHandler(self)
         self.mcp_handler.setup_circuit_breaker()
-
-    # _setup_mcp_tools method removed - handled directly by MCPHandler.setup_context_manager()
-
-    def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
-        """Convert MCP tools (stdio + streamable-http) to OpenAI function declarations."""
-        if not self.functions:
-            return []
-
-        converted_tools = []
-        for function in self.functions.values():
-            converted_tools.append(function.to_openai_format())
-
-        logger.debug(
-            f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format"
-        )
-        return converted_tools
 
     def _get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Get provider tools (web search, code interpreter) if enabled."""
@@ -126,8 +110,8 @@ class ResponseBackend(LLMBackend):
             api_params["tools"] = converted_tools
 
         # Add MCP tools (stdio + streamable-http) as functions
-        if self.functions:
-            mcp_tools = self._convert_mcp_tools_to_openai_format()
+        if self._mcp_functions:
+            mcp_tools = self.mcp_tool_formatter.to_response_api_format(self._mcp_functions)
             if mcp_tools:
                 if "tools" not in api_params:
                     api_params["tools"] = []
@@ -424,7 +408,7 @@ class ResponseBackend(LLMBackend):
             api_params = await self._build_response_api_params(fallback_messages, fallback_tools, all_params)
             # Remove MCP functions from tools for clean fallback
             if "tools" in api_params:
-                mcp_function_names = set(self.functions.keys())
+                mcp_function_names = set(self._mcp_functions.keys())
                 api_params["tools"] = [
                     t for t in api_params["tools"]
                     if not (t.get("type") == "function" and t.get("name") in mcp_function_names)
@@ -513,11 +497,11 @@ class ResponseBackend(LLMBackend):
                         current_messages = MCPMessageManager.trim_message_history(messages.copy(), self._max_mcp_message_history)
 
                         # Show available tools status if MCP functions are available
-                        if self.functions:
+                        if self._mcp_functions:
                             yield StreamChunk(
                                 type="mcp_status",
                                 status="mcp_tools_initiated",
-                                content=f"🔧 [MCP] {len(self.functions)} tools available",
+                                content=f"🔧 [MCP] {len(self._mcp_functions)} tools available",
                                 source="mcp_session"
                             )
 
@@ -602,7 +586,7 @@ class ResponseBackend(LLMBackend):
                     
                     # Remove MCP functions for clean fallback
                     if "tools" in api_params:
-                        mcp_function_names = set(self.functions.keys())
+                        mcp_function_names = set(self._mcp_functions.keys())
                         api_params["tools"] = [
                             t for t in api_params["tools"]
                             if not (t.get("type") == "function" and t.get("name") in mcp_function_names)

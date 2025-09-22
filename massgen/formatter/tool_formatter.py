@@ -5,7 +5,6 @@ Handles conversion between OpenAI, Claude, and Response API formats.
 
 from __future__ import annotations
 
-import json
 from typing import Dict, List, Any
 
 

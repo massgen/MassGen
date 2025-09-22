@@ -156,7 +156,7 @@ class Function:
         # Execute the actual function
         return await self.entrypoint(modified_args)
 
-    def to_openai_format(self) -> Dict[str, Any]:
+    def to_response_api_format(self) -> Dict[str, Any]:
         """Convert function to OpenAI Response API format."""
         return {
             "type": "function",

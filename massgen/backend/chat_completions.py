@@ -329,16 +329,19 @@ class ChatCompletionsBackend(LLMBackend):
         for function in self.functions.values():
             tool = function.to_chat_completions_format()
             converted_tools.append(tool)
-            # Track MCP function names for fallback filtering
-            if tool.get("type") == "function":
-                name = tool.get("function", {}).get("name")
-                if name:
-                    self._mcp_function_names.add(name)
 
         logger.info(
             f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to Chat Completions format"
         )
         return converted_tools
+    
+    def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
+        """Track MCP function names for fallback filtering."""
+        for tool in tools:
+            if tool.get("type") == "function":
+                name = tool.get("function", {}).get("name")
+                if name:
+                    self._mcp_function_names.add(name)
 
     async def _handle_mcp_error_and_fallback(
         self,
@@ -476,6 +479,8 @@ class ChatCompletionsBackend(LLMBackend):
         if self.functions:
             mcp_tools = self._convert_mcp_tools_to_chat_completions_format()
             if mcp_tools:
+                # Track MCP function names for fallback filtering
+                self._track_mcp_function_names(mcp_tools)
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(mcp_tools)
