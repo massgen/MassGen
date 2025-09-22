@@ -77,11 +77,11 @@ This project started with the "threads of thought" and "iterative refinement" id
   - [Tools](#tools)
 - [🏃 Run MassGen](#4--run-massgen)
   - [CLI Configuration Parameters](#cli-configuration-parameters)
-  - [1. Single Agent (Easiest Start)](#1single-agent-easiest-start)
-  - [2. Multi-Agent Collaboration (Recommended)](#2multi-agent-collaboration-recommended)
-  - [3. Model Context Protocol (MCP)](#3model-context-protocol-mcp)
-  - [4. File System Operations](#4file-system-operations--workspace-management)
-  - [5. Project Integration (NEW in v0.0.21)](#5project-integration--user-context-paths-new-in-v0021)
+  - [1. Single Agent (Easiest Start)](#1-single-agent-easiest-start)
+  - [2. Multi-Agent Collaboration (Recommended)](#2-multi-agent-collaboration-recommended)
+  - [3. Model Context Protocol (MCP)](#3-model-context-protocol-mcp)
+  - [4. File System Operations](#4-file-system-operations--workspace-management)
+  - [5. Project Integration (NEW in v0.0.21)](#5-project-integration--user-context-paths-new-in-v0021)
   - [Backend Configuration Reference](#backend-configuration-reference)
   - [Interactive Multi-Turn Mode](#interactive-multi-turn-mode)
 - [📊 View Results](#5--view-results)
@@ -307,7 +307,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 #### 🚀 Getting Started
 
-**CLI Configuration Parameters**
+#### CLI Configuration Parameters
 
 | Parameter          | Description |
 |-------------------|-------------|
@@ -321,7 +321,7 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
 
 
-**1. Single Agent (Easiest Start)**
+#### **1. Single Agent (Easiest Start)**
 
 **Quick Start Commands:**
 ```bash
@@ -348,7 +348,7 @@ agent:
 → [See all single agent configs](massgen/configs/basic/single/)
 
 
-**2. Multi-Agent Collaboration (Recommended)**
+#### **2. Multi-Agent Collaboration (Recommended)**
 
 **Configuration:**
 
@@ -385,7 +385,7 @@ agents:  # Multiple agents (alternative to 'agent')
 → [Explore more multi-agent setups](massgen/configs/basic/multi/)
 
 
-**3. Model context protocol (MCP)**
+#### **3. Model context protocol (MCP)**
 
 The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardises how applications expose tools and context to language models. From the official documentation:
 
@@ -465,7 +465,7 @@ agents:
 → [View more MCP examples](massgen/configs/tools/mcp/)
 
 
-**4. File System Operations & Workspace Management**
+#### **4. File System Operations & Workspace Management**
 
 MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
 
@@ -526,7 +526,7 @@ orchestrator:
 
 → [View more filesystem examples](massgen/configs/tools/filesystem/)
 
-**5. Project Integration & User Context Paths (NEW in v0.0.21)**
+#### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
 Work directly with your existing projects! User Context Paths allow you to share specific directories and files with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
 
