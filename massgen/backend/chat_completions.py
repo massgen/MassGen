@@ -833,6 +833,9 @@ class ChatCompletionsBackend(LLMBackend):
 
             # Execute functions and collect results
             tool_results = []
+            # Ensure every captured function call gets a result to prevent OpenAI hanging
+            processed_call_ids = set()
+
             for call in captured_function_calls:
                 function_name = call["name"]
                 if function_name in self.functions:
@@ -880,6 +883,7 @@ class ChatCompletionsBackend(LLMBackend):
                                     "success": False,
                                 }
                             )
+                            processed_call_ids.add(call["call_id"])
                         else:
                             # Yield MCP success status as StreamChunk (similar to gemini.py)
                             yield StreamChunk(
@@ -898,6 +902,8 @@ class ChatCompletionsBackend(LLMBackend):
                                 }
                             )
 
+                        processed_call_ids.add(call["call_id"])
+
                     except Exception as e:
                         # Only catch unexpected non-MCP system errors
                         logger.error(f"Unexpected error in MCP function execution: {e}")
@@ -909,6 +915,7 @@ class ChatCompletionsBackend(LLMBackend):
                                 "success": False,
                             }
                         )
+                        processed_call_ids.add(call["call_id"])
                         continue
 
                     # Yield function_call status
@@ -923,6 +930,16 @@ class ChatCompletionsBackend(LLMBackend):
                         f"Executed MCP function {function_name} (stdio/streamable-http)"
                     )
                     mcp_functions_executed = True
+
+            # Ensure all captured function calls have results to prevent OpenAI hanging
+            for call in captured_function_calls:
+                if call["call_id"] not in processed_call_ids:
+                    logger.warning(f"Tool call {call['call_id']} for function {call['name']} was not processed - adding error result")
+                    tool_results.append({
+                        "tool_call_id": call["call_id"],
+                        "content": f"Error: Tool call {call['call_id']} for function {call['name']} was not processed. This may indicate a validation or execution error.",
+                        "success": False,
+                    })
 
             # Add all tool response messages after the assistant message
             for result in tool_results:

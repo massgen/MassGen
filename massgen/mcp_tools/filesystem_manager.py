@@ -594,6 +594,8 @@ class FilesystemManager:
             if not temp_parent_path.is_absolute():
                 temp_parent_path = temp_parent_path.resolve()
             self.agent_temporary_workspace_parent = temp_parent_path
+            # Clear existing temp workspace parent if it exists, else we would only clear those with the exact agent_ids in the config.
+            self.clear_temp_workspace()
 
         # Setup main working directory (now that agent_temporary_workspace_parent is set)
         self.cwd = self._setup_workspace(cwd)
