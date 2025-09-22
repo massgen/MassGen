@@ -123,6 +123,47 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
+## 🆕 Latest Features (v0.0.21) 
+
+```yaml
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+```
+[![Latest Version](https://img.youtube.com/vi/D-B38JlJKVM/0.jpg)](https://youtu.be/D-B38JlJKVM)
+
+**Advanced Filesystem Permissions & Grok MCP Integration**
+```bash
+# Grok with MCP tools for weather, search, and more
+uv run python -m massgen.cli --config tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and compare it to Paris?"
+
+# Multi-agent file collaboration with permission control
+uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Analyze this codebase and suggest improvements"
+
+# Advanced filesystem permissions for secure collaboration
+uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Review and refactor project files safely"
+```
+
+**What's New in v0.0.21:**
+- **Grok MCP Support** - Full MCP integration with automatic filesystem support
+- **Advanced Permissions** - Granular file access control for multi-agent collaboration
+- **Context Sharing** - Claude Code agents can now share workspace snapshots
+
+**Try v0.0.21 Features Now:**
+```bash
+# Grok with MCP tools - weather, search, and more
+uv run python -m massgen.cli --config tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and how does it compare to London? Also tell me about any interesting events happening in both cities this week."
+
+# Multi-agent file collaboration with permission control
+uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Analyze all Python files in this project, identify potential security issues, and create a detailed report with recommendations for improvements."
+
+# Context sharing between Claude Code agents
+uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Create a comprehensive website about fascinating facts regarding large language models. Put everything in a single index.html file with embedded CSS and make it visually appealing."
+```
+
+→ [See all release examples](massgen/configs/README.md#release-history--examples)
+
+---
+
+
 ## 🏗️ System Design
 
 MassGen operates through an architecture designed for **seamless multi-agent collaboration**:
@@ -559,41 +600,6 @@ orchestrator:
 - **Path Validation**: All paths are resolved to absolute paths to prevent directory traversal attacks
 
 ---
-
-#### 🆕 Latest Features (v0.0.21) 
-
-https://youtu.be/D-B38JlJKVM
-
-**Advanced Filesystem Permissions & Grok MCP Integration**
-```bash
-# Grok with MCP tools for weather, search, and more
-uv run python -m massgen.cli --config tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and compare it to Paris?"
-
-# Multi-agent file collaboration with permission control
-uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Analyze this codebase and suggest improvements"
-
-# Advanced filesystem permissions for secure collaboration
-uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Review and refactor project files safely"
-```
-
-**What's New in v0.0.21:**
-- **Grok MCP Support** - Full MCP integration with automatic filesystem support
-- **Advanced Permissions** - Granular file access control for multi-agent collaboration
-- **Context Sharing** - Claude Code agents can now share workspace snapshots
-
-**Try v0.0.21 Features Now:**
-```bash
-# Grok with MCP tools - weather, search, and more
-uv run python -m massgen.cli --config tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and how does it compare to London? Also tell me about any interesting events happening in both cities this week."
-
-# Multi-agent file collaboration with permission control
-uv run python -m massgen.cli --config tools/filesystem/fs_permissions_test.yaml "Analyze all Python files in this project, identify potential security issues, and create a detailed report with recommendations for improvements."
-
-# Context sharing between Claude Code agents
-uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Create a comprehensive website about fascinating facts regarding large language models. Put everything in a single index.html file with embedded CSS and make it visually appealing."
-```
-
-→ [See all release examples](massgen/configs/README.md#release-history--examples)
 
 #### Additional Examples by Provider
 
