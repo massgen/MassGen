@@ -134,6 +134,10 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ## 🆕 Latest Features (v0.0.22) 
 
+```bash
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+```
+
 **Experience v0.0.22 Features:**
 
 See the latest workspace copy tools and configuration improvements in action:
@@ -152,6 +156,19 @@ See the latest workspace copy tools and configuration improvements in action:
 - **Configuration Restructuring** - Organized configs by provider & use case (basic/, providers/, tools/, teams/) with comprehensive guides
 - **Enhanced File Operations** - Improved large-scale file handling with better security & workspace management
 - **Critical Bug Fixes** - Resolved write tool issues, path resolution bugs, and documentation improvements
+
+**Try v0.0.21-0.0.22 Features Now:**
+```bash
+# Grok with MCP tools - weather, search, and more
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and how does it compare to London? Also tell me about any interesting events happening in both cities this week."
+
+# Multi-agent file collaboration with permission control
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/fs_permissions_test.yaml "Analyze all Python files in this project, identify potential security issues, and create a detailed report with recommendations for improvements."
+
+# Context sharing between Claude Code agents
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a comprehensive website about fascinating facts regarding large language models. Put everything in a single index.html file with embedded CSS and make it visually appealing."
+```
+
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
 
