@@ -11,8 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-14]  # macos-14 is M1
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        os: [ubuntu-latest, macos-latest, macos-14, windows-latest]  # macos-14 is M1
+        python-version: ['3.10', '3.11', '3.12']
 
     runs-on: ${{ matrix.os }}
 
