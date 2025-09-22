@@ -844,7 +844,7 @@ class ResponseBackend(LLMBackend):
                     yield StreamChunk(
                         type="mcp_status",
                         status="function_call",
-                        content=f"Arguments for Calling {function_name}: {call["arguments"]}",
+                        content=f"Arguments for Calling {function_name}: {call['arguments']}",
                         source=f"mcp_{function_name}"
                     )
                     
