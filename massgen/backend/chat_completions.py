@@ -18,17 +18,14 @@ from __future__ import annotations
 
 # Standard library imports
 import asyncio
-import os
-from dataclasses import dataclass
 from typing import Dict, List, Any, AsyncGenerator, Optional, Tuple, Callable
-from urllib.parse import urlparse
 
 # Third-party imports
-import openai
 from openai import AsyncOpenAI
 
 # Local imports
 from .base import LLMBackend, StreamChunk, FilesystemSupport
+from .utils.message_converters import MessageConverter
 from ..logger_config import (
     log_backend_activity,
     log_backend_agent_message,
@@ -229,36 +226,6 @@ class ChatCompletionsBackend(LLMBackend):
 
         return converted_tools
 
-    def _serialize_tool_arguments(self, arguments) -> str:
-        """Safely serialize tool call arguments to JSON string.
-
-        Args:
-            arguments: Tool arguments (can be string, dict, or other types)
-
-        Returns:
-            JSON string representation of arguments
-        """
-        import json
-
-        if isinstance(arguments, str):
-            # If already a string, validate it's valid JSON
-            try:
-                json.loads(arguments)  # Validate JSON
-                return arguments
-            except (json.JSONDecodeError, ValueError):
-                # If not valid JSON, treat as plain string and wrap in quotes
-                return json.dumps(arguments)
-        elif arguments is None:
-            return "{}"
-        else:
-            # Convert to JSON string
-            try:
-                return json.dumps(arguments)
-            except (TypeError, ValueError) as e:
-                logger.warning(
-                    f"Failed to serialize tool arguments: {e}, arguments: {arguments}"
-                )
-                return "{}"
 
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
@@ -729,7 +696,7 @@ class ChatCompletionsBackend(LLMBackend):
                             for tool_call in final_tool_calls:
                                 args_value = tool_call["function"]["arguments"]
                                 if not isinstance(args_value, str):
-                                    args_value = self._serialize_tool_arguments(
+                                    args_value = MessageConverter._serialize_tool_arguments(
                                         args_value
                                     )
                                 captured_function_calls.append(
@@ -815,7 +782,7 @@ class ChatCompletionsBackend(LLMBackend):
                                 "type": "function",
                                 "function": {
                                     "name": call["name"],
-                                    "arguments": self._serialize_tool_arguments(
+                                    "arguments": MessageConverter._serialize_tool_arguments(
                                         call["arguments"]
                                     ),
                                 },
@@ -1460,51 +1427,6 @@ class ChatCompletionsBackend(LLMBackend):
                 return StreamChunk(type="reasoning_done", content="")
         return None
 
-    def _convert_messages_for_chat_completions(
-        self, messages: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """
-        Convert messages for Chat Completions API compatibility.
-
-        Chat Completions API expects tool call arguments as JSON strings in conversation history,
-        but they may be passed as objects from other parts of the system.
-        """
-        import json
-
-        converted_messages = []
-
-        for message in messages:
-            # Create a copy to avoid modifying the original
-            converted_msg = dict(message)
-
-            # Convert tool_calls arguments from objects to JSON strings
-            if message.get("role") == "assistant" and "tool_calls" in message:
-                converted_tool_calls = []
-                for tool_call in message["tool_calls"]:
-                    converted_call = dict(tool_call)
-                    if "function" in converted_call:
-                        converted_function = dict(converted_call["function"])
-                        arguments = converted_function.get("arguments")
-
-                        # Convert arguments to JSON string if it's an object
-                        if isinstance(arguments, dict):
-                            converted_function["arguments"] = json.dumps(arguments)
-                        elif arguments is None:
-                            converted_function["arguments"] = "{}"
-                        elif not isinstance(arguments, str):
-                            # Handle other non-string types
-                            converted_function[
-                                "arguments"
-                            ] = self._serialize_tool_arguments(arguments)
-                        # If it's already a string, keep it as-is
-
-                        converted_call["function"] = converted_function
-                    converted_tool_calls.append(converted_call)
-                converted_msg["tool_calls"] = converted_tool_calls
-
-            converted_messages.append(converted_msg)
-
-        return converted_messages
 
     def _sanitize_messages_for_api(
         self, messages: List[Dict[str, Any]]
@@ -1536,7 +1458,7 @@ class ChatCompletionsBackend(LLMBackend):
                         if has_match:
                             # Normalize arguments to string
                             fn = dict(tc.get("function", {}))
-                            fn["arguments"] = self._serialize_tool_arguments(
+                            fn["arguments"] = MessageConverter._serialize_tool_arguments(
                                 fn.get("arguments")
                             )
                             valid_tc = dict(tc)
@@ -1574,7 +1496,7 @@ class ChatCompletionsBackend(LLMBackend):
         # Sanitize: remove trailing assistant tool_calls without corresponding tool results
         sanitized_messages = self._sanitize_messages_for_api(messages)
         # Convert messages to ensure tool call arguments are properly serialized
-        converted_messages = self._convert_messages_for_chat_completions(
+        converted_messages = MessageConverter.to_chat_completions_format(
             sanitized_messages
         )
 

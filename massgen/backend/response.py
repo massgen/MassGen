@@ -60,10 +60,6 @@ class ResponseBackend(LLMBackend):
         self.mcp_handler = MCPHandler(self)
         self.mcp_handler.setup_circuit_breaker()
 
-        # Initialize utility classes
-        self.message_converter = MessageConverter()
-        self.token_calculator = TokenCostCalculator()
-   
     # _setup_mcp_tools method removed - handled directly by MCPHandler.setup_context_manager()
 
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:

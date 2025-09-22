@@ -179,87 +179,6 @@ class ClaudeBackend(LLMBackend):
 
         return converted_tools
 
-    def convert_messages_to_claude_format(
-        self, messages: List[Dict[str, Any]]
-    ) -> tuple:
-        """Convert messages to Claude's expected format.
-
-        Handle different tool message formats and extract system message:
-        - Chat Completions tool message: {"role": "tool", "tool_call_id": "...", "content": "..."}
-        - Response API tool message: {"type": "function_call_output", "call_id": "...", "output": "..."}
-        - System messages: Extract and return separately for top-level system parameter
-
-        Returns:
-            tuple: (converted_messages, system_message)
-        """
-        converted_messages = []
-        system_message = ""
-
-        for message in messages:
-            if message.get("role") == "system":
-                # Extract system message for top-level parameter
-                system_message = message.get("content", "")
-            elif message.get("role") == "tool":
-                # Chat Completions tool message -> Claude tool result
-                converted_messages.append(
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": message.get("tool_call_id"),
-                                "content": message.get("content", ""),
-                            }
-                        ],
-                    }
-                )
-            elif message.get("type") == "function_call_output":
-                # Response API tool message -> Claude tool result
-                converted_messages.append(
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": message.get("call_id"),
-                                "content": message.get("output", ""),
-                            }
-                        ],
-                    }
-                )
-            elif message.get("role") == "assistant" and "tool_calls" in message:
-                # Assistant message with tool calls - convert to Claude format
-                content = []
-
-                # Add text content if present
-                if message.get("content"):
-                    content.append({"type": "text", "text": message["content"]})
-
-                # Convert tool calls to Claude tool use format
-                for tool_call in message["tool_calls"]:
-                    tool_name = self.extract_tool_name(tool_call)
-                    tool_args = self.extract_tool_arguments(tool_call)
-                    tool_id = self.extract_tool_call_id(tool_call)
-
-                    content.append(
-                        {
-                            "type": "tool_use",
-                            "id": tool_id,
-                            "name": tool_name,
-                            "input": tool_args,
-                        }
-                    )
-
-                converted_messages.append({"role": "assistant", "content": content})
-            elif message.get("role") in ["user", "assistant"]:
-                # Keep user and assistant messages, skip system
-                converted_message = dict(message)
-                if isinstance(converted_message.get("content"), str):
-                    # Claude expects content to be text for simple messages
-                    pass
-                converted_messages.append(converted_message)
-
-        return converted_messages, system_message
 
     async def _handle_mcp_error_and_fallback(
         self,
@@ -565,7 +484,7 @@ class ClaudeBackend(LLMBackend):
     ) -> Dict[str, Any]:
         """Build Anthropic Messages API parameters with MCP integration."""
         # Convert messages to Claude format and extract system message
-        converted_messages, system_message = self.convert_messages_to_claude_format(
+        converted_messages, system_message = self.message_converter.to_claude_format(
             messages
         )
 
