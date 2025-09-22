@@ -144,7 +144,7 @@ class ChatCompletionsBackend(LLMBackend):
         # - "stdio" & "streamable-http": Use our mcp_tools folder (MultiMCPClient)
 
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
-        self.functions: Dict[str, Function] = {}
+        self._mcp_functions: Dict[str, Function] = {}
 
         # Thread safety for counters
         self._stats_lock = asyncio.Lock()
@@ -252,7 +252,7 @@ class ChatCompletionsBackend(LLMBackend):
                 return
 
             # Convert tools to functions using consolidated utility
-            self.functions.update(
+            self._mcp_functions.update(
                 MCPResourceManager.convert_tools_to_functions(
                     self._mcp_client,
                     backend_name=self.backend_name,
@@ -262,7 +262,7 @@ class ChatCompletionsBackend(LLMBackend):
             )
             self._mcp_initialized = True
             logger.info(
-                f"Successfully initialized MCP mcp_tools sessions with {len(self.functions)} tools converted to functions"
+                f"Successfully initialized MCP mcp_tools sessions with {len(self._mcp_functions)} tools converted to functions"
             )
 
             # Record success for circuit breaker
@@ -318,22 +318,7 @@ class ChatCompletionsBackend(LLMBackend):
             logger.warning(f"Failed to setup MCP sessions: {e}")
             self._mcp_client = None
             self._mcp_initialized = False
-            self.functions = {}
-
-    def _convert_mcp_tools_to_chat_completions_format(self) -> List[Dict[str, Any]]:
-        """Convert MCP tools (stdio + streamable-http) to Chat Completions format."""
-        if not self.functions:
-            return []
-
-        converted_tools = []
-        for function in self.functions.values():
-            tool = function.to_chat_completions_format()
-            converted_tools.append(tool)
-
-        logger.info(
-            f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to Chat Completions format"
-        )
-        return converted_tools
+            self._mcp_functions = {}
     
     def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
         """Track MCP function names for fallback filtering."""
@@ -448,7 +433,7 @@ class ChatCompletionsBackend(LLMBackend):
         result = await MCPExecutionManager.execute_function_with_retry(
             function_name=function_name,
             args=args,
-            functions=self.functions,
+            functions=self._mcp_functions,
             max_retries=max_retries,
             stats_callback=stats_callback,
             circuit_breaker_callback=circuit_breaker_callback,
@@ -476,8 +461,8 @@ class ChatCompletionsBackend(LLMBackend):
             api_params["tools"] = api_tools
 
         # Add MCP tools (stdio + streamable-http) as functions
-        if self.functions:
-            mcp_tools = self._convert_mcp_tools_to_chat_completions_format()
+        if self._mcp_functions:
+            mcp_tools = self.mcp_tool_formatter.to_chat_completions_format(self._mcp_functions)
             if mcp_tools:
                 # Track MCP function names for fallback filtering
                 self._track_mcp_function_names(mcp_tools)
@@ -699,7 +684,7 @@ class ChatCompletionsBackend(LLMBackend):
             non_mcp_functions = [
                 call
                 for call in captured_function_calls
-                if call["name"] not in self.functions
+                if call["name"] not in self._mcp_functions
             ]
 
             if non_mcp_functions:
@@ -742,7 +727,7 @@ class ChatCompletionsBackend(LLMBackend):
                 # First add the assistant message with ALL tool_calls
                 all_tool_calls = []
                 for call in captured_function_calls:
-                    if call["name"] in self.functions:
+                    if call["name"] in self._mcp_functions:
                         all_tool_calls.append(
                             {
                                 "id": call["call_id"],
@@ -769,7 +754,7 @@ class ChatCompletionsBackend(LLMBackend):
             tool_results = []
             for call in captured_function_calls:
                 function_name = call["name"]
-                if function_name in self.functions:
+                if function_name in self._mcp_functions:
                     yield StreamChunk(
                         type="mcp_status",
                         status="mcp_tool_called",
@@ -779,8 +764,8 @@ class ChatCompletionsBackend(LLMBackend):
 
                     # Yield detailed MCP status as StreamChunk (similar to gemini.py)
                     tools_info = (
-                        f" ({len(self.functions)} tools available)"
-                        if self.functions
+                        f" ({len(self._mcp_functions)} tools available)"
+                        if self._mcp_functions
                         else ""
                     )
                     yield StreamChunk(
@@ -1199,7 +1184,7 @@ class ChatCompletionsBackend(LLMBackend):
                     client = self._create_openai_client(**kwargs)
 
                     # Determine if MCP processing is needed AFTER setup
-                    use_mcp = bool(self.functions)
+                    use_mcp = bool(self._mcp_functions)
 
                     # If MCP is configured but unavailable, inform the user and fall back
                     if self.mcp_servers and not use_mcp:
@@ -1241,7 +1226,7 @@ class ChatCompletionsBackend(LLMBackend):
                         yield StreamChunk(
                             type="mcp_status",
                             status="mcp_tools_initiated",
-                            content=f"🔧 [MCP] {len(self.functions)} tools available",
+                            content=f"🔧 [MCP] {len(self._mcp_functions)} tools available",
                             source="mcp_session",
                         )
 
@@ -1505,7 +1490,7 @@ class ChatCompletionsBackend(LLMBackend):
             )
             self._mcp_client = None
             self._mcp_initialized = False
-            self.functions.clear()
+            self._mcp_functions.clear()
             self._mcp_function_names.clear()
 
     async def __aenter__(self) -> "ChatCompletionsBackend":
