@@ -1,5 +1,6 @@
-from .token_manager import TokenCostCalculator
+from .token_manager import TokenUsage, TokenCostCalculator
 
 __all__ = [
+    'TokenUsage',
     'TokenCostCalculator',
 ]
