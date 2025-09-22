@@ -49,6 +49,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 </details>
 
 <details open>
+<summary><h3>🆕 Latest Features</h3></summary>
+
+- [v0.0.21 Features](#-latest-features-v0021)
+- [Advanced Filesystem Permissions](#-latest-features-v0021)
+- [Grok MCP Integration](#-latest-features-v0021)
+- [Context Sharing](#-latest-features-v0021)
+</details>
+
+<details open>
 <summary><h3>🏗️ System Design</h3></summary>
 
 - [System Architecture](#%EF%B8%8F-system-design-1)
@@ -68,12 +77,12 @@ This project started with the "threads of thought" and "iterative refinement" id
   - [Tools](#tools)
 - [🏃 Run MassGen](#4--run-massgen)
   - [CLI Configuration Parameters](#cli-configuration-parameters)
-  - [1. Single Agent (Easiest Start)](#1-single-agent-easiest-start)
-  - [2. Multi-Agent Collaboration (Recommended)](#2-multi-agent-collaboration-recommended)
-  - [3. Model Context Protocol (MCP)](#3-model-context-protocol-mcp)
-  - [4. File System Operations](#4-file-system-operations--workspace-management)
-  - [5. Project Integration (NEW in v0.0.21)](#5-project-integration--user-context-paths-new-in-v0021)
-  - [Backend Configuration Reference](#-backend-configuration-reference)
+  - [1. Single Agent (Easiest Start)](#1single-agent-easiest-start)
+  - [2. Multi-Agent Collaboration (Recommended)](#2multi-agent-collaboration-recommended)
+  - [3. Model Context Protocol (MCP)](#3model-context-protocol-mcp)
+  - [4. File System Operations](#4file-system-operations--workspace-management)
+  - [5. Project Integration (NEW in v0.0.21)](#5project-integration--user-context-paths-new-in-v0021)
+  - [Backend Configuration Reference](#backend-configuration-reference)
   - [Interactive Multi-Turn Mode](#interactive-multi-turn-mode)
 - [📊 View Results](#5--view-results)
   - [Real-time Display](#real-time-display)
