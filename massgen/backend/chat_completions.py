@@ -25,7 +25,6 @@ from openai import AsyncOpenAI
 
 # Local imports
 from .base import LLMBackend, StreamChunk, FilesystemSupport
-from .utils.message_converters import MessageConverter
 from ..logger_config import (
     log_backend_activity,
     log_backend_agent_message,
@@ -696,7 +695,7 @@ class ChatCompletionsBackend(LLMBackend):
                             for tool_call in final_tool_calls:
                                 args_value = tool_call["function"]["arguments"]
                                 if not isinstance(args_value, str):
-                                    args_value = MessageConverter._serialize_tool_arguments(
+                                    args_value = self.message_converter._serialize_tool_arguments(
                                         args_value
                                     )
                                 captured_function_calls.append(
@@ -782,7 +781,7 @@ class ChatCompletionsBackend(LLMBackend):
                                 "type": "function",
                                 "function": {
                                     "name": call["name"],
-                                    "arguments": MessageConverter._serialize_tool_arguments(
+                                    "arguments": self.message_converter._serialize_tool_arguments(
                                         call["arguments"]
                                     ),
                                 },
@@ -1458,7 +1457,7 @@ class ChatCompletionsBackend(LLMBackend):
                         if has_match:
                             # Normalize arguments to string
                             fn = dict(tc.get("function", {}))
-                            fn["arguments"] = MessageConverter._serialize_tool_arguments(
+                            fn["arguments"] = self.message_converter._serialize_tool_arguments(
                                 fn.get("arguments")
                             )
                             valid_tc = dict(tc)
@@ -1496,7 +1495,7 @@ class ChatCompletionsBackend(LLMBackend):
         # Sanitize: remove trailing assistant tool_calls without corresponding tool results
         sanitized_messages = self._sanitize_messages_for_api(messages)
         # Convert messages to ensure tool call arguments are properly serialized
-        converted_messages = MessageConverter.to_chat_completions_format(
+        converted_messages = self.message_converter.to_chat_completions_format(
             sanitized_messages
         )
 
