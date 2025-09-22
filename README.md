@@ -134,9 +134,14 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ## 🆕 Latest Features (v0.0.21) 
 
-```yaml
+```bash
 uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
+
+**Watch v0.0.21 in Action:**
+
+See the latest filesystem permissions and Grok MCP integration features demonstrated in this comprehensive walkthrough:
+
 [![Latest Version](https://img.youtube.com/vi/D-B38JlJKVM/0.jpg)](https://youtu.be/D-B38JlJKVM)
 
 **What's New in v0.0.21:**
