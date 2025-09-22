@@ -40,6 +40,8 @@ massgen/
 │   ├── exceptions.py       # Custom MCP exceptions
 │   ├── security.py         # Security validation and sanitization
 │   ├── filesystem_manager.py # Workspace and snapshot management
+│   ├── hooks.py            # Function hooks for permission management
+│   ├── workspace_copy_server.py # MCP server for file copying operations
 │   └── *.md                # Individual component documentation
 ├── frontend/               # User interface components
 │   ├── __init__.py
@@ -131,9 +133,9 @@ We welcome contributions in these areas:
 
 ### Development Workflow
 
-> **Important**: Our next version is v0.0.22. If you want to contribute, please contribute to the `dev/v0.0.22` branch.
+> **Important**: Our next version is v0.0.23. If you want to contribute, please contribute to the `dev/v0.0.23` branch.
 
-1. **Fork the repository** and create a feature branch from `dev/v0.0.22`
+1. **Fork the repository** and create a feature branch from `dev/v0.0.23`
 2. **Set up the development environment** following the setup instructions above
 3. **Make your changes** following the existing code style and patterns
 4. **Add tests** for new functionality

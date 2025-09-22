@@ -47,7 +47,7 @@ massgen/configs/
 
 **Best starting point for multi-agent collaboration:**
 ```bash
-# Three powerful agents (Gemini, GPT-5, Grok) working together
+# Three powerful agents (Gemini, GPT-5, Grok) with enhanced workspace tools
 uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml "Your complex task"
 ```
 
@@ -107,9 +107,13 @@ uv run python -m massgen.cli --config tools/code-execution/multi_agent_playwrigh
 ```
 
 #### Filesystem Operations
-For file manipulation and workspace management:
+For file manipulation, workspace management, and copy tools:
 ```bash
+# Single agent with enhanced file operations
 uv run python -m massgen.cli --config tools/filesystem/claude_code_single.yaml "Analyze this codebase"
+
+# Multi-agent workspace collaboration with copy tools (NEW in v0.0.22)
+uv run python -m massgen.cli --config tools/filesystem/claude_code_context_sharing.yaml "Create shared workspace files"
 ```
 
 ### Provider-Specific Examples
@@ -222,7 +226,11 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.21 (September 2025) - Latest
+### v0.0.22 (December 2024) - Latest
+**New Features:** Workspace Copy Tools via MCP, Configuration Organization
+- All configs now organized by provider & use case (basic/, providers/, tools/, teams/)
+
+### v0.0.21 (September 2025)
 **New Features:** Advanced Filesystem Permissions, Grok MCP Integration
 - `tools/mcp/grok3_mini_mcp_example.yaml` - Grok with MCP tools
 - `tools/filesystem/fs_permissions_test.yaml` - Permission-controlled file sharing
