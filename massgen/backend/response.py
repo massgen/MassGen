@@ -669,34 +669,6 @@ class ResponseBackend(LLMBackend):
         """Get list of builtin tools supported by OpenAI."""
         return ["web_search", "code_interpreter"]
 
-    def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool name from OpenAI format (handles both Chat Completions and Responses API)."""
-        # Check if it's Chat Completions format
-        if "function" in tool_call:
-            return tool_call.get("function", {}).get("name", "unknown")
-        # Otherwise assume Responses API format
-        return tool_call.get("name", "unknown")
-
-    def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract tool arguments from OpenAI format (handles both Chat Completions and Responses API)."""
-        # Check if it's Chat Completions format
-        if "function" in tool_call:
-            return tool_call.get("function", {}).get("arguments", {})
-        # Otherwise assume Responses API format
-        arguments = tool_call.get("arguments", {})
-        if isinstance(arguments, str):
-            try:
-                import json
-
-                return json.loads(arguments)
-            except:
-                return {}
-        return arguments
-
-    def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool call ID from OpenAI format (handles both Chat Completions and Responses API)."""
-        return tool_call.get("call_id") or tool_call.get("id") or ""
-
     def create_tool_result_message(
         self,
         tool_call: Dict[str, Any],

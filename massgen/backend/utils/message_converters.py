@@ -16,133 +16,161 @@ class MessageConverter:
     """
     
     @staticmethod
+    def _serialize_tool_arguments(arguments) -> str:
+        """Safely serialize tool call arguments to JSON string.
+
+        Args:
+            arguments: Tool arguments (can be string, dict, or other types)
+
+        Returns:
+            JSON string representation of arguments
+        """
+        import json
+
+        if isinstance(arguments, str):
+            # If already a string, validate it's valid JSON
+            try:
+                json.loads(arguments)  # Validate JSON
+                return arguments
+            except (json.JSONDecodeError, ValueError):
+                # If not valid JSON, treat as plain string and wrap in quotes
+                return json.dumps(arguments)
+        elif arguments is None:
+            return "{}"
+        else:
+            # Convert to JSON string
+            try:
+                return json.dumps(arguments)
+            except (TypeError, ValueError) as e:
+                # Logger not imported at module level, use print for warning
+                print(f"Warning: Failed to serialize tool arguments: {e}, arguments: {arguments}")
+                return "{}"
+    
+    @staticmethod
     def to_openai_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Convert messages to OpenAI Chat Completions format.
-        
-        Args:
-            messages: Messages in any supported format
-            
-        Returns:
-            Messages in OpenAI format
+        Convert messages for Chat Completions API compatibility.
+
+        Chat Completions API expects tool call arguments as JSON strings in conversation history,
+        but they may be passed as objects from other parts of the system.
         """
+        import json
+
         converted = []
-        
-        for msg in messages:
-            role = msg.get("role", "")
-            
-            # Handle different content types
-            content = msg.get("content", "")
-            
-            # If content is a list (Claude format), convert to string
-            if isinstance(content, list):
-                text_parts = []
-                for block in content:
-                    if isinstance(block, dict):
-                        if block.get("type") == "text":
-                            text_parts.append(block.get("text", ""))
-                        elif block.get("type") == "tool_result":
-                            # Convert tool result to tool message
-                            converted.append({
-                                "role": "tool",
-                                "tool_call_id": block.get("tool_use_id", ""),
-                                "content": block.get("content", "")
-                            })
-                            continue
-                    else:
-                        text_parts.append(str(block))
-                
-                if text_parts:
-                    content = "\n".join(text_parts)
-                else:
-                    continue  # Skip if no text content
-            
-            # Build the message
-            openai_msg = {"role": role}
-            
-            if content:
-                openai_msg["content"] = content
-            
-            # Handle tool calls
-            if "tool_calls" in msg:
-                openai_msg["tool_calls"] = msg["tool_calls"]
-            
-            # Handle function calls (legacy format)
-            if "function_call" in msg:
-                # Convert to tool_calls format
-                openai_msg["tool_calls"] = [{
-                    "id": msg.get("id", "call_1"),
-                    "type": "function",
-                    "function": msg["function_call"]
-                }]
-            
-            converted.append(openai_msg)
-        
+
+        for message in messages:
+            # Create a copy to avoid modifying the original
+            converted_msg = dict(message)
+
+            # Convert tool_calls arguments from objects to JSON strings
+            if message.get("role") == "assistant" and "tool_calls" in message:
+                converted_tool_calls = []
+                for tool_call in message["tool_calls"]:
+                    converted_call = dict(tool_call)
+                    if "function" in converted_call:
+                        converted_function = dict(converted_call["function"])
+                        arguments = converted_function.get("arguments")
+
+                        # Convert arguments to JSON string if it's an object
+                        if isinstance(arguments, dict):
+                            converted_function["arguments"] = json.dumps(arguments)
+                        elif arguments is None:
+                            converted_function["arguments"] = "{}"
+                        elif not isinstance(arguments, str):
+                            # Handle other non-string types
+                            converted_function[
+                                "arguments"
+                            ] = MessageConverter._serialize_tool_arguments(arguments)
+                        # If it's already a string, keep it as-is
+
+                        converted_call["function"] = converted_function
+                    converted_tool_calls.append(converted_call)
+                converted_msg["tool_calls"] = converted_tool_calls
+
+            converted.append(converted_msg)
+
         return converted
     
     @staticmethod
     def to_claude_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Convert messages to Claude's format.
-        
-        Args:
-            messages: Messages in any supported format
-            
+        """Convert messages to Claude's expected format.
+
+        Handle different tool message formats and extract system message:
+        - Chat Completions tool message: {"role": "tool", "tool_call_id": "...", "content": "..."}
+        - Response API tool message: {"type": "function_call_output", "call_id": "...", "output": "..."}
+        - System messages: Extract and return separately for top-level system parameter
+
         Returns:
-            Messages in Claude format with content blocks
+            tuple: (converted_messages, system_message)
         """
-        converted = []
-        
-        for msg in messages:
-            role = msg.get("role", "")
-            
-            # Skip system messages (handled separately in Claude)
-            if role == "system":
-                continue
-            
-            # Map roles
-            if role == "tool":
-                role = "user"  # Tool results go as user messages in Claude
-            
-            claude_msg = {"role": role, "content": []}
-            
-            # Handle content
-            content = msg.get("content", "")
-            if content:
-                if isinstance(content, str):
-                    claude_msg["content"].append({
-                        "type": "text",
-                        "text": content
-                    })
-                elif isinstance(content, list):
-                    # Already in Claude format
-                    claude_msg["content"] = content
-            
-            # Handle tool calls
-            if "tool_calls" in msg:
-                for tool_call in msg["tool_calls"]:
-                    func = tool_call.get("function", {})
-                    claude_msg["content"].append({
-                        "type": "tool_use",
-                        "id": tool_call.get("id", ""),
-                        "name": func.get("name", ""),
-                        "input": json.loads(func.get("arguments", "{}"))
-                        if isinstance(func.get("arguments"), str)
-                        else func.get("arguments", {})
-                    })
-            
-            # Handle tool results (from tool role messages)
-            if role == "user" and msg.get("tool_call_id"):
-                claude_msg["content"] = [{
-                    "type": "tool_result",
-                    "tool_use_id": msg["tool_call_id"],
-                    "content": msg.get("content", "")
-                }]
-            
-            if claude_msg["content"]:  # Only add if there's content
-                converted.append(claude_msg)
-        
-        return converted
+        converted_messages = []
+        system_message = ""
+
+        for message in messages:
+            if message.get("role") == "system":
+                # Extract system message for top-level parameter
+                system_message = message.get("content", "")
+            elif message.get("role") == "tool":
+                # Chat Completions tool message -> Claude tool result
+                converted_messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": message.get("tool_call_id"),
+                                "content": message.get("content", ""),
+                            }
+                        ],
+                    }
+                )
+            elif message.get("type") == "function_call_output":
+                # Response API tool message -> Claude tool result
+                converted_messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": message.get("call_id"),
+                                "content": message.get("output", ""),
+                            }
+                        ],
+                    }
+                )
+            elif message.get("role") == "assistant" and "tool_calls" in message:
+                # Assistant message with tool calls - convert to Claude format
+                content = []
+
+                # Add text content if present
+                if message.get("content"):
+                    content.append({"type": "text", "text": message["content"]})
+
+                # Convert tool calls to Claude tool use format
+                for tool_call in message["tool_calls"]:
+                    tool_name = self.extract_tool_name(tool_call)
+                    tool_args = self.extract_tool_arguments(tool_call)
+                    tool_id = self.extract_tool_call_id(tool_call)
+
+                    content.append(
+                        {
+                            "type": "tool_use",
+                            "id": tool_id,
+                            "name": tool_name,
+                            "input": tool_args,
+                        }
+                    )
+
+                converted_messages.append({"role": "assistant", "content": content})
+            elif message.get("role") in ["user", "assistant"]:
+                # Keep user and assistant messages, skip system
+                converted_message = dict(message)
+                if isinstance(converted_message.get("content"), str):
+                    # Claude expects content to be text for simple messages
+                    pass
+                converted_messages.append(converted_message)
+
+        return converted_messages, system_message
     
     @staticmethod
     def to_gemini_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -253,131 +281,7 @@ class MessageConverter:
                 converted_messages.append(message.copy())
 
         return converted_messages
-    
-    @staticmethod
-    def merge_system_messages(messages: List[Dict[str, Any]]) -> Tuple[str, List[Dict[str, Any]]]:
-        """
-        Extract and merge system messages into a single system prompt.
-        Many APIs handle system messages differently, so this extracts them.
-        
-        Args:
-            messages: List of messages possibly containing system messages
-            
-        Returns:
-            Tuple of (merged_system_content, remaining_messages)
-        """
-        system_content = []
-        other_messages = []
-        
-        for msg in messages:
-            if msg.get("role") == "system":
-                content = msg.get("content", "")
-                if content:
-                    system_content.append(content)
-            else:
-                other_messages.append(msg)
-        
-        merged_system = "\n\n".join(system_content) if system_content else None
-        return merged_system, other_messages
-    
-    @staticmethod
-    def normalize_tool_calls(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Normalize tool calls across different formats.
-        Ensures all tool calls follow the same structure.
-        
-        Args:
-            messages: Messages with potentially different tool call formats
-            
-        Returns:
-            Messages with normalized tool calls
-        """
-        normalized = []
-        
-        for msg in messages:
-            new_msg = msg.copy()
-            
-            # Convert function_call to tool_calls
-            if "function_call" in msg and "tool_calls" not in msg:
-                new_msg["tool_calls"] = [{
-                    "id": f"call_{hash(str(msg['function_call']))}",
-                    "type": "function",
-                    "function": msg["function_call"]
-                }]
-                del new_msg["function_call"]
-            
-            # Ensure tool_calls have proper structure
-            if "tool_calls" in new_msg:
-                normalized_calls = []
-                for call in new_msg["tool_calls"]:
-                    if not isinstance(call, dict):
-                        continue
-                    
-                    normalized_call = {
-                        "id": call.get("id", f"call_{len(normalized_calls)}"),
-                        "type": call.get("type", "function")
-                    }
-                    
-                    # Handle function data
-                    if "function" in call:
-                        normalized_call["function"] = call["function"]
-                    elif "name" in call:
-                        # Direct function format
-                        normalized_call["function"] = {
-                            "name": call["name"],
-                            "arguments": call.get("arguments", "{}")
-                        }
-                    
-                    normalized_calls.append(normalized_call)
-                
-                if normalized_calls:
-                    new_msg["tool_calls"] = normalized_calls
-                else:
-                    del new_msg["tool_calls"]
-            
-            normalized.append(new_msg)
-        
-        return normalized
-    
-    @staticmethod
-    def extract_text_content(message: Dict[str, Any]) -> str:
-        """
-        Extract plain text content from a message regardless of format.
-        
-        Args:
-            message: Message in any format
-            
-        Returns:
-            Plain text content
-        """
-        content = message.get("content", "")
-        
-        if isinstance(content, str):
-            return content
-        
-        if isinstance(content, list):
-            # Handle content blocks (Claude format)
-            text_parts = []
-            for block in content:
-                if isinstance(block, dict):
-                    if block.get("type") == "text":
-                        text_parts.append(block.get("text", ""))
-                    elif block.get("type") == "tool_result":
-                        text_parts.append(f"[Tool Result: {block.get('content', '')}]")
-                else:
-                    text_parts.append(str(block))
-            return "\n".join(text_parts)
-        
-        # Handle Gemini parts format
-        if "parts" in message:
-            text_parts = []
-            for part in message["parts"]:
-                if isinstance(part, dict) and "text" in part:
-                    text_parts.append(part["text"])
-            return "\n".join(text_parts)
-        
-        return str(content) if content else ""
-    
+
     @staticmethod
     def convert_between_formats(
         messages: List[Dict[str, Any]],

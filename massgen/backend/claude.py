@@ -1538,40 +1538,6 @@ class ClaudeBackend(LLMBackend):
         """Get list of builtin tools supported by Claude."""
         return ["web_search", "code_execution"]
 
-    def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool name from tool call (handles multiple formats)."""
-        # Chat Completions format
-        if "function" in tool_call:
-            return tool_call.get("function", {}).get("name", "unknown")
-        # Claude native format
-        elif "name" in tool_call:
-            return tool_call.get("name", "unknown")
-        # Fallback
-        return "unknown"
-
-    def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract tool arguments from tool call (handles multiple formats)."""
-        # Chat Completions format
-        if "function" in tool_call:
-            args = tool_call.get("function", {}).get("arguments", {})
-        # Claude native format
-        elif "input" in tool_call:
-            args = tool_call.get("input", {})
-        else:
-            args = {}
-
-        # Ensure JSON parsing if needed
-        if isinstance(args, str):
-            try:
-                return json.loads(args)
-            except:
-                return {}
-        return args
-
-    def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool call ID from tool call."""
-        return tool_call.get("id") or tool_call.get("call_id") or ""
-
     def create_tool_result_message(
         self, tool_call: Dict[str, Any], result_content: str
     ) -> Dict[str, Any]:

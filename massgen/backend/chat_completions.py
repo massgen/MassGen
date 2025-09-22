@@ -1407,27 +1407,6 @@ class ChatCompletionsBackend(LLMBackend):
             finally:
                 await self._cleanup_client(client)
 
-
-    def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool name from Chat Completions format."""
-        return tool_call.get("function", {}).get("name", "unknown")
-
-    def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract tool arguments from Chat Completions format."""
-        arguments = tool_call.get("function", {}).get("arguments", {})
-        if isinstance(arguments, str):
-            try:
-                import json
-
-                return json.loads(arguments) if arguments.strip() else {}
-            except json.JSONDecodeError:
-                return {}
-        return arguments
-
-    def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool call ID from Chat Completions format."""
-        return tool_call.get("id", "")
-
     def create_tool_result_message(
         self, tool_call: Dict[str, Any], result_content: str
     ) -> Dict[str, Any]:
