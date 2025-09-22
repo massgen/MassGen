@@ -28,6 +28,19 @@ massgen/configs/
 └── docs/                 # Setup guides and documentation
 ```
 
+## CLI Command Line Arguments
+
+| Parameter          | Description |
+|-------------------|-------------|
+| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `azure_openai`, `zai`). Optional for [models with default backends](../utils.py).|
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
+| `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
+| `--no-logs`        | Disable real-time logging.|
+| `--debug`          | Enable debug mode with verbose logging (NEW in v0.0.13). Shows detailed orchestrator activities, agent messages, backend operations, and tool calls. Debug logs are saved to `agent_outputs/log_{time}/massgen_debug.log`. |
+| `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
+
 ## Quick Start Examples
 
 ### 🌟 Recommended Showcase Example
@@ -42,6 +55,25 @@ This configuration combines:
 - **Gemini 2.5 Flash** - Fast, versatile with web search
 - **GPT-5 Nano** - Advanced reasoning with code interpreter
 - **Grok-3 Mini** - Efficient with real-time web search
+
+### Quick Setup Without Config Files
+
+**Single agent with model name only:**
+```bash
+# Quick test with any supported model - no configuration needed
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
+uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
+uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
+```
+
+**Interactive Mode:**
+```bash
+# Start interactive chat (no initial question)
+uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml
+
+# Debug mode for troubleshooting
+uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml --debug "Your question"
+```
 
 ### Basic Usage
 
