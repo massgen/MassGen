@@ -21,8 +21,9 @@ import fastmcp
 
 mcp = fastmcp.FastMCP("Workspace Copy")
 
-# Global variable to store allowed paths (set by argument parsing)
+# Global variables to store allowed paths and workspace (set by argument parsing)
 ALLOWED_PATHS: List[Path] = []
+WORKSPACE_PATH: Optional[Path] = None
 
 
 def get_copy_file_pairs(
@@ -60,9 +61,15 @@ def get_copy_file_pairs(
 
     _validate_path_access(source_base, ALLOWED_PATHS)
 
-    # Handle destination base path - can be absolute or relative to any allowed path
+    # Handle destination base path - resolve relative paths relative to workspace
     if destination_base_path:
-        dest_base = Path(destination_base_path).resolve()
+        if Path(destination_base_path).is_absolute():
+            dest_base = Path(destination_base_path).resolve()
+        else:
+            # Relative path should be resolved relative to workspace
+            if WORKSPACE_PATH is None:
+                raise ValueError("Relative destination paths require WORKSPACE_PATH to be set")
+            dest_base = (WORKSPACE_PATH / destination_base_path).resolve()
     else:
         # No destination specified - this shouldn't happen for batch operations
         raise ValueError("destination_base_path is required for copy_files_batch")
@@ -147,8 +154,15 @@ def _validate_and_resolve_paths(source_path: str, destination_path: str) -> tupl
 
         _validate_path_access(source, ALLOWED_PATHS)
 
-        # Handle destination path - resolve and validate against allowed paths
-        destination = Path(destination_path).resolve()
+        # Handle destination path - resolve relative paths relative to workspace
+        if Path(destination_path).is_absolute():
+            destination = Path(destination_path).resolve()
+        else:
+            # Relative path should be resolved relative to workspace
+            if WORKSPACE_PATH is None:
+                raise ValueError("Relative destination paths require WORKSPACE_PATH to be set")
+            destination = (WORKSPACE_PATH / destination_path).resolve()
+
         _validate_path_access(destination, ALLOWED_PATHS)
 
         return source, destination
@@ -217,8 +231,10 @@ def copy_file(
     or any other accessible location to the current agent's workspace.
 
     Args:
-        source_path: Path to source file/directory (absolute or relative to accessible paths)
-        destination_path: Destination path in workspace (relative to workspace root)
+        source_path: Path to source file/directory (must be absolute path)
+        destination_path: Destination path - can be:
+            - Relative path: Resolved relative to your workspace (e.g., "output/file.txt")
+            - Absolute path: Must be within allowed directories for security
         overwrite: Whether to overwrite existing files/directories (default: False)
 
     Returns:
@@ -250,8 +266,11 @@ def copy_files_batch(
     while filtering out unwanted files.
 
     Args:
-        source_base_path: Base path to copy from
-        destination_base_path: Base path in workspace to copy to (default: workspace root)
+        source_base_path: Base path to copy from (must be absolute path)
+        destination_base_path: Base destination path - can be:
+            - Relative path: Resolved relative to your workspace (e.g., "project/output")
+            - Absolute path: Must be within allowed directories for security
+            - Empty string: Copy to workspace root
         include_patterns: List of glob patterns for files to include (default: ["*"])
         exclude_patterns: List of glob patterns for files to exclude (default: [])
         overwrite: Whether to overwrite existing files (default: False)
@@ -338,5 +357,13 @@ if __name__ == "__main__":
 
     # Set global allowed paths
     ALLOWED_PATHS = [Path(path).resolve() for path in args.paths]
+
+    # Get workspace path from environment variable
+    workspace_env = os.getenv("WORKSPACE_PATH")
+    if workspace_env:
+        WORKSPACE_PATH = Path(workspace_env).resolve()
+        print(f"Workspace copy server: Using workspace path {WORKSPACE_PATH}")
+    else:
+        print("Workspace copy server: No WORKSPACE_PATH set - relative paths will not work")
 
     mcp.run()

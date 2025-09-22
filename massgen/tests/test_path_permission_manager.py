@@ -652,13 +652,15 @@ def test_workspace_copy_server_path_validation():
         # We need to modify ALLOWED_PATHS global for this test
         import massgen.mcp_tools.workspace_copy_server as wc_server
 
-        # Store original ALLOWED_PATHS and set test paths
+        # Store original ALLOWED_PATHS and WORKSPACE_PATH and set test paths
         original_allowed_paths = wc_server.ALLOWED_PATHS.copy()
+        original_workspace_path = wc_server.WORKSPACE_PATH
         wc_server.ALLOWED_PATHS = [
             helper.workspace_dir.resolve(),
             helper.context_dir.resolve(),
             helper.readonly_dir.resolve()
         ]
+        wc_server.WORKSPACE_PATH = helper.workspace_dir.resolve()
 
         # Create some test files
         test_source_dir = helper.temp_dir / "source"
@@ -767,12 +769,51 @@ def test_workspace_copy_server_path_validation():
                 print(f"❌ Failed: Unexpected error: {e}")
                 return False
 
+        # Test 6: Test relative path resolution to workspace
+        print("  Testing relative path resolution...")
+        from massgen.mcp_tools.workspace_copy_server import _validate_and_resolve_paths
+
+        try:
+            source, dest = _validate_and_resolve_paths(
+                str(test_source_dir / "test_file.txt"),
+                "subdir/relative_dest.txt"  # Relative path
+            )
+            expected_dest = helper.workspace_dir / "subdir" / "relative_dest.txt"
+            if dest != expected_dest.resolve():
+                print(f"❌ Failed: Relative path should resolve to {expected_dest.resolve()}, got {dest}")
+                return False
+            print("  ✓ Relative path correctly resolved to workspace")
+        except Exception as e:
+            print(f"❌ Failed: Relative path resolution failed: {e}")
+            return False
+
+        # Test 7: Test relative path without workspace set
+        print("  Testing relative path without workspace...")
+        old_workspace = wc_server.WORKSPACE_PATH
+        wc_server.WORKSPACE_PATH = None
+        try:
+            source, dest = _validate_and_resolve_paths(
+                str(test_source_dir / "test_file.txt"),
+                "relative_dest.txt"
+            )
+            print("❌ Failed: Should have failed when WORKSPACE_PATH is None")
+            return False
+        except ValueError as e:
+            if "require WORKSPACE_PATH" in str(e):
+                print("  ✓ Correctly rejected relative path when workspace not set")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+        finally:
+            wc_server.WORKSPACE_PATH = old_workspace
+
         print("✅ Workspace copy server path validation works correctly")
         return True
 
     finally:
-        # Restore original ALLOWED_PATHS
+        # Restore original ALLOWED_PATHS and WORKSPACE_PATH
         wc_server.ALLOWED_PATHS = original_allowed_paths
+        wc_server.WORKSPACE_PATH = original_workspace_path
         helper.teardown()
 
 

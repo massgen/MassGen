@@ -29,6 +29,7 @@ MassGen uses different permission enforcement strategies based on backend capabi
 - **Purpose**: Primary working directory for agent operations
 - **Permission**: Always `WRITE` - agents can create, modify, and delete files
 - **Scope**: Agent-specific, isolated from other agents
+- **Lifecycle**: Workspace is cleared at the start of each agent execution (see [Workspace Clearing](#workspace-clearing))
 - **Example**: `agent_workspace/`, `claude_code_workspace/`
 
 ### 2. Temporary Workspace Paths
@@ -46,6 +47,38 @@ MassGen uses different permission enforcement strategies based on backend capabi
     - For now, we assume only one context path can have `WRITE` access to avoid complexity -- this represents the case of a single project directory being modified as is default in other CLI tools. We allow multiple write paths, but have no guarantee of performance.
     - The default behavior will be for the final agent to copy files from its workspace to the context path write directory at the end of the run, mimicking what would happen if we edited the files directly.
 - **Example**: Project source files, documentation, configuration files
+
+## Workspace Clearing
+
+### Purpose
+
+MassGen clears each agent's workspace at the start of execution to ensure:
+- **Clean State**: Fresh workspace free from previous runs
+- **Isolation**: Prevents accidental access to residual files
+- **Context Preservation**: Previous outputs remain in snapshots/temp workspaces for sharing
+
+### When and Why
+
+Workspace clearing happens **before** agent execution (not after):
+
+```python
+# In orchestrator._stream_agent_execution()
+if agent.backend.filesystem_manager:
+    agent.backend.filesystem_manager.clear_workspace()
+```
+
+**Why at start vs end**: Preserves previous agent's output for logging while giving new agent a clean slate.
+
+### What Gets Cleared vs Preserved
+
+**Cleared**: Agent workspace directory (`cwd`) - all files and subdirectories removed
+
+**Preserved**:
+- Snapshots and temporary workspaces (for context sharing)
+- Context paths (user-specified directories)
+- Log files and execution artifacts
+
+This enables both workspace isolation and context sharing between agents.
 
 ## Configuration
 

@@ -725,6 +725,7 @@ class FilesystemManager:
             "args": ["run", "massgen/mcp_tools/workspace_copy_server.py"],
             "env": {
                 "FASTMCP_SHOW_CLI_BANNER": "false",
+                "WORKSPACE_PATH": str(self.cwd),  # Pass workspace path via environment
             }
         }
 
