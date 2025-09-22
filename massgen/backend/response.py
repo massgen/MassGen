@@ -24,8 +24,8 @@ from ..mcp_tools import (
     MCPServerError,
     Function,
     MCPMessageManager,
+    MCPHandler,
 )
-from ..mcp_tools.mcp_handler import MCPHandler
 
 
 class ResponseBackend(LLMBackend):
@@ -786,9 +786,6 @@ class ResponseBackend(LLMBackend):
                 if not key.startswith("_") and not callable(getattr(obj, key, None))
             }
 
-    async def cleanup_mcp(self) -> None:
-        """Cleanup MCP connections."""
-        await self.mcp_handler.cleanup_mcp()
 
     async def __aenter__(self) -> "ResponseBackend":
         """Async context manager entry."""
@@ -803,6 +800,6 @@ class ResponseBackend(LLMBackend):
         exc_tb: Optional[object],
     ) -> None:
         """Async context manager exit with automatic resource cleanup."""
-        await self.mcp_handler.cleanup_context_manager(logger_instance=logger)
+        await self.mcp_handler.cleanup_mcp()
         # Don't suppress the original exception if one occurred
         return None

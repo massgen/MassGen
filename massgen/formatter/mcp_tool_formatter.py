@@ -46,7 +46,7 @@ class MCPToolFormatter:
             except Exception as e:
                 logger.warning(f"Failed to convert MCP function to Claude format: {e}")
                 continue
-        logger.debug(f"Converted {len(converted)} MCP tools to Claude format")
+        logger.info(f"Converted {len(converted)} MCP tools to Claude format")
         return converted
 
     @staticmethod
@@ -57,9 +57,9 @@ class MCPToolFormatter:
 
         converted_tools = []
         for mcp_function in mcp_functions.values():
-            converted_tools.append(mcp_function.to_openai_format())
+            converted_tools.append(mcp_function.to_response_api_format())
 
-        logger.debug(
+        logger.info(
             f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format"
         )
         return converted_tools
