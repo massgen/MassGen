@@ -810,7 +810,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Recent Achievements (v0.0.22)
 
-**🎉 Released: November 22, 2025**
+**🎉 Released: September 22, 2025**
 
 Version 0.0.22 introduces **Workspace Copy Tools via MCP** and **Configuration Organization**, establishing efficient multi-agent collaboration infrastructure:
 
