@@ -187,43 +187,6 @@ class ChatCompletionsBackend(LLMBackend):
         else:
             return "ChatCompletion"
 
-    def convert_tools_to_chat_completions_format(
-        self, tools: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Convert tools from Response API format to Chat Completions format if needed.
-
-        Response API format: {"type": "function", "name": ..., "description": ..., "parameters": ...}
-        Chat Completions format: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
-        """
-        if not tools:
-            return tools
-
-        converted_tools = []
-        for tool in tools:
-            if tool.get("type") == "function":
-                if "function" in tool:
-                    # Already in Chat Completions format
-                    converted_tools.append(tool)
-                elif "name" in tool and "description" in tool:
-                    # Response API format - convert to Chat Completions format
-                    converted_tools.append(
-                        {
-                            "type": "function",
-                            "function": {
-                                "name": tool["name"],
-                                "description": tool["description"],
-                                "parameters": tool.get("parameters", {}),
-                            },
-                        }
-                    )
-                else:
-                    # Unknown format - keep as-is
-                    converted_tools.append(tool)
-            else:
-                # Non-function tool - keep as-is
-                converted_tools.append(tool)
-
-        return converted_tools
 
 
     async def _setup_mcp_tools(self) -> None:
@@ -695,7 +658,7 @@ class ChatCompletionsBackend(LLMBackend):
                             for tool_call in final_tool_calls:
                                 args_value = tool_call["function"]["arguments"]
                                 if not isinstance(args_value, str):
-                                    args_value = self.message_converter._serialize_tool_arguments(
+                                    args_value = self.message_formatter._serialize_tool_arguments(
                                         args_value
                                     )
                                 captured_function_calls.append(
@@ -781,7 +744,7 @@ class ChatCompletionsBackend(LLMBackend):
                                 "type": "function",
                                 "function": {
                                     "name": call["name"],
-                                    "arguments": self.message_converter._serialize_tool_arguments(
+                                    "arguments": self.message_formatter._serialize_tool_arguments(
                                         call["arguments"]
                                     ),
                                 },
@@ -1457,7 +1420,7 @@ class ChatCompletionsBackend(LLMBackend):
                         if has_match:
                             # Normalize arguments to string
                             fn = dict(tc.get("function", {}))
-                            fn["arguments"] = self.message_converter._serialize_tool_arguments(
+                            fn["arguments"] = self.message_formatter._serialize_tool_arguments(
                                 fn.get("arguments")
                             )
                             valid_tc = dict(tc)
@@ -1495,7 +1458,7 @@ class ChatCompletionsBackend(LLMBackend):
         # Sanitize: remove trailing assistant tool_calls without corresponding tool results
         sanitized_messages = self._sanitize_messages_for_api(messages)
         # Convert messages to ensure tool call arguments are properly serialized
-        converted_messages = self.message_converter.to_chat_completions_format(
+        converted_messages = self.message_formatter.to_chat_completions_format(
             sanitized_messages
         )
 
@@ -1519,7 +1482,7 @@ class ChatCompletionsBackend(LLMBackend):
 
         # Add framework tools (convert to Chat Completions format)
         if tools:
-            converted_tools = self.convert_tools_to_chat_completions_format(tools)
+            converted_tools = self.tool_formatter.to_chat_completions_format(tools)
             api_tools.extend(converted_tools)
 
         # Add provider tools (web search, code interpreter) if enabled

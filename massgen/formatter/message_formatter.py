@@ -1,6 +1,6 @@
 """
 Message formatter for different LLM APIs.
-Handles conversion between OpenAI, Claude, Gemini, and Response API formats.
+Handles conversion between OpenAI, Claude, and Response API formats.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ class MessageFormatter:
         but they may be passed as objects from other parts of the system.
         """
 
-        converted = []
+        converted_messages = []
 
         for message in messages:
             # Create a copy to avoid modifying the original
@@ -55,9 +55,9 @@ class MessageFormatter:
                     converted_tool_calls.append(converted_call)
                 converted_msg["tool_calls"] = converted_tool_calls
 
-            converted.append(converted_msg)
+            converted_messages.append(converted_msg)
 
-        return converted
+        return converted_messages
     
     @staticmethod
     def to_claude_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -141,71 +141,6 @@ class MessageFormatter:
         return converted_messages, system_message
     
     @staticmethod
-    def to_gemini_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Convert messages to Gemini's format.
-        
-        Args:
-            messages: Messages in any supported format
-            
-        Returns:
-            Messages in Gemini format with parts
-        """
-        converted = []
-        
-        for msg in messages:
-            role = msg.get("role", "")
-            
-            # Map roles to Gemini format
-            if role == "assistant":
-                role = "model"
-            elif role == "system":
-                role = "user"  # Gemini handles system as user with special marker
-            elif role == "tool":
-                role = "function"
-            
-            gemini_msg = {"role": role, "parts": []}
-            
-            # Handle content
-            content = msg.get("content", "")
-            if content:
-                if isinstance(content, str):
-                    if role == "function":
-                        # Function response format
-                        gemini_msg["parts"].append({
-                            "functionResponse": {
-                                "name": msg.get("name", "unknown"),
-                                "response": {"content": content}
-                            }
-                        })
-                    else:
-                        gemini_msg["parts"].append({"text": content})
-                elif isinstance(content, list):
-                    # Convert content blocks
-                    for block in content:
-                        if isinstance(block, dict):
-                            if block.get("type") == "text":
-                                gemini_msg["parts"].append({"text": block.get("text", "")})
-            
-            # Handle tool calls
-            if "tool_calls" in msg:
-                for tool_call in msg["tool_calls"]:
-                    func = tool_call.get("function", {})
-                    gemini_msg["parts"].append({
-                        "functionCall": {
-                            "name": func.get("name", ""),
-                            "args": json.loads(func.get("arguments", "{}"))
-                            if isinstance(func.get("arguments"), str)
-                            else func.get("arguments", {})
-                        }
-                    })
-            
-            if gemini_msg["parts"]:  # Only add if there are parts
-                converted.append(gemini_msg)
-        
-        return converted
-    
-    @staticmethod
     def to_response_api_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Convert messages from Chat Completions format to Response API format.
 
@@ -261,8 +196,8 @@ class MessageFormatter:
         
         Args:
             messages: Messages in source format
-            source_format: One of "openai", "claude", "gemini", "response_api"
-            target_format: One of "openai", "claude", "gemini", "response_api"
+            source_format: One of "openai", "claude", "response_api"
+            target_format: One of "openai", "claude", "response_api"
             
         Returns:
             Messages in target format
@@ -298,7 +233,7 @@ class MessageFormatter:
                     
                     openai_messages.append(openai_msg)
             else:
-                openai_messages = MessageFormatter.to_openai_format(messages)
+                openai_messages = MessageFormatter.to_chat_completions_format(messages)
         else:
             openai_messages = messages
         
@@ -307,8 +242,6 @@ class MessageFormatter:
             return openai_messages
         elif target_format == "claude":
             return MessageFormatter.to_claude_format(openai_messages)
-        elif target_format == "gemini":
-            return MessageFormatter.to_gemini_format(openai_messages)
         elif target_format == "response_api":
             return MessageFormatter.to_response_api_format(openai_messages)
         else:

@@ -132,52 +132,6 @@ class ClaudeBackend(LLMBackend):
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
 
-    def convert_tools_to_claude_format(
-        self, tools: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Convert tools to Claude's expected format.
-
-        Input formats supported:
-        - Response API format: {"type": "function", "name": ..., "description": ..., "parameters": ...}
-        - Chat Completions format: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
-
-        Claude format: {"type": "function", "name": ..., "description": ..., "input_schema": ...}
-        """
-        if not tools:
-            return tools
-
-        converted_tools = []
-        for tool in tools:
-            if tool.get("type") == "function":
-                if "function" in tool:
-                    # Chat Completions format -> Claude custom tool
-                    func = tool["function"]
-                    converted_tools.append(
-                        {
-                            "type": "custom",
-                            "name": func["name"],
-                            "description": func["description"],
-                            "input_schema": func.get("parameters", {}),
-                        }
-                    )
-                elif "name" in tool and "description" in tool:
-                    # Response API format -> Claude custom tool
-                    converted_tools.append(
-                        {
-                            "type": "custom",
-                            "name": tool["name"],
-                            "description": tool["description"],
-                            "input_schema": tool.get("parameters", {}),
-                        }
-                    )
-                else:
-                    # Unknown format - keep as-is
-                    converted_tools.append(tool)
-            else:
-                # Non-function tool (builtin tools) - keep as-is
-                converted_tools.append(tool)
-
-        return converted_tools
 
 
     async def _handle_mcp_error_and_fallback(
@@ -484,7 +438,7 @@ class ClaudeBackend(LLMBackend):
     ) -> Dict[str, Any]:
         """Build Anthropic Messages API parameters with MCP integration."""
         # Convert messages to Claude format and extract system message
-        converted_messages, system_message = self.message_converter.to_claude_format(
+        converted_messages, system_message = self.message_formatter.to_claude_format(
             messages
         )
 
@@ -503,7 +457,7 @@ class ClaudeBackend(LLMBackend):
 
         # User-defined tools
         if tools:
-            converted_tools = self.convert_tools_to_claude_format(tools)
+            converted_tools = self.tool_formatter.to_claude_format(tools)
             combined_tools.extend(converted_tools)
 
         # MCP tools

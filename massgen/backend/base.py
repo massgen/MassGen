@@ -9,7 +9,7 @@ from typing import Dict, List, Any, AsyncGenerator, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
 from ..token_manager import TokenUsage, TokenCostCalculator
-from ..formatter import MessageFormatter
+from ..formatter import MessageFormatter, ToolFormatter
 
 
 class FilesystemSupport(Enum):
@@ -55,7 +55,8 @@ class LLMBackend(ABC):
         self.config = kwargs
         
         # Initialize utility classes
-        self.message_converter = MessageFormatter()
+        self.message_formatter = MessageFormatter()
+        self.tool_formatter = ToolFormatter()
         self.token_usage = TokenUsage()
         self.token_calculator = TokenCostCalculator()
    

@@ -93,7 +93,7 @@ class ResponseBackend(LLMBackend):
     ) -> Dict[str, Any]:
         """Build OpenAI Response API parameters with MCP integration."""
         # Convert messages to Response API format
-        converted_messages = self.message_converter.to_response_api_format(messages)
+        converted_messages = self.message_formatter.to_response_api_format(messages)
 
         # Response API parameters (uses 'input', not 'messages')
         api_params = {"input": converted_messages, "stream": True}
@@ -122,7 +122,7 @@ class ResponseBackend(LLMBackend):
 
         # Add framework tools (convert to Response API format)
         if tools:
-            converted_tools = self.convert_tools_to_response_api_format(tools)
+            converted_tools = self.tool_formatter.to_response_api_format(tools)
             api_params["tools"] = converted_tools
 
         # Add MCP tools (stdio + streamable-http) as functions
@@ -143,36 +143,6 @@ class ResponseBackend(LLMBackend):
 
         return api_params
 
-    def convert_tools_to_response_api_format(
-        self,
-        tools: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        """Convert tools from Chat Completions format to Response API format if needed.
-
-        Chat Completions format: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
-        Response API format: {"type": "function", "name": ..., "description": ..., "parameters": ...}
-        """
-        if not tools:
-            return tools
-
-        converted_tools = []
-        for tool in tools:
-            if tool.get("type") == "function" and "function" in tool:
-                # Chat Completions format - convert to Response API format
-                func = tool["function"]
-                converted_tools.append(
-                    {
-                        "type": "function",
-                        "name": func["name"],
-                        "description": func["description"],
-                        "parameters": func.get("parameters", {}),
-                    }
-                )
-            else:
-                # Already in Response API format or non-function tool
-                converted_tools.append(tool)
-
-        return converted_tools
 
     def _process_stream_chunk(self, chunk, agent_id) -> StreamChunk:
         """Process individual stream chunks and convert to StreamChunk format."""
