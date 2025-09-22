@@ -1407,43 +1407,6 @@ class ChatCompletionsBackend(LLMBackend):
             finally:
                 await self._cleanup_client(client)
 
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text (rough approximation)."""
-        # Simple approximation: ~1.3 tokens per word
-        return int(len(text.split()) * 1.3)
-
-    def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str
-    ) -> float:
-        """Calculate cost for token usage based on OpenAI pricing (default fallback)."""
-        model_lower = model.lower()
-
-        # OpenAI GPT-4o pricing (most common)
-        if "gpt-4o" in model_lower:
-            if "mini" in model_lower:
-                input_cost = (input_tokens / 1_000_000) * 0.15
-                output_cost = (output_tokens / 1_000_000) * 0.60
-            else:
-                input_cost = (input_tokens / 1_000_000) * 2.50
-                output_cost = (output_tokens / 1_000_000) * 10.00
-        # GPT-4 pricing
-        elif "gpt-4" in model_lower:
-            if "turbo" in model_lower:
-                input_cost = (input_tokens / 1_000_000) * 10.00
-                output_cost = (output_tokens / 1_000_000) * 30.00
-            else:
-                input_cost = (input_tokens / 1_000_000) * 30.00
-                output_cost = (output_tokens / 1_000_000) * 60.00
-        # GPT-3.5 pricing
-        elif "gpt-3.5" in model_lower:
-            input_cost = (input_tokens / 1_000_000) * 0.50
-            output_cost = (output_tokens / 1_000_000) * 1.50
-        else:
-            # Generic fallback pricing (moderate cost estimate)
-            input_cost = (input_tokens / 1_000_000) * 1.00
-            output_cost = (output_tokens / 1_000_000) * 3.00
-
-        return input_cost + output_cost
 
     def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
         """Extract tool name from Chat Completions format."""
