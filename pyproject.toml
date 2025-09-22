@@ -44,8 +44,7 @@ dependencies = [
     "claude-code-sdk>=0.0.22",
     "loguru>=0.7.0",
     "mcp>=1.12.0",
-    "aiohttp>=3.8.0",
-    "fastmcp>=2.12.3",
+    "aiohttp>=3.8.0"
 ]
 
 [project.optional-dependencies]
@@ -198,3 +197,10 @@ exclude_lines = [
 [tool.bandit]
 exclude_dirs = ["tests", "future_mass"]
 skips = ["B101", "B601"]  # Skip assert_used and shell_injection for test files
+
+[dependency-groups]
+dev = [
+    "astroid>=3.0.0",
+    "pre-commit>=4.3.0",
+    "pylint>=3.0.0",
+]
