@@ -47,8 +47,8 @@ massgen/configs/
 
 **Best starting point for multi-agent collaboration:**
 ```bash
-# Three powerful agents (Gemini, GPT-5, Grok) working together
-uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml "Your complex task"
+# Three powerful agents (Gemini, GPT-5, Grok) with enhanced workspace tools
+uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Your complex task"
 ```
 
 This configuration combines:
@@ -69,17 +69,17 @@ uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI develop
 **Interactive Mode:**
 ```bash
 # Start interactive chat (no initial question)
-uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml
+uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml
 
 # Debug mode for troubleshooting
-uv run python -m massgen.cli --config basic/multi/three_agents_default.yaml --debug "Your question"
+uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml --debug "Your question"
 ```
 
 ### Basic Usage
 
 For simple single-agent setups:
 ```bash
-uv run python -m massgen.cli --config basic/single/single_agent.yaml "Your question"
+uv run python -m massgen.cli --config massgen/configs/basic/single/single_agent.yaml "Your question"
 ```
 
 ### Tool-Enabled Configurations
@@ -88,28 +88,32 @@ uv run python -m massgen.cli --config basic/single/single_agent.yaml "Your quest
 MCP enables agents to use external tools and services:
 ```bash
 # Weather queries
-uv run python -m massgen.cli --config tools/mcp/gemini_mcp_example.yaml "What's the weather in Tokyo?"
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_example.yaml "What's the weather in Tokyo?"
 
 # Discord integration
-uv run python -m massgen.cli --config tools/mcp/claude_code_discord_mcp_example.yaml "Extract latest messages"
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/claude_code_discord_mcp_example.yaml "Extract latest messages"
 ```
 
 #### Web Search
 For agents with web search capabilities:
 ```bash
-uv run python -m massgen.cli --config tools/web-search/claude_streamable_http_test.yaml "Search for latest news"
+uv run python -m massgen.cli --config massgen/configs/tools/web-search/claude_streamable_http_test.yaml "Search for latest news"
 ```
 
 #### Code Execution
 For code interpretation and execution:
 ```bash
-uv run python -m massgen.cli --config tools/code-execution/multi_agent_playwright_automation.yaml "Browse and analyze websites"
+uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse and analyze websites"
 ```
 
 #### Filesystem Operations
-For file manipulation and workspace management:
+For file manipulation, workspace management, and copy tools:
 ```bash
-uv run python -m massgen.cli --config tools/filesystem/claude_code_single.yaml "Analyze this codebase"
+# Single agent with enhanced file operations
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_single.yaml "Analyze this codebase"
+
+# Multi-agent workspace collaboration with copy tools (NEW in v0.0.22)
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create shared workspace files"
 ```
 
 ### Provider-Specific Examples
@@ -118,22 +122,22 @@ Each provider has unique features and capabilities:
 
 #### OpenAI (GPT-5 Series)
 ```bash
-uv run python -m massgen.cli --config providers/openai/gpt5.yaml "Complex reasoning task"
+uv run python -m massgen.cli --config massgen/configs/providers/openai/gpt5.yaml "Complex reasoning task"
 ```
 
 #### Claude
 ```bash
-uv run python -m massgen.cli --config providers/claude/claude_mcp_example.yaml "Creative writing task"
+uv run python -m massgen.cli --config massgen/configs/providers/claude/claude_mcp_example.yaml "Creative writing task"
 ```
 
 #### Gemini
 ```bash
-uv run python -m massgen.cli --config providers/gemini/gemini_mcp_example.yaml "Research task"
+uv run python -m massgen.cli --config massgen/configs/providers/gemini/gemini_mcp_example.yaml "Research task"
 ```
 
 #### Local Models
 ```bash
-uv run python -m massgen.cli --config providers/local/lmstudio.yaml "Run with local model"
+uv run python -m massgen.cli --config massgen/configs/providers/local/lmstudio.yaml "Run with local model"
 ```
 
 ### Pre-Configured Teams
@@ -142,17 +146,17 @@ Teams are specialized multi-agent setups for specific domains:
 
 #### Creative Teams
 ```bash
-uv run python -m massgen.cli --config teams/creative/creative_team.yaml "Write a story"
+uv run python -m massgen.cli --config massgen/configs/teams/creative/creative_team.yaml "Write a story"
 ```
 
 #### Research Teams
 ```bash
-uv run python -m massgen.cli --config teams/research/research_team.yaml "Analyze market trends"
+uv run python -m massgen.cli --config massgen/configs/teams/research/research_team.yaml "Analyze market trends"
 ```
 
 #### Development Teams
 ```bash
-uv run python -m massgen.cli --config teams/development/zai_coding_team.yaml "Build a web app"
+uv run python -m massgen.cli --config massgen/configs/teams/development/zai_coding_team.yaml "Build a web app"
 ```
 
 ## Configuration File Format
@@ -222,40 +226,44 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.21 (September 2025) - Latest
+### v0.0.22 (December 2024) - Latest
+**New Features:** Workspace Copy Tools via MCP, Configuration Organization
+- All configs now organized by provider & use case (basic/, providers/, tools/, teams/)
+
+### v0.0.21 (September 2024)
 **New Features:** Advanced Filesystem Permissions, Grok MCP Integration
-- `tools/mcp/grok3_mini_mcp_example.yaml` - Grok with MCP tools
-- `tools/filesystem/fs_permissions_test.yaml` - Permission-controlled file sharing
-- `tools/filesystem/claude_code_context_sharing.yaml` - Agent workspace sharing
+- `massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml` - Grok with MCP tools
+- `massgen/configs/tools/filesystem/fs_permissions_test.yaml` - Permission-controlled file sharing
+- `massgen/configs/tools/filesystem/claude_code_context_sharing.yaml` - Agent workspace sharing
 
 ### v0.0.20
 **New Features:** Claude MCP Support with Recursive Execution
-- `tools/mcp/claude_mcp_example.yaml` - Claude with MCP tools
-- `tools/mcp/claude_mcp_test.yaml` - Testing Claude MCP capabilities
+- `massgen/configs/tools/mcp/claude_mcp_example.yaml` - Claude with MCP tools
+- `massgen/configs/tools/mcp/claude_mcp_test.yaml` - Testing Claude MCP capabilities
 
 ### v0.0.17
 **New Features:** OpenAI MCP Integration
-- `tools/mcp/gpt5_mini_mcp_example.yaml` - GPT-5 with MCP tools
-- `tools/mcp/gpt5mini_claude_code_discord_mcp_example.yaml` - Multi-agent MCP
+- `massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml` - GPT-5 with MCP tools
+- `massgen/configs/tools/mcp/gpt5mini_claude_code_discord_mcp_example.yaml` - Multi-agent MCP
 
 ### v0.0.15
 **New Features:** Gemini MCP Integration
-- `tools/mcp/gemini_mcp_example.yaml` - Gemini with weather MCP
-- `tools/mcp/multimcp_gemini.yaml` - Multiple MCP servers
+- `massgen/configs/tools/mcp/gemini_mcp_example.yaml` - Gemini with weather MCP
+- `massgen/configs/tools/mcp/multimcp_gemini.yaml` - Multiple MCP servers
 
 ### v0.0.10
 **New Features:** Azure OpenAI Support
-- `providers/azure/azure_openai_single.yaml` - Azure single agent
-- `providers/azure/azure_openai_multi.yaml` - Azure multi-agent
+- `massgen/configs/providers/azure/azure_openai_single.yaml` - Azure single agent
+- `massgen/configs/providers/azure/azure_openai_multi.yaml` - Azure multi-agent
 
 ### v0.0.7
 **New Features:** Local Model Support with LM Studio
-- `providers/local/lmstudio.yaml` - Local model inference
+- `massgen/configs/providers/local/lmstudio.yaml` - Local model inference
 
 ### v0.0.5
 **New Features:** Claude Code Integration
-- `tools/filesystem/claude_code_single.yaml` - Claude Code with dev tools
-- `tools/filesystem/claude_code_flash2.5.yaml` - Multi-agent with Claude Code
+- `massgen/configs/tools/filesystem/claude_code_single.yaml` - Claude Code with dev tools
+- `massgen/configs/tools/filesystem/claude_code_flash2.5.yaml` - Multi-agent with Claude Code
 
 ## Naming Convention
 

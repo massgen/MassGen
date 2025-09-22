@@ -51,10 +51,10 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.21 Features](#-latest-features-v0021)
-- [Advanced Filesystem Permissions](#-latest-features-v0021)
-- [Grok MCP Integration](#-latest-features-v0021)
-- [Context Sharing](#-latest-features-v0021)
+- [v0.0.22 Features](#-latest-features-v0022)
+- [Workspace Copy Tools](#-latest-features-v0022)
+- [Configuration Organization](#-latest-features-v0022)
+- [Enhanced File Operations](#-latest-features-v0022)
 </details>
 
 <details open>
@@ -107,7 +107,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.22 Roadmap](#v0022-roadmap)
+- [v0.0.23 Roadmap](#v0023-roadmap)
 </details>
 
 <details open>
@@ -132,24 +132,32 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.21) 
+## 🆕 Latest Features (v0.0.22) 
 
 ```bash
 uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
-**Watch v0.0.21 in Action:**
+**Experience v0.0.22 Features:**
 
-See the latest filesystem permissions and Grok MCP integration features demonstrated in this comprehensive walkthrough:
+See the latest workspace copy tools and configuration improvements in action:
 
-[![Latest Version](https://img.youtube.com/vi/D-B38JlJKVM/0.jpg)](https://youtu.be/D-B38JlJKVM)
+<p align="center">
+  <a href="release_related_figures/copy_file.png">
+    <img src="release_related_figures/copy_file.png" alt="v0.0.22 Workspace Copy Tools" width="400" height="300" style="margin-right: 10px; object-fit: cover;">
+  </a>
+  <a href="release_related_figures/context_path.png">
+    <img src="release_related_figures/context_path.png" alt="v0.0.22 Configuration Organization" width="400" height="300" style="object-fit: cover;">
+  </a>
+</p>
 
-**What's New in v0.0.21:**
-- **Grok MCP Support** - Full MCP integration with automatic filesystem support
-- **Advanced Permissions** - Granular file access control for multi-agent collaboration
-- **Context Sharing** - Claude Code agents can now share workspace snapshots
+**What's New in v0.0.22:**
+- **Workspace Copy Tools via MCP** - Seamlessly copy files between workspaces for efficient multi-agent collaboration
+- **Configuration Restructuring** - Organized configs by provider & use case (basic/, providers/, tools/, teams/) with comprehensive guides
+- **Enhanced File Operations** - Improved large-scale file handling with better security & workspace management
+- **Critical Bug Fixes** - Resolved write tool issues, path resolution bugs, and documentation improvements
 
-**Try v0.0.21 Features Now:**
+**Try v0.0.21-0.0.22 Features Now:**
 ```bash
 # Grok with MCP tools - weather, search, and more
 uv run python -m massgen.cli --config massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml "What's the weather in Tokyo and how does it compare to London? Also tell me about any interesting events happening in both cities this week."
@@ -160,6 +168,7 @@ uv run python -m massgen.cli --config massgen/configs/tools/filesystem/fs_permis
 # Context sharing between Claude Code agents
 uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a comprehensive website about fascinating facts regarding large language models. Put everything in a single index.html file with embedded CSS and make it visually appealing."
 ```
+
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
 
@@ -799,31 +808,34 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.21)
+### Recent Achievements (v0.0.22)
 
-**🎉 Released: September 19, 2025**
+**🎉 Released: November 22, 2025**
 
-Version 0.0.21 introduces **Advanced Filesystem Permissions** and **Grok MCP Integration**, completing the foundation for secure, collaborative AI file operations:
+Version 0.0.22 introduces **Workspace Copy Tools via MCP** and **Configuration Organization**, establishing efficient multi-agent collaboration infrastructure:
 
-#### Advanced Filesystem Permissions System
-- **Path Permission Manager**: Comprehensive permission management for agent file access with granular validation
-- **User Context Paths**: Support for configurable context paths with READ/WRITE permissions for multi-agent file sharing
-- **Context vs Final Agent Distinction**: Coordination agents get read-only access, final agent gets configured write permissions
-- **Per-Agent Permission Enforcement**: Function hooks validate file operations before execution across all backends
-- **Security Framework**: Complete test suite and documentation for safe multi-agent file operations
+#### Workspace Copy Tools via MCP
+- **File Copying Capabilities**: New `workspace_copy_server.py` with MCP-based file copying functionality (369 lines)
+- **Efficient Workspace Operations**: Support for copying files and directories between workspaces with streaming operations
+- **Automatic Workspace Management**: Workspace initialization and management for seamless agent collaboration
+- **Testing Infrastructure**: Comprehensive testing framework for copy operations and validation
 
-#### Grok MCP Integration
-- **Unified Backend Architecture**: Grok backend refactored to use Chat Completions backend for consistency
-- **Full MCP Support**: Complete MCP server support including stdio and HTTP transports
-- **Filesystem Support**: Inherits filesystem capabilities through MCP servers (automatic injection when `cwd` is provided)
-- **New Configuration Files**: 5 new configuration files including Grok MCP testing and permissions examples
+#### Configuration Organization
+- **Hierarchical Structure**: New organized structure with `basic/`, `providers/`, `tools/`, `teams/` directories
+- **Comprehensive Documentation**: Added detailed `README.md` for configuration guide and `BACKEND_CONFIGURATION.md`
+- **Provider-Specific Examples**: Organized configs by use case and provider (Claude, OpenAI, Gemini, Azure)
+- **Easier Navigation**: Configs organized by functionality for better user experience
 
-#### Terminal Display Enhancements
-- **Rich Terminal Display**: Configuration files now default to rich terminal for better visual output
-- **Fallback Handling**: Enhanced terminal echo restoration for Linux/alacritty/tmux compatibility
-- **Improved Reliability**: Prevents invisible text after MassGen finishes execution
+#### Enhanced File Operations
+- **Large-Scale Operations**: Improved file handling for large-scale operations with better security
+- **Workspace Management**: Clear all temporary workspaces at startup for clean state
+- **Enhanced Security**: Security validation improvements in MCP tools and path handling
 
-### Previous Achievements (v0.0.3-v0.0.20)
+### Previous Achievements (v0.0.3-v0.0.21)
+
+✅ **Advanced Filesystem Permissions System (v0.0.21)**: Comprehensive permission management for agent file access with granular validation, user context paths with configurable READ/WRITE permissions, and per-agent permission enforcement
+
+✅ **Grok MCP Integration (v0.0.21)**: Unified backend architecture with full MCP server support, filesystem capabilities through MCP servers, and enhanced configuration files
 
 ✅ **Claude Backend MCP Support (v0.0.20)**: Extended MCP integration to Claude backend, full MCP protocol and filesystem support, robust error handling, and comprehensive documentation
 
@@ -879,26 +891,25 @@ Version 0.0.21 introduces **Advanced Filesystem Permissions** and **Grok MCP Int
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.22 Roadmap
+### v0.0.23 Roadmap
 
-Version 0.0.22 builds upon the solid foundation established in v0.0.21 by addressing key limitations in filesystem operations and enhancing code generation capabilities. Key priorities include:
+Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tools and configuration organization by addressing critical code architecture improvements and system reliability. Key priorities include:
 
 #### Required Features
-- **Enhanced Filesystem Support**: Address edit_file limitations for large files, enabling safe operations beyond the 10k character cap
-- **File Operation Capabilities**: Introduce copy_files and edit_file_copy tools for file duplication with minimal edits
-- **Memory Optimization**: Implement chunked file reading, streaming operations, and efficient diff algorithms for large file handling
+- **Backend Architecture Refactoring**: Eliminate duplicated code in backend files including MCP, filesystem manager, and permission manager
+- **Agent System Prompt Fixes**: Fix the problem where the final agent expects human feedback through system prompt changes
 
 #### Optional Features
-- **Improved Code Task Output**: Refine system prompts and generation logic to ensure more diverse answers for coding tasks
-- **Quality Metrics**: Develop assessment tools for code generation diversity and effectiveness
+- **VLLM Local Model Support**: Add support for VLLM backends with local models for better performance and cost efficiency
+- **MCP Marketplace Integration**: Integrate MCP Marketplace support for expanded tool ecosystem
 
 Key technical approach:
-- **Streaming File Operations**: Support files up to 500MB with memory-efficient processing
-- **Safety Mechanisms**: Automatic backups, rollback functionality, and integrity checks for large file operations
-- **Copy-Edit Workflows**: Template-based file generation and batch operations for efficient development
-- **Cross-Platform Support**: Robust file operations across different operating systems
+- **Code Deduplication**: Consolidate shared functionality across backends for improved maintainability
+- **Autonomous Agent Behavior**: Ensure final agents complete tasks without expecting human feedback
+- **Local Model Infrastructure**: Enable high-performance local model inference through VLLM
+- **Marketplace Integration**: Expand tool ecosystem through MCP Marketplace discovery and installation
 
-For detailed milestones and technical specifications, see the [full v0.0.22 roadmap](ROADMAP_v0.0.22.md).
+For detailed milestones and technical specifications, see the [full v0.0.23 roadmap](ROADMAP_v0.0.23.md).
 
 ---
 
