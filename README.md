@@ -67,12 +67,12 @@ This project started with the "threads of thought" and "iterative refinement" id
   - [Models](#models)
   - [Tools](#tools)
 - [🏃 Run MassGen](#4--run-massgen)
+  - [CLI Configuration Parameters](#cli-configuration-parameters)
   - [1. Single Agent (Easiest Start)](#1-single-agent-easiest-start)
   - [2. Multi-Agent Collaboration (Recommended)](#2-multi-agent-collaboration-recommended)
   - [3. Model Context Protocol (MCP)](#3-model-context-protocol-mcp)
   - [4. File System Operations](#4-file-system-operations--workspace-management)
   - [5. Project Integration (NEW in v0.0.21)](#5-project-integration--user-context-paths-new-in-v0021)
-  - [CLI Configuration Parameters](#cli-configuration-parameters)
   - [Backend Configuration Reference](#-backend-configuration-reference)
   - [Interactive Multi-Turn Mode](#interactive-multi-turn-mode)
 - [📊 View Results](#5--view-results)
@@ -256,6 +256,20 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 ### 4. 🏃 Run MassGen
 
 #### 🚀 Getting Started
+
+**CLI Configuration Parameters**
+
+| Parameter          | Description |
+|-------------------|-------------|
+| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
+| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `azure_openai`, `zai`). Optional for [models with default backends](massgen/utils.py).|
+| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). `--config` and `--model` are mutually exclusive - use one or the other. |
+| `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
+| `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
+| `--no-logs`        | Disable real-time logging.|
+| `--debug`          | Enable debug mode with verbose logging (NEW in v0.0.13). Shows detailed orchestrator activities, agent messages, backend operations, and tool calls. Debug logs are saved to `agent_outputs/log_{time}/massgen_debug.log`. |
+| `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
+
 
 **1. Single Agent (Easiest Start)**
 
@@ -528,11 +542,8 @@ orchestrator:
 - **Real Project Access** - Work with your actual codebases, not copies
 - **Secure Permissions** - Granular control over what agents can read/modify  
 - **Multi-Agent Collaboration** - Multiple agents safely work on the same project
-
-**Permission Security:**
 - **Context Agents** (during coordination): Always READ-only access to protect your files
 - **Final Agent** (final execution): Gets the configured permission (READ or write)
-- **Workspace Isolation**: Each agent's `cwd` workspace remains fully private and writable
 
 **Use Cases:**
 - **Code Review**: Agents analyze your source code and suggest improvements
@@ -678,21 +689,7 @@ MassGen configurations are organized by features and use cases. See the [Configu
 
 See MCP server setup guides: [Discord MCP](massgen/configs/docs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/docs/TWITTER_MCP_ENESCINAR_SETUP.md) 
 
-#### CLI Configuration Parameters
-
-| Parameter          | Description |
-|-------------------|-------------|
-| `--config`         | Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings |
-| `--backend`        | Backend type for quick setup without a config file (`claude`, `claude_code`, `gemini`, `grok`, `openai`, `azure_openai`, `zai`). Optional for [models with default backends](massgen/utils.py).|
-| `--model`          | Model name for quick setup (e.g., `gemini-2.5-flash`, `gpt-5-nano`, ...). `--config` and `--model` are mutually exclusive - use one or the other. |
-| `--system-message` | System prompt for the agent in quick setup mode. If `--config` is provided, `--system-message` is omitted. |
-| `--no-display`     | Disable real-time streaming UI coordination display (fallback to simple text output).|
-| `--no-logs`        | Disable real-time logging.|
-| `--debug`          | Enable debug mode with verbose logging (NEW in v0.0.13). Shows detailed orchestrator activities, agent messages, backend operations, and tool calls. Debug logs are saved to `agent_outputs/log_{time}/massgen_debug.log`. |
-| `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
-
-
-### 📖 Backend Configuration Reference
+#### Backend Configuration Reference
 
 For detailed configuration of all supported backends (OpenAI, Claude, Gemini, Grok, etc.), see:
 
