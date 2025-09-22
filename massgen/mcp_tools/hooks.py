@@ -22,6 +22,7 @@ from datetime import timedelta
 try:
     from mcp import ClientSession, types
     from mcp.client.session import ProgressFnT
+
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
@@ -29,8 +30,10 @@ except ImportError:
     types = None
     ProgressFnT = None
 
+
 class HookType(Enum):
     """Types of function call hooks."""
+
     PRE_CALL = "pre_call"
     # Future: POST_CALL = "post_call"
 
@@ -42,7 +45,7 @@ class HookResult:
         self,
         allowed: bool,
         metadata: Optional[Dict[str, Any]] = None,
-        modified_args: Optional[str] = None
+        modified_args: Optional[str] = None,
     ):
         self.allowed = allowed
         self.metadata = metadata or {}
@@ -61,7 +64,7 @@ class FunctionHook(ABC):
         function_name: str,
         arguments: str,
         context: Optional[Dict[str, Any]] = None,
-        **kwargs
+        **kwargs,
     ) -> HookResult:
         """
         Execute the hook.
@@ -88,7 +91,9 @@ class FunctionHookManager:
             hook_type: [] for hook_type in HookType
         }
 
-    def register_hook(self, function_name: str, hook_type: HookType, hook: FunctionHook):
+    def register_hook(
+        self, function_name: str, hook_type: HookType, hook: FunctionHook
+    ):
         """Register a hook for a specific function."""
         if function_name not in self._hooks:
             self._hooks[function_name] = {hook_type: [] for hook_type in HookType}
@@ -102,7 +107,9 @@ class FunctionHookManager:
         """Register a hook that applies to all functions."""
         self._global_hooks[hook_type].append(hook)
 
-    def get_hooks_for_function(self, function_name: str) -> Dict[HookType, List[FunctionHook]]:
+    def get_hooks_for_function(
+        self, function_name: str
+    ) -> Dict[HookType, List[FunctionHook]]:
         """Get all hooks (function-specific + global) for a function."""
         result = {hook_type: [] for hook_type in HookType}
 
@@ -147,7 +154,9 @@ class PermissionClientSession(ClientSession):
         # This is a bit hacky but necessary to preserve the session state
         self.__dict__.update(wrapped_session.__dict__)
 
-        logger.debug(f"[PermissionClientSession] Created permission session from {id(wrapped_session)}")
+        logger.debug(
+            f"[PermissionClientSession] Created permission session from {id(wrapped_session)}"
+        )
 
     async def call_tool(
         self,
@@ -162,12 +171,18 @@ class PermissionClientSession(ClientSession):
         tool_args = arguments or {}
 
         # Log tool call for debugging
-        logger.debug(f"[PermissionClientSession] Intercepted tool call: {name} with args: {tool_args}")
+        logger.debug(
+            f"[PermissionClientSession] Intercepted tool call: {name} with args: {tool_args}"
+        )
 
         # Apply permission hook if available
-        if self._permission_manager and hasattr(self._permission_manager, 'pre_tool_use_hook'):
+        if self._permission_manager and hasattr(
+            self._permission_manager, "pre_tool_use_hook"
+        ):
             try:
-                allowed, reason = await self._permission_manager.pre_tool_use_hook(name, tool_args)
+                allowed, reason = await self._permission_manager.pre_tool_use_hook(
+                    name, tool_args
+                )
 
                 if not allowed:
                     error_msg = f"Permission denied for tool '{name}'"
@@ -178,15 +193,14 @@ class PermissionClientSession(ClientSession):
                     # Return an error result instead of calling the tool
                     return types.CallToolResult(
                         content=[
-                            types.TextContent(
-                                type="text",
-                                text=f"Error: {error_msg}"
-                            )
+                            types.TextContent(type="text", text=f"Error: {error_msg}")
                         ],
-                        isError=True
+                        isError=True,
                     )
                 else:
-                    logger.debug(f"[PermissionClientSession] Tool '{name}' permission check passed")
+                    logger.debug(
+                        f"[PermissionClientSession] Tool '{name}' permission check passed"
+                    )
 
             except Exception as e:
                 logger.error(f"[PermissionClientSession] Error in permission hook: {e}")
@@ -198,17 +212,19 @@ class PermissionClientSession(ClientSession):
                 name=name,
                 arguments=arguments,
                 read_timeout_seconds=read_timeout_seconds,
-                progress_callback=progress_callback
+                progress_callback=progress_callback,
             )
-            logger.debug(f"[PermissionClientSession] Tool '{name}' completed successfully")
+            logger.debug(
+                f"[PermissionClientSession] Tool '{name}' completed successfully"
+            )
             return result
         except Exception as e:
             logger.error(f"[PermissionClientSession] Tool '{name}' failed: {e}")
             raise
 
+
 def convert_sessions_to_permission_sessions(
-    sessions: List[ClientSession],
-    permission_manager
+    sessions: List[ClientSession], permission_manager
 ) -> List[PermissionClientSession]:
     """
     Convert a list of ClientSession objects to PermissionClientSession subclasses.
@@ -220,14 +236,19 @@ def convert_sessions_to_permission_sessions(
     Returns:
         List of PermissionClientSession objects that apply permission hooks
     """
-    logger.debug(f"[PermissionClientSession] Converting {len(sessions)} sessions to permission sessions")
+    logger.debug(
+        f"[PermissionClientSession] Converting {len(sessions)} sessions to permission sessions"
+    )
     converted = []
     for session in sessions:
         # Create a new PermissionClientSession that inherits from ClientSession
         perm_session = PermissionClientSession(session, permission_manager)
         converted.append(perm_session)
-    logger.debug(f"[PermissionClientSession] Successfully converted {len(converted)} sessions")
+    logger.debug(
+        f"[PermissionClientSession] Successfully converted {len(converted)} sessions"
+    )
     return converted
+
 
 __all__ = [
     "HookType",

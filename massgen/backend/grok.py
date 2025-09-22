@@ -53,11 +53,11 @@ class GrokBackend(ChatCompletionsBackend):
             # Check for conflict with manually specified search_parameters
             existing_extra = api_params.get("extra_body", {})
             if (
-                    isinstance(existing_extra, dict)
-                    and "search_parameters" in existing_extra
+                isinstance(existing_extra, dict)
+                and "search_parameters" in existing_extra
             ):
                 error_message = "Conflict: Cannot use both 'enable_web_search: true' and manual 'extra_body.search_parameters'. Use one or the other."
-                log_stream_chunk('backend.grok', 'error', error_message, self.agent_id)
+                log_stream_chunk("backend.grok", "error", error_message, self.agent_id)
                 raise ValueError(error_message)
             # Merge search_parameters into existing extra_body
             search_params = {"mode": "auto", "return_citations": True}
@@ -74,4 +74,3 @@ class GrokBackend(ChatCompletionsBackend):
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by Grok."""
         return ["web_search"]
-

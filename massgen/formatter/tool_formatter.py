@@ -13,7 +13,7 @@ class ToolFormatter:
     Convert messages between different API formats.
     Supports bidirectional conversion between all major formats.
     """
-    
+
     @staticmethod
     def to_chat_completions_format(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Convert tools from Response API format to Chat Completions format if needed.
@@ -50,7 +50,7 @@ class ToolFormatter:
                 converted_tools.append(tool)
 
         return converted_tools
-    
+
     @staticmethod
     def to_claude_format(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Convert tools to Claude's expected format.
@@ -96,7 +96,7 @@ class ToolFormatter:
                 converted_tools.append(tool)
 
         return converted_tools
-    
+
     @staticmethod
     def to_response_api_format(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Convert tools from Chat Completions format to Response API format if needed.
@@ -128,24 +128,22 @@ class ToolFormatter:
 
     @staticmethod
     def convert_between_formats(
-        tools: List[Dict[str, Any]],
-        source_format: str,
-        target_format: str
+        tools: List[Dict[str, Any]], source_format: str, target_format: str
     ) -> List[Dict[str, Any]]:
         """
         Convert tools from one format to another.
-        
+
         Args:
             tools: Tools in source format
             source_format: One of "chat_completions", "claude", "response_api"
             target_format: One of "chat_completions", "claude", "response_api"
-            
+
         Returns:
             Tools in target format
         """
         if source_format == target_format:
             return tools
-        
+
         # Convert based on source and target formats
         if source_format == "chat_completions":
             if target_format == "claude":
@@ -167,14 +165,16 @@ class ToolFormatter:
                 converted_tools = []
                 for tool in tools:
                     if tool.get("type") == "custom":
-                        converted_tools.append({
-                            "type": "function",
-                            "function": {
-                                "name": tool.get("name", ""),
-                                "description": tool.get("description", ""),
-                                "parameters": tool.get("input_schema", {})
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool.get("name", ""),
+                                    "description": tool.get("description", ""),
+                                    "parameters": tool.get("input_schema", {}),
+                                },
                             }
-                        })
+                        )
                     else:
                         converted_tools.append(tool)
                 return converted_tools
@@ -183,15 +183,16 @@ class ToolFormatter:
                 converted_tools = []
                 for tool in tools:
                     if tool.get("type") == "custom":
-                        converted_tools.append({
-                            "type": "function",
-                            "name": tool.get("name", ""),
-                            "description": tool.get("description", ""),
-                            "parameters": tool.get("input_schema", {})
-                        })
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "name": tool.get("name", ""),
+                                "description": tool.get("description", ""),
+                                "parameters": tool.get("input_schema", {}),
+                            }
+                        )
                     else:
                         converted_tools.append(tool)
                 return converted_tools
-        
+
         raise ValueError(f"Unsupported conversion: {source_format} to {target_format}")
-        

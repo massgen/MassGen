@@ -20,12 +20,14 @@ import asyncio
 import json
 import time
 from enum import Enum
+
 # Define MCPState locally to avoid circular imports
 class MCPState(Enum):
     NOT_INITIALIZED = "not_initialized"
     READY = "ready"
     CIRCUIT_BREAKER_BLOCKED = "circuit_breaker_blocked"
     CONNECTION_FAILED = "connection_failed"
+
 
 # Import MCP exceptions
 try:
@@ -107,7 +109,7 @@ class Function:
             "function_name": self.name,
             "timestamp": time.time(),
             "backend": self._backend_name or "unknown",
-            "agent_id": self._agent_id
+            "agent_id": self._agent_id,
         }
 
         # Execute PRE_CALL hooks
@@ -115,15 +117,15 @@ class Function:
         for hook in self.hooks.get(HookType.PRE_CALL, []):
             try:
                 hook_result = await hook.execute(
-                    function_name=self.name,
-                    arguments=modified_args,
-                    context=context
+                    function_name=self.name, arguments=modified_args, context=context
                 )
 
                 # Check if hook blocks execution
                 if not hook_result.allowed:
                     # Return proper CallToolResult format matching permission_wrapper.py
-                    reason = hook_result.metadata.get('reason', f"Hook '{hook.name}' blocked function call")
+                    reason = hook_result.metadata.get(
+                        "reason", f"Hook '{hook.name}' blocked function call"
+                    )
                     error_msg = f"Permission denied for tool '{self.name}': {reason}"
                     logger.warning(f"🚫 [Function] {error_msg}")
 
@@ -135,11 +137,10 @@ class Function:
                         return mcp_types.CallToolResult(
                             content=[
                                 mcp_types.TextContent(
-                                    type="text",
-                                    text=f"Error: {error_msg}"
+                                    type="text", text=f"Error: {error_msg}"
                                 )
                             ],
-                            isError=True
+                            isError=True,
                         )
                     except ImportError:
                         # Fallback if MCP types not available
@@ -601,7 +602,9 @@ class MCPCircuitBreakerManager:
                     agent_id=agent_id,
                 )
                 # Reset the exhausted notification flag when a server recovers
-                if backend_instance and hasattr(backend_instance, '_mcp_exhausted_notified'):
+                if backend_instance and hasattr(
+                    backend_instance, "_mcp_exhausted_notified"
+                ):
                     backend_instance._mcp_exhausted_notified = False
             except Exception as cb_error:
                 log_mcp_activity(
@@ -804,15 +807,16 @@ class MCPResourceManager:
 
             # Only log success if servers actually connected
             connected_server_names = (
-                client.get_server_names()
-                if hasattr(client, "get_server_names")
-                else []
+                client.get_server_names() if hasattr(client, "get_server_names") else []
             )
             if connected_server_names and len(connected_server_names) > 0:
                 log_mcp_activity(
                     backend_name,
                     "connection successful",
-                    {"connected_servers": len(connected_server_names), "server_names": connected_server_names},
+                    {
+                        "connected_servers": len(connected_server_names),
+                        "server_names": connected_server_names,
+                    },
                     agent_id=agent_id,
                 )
             else:
@@ -870,7 +874,9 @@ class MCPResourceManager:
             (client, exhausted) where exhausted indicates attempts were exhausted without success.
         """
         attempts = max_attempts or (
-            getattr(getattr(circuit_breaker, "config", None), "max_failures", 1) if circuit_breaker else 1
+            getattr(getattr(circuit_breaker, "config", None), "max_failures", 1)
+            if circuit_breaker
+            else 1
         )
         if attempts < 1:
             attempts = 1
@@ -909,7 +915,7 @@ class MCPResourceManager:
         mcp_client,
         backend_name: Optional[str] = None,
         agent_id: Optional[str] = None,
-        hook_manager = None
+        hook_manager=None,
     ) -> Dict[str, Function]:
         """Convert MCP tools to Function objects with hook support.
 
@@ -926,7 +932,9 @@ class MCPResourceManager:
             return {}
 
         functions = {}
-        hook_mgr = hook_manager  # No fallback to global - each agent must provide its own
+        hook_mgr = (
+            hook_manager  # No fallback to global - each agent must provide its own
+        )
 
         for tool_name, tool in mcp_client.tools.items():
             try:
@@ -1045,7 +1053,8 @@ class MCPResourceManager:
         if (
             hasattr(backend_instance, "_mcp_tools_servers")
             and backend_instance._mcp_tools_servers
-            and getattr(backend_instance, "_mcp_state", MCPState.NOT_INITIALIZED) != MCPState.READY
+            and getattr(backend_instance, "_mcp_state", MCPState.NOT_INITIALIZED)
+            != MCPState.READY
         ):
             try:
                 await backend_instance._setup_mcp_tools()
@@ -1059,7 +1068,8 @@ class MCPResourceManager:
         elif (
             hasattr(backend_instance, "mcp_servers")
             and backend_instance.mcp_servers
-            and getattr(backend_instance, "_mcp_state", MCPState.NOT_INITIALIZED) != MCPState.READY
+            and getattr(backend_instance, "_mcp_state", MCPState.NOT_INITIALIZED)
+            != MCPState.READY
         ):
             try:
                 await backend_instance._setup_mcp_tools()
@@ -1112,7 +1122,7 @@ class MCPSetupManager:
         servers: Any,
         backend_name: Optional[str] = None,
         agent_id: Optional[str] = None,
-        filter_stdio_streamable_only: bool = True
+        filter_stdio_streamable_only: bool = True,
     ) -> List[Dict[str, Any]]:
         """Validate, normalize, and optionally filter MCP servers.
 
@@ -1194,13 +1204,19 @@ class MCPSetupManager:
                 raise MCPConfigurationError(
                     f"HTTP MCP transport type is not supported for server '{server_name}'. "
                     f"Supported types: 'stdio', 'streamable-http'.",
-                    context={"transport_type": transport_type, "server_name": server_name},
+                    context={
+                        "transport_type": transport_type,
+                        "server_name": server_name,
+                    },
                 )
             else:
                 raise MCPConfigurationError(
                     f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. "
                     f"Supported types: 'stdio', 'streamable-http'.",
-                    context={"transport_type": transport_type, "server_name": server_name},
+                    context={
+                        "transport_type": transport_type,
+                        "server_name": server_name,
+                    },
                 )
 
         return filtered_servers

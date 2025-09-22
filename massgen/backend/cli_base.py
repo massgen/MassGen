@@ -221,4 +221,3 @@ class CLIBackend(LLMBackend):
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         return self.__class__.__name__
-

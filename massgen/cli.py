@@ -313,7 +313,9 @@ def create_agents_from_config(
                 agent_context_paths = backend_config.get("context_paths", [])
                 orchestrator_context_paths = orchestrator_config["context_paths"]
                 # Orchestrator paths take precedence, then agent-specific paths
-                backend_config["context_paths"] = orchestrator_context_paths + agent_context_paths
+                backend_config["context_paths"] = (
+                    orchestrator_context_paths + agent_context_paths
+                )
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}

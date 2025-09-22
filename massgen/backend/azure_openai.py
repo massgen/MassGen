@@ -455,4 +455,3 @@ class AzureOpenAIBackend(LLMBackend):
     def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
         """Extract tool call id from Chat Completions-style tool call."""
         return tool_call.get("id", "")
-

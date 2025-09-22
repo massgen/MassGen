@@ -1218,7 +1218,9 @@ class RichTerminalDisplay(TerminalDisplay):
                         current = termios.tcgetattr(sys.stdin.fileno())
                         # Enable echo and canonical mode
                         current[3] = current[3] | termios.ECHO | termios.ICANON
-                        termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, current)
+                        termios.tcsetattr(
+                            sys.stdin.fileno(), termios.TCSADRAIN, current
+                        )
                     except:
                         pass
         except:

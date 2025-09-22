@@ -53,14 +53,14 @@ class LLMBackend(ABC):
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self.api_key = api_key
         self.config = kwargs
-        
+
         # Initialize utility classes
         self.message_formatter = MessageFormatter()
         self.tool_formatter = ToolFormatter()
         self.mcp_tool_formatter = MCPToolFormatter()
         self.token_usage = TokenUsage()
         self.token_calculator = TokenCostCalculator()
-   
+
         # Filesystem manager integration
         self.filesystem_manager = None
         cwd = kwargs.get("cwd")
@@ -74,12 +74,14 @@ class LLMBackend(ABC):
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
-                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
+                context_write_access_enabled = kwargs.get(
+                    "context_write_access_enabled", False
+                )
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
-                    context_write_access_enabled=context_write_access_enabled
+                    context_write_access_enabled=context_write_access_enabled,
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -92,12 +94,14 @@ class LLMBackend(ABC):
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
-                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
+                context_write_access_enabled = kwargs.get(
+                    "context_write_access_enabled", False
+                )
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
-                    context_write_access_enabled=context_write_access_enabled
+                    context_write_access_enabled=context_write_access_enabled,
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
@@ -125,7 +129,9 @@ class LLMBackend(ABC):
         )
 
         # Register hook on this agent's hook manager only
-        self.function_hook_manager.register_global_hook(HookType.PRE_CALL, permission_hook)
+        self.function_hook_manager.register_global_hook(
+            HookType.PRE_CALL, permission_hook
+        )
 
     @classmethod
     def get_base_excluded_config_params(cls) -> set:
@@ -176,17 +182,15 @@ class LLMBackend(ABC):
         pass
 
     def estimate_tokens(
-        self,
-        text: Union[str, List[Dict[str, Any]]],
-        method: str = "auto"
+        self, text: Union[str, List[Dict[str, Any]]], method: str = "auto"
     ) -> int:
         """
         Estimate token count for text or messages.
-        
+
         Args:
             text: Text string or list of message dictionaries
             method: Estimation method ("tiktoken", "simple", "auto")
-            
+
         Returns:
             Estimated token count
         """
@@ -197,12 +201,12 @@ class LLMBackend(ABC):
     ) -> float:
         """
         Calculate cost for token usage.
-        
+
         Args:
             input_tokens: Number of input tokens
             output_tokens: Number of output tokens
             model: Model name
-            
+
         Returns:
             Estimated cost in USD
         """
@@ -216,12 +220,12 @@ class LLMBackend(ABC):
     ) -> TokenUsage:
         """
         Update token usage tracking.
-        
+
         Args:
             messages: Input messages
             response_content: Response content
             model: Model name
-            
+
         Returns:
             Updated TokenUsage object
         """
@@ -238,13 +242,13 @@ class LLMBackend(ABC):
     def reset_token_usage(self):
         """Reset token usage tracking."""
         self.token_usage = TokenUsage()
-    
+
     def format_cost(self, cost: float = None) -> str:
         """Format cost for display."""
         if cost is None:
             cost = self.token_usage.estimated_cost
         return self.token_calculator.format_cost(cost)
-    
+
     def format_usage_summary(self, usage: TokenUsage = None) -> str:
         """Format token usage summary for display."""
         if usage is None:
@@ -272,7 +276,7 @@ class LLMBackend(ABC):
     def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
         """
         Extract tool name from a tool call (handles multiple formats).
-        
+
         Supports:
         - Chat Completions format: {"function": {"name": "...", ...}}
         - Response API format: {"name": "..."}
@@ -296,7 +300,7 @@ class LLMBackend(ABC):
     def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract tool arguments from a tool call (handles multiple formats).
-        
+
         Supports:
         - Chat Completions format: {"function": {"arguments": ...}}
         - Response API format: {"arguments": ...}
@@ -309,7 +313,7 @@ class LLMBackend(ABC):
             Tool arguments dictionary (parsed from JSON string if needed)
         """
         import json
-        
+
         # Chat Completions format
         if "function" in tool_call:
             args = tool_call.get("function", {}).get("arguments", {})
@@ -333,7 +337,7 @@ class LLMBackend(ABC):
     def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
         """
         Extract tool call ID from a tool call (handles multiple formats).
-        
+
         Supports:
         - Chat Completions format: {"id": "..."}
         - Response API format: {"call_id": "..."}

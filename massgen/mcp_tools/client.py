@@ -103,7 +103,9 @@ class MCPClient:
         status_callback: Optional[
             Callable[[str, Dict[str, Any]], Awaitable[None]]
         ] = None,
-        hooks: Optional[Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]] = None,
+        hooks: Optional[
+            Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]
+        ] = None,
     ):
         """
         Initialize MCP client.
@@ -643,14 +645,17 @@ class MCPClient:
                         f"Tool call blocked by pre-tool hook",
                         field="tool_name",
                         value=tool_name,
-                        context={"arguments": validated_arguments, "server_name": self.name},
+                        context={
+                            "arguments": validated_arguments,
+                            "server_name": self.name,
+                        },
                     )
             except Exception as e:
                 if isinstance(e, MCPValidationError):
                     raise  # Re-raise validation errors from hooks
                 logger.warning(
                     f"Pre-tool hook error for {tool_name} on {self.name}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
                 # Hook errors don't block execution unless they explicitly raise MCPValidationError
 
@@ -899,7 +904,9 @@ class MultiMCPClient:
         status_callback: Optional[
             Callable[[str, Dict[str, Any]], Awaitable[None]]
         ] = None,
-        hooks: Optional[Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]] = {},
+        hooks: Optional[
+            Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]
+        ] = {},
     ):
         """
         Initialize MultiMCP client.

@@ -36,7 +36,6 @@ class LMStudioBackend(ChatCompletionsBackend):
         )  # Track models this instance has attempted to load
         self.start_lmstudio_server(**kwargs)
 
-
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
@@ -58,7 +57,6 @@ class LMStudioBackend(ChatCompletionsBackend):
     def get_supported_builtin_tools(self) -> List[str]:  # type: ignore[override]
         # LM Studio (local OpenAI-compatible) does not provide provider-builtins
         return []
-
 
     def start_lmstudio_server(self, **kwargs):
         """Start LM Studio server after checking CLI and model availability."""

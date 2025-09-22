@@ -84,15 +84,17 @@ class MCPHandler:
                 setattr(self.backend, "_mcp_permanent_block_notified", True)
                 return True
             return False
-            
+
         # Don't show if setup failed message was already shown during setup attempts
         if getattr(self.backend, "_mcp_connection_failure_notified", False):
             return False
-            
+
         # Check if circuit breaker is blocking (warning already shown)
         circuit_breaker = self._get_circuit_breaker()
-        circuit_breakers_enabled = getattr(self.backend, "_circuit_breakers_enabled", False)
-        
+        circuit_breakers_enabled = getattr(
+            self.backend, "_circuit_breakers_enabled", False
+        )
+
         if circuit_breakers_enabled and circuit_breaker:
             # If circuit breaker has already shown blocking message, don't show setup failed
             if getattr(self.backend, "_mcp_circuit_breaker_notified", False):
@@ -122,7 +124,7 @@ class MCPHandler:
         current_state = getattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED)
         if current_state == MCPState.READY:
             return
-            
+
         # Check if setup is permanently blocked by circuit breaker
         if getattr(self.backend, "_mcp_permanently_blocked", False):
             return
@@ -170,14 +172,14 @@ class MCPHandler:
             _circuit_breakers_enabled = getattr(
                 self.backend, "_circuit_breakers_enabled", False
             )
-            
+
             if _circuit_breakers_enabled and circuit_breaker:
                 # Attempt setup with circuit breaker coordination up to max_failures times
                 max_attempts = circuit_breaker.config.max_failures
-                
+
                 for attempt in range(1, max_attempts + 1):
                     self.logger.info(f"MCP setup attempt {attempt}/{max_attempts}")
-                    
+
                     # Check circuit breaker filtering
                     filtered_servers = (
                         MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
@@ -187,41 +189,47 @@ class MCPHandler:
                             agent_id=self._get_agent_id(),
                         )
                     )
-                    
+
                     if not filtered_servers:
                         # All servers blocked by circuit breaker
-                        if not getattr(self.backend, "_mcp_circuit_breaker_notified", False):
+                        if not getattr(
+                            self.backend, "_mcp_circuit_breaker_notified", False
+                        ):
                             logger.warning(
                                 "All MCP servers blocked by circuit breaker during setup"
                             )
                             setattr(self.backend, "_mcp_circuit_breaker_notified", True)
-                        
+
                         # Mark as permanently blocked after max attempts
                         if attempt >= max_attempts:
                             setattr(self.backend, "_mcp_permanently_blocked", True)
                         return
-                    
+
                     # Attempt connection
                     success = await self._attempt_mcp_setup(
                         filtered_servers, circuit_breaker, mcp_tools_servers
                     )
-                    
+
                     if success:
                         self.logger.info(f"MCP setup successful on attempt {attempt}")
                         return
-                    
+
                     # If this was the last attempt, mark as permanently blocked
                     if attempt >= max_attempts:
-                        self.logger.warning(f"MCP setup failed after {max_attempts} attempts - permanently blocked")
+                        self.logger.warning(
+                            f"MCP setup failed after {max_attempts} attempts - permanently blocked"
+                        )
                         setattr(self.backend, "_mcp_permanently_blocked", True)
                         return
-                    
+
                     # Wait before next attempt
                     await asyncio.sleep(0.2)
             else:
                 # No circuit breaker - single attempt
-                await self._attempt_mcp_setup(mcp_tools_servers, None, mcp_tools_servers)
-                
+                await self._attempt_mcp_setup(
+                    mcp_tools_servers, None, mcp_tools_servers
+                )
+
         except Exception as e:
             # Record failure for circuit breaker
             circuit_breaker = self._get_circuit_breaker()
@@ -252,7 +260,7 @@ class MCPHandler:
             setattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED)
             self._set_functions({})
             # Don't re-raise the exception - let the backend handle fallback gracefully
-            
+
     async def _attempt_mcp_setup(
         self, servers_to_use: list, circuit_breaker, original_servers: list
     ) -> bool:
@@ -260,7 +268,7 @@ class MCPHandler:
         try:
             allowed_tools = getattr(self.backend, "allowed_tools", None)
             exclude_tools = getattr(self.backend, "exclude_tools", None)
-            
+
             self._last_mcp_servers_used = servers_to_use
 
             # Setup MCP client using consolidated utilities
@@ -273,7 +281,7 @@ class MCPHandler:
                 backend_name=self._get_backend_name(),
                 agent_id=self._get_agent_id(),
             )
-            
+
             # Guard after client setup
             if not mcp_client:
                 # Let circuit breaker handle retry logic - don't set permanent failure state
@@ -284,7 +292,7 @@ class MCPHandler:
                     )
                     setattr(self.backend, "_mcp_connection_failure_notified", True)
                 return False
-                
+
             # Convert tools to functions using consolidated utility
             functions = self._get_functions()
             functions.update(
@@ -321,7 +329,9 @@ class MCPHandler:
                 logger.warning(f"Could not generate MCP connected status: {e}")
 
             # Record success for circuit breaker - only for actually connected servers
-            _circuit_breakers_enabled = getattr(self.backend, "_circuit_breakers_enabled", False)
+            _circuit_breakers_enabled = getattr(
+                self.backend, "_circuit_breakers_enabled", False
+            )
             if _circuit_breakers_enabled and circuit_breaker and mcp_client:
                 try:
                     connected_server_names = (
@@ -355,9 +365,9 @@ class MCPHandler:
                     logger.warning(
                         f"Failed to record circuit breaker success: {cb_error}"
                     )
-            
+
             return True
-            
+
         except Exception as e:
             # This attempt failed
             logger.warning(f"MCP setup attempt failed: {e}")

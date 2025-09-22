@@ -95,13 +95,15 @@ class ChatCompletionsBackend(LLMBackend):
 
     # Parameters to exclude when building API requests
     # Merge base class exclusions with backend-specific ones
-    EXCLUDED_API_PARAMS = LLMBackend.get_base_excluded_config_params().union({
-        "base_url",  # Used for client initialization, not API calls
-        "enable_web_search",
-        "enable_code_interpreter",
-        "allowed_tools",  # Tool filtering parameter
-        "exclude_tools",  # Tool filtering parameter
-    })
+    EXCLUDED_API_PARAMS = LLMBackend.get_base_excluded_config_params().union(
+        {
+            "base_url",  # Used for client initialization, not API calls
+            "enable_web_search",
+            "enable_code_interpreter",
+            "allowed_tools",  # Tool filtering parameter
+            "exclude_tools",  # Tool filtering parameter
+        }
+    )
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
@@ -187,8 +189,6 @@ class ChatCompletionsBackend(LLMBackend):
         else:
             return "ChatCompletion"
 
-
-
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
         if not self.mcp_servers or self._mcp_initialized:
@@ -257,7 +257,7 @@ class ChatCompletionsBackend(LLMBackend):
                     self._mcp_client,
                     backend_name=self.backend_name,
                     agent_id=self.agent_id,
-                    hook_manager=getattr(self, 'function_hook_manager', None),
+                    hook_manager=getattr(self, "function_hook_manager", None),
                 )
             )
             self._mcp_initialized = True
@@ -319,7 +319,7 @@ class ChatCompletionsBackend(LLMBackend):
             self._mcp_client = None
             self._mcp_initialized = False
             self._mcp_functions = {}
-    
+
     def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
         """Track MCP function names for fallback filtering."""
         for tool in tools:
@@ -462,7 +462,9 @@ class ChatCompletionsBackend(LLMBackend):
 
         # Add MCP tools (stdio + streamable-http) as functions
         if self._mcp_functions:
-            mcp_tools = self.mcp_tool_formatter.to_chat_completions_format(self._mcp_functions)
+            mcp_tools = self.mcp_tool_formatter.to_chat_completions_format(
+                self._mcp_functions
+            )
             if mcp_tools:
                 # Track MCP function names for fallback filtering
                 self._track_mcp_function_names(mcp_tools)
@@ -1379,7 +1381,6 @@ class ChatCompletionsBackend(LLMBackend):
                 return StreamChunk(type="reasoning_done", content="")
         return None
 
-
     def _sanitize_messages_for_api(
         self, messages: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
@@ -1410,7 +1411,9 @@ class ChatCompletionsBackend(LLMBackend):
                         if has_match:
                             # Normalize arguments to string
                             fn = dict(tc.get("function", {}))
-                            fn["arguments"] = self.message_formatter._serialize_tool_arguments(
+                            fn[
+                                "arguments"
+                            ] = self.message_formatter._serialize_tool_arguments(
                                 fn.get("arguments")
                             )
                             valid_tc = dict(tc)

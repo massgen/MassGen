@@ -23,18 +23,24 @@ from enum import Enum
 from dataclasses import dataclass
 from ..logger_config import logger, get_log_session_dir
 
+
 class Permission(Enum):
     """File access permission types."""
+
     READ = "read"
     WRITE = "write"
+
 
 @dataclass
 class ManagedPath:
     """Represents any managed path with its permissions and type."""
+
     path: Path
     permission: Permission
     path_type: str  # "workspace", "temp_workspace", "context", etc.
-    original_permission: Optional[Permission] = None  # Original YAML permission for context paths
+    original_permission: Optional[
+        Permission
+    ] = None  # Original YAML permission for context paths
 
     def contains(self, check_path: Path) -> bool:
         """Check if this managed path contains the given path."""
@@ -43,6 +49,7 @@ class ManagedPath:
             return True
         except ValueError:
             return False
+
 
 class PathPermissionManager:
     """
@@ -87,16 +94,16 @@ class PathPermissionManager:
             return
 
         managed_path = ManagedPath(
-            path=path.resolve(),
-            permission=permission,
-            path_type=path_type
+            path=path.resolve(), permission=permission, path_type=path_type
         )
 
         self.managed_paths.append(managed_path)
         # Clear cache when adding new paths
         self._permission_cache.clear()
 
-        logger.info(f"[PathPermissionManager] Added {path_type} path: {path} ({permission.value})")
+        logger.info(
+            f"[PathPermissionManager] Added {path_type} path: {path} ({permission.value})"
+        )
 
     def get_context_paths(self) -> List[Dict[str, str]]:
         """
@@ -108,10 +115,9 @@ class PathPermissionManager:
         context_paths = []
         for mp in self.managed_paths:
             if mp.path_type == "context":
-                context_paths.append({
-                    "path": str(mp.path),
-                    "permission": mp.permission.value
-                })
+                context_paths.append(
+                    {"path": str(mp.path), "permission": mp.permission.value}
+                )
         return context_paths
 
     def set_context_write_access_enabled(self, enabled: bool) -> None:
@@ -125,7 +131,9 @@ class PathPermissionManager:
         if self.context_write_access_enabled == enabled:
             return  # No change needed
 
-        logger.info(f"[PathPermissionManager] Setting context_write_access_enabled to {enabled}")
+        logger.info(
+            f"[PathPermissionManager] Setting context_write_access_enabled to {enabled}"
+        )
         logger.info(f"[PathPermissionManager] Before update: {self.managed_paths=}")
         self.context_write_access_enabled = enabled
 
@@ -135,12 +143,18 @@ class PathPermissionManager:
                 # Update permission based on new context_write_access_enabled setting
                 if enabled:
                     mp.permission = mp.original_permission
-                    logger.debug(f"[PathPermissionManager] Restored original permission for {mp.path}: {mp.permission.value}")
+                    logger.debug(
+                        f"[PathPermissionManager] Restored original permission for {mp.path}: {mp.permission.value}"
+                    )
                 else:
                     mp.permission = Permission.READ
-                    logger.debug(f"[PathPermissionManager] Forced read-only for {mp.path}")
+                    logger.debug(
+                        f"[PathPermissionManager] Forced read-only for {mp.path}"
+                    )
 
-        logger.info(f"[PathPermissionManager] Updated context path permissions based on context_write_access_enabled={enabled}, now is {self.managed_paths=}")
+        logger.info(
+            f"[PathPermissionManager] Updated context path permissions based on context_write_access_enabled={enabled}, now is {self.managed_paths=}"
+        )
 
         # Clear permission cache to force recalculation
         self._permission_cache.clear()
@@ -168,30 +182,37 @@ class PathPermissionManager:
             try:
                 yaml_permission = Permission(permission_str.lower())
             except ValueError:
-                logger.warning(f"[PathPermissionManager] Invalid permission '{permission_str}', using 'read'")
+                logger.warning(
+                    f"[PathPermissionManager] Invalid permission '{permission_str}', using 'read'"
+                )
                 yaml_permission = Permission.READ
 
             # For context paths: only final agent (context_write_access_enabled=True) gets original permissions
             # All coordination agents get read-only access regardless of YAML
             if self.context_write_access_enabled:
                 actual_permission = yaml_permission
-                logger.debug(f"[PathPermissionManager] Final agent: context path {path} gets {actual_permission.value} permission")
+                logger.debug(
+                    f"[PathPermissionManager] Final agent: context path {path} gets {actual_permission.value} permission"
+                )
             else:
                 actual_permission = Permission.READ
                 if yaml_permission == Permission.WRITE:
-                    logger.debug(f"[PathPermissionManager] Coordination agent: forcing context path {path} to read-only (YAML had write)")
+                    logger.debug(
+                        f"[PathPermissionManager] Coordination agent: forcing context path {path} to read-only (YAML had write)"
+                    )
 
             # Create managed path with original permission stored for context paths
             managed_path = ManagedPath(
                 path=path.resolve(),
                 permission=actual_permission,
                 path_type="context",
-                original_permission=yaml_permission
+                original_permission=yaml_permission,
             )
             self.managed_paths.append(managed_path)
             self._permission_cache.clear()
-            logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, original: {yaml_permission.value})")
-
+            logger.info(
+                f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, original: {yaml_permission.value})"
+            )
 
     def get_permission(self, path: Path) -> Optional[Permission]:
         """
@@ -207,19 +228,28 @@ class PathPermissionManager:
 
         # Check cache first
         if resolved_path in self._permission_cache:
-            logger.debug(f"[PathPermissionManager] Permission cache hit for {resolved_path}: {self._permission_cache[resolved_path].value}")
+            logger.debug(
+                f"[PathPermissionManager] Permission cache hit for {resolved_path}: {self._permission_cache[resolved_path].value}"
+            )
             return self._permission_cache[resolved_path]
 
         # Find containing managed path
         for managed_path in self.managed_paths:
-            if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
-                logger.debug(f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}) -- {self.managed_paths=}")
+            if (
+                managed_path.contains(resolved_path)
+                or managed_path.path == resolved_path
+            ):
+                logger.debug(
+                    f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}) -- {self.managed_paths=}"
+                )
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission
 
         return None
 
-    async def pre_tool_use_hook(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    async def pre_tool_use_hook(
+        self, tool_name: str, tool_args: Dict[str, Any]
+    ) -> Tuple[bool, Optional[str]]:
         """
         PreToolUse hook to validate tool calls based on permissions.
 
@@ -264,12 +294,12 @@ class PathPermissionManager:
 
         # Pattern matches tools that modify files/directories
         write_patterns = [
-            r".*[Ww]rite.*",      # Write, write_file, NotebookWrite, etc.
-            r".*[Ee]dit.*",       # Edit, edit_file, MultiEdit, NotebookEdit, etc.
-            r".*[Cc]reate.*",     # create_directory, etc.
-            r".*[Mm]ove.*",       # move_file, etc.
-            r".*[Dd]elete.*",     # delete operations
-            r".*[Rr]emove.*",     # remove operations
+            r".*[Ww]rite.*",  # Write, write_file, NotebookWrite, etc.
+            r".*[Ee]dit.*",  # Edit, edit_file, MultiEdit, NotebookEdit, etc.
+            r".*[Cc]reate.*",  # create_directory, etc.
+            r".*[Mm]ove.*",  # move_file, etc.
+            r".*[Dd]elete.*",  # delete operations
+            r".*[Rr]emove.*",  # remove operations
         ]
 
         for pattern in write_patterns:
@@ -278,7 +308,9 @@ class PathPermissionManager:
 
         return False
 
-    def _validate_write_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    def _validate_write_tool(
+        self, tool_name: str, tool_args: Dict[str, Any]
+    ) -> Tuple[bool, Optional[str]]:
         """Validate write tool access."""
         # Extract file path from arguments
         file_path = self._extract_file_path(tool_args)
@@ -288,7 +320,9 @@ class PathPermissionManager:
 
         path = Path(file_path).resolve()
         permission = self.get_permission(path)
-        logger.debug(f"[PathPermissionManager] Validating write tool '{tool_name}' for path: {path} with permission: {permission}")
+        logger.debug(
+            f"[PathPermissionManager] Validating write tool '{tool_name}' for path: {path} with permission: {permission}"
+        )
 
         # No permission means not in context paths (workspace paths are always allowed)
         # We note that the filesystem MCP server will block access to paths not in its config, and we explicitly mark as read-only any paths that need to be read-only, so all else is fine.
@@ -301,7 +335,9 @@ class PathPermissionManager:
         else:
             return (False, f"No write permission for '{path}' (read-only context path)")
 
-    def _validate_command_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    def _validate_command_tool(
+        self, tool_name: str, tool_args: Dict[str, Any]
+    ) -> Tuple[bool, Optional[str]]:
         """Validate command tool access.
 
         As of v0.0.20, only Claude Code supports execution.
@@ -312,17 +348,32 @@ class PathPermissionManager:
 
         # Dangerous patterns to block
         dangerous_patterns = [
-            "rm ", "rm -", "rmdir", "del ",
-            "sudo ", "su ", "chmod ", "chown ",
-            "format ", "fdisk", "mkfs",
+            "rm ",
+            "rm -",
+            "rmdir",
+            "del ",
+            "sudo ",
+            "su ",
+            "chmod ",
+            "chown ",
+            "format ",
+            "fdisk",
+            "mkfs",
         ]
 
         # File modification patterns to check when write access disabled
         write_patterns = [
-            ">", ">>",  # Redirects
-            "mv ", "move ", "cp ", "copy ",
-            "touch ", "mkdir ", "echo ",
-            "sed -i", "perl -i",  # In-place edits
+            ">",
+            ">>",  # Redirects
+            "mv ",
+            "move ",
+            "cp ",
+            "copy ",
+            "touch ",
+            "mkdir ",
+            "echo ",
+            "sed -i",
+            "perl -i",  # In-place edits
         ]
 
         for pattern in write_patterns:
@@ -333,7 +384,10 @@ class PathPermissionManager:
                     path = Path(target_file).resolve()
                     permission = self.get_permission(path)
                     if permission and permission == Permission.READ:
-                        return (False, f"Command would modify read-only context path: {path}")
+                        return (
+                            False,
+                            f"Command would modify read-only context path: {path}",
+                        )
 
         # Always block dangerous commands
         for pattern in dangerous_patterns:
@@ -347,7 +401,16 @@ class PathPermissionManager:
         # Common argument names for file paths:
         # - Claude Code: file_path, notebook_path
         # - MCP filesystem: path, source, destination
-        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "source", "destination"]
+        path_keys = [
+            "file_path",
+            "path",
+            "filename",
+            "file",
+            "notebook_path",
+            "target",
+            "source",
+            "destination",
+        ]
 
         for key in path_keys:
             if key in tool_args:
@@ -365,7 +428,7 @@ class PathPermissionManager:
                 # Get the part after redirect, strip whitespace and quotes
                 target = parts[1].strip().split()[0] if parts[1].strip() else None
                 if target:
-                    return target.strip('"\'')
+                    return target.strip("\"'")
 
         # For commands like mv, cp
         if pattern in ["mv ", "cp ", "move ", "copy "]:
@@ -385,7 +448,7 @@ class PathPermissionManager:
                 idx = parts.index(pattern.strip())
                 if idx + 1 < len(parts):
                     # The first argument is the target
-                    return parts[idx + 1].strip('"\'')
+                    return parts[idx + 1].strip("\"'")
             except (ValueError, IndexError):
                 pass
 
@@ -412,7 +475,9 @@ class PathPermissionManager:
         lines = [f"Managed paths ({len(self.managed_paths)} total):"]
         for managed_path in self.managed_paths:
             emoji = "📝" if managed_path.permission == Permission.WRITE else "👁️"
-            lines.append(f"  {emoji} {managed_path.path} ({managed_path.permission.value}, {managed_path.path_type})")
+            lines.append(
+                f"  {emoji} {managed_path.path} ({managed_path.permission.value}, {managed_path.path_type})"
+            )
 
         return "\n".join(lines)
 
@@ -420,7 +485,7 @@ class PathPermissionManager:
         self,
         input_data: Dict[str, Any],
         tool_use_id: Optional[str],
-        context: Any  # HookContext from claude_code_sdk
+        context: Any,  # HookContext from claude_code_sdk
     ) -> Dict[str, Any]:
         """
         Claude Code SDK compatible hook function for PreToolUse.
@@ -433,10 +498,12 @@ class PathPermissionManager:
         Returns:
             Hook response dict with permission decision
         """
-        logger.info(f"[PathPermissionManager] PreToolUse hook called for tool_use_id={tool_use_id}, input_data={input_data}")
+        logger.info(
+            f"[PathPermissionManager] PreToolUse hook called for tool_use_id={tool_use_id}, input_data={input_data}"
+        )
 
-        tool_name = input_data.get('tool_name', '')
-        tool_input = input_data.get('tool_input', {})
+        tool_name = input_data.get("tool_name", "")
+        tool_input = input_data.get("tool_input", {})
 
         # Use our existing validation logic
         allowed, reason = await self.pre_tool_use_hook(tool_name, tool_input)
@@ -444,10 +511,11 @@ class PathPermissionManager:
         if not allowed:
             logger.warning(f"[PathPermissionManager] Blocked {tool_name}: {reason}")
             return {
-                'hookSpecificOutput': {
-                    'hookEventName': 'PreToolUse',
-                    'permissionDecision': 'deny',
-                    'permissionDecisionReason': reason or 'Access denied based on context path permissions'
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "deny",
+                    "permissionDecisionReason": reason
+                    or "Access denied based on context path permissions",
                 }
             }
 
@@ -467,34 +535,24 @@ class PathPermissionManager:
         try:
             from claude_code_sdk import HookMatcher
         except ImportError:
-            logger.warning("[PathPermissionManager] claude_code_sdk not available, hooks disabled")
+            logger.warning(
+                "[PathPermissionManager] claude_code_sdk not available, hooks disabled"
+            )
             return {}
 
         return {
-            'PreToolUse': [
+            "PreToolUse": [
                 # Apply context validation to write tools
+                HookMatcher(matcher="Write", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="Edit", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="MultiEdit", hooks=[self.validate_context_access]),
                 HookMatcher(
-                    matcher='Write',
-                    hooks=[self.validate_context_access]
+                    matcher="NotebookEdit", hooks=[self.validate_context_access]
                 ),
-                HookMatcher(
-                    matcher='Edit',
-                    hooks=[self.validate_context_access]
-                ),
-                HookMatcher(
-                    matcher='MultiEdit',
-                    hooks=[self.validate_context_access]
-                ),
-                HookMatcher(
-                    matcher='NotebookEdit',
-                    hooks=[self.validate_context_access]
-                ),
-                HookMatcher(
-                    matcher='Bash',
-                    hooks=[self.validate_context_access]
-                ),
+                HookMatcher(matcher="Bash", hooks=[self.validate_context_access]),
             ]
         }
+
 
 class FilesystemManager:
     """
@@ -552,9 +610,7 @@ class FilesystemManager:
         self.cwd = self._setup_workspace(cwd)
 
         # Add workspace to path manager (workspace is typically writable)
-        self.path_permission_manager.add_path(
-            self.cwd, Permission.WRITE, "workspace"
-        )
+        self.path_permission_manager.add_path(self.cwd, Permission.WRITE, "workspace")
         # Add temporary workspace to path manager (read-only)
         self.path_permission_manager.add_path(
             self.agent_temporary_workspace_parent, Permission.READ, "temp_workspace"
@@ -700,9 +756,13 @@ class FilesystemManager:
 
         async def mcp_hook_wrapper(tool_name: str, tool_args: Dict[str, Any]) -> bool:
             """Wrapper to adapt our hook signature to MCP client expectations."""
-            allowed, reason = await self.path_permission_manager.pre_tool_use_hook(tool_name, tool_args)
+            allowed, reason = await self.path_permission_manager.pre_tool_use_hook(
+                tool_name, tool_args
+            )
             if not allowed and reason:
-                logger.warning(f"[FilesystemManager] Tool blocked: {tool_name} - {reason}")
+                logger.warning(
+                    f"[FilesystemManager] Tool blocked: {tool_name} - {reason}"
+                )
             return allowed
 
         return {HookType.PRE_TOOL_USE: [mcp_hook_wrapper]}
@@ -724,7 +784,9 @@ class FilesystemManager:
         files with write permissions in their context paths.
         """
         self.path_permission_manager.context_write_access_enabled = True
-        logger.info("[FilesystemManager] Context write access enabled - agent can now modify files with write permissions")
+        logger.info(
+            "[FilesystemManager] Context write access enabled - agent can now modify files with write permissions"
+        )
 
     async def save_snapshot(
         self, timestamp: Optional[str] = None, is_final: bool = False
@@ -1025,10 +1087,13 @@ class PathPermissionManagerHook:
 
             # Parse arguments from JSON string
             import json
+
             try:
                 tool_args = json.loads(arguments) if arguments else {}
             except (json.JSONDecodeError, ValueError) as e:
-                logger.warning(f"[PathPermissionManagerHook] Invalid JSON arguments for {function_name}: {e}")
+                logger.warning(
+                    f"[PathPermissionManagerHook] Invalid JSON arguments for {function_name}: {e}"
+                )
                 tool_args = {}
 
             # Call the existing pre_tool_use_hook method
@@ -1037,17 +1102,20 @@ class PathPermissionManagerHook:
             )
 
             if not allowed:
-                logger.info(f"[PathPermissionManagerHook] Blocked {function_name}: {reason}")
+                logger.info(
+                    f"[PathPermissionManagerHook] Blocked {function_name}: {reason}"
+                )
 
             return HookResult(
-                allowed=allowed,
-                metadata={"reason": reason} if reason else {}
+                allowed=allowed, metadata={"reason": reason} if reason else {}
             )
 
         except Exception as e:
-            logger.error(f"[PathPermissionManagerHook] Error checking permissions for {function_name}: {e}")
+            logger.error(
+                f"[PathPermissionManagerHook] Error checking permissions for {function_name}: {e}"
+            )
             # Fail closed - deny access on permission check errors
             return HookResult(
                 allowed=False,
-                metadata={"error": str(e), "reason": "Permission check failed"}
+                metadata={"error": str(e), "reason": "Permission check failed"},
             )

@@ -554,7 +554,9 @@ class GeminiBackend(LLMBackend):
 
     def _setup_permission_hooks(self):
         """Override base class - Gemini uses session-based permissions, not function hooks."""
-        logger.debug("[Gemini] Using session-based permissions, skipping function hook setup")
+        logger.debug(
+            "[Gemini] Using session-based permissions, skipping function hook setup"
+        )
 
     async def _setup_mcp_with_status_stream(
         self, agent_id: Optional[str] = None
@@ -826,7 +828,9 @@ class GeminiBackend(LLMBackend):
                 allowed_tools=allowed_tools,
                 exclude_tools=exclude_tools,
                 status_callback=status_callback,
-                hooks=self.filesystem_manager.get_pre_tool_hooks() if self.filesystem_manager else {},
+                hooks=self.filesystem_manager.get_pre_tool_hooks()
+                if self.filesystem_manager
+                else {},
             )
 
             # Connect the client
@@ -1635,24 +1639,35 @@ Make your decision and include the JSON at the very end of your response."""
 
                     # Convert sessions to permission sessions if filesystem manager is available
                     if self.filesystem_manager:
-                        logger.info(f"[Gemini] Converting {len(mcp_sessions)} MCP sessions to permission sessions")
+                        logger.info(
+                            f"[Gemini] Converting {len(mcp_sessions)} MCP sessions to permission sessions"
+                        )
                         try:
-                            from ..mcp_tools.hooks import convert_sessions_to_permission_sessions
+                            from ..mcp_tools.hooks import (
+                                convert_sessions_to_permission_sessions,
+                            )
+
                             mcp_sessions = convert_sessions_to_permission_sessions(
                                 mcp_sessions,
-                                self.filesystem_manager.path_permission_manager
+                                self.filesystem_manager.path_permission_manager,
                             )
                         except Exception as e:
-                            logger.error(f"[Gemini] Failed to convert sessions to permission sessions: {e}")
+                            logger.error(
+                                f"[Gemini] Failed to convert sessions to permission sessions: {e}"
+                            )
                             # Continue with regular sessions on error
                     else:
-                        logger.debug("[Gemini] No filesystem manager found, using standard sessions")
+                        logger.debug(
+                            "[Gemini] No filesystem manager found, using standard sessions"
+                        )
 
                     # Apply sessions as tools, do not mix with builtin or function_declarations
                     session_config = dict(config)
 
                     # Log session types for debugging if needed
-                    logger.debug(f"[Gemini] Passing {len(mcp_sessions)} sessions to SDK: {[type(s).__name__ for s in mcp_sessions]}")
+                    logger.debug(
+                        f"[Gemini] Passing {len(mcp_sessions)} sessions to SDK: {[type(s).__name__ for s in mcp_sessions]}"
+                    )
 
                     session_config["tools"] = mcp_sessions
 
@@ -2304,7 +2319,6 @@ Make your decision and include the JSON at the very end of your response."""
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by Gemini."""
         return ["google_search_retrieval", "code_execution"]
-
 
     def get_mcp_results(self) -> Dict[str, Any]:
         """

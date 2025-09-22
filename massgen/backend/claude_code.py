@@ -296,7 +296,6 @@ class ClaudeCodeBackend(LLMBackend):
         self._client = None
         self._current_session_id = None
 
-
     def update_token_usage_from_result_message(self, result_message) -> None:
         """Update token usage from Claude Code ResultMessage.
 

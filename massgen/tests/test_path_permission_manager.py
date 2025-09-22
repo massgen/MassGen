@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 from massgen.mcp_tools.filesystem_manager import (
     PathPermissionManager,
     Permission,
-    ManagedPath
+    ManagedPath,
 )
 
 
@@ -59,7 +59,9 @@ class TestHelper:
 
     def create_permission_manager(self, context_write_enabled=False):
         """Helper to create a PathPermissionManager with test paths."""
-        manager = PathPermissionManager(context_write_access_enabled=context_write_enabled)
+        manager = PathPermissionManager(
+            context_write_access_enabled=context_write_enabled
+        )
 
         # Add workspace (always writable)
         manager.add_path(self.workspace_dir, Permission.WRITE, "workspace")
@@ -101,7 +103,14 @@ def test_is_write_tool():
                 return False
 
         # MCP write tools
-        mcp_write_tools = ["write_file", "edit_file", "create_directory", "move_file", "delete_file", "remove_directory"]
+        mcp_write_tools = [
+            "write_file",
+            "edit_file",
+            "create_directory",
+            "move_file",
+            "delete_file",
+            "remove_directory",
+        ]
         for tool in mcp_write_tools:
             if not manager._is_write_tool(tool):
                 print(f"❌ Failed: {tool} should be detected as write tool")
@@ -146,7 +155,9 @@ def test_validate_write_tool():
         allowed, reason = manager._validate_write_tool("Write", tool_args)
 
         if not allowed:
-            print(f"❌ Failed: Context path should be writable when enabled. Reason: {reason}")
+            print(
+                f"❌ Failed: Context path should be writable when enabled. Reason: {reason}"
+            )
             return False
 
         # Test 3: Context path with write disabled
@@ -159,18 +170,24 @@ def test_validate_write_tool():
             print("❌ Failed: Context path should NOT be writable when disabled")
             return False
         if "read-only context path" not in reason:
-            print(f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}")
+            print(
+                f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}"
+            )
             return False
 
         # Test 4: Readonly paths are always blocked
         print("  Testing readonly path...")
         for context_write_enabled in [True, False]:
-            manager = helper.create_permission_manager(context_write_enabled=context_write_enabled)
+            manager = helper.create_permission_manager(
+                context_write_enabled=context_write_enabled
+            )
             tool_args = {"file_path": str(helper.readonly_dir / "readonly_file.txt")}
             allowed, reason = manager._validate_write_tool("Write", tool_args)
 
             if allowed:
-                print(f"❌ Failed: Readonly path should never be writable (context_write={context_write_enabled})")
+                print(
+                    f"❌ Failed: Readonly path should never be writable (context_write={context_write_enabled})"
+                )
                 return False
 
         # Test 5: Unknown paths are allowed -- this is only bc the filesystem already restricts only to those paths that we provide
@@ -229,7 +246,7 @@ def test_validate_command_tool():
             "chown user:group file.txt",
             "format C:",
             "fdisk /dev/sda",
-            "mkfs.ext4 /dev/sdb1"
+            "mkfs.ext4 /dev/sdb1",
         ]
 
         for cmd in dangerous_commands:
@@ -240,7 +257,9 @@ def test_validate_command_tool():
                 print(f"❌ Failed: Dangerous command should be blocked: {cmd}")
                 return False
             if "Dangerous command pattern" not in reason:
-                print(f"❌ Failed: Expected 'Dangerous command pattern' for: {cmd}, got: {reason}")
+                print(
+                    f"❌ Failed: Expected 'Dangerous command pattern' for: {cmd}, got: {reason}"
+                )
                 return False
 
         # Test 2: Safe commands are allowed
@@ -252,7 +271,7 @@ def test_validate_command_tool():
             "find . -name '*.py'",
             "python script.py",
             "npm install",
-            "git status"
+            "git status",
         ]
 
         for cmd in safe_commands:
@@ -260,7 +279,9 @@ def test_validate_command_tool():
             allowed, reason = manager._validate_command_tool("Bash", tool_args)
 
             if not allowed:
-                print(f"❌ Failed: Safe command should be allowed: {cmd}. Reason: {reason}")
+                print(
+                    f"❌ Failed: Safe command should be allowed: {cmd}. Reason: {reason}"
+                )
                 return False
 
         # Test 3: Write operations to readonly paths are blocked
@@ -284,7 +305,9 @@ def test_validate_command_tool():
                 print(f"❌ Failed: Write to readonly should be blocked: {cmd}")
                 return False
             if "read-only context path" not in reason:
-                print(f"❌ Failed: Expected 'read-only context path' for: {cmd}, got: {reason}")
+                print(
+                    f"❌ Failed: Expected 'read-only context path' for: {cmd}, got: {reason}"
+                )
                 return False
 
         # Test 4: Write operations to workspace are allowed
@@ -303,7 +326,9 @@ def test_validate_command_tool():
             allowed, reason = manager._validate_command_tool("Bash", tool_args)
 
             if not allowed:
-                print(f"❌ Failed: Write to workspace should be allowed: {cmd}. Reason: {reason}")
+                print(
+                    f"❌ Failed: Write to workspace should be allowed: {cmd}. Reason: {reason}"
+                )
                 return False
 
         print("✅ _validate_command_tool works correctly")
@@ -331,7 +356,9 @@ def test_pre_tool_use_hook():
             print("❌ Failed: Write tool on readonly path should be blocked")
             return False
         if "read-only context path" not in reason:
-            print(f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}")
+            print(
+                f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}"
+            )
             return False
 
         # Test 2: Command tools with dangerous commands
@@ -343,7 +370,9 @@ def test_pre_tool_use_hook():
             print("❌ Failed: Dangerous command should be blocked")
             return False
         if "Dangerous command pattern" not in reason:
-            print(f"❌ Failed: Expected 'Dangerous command pattern' in reason, got: {reason}")
+            print(
+                f"❌ Failed: Expected 'Dangerous command pattern' in reason, got: {reason}"
+            )
             return False
 
         # Test 3: Read tools are always allowed
@@ -352,16 +381,22 @@ def test_pre_tool_use_hook():
 
         for tool_name in read_tools:
             tool_args = {"file_path": str(helper.readonly_dir / "readonly_file.txt")}
-            allowed, reason = asyncio.run(manager.pre_tool_use_hook(tool_name, tool_args))
+            allowed, reason = asyncio.run(
+                manager.pre_tool_use_hook(tool_name, tool_args)
+            )
 
             if not allowed:
-                print(f"❌ Failed: Read tool should always be allowed: {tool_name}. Reason: {reason}")
+                print(
+                    f"❌ Failed: Read tool should always be allowed: {tool_name}. Reason: {reason}"
+                )
                 return False
 
         # Test 4: Unknown tools are allowed
         print("  Testing unknown tools...")
         tool_args = {"some_param": "value"}
-        allowed, reason = asyncio.run(manager.pre_tool_use_hook("CustomTool", tool_args))
+        allowed, reason = asyncio.run(
+            manager.pre_tool_use_hook("CustomTool", tool_args)
+        )
 
         if not allowed:
             print(f"❌ Failed: Unknown tool should be allowed. Reason: {reason}")
@@ -387,7 +422,7 @@ def test_context_write_access_toggle():
         # Add context paths
         context_paths = [
             {"path": str(helper.context_dir), "permission": "write"},
-            {"path": str(helper.readonly_dir), "permission": "read"}
+            {"path": str(helper.readonly_dir), "permission": "read"},
         ]
         manager.add_context_paths(context_paths)
 
@@ -450,7 +485,9 @@ def test_extract_file_from_command():
         for command, pattern, expected in test_cases:
             result = manager._extract_file_from_command(command, pattern)
             if result != expected:
-                print(f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'")
+                print(
+                    f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'"
+                )
                 return False
 
         # Test move/copy commands
@@ -465,7 +502,9 @@ def test_extract_file_from_command():
         for command, pattern, expected in test_cases:
             result = manager._extract_file_from_command(command, pattern)
             if result != expected:
-                print(f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'")
+                print(
+                    f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'"
+                )
                 return False
 
         print("✅ _extract_file_from_command works correctly")
@@ -477,9 +516,9 @@ def test_extract_file_from_command():
 
 def main():
     """Run all tests."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("🧪 Path Permission Manager Test Suite")
-    print("="*60)
+    print("=" * 60)
 
     tests = [
         test_is_write_tool,
@@ -502,12 +541,13 @@ def main():
         except Exception as e:
             print(f"❌ {test_func.__name__} failed with exception: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print(f"📊 Test Results: {passed} passed, {failed} failed")
-    print("="*60)
+    print("=" * 60)
 
     return failed == 0
 

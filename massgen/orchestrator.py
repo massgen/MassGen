@@ -1324,13 +1324,17 @@ class Orchestrator(ChatAgent):
                     else None
                 )
                 # Get context paths if available
-                context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
+                context_paths = (
+                    agent.backend.filesystem_manager.path_permission_manager.get_context_paths()
+                    if agent.backend.filesystem_manager.path_permission_manager
+                    else []
+                )
 
                 filesystem_system_message = (
                     self.message_templates.filesystem_system_message(
                         main_workspace=main_workspace,
                         temp_workspace=temp_workspace,
-                        context_paths=context_paths
+                        context_paths=context_paths,
                     )
                 )
                 agent_system_message = (
@@ -2061,7 +2065,9 @@ class Orchestrator(ChatAgent):
 
         # Enable write access for final agent on context paths. This ensures that those paths marked `write` by the user are now writable (as all previous agents were read-only).
         if agent.backend.filesystem_manager:
-            agent.backend.filesystem_manager.path_permission_manager.set_context_write_access_enabled(True)
+            agent.backend.filesystem_manager.path_permission_manager.set_context_write_access_enabled(
+                True
+            )
 
         # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work
@@ -2137,14 +2143,18 @@ class Orchestrator(ChatAgent):
                 else None
             )
             # Get context paths if available
-            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
+            context_paths = (
+                agent.backend.filesystem_manager.path_permission_manager.get_context_paths()
+                if agent.backend.filesystem_manager.path_permission_manager
+                else []
+            )
 
             base_system_message += (
                 "\n\n"
                 + self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
                     temp_workspace=temp_workspace,
-                    context_paths=context_paths
+                    context_paths=context_paths,
                 )
             )
             # Add special note that we must not just cite answers from the temp workspace but instead create a synthesized final answer

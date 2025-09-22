@@ -132,8 +132,6 @@ class ClaudeBackend(LLMBackend):
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
 
-
-
     async def _handle_mcp_error_and_fallback(
         self,
         error: Exception,
@@ -347,7 +345,7 @@ class ClaudeBackend(LLMBackend):
                     self._mcp_client,
                     backend_name=self.backend_name,
                     agent_id=self.agent_id,
-                    hook_manager=getattr(self, 'function_hook_manager', None),
+                    hook_manager=getattr(self, "function_hook_manager", None),
                 )
             )
             self._mcp_initialized = True
@@ -447,7 +445,9 @@ class ClaudeBackend(LLMBackend):
 
         # MCP tools
         if self._mcp_functions:
-            mcp_tools = self.mcp_tool_formatter.to_chat_completions_format(self._mcp_functions)
+            mcp_tools = self.mcp_tool_formatter.to_chat_completions_format(
+                self._mcp_functions
+            )
             combined_tools.extend(mcp_tools)
 
         # Build API parameters
@@ -460,12 +460,14 @@ class ClaudeBackend(LLMBackend):
 
         # Direct passthrough of all parameters except those handled separately
         # Use base class exclusions plus Claude-specific ones
-        excluded_params = self.get_base_excluded_config_params().union({
-            "enable_web_search",
-            "enable_code_execution",
-            "allowed_tools",
-            "exclude_tools",
-        })
+        excluded_params = self.get_base_excluded_config_params().union(
+            {
+                "enable_web_search",
+                "enable_code_execution",
+                "allowed_tools",
+                "exclude_tools",
+            }
+        )
         for key, value in all_params.items():
             if key not in excluded_params and value is not None:
                 api_params[key] = value
@@ -1424,7 +1426,6 @@ class ClaudeBackend(LLMBackend):
                 if isinstance(item, dict) and item.get("type") == "tool_result":
                     return item.get("content", "")
         return ""
-
 
     def reset_tool_usage(self):
         """Reset tool usage tracking."""
