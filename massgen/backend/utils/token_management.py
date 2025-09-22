@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, field
-from ..logger_config import logger
+from ...logger_config import logger
 
 
 @dataclass

@@ -75,7 +75,41 @@ class GrokBackend(ChatCompletionsBackend):
         """Get list of builtin tools supported by Grok."""
         return ["web_search"]
 
-    # Token estimation and cost calculation are inherited from ChatCompletionsBackend
-    # which now uses the unified TokenCostCalculator
-    # The calculator has pricing for xAI/Grok models
+    def estimate_tokens(self, text: str) -> int:
+        """Estimate token count for text (rough approximation)."""
+        return int(len(text.split()) * 1.3)
 
+    def calculate_cost(
+        self, input_tokens: int, output_tokens: int, model: str
+    ) -> float:
+        """Calculate cost for token usage."""
+        model_lower = model.lower()
+
+        # Handle -mini models with lower costs
+        if "grok-2" in model_lower:
+            if "mini" in model_lower:
+                input_cost = (input_tokens / 1_000_000) * 1.0  # Lower cost for mini
+                output_cost = (output_tokens / 1_000_000) * 5.0
+            else:
+                input_cost = (input_tokens / 1_000_000) * 2.0
+                output_cost = (output_tokens / 1_000_000) * 10.0
+        elif "grok-3" in model_lower:
+            if "mini" in model_lower:
+                input_cost = (input_tokens / 1_000_000) * 2.5  # Lower cost for mini
+                output_cost = (output_tokens / 1_000_000) * 7.5
+            else:
+                input_cost = (input_tokens / 1_000_000) * 5.0
+                output_cost = (output_tokens / 1_000_000) * 15.0
+        elif "grok-4" in model_lower:
+            if "mini" in model_lower:
+                input_cost = (input_tokens / 1_000_000) * 4.0  # Lower cost for mini
+                output_cost = (output_tokens / 1_000_000) * 10.0
+            else:
+                input_cost = (input_tokens / 1_000_000) * 8.0
+                output_cost = (output_tokens / 1_000_000) * 20.0
+        else:
+            # Default fallback (assume grok-3 pricing)
+            input_cost = (input_tokens / 1_000_000) * 5.0
+            output_cost = (output_tokens / 1_000_000) * 15.0
+
+        return input_cost + output_cost
