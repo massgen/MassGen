@@ -185,6 +185,10 @@ class CoordinationUI:
 
         self.display.initialize(question, log_filename)
 
+        # Initialize variables to avoid reference before assignment error in finally block
+        selected_agent = None
+        vote_results = {}
+
         try:
             # Process coordination stream
             full_response = ""
@@ -629,6 +633,11 @@ class CoordinationUI:
             print()
 
         self.display.initialize(question, log_filename)
+
+        # Initialize variables to avoid reference before assignment error in finally block
+        selected_agent = None
+        vote_results = {}
+        orchestrator_final_answer = None
 
         try:
             # Process coordination stream with conversation context
