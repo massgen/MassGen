@@ -1,0 +1,80 @@
+name: Pre-commit Checks
+
+on:
+  pull_request:
+    # Run on all branches for pull requests
+  push:
+    # Run on all branches for pushes
+
+jobs:
+  pre-commit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-14]  # macos-14 is M1
+        python-version: ['3.10', '3.11', '3.12']
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full depth needed for getting all changes
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pre-commit environment
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}
+        restore-keys: |
+          pre-commit-${{ matrix.os }}-${{ matrix.python-version }}-
+          pre-commit-${{ matrix.os }}-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pre-commit
+        # Install project dependencies if needed for mypy/pylint
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+    - name: Get changed files
+      id: changed-files
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          # For PRs, get files changed between base and head
+          git diff --name-only --diff-filter=ACMRTUXB ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > changed_files.txt
+        else
+          # For pushes, get files changed in the last commit
+          git diff --name-only --diff-filter=ACMRTUXB HEAD~1 HEAD > changed_files.txt
+        fi
+        echo "Changed files:"
+        cat changed_files.txt
+
+    - name: Run pre-commit on changed files
+      run: |
+        if [ -s changed_files.txt ]; then
+          echo "Running pre-commit on changed files..."
+          cat changed_files.txt | xargs pre-commit run --files
+        else
+          echo "No files changed, skipping pre-commit checks"
+        fi
+      continue-on-error: false
+
+    - name: Comment PR on failure
+      if: failure() && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '❌ Pre-commit checks failed on ${{ matrix.os }} with Python ${{ matrix.python-version }}! Please run `pre-commit run --files <changed_files>` locally and fix the issues before pushing.'
+          })
