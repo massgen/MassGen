@@ -28,6 +28,7 @@ from .exceptions import (
 from .security import prepare_command, sanitize_tool_name, validate_url
 from .config_validator import MCPConfigValidator, validate_mcp_integration
 from mcp import types as mcp_types
+from .mcp_handler import MCPHandler
 
 # shared utilities for backend integration
 from .backend_utils import (
@@ -96,6 +97,7 @@ __all__ = [
     "MCPExecutionManager",
     "MCPConverters",
     "MCPFormatValidator",
+    "MCPHandler",
     # Hook system
     "HookType",
     "FunctionHook",

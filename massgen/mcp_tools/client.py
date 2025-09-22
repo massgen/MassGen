@@ -2,6 +2,8 @@
 MCP client implementation for connecting to MCP servers. This module provides enhanced MCP client functionality to connect with MCP servers and integrate external tools and resources into the MassGen workflow.
 """
 import asyncio
+import re
+import os
 from ..logger_config import logger
 from datetime import timedelta
 from enum import Enum
@@ -274,11 +276,7 @@ class MCPClient:
                 env = {**get_default_environment(), **env}
             else:
                 env = get_default_environment()
-
-            # Perform environment variable substitution
-            import re
-            import os
-
+       
             for key, value in env.items():
                 if isinstance(value, str) and "${" in value:
                     # Simple environment variable substitution for patterns like ${VAR_NAME}
@@ -308,6 +306,32 @@ class MCPClient:
         elif transport_type == "streamable-http":
             url = self.config["url"]
             headers = self.config.get("headers", {})
+
+            # Perform environment variable substitution for headers only (e.g., ${API_TOKEN})
+            try:
+                # Substitute in headers
+                if isinstance(headers, dict):
+                    new_headers = {}
+                    for k, v in headers.items():
+                        if isinstance(v, str) and "${" in v:
+                            def _rep_hdr(match):
+                                var_name = match.group(1)
+                                val = os.environ.get(var_name)
+                                if val is None or val.strip() == "":
+                                    raise ValueError(
+                                        f"Required environment variable '{var_name}' is not set for HTTP header '{k}'"
+                                    )
+                                return val
+                            new_headers[k] = re.sub(r"\$\{([A-Z_][A-Z0-9_]*)\}", _rep_hdr, v)
+                        else:
+                            new_headers[k] = v
+                    headers = new_headers
+            except Exception as e:
+                # Do not log header values; just the error message
+                logger.warning(
+                    f"Environment substitution failed for HTTP transport on {self.name}: {e}"
+                )
+                raise
 
             # Use consistent timeout handling
             timeout_raw = self.config.get("timeout", self.timeout_seconds)

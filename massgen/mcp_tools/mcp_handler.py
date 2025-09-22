@@ -47,7 +47,6 @@ class MCPHandler:
         self.logger = logger
         self._execution_manager = MCPExecutionManager()
         self._last_mcp_servers_used = []
-        self._servers_signature = None
         # Initialize state if not already set
         if not hasattr(self.backend, "_mcp_state"):
             setattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED)
@@ -84,17 +83,15 @@ class MCPHandler:
                 setattr(self.backend, "_mcp_permanent_block_notified", True)
                 return True
             return False
-
+            
         # Don't show if setup failed message was already shown during setup attempts
         if getattr(self.backend, "_mcp_connection_failure_notified", False):
             return False
-
+            
         # Check if circuit breaker is blocking (warning already shown)
         circuit_breaker = self._get_circuit_breaker()
-        circuit_breakers_enabled = getattr(
-            self.backend, "_circuit_breakers_enabled", False
-        )
-
+        circuit_breakers_enabled = getattr(self.backend, "_circuit_breakers_enabled", False)
+        
         if circuit_breakers_enabled and circuit_breaker:
             # If circuit breaker has already shown blocking message, don't show setup failed
             if getattr(self.backend, "_mcp_circuit_breaker_notified", False):
@@ -124,43 +121,18 @@ class MCPHandler:
         current_state = getattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED)
         if current_state == MCPState.READY:
             return
-
+            
         # Check if setup is permanently blocked by circuit breaker
         if getattr(self.backend, "_mcp_permanently_blocked", False):
             return
 
         try:
-            # Normalize and separate MCP servers by transport type using mcp_tools utilities
-            normalized_servers = MCPSetupManager.normalize_mcp_servers(
+            # Normalize and filter MCP servers by transport type using mcp_tools utilities
+            mcp_tools_servers = MCPSetupManager.normalize_and_filter_mcp_servers(
                 mcp_servers,
                 backend_name=self._get_backend_name(),
                 agent_id=self._get_agent_id(),
-            )
-
-            new_signature = tuple(
-                sorted([s.get("name", "") for s in normalized_servers])
-            )
-            if (
-                self._servers_signature == new_signature
-                and current_state == MCPState.READY
-            ):
-                return
-
-            # If the signature has changed, we need to re-initialize the client and function registry.
-            if self._servers_signature != new_signature:
-                self.logger.info(
-                    f"MCP server signature changed. Re-initializing MCP client."
-                )
-                self._servers_signature = new_signature
-                # Reset state on server configuration change
-                setattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED)
-                if self._get_mcp_client():
-                    await self.cleanup_mcp()
-
-            mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(
-                normalized_servers,
-                backend_name=self._get_backend_name(),
-                agent_id=self._get_agent_id(),
+                filter_stdio_streamable_only=True,
             )
 
             if not mcp_tools_servers:
@@ -172,64 +144,37 @@ class MCPHandler:
             _circuit_breakers_enabled = getattr(
                 self.backend, "_circuit_breakers_enabled", False
             )
-
+            
             if _circuit_breakers_enabled and circuit_breaker:
-                # Attempt setup with circuit breaker coordination up to max_failures times
-                max_attempts = circuit_breaker.config.max_failures
+                # Delegate retries to circuit breaker-managed helper
+                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
+                    mcp_tools_servers,
+                    circuit_breaker,
+                    backend_name=self._get_backend_name(),
+                    agent_id=self._get_agent_id(),
+                )
+                if not filtered_servers:
+                    if not getattr(self.backend, "_mcp_circuit_breaker_notified", False):
+                        logger.warning("All MCP servers blocked by circuit breaker during setup")
+                        setattr(self.backend, "_mcp_circuit_breaker_notified", True)
+                    # Treat as exhausted immediately
+                    setattr(self.backend, "_mcp_permanently_blocked", True)
+                    return
 
-                for attempt in range(1, max_attempts + 1):
-                    self.logger.info(f"MCP setup attempt {attempt}/{max_attempts}")
-
-                    # Check circuit breaker filtering
-                    filtered_servers = (
-                        MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
-                            mcp_tools_servers,
-                            circuit_breaker,
-                            backend_name=self._get_backend_name(),
-                            agent_id=self._get_agent_id(),
-                        )
-                    )
-
-                    if not filtered_servers:
-                        # All servers blocked by circuit breaker
-                        if not getattr(
-                            self.backend, "_mcp_circuit_breaker_notified", False
-                        ):
-                            logger.warning(
-                                "All MCP servers blocked by circuit breaker during setup"
-                            )
-                            setattr(self.backend, "_mcp_circuit_breaker_notified", True)
-
-                        # Mark as permanently blocked after max attempts
-                        if attempt >= max_attempts:
-                            setattr(self.backend, "_mcp_permanently_blocked", True)
-                        return
-
-                    # Attempt connection
-                    success = await self._attempt_mcp_setup(
-                        filtered_servers, circuit_breaker, mcp_tools_servers
-                    )
-
-                    if success:
-                        self.logger.info(f"MCP setup successful on attempt {attempt}")
-                        return
-
-                    # If this was the last attempt, mark as permanently blocked
-                    if attempt >= max_attempts:
-                        self.logger.warning(
-                            f"MCP setup failed after {max_attempts} attempts - permanently blocked"
-                        )
-                        setattr(self.backend, "_mcp_permanently_blocked", True)
-                        return
-
-                    # Wait before next attempt
-                    await asyncio.sleep(0.2)
+                success, exhausted = await self._attempt_mcp_setup(
+                    filtered_servers, circuit_breaker, mcp_tools_servers
+                )
+                if success:
+                    self.logger.info("MCP setup successful")
+                    return
+                if exhausted:
+                    self.logger.warning("MCP setup failed after circuit breaker-managed retries - permanently blocked")
+                    setattr(self.backend, "_mcp_permanently_blocked", True)
+                    return
             else:
                 # No circuit breaker - single attempt
-                await self._attempt_mcp_setup(
-                    mcp_tools_servers, None, mcp_tools_servers
-                )
-
+                await self._attempt_mcp_setup(mcp_tools_servers, None, mcp_tools_servers)
+                
         except Exception as e:
             # Record failure for circuit breaker
             circuit_breaker = self._get_circuit_breaker()
@@ -248,7 +193,6 @@ class MCPHandler:
                         str(e),
                         backend_name=self._get_backend_name(),
                         agent_id=self._get_agent_id(),
-                        backend_instance=self.backend,
                     )
                 except Exception as cb_error:
                     logger.warning(
@@ -260,19 +204,19 @@ class MCPHandler:
             setattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED)
             self._set_functions({})
             # Don't re-raise the exception - let the backend handle fallback gracefully
-
+            
     async def _attempt_mcp_setup(
         self, servers_to_use: list, circuit_breaker, original_servers: list
-    ) -> bool:
-        """Attempt MCP setup with given servers. Returns True if successful."""
+    ) -> tuple:
+        """Attempt MCP setup with given servers. Returns (success, exhausted)."""
         try:
             allowed_tools = getattr(self.backend, "allowed_tools", None)
             exclude_tools = getattr(self.backend, "exclude_tools", None)
-
+            
             self._last_mcp_servers_used = servers_to_use
 
-            # Setup MCP client using consolidated utilities
-            mcp_client = await MCPResourceManager.setup_mcp_client(
+            # Setup MCP client using consolidated utilities with inherent retries
+            mcp_client, exhausted = await MCPResourceManager.setup_mcp_client_with_retries(
                 servers=servers_to_use,
                 allowed_tools=allowed_tools,
                 exclude_tools=exclude_tools,
@@ -281,18 +225,14 @@ class MCPHandler:
                 backend_name=self._get_backend_name(),
                 agent_id=self._get_agent_id(),
             )
-
+            
             # Guard after client setup
             if not mcp_client:
-                # Let circuit breaker handle retry logic - don't set permanent failure state
-                # Only show warning once per session
                 if not getattr(self.backend, "_mcp_connection_failure_notified", False):
-                    logger.warning(
-                        "MCP client setup failed, falling back to no-MCP streaming"
-                    )
+                    logger.warning("MCP client setup failed, falling back to no-MCP streaming")
                     setattr(self.backend, "_mcp_connection_failure_notified", True)
-                return False
-
+                return False, exhausted
+                
             # Convert tools to functions using consolidated utility
             functions = self._get_functions()
             functions.update(
@@ -328,50 +268,12 @@ class MCPHandler:
             except Exception as e:
                 logger.warning(f"Could not generate MCP connected status: {e}")
 
-            # Record success for circuit breaker - only for actually connected servers
-            _circuit_breakers_enabled = getattr(
-                self.backend, "_circuit_breakers_enabled", False
-            )
-            if _circuit_breakers_enabled and circuit_breaker and mcp_client:
-                try:
-                    connected_server_names = (
-                        mcp_client.get_server_names()
-                        if hasattr(mcp_client, "get_server_names")
-                        else []
-                    )
-                    # Only record success if we have actual connected servers
-                    # This prevents recording success when connection failed but mcp_client was created
-                    if connected_server_names and len(connected_server_names) > 0:
-                        connected_server_configs = [
-                            server
-                            for server in servers_to_use
-                            if server.get("name") in connected_server_names
-                        ]
-                        if connected_server_configs:
-                            await MCPCircuitBreakerManager.record_success(
-                                connected_server_configs,
-                                circuit_breaker,
-                                backend_name=self._get_backend_name(),
-                                agent_id=self._get_agent_id(),
-                                backend_instance=self.backend,
-                            )
-
-                    else:
-                        # No servers actually connected, don't record success
-                        logger.info(
-                            f"No MCP servers successfully connected, skipping circuit breaker success recording"
-                        )
-                except Exception as cb_error:
-                    logger.warning(
-                        f"Failed to record circuit breaker success: {cb_error}"
-                    )
-
-            return True
-
+            return True, False
+            
         except Exception as e:
             # This attempt failed
             logger.warning(f"MCP setup attempt failed: {e}")
-            return False
+            return False, False
 
     async def execute_mcp_functions_and_recurse(
         self,
@@ -429,7 +331,7 @@ class MCPHandler:
                 )
                 if fallback_stream_callback:
                     async for chunk in fallback_stream_callback(
-                        updated_messages, non_mcp_functions
+                        updated_messages, tools
                     ):
                         yield chunk
                 else:
@@ -620,6 +522,7 @@ class MCPHandler:
                     detect_function_calls_callback=detect_function_calls_callback,
                     process_chunk_callback=process_chunk_callback,
                     format_tool_result_callback=format_tool_result_callback,
+                    fallback_stream_callback=fallback_stream_callback,
                     **kwargs,
                 ):
                     yield next_chunk
@@ -861,7 +764,7 @@ class MCPHandler:
 
     def _get_functions(self) -> Dict[str, Function]:
         """Get the functions registry."""
-        return getattr(self.backend, "functions", {})
+        return getattr(self.backend, "_mcp_functions", {})
 
     def _get_mcp_tool_failures(self) -> int:
         """Get the current MCP tool failure count."""
@@ -877,7 +780,7 @@ class MCPHandler:
 
     def _set_functions(self, functions: Dict[str, Function]) -> None:
         """Set the functions registry."""
-        setattr(self.backend, "functions", functions)
+        setattr(self.backend, "_mcp_functions", functions)
 
     async def execute_mcp_function_with_retry(
         self, function_name: str, arguments_json: str, max_retries: int = 3
@@ -989,10 +892,13 @@ class MCPHandler:
         backend_name = self._get_backend_name()
         agent_id = self._get_agent_id()
 
-        # Setup MCP tools if configured during context manager entry
-        if hasattr(self.backend, "mcp_servers") and self.backend.mcp_servers:
+        # Setup MCP tools if configured and not already ready
+        if (
+            hasattr(self.backend, "mcp_servers")
+            and self.backend.mcp_servers
+            and getattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED) != MCPState.READY
+        ):
             try:
-                # Directly call our own setup method to avoid delegation loops
                 await self.setup_mcp_tools()
             except Exception as e:
                 log_mcp_activity(
@@ -1002,52 +908,7 @@ class MCPHandler:
                     agent_id=agent_id,
                 )
 
-    async def cleanup_context_manager(self, logger_instance=None) -> None:
-        """
-        Clean up MCP resources during async context manager exit.
-
-        This method directly implements the logic previously delegated to MCPResourceManager.
-        """
-        log = logger_instance or self.logger
-        backend_name = self._get_backend_name()
-        agent_id = self._get_agent_id()
-
-        try:
-            if hasattr(self.backend, "cleanup_mcp"):
-                await self.backend.cleanup_mcp()
-            elif hasattr(self.backend, "_mcp_client"):
-                mcp_client = getattr(self.backend, "_mcp_client", None)
-                if mcp_client:
-                    try:
-                        await mcp_client.disconnect()
-                        log_mcp_activity(
-                            backend_name,
-                            "client cleanup completed",
-                            {},
-                            agent_id=agent_id,
-                        )
-                    except Exception as e:
-                        log_mcp_activity(
-                            backend_name,
-                            "error during client cleanup",
-                            {"error": str(e)},
-                            agent_id=agent_id,
-                        )
-
-                # Reset backend state
-                setattr(self.backend, "_mcp_client", None)
-                setattr(self.backend, "_mcp_state", MCPState.NOT_INITIALIZED)
-                if hasattr(self.backend, "functions"):
-                    self.backend.functions.clear()
-        except Exception as e:
-            log.error(f"Error during MCP cleanup for backend '{backend_name}': {e}")
-            log_mcp_activity(
-                backend_name,
-                "error during cleanup",
-                {"error": str(e)},
-                agent_id=agent_id,
-            )
-
+    
     async def cleanup_mcp(self) -> None:
         """
         Clean up MCP client connections and reset state.

@@ -77,28 +77,43 @@ class MCPCircuitBreaker:
 
         status = self._server_status[server_name]
 
-        # Check if below failure threshold
-        if status.failure_count < self.config.max_failures:
-            return False
+          # If server has reached max failures, respect backoff window before allowing retries
+        if status.failure_count >= self.config.max_failures:
+            backoff_time = self._calculate_backoff_time(status.failure_count)
+            if backoff_time <= 0:
+                return False
 
-        current_time = time.monotonic()
-        time_since_failure = current_time - status.last_failure_time
+            elapsed = time.monotonic() - status.last_failure_time
+            if elapsed < backoff_time:
+                # Still within backoff window → block attempts
+                log_mcp_activity(
+                    self.backend_name,
+                    "Circuit breaker blocking server",
+                    {
+                        "server_name": server_name,
+                        "failure_count": status.failure_count,
+                        "max_failures": self.config.max_failures,
+                        "backoff_time_seconds": backoff_time,
+                        "time_remaining": max(0.0, backoff_time - elapsed),
+                    },
+                    agent_id=self.agent_id or agent_id,
+                )
+                return True
+            else:
+                # Backoff elapsed → allow a retry (do not auto-reset; next failure will extend backoff)
+                log_mcp_activity(
+                    self.backend_name,
+                    "Circuit breaker backoff elapsed - allowing retry",
+                    {
+                        "server_name": server_name,
+                        "failure_count": status.failure_count,
+                        "max_failures": self.config.max_failures,
+                    },
+                    agent_id=self.agent_id or agent_id,
+                )
+                return False
 
-        # Calculate backoff time with exponential backoff (capped)
-        backoff_time = self._calculate_backoff_time(status.failure_count)
-
-        if time_since_failure > backoff_time:
-            # Reset failure count after backoff period
-            log_mcp_activity(
-                self.backend_name,
-                "Circuit breaker reset for server",
-                {"server_name": server_name, "backoff_time_seconds": backoff_time},
-                agent_id=self.agent_id or agent_id,
-            )
-            self._reset_server(server_name)
-            return False
-
-        return True
+        return False
 
     def record_failure(self, server_name: str, agent_id: Optional[str] = None) -> None:
         """
