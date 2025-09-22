@@ -153,13 +153,6 @@ See the latest workspace copy tools and configuration improvements in action:
 - **Enhanced File Operations** - Improved large-scale file handling with better security & workspace management
 - **Critical Bug Fixes** - Resolved write tool issues, path resolution bugs, and documentation improvements
 
-**Try v0.0.22 Features Now:**
-```bash
-# Workspace copy tools for efficient file sharing
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a multi-page React application with shared components. Use workspace copy tools to efficiently share code between agents."
-
-```
-
 → [See all release examples](massgen/configs/README.md#release-history--examples)
 
 ---
