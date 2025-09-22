@@ -5,14 +5,13 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.0.22] - 2024-12-22
+## [0.0.22] - 2025-09-22
 
 ### Added
 - **Workspace Copy Tools via MCP**: New file copying capabilities for efficient workspace operations
   - Added `workspace_copy_server.py` with MCP-based file copying functionality (369 lines)
   - Support for copying files and directories between workspaces
   - Efficient handling of large files with streaming operations
-  - Automatic workspace initialization and management
   - Testing infrastructure for copy operations
 
 - **Configuration Organization**: Major restructuring of configuration files for better usability
