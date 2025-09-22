@@ -23,10 +23,16 @@ Examples:
 Brief description of the changes in this PR
 
 ## Type of change
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
+- [ ] Bug fix (`fix:`) - Non-breaking change which fixes an issue
+- [ ] New feature (`feat:`) - Non-breaking change which adds functionality
+- [ ] Breaking change (`breaking:`) - Fix or feature that would cause existing functionality to not work as expected
+- [ ] Documentation (`docs:`) - Documentation updates
+- [ ] Code refactoring (`refactor:`) - Code changes that neither fix a bug nor add a feature
+- [ ] Tests (`test:`) - Adding missing tests or correcting existing tests
+- [ ] Chore (`chore:`) - Maintenance tasks, dependency updates, etc.
+- [ ] Performance improvement (`perf:`) - Code changes that improve performance
+- [ ] Code style (`style:`) - Changes that do not affect the meaning of the code (formatting, missing semi-colons, etc.)
+- [ ] CI/CD (`ci:`) - Changes to CI/CD configuration files and scripts
 
 ## Checklist
 - [ ] I have run pre-commit on my changed files and all checks pass
