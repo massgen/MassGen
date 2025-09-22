@@ -1309,6 +1309,7 @@ class Orchestrator(ChatAgent):
         # This preserves the previous agent's output for logging while giving a clean slate
         if agent.backend.filesystem_manager:
             agent.backend.filesystem_manager.clear_workspace()
+            agent.backend.filesystem_manager.clear_temp_workspace()
             agent.backend.filesystem_manager.log_current_state("before execution")
 
         try:
