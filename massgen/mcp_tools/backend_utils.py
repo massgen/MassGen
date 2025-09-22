@@ -19,6 +19,13 @@ import random
 import asyncio
 import json
 import time
+from enum import Enum
+# Define MCPState locally to avoid circular imports
+class MCPState(Enum):
+    NOT_INITIALIZED = "not_initialized"
+    READY = "ready"
+    CIRCUIT_BREAKER_BLOCKED = "circuit_breaker_blocked"
+    CONNECTION_FAILED = "connection_failed"
 
 # Import MCP exceptions
 try:
@@ -577,6 +584,7 @@ class MCPCircuitBreakerManager:
         circuit_breaker,
         backend_name: Optional[str] = None,
         agent_id: Optional[str] = None,
+        backend_instance=None,
     ) -> None:
         """Record successful operation for circuit breaker."""
         if not circuit_breaker:
@@ -592,6 +600,9 @@ class MCPCircuitBreakerManager:
                     {"server_name": server_name},
                     agent_id=agent_id,
                 )
+                # Reset the exhausted notification flag when a server recovers
+                if backend_instance and hasattr(backend_instance, '_mcp_exhausted_notified'):
+                    backend_instance._mcp_exhausted_notified = False
             except Exception as cb_error:
                 log_mcp_activity(
                     backend_name,
@@ -621,6 +632,7 @@ class MCPCircuitBreakerManager:
         error_message: Optional[str] = None,
         backend_name: Optional[str] = None,
         agent_id: Optional[str] = None,
+        backend_instance=None,
     ) -> None:
         """Record circuit breaker events for servers.
 
@@ -631,6 +643,7 @@ class MCPCircuitBreakerManager:
             error_message: Optional error message for failure events
             backend_name: Optional backend name for logging context
             agent_id: Optional agent ID for logging context
+            backend_instance: Optional backend instance to reset notification flag
         """
         if not circuit_breaker:
             return
@@ -710,11 +723,8 @@ class MCPResourceManager:
             return None
 
         # Normalize and filter servers
-        normalized_servers = MCPSetupManager.normalize_mcp_servers(
-            servers, backend_name, agent_id
-        )
-        stdio_streamable_servers = MCPSetupManager.separate_stdio_streamable_servers(
-            normalized_servers, backend_name, agent_id
+        stdio_streamable_servers = MCPSetupManager.normalize_and_filter_mcp_servers(
+            servers, backend_name, agent_id, filter_stdio_streamable_only=True
         )
 
         if not stdio_streamable_servers:
@@ -735,91 +745,164 @@ class MCPResourceManager:
             filtered_servers = stdio_streamable_servers
 
         if not filtered_servers:
+            if circuit_breaker:
+                log_mcp_activity(
+                    backend_name,
+                    "all servers blocked by circuit breaker - skipping connection attempt",
+                    {"transport_types": ["stdio", "streamable-http"]},
+                    agent_id=agent_id,
+                )
+            else:
+                log_mcp_activity(
+                    backend_name,
+                    "all servers filtered by circuit breaker",
+                    {"transport_types": ["stdio", "streamable-http"]},
+                    agent_id=agent_id,
+                )
+            return None
+
+        # Single attempt with circuit breaker protection
+        try:
+            client = await MultiMCPClient.create_and_connect(
+                filtered_servers,
+                timeout_seconds=timeout_seconds,
+                allowed_tools=allowed_tools,
+                exclude_tools=exclude_tools,
+                circuit_breaker=circuit_breaker,
+            )
+
+            # Record success in circuit breaker ONLY if servers actually connected
+            if circuit_breaker:
+                connected_server_names = (
+                    client.get_server_names()
+                    if hasattr(client, "get_server_names")
+                    else []
+                )
+                # Only record success if we have actual connected servers
+                if connected_server_names and len(connected_server_names) > 0:
+                    connected_server_configs = [
+                        server
+                        for server in filtered_servers
+                        if server.get("name") in connected_server_names
+                    ]
+                    if connected_server_configs:
+                        await MCPCircuitBreakerManager.record_event(
+                            connected_server_configs,
+                            circuit_breaker,
+                            "success",
+                            backend_name=backend_name,
+                            agent_id=agent_id,
+                        )
+                else:
+                    # No servers actually connected, don't record success
+                    log_mcp_activity(
+                        backend_name,
+                        "No MCP servers successfully connected, skipping circuit breaker success recording",
+                        {"attempted_servers": len(filtered_servers)},
+                        agent_id=agent_id,
+                    )
+
+            # Only log success if servers actually connected
+            connected_server_names = (
+                client.get_server_names()
+                if hasattr(client, "get_server_names")
+                else []
+            )
+            if connected_server_names and len(connected_server_names) > 0:
+                log_mcp_activity(
+                    backend_name,
+                    "connection successful",
+                    {"connected_servers": len(connected_server_names), "server_names": connected_server_names},
+                    agent_id=agent_id,
+                )
+            else:
+                log_mcp_activity(
+                    backend_name,
+                    "connection failed - no servers connected",
+                    {"attempted_servers": len(filtered_servers)},
+                    agent_id=agent_id,
+                )
+                return None
+            return client
+
+        except (MCPConnectionError, MCPTimeoutError, MCPServerError) as e:
+            # Record failure in circuit breaker
+            if circuit_breaker:
+                await MCPCircuitBreakerManager.record_event(
+                    filtered_servers,
+                    circuit_breaker,
+                    "failure",
+                    str(e),
+                    backend_name,
+                    agent_id,
+                )
+
             log_mcp_activity(
                 backend_name,
-                "all servers filtered by circuit breaker",
-                {"transport_types": ["stdio", "streamable-http"]},
+                "connection failed - falling back to non-MCP mode",
+                {"error": str(e)},
                 agent_id=agent_id,
             )
             return None
 
-        # Retry logic with exponential backoff
-        max_retries = 3
-        for retry in range(max_retries):
-            try:
-                if retry > 0:
-                    delay = MCPErrorHandler.get_retry_delay(retry - 1)
-                    log_mcp_activity(
-                        backend_name,
-                        "connection retry",
-                        {
-                            "attempt": retry,
-                            "max_retries": max_retries - 1,
-                            "delay_seconds": delay,
-                        },
-                        agent_id=agent_id,
-                    )
-                    await asyncio.sleep(delay)
+        except Exception as e:
+            MCPErrorHandler.log_error(
+                e,
+                f"Unexpected error during MCP connection",
+                "error",
+            )
+            return None
 
-                client = await MultiMCPClient.create_and_connect(
-                    filtered_servers,
-                    timeout_seconds=timeout_seconds,
-                    allowed_tools=allowed_tools,
-                    exclude_tools=exclude_tools,
-                )
+    @staticmethod
+    async def setup_mcp_client_with_retries(
+        servers: List[Dict[str, Any]],
+        allowed_tools: Optional[List[str]],
+        exclude_tools: Optional[List[str]],
+        circuit_breaker=None,
+        timeout_seconds: int = 30,
+        backend_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        max_attempts: Optional[int] = None,
+    ) -> Tuple[Optional[Any], bool]:
+        """Attempt to setup MCP client with inherent retry coordinated by the circuit breaker.
 
-                # Record success in circuit breaker
-                if circuit_breaker:
-                    await MCPCircuitBreakerManager.record_event(
-                        filtered_servers,
-                        circuit_breaker,
-                        "success",
-                        backend_name=backend_name,
-                        agent_id=agent_id,
-                    )
+        Returns:
+            (client, exhausted) where exhausted indicates attempts were exhausted without success.
+        """
+        attempts = max_attempts or (
+            getattr(getattr(circuit_breaker, "config", None), "max_failures", 1) if circuit_breaker else 1
+        )
+        if attempts < 1:
+            attempts = 1
 
-                log_mcp_activity(
-                    backend_name,
-                    "connection successful",
-                    {"attempt": retry + 1},
-                    agent_id=agent_id,
-                )
-                return client
+        for attempt in range(1, attempts + 1):
+            log_mcp_activity(
+                backend_name,
+                "mcp setup attempt",
+                {"attempt": attempt, "max_attempts": attempts},
+                agent_id=agent_id,
+            )
 
-            except (MCPConnectionError, MCPTimeoutError, MCPServerError) as e:
-                if retry < max_retries - 1:  # Not last attempt
-                    MCPErrorHandler.log_error(e, f"MCP connection attempt {retry + 1}")
-                    continue
+            client = await MCPResourceManager.setup_mcp_client(
+                servers=servers,
+                allowed_tools=allowed_tools,
+                exclude_tools=exclude_tools,
+                circuit_breaker=circuit_breaker,
+                timeout_seconds=timeout_seconds,
+                backend_name=backend_name,
+                agent_id=agent_id,
+            )
+            if client:
+                return client, False
 
-                # Record failure and re-raise
-                if circuit_breaker:
-                    await MCPCircuitBreakerManager.record_event(
-                        filtered_servers,
-                        circuit_breaker,
-                        "failure",
-                        str(e),
-                        backend_name,
-                        agent_id,
-                    )
+            if attempt < attempts:
+                try:
+                    delay = MCPErrorHandler.get_retry_delay(attempt - 1, base_delay=2)
+                except Exception:
+                    delay = 2
+                await asyncio.sleep(delay)
 
-                log_mcp_activity(
-                    backend_name,
-                    "connection failed after retries",
-                    {"max_retries": max_retries, "error": str(e)},
-                    agent_id=agent_id,
-                )
-                return None
-            except Exception as e:
-                MCPErrorHandler.log_error(
-                    e,
-                    f"Unexpected error during MCP connection attempt {retry + 1}",
-                    "error",
-                )
-                if retry < max_retries - 1:
-                    continue
-                return None
-
-        return None
+        return None, True
 
     @staticmethod
     def convert_tools_to_functions(
@@ -962,7 +1045,7 @@ class MCPResourceManager:
         if (
             hasattr(backend_instance, "_mcp_tools_servers")
             and backend_instance._mcp_tools_servers
-            and not backend_instance._mcp_initialized
+            and getattr(backend_instance, "_mcp_state", MCPState.NOT_INITIALIZED) != MCPState.READY
         ):
             try:
                 await backend_instance._setup_mcp_tools()
@@ -976,7 +1059,7 @@ class MCPResourceManager:
         elif (
             hasattr(backend_instance, "mcp_servers")
             and backend_instance.mcp_servers
-            and not backend_instance._mcp_initialized
+            and getattr(backend_instance, "_mcp_state", MCPState.NOT_INITIALIZED) != MCPState.READY
         ):
             try:
                 await backend_instance._setup_mcp_tools()
@@ -1025,19 +1108,24 @@ class MCPSetupManager:
     """MCP setup and initialization utilities."""
 
     @staticmethod
-    def normalize_mcp_servers(
-        servers: Any, backend_name: Optional[str] = None, agent_id: Optional[str] = None
+    def normalize_and_filter_mcp_servers(
+        servers: Any,
+        backend_name: Optional[str] = None,
+        agent_id: Optional[str] = None,
+        filter_stdio_streamable_only: bool = True
     ) -> List[Dict[str, Any]]:
-        """Validate and normalize mcp_servers into a list of dicts.
+        """Validate, normalize, and optionally filter MCP servers.
 
         Args:
             servers: MCP servers configuration (list, dict, or None)
             backend_name: Optional backend name for logging context
             agent_id: Optional agent ID for logging context
+            filter_stdio_streamable_only: If True, only return stdio and streamable-http servers
 
         Returns:
-            Normalized list of server dictionaries
+            Normalized and filtered list of server dictionaries
         """
+        # Step 1: Validate and normalize input
         if not servers:
             return []
 
@@ -1074,29 +1162,18 @@ class MCPSetupManager:
                 continue
 
             # Add default name if missing
-            if "name" not in server:
-                server = server.copy()
-                server["name"] = f"server_{i}"
+            server_copy = server.copy()
+            if "name" not in server_copy:
+                server_copy["name"] = f"server_{i}"
 
-            normalized.append(server)
+            normalized.append(server_copy)
 
-        return normalized
+        # Step 2: Filter by transport type if requested
+        if not filter_stdio_streamable_only:
+            return normalized
 
-    @staticmethod
-    def separate_servers_by_transport_type(
-        servers: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Separate servers to return only stdio and streamable-http servers.
-
-        Args:
-            servers: List of server configurations
-
-        Returns:
-            List containing only stdio and streamable-http servers
-        """
-        mcp_tools_servers = []
-
-        for server in servers:
+        filtered_servers = []
+        for server in normalized:
             transport_type = (server.get("type") or "").lower()
             server_name = server.get("name", "unnamed")
 
@@ -1112,47 +1189,21 @@ class MCPSetupManager:
                 continue
 
             if transport_type in ["stdio", "streamable-http"]:
-                # Both stdio and streamable-http use MultiMCPClient
-                mcp_tools_servers.append(server)
+                filtered_servers.append(server)
             elif transport_type == "http":
                 raise MCPConfigurationError(
                     f"HTTP MCP transport type is not supported for server '{server_name}'. "
                     f"Supported types: 'stdio', 'streamable-http'.",
-                    context="transport_validation",
+                    context={"transport_type": transport_type, "server_name": server_name},
                 )
             else:
                 raise MCPConfigurationError(
                     f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. "
                     f"Supported types: 'stdio', 'streamable-http'.",
-                    context="transport_validation",
+                    context={"transport_type": transport_type, "server_name": server_name},
                 )
 
-        return mcp_tools_servers
-
-    @staticmethod
-    def separate_stdio_streamable_servers(
-        servers: List[Dict[str, Any]],
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
-        """Extract only stdio and streamable-http servers.
-
-        Args:
-            servers: List of server configurations
-            backend_name: Optional backend name for logging context
-            agent_id: Optional agent ID for logging context
-
-        Returns:
-            List containing only stdio and streamable-http servers
-        """
-        stdio_streamable = []
-
-        for server in servers:
-            transport_type = server.get("type", "").lower()
-            if transport_type in ["stdio", "streamable-http"]:
-                stdio_streamable.append(server)
-
-        return stdio_streamable
+        return filtered_servers
 
 
 class MCPExecutionManager:
