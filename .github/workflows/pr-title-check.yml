@@ -1,0 +1,101 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check PR Title Format
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const title = context.payload.pull_request.title;
+          const validPrefixes = [
+            'fix:',       // Bug fix
+            'feat:',      // New feature
+            'breaking:',  // Breaking change
+            'docs:',      // Documentation
+            'refactor:',  // Code refactoring
+            'test:',      // Tests
+            'chore:',     // Maintenance
+            'perf:',      // Performance improvement
+            'style:',     // Code style changes
+            'ci:',        // CI/CD changes
+          ];
+
+          const hasValidPrefix = validPrefixes.some(prefix =>
+            title.toLowerCase().startsWith(prefix)
+          );
+
+          if (!hasValidPrefix) {
+            const errorMessage = `
+            ❌ **PR title format is incorrect!**
+
+            Your PR title must start with one of the following prefixes:
+            - \`fix:\` - Bug fixes
+            - \`feat:\` - New features
+            - \`breaking:\` - Breaking changes
+            - \`docs:\` - Documentation updates
+            - \`refactor:\` - Code refactoring
+            - \`test:\` - Test additions or modifications
+            - \`chore:\` - Maintenance tasks
+            - \`perf:\` - Performance improvements
+            - \`style:\` - Code style changes
+            - \`ci:\` - CI/CD configuration changes
+
+            **Example titles:**
+            - \`fix: resolve memory leak in data processing\`
+            - \`feat: add export to CSV functionality\`
+            - \`breaking: change API response format\`
+            - \`docs: update installation guide\`
+
+            Please update your PR title to follow this format.
+            `;
+
+            // Post comment on PR
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: errorMessage
+            });
+
+            // Fail the check
+            core.setFailed(`PR title must start with one of: ${validPrefixes.join(', ')}`);
+          } else {
+            console.log(`✅ PR title format is correct: "${title}"`);
+
+            // Optional: Add a label based on the prefix
+            const prefix = validPrefixes.find(p => title.toLowerCase().startsWith(p));
+            const labelMap = {
+              'fix:': 'bug',
+              'feat:': 'enhancement',
+              'breaking:': 'breaking-change',
+              'docs:': 'documentation',
+              'refactor:': 'refactoring',
+              'test:': 'testing',
+              'chore:': 'maintenance',
+              'perf:': 'performance',
+              'style:': 'style',
+              'ci:': 'ci/cd'
+            };
+
+            const label = labelMap[prefix];
+            if (label) {
+              try {
+                await github.rest.issues.addLabels({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: [label]
+                });
+                console.log(`Added label: ${label}`);
+              } catch (error) {
+                console.log(`Could not add label ${label}: ${error.message}`);
+              }
+            }
+          }
