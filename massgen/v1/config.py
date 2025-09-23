@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen Configuration System
 
@@ -5,26 +6,23 @@ This module provides configuration management for the MassGen system,
 supporting YAML file loading and programmatic configuration creation.
 """
 
-import yaml
-import os
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
-from dataclasses import asdict
+from typing import Any, Dict, List, Optional, Union
+
+import yaml
 
 from .types import (
-    MassConfig,
-    OrchestratorConfig,
     AgentConfig,
-    ModelConfig,
-    StreamingDisplayConfig,
     LoggingConfig,
+    MassConfig,
+    ModelConfig,
+    OrchestratorConfig,
+    StreamingDisplayConfig,
 )
 
 
 class ConfigurationError(Exception):
     """Exception raised for configuration-related errors."""
-
-    pass
 
 
 def load_config_from_yaml(config_path: Union[str, Path]) -> MassConfig:
@@ -92,9 +90,7 @@ def create_config_from_models(
             inference_timeout=180,
         )
 
-        agent_config = AgentConfig(
-            agent_id=i + 1, agent_type=agent_type, model_config=model_config
-        )
+        agent_config = AgentConfig(agent_id=i + 1, agent_type=agent_type, model_config=model_config)
         agents.append(agent_config)
 
     # Create configuration components

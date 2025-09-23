@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Test script for Claude Code Context Sharing functionality.
 
@@ -8,18 +9,14 @@ ensuring that:
 3. Agents can access each other's work through shared context
 """
 
-import asyncio
-import os
 import shutil
 from pathlib import Path
-from typing import Dict, List
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from massgen.orchestrator import Orchestrator
 from massgen.chat_agent import ChatAgent
-from massgen.agent_config import AgentConfig
+from massgen.orchestrator import Orchestrator
 
 
 class MockClaudeCodeBackend:
@@ -216,9 +213,7 @@ def test_non_claude_code_agents_ignored(test_workspace):
     # Create mixed agents (some Claude Code, some not)
     agents = {
         "claude_code_1": MockClaudeCodeAgent("claude_code_1"),
-        "regular_agent": MagicMock(
-            backend=MagicMock(get_provider_name=lambda: "openai")
-        ),
+        "regular_agent": MagicMock(backend=MagicMock(get_provider_name=lambda: "openai")),
     }
 
     orchestrator = Orchestrator(

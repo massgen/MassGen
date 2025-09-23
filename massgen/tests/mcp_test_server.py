@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Simple MCP test server for testing MCP integration.
 
@@ -6,10 +7,10 @@ This server provides basic tools for testing MCP functionality.
 It implements the MCP protocol over stdio transport.
 """
 
-import sys
-import json
 import asyncio
-from typing import Dict, Any
+import json
+import sys
+from typing import Any, Dict
 
 
 class SimpleMCPServer:
@@ -22,9 +23,7 @@ class SimpleMCPServer:
                 "description": "Echo back the input text",
                 "inputSchema": {
                     "type": "object",
-                    "properties": {
-                        "text": {"type": "string", "description": "Text to echo back"}
-                    },
+                    "properties": {"text": {"type": "string", "description": "Text to echo back"}},
                     "required": ["text"],
                 },
             },
@@ -76,9 +75,7 @@ class SimpleMCPServer:
             a = arguments.get("a", 0)
             b = arguments.get("b", 0)
             result = a + b
-            return {
-                "content": [{"type": "text", "text": f"Result: {a} + {b} = {result}"}]
-            }
+            return {"content": [{"type": "text", "text": f"Result: {a} + {b} = {result}"}]}
 
         elif tool_name == "get_current_time":
             import datetime

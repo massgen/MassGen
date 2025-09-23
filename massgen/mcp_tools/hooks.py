@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Hook system for MCP tool call interception.
 
@@ -10,18 +11,18 @@ across different backend architectures:
 The actual permission logic is implemented in filesystem_manager.py
 """
 
-import time
-import json
-from ..logger_config import logger
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, List
-from enum import Enum
 from datetime import timedelta
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from ..logger_config import logger
 
 # MCP imports for session-based backends
 try:
     from mcp import ClientSession, types
     from mcp.client.session import ProgressFnT
+
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
@@ -29,8 +30,10 @@ except ImportError:
     types = None
     ProgressFnT = None
 
+
 class HookType(Enum):
     """Types of function call hooks."""
+
     PRE_CALL = "pre_call"
     # Future: POST_CALL = "post_call"
 
@@ -38,12 +41,7 @@ class HookType(Enum):
 class HookResult:
     """Result of a hook execution."""
 
-    def __init__(
-        self,
-        allowed: bool,
-        metadata: Optional[Dict[str, Any]] = None,
-        modified_args: Optional[str] = None
-    ):
+    def __init__(self, allowed: bool, metadata: Optional[Dict[str, Any]] = None, modified_args: Optional[str] = None):
         self.allowed = allowed
         self.metadata = metadata or {}
         self.modified_args = modified_args
@@ -56,13 +54,7 @@ class FunctionHook(ABC):
         self.name = name
 
     @abstractmethod
-    async def execute(
-        self,
-        function_name: str,
-        arguments: str,
-        context: Optional[Dict[str, Any]] = None,
-        **kwargs
-    ) -> HookResult:
+    async def execute(self, function_name: str, arguments: str, context: Optional[Dict[str, Any]] = None, **kwargs) -> HookResult:
         """
         Execute the hook.
 
@@ -74,19 +66,14 @@ class FunctionHook(ABC):
         Returns:
             HookResult with allowed flag and optional modifications
         """
-        pass
 
 
 class FunctionHookManager:
     """Manages registration and execution of function hooks."""
 
     def __init__(self):
-        self._hooks: Dict[HookType, List[FunctionHook]] = {
-            hook_type: [] for hook_type in HookType
-        }
-        self._global_hooks: Dict[HookType, List[FunctionHook]] = {
-            hook_type: [] for hook_type in HookType
-        }
+        self._hooks: Dict[HookType, List[FunctionHook]] = {hook_type: [] for hook_type in HookType}
+        self._global_hooks: Dict[HookType, List[FunctionHook]] = {hook_type: [] for hook_type in HookType}
 
     def register_hook(self, function_name: str, hook_type: HookType, hook: FunctionHook):
         """Register a hook for a specific function."""
@@ -165,7 +152,7 @@ class PermissionClientSession(ClientSession):
         logger.debug(f"[PermissionClientSession] Intercepted tool call: {name} with args: {tool_args}")
 
         # Apply permission hook if available
-        if self._permission_manager and hasattr(self._permission_manager, 'pre_tool_use_hook'):
+        if self._permission_manager and hasattr(self._permission_manager, "pre_tool_use_hook"):
             try:
                 allowed, reason = await self._permission_manager.pre_tool_use_hook(name, tool_args)
 
@@ -176,15 +163,7 @@ class PermissionClientSession(ClientSession):
                     logger.warning(f"🚫 [PermissionClientSession] {error_msg}")
 
                     # Return an error result instead of calling the tool
-                    return types.CallToolResult(
-                        content=[
-                            types.TextContent(
-                                type="text",
-                                text=f"Error: {error_msg}"
-                            )
-                        ],
-                        isError=True
-                    )
+                    return types.CallToolResult(content=[types.TextContent(type="text", text=f"Error: {error_msg}")], isError=True)
                 else:
                     logger.debug(f"[PermissionClientSession] Tool '{name}' permission check passed")
 
@@ -194,22 +173,15 @@ class PermissionClientSession(ClientSession):
 
         # Call the parent's call_tool method
         try:
-            result = await super().call_tool(
-                name=name,
-                arguments=arguments,
-                read_timeout_seconds=read_timeout_seconds,
-                progress_callback=progress_callback
-            )
+            result = await super().call_tool(name=name, arguments=arguments, read_timeout_seconds=read_timeout_seconds, progress_callback=progress_callback)
             logger.debug(f"[PermissionClientSession] Tool '{name}' completed successfully")
             return result
         except Exception as e:
             logger.error(f"[PermissionClientSession] Tool '{name}' failed: {e}")
             raise
 
-def convert_sessions_to_permission_sessions(
-    sessions: List[ClientSession],
-    permission_manager
-) -> List[PermissionClientSession]:
+
+def convert_sessions_to_permission_sessions(sessions: List[ClientSession], permission_manager) -> List[PermissionClientSession]:
     """
     Convert a list of ClientSession objects to PermissionClientSession subclasses.
 
@@ -228,6 +200,7 @@ def convert_sessions_to_permission_sessions(
         converted.append(perm_session)
     logger.debug(f"[PermissionClientSession] Successfully converted {len(converted)} sessions")
     return converted
+
 
 __all__ = [
     "HookType",

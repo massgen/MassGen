@@ -19,18 +19,17 @@ Usage examples:
 
 import argparse
 import sys
-import os
 from pathlib import Path
+
+from massgen.v1 import (
+    ConfigurationError,
+    create_config_from_models,
+    load_config_from_yaml,
+    run_mass_with_config,
+)
 
 # Add massgen package to path
 sys.path.insert(0, str(Path(__file__).parent))
-
-from massgen.v1 import (
-    run_mass_with_config,
-    load_config_from_yaml,
-    create_config_from_models,
-    ConfigurationError,
-)
 
 # Color constants for beautiful terminal output
 BRIGHT_CYAN = "\033[96m"
@@ -50,9 +49,7 @@ def display_vote_distribution(vote_distribution):
     # sort the keys
     sorted_keys = sorted(vote_distribution.keys())
     for agent_id in sorted_keys:
-        print(
-            f"      {BRIGHT_CYAN}Agent {agent_id}{RESET}: {BRIGHT_GREEN}{vote_distribution[agent_id]}{RESET} votes"
-        )
+        print(f"      {BRIGHT_CYAN}Agent {agent_id}{RESET}: {BRIGHT_GREEN}{vote_distribution[agent_id]}{RESET} votes")
 
 
 def run_interactive_mode(config):
@@ -69,17 +66,9 @@ def run_interactive_mode(config):
     if hasattr(config, "agents") and config.agents:
         print(f"🤖 Agents ({len(config.agents)}):")
         for i, agent in enumerate(config.agents, 1):
-            model_name = (
-                getattr(agent.model_config, "model", "Unknown")
-                if hasattr(agent, "model_config")
-                else "Unknown"
-            )
+            model_name = getattr(agent.model_config, "model", "Unknown") if hasattr(agent, "model_config") else "Unknown"
             agent_type = getattr(agent, "agent_type", "Unknown")
-            tools = (
-                getattr(agent.model_config, "tools", [])
-                if hasattr(agent, "model_config")
-                else []
-            )
+            tools = getattr(agent.model_config, "tools", []) if hasattr(agent, "model_config") else []
             tools_str = ", ".join(tools) if tools else "None"
             print(f"   {i}. {model_name} ({agent_type})")
             print(f"      Tools: {tools_str}")
@@ -89,21 +78,15 @@ def run_interactive_mode(config):
     # Show orchestrator settings
     if hasattr(config, "orchestrator"):
         orch = config.orchestrator
-        print(f"⚙️  Orchestrator:")
+        print("⚙️  Orchestrator:")
         print(f"   • Duration: {getattr(orch, 'max_duration', 'Default')}s")
         print(f"   • Consensus: {getattr(orch, 'consensus_threshold', 'Default')}")
-        print(
-            f"   • Max Debate Rounds: {getattr(orch, 'max_debate_rounds', 'Default')}"
-        )
+        print(f"   • Max Debate Rounds: {getattr(orch, 'max_debate_rounds', 'Default')}")
 
     # Show model parameters (from first agent as representative)
-    if (
-        hasattr(config, "agents")
-        and config.agents
-        and hasattr(config.agents[0], "model_config")
-    ):
+    if hasattr(config, "agents") and config.agents and hasattr(config.agents[0], "model_config"):
         model_config = config.agents[0].model_config
-        print(f"🔧 Model Config:")
+        print("🔧 Model Config:")
         temp = getattr(model_config, "temperature", "Default")
         timeout = getattr(model_config, "inference_timeout", "Default")
         max_rounds = getattr(model_config, "max_rounds", "Default")
@@ -114,12 +97,8 @@ def run_interactive_mode(config):
     # Show display settings
     if hasattr(config, "streaming_display"):
         display = config.streaming_display
-        display_status = (
-            "✅ Enabled" if getattr(display, "display_enabled", True) else "❌ Disabled"
-        )
-        logs_status = (
-            "✅ Enabled" if getattr(display, "save_logs", True) else "❌ Disabled"
-        )
+        display_status = "✅ Enabled" if getattr(display, "display_enabled", True) else "❌ Disabled"
+        logs_status = "✅ Enabled" if getattr(display, "save_logs", True) else "❌ Disabled"
         print(f"📺 Display: {display_status}")
         print(f"📁 Logs: {logs_status}")
 
@@ -162,48 +141,27 @@ def run_interactive_mode(config):
                 # Assistant response section
                 print(f"\n{BRIGHT_GREEN}🤖 Assistant:{RESET}")
 
-                agents = {
-                    f"Agent {agent.agent_id}": agent.model_config.model
-                    for agent in config.agents
-                }
+                agents = {f"Agent {agent.agent_id}": agent.model_config.model for agent in config.agents}
 
                 # Show metadata with clean indentation
                 if result.get("single_agent_mode", False):
                     print(f"    {BRIGHT_YELLOW}📋 Mode:{RESET} Single Agent")
                     print(f"    {BRIGHT_MAGENTA}🤖 Agents:{RESET} {agents}")
-                    print(
-                        f"    {BRIGHT_CYAN}🎯 Representative:{RESET} {result['representative_agent_id']}"
-                    )
-                    print(
-                        f"    {BRIGHT_GREEN}🔧 Model:{RESET} {result.get('model_used', 'Unknown')}"
-                    )
-                    print(
-                        f"    {BRIGHT_BLUE}⏱️  Duration:{RESET} {result['session_duration']:.1f}s"
-                    )
+                    print(f"    {BRIGHT_CYAN}🎯 Representative:{RESET} {result['representative_agent_id']}")
+                    print(f"    {BRIGHT_GREEN}🔧 Model:{RESET} {result.get('model_used', 'Unknown')}")
+                    print(f"    {BRIGHT_BLUE}⏱️  Duration:{RESET} {result['session_duration']:.1f}s")
                     if result.get("citations"):
-                        print(
-                            f"    {BRIGHT_WHITE}📚 Citations:{RESET} {len(result['citations'])}"
-                        )
+                        print(f"    {BRIGHT_WHITE}📚 Citations:{RESET} {len(result['citations'])}")
                     if result.get("code"):
-                        print(
-                            f"    {BRIGHT_WHITE}💻 Code blocks:{RESET} {len(result['code'])}"
-                        )
+                        print(f"    {BRIGHT_WHITE}💻 Code blocks:{RESET} {len(result['code'])}")
                 else:
                     print(f"    {BRIGHT_YELLOW}📋 Mode:{RESET} Multi-Agent")
                     print(f"    {BRIGHT_MAGENTA}🤖 Agents:{RESET} {agents}")
-                    print(
-                        f"    {BRIGHT_CYAN}🎯 Representative:{RESET} {result['representative_agent_id']}"
-                    )
-                    print(
-                        f"    {BRIGHT_GREEN}✅ Consensus:{RESET} {result['consensus_reached']}"
-                    )
-                    print(
-                        f"    {BRIGHT_BLUE}⏱️  Duration:{RESET} {result['session_duration']:.1f}s"
-                    )
+                    print(f"    {BRIGHT_CYAN}🎯 Representative:{RESET} {result['representative_agent_id']}")
+                    print(f"    {BRIGHT_GREEN}✅ Consensus:{RESET} {result['consensus_reached']}")
+                    print(f"    {BRIGHT_BLUE}⏱️  Duration:{RESET} {result['session_duration']:.1f}s")
                     print(f"    {BRIGHT_YELLOW}📊 Vote Distribution:{RESET}")
-                    display_vote_distribution(
-                        result["summary"]["final_vote_distribution"]
-                    )
+                    display_vote_distribution(result["summary"]["final_vote_distribution"])
 
                 # Print the response with simple indentation
                 print(f"\n    {BRIGHT_RED}💡 Response:{RESET}")
@@ -233,14 +191,14 @@ def main():
 Examples:
   # Use YAML configuration
   uv run python -m massgen.v1.cli "What is the capital of France?" --config examples/production.yaml
-  
+
   # Use model names directly (single or multiple agents)
   uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o gemini-2.5-flash
   uv run python -m massgen.v1.cli "What is 2+2?" --models gpt-4o  # Single agent mode
-  
+
   # Interactive mode (no question provided)
   uv run python -m massgen.v1.cli --models gpt-4o grok-4
-  
+
   # Override parameters
   uv run python -m massgen.v1.cli "Question" --models gpt-4o gemini-2.5-flash --max-duration 1200 --consensus 0.8
         """,
@@ -255,26 +213,14 @@ Examples:
 
     # Configuration options (mutually exclusive)
     config_group = parser.add_mutually_exclusive_group(required=True)
-    config_group.add_argument(
-        "--config", type=str, help="Path to YAML configuration file"
-    )
-    config_group.add_argument(
-        "--models", nargs="+", help="Model names (e.g., gpt-4o gemini-2.5-flash)"
-    )
+    config_group.add_argument("--config", type=str, help="Path to YAML configuration file")
+    config_group.add_argument("--models", nargs="+", help="Model names (e.g., gpt-4o gemini-2.5-flash)")
 
     # Configuration overrides
-    parser.add_argument(
-        "--max-duration", type=int, default=None, help="Max duration in seconds"
-    )
-    parser.add_argument(
-        "--consensus", type=float, default=None, help="Consensus threshold (0.0-1.0)"
-    )
-    parser.add_argument(
-        "--max-debates", type=int, default=None, help="Maximum debate rounds"
-    )
-    parser.add_argument(
-        "--no-display", action="store_true", help="Disable streaming display"
-    )
+    parser.add_argument("--max-duration", type=int, default=None, help="Max duration in seconds")
+    parser.add_argument("--consensus", type=float, default=None, help="Consensus threshold (0.0-1.0)")
+    parser.add_argument("--max-debates", type=int, default=None, help="Maximum debate rounds")
+    parser.add_argument("--no-display", action="store_true", help="Disable streaming display")
     parser.add_argument("--no-logs", action="store_true", help="Disable file logging")
 
     args = parser.parse_args()
@@ -302,10 +248,7 @@ Examples:
         config.validate()
 
         # The used models
-        agents = {
-            f"Agent {agent.agent_id}": agent.model_config.model
-            for agent in config.agents
-        }
+        agents = {f"Agent {agent.agent_id}": agent.model_config.model for agent in config.agents}
 
         # Check if question was provided
         if args.question:
@@ -333,7 +276,7 @@ Examples:
                 print(f"🎯 Representative Agent: {result['representative_agent_id']}")
                 print(f"✅ Consensus: {result['consensus_reached']}")
                 print(f"⏱️  Duration: {result['session_duration']:.1f}s")
-                print(f"📊 Votes:")
+                print("📊 Votes:")
                 display_vote_distribution(result["summary"]["final_vote_distribution"])
         else:
             # Interactive mode

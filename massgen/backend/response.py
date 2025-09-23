@@ -1,24 +1,43 @@
+# -*- coding: utf-8 -*-
 """
 Response API backend implementation.
 Standalone implementation optimized for the standard Response API format (originated by OpenAI).
 """
 from __future__ import annotations
-import os
-import logging
-import json
+
 import asyncio
-from typing import Dict, List, Any, AsyncGenerator, Optional, Callable, Literal
-from .base import LLMBackend, StreamChunk, FilesystemSupport
-from ..logger_config import log_backend_activity, log_backend_agent_message, log_stream_chunk,logger
+import os
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+
+from ..logger_config import (
+    log_backend_activity,
+    log_backend_agent_message,
+    log_stream_chunk,
+    logger,
+)
+from .base import FilesystemSupport, LLMBackend, StreamChunk
 
 # MCP integration imports
 try:
     from ..mcp_tools import (
-        MultiMCPClient, MCPError, MCPConnectionError, MCPCircuitBreaker,
-        MCPConfigurationError, MCPValidationError, MCPTimeoutError, MCPServerError,
-        MCPConfigValidator, Function, MCPErrorHandler, MCPSetupManager, MCPResourceManager, 
-        MCPExecutionManager, MCPRetryHandler, MCPMessageManager, 
-        MCPConfigHelper, MCPCircuitBreakerManager
+        Function,
+        MCPCircuitBreaker,
+        MCPCircuitBreakerManager,
+        MCPConfigHelper,
+        MCPConfigurationError,
+        MCPConfigValidator,
+        MCPConnectionError,
+        MCPError,
+        MCPErrorHandler,
+        MCPExecutionManager,
+        MCPMessageManager,
+        MCPResourceManager,
+        MCPRetryHandler,
+        MCPServerError,
+        MCPSetupManager,
+        MCPTimeoutError,
+        MCPValidationError,
+        MultiMCPClient,
     )
 except ImportError as e:  # MCP not installed or import failed
     logger.warning(f"MCP import failed: {e}")
@@ -49,7 +68,7 @@ class ResponseBackend(LLMBackend):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
 
-        #MCP integration (filesystem MCP server may have been injected by base class)
+        # MCP integration (filesystem MCP server may have been injected by base class)
         self.mcp_servers = self.config.get("mcp_servers", [])
         self.allowed_tools = kwargs.pop("allowed_tools", None)
         self.exclude_tools = kwargs.pop("exclude_tools", None)
@@ -63,7 +82,7 @@ class ResponseBackend(LLMBackend):
         # Circuit breaker for MCP tools (stdio + streamable-http) with explicit configuration
         self._mcp_tools_circuit_breaker = None  # For stdio + streamable-http
         self._circuit_breakers_enabled = MCPCircuitBreaker is not None
-        
+
         # Initialize circuit breaker if available
         if self._circuit_breakers_enabled:
             # Use shared utility to build circuit breaker configuration
@@ -92,8 +111,7 @@ class ResponseBackend(LLMBackend):
 
         # Initialize backend name and agent ID for MCP operations
         self.backend_name = self.get_provider_name()
-        self.agent_id = kwargs.get('agent_id', None)
-
+        self.agent_id = kwargs.get("agent_id", None)
 
     async def _handle_mcp_error_and_fallback(
         self,
@@ -103,16 +121,15 @@ class ResponseBackend(LLMBackend):
         stream_func: Callable[[Dict[str, Any]], AsyncGenerator[StreamChunk, None]],
     ) -> AsyncGenerator[StreamChunk, None]:
         """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
-      
+
         async with self._stats_lock:
             self._mcp_tool_failures += 1
             call_index_snapshot = self._mcp_tool_calls_count
 
         log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
 
-     
         logger.warning(
-            f"MCP tool call #{call_index_snapshot} failed - {log_type}: {error}"
+            f"MCP tool call #{call_index_snapshot} failed - {log_type}: {error}",
         )
 
         # Yield user-friendly error message
@@ -126,11 +143,7 @@ class ResponseBackend(LLMBackend):
 
         # Remove any MCP tools from the tools list
         if "tools" in fallback_params:
-            non_mcp_tools = [
-                tool
-                for tool in fallback_params["tools"]
-                if tool.get("type") != "mcp"
-            ]
+            non_mcp_tools = [tool for tool in fallback_params["tools"] if tool.get("type") != "mcp"]
             fallback_params["tools"] = non_mcp_tools
 
         # Add back provider tools if they were present
@@ -142,9 +155,11 @@ class ResponseBackend(LLMBackend):
         async for chunk in stream_func(fallback_params):
             yield chunk
 
-
     async def _execute_mcp_function_with_retry(
-        self, function_name: str, arguments_json: str, max_retries: int = 3
+        self,
+        function_name: str,
+        arguments_json: str,
+        max_retries: int = 3,
     ) -> List[str, Any]:
         """Execute MCP function with exponential backoff retry logic."""
         import json
@@ -182,7 +197,7 @@ class ResponseBackend(LLMBackend):
             max_retries=max_retries,
             stats_callback=stats_callback,
             circuit_breaker_callback=circuit_breaker_callback,
-            logger_instance=logger
+            logger_instance=logger,
         )
 
         # Convert result to string for response.py compatibility
@@ -199,21 +214,27 @@ class ResponseBackend(LLMBackend):
         try:
             # Normalize and separate MCP servers by transport type using mcp_tools utilities
             normalized_servers = MCPSetupManager.normalize_mcp_servers(
-                self.mcp_servers, backend_name=self.backend_name, agent_id=self.agent_id
+                self.mcp_servers,
+                backend_name=self.backend_name,
+                agent_id=self.agent_id,
             )
             mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(
-                normalized_servers, backend_name=self.backend_name, agent_id=self.agent_id
+                normalized_servers,
+                backend_name=self.backend_name,
+                agent_id=self.agent_id,
             )
-            
+
             if not mcp_tools_servers:
                 logger.info("No stdio/streamable-http servers configured")
                 return
 
-            # Apply circuit breaker filtering before connection attempts  
+            # Apply circuit breaker filtering before connection attempts
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
                 filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
-                    mcp_tools_servers, self._mcp_tools_circuit_breaker,
-                    backend_name=self.backend_name, agent_id=self.agent_id
+                    mcp_tools_servers,
+                    self._mcp_tools_circuit_breaker,
+                    backend_name=self.backend_name,
+                    agent_id=self.agent_id,
                 )
                 if not filtered_servers:
                     logger.warning("All MCP servers blocked by circuit breaker during setup")
@@ -232,7 +253,7 @@ class ResponseBackend(LLMBackend):
                 circuit_breaker=self._mcp_tools_circuit_breaker,
                 timeout_seconds=30,
                 backend_name=self.backend_name,
-                agent_id=self.agent_id
+                agent_id=self.agent_id,
             )
 
             # Guard after client setup
@@ -247,27 +268,26 @@ class ResponseBackend(LLMBackend):
                     self._mcp_client,
                     backend_name=self.backend_name,
                     agent_id=self.agent_id,
-                    hook_manager=getattr(self, 'function_hook_manager', None),
-                )
+                    hook_manager=getattr(self, "function_hook_manager", None),
+                ),
             )
             self._mcp_initialized = True
             logger.info(
-                f"Successfully initialized MCP mcp_tools sessions with {len(self.functions)} tools converted to functions"
+                f"Successfully initialized MCP mcp_tools sessions with {len(self.functions)} tools converted to functions",
             )
 
             # Record success for circuit breaker
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client:
                 try:
-                    connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, 'get_server_names') else []
+                    connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, "get_server_names") else []
                     if connected_server_names:
-                        connected_server_configs = [
-                            server for server in servers_to_use
-                            if server.get("name") in connected_server_names
-                        ]
+                        connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
                         if connected_server_configs:
                             await MCPCircuitBreakerManager.record_success(
-                                connected_server_configs, self._mcp_tools_circuit_breaker,
-                                backend_name=self.backend_name, agent_id=self.agent_id
+                                connected_server_configs,
+                                self._mcp_tools_circuit_breaker,
+                                backend_name=self.backend_name,
+                                agent_id=self.agent_id,
                             )
                 except Exception as cb_error:
                     logger.warning(f"Failed to record circuit breaker success: {cb_error}")
@@ -277,9 +297,11 @@ class ResponseBackend(LLMBackend):
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
                 try:
                     await MCPCircuitBreakerManager.record_failure(
-                        servers_to_use if 'servers_to_use' in locals() else mcp_tools_servers if 'mcp_tools_servers' in locals() else [],
-                        self._mcp_tools_circuit_breaker, str(e),
-                        backend_name=self.backend_name, agent_id=self.agent_id
+                        servers_to_use if "servers_to_use" in locals() else mcp_tools_servers if "mcp_tools_servers" in locals() else [],
+                        self._mcp_tools_circuit_breaker,
+                        str(e),
+                        backend_name=self.backend_name,
+                        agent_id=self.agent_id,
                     )
                 except Exception as cb_error:
                     logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
@@ -288,7 +310,6 @@ class ResponseBackend(LLMBackend):
             self._mcp_client = None
             self._mcp_initialized = False
             self.functions = {}
-
 
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
         """Convert MCP tools (stdio + streamable-http) to OpenAI function declarations."""
@@ -300,17 +321,19 @@ class ResponseBackend(LLMBackend):
             converted_tools.append(function.to_openai_format())
 
         logger.debug(
-            f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format"
+            f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format",
         )
         return converted_tools
 
-
     async def _build_response_api_params(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], all_params: Dict[str, Any]
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        all_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Build OpenAI Response API parameters with MCP integration."""
         # Convert messages to Response API format
-        converted_messages = self.convert_messages_to_response_api_format(messages)
+        converted_messages = self.message_formatter.to_response_api_format(messages)
 
         # Response API parameters (uses 'input', not 'messages')
         api_params = {"input": converted_messages, "stream": True}
@@ -333,7 +356,7 @@ class ResponseBackend(LLMBackend):
 
         # Add framework tools (convert to Response API format)
         if tools:
-            converted_tools = self.convert_tools_to_response_api_format(tools)
+            converted_tools = self.tool_formatter.to_response_api_format(tools)
             api_params["tools"] = converted_tools
 
         # Add MCP tools (stdio + streamable-http) as functions
@@ -345,7 +368,6 @@ class ResponseBackend(LLMBackend):
                 api_params["tools"].extend(mcp_tools)
                 logger.info(f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to OpenAI Response API")
 
-
         # Add provider tools (web search, code interpreter) if enabled
         provider_tools = []
         enable_web_search = all_params.get("enable_web_search", False)
@@ -355,7 +377,7 @@ class ResponseBackend(LLMBackend):
             provider_tools.append({"type": "web_search"})
         if enable_code_interpreter:
             provider_tools.append(
-                {"type": "code_interpreter", "container": {"type": "auto"}}
+                {"type": "code_interpreter", "container": {"type": "auto"}},
             )
 
         if provider_tools:
@@ -366,7 +388,8 @@ class ResponseBackend(LLMBackend):
         return api_params
 
     def convert_tools_to_response_api_format(
-        self, tools: List[Dict[str, Any]]
+        self,
+        tools: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """Convert tools from Chat Completions format to Response API format if needed.
 
@@ -387,60 +410,13 @@ class ResponseBackend(LLMBackend):
                         "name": func["name"],
                         "description": func["description"],
                         "parameters": func.get("parameters", {}),
-                    }
+                    },
                 )
             else:
                 # Already in Response API format or non-function tool
                 converted_tools.append(tool)
 
         return converted_tools
-
-    def convert_messages_to_response_api_format(
-        self, messages: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Convert messages from Chat Completions format to Response API format.
-
-        Chat Completions tool message: {"role": "tool", "tool_call_id": "...", "content": "..."}
-        Response API tool message: {"type": "function_call_output", "call_id": "...", "output": "..."}
-
-        Note: Assistant messages with tool_calls should not be in input - they're generated by the backend.
-        """
-        
-        cleaned_messages = []
-        for message in messages:
-            if "status" in message and "role" not in message:
-                # Create a copy without 'status'
-                cleaned_message = {k: v for k, v in message.items() if k != "status"}
-                cleaned_messages.append(cleaned_message)
-            else:
-                cleaned_messages.append(message)
-
-        converted_messages = []
-
-        for message in cleaned_messages:
-            if message.get("role") == "tool":
-                # Convert Chat Completions tool message to Response API format
-                converted_message = {
-                    "type": "function_call_output",
-                    "call_id": message.get("tool_call_id"),
-                    "output": message.get("content", ""),
-                }
-                converted_messages.append(converted_message)
-            elif message.get("type") == "function_call_output":
-                # Already in Response API format
-                converted_messages.append(message)
-            elif message.get("role") == "assistant" and "tool_calls" in message:
-                # Assistant message with tool_calls - remove tool_calls when sending as input
-               
-                cleaned_message = {
-                    k: v for k, v in message.items() if k != "tool_calls"
-                }
-                converted_messages.append(cleaned_message)
-            else:
-                # For other message types, pass through as-is
-                converted_messages.append(message.copy())
-
-        return converted_messages
 
     def _process_stream_chunk(self, chunk, agent_id) -> StreamChunk:
         """Process individual stream chunks and convert to StreamChunk format."""
@@ -455,7 +431,7 @@ class ResponseBackend(LLMBackend):
                 agent_id or "default",
                 "RECV",
                 {"content": chunk.delta},
-                backend_name=self.get_provider_name()
+                backend_name=self.get_provider_name(),
             )
             log_stream_chunk("backend.response", "content", chunk.delta, agent_id)
             return StreamChunk(type="content", content=chunk.delta)
@@ -475,7 +451,7 @@ class ResponseBackend(LLMBackend):
             log_stream_chunk("backend.response", "reasoning_done", reasoning_text, agent_id)
             return StreamChunk(
                 type="reasoning_done",
-                content=f"\n🧠 [Reasoning Complete]\n",
+                content="\n🧠 [Reasoning Complete]\n",
                 reasoning_text=reasoning_text,
                 item_id=getattr(chunk, "item_id", None),
                 content_index=getattr(chunk, "content_index", None),
@@ -496,7 +472,7 @@ class ResponseBackend(LLMBackend):
             log_stream_chunk("backend.response", "reasoning_summary_done", summary_text, agent_id)
             return StreamChunk(
                 type="reasoning_summary_done",
-                content=f"\n📋 [Reasoning Summary Complete]\n",
+                content="\n📋 [Reasoning Summary Complete]\n",
                 reasoning_summary_text=summary_text,
                 item_id=getattr(chunk, "item_id", None),
                 summary_index=getattr(chunk, "summary_index", None),
@@ -505,33 +481,28 @@ class ResponseBackend(LLMBackend):
         # Provider tool events
         elif chunk_type == "response.web_search_call.in_progress":
             log_stream_chunk("backend.response", "web_search", "Starting search", agent_id)
-            return StreamChunk(type="content", content=f"\n🔍 [Provider Tool: Web Search] Starting search...")
+            return StreamChunk(type="content", content="\n🔍 [Provider Tool: Web Search] Starting search...")
         elif chunk_type == "response.web_search_call.searching":
             log_stream_chunk("backend.response", "web_search", "Searching", agent_id)
-            return StreamChunk(type="content", content=f"\n🔍 [Provider Tool: Web Search] Searching...")
+            return StreamChunk(type="content", content="\n🔍 [Provider Tool: Web Search] Searching...")
         elif chunk_type == "response.web_search_call.completed":
             log_stream_chunk("backend.response", "web_search", "Search completed", agent_id)
-            return StreamChunk(type="content", content=f"\n✅ [Provider Tool: Web Search] Search completed")
+            return StreamChunk(type="content", content="\n✅ [Provider Tool: Web Search] Search completed")
 
         elif chunk_type == "response.code_interpreter_call.in_progress":
             log_stream_chunk("backend.response", "code_interpreter", "Starting execution", agent_id)
-            return StreamChunk(type="content", content=f"\n💻 [Provider Tool: Code Interpreter] Starting execution...")
+            return StreamChunk(type="content", content="\n💻 [Provider Tool: Code Interpreter] Starting execution...")
         elif chunk_type == "response.code_interpreter_call.executing":
             log_stream_chunk("backend.response", "code_interpreter", "Executing", agent_id)
-            return StreamChunk(type="content", content=f"\n💻 [Provider Tool: Code Interpreter] Executing...")
+            return StreamChunk(type="content", content="\n💻 [Provider Tool: Code Interpreter] Executing...")
         elif chunk_type == "response.code_interpreter_call.completed":
             log_stream_chunk("backend.response", "code_interpreter", "Execution completed", agent_id)
-            return StreamChunk(type="content", content=f"\n✅ [Provider Tool: Code Interpreter] Execution completed")
+            return StreamChunk(type="content", content="\n✅ [Provider Tool: Code Interpreter] Execution completed")
         elif chunk.type == "response.output_item.done":
             # Get search query or executed code details - show them right after completion
             if hasattr(chunk, "item") and chunk.item:
-                if (
-                    hasattr(chunk.item, "type")
-                    and chunk.item.type == "web_search_call"
-                ):
-                    if hasattr(chunk.item, "action") and (
-                        "query" in chunk.item.action
-                    ):
+                if hasattr(chunk.item, "type") and chunk.item.type == "web_search_call":
+                    if hasattr(chunk.item, "action") and ("query" in chunk.item.action):
                         search_query = chunk.item.action["query"]
                         if search_query:
                             log_stream_chunk("backend.response", "search_query", search_query, agent_id)
@@ -539,10 +510,7 @@ class ResponseBackend(LLMBackend):
                                 type="content",
                                 content=f"\n🔍 [Search Query] '{search_query}'\n",
                             )
-                elif (
-                    hasattr(chunk.item, "type")
-                    and chunk.item.type == "code_interpreter_call"
-                ):
+                elif hasattr(chunk.item, "type") and chunk.item.type == "code_interpreter_call":
                     if hasattr(chunk.item, "code") and chunk.item.code:
                         # Format code as a proper code block - don't assume language
                         log_stream_chunk("backend.response", "code_executed", chunk.item.code, agent_id)
@@ -552,18 +520,12 @@ class ResponseBackend(LLMBackend):
                         )
 
                     # Also show the execution output if available
-                    if (
-                        hasattr(chunk.item, "outputs")
-                        and chunk.item.outputs
-                    ):
+                    if hasattr(chunk.item, "outputs") and chunk.item.outputs:
                         for output in chunk.item.outputs:
                             output_text = None
                             if hasattr(output, "text") and output.text:
                                 output_text = output.text
-                            elif (
-                                hasattr(output, "content")
-                                and output.content
-                            ):
+                            elif hasattr(output, "content") and output.content:
                                 output_text = output.content
                             elif hasattr(output, "data") and output.data:
                                 output_text = str(output.data)
@@ -611,19 +573,14 @@ class ResponseBackend(LLMBackend):
                 response_dict = self._convert_to_dict(chunk.response)
 
                 # Handle builtin tool results from output array with simple content format
-                if (
-                    isinstance(response_dict, dict)
-                    and "output" in response_dict
-                ):
+                if isinstance(response_dict, dict) and "output" in response_dict:
                     for item in response_dict["output"]:
                         if item.get("type") == "code_interpreter_call":
                             # Code execution result
                             status = item.get("status", "unknown")
                             code = item.get("code", "")
                             outputs = item.get("outputs")
-                            content = (
-                                f"\n🔧 Code Interpreter [{status.title()}]"
-                            )
+                            content = f"\n🔧 Code Interpreter [{status.title()}]"
                             if code:
                                 content += f": {code}"
                             if outputs:
@@ -631,7 +588,8 @@ class ResponseBackend(LLMBackend):
 
                             log_stream_chunk("backend.response", "code_interpreter_result", content, agent_id)
                             return StreamChunk(
-                                type="content", content=content
+                                type="content",
+                                content=content,
                             )
                         elif item.get("type") == "web_search_call":
                             # Web search result
@@ -644,18 +602,18 @@ class ResponseBackend(LLMBackend):
                             if query:
                                 content = f"\n🔧 Web Search [{status.title()}]: {query}"
                                 if results:
-                                    content += (
-                                        f" → Found {len(results)} results"
-                                    )
+                                    content += f" → Found {len(results)} results"
                                 log_stream_chunk("backend.response", "web_search_result", content, agent_id)
                                 return StreamChunk(
-                                    type="tool", content=content
+                                    type="tool",
+                                    content=content,
                                 )
 
                 # Yield the complete response for internal use
                 log_stream_chunk("backend.response", "complete_response", "Response completed", agent_id)
                 return StreamChunk(
-                    type="complete_response", response=response_dict
+                    type="complete_response",
+                    response=response_dict,
                 )
 
         # Default chunk - this should not happen for valid responses
@@ -664,17 +622,17 @@ class ResponseBackend(LLMBackend):
     async def _stream_mcp_recursive(
         self,
         current_messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]], 
+        tools: List[Dict[str, Any]],
         client,
-        **kwargs
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Recursively stream MCP responses, executing function calls as needed."""
-        
+
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
         api_params = await self._build_response_api_params(current_messages, tools, all_params)
 
-        agent_id = kwargs['agent_id']
+        agent_id = kwargs["agent_id"]
         # Start streaming
         stream = await client.responses.create(**api_params)
 
@@ -686,26 +644,21 @@ class ResponseBackend(LLMBackend):
         async for chunk in stream:
             if hasattr(chunk, "type"):
                 # Detect function call start
-                if (chunk.type == "response.output_item.added" and
-                    hasattr(chunk, "item") and chunk.item and
-                    getattr(chunk.item, "type", None) == "function_call"):
-
+                if chunk.type == "response.output_item.added" and hasattr(chunk, "item") and chunk.item and getattr(chunk.item, "type", None) == "function_call":
                     current_function_call = {
                         "call_id": getattr(chunk.item, "call_id", ""),
                         "name": getattr(chunk.item, "name", ""),
-                        "arguments": ""
+                        "arguments": "",
                     }
                     logger.info(f"Function call detected: {current_function_call['name']}")
 
                 # Accumulate function arguments
-                elif (chunk.type == "response.function_call_arguments.delta" and
-                      current_function_call is not None):
+                elif chunk.type == "response.function_call_arguments.delta" and current_function_call is not None:
                     delta = getattr(chunk, "delta", "")
                     current_function_call["arguments"] += delta
 
                 # Function call completed
-                elif (chunk.type == "response.output_item.done" and
-                      current_function_call is not None):
+                elif chunk.type == "response.output_item.done" and current_function_call is not None:
                     captured_function_calls.append(current_function_call)
                     current_function_call = None
 
@@ -745,9 +698,10 @@ class ResponseBackend(LLMBackend):
                 # Get current mcp_tools servers using utility functions
                 normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
                 mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
-                
+
                 filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
-                    mcp_tools_servers, self._mcp_tools_circuit_breaker
+                    mcp_tools_servers,
+                    self._mcp_tools_circuit_breaker,
                 )
                 if not filtered_servers:
                     logger.warning("All MCP servers blocked by circuit breaker")
@@ -755,7 +709,7 @@ class ResponseBackend(LLMBackend):
                         type="mcp_status",
                         status="mcp_blocked",
                         content="⚠️ [MCP] All servers blocked by circuit breaker",
-                        source="circuit_breaker"
+                        source="circuit_breaker",
                     )
                     yield StreamChunk(type="done")
                     return
@@ -771,18 +725,19 @@ class ResponseBackend(LLMBackend):
                 if function_name in self.functions:
                     # Yield MCP tool call status
                     yield StreamChunk(
-                        type="mcp_status", 
+                        type="mcp_status",
                         status="mcp_tool_called",
                         content=f"🔧 [MCP Tool] Calling {function_name}...",
-                        source=f"mcp_{function_name}"
+                        source=f"mcp_{function_name}",
                     )
-                    
+
                     try:
                         # Execute MCP function with retry and exponential backoff
                         result, result_obj = await self._execute_mcp_function_with_retry(
-                            function_name, call["arguments"]
+                            function_name,
+                            call["arguments"],
                         )
-                        
+
                         # Check if function failed after all retries
                         if isinstance(result, str) and result.startswith("Error:"):
                             # Log failure but still create tool response
@@ -793,21 +748,21 @@ class ResponseBackend(LLMBackend):
                                 "type": "function_call",
                                 "call_id": call["call_id"],
                                 "name": function_name,
-                                "arguments": call["arguments"]
+                                "arguments": call["arguments"],
                             }
                             updated_messages.append(function_call_msg)
 
                             error_output_msg = {
                                 "type": "function_call_output",
                                 "call_id": call["call_id"],
-                                "output": result
+                                "output": result,
                             }
                             updated_messages.append(error_output_msg)
 
                             processed_call_ids.add(call["call_id"])
                             mcp_functions_executed = True
                             continue
-                            
+
                     except Exception as e:
                         # Only catch unexpected non-MCP system errors
                         logger.error(f"Unexpected error in MCP function execution: {e}")
@@ -818,14 +773,14 @@ class ResponseBackend(LLMBackend):
                             "type": "function_call",
                             "call_id": call["call_id"],
                             "name": function_name,
-                            "arguments": call["arguments"]
+                            "arguments": call["arguments"],
                         }
                         updated_messages.append(function_call_msg)
 
                         error_output_msg = {
                             "type": "function_call_output",
                             "call_id": call["call_id"],
-                            "output": error_msg
+                            "output": error_msg,
                         }
                         updated_messages.append(error_output_msg)
 
@@ -838,28 +793,28 @@ class ResponseBackend(LLMBackend):
                         "type": "function_call",
                         "call_id": call["call_id"],
                         "name": function_name,
-                        "arguments": call["arguments"]
+                        "arguments": call["arguments"],
                     }
                     updated_messages.append(function_call_msg)
                     yield StreamChunk(
                         type="mcp_status",
                         status="function_call",
                         content=f"Arguments for Calling {function_name}: {call['arguments']}",
-                        source=f"mcp_{function_name}"
+                        source=f"mcp_{function_name}",
                     )
-                    
+
                     # Add function output to messages and yield as StreamChunk
                     function_output_msg = {
                         "type": "function_call_output",
                         "call_id": call["call_id"],
-                        "output": str(result)
+                        "output": str(result),
                     }
                     updated_messages.append(function_output_msg)
                     yield StreamChunk(
                         type="mcp_status",
                         status="function_call_output",
                         content=f"Results for Calling {function_name}: {str(result_obj.content[0].text)}",
-                        source=f"mcp_{function_name}"
+                        source=f"mcp_{function_name}",
                     )
 
                     logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
@@ -868,11 +823,11 @@ class ResponseBackend(LLMBackend):
                     # Yield MCP tool response status
                     yield StreamChunk(
                         type="mcp_status",
-                        status="mcp_tool_response", 
+                        status="mcp_tool_response",
                         content=f"✅ [MCP Tool] {function_name} completed",
-                        source=f"mcp_{function_name}"
+                        source=f"mcp_{function_name}",
                     )
-                    
+
                     mcp_functions_executed = True
 
             # Ensure all captured function calls have results to prevent hanging
@@ -885,14 +840,14 @@ class ResponseBackend(LLMBackend):
                         "type": "function_call",
                         "call_id": call["call_id"],
                         "name": call["name"],
-                        "arguments": call["arguments"]
+                        "arguments": call["arguments"],
                     }
                     updated_messages.append(function_call_msg)
 
                     error_output_msg = {
                         "type": "function_call_output",
                         "call_id": call["call_id"],
-                        "output": f"Error: Tool call {call['call_id']} for function {call['name']} was not processed. This may indicate a validation or execution error."
+                        "output": f"Error: Tool call {call['call_id']} for function {call['name']} was not processed. This may indicate a validation or execution error.",
                     }
                     updated_messages.append(error_output_msg)
                     mcp_functions_executed = True
@@ -900,7 +855,7 @@ class ResponseBackend(LLMBackend):
             # Trim history after function executions to bound memory usage
             if mcp_functions_executed:
                 updated_messages = MCPMessageManager.trim_message_history(updated_messages, self._max_mcp_message_history)
-                
+
                 # Recursive call with updated messages
                 async for chunk in self._stream_mcp_recursive(updated_messages, tools, client, **kwargs):
                     yield chunk
@@ -908,32 +863,35 @@ class ResponseBackend(LLMBackend):
                 # No MCP functions were executed, we're done
                 yield StreamChunk(type="done")
                 return
-                
+
         elif response_completed:
             # Response completed with no function calls - we're done (base case)
             yield StreamChunk(
-                type="mcp_status", 
+                type="mcp_status",
                 status="mcp_session_complete",
                 content="✅ [MCP] Session completed",
-                source="mcp_session"
+                source="mcp_session",
             )
             yield StreamChunk(type="done")
             return
 
     async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI Response API with unified MCP/non-MCP processing."""
-        
-        agent_id = kwargs.get('agent_id', None)
-        
+
+        agent_id = kwargs.get("agent_id", None)
+
         log_backend_activity(
             self.get_provider_name(),
             "Starting stream_with_tools",
             {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id
+            agent_id=agent_id,
         )
-        
+
         # Catch setup errors by wrapping the context manager itself
         try:
             # Use async context manager for proper MCP resource management
@@ -952,7 +910,7 @@ class ResponseBackend(LLMBackend):
                             type="mcp_status",
                             status="mcp_unavailable",
                             content="⚠️ [MCP] Setup failed or no tools available; continuing without MCP",
-                            source="mcp_setup"
+                            source="mcp_setup",
                         )
 
                     # Yield MCP connection status if MCP tools are available
@@ -963,15 +921,15 @@ class ResponseBackend(LLMBackend):
                         if mcp_tools_servers:
                             yield StreamChunk(
                                 type="mcp_status",
-                                status="mcp_connected", 
+                                status="mcp_connected",
                                 content=f"✅ [MCP] Connected to {len(mcp_tools_servers)} servers",
-                                source="mcp_setup"
+                                source="mcp_setup",
                             )
 
                     if use_mcp:
                         # MCP MODE: Recursive function call detection and execution
                         logger.info("Using recursive MCP execution mode")
-                        
+
                         current_messages = MCPMessageManager.trim_message_history(messages.copy(), 200)
 
                         # Yield MCP session initiation status
@@ -979,7 +937,7 @@ class ResponseBackend(LLMBackend):
                             type="mcp_status",
                             status="mcp_tools_initiated",
                             content=f"🔧 [MCP] {len(self.functions)} tools available",
-                            source="mcp_session"
+                            source="mcp_session",
                         )
 
                         # Start recursive MCP streaming
@@ -989,7 +947,7 @@ class ResponseBackend(LLMBackend):
                     else:
                         # NON-MCP MODE: Simple passthrough streaming
                         logger.info("Using no-MCP mode")
-                        
+
                         all_params = {**self.config, **kwargs}
                         api_params = await self._build_response_api_params(messages, tools, all_params)
 
@@ -1015,10 +973,13 @@ class ResponseBackend(LLMBackend):
                                 # Get current mcp_tools servers for circuit breaker failure recording
                                 normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
                                 mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
-                                
+
                                 await MCPCircuitBreakerManager.record_failure(
-                                    mcp_tools_servers, self._mcp_tools_circuit_breaker, str(e),
-                                    backend_name=self.backend_name, agent_id=agent_id
+                                    mcp_tools_servers,
+                                    self._mcp_tools_circuit_breaker,
+                                    str(e),
+                                    backend_name=self.backend_name,
+                                    agent_id=agent_id,
                                 )
                             except Exception as cb_error:
                                 logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
@@ -1026,7 +987,7 @@ class ResponseBackend(LLMBackend):
                         # Use local error handling function
                         all_params = {**self.config, **kwargs}
                         api_params = await self._build_response_api_params(messages, tools, all_params)
-                        
+
                         # Get provider tools for fallback
                         provider_tools = []
                         enable_web_search = all_params.get("enable_web_search", False)
@@ -1035,25 +996,28 @@ class ResponseBackend(LLMBackend):
                             provider_tools.append({"type": "web_search"})
                         if enable_code_interpreter:
                             provider_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
-                        
+
                         # Use inline fallback logic instead of deleted stream_without_mcp method
                         async def fallback_stream(params):
                             stream = await client.responses.create(**params)
                             async for chunk in stream:
                                 yield self._process_stream_chunk(chunk, agent_id)
-                        
+
                         async for chunk in self._handle_mcp_error_and_fallback(
-                            e, api_params, provider_tools, fallback_stream
+                            e,
+                            api_params,
+                            provider_tools,
+                            fallback_stream,
                         ):
                             yield chunk
                     else:
                         logger.error(f"Streaming error: {e}")
                         yield StreamChunk(type="error", error=str(e))
-                
+
                 finally:
                     # Ensure the underlying HTTP client is properly closed to avoid event loop issues
                     try:
-                        if hasattr(client, 'aclose'):
+                        if hasattr(client, "aclose"):
                             await client.aclose()
                     except Exception:
                         # Suppress cleanup errors so we don't mask primary exceptions
@@ -1063,6 +1027,7 @@ class ResponseBackend(LLMBackend):
             # Provide a clear user-facing message and fall back to non-MCP streaming
             try:
                 import openai
+
                 client = openai.AsyncOpenAI(api_key=self.api_key)
 
                 all_params = {**self.config, **kwargs}
@@ -1085,7 +1050,10 @@ class ResponseBackend(LLMBackend):
 
                 if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
                     async for chunk in self._handle_mcp_error_and_fallback(
-                        e, api_params, provider_tools, fallback_stream
+                        e,
+                        api_params,
+                        provider_tools,
+                        fallback_stream,
                     ):
                         yield chunk
                 else:
@@ -1095,7 +1063,7 @@ class ResponseBackend(LLMBackend):
                             type="mcp_status",
                             status="mcp_unavailable",
                             content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
-                            source="mcp_setup"
+                            source="mcp_setup",
                         )
 
                     # Proceed with non-MCP streaming
@@ -1107,7 +1075,7 @@ class ResponseBackend(LLMBackend):
                 yield StreamChunk(type="error", error=str(inner_e))
             finally:
                 try:
-                    if 'client' in locals() and hasattr(client, 'aclose'):
+                    if "client" in locals() and hasattr(client, "aclose"):
                         await client.aclose()
                 except Exception:
                     pass
@@ -1115,7 +1083,7 @@ class ResponseBackend(LLMBackend):
     def get_provider_name(self) -> str:
         """Get the provider name."""
         return "OpenAI"
-    
+
     def get_filesystem_support(self) -> FilesystemSupport:
         """OpenAI supports filesystem through MCP servers."""
         return FilesystemSupport.MCP
@@ -1144,7 +1112,7 @@ class ResponseBackend(LLMBackend):
                 import json
 
                 return json.loads(arguments)
-            except:
+            except (json.JSONDecodeError, TypeError, ValueError):
                 return {}
         return arguments
 
@@ -1153,7 +1121,9 @@ class ResponseBackend(LLMBackend):
         return tool_call.get("call_id") or tool_call.get("id") or ""
 
     def create_tool_result_message(
-        self, tool_call: Dict[str, Any], result_content: str
+        self,
+        tool_call: Dict[str, Any],
+        result_content: str,
     ) -> Dict[str, Any]:
         """Create tool result message for OpenAI Responses API format."""
         tool_call_id = self.extract_tool_call_id(tool_call)
@@ -1177,20 +1147,19 @@ class ResponseBackend(LLMBackend):
                 return obj.dict()
             else:
                 return dict(obj)
-        except:
+        except (TypeError, ValueError, AttributeError):
             # Final fallback: extract key attributes manually
-            return {
-                key: getattr(obj, key, None)
-                for key in dir(obj)
-                if not key.startswith("_") and not callable(getattr(obj, key, None))
-            }
+            return {key: getattr(obj, key, None) for key in dir(obj) if not key.startswith("_") and not callable(getattr(obj, key, None))}
 
     def estimate_tokens(self, text: str) -> int:
         """Estimate token count for text (rough approximation)."""
         return len(text) // 4
 
     def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str
+        self,
+        input_tokens: int,
+        output_tokens: int,
+        model: str,
     ) -> float:
         """Calculate cost for OpenAI token usage (2024-2025 pricing)."""
         model_lower = model.lower()
@@ -1220,18 +1189,19 @@ class ResponseBackend(LLMBackend):
             await MCPResourceManager.cleanup_mcp_client(
                 self._mcp_client,
                 backend_name=self.backend_name,
-                agent_id=self.agent_id
+                agent_id=self.agent_id,
             )
             self._mcp_client = None
             self._mcp_initialized = False
             self.functions.clear()
-    
 
     async def __aenter__(self) -> "ResponseBackend":
         """Async context manager entry."""
         # Initialize MCP tools if configured
         await MCPResourceManager.setup_mcp_context_manager(
-            self, backend_name=self.backend_name, agent_id=self.agent_id
+            self,
+            backend_name=self.backend_name,
+            agent_id=self.agent_id,
         )
         return self
 
@@ -1243,8 +1213,10 @@ class ResponseBackend(LLMBackend):
     ) -> None:
         """Async context manager exit with automatic resource cleanup."""
         await MCPResourceManager.cleanup_mcp_context_manager(
-            self, logger_instance=logger,
-            backend_name=self.backend_name, agent_id=self.agent_id
+            self,
+            logger_instance=logger,
+            backend_name=self.backend_name,
+            agent_id=self.agent_id,
         )
         # Don't suppress the original exception if one occurred
         return False

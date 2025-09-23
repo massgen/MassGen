@@ -1,7 +1,14 @@
+# -*- coding: utf-8 -*-
+import copy
 import os
-import threading
 import time
-import json
+
+from dotenv import load_dotenv
+
+from massgen.v1.types import AgentResponse
+from massgen.v1.utils import generate_random_id
+
+load_dotenv()
 
 try:
     from google import genai
@@ -15,26 +22,10 @@ except ImportError:
     class genai:
         @staticmethod
         def configure(**kwargs):
-            raise ImportError(
-                "Google genai package not installed. Install with: pip install google-genai"
-            )
+            raise ImportError("Google genai package not installed. Install with: pip install google-genai")
 
     class types:
         pass
-
-
-from dotenv import load_dotenv
-import copy
-
-load_dotenv()
-
-# Import utility functions and tools
-from massgen.v1.utils import (
-    function_to_json,
-    execute_function_calls,
-    generate_random_id,
-)
-from massgen.v1.types import AgentResponse
 
 
 def add_citations_to_response(response):
@@ -82,7 +73,6 @@ def parse_completion(completion, add_citations=True):
     code = []
     citations = []
     function_calls = []
-    reasoning_items = []
 
     # Handle response from the official SDK
     # Always parse candidates.content.parts for complete information
@@ -96,50 +86,31 @@ def parse_completion(completion, add_citations=True):
                     text += part.text
                 # Handle executable code parts
                 elif hasattr(part, "executable_code") and part.executable_code:
-                    if (
-                        hasattr(part.executable_code, "code")
-                        and part.executable_code.code
-                    ):
+                    if hasattr(part.executable_code, "code") and part.executable_code.code:
                         code.append(part.executable_code.code)
-                    elif hasattr(part.executable_code, "language") and hasattr(
-                        part.executable_code, "code"
-                    ):
+                    elif hasattr(part.executable_code, "language") and hasattr(part.executable_code, "code"):
                         # Alternative format for executable code
                         code.append(part.executable_code.code)
                 # Handle code execution results
-                elif (
-                    hasattr(part, "code_execution_result")
-                    and part.code_execution_result
-                ):
-                    if (
-                        hasattr(part.code_execution_result, "output")
-                        and part.code_execution_result.output
-                    ):
+                elif hasattr(part, "code_execution_result") and part.code_execution_result:
+                    if hasattr(part.code_execution_result, "output") and part.code_execution_result.output:
                         # Add execution result as text output
-                        text += (
-                            f"\n[Code Output]\n{part.code_execution_result.output}\n"
-                        )
+                        text += f"\n[Code Output]\n{part.code_execution_result.output}\n"
                 # Handle function calls
                 elif hasattr(part, "function_call"):
                     if part.function_call:
                         # Extract function name and arguments
                         func_name = getattr(part.function_call, "name", "unknown")
                         func_args = {}
-                        call_id = getattr(
-                            part.function_call, "id", generate_random_id()
-                        )
-                        if (
-                            hasattr(part.function_call, "args")
-                            and part.function_call.args
-                        ):
+                        call_id = getattr(part.function_call, "id", generate_random_id())
+                        if hasattr(part.function_call, "args") and part.function_call.args:
                             # Convert args to dict if it's a struct/object
                             if hasattr(part.function_call.args, "_pb"):
                                 # It's a protobuf struct, need to convert to dict
-                                import json
 
                                 try:
                                     func_args = dict(part.function_call.args)
-                                except:
+                                except Exception:
                                     func_args = {}
                             else:
                                 func_args = part.function_call.args
@@ -150,7 +121,7 @@ def parse_completion(completion, add_citations=True):
                                 "call_id": call_id,
                                 "name": func_name,
                                 "arguments": func_args,
-                            }
+                            },
                         )
                 # Handle function responses
                 elif hasattr(part, "function_response"):
@@ -175,15 +146,9 @@ def parse_completion(completion, add_citations=True):
                         citations.append(citation)
 
             # Handle search entry point (if available)
-            if (
-                hasattr(grounding, "search_entry_point")
-                and grounding.search_entry_point
-            ):
+            if hasattr(grounding, "search_entry_point") and grounding.search_entry_point:
                 entry_point = grounding.search_entry_point
-                if (
-                    hasattr(entry_point, "rendered_content")
-                    and entry_point.rendered_content
-                ):
+                if hasattr(entry_point, "rendered_content") and entry_point.rendered_content:
                     # Add search summary to citations if available
                     pass
 
@@ -194,9 +159,7 @@ def parse_completion(completion, add_citations=True):
         except Exception as e:
             print(f"[GEMINI] Error adding citations to text: {e}")
 
-    return AgentResponse(
-        text=text, code=code, citations=citations, function_calls=function_calls
-    )
+    return AgentResponse(text=text, code=code, citations=citations, function_calls=function_calls)
 
 
 def process_message(
@@ -255,25 +218,17 @@ def process_message(
         if role == "system":
             system_instruction = content
         elif role == "user":
-            gemini_messages.append(
-                types.Content(role="user", parts=[types.Part(text=content)])
-            )
+            gemini_messages.append(types.Content(role="user", parts=[types.Part(text=content)]))
         elif role == "assistant":
-            gemini_messages.append(
-                types.Content(role="model", parts=[types.Part(text=content)])
-            )
+            gemini_messages.append(types.Content(role="model", parts=[types.Part(text=content)]))
         elif message.get("type", None) == "function_call":
             function_calls[message["call_id"]] = message
         elif message.get("type", None) == "function_call_output":
             func_name = function_calls[message["call_id"]]["name"]
             func_resp = message["output"]
-            function_response_part = types.Part.from_function_response(
-                name=func_name, response={"result": func_resp}
-            )
+            function_response_part = types.Part.from_function_response(name=func_name, response={"result": func_resp})
             # Append the function response
-            gemini_messages.append(
-                types.Content(role="user", parts=[function_response_part])
-            )
+            gemini_messages.append(types.Content(role="user", parts=[function_response_part]))
 
     # Set up generation config
     generation_config = {}
@@ -296,9 +251,7 @@ def process_message(
                 gemini_tools.append(types.Tool(google_search=types.GoogleSearch()))
                 has_native_tools = True
             elif "code_execution" == tool:
-                gemini_tools.append(
-                    types.Tool(code_execution=types.ToolCodeExecution())
-                )
+                gemini_tools.append(types.Tool(code_execution=types.ToolCodeExecution()))
                 has_native_tools = True
             else:
                 # Collect custom function declarations
@@ -312,9 +265,7 @@ def process_message(
                 custom_functions.append(function_declaration)
 
     if custom_functions and has_native_tools:
-        print(
-            f"[WARNING] Gemini API doesn't support combining native tools with custom functions. Prioritizing built-in tools."
-        )
+        print("[WARNING] Gemini API doesn't support combining native tools with custom functions. Prioritizing built-in tools.")
     elif custom_functions and not has_native_tools:
         # add custom functions to the tools
         gemini_tools.append(types.Tool(function_declarations=custom_functions))
@@ -343,15 +294,11 @@ def process_message(
     request_params = {
         "model": model,
         "contents": gemini_messages,
-        "config": types.GenerateContentConfig(
-            safety_settings=safety_settings, **generation_config
-        ),
+        "config": types.GenerateContentConfig(safety_settings=safety_settings, **generation_config),
     }
 
     if system_instruction:
-        request_params["config"].system_instruction = types.Content(
-            parts=[types.Part(text=system_instruction)]
-        )
+        request_params["config"].system_instruction = types.Content(parts=[types.Part(text=system_instruction)])
 
     if gemini_tools:
         request_params["config"].tools = gemini_tools
@@ -370,12 +317,9 @@ def process_message(
 
                 # Code streaming tracking
                 code_lines_shown = 0
-                current_code_chunk = ""
                 truncation_message_sent = False  # Track if truncation message was sent
 
-                stream_response = client.models.generate_content_stream(
-                    **request_params
-                )
+                stream_response = client.models.generate_content_stream(**request_params)
 
                 for chunk in stream_response:
                     # Handle text chunks - be very careful to avoid duplication
@@ -394,15 +338,9 @@ def process_message(
                     # Only process candidates if we haven't already processed text from chunk.text
                     elif hasattr(chunk, "candidates") and chunk.candidates:
                         candidate = chunk.candidates[0]
-                        if hasattr(candidate, "content") and hasattr(
-                            candidate.content, "parts"
-                        ):
+                        if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
                             for part in candidate.content.parts:
-                                if (
-                                    hasattr(part, "text")
-                                    and part.text
-                                    and not chunk_text_processed
-                                ):
+                                if hasattr(part, "text") and part.text and not chunk_text_processed:
                                     chunk_text = part.text
                                     text += chunk_text
                                     try:
@@ -410,12 +348,7 @@ def process_message(
                                         chunk_text_processed = True  # Mark as processed to avoid further processing
                                     except Exception as e:
                                         print(f"Stream callback error: {e}")
-                                elif (
-                                    hasattr(part, "executable_code")
-                                    and part.executable_code
-                                    and hasattr(part.executable_code, "code")
-                                    and part.executable_code.code
-                                ):
+                                elif hasattr(part, "executable_code") and part.executable_code and hasattr(part.executable_code, "code") and part.executable_code.code:
                                     # Handle code execution streaming
                                     code_text = part.executable_code.code
                                     code.append(code_text)
@@ -425,9 +358,7 @@ def process_message(
 
                                     if code_lines_shown == 0:
                                         try:
-                                            stream_callback(
-                                                "\n💻 Starting code execution...\n"
-                                            )
+                                            stream_callback("\n💻 Starting code execution...\n")
                                         except Exception as e:
                                             print(f"Stream callback error: {e}")
 
@@ -438,49 +369,31 @@ def process_message(
                                                 code_lines_shown += 1
                                             except Exception as e:
                                                 print(f"Stream callback error: {e}")
-                                        elif (
-                                            code_lines_shown == 3
-                                            and not truncation_message_sent
-                                        ):
+                                        elif code_lines_shown == 3 and not truncation_message_sent:
                                             try:
-                                                stream_callback(
-                                                    "\n[CODE_DISPLAY_ONLY]\n💻 ... (full code in log file)\n"
-                                                )
+                                                stream_callback("\n[CODE_DISPLAY_ONLY]\n💻 ... (full code in log file)\n")
                                                 truncation_message_sent = True  # Ensure this message is only sent once
                                                 code_lines_shown += 1
                                             except Exception as e:
                                                 print(f"Stream callback error: {e}")
                                         else:
                                             try:
-                                                stream_callback(
-                                                    f"[CODE_LOG_ONLY]{line}\n"
-                                                )
+                                                stream_callback(f"[CODE_LOG_ONLY]{line}\n")
                                             except Exception as e:
                                                 print(f"Stream callback error: {e}")
 
-                                elif (
-                                    hasattr(part, "function_call")
-                                    and part.function_call
-                                ):
+                                elif hasattr(part, "function_call") and part.function_call:
                                     # Handle function calls - extract the actual function call data
-                                    func_name = getattr(
-                                        part.function_call, "name", "unknown"
-                                    )
+                                    func_name = getattr(part.function_call, "name", "unknown")
                                     func_args = {}
-                                    if (
-                                        hasattr(part.function_call, "args")
-                                        and part.function_call.args
-                                    ):
+                                    if hasattr(part.function_call, "args") and part.function_call.args:
                                         # Convert args to dict if it's a struct/object
                                         if hasattr(part.function_call.args, "_pb"):
                                             # It's a protobuf struct, need to convert to dict
-                                            import json
 
                                             try:
-                                                func_args = dict(
-                                                    part.function_call.args
-                                                )
-                                            except:
+                                                func_args = dict(part.function_call.args)
+                                            except Exception:
                                                 func_args = {}
                                         else:
                                             func_args = part.function_call.args
@@ -491,7 +404,7 @@ def process_message(
                                             "call_id": part.function_call.id,
                                             "name": func_name,
                                             "arguments": func_args,
-                                        }
+                                        },
                                     )
 
                                     try:
@@ -501,20 +414,12 @@ def process_message(
 
                                 elif hasattr(part, "function_response"):
                                     try:
-                                        stream_callback(
-                                            "\n🔧 Function response received\n"
-                                        )
+                                        stream_callback("\n🔧 Function response received\n")
                                     except Exception as e:
                                         print(f"Stream callback error: {e}")
 
-                                elif (
-                                    hasattr(part, "code_execution_result")
-                                    and part.code_execution_result
-                                ):
-                                    if (
-                                        hasattr(part.code_execution_result, "output")
-                                        and part.code_execution_result.output
-                                    ):
+                                elif hasattr(part, "code_execution_result") and part.code_execution_result:
+                                    if hasattr(part.code_execution_result, "output") and part.code_execution_result.output:
                                         # Add execution result as text output
                                         result_text = f"\n[Code Output]\n{part.code_execution_result.output}\n"
                                         text += result_text
@@ -524,15 +429,9 @@ def process_message(
                                             print(f"Stream callback error: {e}")
 
                         # Handle grounding metadata (citations from search) at the candidate level
-                        if (
-                            hasattr(candidate, "grounding_metadata")
-                            and candidate.grounding_metadata
-                        ):
+                        if hasattr(candidate, "grounding_metadata") and candidate.grounding_metadata:
                             grounding = candidate.grounding_metadata
-                            if (
-                                hasattr(grounding, "grounding_chunks")
-                                and grounding.grounding_chunks
-                            ):
+                            if hasattr(grounding, "grounding_chunks") and grounding.grounding_chunks:
                                 for chunk_item in grounding.grounding_chunks:
                                     if hasattr(chunk_item, "web") and chunk_item.web:
                                         web_chunk = chunk_item.web
@@ -569,9 +468,7 @@ def process_message(
 
     if completion is None:
         # If we failed all retries, return empty response instead of raising exception
-        print(
-            f"Failed to get completion after {max_retries} retries, returning empty response"
-        )
+        print(f"Failed to get completion after {max_retries} retries, returning empty response")
         return AgentResponse(text="", code=[], citations=[], function_calls=[])
 
     # Parse the completion and return text, code, and citations

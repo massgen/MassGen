@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script for CLI backends - Claude Code CLI and Gemini CLI integration.
 
@@ -10,7 +11,6 @@ Update tests to reflect current backend architecture.
 """
 
 import asyncio
-import os
 import sys
 from pathlib import Path
 
@@ -20,7 +20,6 @@ sys.path.insert(0, str(project_root))
 
 try:
     # from massgen.backend.claude_code_cli import ClaudeCodeCLIBackend  # File removed
-    from massgen.backend.gemini import GeminiBackend
     from massgen.backend.cli_base import CLIBackend
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -116,9 +115,7 @@ async def test_end_to_end_mock():
     print("🧪 Testing end-to-end with mock execution...")
 
     # Test Claude Code CLI mock
-    claude_backend = MockCLIBackend(
-        "claude", '{"response": "4", "reasoning": "2+2 equals 4"}'
-    )
+    claude_backend = MockCLIBackend("claude", '{"response": "4", "reasoning": "2+2 equals 4"}')
 
     messages = [{"role": "user", "content": "What is 2+2?"}]
     tools = []
@@ -166,14 +163,10 @@ async def main():
         print()
         print("Usage examples:")
         print("  # Claude Code (SDK-based)")
-        print(
-            "  uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 'What is 2+2?'"
-        )
+        print("  uv run python -m massgen.cli --backend claude_code --model claude-sonnet-4-20250514 'What is 2+2?'")
         print()
         print("  # Mixed CLI backends")
-        print(
-            "  uv run python -m massgen.cli --config massgen/configs/cli_backends_mixed.yaml 'Complex question'"
-        )
+        print("  uv run python -m massgen.cli --config massgen/configs/cli_backends_mixed.yaml 'Complex question'")
 
     except Exception as e:
         print(f"❌ Test failed: {e}")

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen System Types
 
@@ -6,9 +7,8 @@ used throughout the MassGen framework.
 """
 
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
-from abc import ABC, abstractmethod
 
 
 @dataclass
@@ -62,9 +62,7 @@ class TaskInput:
     """Represents a task to be processed by the MassGen system."""
 
     question: str
-    context: Dict[str, Any] = field(
-        default_factory=dict
-    )  # may support more information in the future, like images
+    context: Dict[str, Any] = field(default_factory=dict)  # may support more information in the future, like images
     task_id: Optional[str] = None
 
 
@@ -91,19 +89,11 @@ class AgentState:
     agent_id: int
     status: str = "working"  # "working", "voted", "failed"
     curr_answer: str = ""  # the latest answer of the agent's work
-    updated_answers: List[AnswerRecord] = field(
-        default_factory=list
-    )  # a list of answer records
-    curr_vote: Optional[
-        VoteRecord
-    ] = None  # Which agent's solution this agent voted for
+    updated_answers: List[AnswerRecord] = field(default_factory=list)  # a list of answer records
+    curr_vote: Optional[VoteRecord] = None  # Which agent's solution this agent voted for
     cast_votes: List[VoteRecord] = field(default_factory=list)  # a list of vote records
-    seen_updates_timestamps: Dict[int, float] = field(
-        default_factory=dict
-    )  # agent_id -> last_seen_timestamp
-    chat_history: List[Dict[str, Any]] = field(
-        default_factory=list
-    )  # a list of conversation records
+    seen_updates_timestamps: Dict[int, float] = field(default_factory=dict)  # agent_id -> last_seen_timestamp
+    chat_history: List[Dict[str, Any]] = field(default_factory=list)  # a list of conversation records
     chat_round: int = 0  # the number of chat rounds the agent has participated in
     execution_start_time: Optional[float] = None
     execution_end_time: Optional[float] = None
@@ -211,9 +201,7 @@ class AgentConfig:
     def __post_init__(self):
         """Validate agent configuration."""
         if self.agent_type not in ["openai", "gemini", "grok"]:
-            raise ValueError(
-                f"Invalid agent_type: {self.agent_type}. Must be one of: openai, gemini, grok"
-            )
+            raise ValueError(f"Invalid agent_type: {self.agent_type}. Must be one of: openai, gemini, grok")
 
 
 @dataclass
@@ -222,9 +210,7 @@ class MassConfig:
 
     orchestrator: OrchestratorConfig = field(default_factory=OrchestratorConfig)
     agents: List[AgentConfig] = field(default_factory=list)
-    streaming_display: StreamingDisplayConfig = field(
-        default_factory=StreamingDisplayConfig
-    )
+    streaming_display: StreamingDisplayConfig = field(default_factory=StreamingDisplayConfig)
     logging: LoggingConfig = field(default_factory=LoggingConfig)
     task: Optional[Dict[str, Any]] = None  # Task-specific configuration
 
