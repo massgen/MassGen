@@ -48,6 +48,32 @@ def build_presentation(presentation_name):
             "Vision - Exponential Intelligence",
             "Call to Action - Join Revolution"
         ],
+        "recsys": [
+            "Title - RecSys'25 Tutorial",
+            "Problem - AI Scaling Challenges", 
+            "Solution - Multi-Agent Collaboration",
+            "AG2 - Research Foundation",
+            "Evidence - Performance Gains",
+            "Architecture - System Design",
+            "Features & Capabilities",
+            "Tech - Async Streaming",
+            "Tech - Backend Challenges", 
+            "Tech - Binary Decision Framework",
+            "Context Sharing - Challenge",
+            "Context Sharing - Solution",
+            "Context Sharing - In Action",
+            "Benchmarking - Preliminary Results",
+            "Case Study - Success Through Collaboration", 
+            "Case Study - When Coordination Fails",
+            "Coordination Psychology - Voting Behavior",
+            "Evolution",
+            "Early Adopters - Community Growth",
+            "Demo - Live Examples",
+            "Agentic Recommendation Applications",
+            "Getting Started - 60 Seconds",
+            "Vision - Exponential Intelligence",
+            "Call to Action - Build Agentic RecSys"
+        ],
         "columbia": [
             "Title - Columbia University",
             "Problem - Single-Agent Limitation", 
@@ -156,6 +182,32 @@ def build_presentation(presentation_name):
             "slide-roadmap-vision",
             "slide-call-to-action-columbia"
         ],
+        "recsys": [
+            "slide-title-recsys",
+            "slide-the-problem",
+            "slide-the-solution-multi-agent-collaboration",
+            "slide-ag2-research-foundation",
+            "slide-evidence-performance-gains",
+            "slide-architecture",
+            "slide-key-features-capabilities",
+            "slide-tech-deep-dive-async-streaming-architecture",
+            "slide-tech-deep-dive-backend-abstraction-challenges",
+            "slide-tech-deep-dive-binary-decision-framework-solution",
+            "slide-context-sharing-challenge",
+            "slide-context-sharing-solution",
+            "slide-context-sharing-in-action",
+            "slide-benchmarking-results",
+            "slide-case-study-success-through-collaboration",
+            "slide-case-study-when-coordination-fails",
+            "slide-coordination-strategy-research",
+            "slide-evolution-from-v001",
+            "slide-early-adopters",
+            "slide-live-demo-examples",
+            "slide-recsys-applications",  # RecSys-specific applications
+            "slide-getting-started",
+            "slide-roadmap-vision",
+            "slide-call-to-action-recsys"
+        ],
         "aibuilders": [
             "slide-title-aibuilders",  # AI Builders-specific title
             "slide-the-problem",
@@ -241,7 +293,7 @@ def build_presentation(presentation_name):
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python build_presentation.py <presentation_name>")
-        print("Available presentations: m2l, columbia, aibuilders")
+        print("Available presentations: m2l, columbia, recsys, aibuilders")
         sys.exit(1)
     
     presentation_name = sys.argv[1]
