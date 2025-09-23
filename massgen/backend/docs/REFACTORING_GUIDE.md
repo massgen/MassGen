@@ -22,7 +22,7 @@ class MyBackend(LLMBackend, MCPIntegrationMixin):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._init_mcp_integration(**kwargs)
-    
+
     async def some_method(self):
         # Initialize MCP if needed
         if await self._initialize_mcp_client():
@@ -50,10 +50,10 @@ class MyBackend(LLMBackend, ToolHandlerMixin):
     async def process_tools(self, tools):
         # Convert tools to desired format
         formatted = self.convert_tools_format(tools, ToolFormat.CHAT_COMPLETIONS)
-        
+
         # Filter based on allowed/excluded
         filtered = self.filter_tools(formatted, self.allowed_tools, self.exclude_tools)
-        
+
         # Validate tool calls
         valid_calls, errors = self.validate_tool_calls(tool_calls)
 ```
@@ -79,13 +79,13 @@ class MyBackend(LLMBackend):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.token_calculator = TokenCostCalculator()
-    
+
     def estimate_tokens(self, text: str) -> int:
         return self.token_calculator.estimate_tokens(text)
-    
+
     def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
         return self.token_calculator.calculate_cost(
-            input_tokens, output_tokens, 
+            input_tokens, output_tokens,
             self.get_provider_name(), model
         )
 ```

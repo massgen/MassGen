@@ -193,22 +193,22 @@ from massgen.mcp_tools.exceptions import MCPConnectionError
 async def example_single_client():
     # Circuit breaker is handled internally by MultiMCPClient
     # but you can create your own for custom logic
-    
+
     config = CircuitBreakerConfig(max_failures=2, reset_time_seconds=60)
     circuit_breaker = MCPCircuitBreaker(config)
-    
+
     server_config = {
         "name": "weather_server",
         "type": "stdio",
         "command": "npx",
         "args": ["-y", "@fak111/weather-mcp"]
     }
-    
+
     # Check circuit breaker before attempting connection
     if circuit_breaker.should_skip_server("weather_server"):
         print("Server is failing, skipping connection attempt")
         return
-    
+
     try:
         async with MCPClient(server_config) as client:
             result = await client.call_tool("get_weather", {"city": "Tokyo"})
@@ -239,22 +239,22 @@ async def example_multi_client():
         },
         {
             "name": "file_server",
-            "type": "stdio", 
+            "type": "stdio",
             "command": "python",
             "args": ["-m", "file_mcp_server"]
         }
     ]
-    
+
     async with MultiMCPClient(server_configs) as multi_client:
         # Circuit breaker automatically handles failing servers
         try:
             # This will skip servers that are currently failing
-            result = await multi_client.call_tool("mcp__weather_server__get_weather", 
+            result = await multi_client.call_tool("mcp__weather_server__get_weather",
                                                  {"city": "Tokyo"})
             print(f"Weather result: {result}")
         except MCPConnectionError as e:
             print(f"All weather servers are failing: {e}")
-        
+
         # Check circuit breaker status
         health_status = await multi_client.health_check_all()
         print(f"Server health: {health_status}")
@@ -289,7 +289,7 @@ for failure_count in failures:
 
 # Output:
 # Failure 3: 300s (5.0 minutes)
-# Failure 4: 600s (10.0 minutes)  
+# Failure 4: 600s (10.0 minutes)
 # Failure 5: 1200s (20.0 minutes)
 # Failure 6: 2400s (40.0 minutes)
 # Failure 7: 2400s (40.0 minutes) - capped
@@ -328,11 +328,11 @@ async def monitor_circuit_breaker():
     async with MultiMCPClient(server_configs) as client:
         # Access internal circuit breaker
         circuit_breaker = client._circuit_breaker
-        
+
         while True:
             # Get all failing servers
             failing_servers = circuit_breaker.get_all_failing_servers()
-            
+
             if failing_servers:
                 print("=== Circuit Breaker Status ===")
                 for server_name, status in failing_servers.items():
@@ -343,7 +343,7 @@ async def monitor_circuit_breaker():
                     print()
             else:
                 print("All servers healthy")
-            
+
             await asyncio.sleep(30)  # Check every 30 seconds
 ```
 
@@ -480,11 +480,11 @@ async def robust_operation(client, circuit_breaker, server_name):
 async def monitor_recovery():
     while True:
         failing_servers = circuit_breaker.get_all_failing_servers()
-        
+
         for server_name, status in failing_servers.items():
             if status['time_remaining'] <= 0:
                 print(f"Server {server_name} ready for retry")
-                
+
                 # Optionally trigger health check
                 try:
                     # Attempt connection
@@ -494,7 +494,7 @@ async def monitor_recovery():
                         print(f"Server {server_name} recovered!")
                 except Exception:
                     circuit_breaker.record_failure(server_name)
-        
+
         await asyncio.sleep(10)
 ```
 
@@ -519,12 +519,12 @@ logging.getLogger('massgen.mcp_tools.circuit_breaker').setLevel(logging.DEBUG)
 # Get detailed circuit breaker state
 def inspect_circuit_breaker(circuit_breaker):
     print(f"Circuit breaker: {circuit_breaker}")
-    
+
     failing_servers = circuit_breaker.get_all_failing_servers()
     if not failing_servers:
         print("No failing servers")
         return
-    
+
     for server_name, status in failing_servers.items():
         print(f"\nServer: {server_name}")
         print(f"  Failure count: {status['failure_count']}")
@@ -563,7 +563,7 @@ async def robust_mcp_operation(client, circuit_breaker, server_name):
             f"Server {server_name} is currently failing",
             server_name=server_name
         )
-    
+
     try:
         result = await client.call_tool("tool_name", {})
         circuit_breaker.record_success(server_name)
@@ -585,16 +585,16 @@ async def robust_mcp_operation(client, circuit_breaker, server_name):
 from prometheus_client import Counter, Gauge, Histogram
 
 # Metrics
-circuit_breaker_failures = Counter('mcp_circuit_breaker_failures_total', 
+circuit_breaker_failures = Counter('mcp_circuit_breaker_failures_total',
                                   'Total circuit breaker failures', ['server'])
-circuit_breaker_state = Gauge('mcp_circuit_breaker_open', 
+circuit_breaker_state = Gauge('mcp_circuit_breaker_open',
                              'Circuit breaker open state', ['server'])
 circuit_breaker_backoff = Histogram('mcp_circuit_breaker_backoff_seconds',
                                    'Circuit breaker backoff times', ['server'])
 
 def update_metrics(circuit_breaker):
     failing_servers = circuit_breaker.get_all_failing_servers()
-    
+
     for server_name, status in failing_servers.items():
         circuit_breaker_failures.labels(server=server_name).inc()
         circuit_breaker_state.labels(server=server_name).set(
@@ -616,7 +616,7 @@ from massgen.mcp_tools.exceptions import (
 
 # Circuit breaker automatically handles these exception types:
 # - MCPConnectionError: Records failure, triggers circuit breaker
-# - MCPTimeoutError: Records failure, triggers circuit breaker  
+# - MCPTimeoutError: Records failure, triggers circuit breaker
 # - MCPServerError: May record failure depending on error type
 
 async def handle_mcp_errors(client, circuit_breaker, server_name):

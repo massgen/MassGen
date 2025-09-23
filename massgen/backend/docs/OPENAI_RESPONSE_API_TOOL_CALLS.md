@@ -7,7 +7,7 @@
 {
     "type": "function_call",
     "id": "fc_12345xyz",
-    "call_id": "call_12345xyz", 
+    "call_id": "call_12345xyz",
     "name": "get_weather",
     "arguments": "{\"location\":\"Paris, France\"}"
 }
@@ -27,7 +27,7 @@
 When handling tool calls across multiple turns:
 
 1. **Model makes tool call** - Returns function_call object with call_id
-2. **Execute function** - Run your code with the arguments  
+2. **Execute function** - Run your code with the arguments
 3. **Add BOTH messages to input array**:
    ```python
    input_messages.append(tool_call)  # append model's function call message
@@ -52,7 +52,7 @@ For error messages to tools, follow the same pattern:
 ```python
 # Agent made invalid tool call with call_id "call_123"
 error_message = {
-    "type": "function_call_output", 
+    "type": "function_call_output",
     "call_id": "call_123",
     "output": "Error: You can only vote once per response. Please vote for just ONE agent."
 }
