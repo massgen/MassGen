@@ -103,7 +103,7 @@ def reset_conversation(self):
 ## Implementation Files
 
 - `base.py` - Base backend interface with `LLMBackend` abstract class
-- `chat_completions.py` - Stateless ChatCompletion backends (OpenAI-compatible)  
+- `chat_completions.py` - Stateless ChatCompletion backends (OpenAI-compatible)
 - `claude_code.py` - **Stateful** Claude Code backend with streaming support
 - `cli_base.py` - Base CLI backend functionality
 

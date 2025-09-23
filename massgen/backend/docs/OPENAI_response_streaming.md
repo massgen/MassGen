@@ -73,7 +73,7 @@ Conversation state
 Extend the models with tools
 Create a model response
 post
- 
+
 https://api.openai.com/v1/responses
 Creates a model response. Provide text or image inputs to generate text or JSON outputs. Have the model call your own custom code or use built-in tools like web search or file search to use your own data as input for the model's response.
 
@@ -378,7 +378,7 @@ Response
 }
 Get a model response
 get
- 
+
 https://api.openai.com/v1/responses/{response_id}
 Retrieves a model response with the given ID.
 
@@ -480,7 +480,7 @@ Response
 }
 Delete a model response
 delete
- 
+
 https://api.openai.com/v1/responses/{response_id}
 Deletes a model response with the given ID.
 
@@ -506,7 +506,7 @@ Response
 }
 Cancel a response
 post
- 
+
 https://api.openai.com/v1/responses/{response_id}/cancel
 Cancels a model response with the given ID. Only responses created with the background parameter set to true can be cancelled. Learn more.
 
@@ -583,7 +583,7 @@ Response
 }
 List input items
 get
- 
+
 https://api.openai.com/v1/responses/{response_id}/input_items
 Returns a list of input items for a given response.
 
@@ -1240,7 +1240,7 @@ OBJECT response.incomplete
     "object": "response",
     "created_at": 1740855869,
     "status": "incomplete",
-    "error": null, 
+    "error": null,
     "incomplete_details": {
       "reason": "max_tokens"
     },
@@ -3433,7 +3433,7 @@ Related guide: Speech to text
 
 Create speech
 post
- 
+
 https://api.openai.com/v1/audio/speech
 Generates audio from the input text.
 
@@ -3500,7 +3500,7 @@ curl https://api.openai.com/v1/audio/speech \
   --output speech.mp3
 Create transcription
 post
- 
+
 https://api.openai.com/v1/audio/transcriptions
 Transcribes audio into the input language.
 
@@ -3603,7 +3603,7 @@ Response
 }
 Create translation
 post
- 
+
 https://api.openai.com/v1/audio/translations
 Translates audio into English.
 
@@ -3870,7 +3870,7 @@ Given a prompt and/or an input image, the model will generate a new image. Relat
 
 Create image
 post
- 
+
 https://api.openai.com/v1/images/generations
 Creates an image given a prompt. Learn more.
 
@@ -4014,7 +4014,7 @@ Response
 }
 Create image edit
 post
- 
+
 https://api.openai.com/v1/images/edits
 Creates an edited or extended image given one or more source images and a prompt. This endpoint only supports gpt-image-1 and dall-e-2.
 
@@ -4146,7 +4146,7 @@ curl -s -D >(grep -i x-request-id >&2) \
   -F 'prompt=Create a lovely gift basket with these four items in it'
 Create image variation
 post
- 
+
 https://api.openai.com/v1/images/variations
 Creates a variation of a given image. This endpoint only supports dall-e-2.
 
@@ -4520,7 +4520,7 @@ Get a vector representation of a given input that can be easily consumed by mach
 
 Create embeddings
 post
- 
+
 https://api.openai.com/v1/embeddings
 Creates an embedding vector representing the input text.
 
@@ -4548,7 +4548,7 @@ string
 
 Optional
 Defaults to float
-The format to return the embeddings in. Can be either float or 
+The format to return the embeddings in. Can be either float or
 base64
 .
 
@@ -4625,7 +4625,7 @@ Create, manage, and run evals in the OpenAI platform. Related guide: Evals
 
 Create eval
 post
- 
+
 https://api.openai.com/v1/evals
 Create the structure of an evaluation that can be used to test a model's performance. An evaluation is a set of testing criteria and the config for a data source, which dictates the schema of the data used in the evaluation. After creating an evaluation, you can run it on different models and model parameters. We support several types of graders and datasources. For more information, see the Evals guide.
 
@@ -4766,7 +4766,7 @@ Response
 }
 Get an eval
 get
- 
+
 https://api.openai.com/v1/evals/{eval_id}
 Get an evaluation by ID.
 
@@ -4830,7 +4830,7 @@ Response
 }
 Update an eval
 post
- 
+
 https://api.openai.com/v1/evals/{eval_id}
 Update certain properties of an evaluation.
 
@@ -4910,7 +4910,7 @@ Response
 }
 Delete an eval
 delete
- 
+
 https://api.openai.com/v1/evals/{eval_id}
 Delete an evaluation.
 
@@ -4936,7 +4936,7 @@ Response
 }
 List evals
 get
- 
+
 https://api.openai.com/v1/evals
 List evaluations for a project.
 
@@ -5050,7 +5050,7 @@ Response
 }
 Get eval runs
 get
- 
+
 https://api.openai.com/v1/evals/{eval_id}/runs
 Get a list of runs for an evaluation.
 
@@ -5177,7 +5177,7 @@ Response
 }
 Get an eval run
 get
- 
+
 https://api.openai.com/v1/evals/{eval_id}/runs/{run_id}
 Get an evaluation run by ID.
 
@@ -5350,7 +5350,7 @@ Response
 }
 Create eval run
 post
- 
+
 https://api.openai.com/v1/evals/{eval_id}/runs
 Kicks off a new run for a given evaluation, specifying the data source, and what model configuration to use to test. The datasource will be validated against the schema specified in the config of the evaluation.
 
@@ -5458,7 +5458,7 @@ Response
 }
 Cancel eval run
 post
- 
+
 https://api.openai.com/v1/evals/{eval_id}/runs/{run_id}
 Cancel an ongoing evaluation run.
 
@@ -5632,7 +5632,7 @@ Response
 }
 Delete eval run
 delete
- 
+
 https://api.openai.com/v1/evals/{eval_id}/runs/{run_id}
 Delete an eval run.
 
@@ -5665,7 +5665,7 @@ Response
 }
 Get an output item of an eval run
 get
- 
+
 https://api.openai.com/v1/evals/{eval_id}/runs/{run_id}/output_items/{output_item_id}
 Get an evaluation run output item by ID.
 
@@ -5759,7 +5759,7 @@ Response
 }
 Get eval run output items
 get
- 
+
 https://api.openai.com/v1/evals/{eval_id}/runs/{run_id}/output_items
 Get a list of output items for an evaluation run.
 
@@ -6304,7 +6304,7 @@ Manage fine-tuning jobs to tailor a model to your specific training data. Relate
 
 Create fine-tuning job
 post
- 
+
 https://api.openai.com/v1/fine_tuning/jobs
 Creates a fine-tuning job which begins the process of creating a new model from a given dataset.
 
@@ -6436,7 +6436,7 @@ Response
 }
 List fine-tuning jobs
 get
- 
+
 https://api.openai.com/v1/fine_tuning/jobs
 List your organization's fine-tuning jobs
 
@@ -6491,7 +6491,7 @@ Response
 }
 List fine-tuning events
 get
- 
+
 https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/events
 Get status updates for a fine-tuning job.
 
@@ -6549,7 +6549,7 @@ Response
 }
 List fine-tuning checkpoints
 get
- 
+
 https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/checkpoints
 List checkpoints for a fine-tuning job.
 
@@ -6615,7 +6615,7 @@ Response
 }
 List checkpoint permissions
 get
- 
+
 https://api.openai.com/v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
 NOTE: This endpoint requires an admin API key.
 
@@ -6684,7 +6684,7 @@ Response
 }
 Create checkpoint permissions
 post
- 
+
 https://api.openai.com/v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
 NOTE: Calling this endpoint requires an admin API key.
 
@@ -6728,7 +6728,7 @@ Response
 }
 Delete checkpoint permission
 delete
- 
+
 https://api.openai.com/v1/fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions/{permission_id}
 NOTE: This endpoint requires an admin API key.
 
@@ -6761,7 +6761,7 @@ Response
 }
 Retrieve fine-tuning job
 get
- 
+
 https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}
 Get info about a fine-tuning job.
 
@@ -6817,7 +6817,7 @@ Response
 }
 Cancel fine-tuning
 post
- 
+
 https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/cancel
 Immediately cancel a fine-tune job.
 
@@ -6849,7 +6849,7 @@ Response
 }
 Resume fine-tuning
 post
- 
+
 https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/resume
 Resume a fine-tune job.
 
@@ -6881,7 +6881,7 @@ Response
 }
 Pause fine-tuning
 post
- 
+
 https://api.openai.com/v1/fine_tuning/jobs/{fine_tuning_job_id}/pause
 Pause a fine-tune job.
 
@@ -7615,7 +7615,7 @@ OBJECT Multi Grader
 Run grader
 Beta
 post
- 
+
 https://api.openai.com/v1/fine_tuning/alpha/graders/run
 Run a grader.
 
@@ -7714,7 +7714,7 @@ Response
 Validate grader
 Beta
 post
- 
+
 https://api.openai.com/v1/fine_tuning/alpha/graders/validate
 Validate a grader.
 
@@ -7758,7 +7758,7 @@ Create large batches of API requests for asynchronous processing. The Batch API 
 
 Create batch
 post
- 
+
 https://api.openai.com/v1/batches
 Creates and executes a batch from an uploaded file of requests
 
@@ -7837,7 +7837,7 @@ Response
 }
 Retrieve batch
 get
- 
+
 https://api.openai.com/v1/batches/{batch_id}
 Retrieves a batch.
 
@@ -7887,7 +7887,7 @@ Response
 }
 Cancel batch
 post
- 
+
 https://api.openai.com/v1/batches/{batch_id}/cancel
 Cancels an in-progress batch. The batch will be in status cancelling for up to 10 minutes, before changing to cancelled, where it will have partial results (if any) available in the output file.
 
@@ -7938,7 +7938,7 @@ Response
 }
 List batch
 get
- 
+
 https://api.openai.com/v1/batches
 List your organization's batches.
 
@@ -8185,7 +8185,7 @@ Files are used to upload documents that can be used with features like Assistant
 
 Upload file
 post
- 
+
 https://api.openai.com/v1/files
 Upload a file that can be used across various endpoints. Individual files can be up to 512 MB, and the size of all files uploaded by one organization can be up to 100 GB.
 
@@ -8229,7 +8229,7 @@ Response
 }
 List files
 get
- 
+
 https://api.openai.com/v1/files
 Returns a list of files.
 
@@ -8293,7 +8293,7 @@ Response
 }
 Retrieve file
 get
- 
+
 https://api.openai.com/v1/files/{file_id}
 Returns information about a specific file.
 
@@ -8321,7 +8321,7 @@ Response
 }
 Delete file
 delete
- 
+
 https://api.openai.com/v1/files/{file_id}
 Delete a file.
 
@@ -8347,7 +8347,7 @@ Response
 }
 Retrieve file content
 get
- 
+
 https://api.openai.com/v1/files/{file_id}/content
 Returns the contents of the specified file.
 
@@ -8429,7 +8429,7 @@ Allows you to upload large files in multiple parts.
 
 Create upload
 post
- 
+
 https://api.openai.com/v1/uploads
 Creates an intermediate Upload object that you can add Parts to. Currently, an Upload can accept at most 8 GB in total and expires after an hour after you create it.
 
@@ -8493,7 +8493,7 @@ Response
 }
 Add upload part
 post
- 
+
 https://api.openai.com/v1/uploads/{upload_id}/parts
 Adds a Part to an Upload object. A Part represents a chunk of bytes from the file you are trying to upload.
 
@@ -8530,7 +8530,7 @@ Response
 }
 Complete upload
 post
- 
+
 https://api.openai.com/v1/uploads/{upload_id}/complete
 Completes the Upload.
 
@@ -8589,7 +8589,7 @@ Response
 }
 Cancel upload
 post
- 
+
 https://api.openai.com/v1/uploads/{upload_id}/cancel
 Cancels the Upload. No Parts may be added after an Upload is cancelled.
 
@@ -8718,7 +8718,7 @@ List and describe the various models available in the API. You can refer to the 
 
 List models
 get
- 
+
 https://api.openai.com/v1/models
 Lists the currently available models, and provides basic information about each one such as the owner and availability.
 
@@ -8755,7 +8755,7 @@ Response
 }
 Retrieve model
 get
- 
+
 https://api.openai.com/v1/models/{model}
 Retrieves a model instance, providing basic information about the model such as the owner and permissioning.
 
@@ -8781,7 +8781,7 @@ Response
 }
 Delete a fine-tuned model
 delete
- 
+
 https://api.openai.com/v1/models/{model}
 Delete a fine-tuned model. You must have the Owner role in your organization to delete a model.
 
@@ -8840,7 +8840,7 @@ Given text and/or image inputs, classifies if those inputs are potentially harmf
 
 Create moderation
 post
- 
+
 https://api.openai.com/v1/moderations
 Classifies if text and/or image inputs are potentially harmful. Learn more in the moderation guide.
 
@@ -9022,7 +9022,7 @@ Related guide: File Search
 
 Create vector store
 post
- 
+
 https://api.openai.com/v1/vector_stores
 Create a vector store.
 
@@ -9091,7 +9091,7 @@ Response
 }
 List vector stores
 get
- 
+
 https://api.openai.com/v1/vector_stores
 Returns a list of vector stores.
 
@@ -9169,7 +9169,7 @@ Response
 }
 Retrieve vector store
 get
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}
 Retrieves a vector store.
 
@@ -9196,7 +9196,7 @@ Response
 }
 Modify vector store
 post
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}
 Modifies a vector store.
 
@@ -9258,7 +9258,7 @@ Response
 }
 Delete vector store
 delete
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}
 Delete a vector store.
 
@@ -9286,7 +9286,7 @@ Response
 }
 Search vector store
 post
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/search
 Search a vector store for relevant chunks based on a query and file attributes filter.
 
@@ -9469,7 +9469,7 @@ Related guide: File Search
 
 Create vector store file
 post
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/files
 Create a vector store file by attaching a File to a vector store.
 
@@ -9524,7 +9524,7 @@ Response
 }
 List vector store files
 get
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/files
 Returns a list of vector store files.
 
@@ -9599,7 +9599,7 @@ Response
 }
 Retrieve vector store file
 get
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/files/{file_id}
 Retrieves a vector store file.
 
@@ -9635,7 +9635,7 @@ Response
 }
 Retrieve vector store file content
 get
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/files/{file_id}/content
 Retrieve the parsed contents of a vector store file.
 
@@ -9671,7 +9671,7 @@ Response
 }
 Update vector store file attributes
 post
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/files/{file_id}
 Update attributes on a vector store file.
 
@@ -9717,7 +9717,7 @@ Response
 }
 Delete vector store file
 delete
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/files/{file_id}
 Delete a vector store file. This will remove the file from the vector store but the file itself will not be deleted. To delete the file, use the delete file endpoint.
 
@@ -9824,7 +9824,7 @@ Vector store file batches represent operations to add multiple files to a vector
 
 Create vector store file batch
 post
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/file_batches
 Create a vector store file batch.
 
@@ -9884,7 +9884,7 @@ Response
 }
 Retrieve vector store file batch
 get
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/file_batches/{batch_id}
 Retrieves a vector store file batch.
 
@@ -9926,7 +9926,7 @@ Response
 }
 Cancel vector store file batch
 post
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/file_batches/{batch_id}/cancel
 Cancel a vector store file batch. This attempts to cancel the processing of files in this batch as soon as possible.
 
@@ -9969,7 +9969,7 @@ Response
 }
 List vector store files in a batch
 get
- 
+
 https://api.openai.com/v1/vector_stores/{vector_store_id}/file_batches/{batch_id}/files
 Returns a list of vector store files in a batch.
 
@@ -10102,7 +10102,7 @@ Create and manage containers for use with the Code Interpreter tool.
 
 Create container
 post
- 
+
 https://api.openai.com/v1/containers
 Create Container
 
@@ -10152,7 +10152,7 @@ Response
 }
 List containers
 get
- 
+
 https://api.openai.com/v1/containers
 List Containers
 
@@ -10206,7 +10206,7 @@ Response
 }
 Retrieve container
 get
- 
+
 https://api.openai.com/v1/containers/{container_id}
 Retrieve Container
 
@@ -10236,7 +10236,7 @@ Response
 }
 Delete a container
 delete
- 
+
 https://api.openai.com/v1/containers/{container_id}
 Delete Container
 
@@ -10310,7 +10310,7 @@ Create and manage container files for use with the Code Interpreter tool.
 
 Create container file
 post
- 
+
 https://api.openai.com/v1/containers/{container_id}/files
 Create a Container File
 
@@ -10353,7 +10353,7 @@ Response
 }
 List container files
 get
- 
+
 https://api.openai.com/v1/containers/{container_id}/files
 List Container files
 
@@ -10409,7 +10409,7 @@ Response
 }
 Retrieve container file
 get
- 
+
 https://api.openai.com/v1/containers/{container_id}/files/{file_id}
 Retrieve Container File
 
@@ -10440,7 +10440,7 @@ Response
 }
 Retrieve container file content
 get
- 
+
 https://api.openai.com/v1/containers/{container_id}/files/{file_id}/content
 Retrieve Container File Content
 
@@ -10463,7 +10463,7 @@ Response
 <binary content of the file>
 Delete a container file
 delete
- 
+
 https://api.openai.com/v1/containers/{container_id}/files/{file_id}
 Delete Container File
 
@@ -10543,7 +10543,7 @@ REST API endpoint to generate ephemeral session tokens for use in client-side ap
 
 Create session
 post
- 
+
 https://api.openai.com/v1/realtime/sessions
 Create an ephemeral API token for use in client-side applications with the Realtime API. Can be configured with the same session parameters as the session.update client event.
 
@@ -10699,13 +10699,13 @@ Response
   "speed": 1.1,
   "tracing": "auto",
   "client_secret": {
-    "value": "ek_abc123", 
+    "value": "ek_abc123",
     "expires_at": 1234567890
   }
 }
 Create transcription session
 post
- 
+
 https://api.openai.com/v1/realtime/transcription_sessions
 Create an ephemeral API token for use in client-side applications with the Realtime API specifically for realtime transcriptions. Can be configured with the same session parameters as the transcription_session.update client event.
 
@@ -10897,7 +10897,7 @@ OBJECT The session object
   "tracing": "auto",
   "max_response_output_tokens": 200,
   "client_secret": {
-    "value": "ek_abc123", 
+    "value": "ek_abc123",
     "expires_at": 1234567890
   }
 }
@@ -12771,7 +12771,7 @@ Starting a new project? We recommend trying Responses to take advantage of the l
 
 Create chat completion
 post
- 
+
 https://api.openai.com/v1/chat/completions
 Starting a new project? We recommend trying Responses to take advantage of the latest OpenAI platform features. Compare Chat Completions with Responses.
 
@@ -13128,7 +13128,7 @@ Response
 }
 Get chat completion
 get
- 
+
 https://api.openai.com/v1/chat/completions/{completion_id}
 Get a stored chat completion. Only Chat Completions that have been created with the store parameter set to true will be returned.
 
@@ -13186,7 +13186,7 @@ Response
 }
 Get chat messages
 get
- 
+
 https://api.openai.com/v1/chat/completions/{completion_id}/messages
 Get the messages in a stored chat completion. Only Chat Completions that have been created with the store parameter set to true will be returned.
 
@@ -13243,7 +13243,7 @@ Response
 }
 List Chat Completions
 get
- 
+
 https://api.openai.com/v1/chat/completions
 List stored Chat Completions. Only Chat Completions that have been stored with the store parameter set to true will be returned.
 
@@ -13337,7 +13337,7 @@ Response
 }
 Update chat completion
 post
- 
+
 https://api.openai.com/v1/chat/completions/{completion_id}
 Modify a stored chat completion. Only Chat Completions that have been created with the store parameter set to true can be modified. Currently, the only supported modification is to update the metadata field.
 
@@ -13407,7 +13407,7 @@ Response
 }
 Delete chat completion
 delete
- 
+
 https://api.openai.com/v1/chat/completions/{completion_id}
 Delete a stored chat completion. Only Chat Completions that have been created with the store parameter set to true can be deleted.
 
@@ -13718,7 +13718,7 @@ Get started with the Assistants API
 Create assistant
 Beta
 post
- 
+
 https://api.openai.com/v1/assistants
 Create an assistant with a model and instructions.
 
@@ -13847,7 +13847,7 @@ Response
 List assistants
 Beta
 get
- 
+
 https://api.openai.com/v1/assistants
 Returns a list of assistants.
 
@@ -13943,7 +13943,7 @@ Response
 Retrieve assistant
 Beta
 get
- 
+
 https://api.openai.com/v1/assistants/{assistant_id}
 Retrieves an assistant.
 
@@ -13984,7 +13984,7 @@ Response
 Modify assistant
 Beta
 post
- 
+
 https://api.openai.com/v1/assistants/{assistant_id}
 Modifies an assistant.
 
@@ -14122,7 +14122,7 @@ Response
 Delete assistant
 Beta
 delete
- 
+
 https://api.openai.com/v1/assistants/{assistant_id}
 Delete an assistant.
 
@@ -14261,7 +14261,7 @@ Related guide: Assistants
 Create thread
 Beta
 post
- 
+
 https://api.openai.com/v1/threads
 Create a thread.
 
@@ -14312,7 +14312,7 @@ Response
 Retrieve thread
 Beta
 get
- 
+
 https://api.openai.com/v1/threads/{thread_id}
 Retrieves a thread.
 
@@ -14346,7 +14346,7 @@ Response
 Modify thread
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/{thread_id}
 Modifies a thread.
 
@@ -14402,7 +14402,7 @@ Response
 Delete thread
 Beta
 delete
- 
+
 https://api.openai.com/v1/threads/{thread_id}
 Delete a thread.
 
@@ -14477,7 +14477,7 @@ Related guide: Assistants
 Create message
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/{thread_id}/messages
 Create a message.
 
@@ -14555,7 +14555,7 @@ Response
 List messages
 Beta
 get
- 
+
 https://api.openai.com/v1/threads/{thread_id}/messages
 Returns a list of messages for a given thread.
 
@@ -14659,7 +14659,7 @@ Response
 Retrieve message
 Beta
 get
- 
+
 https://api.openai.com/v1/threads/{thread_id}/messages/{message_id}
 Retrieve a message.
 
@@ -14708,7 +14708,7 @@ Response
 Modify message
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/{thread_id}/messages/{message_id}
 Modifies a message.
 
@@ -14775,7 +14775,7 @@ Response
 Delete message
 Beta
 delete
- 
+
 https://api.openai.com/v1/threads/{thread_id}/messages/{message_id}
 Deletes a message.
 
@@ -14918,7 +14918,7 @@ Related guide: Assistants
 Create run
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs
 Create a run.
 
@@ -15118,7 +15118,7 @@ Response
 Create thread and run
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/runs
 Create a thread and run it in one request.
 
@@ -15300,7 +15300,7 @@ Response
 List runs
 Beta
 get
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs
 Returns a list of runs belonging to a thread.
 
@@ -15452,7 +15452,7 @@ Response
 Retrieve run
 Beta
 get
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}
 Retrieves a run.
 
@@ -15519,7 +15519,7 @@ Response
 Modify run
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}
 Modifies a run.
 
@@ -15611,7 +15611,7 @@ Response
 Submit tool outputs to run
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}/submit_tool_outputs
 When a run has the status: "requires_action" and required_action.type is submit_tool_outputs, this endpoint can be used to submit the outputs from the tool calls once they're all completed. All outputs must be submitted in a single request.
 
@@ -15717,7 +15717,7 @@ Response
 Cancel a run
 Beta
 post
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}/cancel
 Cancels a run that is in_progress.
 
@@ -15984,7 +15984,7 @@ Related guide: Assistants
 List run steps
 Beta
 get
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}/steps
 Returns a list of run steps belonging to a run.
 
@@ -16082,7 +16082,7 @@ Response
 Retrieve run step
 Beta
 get
- 
+
 https://api.openai.com/v1/threads/{thread_id}/runs/{run_id}/steps/{step_id}
 Retrieves a run step.
 
@@ -16507,7 +16507,7 @@ It's crucial to handle Admin API keys with care due to their elevated permission
 
 List all organization and project API keys.
 get
- 
+
 https://api.openai.com/v1/organization/admin_api_keys
 List organization API keys
 
@@ -16560,7 +16560,7 @@ Response
 }
 Create admin API key
 post
- 
+
 https://api.openai.com/v1/organization/admin_api_keys
 Create an organization admin API key
 
@@ -16599,7 +16599,7 @@ Response
 }
 Retrieve admin API key
 get
- 
+
 https://api.openai.com/v1/organization/admin_api_keys/{key_id}
 Retrieve a single organization API key
 
@@ -16634,7 +16634,7 @@ Response
 }
 Delete admin API key
 delete
- 
+
 https://api.openai.com/v1/organization/admin_api_keys/{key_id}
 Delete an organization admin API key
 
@@ -16721,7 +16721,7 @@ Invite and manage invitations for an organization.
 
 List invites
 get
- 
+
 https://api.openai.com/v1/organization/invites
 Returns a list of invites in the organization.
 
@@ -16767,7 +16767,7 @@ Response
 }
 Create invite
 post
- 
+
 https://api.openai.com/v1/organization/invites
 Create an invite for a user to the organization. The invite must be accepted by the user before they have access to the organization.
 
@@ -16836,7 +16836,7 @@ Response
 }
 Retrieve invite
 get
- 
+
 https://api.openai.com/v1/organization/invites/{invite_id}
 Retrieves an invite.
 
@@ -16867,7 +16867,7 @@ Response
 }
 Delete invite
 delete
- 
+
 https://api.openai.com/v1/organization/invites/{invite_id}
 Delete an invite. If the invite has already been accepted, it cannot be deleted.
 
@@ -16963,7 +16963,7 @@ Manage users and their role in an organization.
 
 List users
 get
- 
+
 https://api.openai.com/v1/organization/users
 Lists all of the users in the organization.
 
@@ -17013,7 +17013,7 @@ Response
 }
 Modify user
 post
- 
+
 https://api.openai.com/v1/organization/users/{user_id}
 Modifies a user's role in the organization.
 
@@ -17052,7 +17052,7 @@ Response
 }
 Retrieve user
 get
- 
+
 https://api.openai.com/v1/organization/users/{user_id}
 Retrieves a user by their identifier.
 
@@ -17081,7 +17081,7 @@ Response
 }
 Delete user
 delete
- 
+
 https://api.openai.com/v1/organization/users/{user_id}
 Deletes a user from the organization.
 
@@ -17152,7 +17152,7 @@ Manage the projects within an orgnanization includes creation, updating, and arc
 
 List projects
 get
- 
+
 https://api.openai.com/v1/organization/projects
 Returns a list of projects.
 
@@ -17203,7 +17203,7 @@ Response
 }
 Create project
 post
- 
+
 https://api.openai.com/v1/organization/projects
 Create a new project in the organization. Projects can be created and archived, but cannot be deleted.
 
@@ -17235,7 +17235,7 @@ Response
 }
 Retrieve project
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}
 Retrieves a project.
 
@@ -17264,7 +17264,7 @@ Response
 }
 Modify project
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}
 Modifies a project in the organization.
 
@@ -17294,7 +17294,7 @@ curl -X POST https://api.openai.com/v1/organization/projects/proj_abc \
   }'
 Archive project
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/archive
 Archives a project in the organization. Archived projects cannot be used or updated.
 
@@ -17368,7 +17368,7 @@ Manage users within a project, including adding, updating roles, and removing us
 
 List project users
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/users
 Returns a list of users in the project.
 
@@ -17419,7 +17419,7 @@ Response
 }
 Create project user
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/users
 Adds a user to the project. Users must already be members of the organization to be added to a project.
 
@@ -17464,7 +17464,7 @@ Response
 }
 Retrieve project user
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/users/{user_id}
 Retrieves a user in the project.
 
@@ -17499,7 +17499,7 @@ Response
 }
 Modify project user
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/users/{user_id}
 Modifies a user's role in the project.
 
@@ -17544,7 +17544,7 @@ Response
 }
 Delete project user
 delete
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/users/{user_id}
 Deletes a user from the project.
 
@@ -17621,7 +17621,7 @@ Manage service accounts within a project. A service account is a bot user that i
 
 List project service accounts
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/service_accounts
 Returns a list of service accounts in the project.
 
@@ -17671,7 +17671,7 @@ Response
 }
 Create project service account
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/service_accounts
 Creates a new service account in the project. This also returns an unredacted API key for the service account.
 
@@ -17716,7 +17716,7 @@ Response
 }
 Retrieve project service account
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/service_accounts/{service_account_id}
 Retrieves a service account in the project.
 
@@ -17750,7 +17750,7 @@ Response
 }
 Delete project service account
 delete
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/service_accounts/{service_account_id}
 Deletes a service account from the project.
 
@@ -17821,7 +17821,7 @@ Manage API keys for a given project. Supports listing and deleting keys for user
 
 List project API keys
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/api_keys
 Returns a list of API keys in the project.
 
@@ -17883,7 +17883,7 @@ Response
 }
 Retrieve project API key
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/api_keys/{key_id}
 Retrieves an API key in the project.
 
@@ -17929,7 +17929,7 @@ Response
 }
 Delete project API key
 delete
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/api_keys/{key_id}
 Deletes an API key from the project.
 
@@ -18022,7 +18022,7 @@ Manage rate limits per model for projects. Rate limits may be configured to be e
 
 List project rate limits
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/rate_limits
 Returns the rate limits per model for a project.
 
@@ -18079,7 +18079,7 @@ Response
 }
 Modify project rate limit
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/rate_limits/{rate_limit_id}
 Updates a project rate limit.
 
@@ -18214,7 +18214,7 @@ Logs of user actions and configuration changes within this organization. To log 
 
 List audit logs
 get
- 
+
 https://api.openai.com/v1/organization/audit_logs
 List user actions and configuration changes within this organization.
 
@@ -18594,7 +18594,7 @@ While the Usage API delivers granular usage data, it may not always reconcile pe
 
 Completions
 get
- 
+
 https://api.openai.com/v1/organization/usage/completions
 Get completions usage details for the organization.
 
@@ -18783,7 +18783,7 @@ OBJECT Completions usage object
 }
 Embeddings
 get
- 
+
 https://api.openai.com/v1/organization/usage/embeddings
 Get embeddings usage details for the organization.
 
@@ -18931,7 +18931,7 @@ OBJECT Embeddings usage object
 }
 Moderations
 get
- 
+
 https://api.openai.com/v1/organization/usage/moderations
 Get moderations usage details for the organization.
 
@@ -19079,7 +19079,7 @@ OBJECT Moderations usage object
 }
 Images
 get
- 
+
 https://api.openai.com/v1/organization/usage/images
 Get images usage details for the organization.
 
@@ -19253,7 +19253,7 @@ OBJECT Images usage object
 }
 Audio speeches
 get
- 
+
 https://api.openai.com/v1/organization/usage/audio_speeches
 Get audio speeches usage details for the organization.
 
@@ -19401,7 +19401,7 @@ OBJECT Audio speeches usage object
 }
 Audio transcriptions
 get
- 
+
 https://api.openai.com/v1/organization/usage/audio_transcriptions
 Get audio transcriptions usage details for the organization.
 
@@ -19549,7 +19549,7 @@ OBJECT Audio transcriptions usage object
 }
 Vector stores
 get
- 
+
 https://api.openai.com/v1/organization/usage/vector_stores
 Get vector stores usage details for the organization.
 
@@ -19651,7 +19651,7 @@ OBJECT Vector stores usage object
 }
 Code interpreter sessions
 get
- 
+
 https://api.openai.com/v1/organization/usage/code_interpreter_sessions
 Get code interpreter sessions usage details for the organization.
 
@@ -19753,7 +19753,7 @@ OBJECT Code interpreter sessions usage object
 }
 Costs
 get
- 
+
 https://api.openai.com/v1/organization/costs
 Get costs details for the organization.
 
@@ -19874,7 +19874,7 @@ Learn more about Mutual TLS.
 
 Upload certificate
 post
- 
+
 https://api.openai.com/v1/organization/certificates
 Upload a certificate to the organization. This does not automatically activate the certificate.
 
@@ -19917,7 +19917,7 @@ Response
 }
 Get certificate
 get
- 
+
 https://api.openai.com/v1/organization/certificates/{certificate_id}
 Get a certificate that has been uploaded to the organization.
 
@@ -19957,7 +19957,7 @@ Response
 }
 Modify certificate
 post
- 
+
 https://api.openai.com/v1/organization/certificates/{certificate_id}
 Modify a certificate. Note that only the name can be modified.
 
@@ -19991,7 +19991,7 @@ Response
 }
 Delete certificate
 delete
- 
+
 https://api.openai.com/v1/organization/certificates/{certificate_id}
 Delete a certificate from the organization.
 
@@ -20010,7 +20010,7 @@ Response
 }
 List organization certificates
 get
- 
+
 https://api.openai.com/v1/organization/certificates
 List uploaded certificates for this organization.
 
@@ -20063,7 +20063,7 @@ Response
 }
 List project certificates
 get
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/certificates
 List certificates for this project.
 
@@ -20123,7 +20123,7 @@ Response
 }
 Activate certificates for organization
 post
- 
+
 https://api.openai.com/v1/organization/certificates/activate
 Activate certificates at the organization level.
 
@@ -20174,7 +20174,7 @@ Response
 }
 Deactivate certificates for organization
 post
- 
+
 https://api.openai.com/v1/organization/certificates/deactivate
 Deactivate certificates at the organization level.
 
@@ -20225,7 +20225,7 @@ Response
 }
 Activate certificates for project
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/certificates/activate
 Activate certificates at the project level.
 
@@ -20283,7 +20283,7 @@ Response
 }
 Deactivate certificates for project
 post
- 
+
 https://api.openai.com/v1/organization/projects/{project_id}/certificates/deactivate
 Deactivate certificates at the project level. You can atomically and idempotently deactivate up to 10 certificates at a time.
 
@@ -20392,7 +20392,7 @@ Given a prompt, the model will return one or more predicted completions along wi
 Create completion
 Legacy
 post
- 
+
 https://api.openai.com/v1/completions
 Creates a completion for the provided prompt and parameters.
 

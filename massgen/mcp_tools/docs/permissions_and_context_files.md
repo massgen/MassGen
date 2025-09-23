@@ -58,7 +58,7 @@ agents:
       type: "claude_code"
       model: "claude-sonnet-4-20250514"
       cwd: "workspace1"                      # Agent-specific workspace
-      
+
   - id: "final_agent"
     backend:
       type: "openai"
@@ -106,7 +106,7 @@ agents:
       type: "openai"
       model: "gpt-5"
       cwd: "workspace1"                      # Isolated workspace for this agent
-      
+
   - id: "gpt5nano_2"
     backend:
       type: "openai"

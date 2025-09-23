@@ -12,7 +12,7 @@ The Gemini API provides access to Google's latest generative AI models with mult
 ## Models Available
 
 1. **Gemini 2.5 Pro**: Most powerful thinking model with features for complex reasoning
-2. **Gemini 2.5 Flash**: Newest multimodal model with next generation features  
+2. **Gemini 2.5 Flash**: Newest multimodal model with next generation features
 3. **Gemini 2.5 Flash-Lite**: Lighter version
 
 **Note**: Starting April 29, 2025, Gemini 1.5 Pro and Gemini 1.5 Flash models are not available in projects with no prior usage.
@@ -41,7 +41,7 @@ print(response.text)
 ### Synchronous Streaming
 ```python
 for chunk in client.models.generate_content_stream(
-    model='gemini-2.0-flash', 
+    model='gemini-2.0-flash',
     contents='Tell me a story in 300 words.'
 ):
     print(chunk.text)
@@ -51,7 +51,7 @@ for chunk in client.models.generate_content_stream(
 ### Asynchronous Streaming
 ```python
 async for chunk in await client.aio.models.generate_content_stream(
-    model='gemini-2.0-flash', 
+    model='gemini-2.0-flash',
     contents="Write a cute story about cats."
 ):
     if chunk.text:
@@ -87,7 +87,7 @@ async def async_demo():
 - Allows models to interact with external tools and APIs
 - Three primary use cases:
   1. Augment Knowledge
-  2. Extend Capabilities  
+  2. Extend Capabilities
   3. Take Actions
 
 ### Function Call Workflow
@@ -218,7 +218,7 @@ response = client.models.generate_content(
 
 **Response Format:**
 - `text`: Model's explanatory text
-- `executableCode`: Generated Python code  
+- `executableCode`: Generated Python code
 - `codeExecutionResult`: Execution output
 - Access via `response.candidates[0].content.parts`
 
@@ -243,7 +243,7 @@ grounding_tool = types.Tool(google_search=types.GoogleSearch())
 config = types.GenerateContentConfig(tools=[grounding_tool])
 
 response = client.models.generate_content(
-    model="gemini-2.5-flash", 
+    model="gemini-2.5-flash",
     contents="Latest AI developments in 2025",
     config=config
 )
@@ -345,11 +345,11 @@ client.models.generate_content(...)
 - `function_declarations` only (user-defined tools)
 
 **❌ NOT Supported:**
-- `code_execution` + `function_declarations` 
+- `code_execution` + `function_declarations`
 - `grounding` + `function_declarations`
 - All three tool types together
 
-### Live API (Preview/Experimental) 
+### Live API (Preview/Experimental)
 **✅ Multi-Tool Support:**
 - Can combine `google_search` + `code_execution` + `function_declarations`
 - Full flexibility but comes with major limitations

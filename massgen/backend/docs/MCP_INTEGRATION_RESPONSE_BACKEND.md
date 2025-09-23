@@ -15,7 +15,7 @@ The system supports three distinct transport types, each serving different use c
 - **Use Cases**: Local tools, file system operations, command-line utilities
 - **Examples**: File operations, local development tools, system utilities
 
-### 2. **streamable-http Transport** 
+### 2. **streamable-http Transport**
 - **Purpose**: Web-based MCP servers with streaming capabilities
 - **Implementation**: Uses `MultiMCPClient` from `massgen.mcp_tools`
 - **Communication**: HTTP with streaming support
@@ -184,12 +184,12 @@ mcp_servers:
     type: "stdio"
     command: "python"
     args: ["-m", "mcp_file_server"]
-  
+
   # streamable-http transport - web-based streaming services
   weather_service:
     type: "streamable-http"
     url: "https://api.weather.example.com/mcp"
-  
+
   # http transport - direct OpenAI MCP servers with authorization
   enterprise_tools:
     type: "http"
@@ -199,7 +199,7 @@ mcp_servers:
     allowed_tools:              # Optional: limit to specific tools
       - "create_report"
       - "get_data"
-  
+
   # HTTP MCP server with always requiring approval
   secure_payment_service:
     type: "http"
@@ -215,7 +215,7 @@ mcp_servers:
 - **"always"**: User must approve each tool execution before it runs
 - **Purpose**: Control user interaction level for sensitive operations
 
-#### authorization  
+#### authorization
 - **Format**: Supports environment variable substitution with `${VAR_NAME}` pattern
 - **Purpose**: Authenticate with HTTP MCP servers requiring API keys or OAuth tokens
 - **Examples**: `"Bearer ${API_TOKEN}"`, `"${OAUTH_ACCESS_TOKEN}"`
