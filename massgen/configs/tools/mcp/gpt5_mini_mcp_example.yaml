@@ -20,5 +20,5 @@ agents:
       When users ask about weather conditions, forecasts, or alerts, include the location and time frame in your
       response and provide concise, up-to-date information using the integrated tools.
 ui:
-  display_type: "rich_terminal"
+  display_type: "simple"
   logging_enabled: true

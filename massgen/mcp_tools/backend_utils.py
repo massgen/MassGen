@@ -19,6 +19,7 @@ import random
 import asyncio
 import json
 import time
+from enum import Enum
 
 # Import MCP exceptions
 try:
@@ -54,6 +55,13 @@ try:
 except ImportError:
     HookType = None
     FunctionHook = None
+
+# Define MCPState locally to avoid circular imports
+class MCPState(Enum):
+    NOT_INITIALIZED = "not_initialized"
+    READY = "ready"
+    CIRCUIT_BREAKER_BLOCKED = "circuit_breaker_blocked"
+    CONNECTION_FAILED = "connection_failed"
 
 
 class Function:
