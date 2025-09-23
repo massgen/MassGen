@@ -40,7 +40,7 @@ This document outlines the design for extending MassGen to support agents from m
 ├─────────────────────────────────────────────┤
 │        Framework Adapters (New)             │
 ├─────────┬───────────┬───────────┬───────────┤
-│   AG2   │ LangChain │ LangGraph │  Remote   │
+│   AG2   │ LangChain │ Black Box │  Remote   │
 └─────────┴───────────┴───────────┴───────────┘
 ```
 
