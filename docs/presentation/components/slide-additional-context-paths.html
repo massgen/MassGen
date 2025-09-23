@@ -1,0 +1,82 @@
+        <!-- Slide 13: Additional Context Paths -->
+        <div class="slide">
+            <div style="height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;">
+                <div style="text-align: center; width: 100%; max-width: 1000px;">
+                    <svg viewBox="0 0 700 520" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+                        <!-- Orchestrator -->
+                        <rect x="275" y="30" width="150" height="45" rx="8" fill="#9b59b6" stroke="#8e44ad" stroke-width="3"/>
+                        <text x="350" y="58" text-anchor="middle" font-family="Arial" font-size="17" font-weight="bold" fill="white">Orchestrator</text>
+
+                        <!-- Central Context Hub -->
+                        <rect x="150" y="90" width="400" height="140" rx="12" fill="#f8f9fa" stroke="#dee2e6" stroke-width="2"/>
+                        <text x="350" y="115" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#495057">Central Context Hub</text>
+
+                        <!-- Snapshot Storage -->
+                        <rect x="170" y="130" width="160" height="70" rx="8" fill="#e8f5e8" stroke="#27ae60" stroke-width="2"/>
+                        <text x="250" y="150" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#27ae60">Snapshot Storage</text>
+                        <rect x="185" y="165" width="50" height="25" rx="4" fill="#27ae60"/>
+                        <text x="210" y="181" text-anchor="middle" font-family="Arial" font-size="11" fill="white" font-weight="bold">agent1/</text>
+                        <rect x="245" y="165" width="50" height="25" rx="4" fill="#27ae60"/>
+                        <text x="270" y="181" text-anchor="middle" font-family="Arial" font-size="11" fill="white" font-weight="bold">agent2/</text>
+
+                        <!-- User Context Paths -->
+                        <rect x="370" y="130" width="160" height="70" rx="8" fill="#fff" stroke="#6c757d" stroke-width="2"/>
+                        <text x="450" y="150" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#495057">User Context Paths</text>
+                        <rect x="385" y="165" width="65" height="25" rx="4" fill="#e8f5e8" stroke="#27ae60" stroke-width="1"/>
+                        <text x="417" y="181" text-anchor="middle" font-family="Arial" font-size="9" font-weight="bold" fill="#155724">Read-Only</text>
+                        <rect x="460" y="165" width="55" height="25" rx="4" fill="#fce4ec" stroke="#e91e63" stroke-width="1"/>
+                        <text x="487" y="181" text-anchor="middle" font-family="Arial" font-size="9" font-weight="bold" fill="#ad1457">Write</text>
+
+                        <!-- Access control info -->
+                        <text x="350" y="220" text-anchor="middle" font-family="Arial" font-size="12" fill="#495057" font-weight="600"><tspan fill="#27ae60">Read: All agents</tspan> | <tspan fill="#e91e63">Write: Final agent only</tspan></text>
+
+                        <!-- Agents (preserved from slide 12) -->
+                        <rect x="75" y="260" width="120" height="90" rx="8" fill="#3498db" stroke="#2980b9" stroke-width="2"/>
+                        <text x="135" y="290" text-anchor="middle" font-family="Arial" font-size="16" fill="white" font-weight="bold">Agent 1</text>
+                        <rect x="95" y="305" width="80" height="28" rx="4" fill="#2980b9"/>
+                        <text x="135" y="323" text-anchor="middle" font-family="Arial" font-size="11" fill="white">Permanent</text>
+                        <rect x="95" y="333" width="80" height="17" rx="2" fill="#74b9ff"/>
+                        <text x="135" y="344" text-anchor="middle" font-family="Arial" font-size="11" fill="white">Temp Context</text>
+
+                        <rect x="505" y="260" width="120" height="90" rx="8" fill="#f39c12" stroke="#e67e22" stroke-width="2"/>
+                        <text x="565" y="290" text-anchor="middle" font-family="Arial" font-size="16" fill="white" font-weight="bold">Agent 2</text>
+                        <rect x="525" y="305" width="80" height="28" rx="4" fill="#e67e22"/>
+                        <text x="565" y="323" text-anchor="middle" font-family="Arial" font-size="11" fill="white">Permanent</text>
+                        <rect x="525" y="333" width="80" height="17" rx="2" fill="#fdcb6e"/>
+                        <text x="565" y="344" text-anchor="middle" font-family="Arial" font-size="11" fill="white">Temp Context</text>
+
+                        <!-- Flow arrows -->
+                        <!-- From Orchestrator to Context Hub -->
+                        <line x1="350" y1="75" x2="350" y2="90" stroke="#9b59b6" stroke-width="3" marker-end="url(#arrowhead-purple)"/>
+
+                        <!-- From Context Hub to Agents -->
+                        <path d="M 250 230 Q 200 245 135 260" stroke="#27ae60" stroke-width="3" fill="none" marker-end="url(#arrowhead-green)"/>
+                        <path d="M 450 230 Q 500 245 565 260" stroke="#27ae60" stroke-width="3" fill="none" marker-end="url(#arrowhead-green)"/>
+
+                        <!-- Final Agent Selection -->
+                        <rect x="225" y="370" width="250" height="55" rx="12" fill="#fff3e0" stroke="#ff9800" stroke-width="3"/>
+                        <text x="350" y="395" text-anchor="middle" font-family="Arial" font-size="15" font-weight="bold" fill="#e65100">Final Agent Selection</text>
+                        <text x="350" y="412" text-anchor="middle" font-family="Arial" font-size="12" fill="#f57c00" font-weight="600">Agent 2 → Write Access Granted ✅</text>
+
+                        <!-- Selection arrow from Agent 2 -->
+                        <path d="M 565 350 Q 520 360 475 370" stroke="#ff9800" stroke-width="4" fill="none" marker-end="url(#arrowhead-orange)"/>
+
+                        <!-- Key benefits -->
+                        <rect x="50" y="450" width="600" height="40" rx="8" fill="#d4edda" stroke="#27ae60" stroke-width="2"/>
+                        <text x="350" y="474" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#155724">✅ Custom Context Integration + ✅ Granular Access Control + ✅ Direct Repository Access</text>
+
+                        <defs>
+                            <marker id="arrowhead-green" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                <polygon points="0 0, 8 3, 0 6" fill="#27ae60"/>
+                            </marker>
+                            <marker id="arrowhead-orange" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                <polygon points="0 0, 8 3, 0 6" fill="#ff9800"/>
+                            </marker>
+                            <marker id="arrowhead-purple" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                                <polygon points="0 0, 8 3, 0 6" fill="#9b59b6"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+        </div>

@@ -12,9 +12,7 @@ from pathlib import Path
 
 def load_component(component_name):
     """Load a component file from the components directory."""
-    component_path = (
-        Path(__file__).parent / "components" / f"{component_name}.html"
-    )
+    component_path = Path(__file__).parent / "components" / f"{component_name}.html"
     if component_path.exists():
         return component_path.read_text()
     else:
@@ -66,6 +64,7 @@ def build_presentation(presentation_name):
             "Tech - Binary Decision Framework",
             "Context Sharing - Challenge",
             "Context Sharing - Solution",
+            "Additional Context Paths",
             "Context Sharing - In Action",
             "Benchmarking - Preliminary Results",
             "Case Study - Success Through Collaboration",
@@ -200,6 +199,7 @@ def build_presentation(presentation_name):
             "slide-tech-deep-dive-binary-decision-framework-solution",
             "slide-context-sharing-challenge",
             "slide-context-sharing-solution",
+            "slide-additional-context-paths",
             "slide-context-sharing-in-action",
             "slide-benchmarking-results",
             "slide-case-study-success-through-collaboration",
@@ -247,11 +247,7 @@ def build_presentation(presentation_name):
         return
 
     # Start building the HTML with presentation-specific head
-    head_component = (
-        f"head-{presentation_name}"
-        if presentation_name in ["columbia", "aibuilders"]
-        else "head"
-    )
+    head_component = f"head-{presentation_name}" if presentation_name in ["columbia", "aibuilders"] else "head"
     html_content = load_component(head_component)
     html_content += '\n<body>\n    <div class="slideshow-container">\n'
 
