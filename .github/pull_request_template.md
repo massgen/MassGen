@@ -47,7 +47,11 @@ Brief description of the changes in this PR
 ## Pre-commit status
 ```
 # Paste the output of running pre-commit on your changed files:
-# git diff --name-only HEAD~1 | xargs pre-commit run --files
+# uv run pre-commit install
+# git diff --name-only HEAD~1 | xargs uv run pre-commit run --files
+# git add --all # if any fixes were applied
+# git commit -m "chore: apply pre-commit fixes"
+# git push origin <branch-name>
 ```
 
 ## Additional context
