@@ -80,7 +80,7 @@ repos:
           --disable=W0632,
           --disable=W0123,
           --disable=C3001,
-          massgen
+          massgen/backend
         ]
 
   # - repo: https://github.com/pre-commit/mirrors-mypy
