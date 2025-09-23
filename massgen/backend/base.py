@@ -8,7 +8,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Any, AsyncGenerator, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
-from .utils.token_management import TokenUsage, TokenCostCalculator
+from ..token_manager import TokenUsage, TokenCostCalculator
+from ..formatter import MessageFormatter, ToolFormatter, MCPToolFormatter
 
 
 class FilesystemSupport(Enum):
@@ -52,9 +53,14 @@ class LLMBackend(ABC):
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         self.api_key = api_key
         self.config = kwargs
+        
+        # Initialize utility classes
+        self.message_formatter = MessageFormatter()
+        self.tool_formatter = ToolFormatter()
+        self.mcp_tool_formatter = MCPToolFormatter()
         self.token_usage = TokenUsage()
         self.token_calculator = TokenCostCalculator()
-
+   
         # Filesystem manager integration
         self.filesystem_manager = None
         cwd = kwargs.get("cwd")

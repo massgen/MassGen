@@ -120,7 +120,7 @@ class ClaudeBackend(LLMBackend):
             )
 
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
-        self.functions: Dict[str, Function] = {}
+        self._mcp_functions: Dict[str, Function] = {}
 
         # Thread safety for counters
         self._stats_lock = asyncio.Lock()
@@ -132,134 +132,7 @@ class ClaudeBackend(LLMBackend):
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
 
-    def convert_tools_to_claude_format(
-        self, tools: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """Convert tools to Claude's expected format.
 
-        Input formats supported:
-        - Response API format: {"type": "function", "name": ..., "description": ..., "parameters": ...}
-        - Chat Completions format: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
-
-        Claude format: {"type": "function", "name": ..., "description": ..., "input_schema": ...}
-        """
-        if not tools:
-            return tools
-
-        converted_tools = []
-        for tool in tools:
-            if tool.get("type") == "function":
-                if "function" in tool:
-                    # Chat Completions format -> Claude custom tool
-                    func = tool["function"]
-                    converted_tools.append(
-                        {
-                            "type": "custom",
-                            "name": func["name"],
-                            "description": func["description"],
-                            "input_schema": func.get("parameters", {}),
-                        }
-                    )
-                elif "name" in tool and "description" in tool:
-                    # Response API format -> Claude custom tool
-                    converted_tools.append(
-                        {
-                            "type": "custom",
-                            "name": tool["name"],
-                            "description": tool["description"],
-                            "input_schema": tool.get("parameters", {}),
-                        }
-                    )
-                else:
-                    # Unknown format - keep as-is
-                    converted_tools.append(tool)
-            else:
-                # Non-function tool (builtin tools) - keep as-is
-                converted_tools.append(tool)
-
-        return converted_tools
-
-    def convert_messages_to_claude_format(
-        self, messages: List[Dict[str, Any]]
-    ) -> tuple:
-        """Convert messages to Claude's expected format.
-
-        Handle different tool message formats and extract system message:
-        - Chat Completions tool message: {"role": "tool", "tool_call_id": "...", "content": "..."}
-        - Response API tool message: {"type": "function_call_output", "call_id": "...", "output": "..."}
-        - System messages: Extract and return separately for top-level system parameter
-
-        Returns:
-            tuple: (converted_messages, system_message)
-        """
-        converted_messages = []
-        system_message = ""
-
-        for message in messages:
-            if message.get("role") == "system":
-                # Extract system message for top-level parameter
-                system_message = message.get("content", "")
-            elif message.get("role") == "tool":
-                # Chat Completions tool message -> Claude tool result
-                converted_messages.append(
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": message.get("tool_call_id"),
-                                "content": message.get("content", ""),
-                            }
-                        ],
-                    }
-                )
-            elif message.get("type") == "function_call_output":
-                # Response API tool message -> Claude tool result
-                converted_messages.append(
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": message.get("call_id"),
-                                "content": message.get("output", ""),
-                            }
-                        ],
-                    }
-                )
-            elif message.get("role") == "assistant" and "tool_calls" in message:
-                # Assistant message with tool calls - convert to Claude format
-                content = []
-
-                # Add text content if present
-                if message.get("content"):
-                    content.append({"type": "text", "text": message["content"]})
-
-                # Convert tool calls to Claude tool use format
-                for tool_call in message["tool_calls"]:
-                    tool_name = self.extract_tool_name(tool_call)
-                    tool_args = self.extract_tool_arguments(tool_call)
-                    tool_id = self.extract_tool_call_id(tool_call)
-
-                    content.append(
-                        {
-                            "type": "tool_use",
-                            "id": tool_id,
-                            "name": tool_name,
-                            "input": tool_args,
-                        }
-                    )
-
-                converted_messages.append({"role": "assistant", "content": content})
-            elif message.get("role") in ["user", "assistant"]:
-                # Keep user and assistant messages, skip system
-                converted_message = dict(message)
-                if isinstance(converted_message.get("content"), str):
-                    # Claude expects content to be text for simple messages
-                    pass
-                converted_messages.append(converted_message)
-
-        return converted_messages, system_message
 
     async def _handle_mcp_error_and_fallback(
         self,
@@ -292,8 +165,8 @@ class ClaudeBackend(LLMBackend):
         fallback_params = dict(api_params)
 
         # Remove any MCP tools from the tools list
-        if "tools" in fallback_params and self.functions:
-            mcp_names = set(self.functions.keys())
+        if "tools" in fallback_params and self._mcp_functions:
+            mcp_names = set(self._mcp_functions.keys())
             non_mcp_tools = []
             for tool in fallback_params["tools"]:
                 name = tool.get("name")
@@ -387,7 +260,7 @@ class ClaudeBackend(LLMBackend):
         result = await MCPExecutionManager.execute_function_with_retry(  # type: ignore[union-attr]
             function_name=function_name,
             args=args,
-            functions=self.functions,
+            functions=self._mcp_functions,
             max_retries=max_retries,
             stats_callback=stats_callback,
             circuit_breaker_callback=circuit_breaker_callback,
@@ -469,7 +342,7 @@ class ClaudeBackend(LLMBackend):
                 return
 
             # Convert tools to functions
-            self.functions.update(
+            self._mcp_functions.update(
                 MCPResourceManager.convert_tools_to_functions(  # type: ignore[union-attr]
                     self._mcp_client,
                     backend_name=self.backend_name,
@@ -479,7 +352,7 @@ class ClaudeBackend(LLMBackend):
             )
             self._mcp_initialized = True
             logger.info(
-                f"Successfully initialized MCP sessions with {len(self.functions)} tools converted to functions"
+                f"Successfully initialized MCP sessions with {len(self._mcp_functions)} tools converted to functions"
             )
 
             # Record success for circuit breaker
@@ -540,22 +413,7 @@ class ClaudeBackend(LLMBackend):
             logger.warning(f"Failed to setup MCP sessions: {e}")
             self._mcp_client = None
             self._mcp_initialized = False
-            self.functions = {}
-
-    def _convert_mcp_tools_to_claude_format(self) -> List[Dict[str, Any]]:
-        """Convert MCP tools to Claude's custom tool format."""
-        if not self.functions:
-            return []
-        converted: List[Dict[str, Any]] = []
-        for function in self.functions.values():
-            try:
-
-                converted.append(function.to_claude_format())
-            except Exception as e:
-                logger.warning(f"Failed to convert MCP function to Claude format: {e}")
-                continue
-        logger.debug(f"Converted {len(converted)} MCP tools to Claude format")
-        return converted
+            self._mcp_functions = {}
 
     async def _build_claude_api_params(
         self,
@@ -565,7 +423,7 @@ class ClaudeBackend(LLMBackend):
     ) -> Dict[str, Any]:
         """Build Anthropic Messages API parameters with MCP integration."""
         # Convert messages to Claude format and extract system message
-        converted_messages, system_message = self.convert_messages_to_claude_format(
+        converted_messages, system_message = self.message_formatter.to_claude_format(
             messages
         )
 
@@ -584,12 +442,12 @@ class ClaudeBackend(LLMBackend):
 
         # User-defined tools
         if tools:
-            converted_tools = self.convert_tools_to_claude_format(tools)
+            converted_tools = self.tool_formatter.to_claude_format(tools)
             combined_tools.extend(converted_tools)
 
         # MCP tools
-        if self.functions:
-            mcp_tools = self._convert_mcp_tools_to_claude_format()
+        if self._mcp_functions:
+            mcp_tools = self.mcp_tool_formatter.to_chat_completions_format(self._mcp_functions)
             combined_tools.extend(mcp_tools)
 
         # Build API parameters
@@ -786,7 +644,7 @@ class ClaudeBackend(LLMBackend):
                             except json.JSONDecodeError:
                                 parsed_input = {"raw_input": tool_input}
 
-                            if tool_name in self.functions:
+                            if tool_name in self._mcp_functions:
                                 mcp_tool_calls.append(
                                     {
                                         "id": tool_use["id"],
@@ -1028,7 +886,7 @@ class ClaudeBackend(LLMBackend):
                 client = anthropic.AsyncAnthropic(api_key=self.api_key)
                 try:
                     # Determine if MCP processing is needed
-                    use_mcp = bool(self.functions)
+                    use_mcp = bool(self._mcp_functions)
 
                     # If MCP is configured but unavailable, inform the user and fall back
                     if self.mcp_servers and not use_mcp:
@@ -1058,7 +916,7 @@ class ClaudeBackend(LLMBackend):
                         yield StreamChunk(
                             type="mcp_status",
                             status="mcp_tools_initiated",
-                            content=f"🔧 [MCP] {len(self.functions)} tools available",
+                            content=f"🔧 [MCP] {len(self._mcp_functions)} tools available",
                             source="mcp_session",
                         )
                         async for chunk in self._stream_mcp_recursive(
@@ -1508,7 +1366,7 @@ class ClaudeBackend(LLMBackend):
             )
             self._mcp_client = None
             self._mcp_initialized = False
-            self.functions.clear()
+            self._mcp_functions.clear()
 
     async def __aenter__(self) -> "ClaudeBackend":
         """Async context manager entry."""

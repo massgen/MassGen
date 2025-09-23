@@ -1,62 +1,30 @@
 """
-Message format converters for different LLM APIs.
-Handles conversion between OpenAI, Claude, Gemini, and Response API formats.
+Message formatter for different LLM APIs.
+Handles conversion between OpenAI, Claude, and Response API formats.
 """
 
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any
 
 
-class MessageConverter:
+class MessageFormatter:
     """
     Convert messages between different API formats.
     Supports bidirectional conversion between all major formats.
     """
     
     @staticmethod
-    def _serialize_tool_arguments(arguments) -> str:
-        """Safely serialize tool call arguments to JSON string.
-
-        Args:
-            arguments: Tool arguments (can be string, dict, or other types)
-
-        Returns:
-            JSON string representation of arguments
-        """
-        import json
-
-        if isinstance(arguments, str):
-            # If already a string, validate it's valid JSON
-            try:
-                json.loads(arguments)  # Validate JSON
-                return arguments
-            except (json.JSONDecodeError, ValueError):
-                # If not valid JSON, treat as plain string and wrap in quotes
-                return json.dumps(arguments)
-        elif arguments is None:
-            return "{}"
-        else:
-            # Convert to JSON string
-            try:
-                return json.dumps(arguments)
-            except (TypeError, ValueError) as e:
-                # Logger not imported at module level, use print for warning
-                print(f"Warning: Failed to serialize tool arguments: {e}, arguments: {arguments}")
-                return "{}"
-    
-    @staticmethod
-    def to_openai_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def to_chat_completions_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Convert messages for Chat Completions API compatibility.
 
         Chat Completions API expects tool call arguments as JSON strings in conversation history,
         but they may be passed as objects from other parts of the system.
         """
-        import json
 
-        converted = []
+        converted_messages = []
 
         for message in messages:
             # Create a copy to avoid modifying the original
@@ -80,16 +48,16 @@ class MessageConverter:
                             # Handle other non-string types
                             converted_function[
                                 "arguments"
-                            ] = MessageConverter._serialize_tool_arguments(arguments)
+                            ] = MessageFormatter._serialize_tool_arguments(arguments)
                         # If it's already a string, keep it as-is
 
                         converted_call["function"] = converted_function
                     converted_tool_calls.append(converted_call)
                 converted_msg["tool_calls"] = converted_tool_calls
 
-            converted.append(converted_msg)
+            converted_messages.append(converted_msg)
 
-        return converted
+        return converted_messages
     
     @staticmethod
     def to_claude_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -148,9 +116,9 @@ class MessageConverter:
 
                 # Convert tool calls to Claude tool use format
                 for tool_call in message["tool_calls"]:
-                    tool_name = self.extract_tool_name(tool_call)
-                    tool_args = self.extract_tool_arguments(tool_call)
-                    tool_id = self.extract_tool_call_id(tool_call)
+                    tool_name = MessageFormatter.extract_tool_name(tool_call)
+                    tool_args = MessageFormatter.extract_tool_arguments(tool_call)
+                    tool_id = MessageFormatter.extract_tool_call_id(tool_call)
 
                     content.append(
                         {
@@ -171,71 +139,6 @@ class MessageConverter:
                 converted_messages.append(converted_message)
 
         return converted_messages, system_message
-    
-    @staticmethod
-    def to_gemini_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Convert messages to Gemini's format.
-        
-        Args:
-            messages: Messages in any supported format
-            
-        Returns:
-            Messages in Gemini format with parts
-        """
-        converted = []
-        
-        for msg in messages:
-            role = msg.get("role", "")
-            
-            # Map roles to Gemini format
-            if role == "assistant":
-                role = "model"
-            elif role == "system":
-                role = "user"  # Gemini handles system as user with special marker
-            elif role == "tool":
-                role = "function"
-            
-            gemini_msg = {"role": role, "parts": []}
-            
-            # Handle content
-            content = msg.get("content", "")
-            if content:
-                if isinstance(content, str):
-                    if role == "function":
-                        # Function response format
-                        gemini_msg["parts"].append({
-                            "functionResponse": {
-                                "name": msg.get("name", "unknown"),
-                                "response": {"content": content}
-                            }
-                        })
-                    else:
-                        gemini_msg["parts"].append({"text": content})
-                elif isinstance(content, list):
-                    # Convert content blocks
-                    for block in content:
-                        if isinstance(block, dict):
-                            if block.get("type") == "text":
-                                gemini_msg["parts"].append({"text": block.get("text", "")})
-            
-            # Handle tool calls
-            if "tool_calls" in msg:
-                for tool_call in msg["tool_calls"]:
-                    func = tool_call.get("function", {})
-                    gemini_msg["parts"].append({
-                        "functionCall": {
-                            "name": func.get("name", ""),
-                            "args": json.loads(func.get("arguments", "{}"))
-                            if isinstance(func.get("arguments"), str)
-                            else func.get("arguments", {})
-                        }
-                    })
-            
-            if gemini_msg["parts"]:  # Only add if there are parts
-                converted.append(gemini_msg)
-        
-        return converted
     
     @staticmethod
     def to_response_api_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -293,8 +196,8 @@ class MessageConverter:
         
         Args:
             messages: Messages in source format
-            source_format: One of "openai", "claude", "gemini", "response_api"
-            target_format: One of "openai", "claude", "gemini", "response_api"
+            source_format: One of "openai", "claude", "response_api"
+            target_format: One of "openai", "claude", "response_api"
             
         Returns:
             Messages in target format
@@ -306,7 +209,7 @@ class MessageConverter:
         if source_format != "openai":
             if source_format == "claude":
                 # Claude to OpenAI conversion needs special handling
-                openai_messages = MessageConverter.to_openai_format(messages)
+                openai_messages = MessageFormatter.to_openai_format(messages)
             elif source_format == "gemini":
                 # Convert Gemini to OpenAI
                 openai_messages = []
@@ -330,7 +233,7 @@ class MessageConverter:
                     
                     openai_messages.append(openai_msg)
             else:
-                openai_messages = MessageConverter.to_openai_format(messages)
+                openai_messages = MessageFormatter.to_chat_completions_format(messages)
         else:
             openai_messages = messages
         
@@ -338,10 +241,121 @@ class MessageConverter:
         if target_format == "openai":
             return openai_messages
         elif target_format == "claude":
-            return MessageConverter.to_claude_format(openai_messages)
-        elif target_format == "gemini":
-            return MessageConverter.to_gemini_format(openai_messages)
+            return MessageFormatter.to_claude_format(openai_messages)
         elif target_format == "response_api":
-            return MessageConverter.to_response_api_format(openai_messages)
+            return MessageFormatter.to_response_api_format(openai_messages)
         else:
             raise ValueError(f"Unknown target format: {target_format}")
+        
+    @staticmethod
+    def extract_tool_name(tool_call: Dict[str, Any]) -> str:
+        """
+        Extract tool name from a tool call (handles multiple formats).
+        
+        Supports:
+        - Chat Completions format: {"function": {"name": "...", ...}}
+        - Response API format: {"name": "..."}
+        - Claude native format: {"name": "..."}
+
+        Args:
+            tool_call: Tool call data structure from any backend
+
+        Returns:
+            Tool name string
+        """
+        # Chat Completions format
+        if "function" in tool_call:
+            return tool_call.get("function", {}).get("name", "unknown")
+        # Response API / Claude native format
+        elif "name" in tool_call:
+            return tool_call.get("name", "unknown")
+        # Fallback
+        return "unknown"
+
+    @staticmethod
+    def extract_tool_arguments(tool_call: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Extract tool arguments from a tool call (handles multiple formats).
+        
+        Supports:
+        - Chat Completions format: {"function": {"arguments": ...}}
+        - Response API format: {"arguments": ...}
+        - Claude native format: {"input": ...}
+
+        Args:
+            tool_call: Tool call data structure from any backend
+
+        Returns:
+            Tool arguments dictionary (parsed from JSON string if needed)
+        """
+        import json
+        
+        # Chat Completions format
+        if "function" in tool_call:
+            args = tool_call.get("function", {}).get("arguments", {})
+        # Claude native format
+        elif "input" in tool_call:
+            args = tool_call.get("input", {})
+        # Response API format
+        elif "arguments" in tool_call:
+            args = tool_call.get("arguments", {})
+        else:
+            args = {}
+
+        # Parse JSON string if needed
+        if isinstance(args, str):
+            try:
+                return json.loads(args) if args.strip() else {}
+            except (json.JSONDecodeError, ValueError):
+                return {}
+        return args if isinstance(args, dict) else {}
+
+    @staticmethod
+    def extract_tool_call_id(tool_call: Dict[str, Any]) -> str:
+        """
+        Extract tool call ID from a tool call (handles multiple formats).
+        
+        Supports:
+        - Chat Completions format: {"id": "..."}
+        - Response API format: {"call_id": "..."}
+        - Claude native format: {"id": "..."}
+
+        Args:
+            tool_call: Tool call data structure from any backend
+
+        Returns:
+            Tool call ID string
+        """
+        # Try multiple possible ID fields
+        return tool_call.get("id") or tool_call.get("call_id") or ""
+    
+    @staticmethod
+    def _serialize_tool_arguments(arguments) -> str:
+        """Safely serialize tool call arguments to JSON string.
+
+        Args:
+            arguments: Tool arguments (can be string, dict, or other types)
+
+        Returns:
+            JSON string representation of arguments
+        """
+        import json
+
+        if isinstance(arguments, str):
+            # If already a string, validate it's valid JSON
+            try:
+                json.loads(arguments)  # Validate JSON
+                return arguments
+            except (json.JSONDecodeError, ValueError):
+                # If not valid JSON, treat as plain string and wrap in quotes
+                return json.dumps(arguments)
+        elif arguments is None:
+            return "{}"
+        else:
+            # Convert to JSON string
+            try:
+                return json.dumps(arguments)
+            except (TypeError, ValueError) as e:
+                # Logger not imported at module level, use print for warning
+                print(f"Warning: Failed to serialize tool arguments: {e}, arguments: {arguments}")
+                return "{}"

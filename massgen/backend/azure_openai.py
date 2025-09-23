@@ -452,23 +452,6 @@ class AzureOpenAIBackend(LLMBackend):
         except Exception as e:
             return StreamChunk(type="error", error=f"Error processing chunk: {str(e)}")
 
-    # --- Tool call helpers (Chat Completions compatible) ---
-    def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool name from Chat Completions-style tool call."""
-        return tool_call.get("function", {}).get("name", "unknown")
-
-    def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract tool arguments and parse JSON string if necessary."""
-        arguments = tool_call.get("function", {}).get("arguments", {})
-        if isinstance(arguments, str):
-            try:
-                import json
-
-                return json.loads(arguments) if arguments.strip() else {}
-            except json.JSONDecodeError:
-                return {}
-        return arguments
-
     def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
         """Extract tool call id from Chat Completions-style tool call."""
         return tool_call.get("id", "")
