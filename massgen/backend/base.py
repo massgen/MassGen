@@ -265,42 +265,82 @@ class LLMBackend(ABC):
 
     def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
         """
-        Extract tool name from a tool call in this backend's format.
+        Extract tool name from a tool call (handles multiple formats).
+        
+        Supports:
+        - Chat Completions format: {"function": {"name": "...", ...}}
+        - Response API format: {"name": "..."}
+        - Claude native format: {"name": "..."}
 
         Args:
-            tool_call: Tool call data structure from this backend
+            tool_call: Tool call data structure from any backend
 
         Returns:
             Tool name string
         """
-        # Default implementation assumes Chat Completions format
-        return tool_call.get("function", {}).get("name", "unknown")
+        # Chat Completions format
+        if "function" in tool_call:
+            return tool_call.get("function", {}).get("name", "unknown")
+        # Response API / Claude native format
+        elif "name" in tool_call:
+            return tool_call.get("name", "unknown")
+        # Fallback
+        return "unknown"
 
     def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Extract tool arguments from a tool call in this backend's format.
+        Extract tool arguments from a tool call (handles multiple formats).
+        
+        Supports:
+        - Chat Completions format: {"function": {"arguments": ...}}
+        - Response API format: {"arguments": ...}
+        - Claude native format: {"input": ...}
 
         Args:
-            tool_call: Tool call data structure from this backend
+            tool_call: Tool call data structure from any backend
 
         Returns:
-            Tool arguments dictionary
+            Tool arguments dictionary (parsed from JSON string if needed)
         """
-        # Default implementation assumes Chat Completions format
-        return tool_call.get("function", {}).get("arguments", {})
+        import json
+        
+        # Chat Completions format
+        if "function" in tool_call:
+            args = tool_call.get("function", {}).get("arguments", {})
+        # Claude native format
+        elif "input" in tool_call:
+            args = tool_call.get("input", {})
+        # Response API format
+        elif "arguments" in tool_call:
+            args = tool_call.get("arguments", {})
+        else:
+            args = {}
+
+        # Parse JSON string if needed
+        if isinstance(args, str):
+            try:
+                return json.loads(args) if args.strip() else {}
+            except (json.JSONDecodeError, ValueError):
+                return {}
+        return args if isinstance(args, dict) else {}
 
     def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
         """
-        Extract tool call ID from a tool call in this backend's format.
+        Extract tool call ID from a tool call (handles multiple formats).
+        
+        Supports:
+        - Chat Completions format: {"id": "..."}
+        - Response API format: {"call_id": "..."}
+        - Claude native format: {"id": "..."}
 
         Args:
-            tool_call: Tool call data structure from this backend
+            tool_call: Tool call data structure from any backend
 
         Returns:
             Tool call ID string
         """
-        # Default implementation assumes Chat Completions format
-        return tool_call.get("id", "")
+        # Try multiple possible ID fields
+        return tool_call.get("id") or tool_call.get("call_id") or ""
 
     def create_tool_result_message(
         self, tool_call: Dict[str, Any], result_content: str
