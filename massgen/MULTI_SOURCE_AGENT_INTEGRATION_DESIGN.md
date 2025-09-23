@@ -366,16 +366,20 @@ agents:
 ```yaml
 # ag2_groupchat.yaml
 agents:
-  - id: "research_team"
+  - id: "ag2_research_team"
     backend:
       type: "ag2"
+      
       # GroupChat configuration - entire group acts as one MassGen agent
       group_config:
+        # Define agents in the group
         agents:
           - type: "AssistantAgent"
             config:
               name: "researcher"
-              system_message: "You are a research specialist."
+              system_message: |
+                You are a research specialist.
+                Find and analyze information from various sources.
               llm_config:
                 model: "gpt-4"
                 temperature: 0.7
@@ -383,7 +387,9 @@ agents:
           - type: "AssistantAgent"
             config:
               name: "analyst"
-              system_message: "You are a data analyst."
+              system_message: |
+                You are a data analyst.
+                Analyze research findings and identify patterns.
               llm_config:
                 model: "gpt-4"
                 temperature: 0.5
@@ -391,21 +397,26 @@ agents:
           - type: "AssistantAgent"
             config:
               name: "writer"
-              system_message: "You are a technical writer."
+              system_message: |
+                You are a technical writer.
+                Synthesize findings into clear, concise reports.
               llm_config:
                 model: "gpt-4"
                 temperature: 0.8
         
+        # GroupChat settings
         chat_config:
           max_round: 10
           speaker_selection_method: "auto"
           allow_repeat_speaker: false
         
+        # GroupChatManager settings
         manager_config:
-          name: "team_manager"
+          name: "research_team_manager"
           system_message: "Coordinate the research team effectively."
           llm_config:
             model: "gpt-4"
+            temperature: 0.5
 ```
 
 ### Mixed Framework Team
@@ -2156,7 +2167,76 @@ Run commands with specific prompts:
 uv run python -m massgen.cli --config ag2_groupchat.yaml "Research the latest developments in quantum computing and analyze their potential impact on cryptography"
 ```
 
-### Example 2: Parallel Data Science Agents
+### Example 2: Mixed Team Configuration
+
+```yaml
+# Mixed team: AG2 GroupChat + Native MassGen agents
+agents:
+  # AG2 GroupChat for research
+  - id: "ag2_research_group"
+    backend:
+      type: "ag2"
+      
+      group_config:
+        agents:
+          - type: "AssistantAgent"
+            config:
+              name: "web_researcher"
+              system_message: "Search and gather information from the web."
+              llm_config:
+                model: "gpt-4"
+          
+          - type: "AssistantAgent"  
+            config:
+              name: "fact_checker"
+              system_message: "Verify facts and check sources."
+              llm_config:
+                model: "gpt-4"
+        
+        chat_config:
+          max_round: 5
+          speaker_selection_method: "round_robin"
+  
+  # Native MassGen agent for code
+  - id: "native_coder"
+    backend:
+      type: "openai"
+      model: "gpt-4"
+      enable_code_interpreter: true
+    system_message: "You write and debug code based on research findings."
+  
+  # LangChain agent for documentation
+  - id: "langchain_documenter"
+    backend:
+      type: "langchain"
+      
+      chain_type: "agent"
+      agent_config:
+        agent_type: "openai-functions"
+        model_name: "gpt-4"
+        temperature: 0.7
+        tools: ["serpapi", "wikipedia"]
+      
+      memory_config:
+        type: "ConversationSummaryMemory"
+        llm_model_name: "gpt-3.5-turbo"
+
+# Orchestrator configuration
+orchestrator:
+  timeout_seconds: 1800
+  
+  # Enable workspace sharing between agents
+  context_sharing:
+    enabled: true
+    snapshot_storage: "./agent_snapshots"
+    
+  # Orchestration strategy
+  strategy:
+    type: "voting"
+    min_votes: 2
+```
+
+### Example 3: Parallel Data Science Agents
 
 ```yaml
 # data_science_team.yaml
