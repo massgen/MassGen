@@ -6,7 +6,6 @@ through command-line interfaces (like Claude Code CLI, Gemini CLI, etc.).
 """
 
 import asyncio
-import json
 import subprocess
 import tempfile
 from abc import abstractmethod
@@ -222,17 +221,3 @@ class CLIBackend(LLMBackend):
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         return self.__class__.__name__
-
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text (rough approximation)."""
-        # Rough estimation: ~4 characters per token for most models
-        return len(text) // 4
-
-    def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str
-    ) -> float:
-        """Calculate cost for token usage."""
-        costs = self.get_cost_per_token()
-        return (input_tokens * costs.get("input", 0.0)) + (
-            output_tokens * costs.get("output", 0.0)
-        )

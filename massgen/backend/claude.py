@@ -1601,52 +1601,6 @@ class ClaudeBackend(LLMBackend):
                     return item.get("content", "")
         return ""
 
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text (Claude uses ~4 chars per token)."""
-        return len(text) // 4
-
-    def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str
-    ) -> float:
-        """Calculate cost for Claude token usage (2025 pricing)."""
-        model_lower = model.lower()
-
-        if "claude-4" in model_lower:
-            if "opus" in model_lower:
-                # Claude 4 Opus
-                input_cost = (input_tokens / 1_000_000) * 15.0
-                output_cost = (output_tokens / 1_000_000) * 75.0
-            else:
-                # Claude 4 Sonnet
-                input_cost = (input_tokens / 1_000_000) * 3.0
-                output_cost = (output_tokens / 1_000_000) * 15.0
-        elif "claude-3.7" in model_lower or "claude-3-7" in model_lower:
-            # Claude 3.7 Sonnet
-            input_cost = (input_tokens / 1_000_000) * 3.0
-            output_cost = (output_tokens / 1_000_000) * 15.0
-        elif "claude-3.5" in model_lower or "claude-3-5" in model_lower:
-            if "haiku" in model_lower:
-                # Claude 3.5 Haiku
-                input_cost = (input_tokens / 1_000_000) * 1.0
-                output_cost = (output_tokens / 1_000_000) * 5.0
-            else:
-                # Claude 3.5 Sonnet (legacy)
-                input_cost = (input_tokens / 1_000_000) * 3.0
-                output_cost = (output_tokens / 1_000_000) * 15.0
-        else:
-            # Default fallback (assume Claude 4 Sonnet pricing)
-            input_cost = (input_tokens / 1_000_000) * 3.0
-            output_cost = (output_tokens / 1_000_000) * 15.0
-
-        # Add tool usage costs
-        tool_costs = 0.0
-        if self.search_count > 0:
-            tool_costs += (self.search_count / 1000) * 10.0  # $10 per 1,000 searches
-
-        if self.code_session_hours > 0:
-            tool_costs += self.code_session_hours * 0.05  # $0.05 per session-hour
-
-        return input_cost + output_cost + tool_costs
 
     def reset_tool_usage(self):
         """Reset tool usage tracking."""

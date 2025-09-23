@@ -36,9 +36,6 @@ class LMStudioBackend(ChatCompletionsBackend):
         )  # Track models this instance has attempted to load
         self.start_lmstudio_server(**kwargs)
 
-    # Local server usage is typically free; report zero cost
-    def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:  # type: ignore[override]
-        return 0.0
 
     async def stream_with_tools(
         self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
@@ -62,9 +59,6 @@ class LMStudioBackend(ChatCompletionsBackend):
         # LM Studio (local OpenAI-compatible) does not provide provider-builtins
         return []
 
-    def estimate_tokens(self, text: str) -> int:  # type: ignore[override]
-        # Simple heuristic consistent with ChatCompletionsBackend
-        return int(len(text.split()) * 1.3)
 
     def start_lmstudio_server(self, **kwargs):
         """Start LM Studio server after checking CLI and model availability."""

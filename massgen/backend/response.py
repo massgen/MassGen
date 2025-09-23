@@ -732,20 +732,6 @@ class ResponseBackend(LLMBackend):
                 if not key.startswith("_") and not callable(getattr(obj, key, None))
             }
 
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text using TokenCostCalculator."""
-        return self.token_calculator.estimate_tokens(text)
-
-    def calculate_cost(
-        self,
-        input_tokens: int,
-        output_tokens: int,
-        model: str,
-    ) -> float:
-        """Calculate cost for OpenAI token usage using TokenCostCalculator."""
-        return self.token_calculator.calculate_cost(
-            input_tokens, output_tokens, "OpenAI", model
-        )
 
     async def cleanup_mcp(self) -> None:
         """Cleanup MCP connections."""

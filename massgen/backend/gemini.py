@@ -2305,43 +2305,6 @@ Make your decision and include the JSON at the very end of your response."""
         """Get list of builtin tools supported by Gemini."""
         return ["google_search_retrieval", "code_execution"]
 
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text (Gemini uses ~4 chars per token)."""
-        return len(text) // 4
-
-    def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str
-    ) -> float:
-        """Calculate cost for Gemini token usage (2025 pricing)."""
-        model_lower = model.lower()
-
-        if "gemini-2.5-pro" in model_lower:
-            # Gemini 2.5 Pro pricing
-            input_cost = (input_tokens / 1_000_000) * 1.25
-            output_cost = (output_tokens / 1_000_000) * 5.0
-        elif "gemini-2.5-flash" in model_lower:
-            if "lite" in model_lower:
-                # Gemini 2.5 Flash-Lite pricing
-                input_cost = (input_tokens / 1_000_000) * 0.075
-                output_cost = (output_tokens / 1_000_000) * 0.30
-            else:
-                # Gemini 2.5 Flash pricing
-                input_cost = (input_tokens / 1_000_000) * 0.15
-                output_cost = (output_tokens / 1_000_000) * 0.60
-        else:
-            # Default fallback (assume Flash pricing)
-            input_cost = (input_tokens / 1_000_000) * 0.15
-            output_cost = (output_tokens / 1_000_000) * 0.60
-
-        # Add tool usage costs (estimates)
-        tool_costs = 0.0
-        if self.search_count > 0:
-            tool_costs += self.search_count * 0.01  # Estimated search cost
-
-        if self.code_execution_count > 0:
-            tool_costs += self.code_execution_count * 0.005  # Estimated execution cost
-
-        return input_cost + output_cost + tool_costs
 
     def get_mcp_results(self) -> Dict[str, Any]:
         """

@@ -5,9 +5,10 @@ Base backend interface for LLM providers.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, AsyncGenerator, Optional
+from typing import Dict, List, Any, AsyncGenerator, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
+from .utils.token_management import TokenUsage, TokenCostCalculator
 
 
 class FilesystemSupport(Enum):
@@ -45,15 +46,6 @@ class StreamChunk:
     summary_index: Optional[int] = None  # Reasoning summary index
 
 
-@dataclass
-class TokenUsage:
-    """Token usage and cost tracking."""
-
-    input_tokens: int = 0
-    output_tokens: int = 0
-    estimated_cost: float = 0.0
-
-
 class LLMBackend(ABC):
     """Abstract base class for LLM providers."""
 
@@ -61,6 +53,7 @@ class LLMBackend(ABC):
         self.api_key = api_key
         self.config = kwargs
         self.token_usage = TokenUsage()
+        self.token_calculator = TokenCostCalculator()
 
         # Filesystem manager integration
         self.filesystem_manager = None
@@ -176,36 +169,61 @@ class LLMBackend(ABC):
         """Get the name of this provider."""
         pass
 
-    @abstractmethod
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text."""
-        pass
+    def estimate_tokens(
+        self,
+        text: Union[str, List[Dict[str, Any]]],
+        method: str = "auto"
+    ) -> int:
+        """
+        Estimate token count for text or messages.
+        
+        Args:
+            text: Text string or list of message dictionaries
+            method: Estimation method ("tiktoken", "simple", "auto")
+            
+        Returns:
+            Estimated token count
+        """
+        return self.token_calculator.estimate_tokens(text, method)
 
-    @abstractmethod
     def calculate_cost(
         self, input_tokens: int, output_tokens: int, model: str
     ) -> float:
-        """Calculate cost for token usage."""
-        pass
+        """
+        Calculate cost for token usage.
+        
+        Args:
+            input_tokens: Number of input tokens
+            output_tokens: Number of output tokens
+            model: Model name
+            
+        Returns:
+            Estimated cost in USD
+        """
+        provider = self.get_provider_name()
+        return self.token_calculator.calculate_cost(
+            input_tokens, output_tokens, provider, model
+        )
 
     def update_token_usage(
         self, messages: List[Dict[str, Any]], response_content: str, model: str
-    ):
-        """Update token usage tracking."""
-        # Estimate input tokens from messages
-        input_text = str(messages)
-        input_tokens = self.estimate_tokens(input_text)
-
-        # Estimate output tokens from response
-        output_tokens = self.estimate_tokens(response_content)
-
-        # Update totals
-        self.token_usage.input_tokens += input_tokens
-        self.token_usage.output_tokens += output_tokens
-
-        # Calculate cost
-        cost = self.calculate_cost(input_tokens, output_tokens, model)
-        self.token_usage.estimated_cost += cost
+    ) -> TokenUsage:
+        """
+        Update token usage tracking.
+        
+        Args:
+            messages: Input messages
+            response_content: Response content
+            model: Model name
+            
+        Returns:
+            Updated TokenUsage object
+        """
+        provider = self.get_provider_name()
+        self.token_usage = self.token_calculator.update_token_usage(
+            self.token_usage, messages, response_content, provider, model
+        )
+        return self.token_usage
 
     def get_token_usage(self) -> TokenUsage:
         """Get current token usage."""
@@ -214,6 +232,18 @@ class LLMBackend(ABC):
     def reset_token_usage(self):
         """Reset token usage tracking."""
         self.token_usage = TokenUsage()
+    
+    def format_cost(self, cost: float = None) -> str:
+        """Format cost for display."""
+        if cost is None:
+            cost = self.token_usage.estimated_cost
+        return self.token_calculator.format_cost(cost)
+    
+    def format_usage_summary(self, usage: TokenUsage = None) -> str:
+        """Format token usage summary for display."""
+        if usage is None:
+            usage = self.token_usage
+        return self.token_calculator.format_usage_summary(usage)
 
     def get_filesystem_support(self) -> FilesystemSupport:
         """
