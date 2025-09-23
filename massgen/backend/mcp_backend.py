@@ -1,17 +1,25 @@
+# -*- coding: utf-8 -*-
 from __future__ import annotations
+
 import asyncio
 from abc import abstractmethod
-from typing import Dict, List, Any, AsyncGenerator, Optional, Callable
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
+from ..logger_config import logger
 
 # Import base LLM backend
 from .base import LLMBackend, StreamChunk
-from ..logger_config import logger, log_backend_activity
 
 # Optional MCP imports with fallbacks
 try:
     from ..mcp_tools import (
-        MultiMCPClient, MCPError, MCPConnectionError, 
-        MCPTimeoutError, MCPServerError, Function, MCPHandler
+        Function,
+        MCPConnectionError,
+        MCPError,
+        MCPHandler,
+        MCPServerError,
+        MCPTimeoutError,
+        MultiMCPClient,
     )
 except ImportError:
     MultiMCPClient = None
@@ -25,25 +33,25 @@ except ImportError:
 
 class MCPBackend(LLMBackend):
     """MCP-enabled backend base class that leverages the existing MCPHandler."""
-    
+
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         """Initialize MCPBackend with MCP configuration."""
         # Call parent constructor
-        super().__init__(api_key, **kwargs)        
-        
+        super().__init__(api_key, **kwargs)
+
         # Extract MCP configuration
-        self.mcp_servers = self.config.get('mcp_servers', [])
-        self.allowed_tools = self.config.get('allowed_tools', None)
-        self.exclude_tools = self.config.get('exclude_tools', None)
-        
+        self.mcp_servers = self.config.get("mcp_servers", [])
+        self.allowed_tools = self.config.get("allowed_tools", None)
+        self.exclude_tools = self.config.get("exclude_tools", None)
+
         # Initialize MCP state variables
         self._mcp_client: Optional[MultiMCPClient] = None
         self._mcp_initialized = False
         self._mcp_tool_calls_count = 0
         self._mcp_tool_failures = 0
-        
+
         # Initialize circuit breaker variables
-        self._circuit_breakers_enabled = self.config.get('circuit_breakers_enabled', True)
+        self._circuit_breakers_enabled = self.config.get("circuit_breakers_enabled", True)
 
         # Initialize function registry
         self._mcp_functions: Dict[str, Function] = {}
@@ -52,12 +60,12 @@ class MCPBackend(LLMBackend):
         self._stats_lock = asyncio.Lock()
 
         # Initialize message history limit
-        self._max_mcp_message_history = self.config.get('max_mcp_message_history', 200)
-        
+        self._max_mcp_message_history = self.config.get("max_mcp_message_history", 200)
+
         # Set backend identification
         self.backend_name = self.__class__.__name__
-        self.agent_id = self.config.get('agent_id', None)
-        
+        self.agent_id = self.config.get("agent_id", None)
+
         # Initialize MCPHandler only if MCP dependencies are available
         if MCPHandler is not None:
             self.mcp_handler = MCPHandler(self)
@@ -65,7 +73,7 @@ class MCPBackend(LLMBackend):
             self.mcp_handler.setup_circuit_breaker()
         else:
             self.mcp_handler = None
-    
+
     async def stream_with_mcp_support(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Coordinate MCP setup, streaming, and cleanup with comprehensive error handling."""
         async with self:
@@ -73,19 +81,15 @@ class MCPBackend(LLMBackend):
                 # Check if MCP handler is available
                 if self.mcp_handler is None:
                     # MCP dependencies not available, use non-MCP mode
-                    yield StreamChunk(
-                        type="mcp_status",
-                        status="mcp_unavailable",
-                        content="MCP tools not available - dependencies missing"
-                    )
+                    yield StreamChunk(type="mcp_status", status="mcp_unavailable", content="MCP tools not available - dependencies missing")
                     async for chunk in self._stream_without_mcp(messages, tools, **kwargs):
                         yield chunk
                     return
-                
+
                 # Determine if MCP processing is needed
                 if self.mcp_handler.should_use_mcp():
                     # Yield the connected status chunk if available
-                    if hasattr(self, '_mcp_connection_status_chunk') and self._mcp_connection_status_chunk:
+                    if hasattr(self, "_mcp_connection_status_chunk") and self._mcp_connection_status_chunk:
                         yield self._mcp_connection_status_chunk
 
                     # Use MCP mode
@@ -94,16 +98,12 @@ class MCPBackend(LLMBackend):
                 else:
                     # Show status message if needed (only when not using MCP)
                     if self.mcp_handler.should_show_no_mcp_message():
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_unconfigured",
-                            content="No MCP tools configured"
-                        )
+                        yield StreamChunk(type="mcp_status", status="mcp_unconfigured", content="No MCP tools configured")
 
                     # Use non-MCP mode
                     async for chunk in self._stream_without_mcp(messages, tools, **kwargs):
                         yield chunk
-                        
+
             except (MCPError, MCPConnectionError, MCPTimeoutError, MCPServerError) as e:
                 logger.error(f"MCP error in {self.backend_name}: {e}")
                 # Handle MCP error with fallback
@@ -114,10 +114,10 @@ class MCPBackend(LLMBackend):
                 # Fallback to non-MCP streaming
                 async for chunk in self._stream_without_mcp(messages, tools, **kwargs):
                     yield chunk
-    
+
     async def _stream_with_mcp_recursive(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Build callback functions for backend-specific operations and delegate to MCPHandler."""
-        
+
         # Build callback functions with proper error handling
         def _build_api_params_callback():
             async def callback(msgs, tls, kwargs):
@@ -126,8 +126,9 @@ class MCPBackend(LLMBackend):
                 except Exception as e:
                     logger.error(f"Error building API params in {self.backend_name}: {e}")
                     raise
+
             return callback
-        
+
         def _create_stream_callback():
             async def callback(api_params):
                 try:
@@ -135,8 +136,9 @@ class MCPBackend(LLMBackend):
                 except Exception as e:
                     logger.error(f"Error creating stream in {self.backend_name}: {e}")
                     raise
+
             return callback
-        
+
         def _detect_function_calls_callback():
             def callback(chunk, current_call, captured_calls):
                 try:
@@ -144,8 +146,9 @@ class MCPBackend(LLMBackend):
                 except Exception as e:
                     logger.error(f"Error detecting function calls in {self.backend_name}: {e}")
                     return current_call, captured_calls, False
+
             return callback
-        
+
         def _process_chunk_callback():
             def callback(chunk):
                 try:
@@ -153,8 +156,9 @@ class MCPBackend(LLMBackend):
                 except Exception as e:
                     logger.error(f"Error processing chunk in {self.backend_name}: {e}")
                     return StreamChunk(type="error", content=f"Chunk processing error: {e}")
+
             return callback
-        
+
         def _format_tool_result_callback():
             def callback(tool_call, result_content):
                 try:
@@ -162,8 +166,9 @@ class MCPBackend(LLMBackend):
                 except Exception as e:
                     logger.error(f"Error formatting tool result in {self.backend_name}: {e}")
                     return {"type": "error", "content": f"Tool result formatting error: {e}"}
+
             return callback
-        
+
         def _fallback_stream_callback():
             async def callback(msgs, tls, **kwargs):
                 try:
@@ -172,8 +177,9 @@ class MCPBackend(LLMBackend):
                 except Exception as e:
                     logger.error(f"Error in fallback stream for {self.backend_name}: {e}")
                     yield StreamChunk(type="error", content=f"Fallback streaming error: {e}")
+
             return callback
-        
+
         # Delegate to MCPHandler with callbacks
         async for chunk in self.mcp_handler.execute_mcp_functions_and_recurse(
             current_messages=messages,
@@ -185,10 +191,10 @@ class MCPBackend(LLMBackend):
             process_chunk_callback=_process_chunk_callback(),
             format_tool_result_callback=_format_tool_result_callback(),
             fallback_stream_callback=_fallback_stream_callback(),
-            **kwargs
+            **kwargs,
         ):
             yield chunk
-    
+
     async def _handle_mcp_error_fallback(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], error: Exception, **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Enhanced error handling with correct MCPHandler fallback wiring."""
 
@@ -219,40 +225,39 @@ class MCPBackend(LLMBackend):
             stream_func=stream_func,
         ):
             yield chunk
-    
+
     async def __aenter__(self):
         """Context manager entry - delegate to MCPHandler."""
         if self.mcp_handler is not None:
             await self.mcp_handler.setup_context_manager()
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit - delegate to MCPHandler."""
         if self.mcp_handler is not None:
             await self.mcp_handler.cleanup_mcp()
-    
+
     # Abstract methods that must be implemented by backend-specific classes
-    
+
     @abstractmethod
     async def _build_api_params(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """
         Build backend-specific API parameters.
-        
+
         Each backend has different parameter requirements:
         - Response API: uses 'input' instead of 'messages', 'max_output_tokens' instead of 'max_tokens'
         - Claude: uses 'messages', 'max_tokens', specific system message handling
         - Chat Completions: uses 'messages', 'max_tokens', standard OpenAI format
-        
+
         Args:
             messages: List of message dictionaries
             tools: List of tool definitions
             kwargs: Additional parameters
-            
+
         Returns:
             Dict containing backend-specific API parameters
         """
-        pass
-    
+
     @abstractmethod
     async def _create_stream(self, api_params: Dict[str, Any]) -> Any:
         """
@@ -269,7 +274,6 @@ class MCPBackend(LLMBackend):
         Returns:
             Streaming iterator for the specific backend
         """
-        pass
 
     @abstractmethod
     def _detect_function_calls(self, chunk: Any, current_call: Optional[Dict[str, Any]], captured_calls: List[Dict[str, Any]]) -> tuple:
@@ -289,7 +293,6 @@ class MCPBackend(LLMBackend):
         Returns:
             Tuple of (current_function_call, captured_calls, consumed)
         """
-        pass
 
     @abstractmethod
     def _process_chunk(self, chunk: Any) -> StreamChunk:
@@ -307,7 +310,6 @@ class MCPBackend(LLMBackend):
         Returns:
             StreamChunk object with standardized format
         """
-        pass
 
     # create_tool_result_message is inherited from LLMBackend base class
 
@@ -327,7 +329,6 @@ class MCPBackend(LLMBackend):
         Yields:
             StreamChunk objects
         """
-        pass
 
     @abstractmethod
     def _get_provider_tools(self, kwargs: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -345,4 +346,3 @@ class MCPBackend(LLMBackend):
         Returns:
             List of provider-specific tool definitions
         """
-        pass

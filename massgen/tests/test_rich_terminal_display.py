@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script for MassGen Rich Terminal Display.
 Tests RichTerminalDisplay functionality with two-agent coordination.
@@ -9,15 +10,15 @@ import os
 import sys
 from pathlib import Path
 
+from massgen.backend.response import ResponseBackend
+from massgen.chat_agent import SingleAgent
+from massgen.frontend.coordination_ui import CoordinationUI, coordinate_with_rich_ui
+from massgen.frontend.displays.rich_terminal_display import is_rich_available
+from massgen.orchestrator import Orchestrator
+
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from massgen.backend.response import ResponseBackend
-from massgen.chat_agent import SingleAgent
-from massgen.orchestrator import Orchestrator
-from massgen.frontend.coordination_ui import CoordinationUI, coordinate_with_rich_ui
-from massgen.frontend.displays.rich_terminal_display import is_rich_available
 
 
 async def test_rich_availability():
@@ -64,7 +65,7 @@ async def test_rich_display_basic():
         # Test theme configuration
         themes = ["dark", "light", "cyberpunk"]
         for theme in themes:
-            themed_display = RichTerminalDisplay(agent_ids, theme=theme)
+            RichTerminalDisplay(agent_ids, theme=theme)
             print(f"✅ {theme.title()} theme created successfully")
 
         # Clean up
@@ -186,9 +187,7 @@ async def test_rich_convenience_function():
             system_message="You are a strategic thinker who focuses on long-term implications and strategic recommendations.",
         )
 
-        orchestrator = Orchestrator(
-            agents={"analyst": analyst, "strategist": strategist}
-        )
+        orchestrator = Orchestrator(agents={"analyst": analyst, "strategist": strategist})
 
         print("🎯 Testing convenience function with light theme...")
 
@@ -231,13 +230,10 @@ async def test_rich_fallback():
 
     try:
         # Test UI creation with rich_terminal when Rich is available
-        ui = CoordinationUI(display_type="rich_terminal")
+        CoordinationUI(display_type="rich_terminal")
 
         if is_rich_available():
             print("✅ Rich is available - RichTerminalDisplay should be used")
-            from massgen.frontend.displays.rich_terminal_display import (
-                RichTerminalDisplay,
-            )
 
             # Note: We can't easily test the actual fallback without mocking
             print("📝 Note: Fallback logic tested through UI creation")

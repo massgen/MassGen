@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Message formatter for different LLM APIs.
 Handles conversion between OpenAI, Claude, and Response API formats.
@@ -5,7 +6,7 @@ Handles conversion between OpenAI, Claude, and Response API formats.
 
 from __future__ import annotations
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 
 class ToolFormatter:
@@ -40,7 +41,7 @@ class ToolFormatter:
                                 "description": tool["description"],
                                 "parameters": tool.get("parameters", {}),
                             },
-                        }
+                        },
                     )
                 else:
                     # Unknown format - keep as-is
@@ -76,7 +77,7 @@ class ToolFormatter:
                             "name": func["name"],
                             "description": func["description"],
                             "input_schema": func.get("parameters", {}),
-                        }
+                        },
                     )
                 elif "name" in tool and "description" in tool:
                     # Response API format -> Claude custom tool
@@ -86,7 +87,7 @@ class ToolFormatter:
                             "name": tool["name"],
                             "description": tool["description"],
                             "input_schema": tool.get("parameters", {}),
-                        }
+                        },
                     )
                 else:
                     # Unknown format - keep as-is
@@ -118,7 +119,7 @@ class ToolFormatter:
                         "name": func["name"],
                         "description": func["description"],
                         "parameters": func.get("parameters", {}),
-                    }
+                    },
                 )
             else:
                 # Already in Response API format or non-function tool
@@ -127,9 +128,7 @@ class ToolFormatter:
         return converted_tools
 
     @staticmethod
-    def convert_between_formats(
-        tools: List[Dict[str, Any]], source_format: str, target_format: str
-    ) -> List[Dict[str, Any]]:
+    def convert_between_formats(tools: List[Dict[str, Any]], source_format: str, target_format: str) -> List[Dict[str, Any]]:
         """
         Convert tools from one format to another.
 
@@ -173,7 +172,7 @@ class ToolFormatter:
                                     "description": tool.get("description", ""),
                                     "parameters": tool.get("input_schema", {}),
                                 },
-                            }
+                            },
                         )
                     else:
                         converted_tools.append(tool)
@@ -189,7 +188,7 @@ class ToolFormatter:
                                 "name": tool.get("name", ""),
                                 "description": tool.get("description", ""),
                                 "parameters": tool.get("input_schema", {}),
-                            }
+                            },
                         )
                     else:
                         converted_tools.append(tool)

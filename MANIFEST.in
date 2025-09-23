@@ -3,10 +3,9 @@ include LICENSE
 include CONTRIBUTING.md
 include CHANGELOG.md
 include requirements.txt
-include examples/*.yaml
-include massgen/backends/.env.example
+include massgen/configs/*
+include .env.example
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 exclude .gitignore
-exclude *.log
-exclude logs/* 
+exclude massgen_logs/*

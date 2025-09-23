@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Terminal Display for MassGen Coordination
 
@@ -6,6 +7,7 @@ Rich terminal interface with live updates, agent columns, and coordination event
 
 import os
 from typing import List, Optional
+
 from .base_display import BaseDisplay
 
 
@@ -36,9 +38,7 @@ class TerminalDisplay(BaseDisplay):
             self.col_width = (self.terminal_width - 3) // 2
             self.separators = " │ "
         else:
-            self.col_width = (
-                self.terminal_width - (self.num_agents - 1) * 3
-            ) // self.num_agents
+            self.col_width = (self.terminal_width - (self.num_agents - 1) * 3) // self.num_agents
             self.separators = " │ "
 
     def _get_terminal_width(self) -> int:
@@ -57,7 +57,7 @@ class TerminalDisplay(BaseDisplay):
 
         try:
             os.system("clear" if os.name == "posix" else "cls")
-        except:
+        except OSError:
             print("\033[2J\033[H", end="")
 
         title = f"🚀 {'Multi' if self.num_agents > 2 else 'Two' if self.num_agents == 2 else 'Single'}-Agent Coordination Dashboard"
@@ -73,20 +73,12 @@ class TerminalDisplay(BaseDisplay):
         for agent_id in self.agent_ids:
             # Try to get backend info from orchestrator if available
             backend_name = "Unknown"
-            if (
-                hasattr(self, "orchestrator")
-                and self.orchestrator
-                and hasattr(self.orchestrator, "agents")
-            ):
+            if hasattr(self, "orchestrator") and self.orchestrator and hasattr(self.orchestrator, "agents"):
                 agent = self.orchestrator.agents.get(agent_id)
-                if (
-                    agent
-                    and hasattr(agent, "backend")
-                    and hasattr(agent.backend, "get_provider_name")
-                ):
+                if agent and hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
                     try:
                         backend_name = agent.backend.get_provider_name()
-                    except:
+                    except (AttributeError, Exception):
                         backend_name = "Unknown"
 
             # Generic header format for any agent
@@ -103,9 +95,7 @@ class TerminalDisplay(BaseDisplay):
         print("=" * self.terminal_width)
         print()
 
-    def update_agent_content(
-        self, agent_id: str, content: str, content_type: str = "thinking"
-    ):
+    def update_agent_content(self, agent_id: str, content: str, content_type: str = "thinking"):
         """Update content for a specific agent."""
         if agent_id not in self.agent_ids:
             return
@@ -142,10 +132,7 @@ class TerminalDisplay(BaseDisplay):
             should_refresh = True  # Always refresh for presentations
         else:
             # Thinking content - smart formatting based on content type
-            if (
-                self.agent_outputs[agent_id]
-                and self.agent_outputs[agent_id][-1] == "⚡ Working..."
-            ):
+            if self.agent_outputs[agent_id] and self.agent_outputs[agent_id][-1] == "⚡ Working...":
                 # Replace "Working..." with actual thinking
                 self.agent_outputs[agent_id][-1] = clean_content
                 should_refresh = True  # Refresh when replacing "Working..."
@@ -235,9 +222,7 @@ class TerminalDisplay(BaseDisplay):
         if old_status != "working" and status == "working":
             agent_prefix = f"[{agent_id}] " if self.num_agents > 1 else ""
             print(f"\n{agent_prefix}⚡  Working...")
-            if not self.agent_outputs[agent_id] or not self.agent_outputs[agent_id][
-                -1
-            ].startswith("⚡"):
+            if not self.agent_outputs[agent_id] or not self.agent_outputs[agent_id][-1].startswith("⚡"):
                 self.agent_outputs[agent_id].append("⚡  Working...")
 
         # Show status update in footer
@@ -250,22 +235,19 @@ class TerminalDisplay(BaseDisplay):
 
     def show_final_answer(self, answer: str, vote_results=None, selected_agent=None):
         """Display the final coordinated answer prominently."""
-        print(f"\n🎯 FINAL COORDINATED ANSWER:")
+        print("\n🎯 FINAL COORDINATED ANSWER:")
         print("=" * 60)
         print(f"📋 {answer}")
         if selected_agent:
             print(f"✅ Selected by: {selected_agent}")
         if vote_results:
-            vote_summary = ", ".join(
-                [f"{agent}: {votes}" for agent, votes in vote_results.items()]
-            )
+            vote_summary = ", ".join([f"{agent}: {votes}" for agent, votes in vote_results.items()])
             print(f"🗳️ Vote results: {vote_summary}")
         print("=" * 60)
 
     def cleanup(self):
         """Clean up display resources."""
         # No special cleanup needed for terminal display
-        pass
 
     def _refresh_display(self):
         """Refresh the entire display with proper columns."""
@@ -280,20 +262,12 @@ class TerminalDisplay(BaseDisplay):
         print("\033[7;1H\033[0J", end="")  # Move to line 7 and clear down
 
         # Show agent outputs in columns with word wrapping
-        max_lines = (
-            max(len(self.agent_outputs[agent_id]) for agent_id in self.agent_ids)
-            if self.agent_outputs
-            else 0
-        )
+        max_lines = max(len(self.agent_outputs[agent_id]) for agent_id in self.agent_ids) if self.agent_outputs else 0
 
         # For single agent, don't wrap - show full content
         if self.num_agents == 1:
             for i in range(max_lines):
-                line = (
-                    self.agent_outputs[self.agent_ids[0]][i]
-                    if i < len(self.agent_outputs[self.agent_ids[0]])
-                    else ""
-                )
+                line = self.agent_outputs[self.agent_ids[0]][i] if i < len(self.agent_outputs[self.agent_ids[0]]) else ""
                 print(line)
         else:
             # For multiple agents, wrap long lines to fit columns
@@ -306,18 +280,14 @@ class TerminalDisplay(BaseDisplay):
                         words = line.split(" ")
                         current_line = ""
                         for word in words:
-                            test_line = (
-                                current_line + (" " if current_line else "") + word
-                            )
+                            test_line = current_line + (" " if current_line else "") + word
                             if len(test_line) > self.col_width - 2:
                                 if current_line:
                                     wrapped_outputs[agent_id].append(current_line)
                                     current_line = word
                                 else:
                                     # Single word longer than column width - truncate gracefully
-                                    wrapped_outputs[agent_id].append(
-                                        word[: self.col_width - 2] + "…"
-                                    )
+                                    wrapped_outputs[agent_id].append(word[: self.col_width - 2] + "…")
                                     current_line = ""
                             else:
                                 current_line = test_line
@@ -327,19 +297,11 @@ class TerminalDisplay(BaseDisplay):
                         wrapped_outputs[agent_id].append(line)
 
             # Display wrapped content
-            max_wrapped_lines = (
-                max(len(wrapped_outputs[agent_id]) for agent_id in self.agent_ids)
-                if wrapped_outputs
-                else 0
-            )
+            max_wrapped_lines = max(len(wrapped_outputs[agent_id]) for agent_id in self.agent_ids) if wrapped_outputs else 0
             for i in range(max_wrapped_lines):
                 output_lines = []
                 for agent_id in self.agent_ids:
-                    line = (
-                        wrapped_outputs[agent_id][i]
-                        if i < len(wrapped_outputs[agent_id])
-                        else ""
-                    )
+                    line = wrapped_outputs[agent_id][i] if i < len(wrapped_outputs[agent_id]) else ""
                     output_lines.append(f"{line:<{self.col_width}}")
                 print(self.separators.join(output_lines))
 
@@ -351,25 +313,15 @@ class TerminalDisplay(BaseDisplay):
         for agent_id in self.agent_ids:
             # Get backend info same as in header
             backend_name = "Unknown"
-            if (
-                hasattr(self, "orchestrator")
-                and self.orchestrator
-                and hasattr(self.orchestrator, "agents")
-            ):
+            if hasattr(self, "orchestrator") and self.orchestrator and hasattr(self.orchestrator, "agents"):
                 agent = self.orchestrator.agents.get(agent_id)
-                if (
-                    agent
-                    and hasattr(agent, "backend")
-                    and hasattr(agent.backend, "get_provider_name")
-                ):
+                if agent and hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
                     try:
                         backend_name = agent.backend.get_provider_name()
-                    except:
+                    except (AttributeError, Exception):
                         backend_name = "Unknown"
 
-            status_text = (
-                f"{agent_id.upper()} ({backend_name}): {self.agent_status[agent_id]}"
-            )
+            status_text = f"{agent_id.upper()} ({backend_name}): {self.agent_status[agent_id]}"
             status_lines.append(f"{status_text:^{self.col_width}}")
 
         if self.num_agents == 1:

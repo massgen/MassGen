@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Claude Backend Integration Tests for MassGen
 
@@ -12,17 +13,16 @@ Tests the Claude backend implementation with real API calls:
 Requires ANTHROPIC_API_KEY environment variable.
 """
 
+import asyncio
 import os
 import sys
-import asyncio
-import json
 from pathlib import Path
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.claude import ClaudeBackend
+from massgen.backend.claude import ClaudeBackend  # noqa: E402
 
 
 async def test_claude_basic_streaming():
@@ -31,21 +31,15 @@ async def test_claude_basic_streaming():
 
     backend = ClaudeBackend()
 
-    messages = [
-        {"role": "user", "content": "Explain quantum computing in 2-3 sentences."}
-    ]
+    messages = [{"role": "user", "content": "Explain quantum computing in 2-3 sentences."}]
 
     content = ""
-    async for chunk in backend.stream_with_tools(
-        messages, [], model="claude-3-5-haiku-20241022"
-    ):
+    async for chunk in backend.stream_with_tools(messages, [], model="claude-3-5-haiku-20241022"):
         if chunk.type == "content":
             content += chunk.content
             print(chunk.content, end="", flush=True)
         elif chunk.type == "complete_message":
-            print(
-                f"\n✅ Complete message received: {len(chunk.complete_message.get('content', ''))} chars"
-            )
+            print(f"\n✅ Complete message received: {len(chunk.complete_message.get('content', ''))} chars")
         elif chunk.type == "done":
             print("\n✅ Basic streaming test completed")
             break
@@ -76,20 +70,18 @@ async def test_claude_tool_calling():
                 },
                 "required": ["width", "height"],
             },
-        }
+        },
     ]
 
     messages = [
         {
             "role": "user",
             "content": "Calculate the area of a rectangle with width 5 and height 3.",
-        }
+        },
     ]
 
     tool_calls_received = []
-    async for chunk in backend.stream_with_tools(
-        messages, tools, model="claude-3-5-haiku-20241022"
-    ):
+    async for chunk in backend.stream_with_tools(messages, tools, model="claude-3-5-haiku-20241022"):
         if chunk.type == "content":
             print(chunk.content, end="", flush=True)
         elif chunk.type == "tool_calls":
@@ -100,7 +92,7 @@ async def test_claude_tool_calling():
                 tool_args = backend.extract_tool_arguments(tool_call)
                 print(f"   - {tool_name}: {tool_args}")
         elif chunk.type == "complete_message":
-            print(f"\n✅ Complete message with tool calls received")
+            print("\n✅ Complete message with tool calls received")
         elif chunk.type == "done":
             print("✅ Tool calling test completed")
             break
@@ -128,14 +120,14 @@ async def test_claude_multi_tool_support():
                 "properties": {"title": {"type": "string"}, "data": {"type": "string"}},
                 "required": ["title", "data"],
             },
-        }
+        },
     ]
 
     messages = [
         {
             "role": "user",
             "content": "Search for recent news about AI and format the result with a nice title.",
-        }
+        },
     ]
 
     # Enable both server-side tools and user tools
@@ -186,7 +178,7 @@ async def test_claude_message_conversion():
                     "id": "call_123",
                     "type": "function",
                     "function": {"name": "add", "arguments": {"a": 5, "b": 3}},
-                }
+                },
             ],
         },
         {"role": "tool", "tool_call_id": "call_123", "content": "8"},
@@ -202,11 +194,7 @@ async def test_claude_message_conversion():
     # Check tool result conversion
     tool_result_found = False
     for msg in converted:
-        if (
-            msg.get("role") == "user"
-            and isinstance(msg.get("content"), list)
-            and any(item.get("type") == "tool_result" for item in msg["content"])
-        ):
+        if msg.get("role") == "user" and isinstance(msg.get("content"), list) and any(item.get("type") == "tool_result" for item in msg["content"]):
             tool_result_found = True
             print("   ✅ Tool result conversion successful")
             break
@@ -289,7 +277,7 @@ async def main():
             results.append((test_name, False))
 
     # Summary
-    print(f"\n📊 Test Results Summary:")
+    print("\n📊 Test Results Summary:")
     passed = sum(1 for _, result in results if result)
     total = len(results)
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 CLI Backend Base Class - Abstract interface for CLI-based LLM backends.
 
@@ -9,8 +10,8 @@ import asyncio
 import subprocess
 import tempfile
 from abc import abstractmethod
-from typing import Dict, List, Any, AsyncGenerator, Optional
 from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .base import LLMBackend, StreamChunk, TokenUsage
 
@@ -25,9 +26,7 @@ class CLIBackend(LLMBackend):
         self.timeout = kwargs.get("timeout", 300)  # 5 minutes default
 
     @abstractmethod
-    def _build_command(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
-    ) -> List[str]:
+    def _build_command(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> List[str]:
         """Build the CLI command to execute.
 
         Args:
@@ -38,7 +37,6 @@ class CLIBackend(LLMBackend):
         Returns:
             List of command arguments for subprocess
         """
-        pass
 
     @abstractmethod
     def _parse_output(self, output: str) -> Dict[str, Any]:
@@ -50,7 +48,6 @@ class CLIBackend(LLMBackend):
         Returns:
             Parsed response data
         """
-        pass
 
     async def _execute_cli_command(self, command: List[str]) -> str:
         """Execute CLI command asynchronously.
@@ -73,24 +70,18 @@ class CLIBackend(LLMBackend):
         )
 
         try:
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(), timeout=self.timeout
-            )
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=self.timeout)
 
             if process.returncode != 0:
                 error_msg = stderr.decode("utf-8") if stderr else "Unknown error"
-                raise subprocess.CalledProcessError(
-                    process.returncode, command, error_msg
-                )
+                raise subprocess.CalledProcessError(process.returncode, command, error_msg)
 
             return stdout.decode("utf-8")
 
         except asyncio.TimeoutError:
             process.kill()
             await process.wait()
-            raise asyncio.TimeoutError(
-                f"CLI command timed out after {self.timeout} seconds"
-            )
+            raise asyncio.TimeoutError(f"CLI command timed out after {self.timeout} seconds")
 
     def _create_temp_file(self, content: str, suffix: str = ".txt") -> Path:
         """Create a temporary file with content.
@@ -131,9 +122,7 @@ class CLIBackend(LLMBackend):
 
         return "\n\n".join(formatted_parts)
 
-    async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
-    ) -> AsyncGenerator[StreamChunk, None]:
+    async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Stream response with tools support."""
         try:
             # Build CLI command
@@ -156,9 +145,7 @@ class CLIBackend(LLMBackend):
                 source=self.__class__.__name__,
             )
 
-    async def _convert_to_stream_chunks(
-        self, response: Dict[str, Any]
-    ) -> AsyncGenerator[StreamChunk, None]:
+    async def _convert_to_stream_chunks(self, response: Dict[str, Any]) -> AsyncGenerator[StreamChunk, None]:
         """Convert parsed response to stream chunks.
 
         Args:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script for Grok backend integration with architecture.
 Tests basic functionality, tool integration, and streaming.
@@ -13,8 +14,8 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.grok import GrokBackend
-from massgen.chat_agent import SingleAgent
+from massgen.backend.grok import GrokBackend  # noqa: E402
+from massgen.chat_agent import SingleAgent  # noqa: E402
 
 
 async def test_grok_basic():
@@ -67,15 +68,13 @@ async def test_grok_streaming():
             {
                 "role": "user",
                 "content": "Say hello and explain what you are in one sentence.",
-            }
+            },
         ]
 
         print("📤 Sending request to Grok...")
         response_content = ""
 
-        async for chunk in backend.stream_with_tools(
-            messages, tools=[], model="grok-3-mini"
-        ):
+        async for chunk in backend.stream_with_tools(messages, tools=[], model="grok-3-mini"):
             if chunk.type == "content" and chunk.content:
                 response_content += chunk.content
                 print(chunk.content, end="", flush=True)
@@ -83,9 +82,7 @@ async def test_grok_streaming():
                 print(f"\n❌ Error: {chunk.error}")
                 return False
 
-        print(
-            f"\n✅ Streaming test completed. Response length: {len(response_content)} chars"
-        )
+        print(f"\n✅ Streaming test completed. Response length: {len(response_content)} chars")
         return True
 
     except Exception as e:

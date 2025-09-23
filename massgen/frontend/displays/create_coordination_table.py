@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Multi-Agent Coordination Event Table Generator
 
@@ -8,16 +9,14 @@ the progression of agent interactions across rounds.
 
 import json
 import sys
-from typing import Dict, List, Any, Optional, Set, Union
 from dataclasses import dataclass, field
-from collections import defaultdict
-import textwrap
+from typing import Any, Dict, List, Optional, Union
 
 try:
-    from rich.table import Table
-    from rich.console import Console
-    from rich.text import Text
     from rich import box
+    from rich.console import Console
+    from rich.table import Table
+    from rich.panel import Panel
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -116,9 +115,7 @@ class CoordinationTableBuilder:
                         if label.startswith("agent") and "." in label:
                             try:
                                 # Extract agent number from label (e.g., "agent1.1" -> "1")
-                                agent_num = label.split(".")[0][
-                                    5:
-                                ]  # Remove "agent" prefix
+                                agent_num = label.split(".")[0][5:]  # Remove "agent" prefix
                                 # Find agent with this number in our mapping
                                 for agent_id, mapped_num in self.agent_mapping.items():
                                     if mapped_num == agent_num:
@@ -173,9 +170,7 @@ class CoordinationTableBuilder:
             all_rounds.add(round_num)
 
         # Exclude final round from regular rounds if it exists
-        regular_rounds = sorted(
-            all_rounds - {self.final_round_num} if self.final_round_num else all_rounds
-        )
+        regular_rounds = sorted(all_rounds - {self.final_round_num} if self.final_round_num else all_rounds)
 
         # Initialize round states
         rounds = {}
@@ -184,9 +179,7 @@ class CoordinationTableBuilder:
 
         # Add final round if exists
         if self.final_round_num is not None:
-            rounds[self.final_round_num] = {
-                agent: AgentState(round=self.final_round_num) for agent in self.agents
-            }
+            rounds[self.final_round_num] = {agent: AgentState(round=self.final_round_num) for agent in self.agents}
 
         # Process events
         for event in self.events:
@@ -206,11 +199,7 @@ class CoordinationTableBuilder:
                 elif event_type == "restart_completed":
                     round_num = context.get("agent_round", context.get("round", 0))
                 elif event_type == "final_answer":
-                    round_num = (
-                        self.final_round_num
-                        if self.final_round_num
-                        else context.get("round", 0)
-                    )
+                    round_num = self.final_round_num if self.final_round_num else context.get("round", 0)
 
                 if round_num in rounds:
                     agent_state = rounds[round_num][agent_id]
@@ -225,9 +214,7 @@ class CoordinationTableBuilder:
                             agent_state.current_answer = label
                             # Get preview from saved answers
                             if agent_id in self.agent_answers:
-                                agent_state.answer_preview = self.agent_answers[
-                                    agent_id
-                                ]
+                                agent_state.answer_preview = self.agent_answers[agent_id]
 
                     elif event_type == "vote_cast":
                         agent_state.vote = context.get("voted_for_label")
@@ -248,9 +235,7 @@ class CoordinationTableBuilder:
                         agent_state.is_selected_winner = True
 
                     elif event_type == "status_change":
-                        status = event.get("details", "").replace(
-                            "Changed to status: ", ""
-                        )
+                        status = event.get("details", "").replace("Changed to status: ", "")
                         agent_state.status = status
 
         # Mark non-winner as completed in FINAL round
@@ -270,14 +255,12 @@ class CoordinationTableBuilder:
                     r,
                     round_type,
                     rounds.get(r, {agent: AgentState() for agent in self.agents}),
-                )
+                ),
             )
 
         # Add FINAL round if exists
         if self.final_round_num is not None and self.final_round_num in rounds:
-            round_list.append(
-                RoundData(self.final_round_num, "FINAL", rounds[self.final_round_num])
-            )
+            round_list.append(RoundData(self.final_round_num, "FINAL", rounds[self.final_round_num]))
 
         return round_list
 
@@ -293,9 +276,7 @@ class CoordinationTableBuilder:
             truncated = content[: width - 3] + "..."
             return truncated.center(width)
 
-    def _build_agent_cell_content(
-        self, agent_state: AgentState, round_type: str, agent_id: str, round_num: int
-    ) -> List[str]:
+    def _build_agent_cell_content(self, agent_state: AgentState, round_type: str, agent_id: str, round_num: int) -> List[str]:
         """Build the content for an agent's cell in a round"""
         lines = []
 
@@ -304,8 +285,7 @@ class CoordinationTableBuilder:
         show_context = (
             (agent_state.current_answer and not agent_state.vote)
             or agent_state.has_final_answer  # Agent answered (but didn't vote)
-            or agent_state.status  # Agent has final answer
-            in ["streaming", "answering"]  # Agent is actively working
+            or agent_state.status in ["streaming", "answering"]  # Agent has final answer  # Agent is actively working
         )
 
         # Don't show context for completed agents in FINAL round
@@ -328,11 +308,7 @@ class CoordinationTableBuilder:
                 lines.append(f"Context: [{', '.join(agent_state.context)}]")
             lines.append(f"VOTE: {agent_state.vote}")
             if agent_state.vote_reason:
-                reason = (
-                    agent_state.vote_reason[:47] + "..."
-                    if len(agent_state.vote_reason) > 50
-                    else agent_state.vote_reason
-                )
+                reason = agent_state.vote_reason[:47] + "..." if len(agent_state.vote_reason) > 50 else agent_state.vote_reason
                 lines.append(f"Reason: {reason}")
 
         elif round_type == "FINAL":
@@ -340,9 +316,7 @@ class CoordinationTableBuilder:
             if agent_state.has_final_answer:
                 lines.append(f"FINAL ANSWER: {agent_state.current_answer}")
                 if agent_state.answer_preview:
-                    clean_preview = agent_state.answer_preview.replace(
-                        "\n", " "
-                    ).strip()
+                    clean_preview = agent_state.answer_preview.replace("\n", " ").strip()
                     lines.append(f"Preview: {clean_preview}")
                 else:
                     lines.append("Preview: [Answer not available]")
@@ -392,9 +366,7 @@ class CoordinationTableBuilder:
 
         # Helper function to add separator
         def add_separator(style="-"):
-            lines.append(
-                "|" + style * 10 + "+" + (style * cell_width + "+") * num_agents
-            )
+            lines.append("|" + style * 10 + "+" + (style * cell_width + "+") * num_agents)
 
         # Add legend/explanation section
         lines.extend(self._create_legend_section(cell_width))
@@ -452,7 +424,6 @@ class CoordinationTableBuilder:
                 continue
 
             # Update agent state and create table row
-            row_added = False
 
             if event_type == "status_change":
                 status = event.get("details", "").replace("Changed to status: ", "")
@@ -467,19 +438,14 @@ class CoordinationTableBuilder:
                         pass
                     else:
                         # Only show if this is a meaningful transition (not streaming -> streaming)
-                        if (
-                            old_status not in ["streaming", "answering"]
-                            or not agent_states[agent_id]["last_streaming_logged"]
-                        ):
+                        if old_status not in ["streaming", "answering"] or not agent_states[agent_id]["last_streaming_logged"]:
                             # Create multi-line event with context and streaming start
                             event_lines = []
                             # Show context when starting to stream
                             if agent_states[agent_id]["context"]:
-                                event_lines.append(
-                                    f"📋 Context: [{', '.join(agent_states[agent_id]['context'])}]"
-                                )
+                                event_lines.append(f"📋 Context: [{', '.join(agent_states[agent_id]['context'])}]")
                             else:
-                                event_lines.append(f"📋 Context: []")
+                                event_lines.append("📋 Context: []")
                             event_lines.append(f"💭 Started {status}")
 
                             lines.extend(
@@ -489,12 +455,11 @@ class CoordinationTableBuilder:
                                     event_lines,
                                     agent_states,
                                     cell_width,
-                                )
+                                ),
                             )
                             add_separator("-")  # Add separator after event
                             agent_states[agent_id]["last_streaming_logged"] = True
                             event_num += 1
-                            row_added = True
                 elif status not in ["streaming", "answering"]:
                     # Reset the flag when status changes to something else
                     agent_states[agent_id]["last_streaming_logged"] = False
@@ -508,11 +473,7 @@ class CoordinationTableBuilder:
                 # Show restart trigger event spanning both columns (it's a coordination event)
                 agent_num = self.agent_mapping.get(agent_id, "?")
                 agent_name = f"Agent {agent_num}"
-                lines.extend(
-                    self._create_system_row(
-                        f"🔁 {agent_name} RESTART TRIGGERED", cell_width
-                    )
-                )
+                lines.extend(self._create_system_row(f"🔁 {agent_name} RESTART TRIGGERED", cell_width))
                 event_num += 1
 
             elif event_type == "restart_completed":
@@ -525,7 +486,7 @@ class CoordinationTableBuilder:
                         f"✅ RESTART COMPLETED (Restart {agent_round})",
                         agent_states,
                         cell_width,
-                    )
+                    ),
                 )
                 add_separator("-")
                 event_num += 1
@@ -537,9 +498,7 @@ class CoordinationTableBuilder:
                 if label:
                     agent_states[agent_id]["answer"] = label
                     agent_states[agent_id]["status"] = "answered"
-                    agent_states[agent_id][
-                        "last_streaming_logged"
-                    ] = False  # Reset for next round
+                    agent_states[agent_id]["last_streaming_logged"] = False  # Reset for next round
                     # Get preview from saved answers
                     preview = ""
                     if agent_id in self.agent_answers:
@@ -554,14 +513,9 @@ class CoordinationTableBuilder:
                         clean_preview = preview.replace("\n", " ").strip()
                         event_lines.append(f"👁️  Preview: {clean_preview}")
 
-                    lines.extend(
-                        self._create_multi_line_event_row(
-                            event_num, agent_id, event_lines, agent_states, cell_width
-                        )
-                    )
+                    lines.extend(self._create_multi_line_event_row(event_num, agent_id, event_lines, agent_states, cell_width))
                     add_separator("-")  # Add separator after event
                     event_num += 1
-                    row_added = True
 
             elif event_type == "vote_cast":
                 vote = context.get("voted_for_label")
@@ -569,9 +523,7 @@ class CoordinationTableBuilder:
                 if vote:
                     agent_states[agent_id]["vote"] = vote
                     agent_states[agent_id]["status"] = "voted"
-                    agent_states[agent_id][
-                        "last_streaming_logged"
-                    ] = False  # Reset for next round
+                    agent_states[agent_id]["last_streaming_logged"] = False  # Reset for next round
 
                     # Create multi-line event with vote and reason
                     event_lines = []
@@ -579,31 +531,18 @@ class CoordinationTableBuilder:
                     event_lines.append(f"🗳️  VOTE: {vote}")
                     if reason:
                         clean_reason = reason.replace("\n", " ").strip()
-                        reason_str = (
-                            clean_reason[:50] + "..."
-                            if len(clean_reason) > 50
-                            else clean_reason
-                        )
+                        reason_str = clean_reason[:50] + "..." if len(clean_reason) > 50 else clean_reason
                         event_lines.append(f"💭 Reason: {reason_str}")
 
-                    lines.extend(
-                        self._create_multi_line_event_row(
-                            event_num, agent_id, event_lines, agent_states, cell_width
-                        )
-                    )
+                    lines.extend(self._create_multi_line_event_row(event_num, agent_id, event_lines, agent_states, cell_width))
                     add_separator("-")  # Add separator after event
                     event_num += 1
-                    row_added = True
 
             elif event_type == "final_agent_selected":
                 # Show winner selection using agent mapping
                 agent_num = self.agent_mapping.get(agent_id, "?")
                 winner_name = f"Agent {agent_num}"
-                lines.extend(
-                    self._create_system_row(
-                        f"🏆 {winner_name} selected as winner", cell_width
-                    )
-                )
+                lines.extend(self._create_system_row(f"🏆 {winner_name} selected as winner", cell_width))
                 # Update other agents to completed status
                 for other_agent in self.agents:
                     if other_agent != agent_id:
@@ -615,10 +554,7 @@ class CoordinationTableBuilder:
                     agent_states[agent_id]["status"] = "final"
 
                     # Ensure preview is available for final answer
-                    if (
-                        not agent_states[agent_id]["preview"]
-                        and agent_id in self.agent_answers
-                    ):
+                    if not agent_states[agent_id]["preview"] and agent_id in self.agent_answers:
                         agent_states[agent_id]["preview"] = self.agent_answers[agent_id]
 
                     # Create multi-line event with final answer
@@ -626,19 +562,12 @@ class CoordinationTableBuilder:
                     # Context already shown when streaming started
                     event_lines.append(f"🎯 FINAL ANSWER: {label}")
                     if agent_states[agent_id]["preview"]:
-                        clean_preview = (
-                            agent_states[agent_id]["preview"].replace("\n", " ").strip()
-                        )
+                        clean_preview = agent_states[agent_id]["preview"].replace("\n", " ").strip()
                         event_lines.append(f"👁️  Preview: {clean_preview}")
 
-                    lines.extend(
-                        self._create_multi_line_event_row(
-                            event_num, agent_id, event_lines, agent_states, cell_width
-                        )
-                    )
+                    lines.extend(self._create_multi_line_event_row(event_num, agent_id, event_lines, agent_states, cell_width))
                     add_separator("-")  # Add separator after event
                     event_num += 1
-                    row_added = True
 
         # Add summary statistics
         lines.extend(self._create_summary_section(agent_states, cell_width))
@@ -731,9 +660,7 @@ class CoordinationTableBuilder:
                             cell_content = "✅ (voted)"
                         elif status == "answered":
                             if agent_states[agent]["answer"]:
-                                cell_content = (
-                                    f"✅ Answered: {agent_states[agent]['answer']}"
-                                )
+                                cell_content = f"✅ Answered: {agent_states[agent]['answer']}"
                             else:
                                 cell_content = "✅ (answered)"
                         elif status == "completed":
@@ -776,9 +703,7 @@ class CoordinationTableBuilder:
         # Calculate statistics
         total_answers = sum(1 for agent in self.agents if agent_states[agent]["answer"])
         total_votes = sum(1 for agent in self.agents if agent_states[agent]["vote"])
-        total_restarts = len(
-            [e for e in self.events if e["event_type"] == "restart_completed"]
-        )
+        total_restarts = len([e for e in self.events if e["event_type"] == "restart_completed"])
 
         # Count per-agent stats
         agent_stats = {}
@@ -793,10 +718,7 @@ class CoordinationTableBuilder:
 
         # Count restarts per agent
         for event in self.events:
-            if (
-                event["event_type"] == "restart_completed"
-                and event.get("agent_id") in self.agents
-            ):
+            if event["event_type"] == "restart_completed" and event.get("agent_id") in self.agents:
                 agent_id = event["agent_id"]
                 agent_num = self.agent_mapping.get(agent_id, "?")
                 agent_name = f"Agent {agent_num}"
@@ -827,12 +749,7 @@ class CoordinationTableBuilder:
             agent_num = self.agent_mapping.get(agent, "?")
             agent_name = f"Agent {agent_num}"
             count = agent_stats.get(agent_name, {}).get("answers", 0)
-            answers_row += (
-                self._format_cell(
-                    f"{count} answer{'s' if count != 1 else ''}", cell_width
-                )
-                + "|"
-            )
+            answers_row += self._format_cell(f"{count} answer{'s' if count != 1 else ''}", cell_width) + "|"
         lines.append(answers_row)
 
         # Votes row
@@ -841,12 +758,7 @@ class CoordinationTableBuilder:
             agent_num = self.agent_mapping.get(agent, "?")
             agent_name = f"Agent {agent_num}"
             count = agent_stats.get(agent_name, {}).get("votes", 0)
-            votes_row += (
-                self._format_cell(
-                    f"{count} vote{'s' if count != 1 else ''}", cell_width
-                )
-                + "|"
-            )
+            votes_row += self._format_cell(f"{count} vote{'s' if count != 1 else ''}", cell_width) + "|"
         lines.append(votes_row)
 
         # Restarts row
@@ -855,12 +767,7 @@ class CoordinationTableBuilder:
             agent_num = self.agent_mapping.get(agent, "?")
             agent_name = f"Agent {agent_num}"
             count = agent_stats.get(agent_name, {}).get("restarts", 0)
-            restarts_row += (
-                self._format_cell(
-                    f"{count} restart{'s' if count != 1 else ''}", cell_width
-                )
-                + "|"
-            )
+            restarts_row += self._format_cell(f"{count} restart{'s' if count != 1 else ''}", cell_width) + "|"
         lines.append(restarts_row)
 
         # Final status row
@@ -884,9 +791,7 @@ class CoordinationTableBuilder:
         lines.append("|" + "-" * 10 + "+" + ("-" * cell_width + "+") * len(self.agents))
         totals_row = "| TOTALS   |"
         total_width = cell_width * len(self.agents) + (len(self.agents) - 1)
-        totals_content = (
-            f"{total_answers} answers, {total_votes} votes, {total_restarts} restarts"
-        )
+        totals_content = f"{total_answers} answers, {total_votes} votes, {total_restarts} restarts"
         winner_name = None
         for agent in self.agents:
             if agent_states[agent]["status"] == "final":
@@ -927,7 +832,11 @@ class CoordinationTableBuilder:
                 ("Event", "Chronological action in the coordination"),
                 (
                     "Answer Labels",
-                    "Each answer gets a unique ID (agent1.1, agent2.1, etc.)\n                  Format: agent{N}.{attempt} where N=agent number, attempt=new answer number\n                  Example: agent1.1 = Agent1's 1st answer, agent2.1 = Agent2's 1st answer",
+                    "Each answer gets a unique ID (agent1.1, agent2.1, etc.)\n"
+                    "                  Format: agent{N}.{attempt} where N=agent number, "
+                    "attempt=new answer number\n"
+                    "                  Example: agent1.1 = Agent1's 1st answer, "
+                    "agent2.1 = Agent2's 1st answer",
                 ),
                 ("agent1.final", "Special label for the winner's final answer"),
             ],
@@ -1061,35 +970,27 @@ class CoordinationTableBuilder:
                 next_round = self.rounds[i + 1]
                 if next_round.round_type == "FINAL":
                     # Add winner announcement before FINAL round
-                    lines.append(
-                        "|" + "-" * 10 + "+" + ("-" * cell_width + "+") * num_agents
-                    )
+                    lines.append("|" + "-" * 10 + "+" + ("-" * cell_width + "+") * num_agents)
 
                     # Winner announcement row
                     if self.final_winner:
                         # Use agent mapping for consistent naming
-                        agent_number = agent_mapping.get(self.final_winner)
+                        agent_number = self.agent_mapping.get(self.final_winner)
                         if agent_number:
                             winner_name = f"Agent {agent_number}"
                         else:
                             winner_name = self.final_winner
 
                         winner_text = f"{winner_name} selected as winner"
-                        winner_width = (
-                            total_width - 1
-                        )  # Full table width minus the outer borders
+                        winner_width = total_width - 1  # Full table width minus the outer borders
                         winner_row = "|" + winner_text.center(winner_width) + "|"
                         lines.append(winner_row)
 
                     # Solid line before FINAL
-                    lines.append(
-                        "|" + "-" * 10 + "+" + ("-" * cell_width + "+") * num_agents
-                    )
+                    lines.append("|" + "-" * 10 + "+" + ("-" * cell_width + "+") * num_agents)
                 else:
                     # Wavy line between regular rounds
-                    lines.append(
-                        "|" + "~" * 10 + "+" + ("~" * cell_width + "+") * num_agents
-                    )
+                    lines.append("|" + "~" * 10 + "+" + ("~" * cell_width + "+") * num_agents)
 
         # Bottom separator
         lines.append("|" + "-" * 10 + "+" + ("-" * cell_width + "+") * num_agents)
@@ -1102,9 +1003,8 @@ class CoordinationTableBuilder:
     def _create_rich_legend(self) -> Optional["Panel"]:
         """Create Rich legend panel using shared legend content"""
         try:
-            from rich.text import Text
-            from rich.panel import Panel
             from rich import box
+            from rich.text import Text
         except ImportError:
             return None
 
@@ -1135,9 +1035,7 @@ class CoordinationTableBuilder:
                 for line in lines[1:]:
                     content.append(f"  {line}\n", style="dim white")
             else:
-                content.append(
-                    f"  {term.ljust(13)} - {description}\n", style="dim white"
-                )
+                content.append(f"  {term.ljust(13)} - {description}\n", style="dim white")
 
         return Panel(
             content,
@@ -1154,10 +1052,9 @@ class CoordinationTableBuilder:
             Tuple of (legend_panel, table) or None if Rich not available
         """
         try:
-            from rich.table import Table
-            from rich.console import Console
-            from rich.text import Text
             from rich import box
+            from rich.table import Table
+            from rich.text import Text
         except ImportError:
             return None
 
@@ -1220,11 +1117,7 @@ class CoordinationTableBuilder:
                     winner_row.append(winner_text)
                 table.add_row(*winner_row)
                 continue
-            elif (
-                event_type == "restart_triggered"
-                and agent_id
-                and agent_id in self.agents
-            ):
+            elif event_type == "restart_triggered" and agent_id and agent_id in self.agents:
                 agent_num = self.agent_mapping.get(agent_id, "?")
                 agent_name = f"Agent {agent_num}"
                 restart_row = ["[bold yellow]🔁[/bold yellow]"]
@@ -1252,13 +1145,8 @@ class CoordinationTableBuilder:
                 if status in ["streaming", "answering"]:
                     if old_status == "voted":
                         pass  # Skip post-vote streaming
-                    elif (
-                        old_status not in ["streaming", "answering"]
-                        or not agent_states[agent_id]["last_streaming_logged"]
-                    ):
-                        row = self._create_rich_event_row(
-                            event_num, agent_id, agent_states, "streaming_start"
-                        )
+                    elif old_status not in ["streaming", "answering"] or not agent_states[agent_id]["last_streaming_logged"]:
+                        row = self._create_rich_event_row(event_num, agent_id, agent_states, "streaming_start")
                         if row:
                             table.add_row(*row)
                             event_num += 1
@@ -1270,9 +1158,7 @@ class CoordinationTableBuilder:
 
             elif event_type == "restart_completed":
                 agent_round = context.get("agent_round", context.get("round", 0))
-                row = self._create_rich_event_row(
-                    event_num, agent_id, agent_states, "restart_completed", agent_round
-                )
+                row = self._create_rich_event_row(event_num, agent_id, agent_states, "restart_completed", agent_round)
                 if row:
                     table.add_row(*row)
                     event_num += 1
@@ -1286,9 +1172,7 @@ class CoordinationTableBuilder:
                     agent_states[agent_id]["last_streaming_logged"] = False
                     preview = self.agent_answers.get(agent_id, "")
                     agent_states[agent_id]["preview"] = preview
-                    row = self._create_rich_event_row(
-                        event_num, agent_id, agent_states, "new_answer", label, preview
-                    )
+                    row = self._create_rich_event_row(event_num, agent_id, agent_states, "new_answer", label, preview)
                     if row:
                         table.add_row(*row)
                         event_num += 1
@@ -1300,9 +1184,7 @@ class CoordinationTableBuilder:
                     agent_states[agent_id]["vote"] = vote
                     agent_states[agent_id]["status"] = "voted"
                     agent_states[agent_id]["last_streaming_logged"] = False
-                    row = self._create_rich_event_row(
-                        event_num, agent_id, agent_states, "vote", vote, reason
-                    )
+                    row = self._create_rich_event_row(event_num, agent_id, agent_states, "vote", vote, reason)
                     if row:
                         table.add_row(*row)
                         event_num += 1
@@ -1346,11 +1228,7 @@ class CoordinationTableBuilder:
                 # Active agent performing the event
                 if event_type == "streaming_start":
                     context = agent_states[agent]["context"]
-                    context_str = (
-                        f"[dim blue]📋 Context: \\[{', '.join(context)}][/dim blue]\n"
-                        if context
-                        else "[dim blue]📋 Context: \\[][/dim blue]\n"
-                    )
+                    context_str = f"[dim blue]📋 Context: \\[{', '.join(context)}][/dim blue]\n" if context else "[dim blue]📋 Context: \\[][/dim blue]\n"
                     cell = context_str + "[bold cyan]💭 Started streaming[/bold cyan]"
                 elif event_type == "restart_completed":
                     cell = f"[bold green]✅ RESTART COMPLETED (Restart {args[0]})[/bold green]"
@@ -1359,38 +1237,22 @@ class CoordinationTableBuilder:
                     cell = f"[bold green]✨ NEW ANSWER: {label}[/bold green]"
                     if preview:
                         clean_preview = preview.replace("\n", " ").strip()
-                        preview_truncated = (
-                            clean_preview[:80] + "..."
-                            if len(clean_preview) > 80
-                            else clean_preview
-                        )
-                        cell += (
-                            f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
-                        )
+                        preview_truncated = clean_preview[:80] + "..." if len(clean_preview) > 80 else clean_preview
+                        cell += f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
                 elif event_type == "vote":
                     vote, reason = args[0], args[1] if len(args) > 1 else ""
                     cell = f"[bold cyan]🗳️  VOTE: {vote}[/bold cyan]"
                     if reason:
                         clean_reason = reason.replace("\n", " ").strip()
-                        reason_preview = (
-                            clean_reason[:50] + "..."
-                            if len(clean_reason) > 50
-                            else clean_reason
-                        )
+                        reason_preview = clean_reason[:50] + "..." if len(clean_reason) > 50 else clean_reason
                         cell += f"\n[italic dim]💭 Reason: {reason_preview}[/italic dim]"
                 elif event_type == "final_answer":
                     label, preview = args[0], args[1] if len(args) > 1 else ""
                     cell = f"[bold green]🎯 FINAL ANSWER: {label}[/bold green]"
                     if preview:
                         clean_preview = preview.replace("\n", " ").strip()
-                        preview_truncated = (
-                            clean_preview[:80] + "..."
-                            if len(clean_preview) > 80
-                            else clean_preview
-                        )
-                        cell += (
-                            f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
-                        )
+                        preview_truncated = clean_preview[:80] + "..." if len(clean_preview) > 80 else clean_preview
+                        cell += f"\n[dim white]👁️  Preview: {preview_truncated}[/dim white]"
                 else:
                     cell = ""
                 row.append(cell)
@@ -1423,9 +1285,7 @@ class CoordinationTableBuilder:
         # Calculate statistics
         total_answers = sum(1 for agent in self.agents if agent_states[agent]["answer"])
         total_votes = sum(1 for agent in self.agents if agent_states[agent]["vote"])
-        total_restarts = len(
-            [e for e in self.events if e["event_type"] == "restart_completed"]
-        )
+        total_restarts = len([e for e in self.events if e["event_type"] == "restart_completed"])
 
         # Summary header
         summary_row = ["[bold magenta]SUMMARY[/bold magenta]"]
@@ -1440,14 +1300,7 @@ class CoordinationTableBuilder:
         for agent in self.agents:
             answer_count = 1 if agent_states[agent]["answer"] else 0
             vote_count = 1 if agent_states[agent]["vote"] else 0
-            restart_count = len(
-                [
-                    e
-                    for e in self.events
-                    if e["event_type"] == "restart_completed"
-                    and e.get("agent_id") == agent
-                ]
-            )
+            restart_count = len([e for e in self.events if e["event_type"] == "restart_completed" and e.get("agent_id") == agent])
 
             status = agent_states[agent]["status"]
             if status == "final":
@@ -1480,7 +1333,7 @@ class CoordinationTableBuilder:
             header_style="bold bright_white on blue",
             expand=True,
             padding=(0, 1),
-            title=f"[bold bright_cyan]Multi-Agent Coordination Flow[/bold bright_cyan]",
+            title="[bold bright_cyan]Multi-Agent Coordination Flow[/bold bright_cyan]",
             title_style="bold bright_cyan",
         )
 
@@ -1491,20 +1344,14 @@ class CoordinationTableBuilder:
             # Use the full agent name as provided by user configuration
             agent_name = agent
             # Use fixed width instead of ratio to prevent truncation
-            table.add_column(
-                agent_name, style="white", justify="center", width=40, overflow="fold"
-            )
+            table.add_column(agent_name, style="white", justify="center", width=40, overflow="fold")
 
         # Add user question row - create a nested table to achieve true spanning
         from rich.table import Table as InnerTable
 
-        inner_question_table = InnerTable(
-            box=None, show_header=False, expand=True, padding=(0, 0)
-        )
+        inner_question_table = InnerTable(box=None, show_header=False, expand=True, padding=(0, 0))
         inner_question_table.add_column("Question", justify="center", ratio=1)
-        inner_question_table.add_row(
-            f"[bold bright_yellow]{self.user_question}[/bold bright_yellow]"
-        )
+        inner_question_table.add_row(f"[bold bright_yellow]{self.user_question}[/bold bright_yellow]")
 
         question_cells = [""]  # Empty round column
         question_cells.append(inner_question_table)
@@ -1514,9 +1361,7 @@ class CoordinationTableBuilder:
         table.add_row(*question_cells)
 
         # Add separator row
-        separator_cells = ["[dim bright_blue]════════════[/dim bright_blue]"] + [
-            "[dim bright_blue]" + "═" * 88 + "[/dim bright_blue]" for _ in self.agents
-        ]
+        separator_cells = ["[dim bright_blue]════════════[/dim bright_blue]"] + ["[dim bright_blue]" + "═" * 88 + "[/dim bright_blue]" for _ in self.agents]
         table.add_row(*separator_cells)
 
         # Process each round
@@ -1544,9 +1389,7 @@ class CoordinationTableBuilder:
                     if round_data.round_type == "FINAL":
                         round_label = "[bold green]🏁 FINAL 🏁[/bold green]"
                     else:
-                        round_label = (
-                            f"[bold cyan]🔄 {round_data.round_type} 🔄[/bold cyan]"
-                        )
+                        round_label = f"[bold cyan]🔄 {round_data.round_type} 🔄[/bold cyan]"
                     row_cells.append(round_label)
                 else:
                     row_cells.append("")
@@ -1568,7 +1411,7 @@ class CoordinationTableBuilder:
                     # Winner announcement - simulate spanning
                     if self.final_winner:
                         # Use agent mapping for consistent naming
-                        agent_number = agent_mapping.get(self.final_winner)
+                        agent_number = self.agent_mapping.get(self.final_winner)
                         if agent_number:
                             winner_name = f"Agent {agent_number}"
                         else:
@@ -1576,15 +1419,9 @@ class CoordinationTableBuilder:
 
                         winner_announcement = f"🏆 {winner_name} selected as winner 🏆"
                         # Create nested table for winner announcement spanning
-                        inner_winner_table = InnerTable(
-                            box=None, show_header=False, expand=True, padding=(0, 0)
-                        )
-                        inner_winner_table.add_column(
-                            "Winner", justify="center", ratio=1
-                        )
-                        inner_winner_table.add_row(
-                            f"[bold bright_green]{winner_announcement}[/bold bright_green]"
-                        )
+                        inner_winner_table = InnerTable(box=None, show_header=False, expand=True, padding=(0, 0))
+                        inner_winner_table.add_column("Winner", justify="center", ratio=1)
+                        inner_winner_table.add_row(f"[bold bright_green]{winner_announcement}[/bold bright_green]")
 
                         winner_cells = [""]  # Empty round column
                         winner_cells.append(inner_winner_table)
@@ -1594,31 +1431,21 @@ class CoordinationTableBuilder:
                         table.add_row(*winner_cells)
 
                     # Solid line before FINAL
-                    separator_cells = ["[dim green]────────────[/dim green]"] + [
-                        "[dim green]" + "─" * 88 + "[/dim green]" for _ in self.agents
-                    ]
+                    separator_cells = ["[dim green]────────────[/dim green]"] + ["[dim green]" + "─" * 88 + "[/dim green]" for _ in self.agents]
                     table.add_row(*separator_cells)
                 else:
                     # Wavy line between regular rounds
-                    separator_cells = ["[dim cyan]~~~~~~~~~~~~[/dim cyan]"] + [
-                        "[dim cyan]" + "~" * 88 + "[/dim cyan]" for _ in self.agents
-                    ]
+                    separator_cells = ["[dim cyan]~~~~~~~~~~~~[/dim cyan]"] + ["[dim cyan]" + "~" * 88 + "[/dim cyan]" for _ in self.agents]
                     table.add_row(*separator_cells)
 
         return table
 
-    def _build_rich_agent_cell_content(
-        self, agent_state: AgentState, round_type: str, agent_id: str, round_num: int
-    ) -> List[str]:
+    def _build_rich_agent_cell_content(self, agent_state: AgentState, round_type: str, agent_id: str, round_num: int) -> List[str]:
         """Build Rich-formatted content for an agent's cell in a round."""
         lines = []
 
         # Determine if we should show context (for non-voting scenarios)
-        show_context = (
-            (agent_state.current_answer and not agent_state.vote)
-            or agent_state.has_final_answer
-            or agent_state.status in ["streaming", "answering"]
-        )
+        show_context = (agent_state.current_answer and not agent_state.vote) or agent_state.has_final_answer or agent_state.status in ["streaming", "answering"]
 
         # Don't show context for completed agents in FINAL round
         if round_type == "FINAL" and agent_state.status == "completed":
@@ -1628,9 +1455,7 @@ class CoordinationTableBuilder:
         if show_context and not agent_state.vote:
             if agent_state.context:
                 context_items = ", ".join(agent_state.context)
-                context_str = (
-                    f"📋 Context: \\[{context_items}]"  # Escape brackets for Rich
-                )
+                context_str = f"📋 Context: \\[{context_items}]"  # Escape brackets for Rich
             else:
                 context_str = "📋 Context: \\[]"  # Escape brackets for Rich
             lines.append(f"[dim blue]{context_str}[/dim blue]")
@@ -1640,20 +1465,14 @@ class CoordinationTableBuilder:
             # Agent voted in this round - always show context when voting
             if agent_state.context:
                 context_items = ", ".join(agent_state.context)
-                context_str = (
-                    f"📋 Context: \\[{context_items}]"  # Escape brackets for Rich
-                )
+                context_str = f"📋 Context: \\[{context_items}]"  # Escape brackets for Rich
                 lines.append(f"[dim blue]{context_str}[/dim blue]")
             vote_str = f"🗳️  VOTE: {agent_state.vote}"
             lines.append(f"[bold cyan]{vote_str}[/bold cyan]")
             if agent_state.vote_reason:
                 # Clean up newlines and truncate
                 clean_reason = agent_state.vote_reason.replace("\n", " ").strip()
-                reason = (
-                    clean_reason[:65] + "..."
-                    if len(clean_reason) > 68
-                    else clean_reason
-                )
+                reason = clean_reason[:65] + "..." if len(clean_reason) > 68 else clean_reason
                 reason_str = f"💭 Reason: {reason}"
                 lines.append(f"[italic dim]{reason_str}[/italic dim]")
 
@@ -1664,24 +1483,16 @@ class CoordinationTableBuilder:
                 lines.append(f"[bold green]{final_str}[/bold green]")
                 if agent_state.answer_preview:
                     # Clean up newlines in preview
-                    clean_preview = agent_state.answer_preview.replace(
-                        "\n", " "
-                    ).strip()
-                    preview_truncated = (
-                        clean_preview[:80] + "..."
-                        if len(clean_preview) > 80
-                        else clean_preview
-                    )
+                    clean_preview = agent_state.answer_preview.replace("\n", " ").strip()
+                    preview_truncated = clean_preview[:80] + "..." if len(clean_preview) > 80 else clean_preview
                     preview_str = f"👁️  Preview: {preview_truncated}"
                     lines.append(f"[dim white]{preview_str}[/dim white]")
                 else:
-                    lines.append(
-                        f"[dim red]👁️  Preview: [Answer not available][/dim red]"
-                    )
+                    lines.append("[dim red]👁️  Preview: [Answer not available][/dim red]")
             elif agent_state.status == "completed":
-                lines.append(f"[dim green]✅ (completed)[/dim green]")
+                lines.append("[dim green]✅ (completed)[/dim green]")
             else:
-                lines.append(f"[dim yellow]⏳ (waiting)[/dim yellow]")
+                lines.append("[dim yellow]⏳ (waiting)[/dim yellow]")
 
         elif agent_state.current_answer and not agent_state.vote:
             # Agent provided an answer in this round
@@ -1690,27 +1501,23 @@ class CoordinationTableBuilder:
             if agent_state.answer_preview:
                 # Clean up newlines in preview
                 clean_preview = agent_state.answer_preview.replace("\n", " ").strip()
-                preview_truncated = (
-                    clean_preview[:80] + "..."
-                    if len(clean_preview) > 80
-                    else clean_preview
-                )
+                preview_truncated = clean_preview[:80] + "..." if len(clean_preview) > 80 else clean_preview
                 preview_str = f"👁️  Preview: {preview_truncated}"
                 lines.append(f"[dim white]{preview_str}[/dim white]")
             else:
-                lines.append(f"[dim red]👁️  Preview: [Answer not available][/dim red]")
+                lines.append("[dim red]👁️  Preview: [Answer not available][/dim red]")
 
         elif agent_state.status in ["streaming", "answering"]:
-            lines.append(f"[bold yellow]🔄 (answering)[/bold yellow]")
+            lines.append("[bold yellow]🔄 (answering)[/bold yellow]")
 
         elif agent_state.status == "voted":
-            lines.append(f"[dim bright_cyan]✅ (voted)[/dim bright_cyan]")
+            lines.append("[dim bright_cyan]✅ (voted)[/dim bright_cyan]")
 
         elif agent_state.status == "answered":
-            lines.append(f"[dim bright_green]✅ (answered)[/dim bright_green]")
+            lines.append("[dim bright_green]✅ (answered)[/dim bright_green]")
 
         else:
-            lines.append(f"[dim]⏳ (waiting)[/dim]")
+            lines.append("[dim]⏳ (waiting)[/dim]")
 
         return lines
 

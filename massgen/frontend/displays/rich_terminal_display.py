@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Rich Terminal Display for MassGen Coordination
 
@@ -5,41 +6,41 @@ Enhanced terminal interface using Rich library with live updates,
 beautiful formatting, code highlighting, and responsive layout.
 """
 
-import re
-import time
-import threading
 import os
-import sys
-import subprocess
+import re
 import signal
+import subprocess
+import sys
+import threading
+import time
 
 # Unix-specific imports (not available on Windows)
 try:
     import select
-    import tty
     import termios
 
     UNIX_TERMINAL_SUPPORT = True
 except ImportError:
     UNIX_TERMINAL_SUPPORT = False
-from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Optional, Dict, Any
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 from .terminal_display import TerminalDisplay
 
 try:
+    from rich.align import Align
+    from rich.box import DOUBLE, HEAVY, ROUNDED
+    from rich.columns import Columns
     from rich.console import Console
+    from rich.layout import Layout
     from rich.live import Live
     from rich.panel import Panel
-    from rich.columns import Columns
-    from rich.table import Table
-    from rich.syntax import Syntax
-    from rich.text import Text
-    from rich.layout import Layout
-    from rich.align import Align
     from rich.progress import Progress, SpinnerColumn, TextColumn
     from rich.status import Status
-    from rich.box import ROUNDED, HEAVY, DOUBLE
+    from rich.syntax import Syntax
+    from rich.table import Table
+    from rich.text import Text
 
     RICH_AVAILABLE = True
 except ImportError:
@@ -110,10 +111,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 - flush_word_delay: Extra delay after punctuation in flush output (default: 0.08)
         """
         if not RICH_AVAILABLE:
-            raise ImportError(
-                "Rich library is required for RichTerminalDisplay. "
-                "Install with: pip install rich"
-            )
+            raise ImportError("Rich library is required for RichTerminalDisplay. " "Install with: pip install rich")
 
         super().__init__(agent_ids, **kwargs)
 
@@ -133,12 +131,8 @@ class RichTerminalDisplay(TerminalDisplay):
         self.terminal_size = self.console.size
         # Dynamic column width calculation - will be updated on resize
         self.num_agents = len(agent_ids)
-        self.fixed_column_width = max(
-            20, self.terminal_size.width // self.num_agents - 1
-        )
-        self.agent_panel_height = max(
-            10, self.terminal_size.height - 13
-        )  # Reserve space for header(5) + footer(8)
+        self.fixed_column_width = max(20, self.terminal_size.width // self.num_agents - 1)
+        self.agent_panel_height = max(10, self.terminal_size.height - 13)  # Reserve space for header(5) + footer(8)
 
         self.orchestrator = kwargs.get("orchestrator", None)
 
@@ -160,9 +154,7 @@ class RichTerminalDisplay(TerminalDisplay):
         self._performance_check_interval = 5.0  # Check performance every 5 seconds
 
         # Async refresh components - more workers for faster updates
-        self._refresh_executor = ThreadPoolExecutor(
-            max_workers=min(len(agent_ids) * 2 + 8, 20)
-        )
+        self._refresh_executor = ThreadPoolExecutor(max_workers=min(len(agent_ids) * 2 + 8, 20))
         self._agent_panels_cache = {}
         self._header_cache = None
         self._footer_cache = None
@@ -179,16 +171,12 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Interactive mode variables
         self._keyboard_interactive_mode = kwargs.get("keyboard_interactive_mode", True)
-        self._safe_keyboard_mode = kwargs.get(
-            "safe_keyboard_mode", False
-        )  # Non-interfering keyboard mode
+        self._safe_keyboard_mode = kwargs.get("safe_keyboard_mode", False)  # Non-interfering keyboard mode
         self._key_handler = None
         self._input_thread = None
         self._stop_input_thread = False
         self._original_settings = None
-        self._agent_selector_active = (
-            False  # Flag to prevent duplicate agent selector calls
-        )
+        self._agent_selector_active = False  # Flag to prevent duplicate agent selector calls
 
         # Store final presentation for re-display
         self._stored_final_presentation = None
@@ -249,26 +237,14 @@ class RichTerminalDisplay(TerminalDisplay):
         }
 
         # Status jump mechanism for web search interruption
-        self._status_jump_enabled = kwargs.get(
-            "enable_status_jump", True
-        )  # Enable jumping to latest status
-        self._web_search_truncate_on_status_change = kwargs.get(
-            "truncate_web_search_on_status_change", True
-        )  # Truncate web search content on status changes
-        self._max_web_search_lines = kwargs.get(
-            "max_web_search_lines_on_status_change", 3
-        )  # Maximum lines to keep from web search when status changes
+        self._status_jump_enabled = kwargs.get("enable_status_jump", True)  # Enable jumping to latest status
+        self._web_search_truncate_on_status_change = kwargs.get("truncate_web_search_on_status_change", True)  # Truncate web search content on status changes
+        self._max_web_search_lines = kwargs.get("max_web_search_lines_on_status_change", 3)  # Maximum lines to keep from web search when status changes
 
         # Flush output configuration for final answer display
-        self._enable_flush_output = kwargs.get(
-            "enable_flush_output", True
-        )  # Enable flush output for final answer
-        self._flush_char_delay = kwargs.get(
-            "flush_char_delay", 0.03
-        )  # Delay between characters
-        self._flush_word_delay = kwargs.get(
-            "flush_word_delay", 0.08
-        )  # Extra delay after punctuation
+        self._enable_flush_output = kwargs.get("enable_flush_output", True)  # Enable flush output for final answer
+        self._flush_char_delay = kwargs.get("flush_char_delay", 0.03)  # Delay between characters
+        self._flush_word_delay = kwargs.get("flush_word_delay", 0.08)  # Extra delay after punctuation
 
         # File-based output system
         # Use centralized log session directory
@@ -323,13 +299,9 @@ class RichTerminalDisplay(TerminalDisplay):
                 new_size = self.console.size
 
                 # Check if size actually changed
-                if (
-                    new_size.width != self.terminal_size.width
-                    or new_size.height != self.terminal_size.height
-                ):
-
+                if new_size.width != self.terminal_size.width or new_size.height != self.terminal_size.height:
                     # Update stored terminal size
-                    old_size = self.terminal_size
+                    self.terminal_size
                     self.terminal_size = new_size
 
                     # VSCode-specific post-resize delay
@@ -363,9 +335,7 @@ class RichTerminalDisplay(TerminalDisplay):
     def _recalculate_layout(self):
         """Recalculate layout dimensions based on current terminal size."""
         # Recalculate column width
-        self.fixed_column_width = max(
-            20, self.terminal_size.width // self.num_agents - 1
-        )
+        self.fixed_column_width = max(20, self.terminal_size.width // self.num_agents - 1)
 
         # Recalculate panel height (reserve space for header and footer)
         self.agent_panel_height = max(10, self.terminal_size.height - 13)
@@ -414,11 +384,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 terminal_info["performance_tier"] = "high"
                 terminal_info["type"] = "iterm"
                 terminal_info["supports_unicode"] = True
-            elif (
-                "vscode" in term_program
-                or "code" in term_program
-                or self._detect_vscode_terminal()
-            ):
+            elif "vscode" in term_program or "code" in term_program or self._detect_vscode_terminal():
                 # VSCode integrated terminal - needs special handling for flaky behavior
                 terminal_info["performance_tier"] = "medium"
                 terminal_info["type"] = "vscode"
@@ -490,18 +456,14 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 current_process = psutil.Process()
                 parent = current_process.parent()
-                if parent and (
-                    "code" in parent.name().lower() or "vscode" in parent.name().lower()
-                ):
+                if parent and ("code" in parent.name().lower() or "vscode" in parent.name().lower()):
                     return True
             except (ImportError, psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
 
             # Check for common VSCode terminal patterns in environment
             term_program = os.environ.get("TERM_PROGRAM", "").lower()
-            if term_program and any(
-                pattern in term_program for pattern in ["code", "vscode"]
-            ):
+            if term_program and any(pattern in term_program for pattern in ["code", "vscode"]):
                 return True
 
             return False
@@ -617,7 +579,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
     def _monitor_performance(self):
         """Monitor refresh performance and adjust if needed."""
-        current_time = time.time()
+        time.time()
 
         # Clean old refresh time records (keep last 20)
         if len(self._refresh_times) > 20:
@@ -634,7 +596,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 # After 3 dropped frames, reduce refresh rate
                 if self._dropped_frames >= 3:
-                    old_rate = self.refresh_rate
+                    self.refresh_rate
                     self.refresh_rate = max(2, int(self.refresh_rate * 0.7))
                     self._dropped_frames = 0
 
@@ -646,7 +608,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     if self.live and self.live.is_started:
                         try:
                             self.live.refresh_per_second = self.refresh_rate
-                        except:
+                        except Exception:
                             # If live display fails, fallback to simple mode
                             self._fallback_to_simple_display()
 
@@ -757,13 +719,9 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Print a simple status message
         try:
-            self.console.print(
-                "\n[yellow]Terminal compatibility: Using simple display mode[/yellow]"
-            )
-            self.console.print(
-                f"[dim]Monitoring {len(self.agent_ids)} agents...[/dim]\n"
-            )
-        except:
+            self.console.print("\n[yellow]Terminal compatibility: Using simple display mode[/yellow]")
+            self.console.print(f"[dim]Monitoring {len(self.agent_ids)} agents...[/dim]\n")
+        except Exception:
             # If even basic console fails, use plain print
             print("\nUsing simple display mode...")
             print(f"Monitoring {len(self.agent_ids)} agents...\n")
@@ -777,9 +735,7 @@ class RichTerminalDisplay(TerminalDisplay):
         use_safe_mode = term_type in ["iterm", "macos_terminal", "vscode"]
 
         # VSCode-specific stabilization
-        if term_type == "vscode" and self._terminal_performance.get(
-            "refresh_stabilization"
-        ):
+        if term_type == "vscode" and self._terminal_performance.get("refresh_stabilization"):
             # Add small delay before refresh to let VSCode terminal stabilize
             time.sleep(0.01)
 
@@ -788,19 +744,13 @@ class RichTerminalDisplay(TerminalDisplay):
                 # For macOS terminals and VSCode, use more conservative locking
                 with self._layout_update_lock:
                     with self._lock:  # Double locking for extra safety
-                        if (
-                            hasattr(self, "_simple_display_mode")
-                            and self._simple_display_mode
-                        ):
+                        if hasattr(self, "_simple_display_mode") and self._simple_display_mode:
                             self._update_simple_display()
                         else:
                             self._update_live_display_safe()
             else:
                 with self._layout_update_lock:
-                    if (
-                        hasattr(self, "_simple_display_mode")
-                        and self._simple_display_mode
-                    ):
+                    if hasattr(self, "_simple_display_mode") and self._simple_display_mode:
                         self._update_simple_display()
                     else:
                         self._update_live_display()
@@ -809,9 +759,7 @@ class RichTerminalDisplay(TerminalDisplay):
             self._fallback_to_simple_display()
 
         # VSCode-specific post-refresh stabilization
-        if term_type == "vscode" and self._terminal_performance.get(
-            "needs_flush_delay"
-        ):
+        if term_type == "vscode" and self._terminal_performance.get("needs_flush_delay"):
             # Small delay after refresh to prevent flicker
             time.sleep(0.005)
 
@@ -831,7 +779,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 try:
                     self.console.print(f"\r{status_line[:80]}", end="")
-                except:
+                except Exception:
                     print(f"\r{status_line[:80]}", end="")
 
                 self._last_simple_update = current_time
@@ -945,11 +893,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
     def _safe_emoji(self, emoji: str) -> str:
         """Get safe emoji for current terminal, with VSCode fallbacks."""
-        if (
-            self._terminal_performance["type"] == "vscode"
-            and self._use_emoji_fallbacks
-            and emoji in self._emoji_fallbacks
-        ):
+        if self._terminal_performance["type"] == "vscode" and self._use_emoji_fallbacks and emoji in self._emoji_fallbacks:
             return self._emoji_fallbacks[emoji]
         return emoji
 
@@ -981,22 +925,16 @@ class RichTerminalDisplay(TerminalDisplay):
     def _create_initial_display(self):
         """Create the initial welcome display."""
         welcome_text = Text()
-        welcome_text.append(
-            "🚀 MassGen Coordination Dashboard 🚀\n", style=self.colors["header_style"]
-        )
+        welcome_text.append("🚀 MassGen Coordination Dashboard 🚀\n", style=self.colors["header_style"])
         welcome_text.append(
             f"Multi-Agent System with {len(self.agent_ids)} agents\n",
             style=self.colors["primary"],
         )
 
         if self.log_filename:
-            welcome_text.append(
-                f"📁 Log: {self.log_filename}\n", style=self.colors["info"]
-            )
+            welcome_text.append(f"📁 Log: {self.log_filename}\n", style=self.colors["info"])
 
-        welcome_text.append(
-            f"🎨 Theme: {self.theme.title()}", style=self.colors["secondary"]
-        )
+        welcome_text.append(f"🎨 Theme: {self.theme.title()}", style=self.colors["secondary"])
 
         welcome_panel = Panel(
             welcome_text,
@@ -1040,9 +978,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 agent_panels.append(panel)
 
         # Use fixed column widths with equal=False to enforce exact sizing
-        return Columns(
-            agent_panels, equal=False, expand=False, width=self.fixed_column_width
-        )
+        return Columns(agent_panels, equal=False, expand=False, width=self.fixed_column_width)
 
     def _create_header(self) -> Panel:
         """Create the header panel."""
@@ -1074,9 +1010,7 @@ class RichTerminalDisplay(TerminalDisplay):
             agent_panels.append(panel)
 
         # Use fixed column widths with equal=False to enforce exact sizing
-        return Columns(
-            agent_panels, equal=False, expand=False, width=self.fixed_column_width
-        )
+        return Columns(agent_panels, equal=False, expand=False, width=self.fixed_column_width)
 
     def _setup_keyboard_handler(self):
         """Setup keyboard handler for interactive agent selection."""
@@ -1106,22 +1040,16 @@ class RichTerminalDisplay(TerminalDisplay):
 
         if self._safe_keyboard_mode or term_type in ["iterm", "macos_terminal"]:
             # Use completely safe method for macOS terminals to avoid conflicts
-            self._input_thread = threading.Thread(
-                target=self._input_thread_worker_safe, daemon=True
-            )
+            self._input_thread = threading.Thread(target=self._input_thread_worker_safe, daemon=True)
             self._input_thread.start()
         else:
             # Try improved method first, fallback to polling method if needed
             try:
-                self._input_thread = threading.Thread(
-                    target=self._input_thread_worker_improved, daemon=True
-                )
+                self._input_thread = threading.Thread(target=self._input_thread_worker_improved, daemon=True)
                 self._input_thread.start()
             except Exception:
                 # Fallback to simpler polling method
-                self._input_thread = threading.Thread(
-                    target=self._input_thread_worker_fallback, daemon=True
-                )
+                self._input_thread = threading.Thread(target=self._input_thread_worker_fallback, daemon=True)
                 self._input_thread.start()
 
     def _input_thread_worker_improved(self):
@@ -1155,7 +1083,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         except (KeyboardInterrupt, EOFError):
             pass
-        except Exception as e:
+        except Exception:
             # Handle errors gracefully
             pass
         finally:
@@ -1167,14 +1095,8 @@ class RichTerminalDisplay(TerminalDisplay):
         import time
 
         # Show instructions to user
-        self.console.print(
-            "\n[dim]Keyboard support active. Press keys during Live display:[/dim]"
-        )
-        self.console.print(
-            "[dim]1-{} to open agent files, 's' for system status, 'q' to quit[/dim]\n".format(
-                len(self.agent_ids)
-            )
-        )
+        self.console.print("\n[dim]Keyboard support active. Press keys during Live display:[/dim]")
+        self.console.print("[dim]1-{} to open agent files, 's' for system status, 'q' to quit[/dim]\n".format(len(self.agent_ids)))
 
         try:
             while not self._stop_input_thread:
@@ -1199,7 +1121,7 @@ class RichTerminalDisplay(TerminalDisplay):
         try:
             while not self._stop_input_thread:
                 time.sleep(0.5)  # Just wait without doing anything
-        except:
+        except Exception:
             pass
 
     def _restore_terminal_settings(self):
@@ -1208,9 +1130,7 @@ class RichTerminalDisplay(TerminalDisplay):
             if UNIX_TERMINAL_SUPPORT and sys.stdin.isatty():
                 if self._original_settings:
                     # Restore the original settings
-                    termios.tcsetattr(
-                        sys.stdin.fileno(), termios.TCSADRAIN, self._original_settings
-                    )
+                    termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, self._original_settings)
                     self._original_settings = None
                 else:
                     # If we don't have original settings, at least ensure echo is on
@@ -1218,12 +1138,10 @@ class RichTerminalDisplay(TerminalDisplay):
                         current = termios.tcgetattr(sys.stdin.fileno())
                         # Enable echo and canonical mode
                         current[3] = current[3] | termios.ECHO | termios.ICANON
-                        termios.tcsetattr(
-                            sys.stdin.fileno(), termios.TCSADRAIN, current
-                        )
-                    except:
+                        termios.tcsetattr(sys.stdin.fileno(), termios.TCSADRAIN, current)
+                    except Exception:
                         pass
-        except:
+        except Exception:
             pass
 
     def _ensure_clean_keyboard_state(self):
@@ -1233,7 +1151,7 @@ class RichTerminalDisplay(TerminalDisplay):
         if self._input_thread and self._input_thread.is_alive():
             try:
                 self._input_thread.join(timeout=0.5)
-            except:
+            except Exception:
                 pass
 
         # Restore terminal settings to normal mode
@@ -1244,7 +1162,7 @@ class RichTerminalDisplay(TerminalDisplay):
             if UNIX_TERMINAL_SUPPORT and sys.stdin.isatty():
                 # Flush input buffer to remove any pending keystrokes
                 termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
-        except:
+        except Exception:
             pass
 
         # Small delay to ensure all cleanup is complete
@@ -1313,9 +1231,7 @@ class RichTerminalDisplay(TerminalDisplay):
             elif sys.platform.startswith("linux"):  # Linux
                 subprocess.run(["xdg-open", str(self.system_status_file)], check=False)
             elif sys.platform == "win32":  # Windows
-                subprocess.run(
-                    ["start", str(self.system_status_file)], check=False, shell=True
-                )
+                subprocess.run(["start", str(self.system_status_file)], check=False, shell=True)
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Fallback to external app method
             self._open_system_status_in_external_app()
@@ -1327,9 +1243,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         try:
             # Force open in new VS Code window
-            subprocess.run(
-                ["code", "--new-window", str(self.system_status_file)], check=False
-            )
+            subprocess.run(["code", "--new-window", str(self.system_status_file)], check=False)
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Fallback to existing method if VS Code is not available
             self._open_system_status_in_external_app()
@@ -1351,9 +1265,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 for editor in editors:
                     try:
                         if editor == "open":
-                            subprocess.run(
-                                ["open", "-a", "TextEdit", str(file_path)], check=False
-                            )
+                            subprocess.run(["open", "-a", "TextEdit", str(file_path)], check=False)
                         else:
                             subprocess.run([editor, str(file_path)], check=False)
                         break
@@ -1373,9 +1285,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 editors = ["code", "notepad++", "notepad"]
                 for editor in editors:
                     try:
-                        subprocess.run(
-                            [editor, str(file_path)], check=False, shell=True
-                        )
+                        subprocess.run([editor, str(file_path)], check=False, shell=True)
                         break
                     except (subprocess.CalledProcessError, FileNotFoundError):
                         continue
@@ -1407,9 +1317,7 @@ class RichTerminalDisplay(TerminalDisplay):
                                 check=False,
                             )
                         else:
-                            subprocess.run(
-                                [editor, str(self.system_status_file)], check=False
-                            )
+                            subprocess.run([editor, str(self.system_status_file)], check=False)
                         break
                     except (subprocess.CalledProcessError, FileNotFoundError):
                         continue
@@ -1418,9 +1326,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 editors = ["code", "gedit", "kate", "nano", "vim", "xdg-open"]
                 for editor in editors:
                     try:
-                        subprocess.run(
-                            [editor, str(self.system_status_file)], check=False
-                        )
+                        subprocess.run([editor, str(self.system_status_file)], check=False)
                         break
                     except (subprocess.CalledProcessError, FileNotFoundError):
                         continue
@@ -1464,13 +1370,9 @@ class RichTerminalDisplay(TerminalDisplay):
                     f"📄 {agent_id.upper()} - Full Content",
                     style=self.colors["header_style"],
                 )
-                header_text.append(
-                    "\nPress any key to return to main view", style=self.colors["info"]
-                )
+                header_text.append("\nPress any key to return to main view", style=self.colors["info"])
 
-                header_panel = Panel(
-                    header_text, box=DOUBLE, border_style=self.colors["border"]
-                )
+                header_panel = Panel(header_text, box=DOUBLE, border_style=self.colors["border"])
 
                 # Create content panel
                 content_panel = Panel(
@@ -1489,7 +1391,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 # Add separator instead of clearing screen
                 self.console.print("\n" + "=" * 80 + "\n")
 
-        except Exception as e:
+        except Exception:
             # Handle errors gracefully
             pass
 
@@ -1517,7 +1419,9 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 options_text = Text()
                 options_text.append(
-                    "\nThis is a system inspection interface for diving into the multi-agent collaboration behind the scenes in MassGen. It lets you examine each agent’s original output and compare it to the final MassGen answer in terms of quality. You can explore the detailed communication, collaboration, voting, and decision-making process.\n",
+                    "\nThis is a system inspection interface for diving into the multi-agent collaboration behind the scenes in MassGen. "
+                    "It lets you examine each agent's original output and compare it to the final MassGen answer in terms of quality. "
+                    "You can explore the detailed communication, collaboration, voting, and decision-making process.\n",
                     style=self.colors["text"],
                 )
 
@@ -1529,7 +1433,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 for key, agent_id in self._agent_keys.items():
                     options_text.append(f"  {key}: ", style=self.colors["warning"])
                     options_text.append(
-                        f"Inspect the original answer and working log of agent ",
+                        "Inspect the original answer and working log of agent ",
                         style=self.colors["text"],
                     )
                     options_text.append(f"{agent_id}\n", style=self.colors["warning"])
@@ -1558,7 +1462,7 @@ class RichTerminalDisplay(TerminalDisplay):
                         options_text,
                         title="[bold]Agent Selector[/bold]",
                         border_style=self.colors["border"],
-                    )
+                    ),
                 )
 
                 # Get user input
@@ -1576,9 +1480,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     elif choice == "q":
                         break
                     else:
-                        self.console.print(
-                            f"[{self.colors['error']}]Invalid choice. Please try again.[/{self.colors['error']}]"
-                        )
+                        self.console.print(f"[{self.colors['error']}]Invalid choice. Please try again.[/{self.colors['error']}]")
                 except KeyboardInterrupt:
                     # Handle Ctrl+C gracefully
                     break
@@ -1589,40 +1491,14 @@ class RichTerminalDisplay(TerminalDisplay):
     def _redisplay_final_presentation(self):
         """Redisplay the stored final presentation."""
         if not self._stored_final_presentation or not self._stored_presentation_agent:
-            self.console.print(
-                f"[{self.colors['error']}]No final presentation stored.[/{self.colors['error']}]"
-            )
+            self.console.print(f"[{self.colors['error']}]No final presentation stored.[/{self.colors['error']}]")
             return
 
         # Add separator
         self.console.print("\n" + "=" * 80 + "\n")
 
         # Display the stored presentation
-        self._display_final_presentation_content(
-            self._stored_presentation_agent, self._stored_final_presentation
-        )
-
-        # Wait for user to continue
-        input("\nPress Enter to return to agent selector...")
-
-        # Add separator
-        self.console.print("\n" + "=" * 80 + "\n")
-
-    def _redisplay_final_presentation(self):
-        """Redisplay the stored final presentation."""
-        if not self._stored_final_presentation or not self._stored_presentation_agent:
-            self.console.print(
-                f"[{self.colors['error']}]No final presentation stored.[/{self.colors['error']}]"
-            )
-            return
-
-        # Add separator
-        self.console.print("\n" + "=" * 80 + "\n")
-
-        # Display the stored presentation
-        self._display_final_presentation_content(
-            self._stored_presentation_agent, self._stored_final_presentation
-        )
+        self._display_final_presentation_content(self._stored_presentation_agent, self._stored_final_presentation)
 
         # Wait for user to continue
         input("\nPress Enter to return to agent selector...")
@@ -1638,9 +1514,7 @@ class RichTerminalDisplay(TerminalDisplay):
     def _show_system_status(self):
         """Display system status from txt file."""
         if not self.system_status_file or not self.system_status_file.exists():
-            self.console.print(
-                f"[{self.colors['error']}]System status file not found.[/{self.colors['error']}]"
-            )
+            self.console.print(f"[{self.colors['error']}]System status file not found.[/{self.colors['error']}]")
             return
 
         try:
@@ -1654,16 +1528,10 @@ class RichTerminalDisplay(TerminalDisplay):
 
             # Create header
             header_text = Text()
-            header_text.append(
-                "📊 SYSTEM STATUS - Full Log", style=self.colors["header_style"]
-            )
-            header_text.append(
-                "\nPress any key to return to agent selector", style=self.colors["info"]
-            )
+            header_text.append("📊 SYSTEM STATUS - Full Log", style=self.colors["header_style"])
+            header_text.append("\nPress any key to return to agent selector", style=self.colors["info"])
 
-            header_panel = Panel(
-                header_text, box=DOUBLE, border_style=self.colors["border"]
-            )
+            header_panel = Panel(header_text, box=DOUBLE, border_style=self.colors["border"])
 
             # Create content panel
             content_panel = Panel(
@@ -1683,9 +1551,7 @@ class RichTerminalDisplay(TerminalDisplay):
             self.console.print("\n" + "=" * 80 + "\n")
 
         except Exception as e:
-            self.console.print(
-                f"[{self.colors['error']}]Error reading system status file: {e}[/{self.colors['error']}]"
-            )
+            self.console.print(f"[{self.colors['error']}]Error reading system status file: {e}[/{self.colors['error']}]")
 
     def _create_agent_panel(self, agent_id: str) -> Panel:
         """Create a panel for a specific agent."""
@@ -1734,9 +1600,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Add interactive indicator if enabled
         if self._keyboard_interactive_mode and hasattr(self, "_agent_keys"):
-            agent_key = next(
-                (k for k, v in self._agent_keys.items() if v == agent_id), None
-            )
+            agent_key = next((k for k, v in self._agent_keys.items() if v == agent_id), None)
             if agent_key:
                 title += f" [Press {agent_key}]"
 
@@ -1843,13 +1707,9 @@ class RichTerminalDisplay(TerminalDisplay):
                 header_level = len(line) - len(line.lstrip("#"))
                 clean_header = line.lstrip("# ").strip()
                 if header_level <= 2:
-                    formatted.append(
-                        clean_header, style=f"bold {self.colors['header_style']}"
-                    )
+                    formatted.append(clean_header, style=f"bold {self.colors['header_style']}")
                 else:
-                    formatted.append(
-                        clean_header, style=f"bold {self.colors['primary']}"
-                    )
+                    formatted.append(clean_header, style=f"bold {self.colors['primary']}")
             elif self._is_code_content(line):
                 # Code blocks in presentations
                 if self.enable_syntax_highlighting:
@@ -1890,10 +1750,7 @@ class RichTerminalDisplay(TerminalDisplay):
         elif "[Provider Tool: Web Search] Search completed" in line:
             formatted.append("✅ ", style=self.colors["success"])
             formatted.append("Search completed", style=self.colors["text"])
-        elif any(
-            pattern in line
-            for pattern in ["🔍 [Search Query]", "Search Query:", "[Search Query]"]
-        ):
+        elif any(pattern in line for pattern in ["🔍 [Search Query]", "Search Query:", "[Search Query]"]):
             # Extract and display search query with better formatting
             # Try different patterns to extract the query
             query = None
@@ -1920,9 +1777,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 formatted.append("🔍 Search query", style=self.colors["info"])
         else:
             # For long web search results, truncate more aggressively
-            max_web_length = min(
-                self.max_line_length // 2, 60
-            )  # Much shorter for web content
+            max_web_length = min(self.max_line_length // 2, 60)  # Much shorter for web content
             if len(line) > max_web_length:
                 # Try to find a natural break point
                 truncated = line[:max_web_length]
@@ -1948,12 +1803,7 @@ class RichTerminalDisplay(TerminalDisplay):
         if len(content) > 1000 and self._is_web_search_content(content):
             # Check if it contains mostly URLs and technical details
             url_count = content.count("http")
-            technical_indicators = (
-                content.count("[")
-                + content.count("]")
-                + content.count("(")
-                + content.count(")")
-            )
+            technical_indicators = content.count("[") + content.count("]") + content.count("(") + content.count(")")
 
             # If more than 50% seems to be technical metadata, filter it
             if url_count > 5 or technical_indicators > len(content) * 0.1:
@@ -2000,16 +1850,12 @@ class RichTerminalDisplay(TerminalDisplay):
             truncated_web_search = (
                 web_search_lines[:1]  # First line (search start)
                 + ["🔍 ... (web search content truncated due to status update) ..."]
-                + web_search_lines[
-                    -(self._max_web_search_lines - 2) :
-                ]  # Last few lines
+                + web_search_lines[-(self._max_web_search_lines - 2) :]  # Last few lines
             )
 
             # Reconstruct the content with truncated web search
             # Keep recent non-web-search content and add truncated web search
-            recent_non_web = non_web_search_lines[
-                -(max(5, self.max_content_lines - len(truncated_web_search))) :
-            ]
+            recent_non_web = non_web_search_lines[-(max(5, self.max_content_lines - len(truncated_web_search))) :]
             self.agent_outputs[agent_id] = recent_non_web + truncated_web_search
 
         # Add a status jump indicator only if content was actually truncated
@@ -2034,22 +1880,16 @@ class RichTerminalDisplay(TerminalDisplay):
                 return Text(content, style=f"bold {self.colors['info']}")
             else:
                 return Text(content, style=f"bold {self.colors['info']}")
-        except:
+        except Exception:
             return Text(content, style=f"bold {self.colors['info']}")
 
     def _detect_language(self, content: str) -> Optional[str]:
         """Detect programming language from content."""
         content_lower = content.lower()
 
-        if any(
-            keyword in content_lower
-            for keyword in ["def ", "import ", "class ", "python"]
-        ):
+        if any(keyword in content_lower for keyword in ["def ", "import ", "class ", "python"]):
             return "python"
-        elif any(
-            keyword in content_lower
-            for keyword in ["function", "var ", "let ", "const "]
-        ):
+        elif any(keyword in content_lower for keyword in ["function", "var ", "let ", "const "]):
             return "javascript"
         elif any(keyword in content_lower for keyword in ["<", ">", "html", "div"]):
             return "html"
@@ -2087,19 +1927,11 @@ class RichTerminalDisplay(TerminalDisplay):
     def _get_backend_name(self, agent_id: str) -> str:
         """Get backend name for agent."""
         try:
-            if (
-                hasattr(self, "orchestrator")
-                and self.orchestrator
-                and hasattr(self.orchestrator, "agents")
-            ):
+            if hasattr(self, "orchestrator") and self.orchestrator and hasattr(self.orchestrator, "agents"):
                 agent = self.orchestrator.agents.get(agent_id)
-                if (
-                    agent
-                    and hasattr(agent, "backend")
-                    and hasattr(agent.backend, "get_provider_name")
-                ):
+                if agent and hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
                     return agent.backend.get_provider_name()
-        except:
+        except Exception:
             pass
         return "Unknown"
 
@@ -2131,9 +1963,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Log file info
         if self.log_filename:
-            footer_content.append(
-                f"📁 Log: {self.log_filename}\n", style=self.colors["info"]
-            )
+            footer_content.append(f"📁 Log: {self.log_filename}\n", style=self.colors["info"])
 
         # Interactive mode instructions
         if self._keyboard_interactive_mode and hasattr(self, "_agent_keys"):
@@ -2147,9 +1977,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     style=self.colors["info"],
                 )
             else:
-                footer_content.append(
-                    "🎮 Live Mode Hotkeys: Press 1-", style=self.colors["primary"]
-                )
+                footer_content.append("🎮 Live Mode Hotkeys: Press 1-", style=self.colors["primary"])
                 footer_content.append(
                     f"{len(self.agent_ids)} to open agent files in editor, 's' for system status",
                     style=self.colors["text"],
@@ -2166,9 +1994,7 @@ class RichTerminalDisplay(TerminalDisplay):
             box=ROUNDED,
         )
 
-    def update_agent_content(
-        self, agent_id: str, content: str, content_type: str = "thinking"
-    ):
+    def update_agent_content(self, agent_id: str, content: str, content_type: str = "thinking"):
         """Update content for a specific agent with rich formatting and file output."""
 
         if agent_id not in self.agent_ids:
@@ -2187,18 +2013,10 @@ class RichTerminalDisplay(TerminalDisplay):
                 "status",
                 "presentation",
                 "tool",
-            ] or any(
-                keyword in content.lower() for keyword in self._status_change_keywords
-            )
+            ] or any(keyword in content.lower() for keyword in self._status_change_keywords)
 
             # If status jump is enabled and this is a status change, truncate web search content
-            if (
-                self._status_jump_enabled
-                and is_status_change
-                and self._web_search_truncate_on_status_change
-                and self.agent_outputs[agent_id]
-            ):
-
+            if self._status_jump_enabled and is_status_change and self._web_search_truncate_on_status_change and self.agent_outputs[agent_id]:
                 self._truncate_web_search_content(agent_id)
 
             # Enhanced filtering for web search content
@@ -2217,14 +2035,10 @@ class RichTerminalDisplay(TerminalDisplay):
                 "status",
                 "presentation",
                 "error",
-            ] or any(
-                keyword in content.lower() for keyword in self._status_change_keywords
-            )
+            ] or any(keyword in content.lower() for keyword in self._status_change_keywords)
             self._schedule_layered_update(agent_id, is_critical)
 
-    def _process_content_with_buffering(
-        self, agent_id: str, content: str, content_type: str
-    ):
+    def _process_content_with_buffering(self, agent_id: str, content: str, content_type: str):
         """Process content with buffering to accumulate text chunks."""
         # Cancel any existing buffer timer
         if self._buffer_timers.get(agent_id):
@@ -2232,10 +2046,7 @@ class RichTerminalDisplay(TerminalDisplay):
             self._buffer_timers[agent_id] = None
 
         # Special handling for content that should be displayed immediately
-        if (
-            content_type in ["tool", "status", "presentation", "error"]
-            or "\n" in content
-        ):
+        if content_type in ["tool", "status", "presentation", "error"] or "\n" in content:
             # Flush any existing buffer first
             self._flush_buffer(agent_id)
 
@@ -2292,9 +2103,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     self._pending_updates.add(agent_id)
                     self._schedule_async_update(force_update=True)
 
-        self._buffer_timers[agent_id] = threading.Timer(
-            self._buffer_timeout, timeout_flush
-        )
+        self._buffer_timers[agent_id] = threading.Timer(self._buffer_timeout, timeout_flush)
         self._buffer_timers[agent_id].start()
 
     def _write_to_agent_file(self, agent_id: str, content: str, content_type: str):
@@ -2332,7 +2141,7 @@ class RichTerminalDisplay(TerminalDisplay):
             with open(file_path, "a", encoding="utf-8") as f:
                 f.write(formatted_content)
 
-        except Exception as e:
+        except Exception:
             # Handle file write errors gracefully
             pass
 
@@ -2355,7 +2164,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 f.write("\n")
 
-        except Exception as e:
+        except Exception:
             # Handle file write errors gracefully
             pass
 
@@ -2370,25 +2179,14 @@ class RichTerminalDisplay(TerminalDisplay):
 
             # Check if this is a vote-related status change
             current_activity = self.agent_activity.get(agent_id, "")
-            is_vote_status = (
-                "voted" in status.lower() or "voted" in current_activity.lower()
-            )
+            is_vote_status = "voted" in status.lower() or "voted" in current_activity.lower()
 
             # Force update for vote statuses or actual status changes
-            should_update = (
-                old_status != status and last_tracked_status != status
-            ) or is_vote_status
+            should_update = (old_status != status and last_tracked_status != status) or is_vote_status
 
             if should_update:
                 # Truncate web search content when status changes for immediate focus on new status
-                if (
-                    self._status_jump_enabled
-                    and self._web_search_truncate_on_status_change
-                    and old_status != status
-                    and agent_id in self.agent_outputs
-                    and self.agent_outputs[agent_id]
-                ):
-
+                if self._status_jump_enabled and self._web_search_truncate_on_status_change and old_status != status and agent_id in self.agent_outputs and self.agent_outputs[agent_id]:
                     self._truncate_web_search_content(agent_id)
 
                 super().update_agent_status(agent_id, status)
@@ -2417,19 +2215,13 @@ class RichTerminalDisplay(TerminalDisplay):
                 formatted_event = event
 
             # Check for duplicate events
-            if (
-                hasattr(self, "orchestrator_events")
-                and self.orchestrator_events
-                and self.orchestrator_events[-1] == formatted_event
-            ):
+            if hasattr(self, "orchestrator_events") and self.orchestrator_events and self.orchestrator_events[-1] == formatted_event:
                 return  # Skip duplicate events
 
             super().add_orchestrator_event(formatted_event)
 
             # Only update footer for important events that indicate real status changes
-            if any(
-                keyword in event.lower() for keyword in self._important_event_keywords
-            ):
+            if any(keyword in event.lower() for keyword in self._important_event_keywords):
                 # Mark footer for async update
                 self._pending_updates.add("footer")
                 self._schedule_async_update(force_update=True)
@@ -2457,18 +2249,12 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Vote count section
         vote_content.append("📊 Vote Count:\n", style=self.colors["primary"])
-        for agent_id, count in sorted(
-            vote_counts.items(), key=lambda x: x[1], reverse=True
-        ):
+        for agent_id, count in sorted(vote_counts.items(), key=lambda x: x[1], reverse=True):
             winner_mark = "🏆" if agent_id == winner else "  "
             tie_mark = " (tie-broken)" if is_tie and agent_id == winner else ""
             vote_content.append(
                 f"   {winner_mark} {agent_id}: {count} vote{'s' if count != 1 else ''}{tie_mark}\n",
-                style=(
-                    self.colors["success"]
-                    if agent_id == winner
-                    else self.colors["text"]
-                ),
+                style=(self.colors["success"] if agent_id == winner else self.colors["text"]),
             )
 
         # Vote details section
@@ -2479,18 +2265,14 @@ class RichTerminalDisplay(TerminalDisplay):
                 for voter_info in voters:
                     voter = voter_info["voter"]
                     reason = voter_info["reason"]
-                    vote_content.append(
-                        f'     • {voter}: "{reason}"\n', style=self.colors["text"]
-                    )
+                    vote_content.append(f'     • {voter}: "{reason}"\n', style=self.colors["text"])
 
         # Agent mapping section
         agent_mapping = vote_results.get("agent_mapping", {})
         if agent_mapping:
             vote_content.append("\n🔀 Agent Mapping:\n", style=self.colors["primary"])
             for anon_id, real_id in sorted(agent_mapping.items()):
-                vote_content.append(
-                    f"   {anon_id} → {real_id}\n", style=self.colors["info"]
-                )
+                vote_content.append(f"   {anon_id} → {real_id}\n", style=self.colors["info"])
 
         # Tie-breaking info
         if is_tie:
@@ -2578,8 +2360,8 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 # Use Rich's pager for scrollable display
                 from rich.console import Console
-                from rich.text import Text
                 from rich.panel import Panel
+                from rich.text import Text
 
                 # Create a temporary console for paging
                 temp_console = Console()
@@ -2590,9 +2372,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 # Add title
                 title_text = Text()
                 title_text.append("📊 COORDINATION TABLE", style="bold bright_green")
-                title_text.append(
-                    "\n\nNavigation: ↑/↓ or j/k to scroll, q to quit", style="dim cyan"
-                )
+                title_text.append("\n\nNavigation: ↑/↓ or j/k to scroll, q to quit", style="dim cyan")
 
                 title_panel = Panel(
                     title_text,
@@ -2675,9 +2455,7 @@ class RichTerminalDisplay(TerminalDisplay):
         )
         if vote_results and vote_results.get("vote_counts"):
             vote_count = vote_results["vote_counts"].get(selected_agent, 0)
-            header_text.append(
-                f" (Selected with {vote_count} votes)", style=self.colors["info"]
-            )
+            header_text.append(f" (Selected with {vote_count} votes)", style=self.colors["info"])
 
         header_panel = Panel(
             Align.center(header_text),
@@ -2693,9 +2471,7 @@ class RichTerminalDisplay(TerminalDisplay):
         chunk_count = 0
 
         # Initialize the final presentation file
-        presentation_file_path = self._initialize_final_presentation_file(
-            selected_agent
-        )
+        presentation_file_path = self._initialize_final_presentation_file(selected_agent)
 
         try:
             # Enhanced streaming with orchestrator query awareness
@@ -2718,53 +2494,37 @@ class RichTerminalDisplay(TerminalDisplay):
                         content = str(content)
 
                     # Process reasoning content with shared logic
-                    processed_content = self.process_reasoning_content(
-                        chunk_type, content, source
-                    )
+                    processed_content = self.process_reasoning_content(chunk_type, content, source)
 
                     # Accumulate content
                     presentation_content += processed_content
 
                     # Save chunk to file as it arrives
-                    self._append_to_final_presentation_file(
-                        presentation_file_path, processed_content
-                    )
+                    self._append_to_final_presentation_file(presentation_file_path, processed_content)
 
                     # Enhanced formatting for orchestrator query responses
                     if chunk_type == "status":
                         # Status updates from orchestrator query
-                        status_text = Text(
-                            f"🔄 {processed_content}", style=self.colors["info"]
-                        )
+                        status_text = Text(f"🔄 {processed_content}", style=self.colors["info"])
                         self.console.print(status_text)
                     elif "error" in chunk_type:
                         # Error handling in orchestrator query
-                        error_text = Text(
-                            f"❌ {processed_content}", style=self.colors["error"]
-                        )
+                        error_text = Text(f"❌ {processed_content}", style=self.colors["error"])
                         self.console.print(error_text)
                     else:
                         # Main presentation content with simple output
                         # Use markup=False to prevent Rich from interpreting brackets as markup
-                        self.console.print(
-                            processed_content, end="", highlight=False, markup=False
-                        )
+                        self.console.print(processed_content, end="", highlight=False, markup=False)
                 else:
                     # Handle reasoning chunks with no content (like reasoning_summary_done)
-                    processed_content = self.process_reasoning_content(
-                        chunk_type, "", source
-                    )
+                    processed_content = self.process_reasoning_content(chunk_type, "", source)
                     # Accumulate content
                     presentation_content += processed_content
                     # Save chunk to file as it arrives
-                    self._append_to_final_presentation_file(
-                        presentation_file_path, processed_content
-                    )
+                    self._append_to_final_presentation_file(presentation_file_path, processed_content)
                     # Main presentation content with simple output
                     # Use markup=False to prevent Rich from interpreting brackets as markup
-                    self.console.print(
-                        processed_content, end="", highlight=False, markup=False
-                    )
+                    self.console.print(processed_content, end="", highlight=False, markup=False)
 
                 # Handle orchestrator query completion signals
                 if chunk_type == "done":
@@ -2777,9 +2537,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         except Exception as e:
             # Enhanced error handling for orchestrator queries
-            error_text = Text(
-                f"❌ Error during final presentation: {e}", style=self.colors["error"]
-            )
+            error_text = Text(f"❌ Error during final presentation: {e}", style=self.colors["error"])
             self.console.print(error_text)
 
             # Fallback: try to get content from agent's stored answer
@@ -2787,9 +2545,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 try:
                     status = self.orchestrator.get_status()
                     if selected_agent in status.get("agent_states", {}):
-                        stored_answer = status["agent_states"][selected_agent].get(
-                            "answer", ""
-                        )
+                        stored_answer = status["agent_states"][selected_agent].get("answer", "")
                         if stored_answer:
                             fallback_text = Text(
                                 f"\n📋 Fallback to stored answer:\n{stored_answer}",
@@ -2848,7 +2604,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     status = self.orchestrator.get_status()
                     vote_results = vote_results or status.get("vote_results", {})
                     selected_agent = selected_agent or status.get("selected_agent")
-            except:
+            except Exception:
                 pass
 
         # Force update all agent final statuses first (show voting results in agent panels)
@@ -2870,30 +2626,22 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Now display only the selected agent instead of the full answer
         if selected_agent:
-            selected_agent_text = Text(
-                f"🏆 Selected agent: {selected_agent}", style=self.colors["success"]
-            )
+            selected_agent_text = Text(f"🏆 Selected agent: {selected_agent}", style=self.colors["success"])
         else:
             # Check if this is due to orchestrator timeout
             is_timeout = False
             if hasattr(self, "orchestrator") and self.orchestrator:
-                is_timeout = getattr(
-                    self.orchestrator, "is_orchestrator_timeout", False
-                )
+                is_timeout = getattr(self.orchestrator, "is_orchestrator_timeout", False)
 
             if is_timeout:
                 selected_agent_text = Text()
-                selected_agent_text.append(
-                    "No agent selected\n", style=self.colors["warning"]
-                )
+                selected_agent_text.append("No agent selected\n", style=self.colors["warning"])
                 selected_agent_text.append(
                     "The orchestrator timed out before any agent could complete voting or provide an answer.",
                     style=self.colors["warning"],
                 )
             else:
-                selected_agent_text = Text(
-                    "No agent selected", style=self.colors["warning"]
-                )
+                selected_agent_text = Text("No agent selected", style=self.colors["warning"])
 
         final_panel = Panel(
             Align.center(selected_agent_text),
@@ -2909,23 +2657,12 @@ class RichTerminalDisplay(TerminalDisplay):
         # Show which agent was selected
         if selected_agent:
             selection_text = Text()
-            selection_text.append(
-                f"✅ Selected by: {selected_agent}", style=self.colors["success"]
-            )
+            selection_text.append(f"✅ Selected by: {selected_agent}", style=self.colors["success"])
             if vote_results and vote_results.get("vote_counts"):
-                vote_summary = ", ".join(
-                    [
-                        f"{agent}: {count}"
-                        for agent, count in vote_results["vote_counts"].items()
-                    ]
-                )
-                selection_text.append(
-                    f"\n🗳️ Vote results: {vote_summary}", style=self.colors["info"]
-                )
+                vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results["vote_counts"].items()])
+                selection_text.append(f"\n🗳️ Vote results: {vote_summary}", style=self.colors["info"])
 
-            selection_panel = Panel(
-                selection_text, border_style=self.colors["info"], box=ROUNDED
-            )
+            selection_panel = Panel(selection_text, border_style=self.colors["info"], box=ROUNDED)
             self.console.print(selection_panel)
 
         self.console.print("\n")
@@ -2970,17 +2707,13 @@ class RichTerminalDisplay(TerminalDisplay):
                 self.console.print(error_text)
 
         # Show interactive options for viewing agent details (only if not in safe mode)
-        if (
-            self._keyboard_interactive_mode
-            and hasattr(self, "_agent_keys")
-            and not self._safe_keyboard_mode
-        ):
+        if self._keyboard_interactive_mode and hasattr(self, "_agent_keys") and not self._safe_keyboard_mode:
             self.show_agent_selector()
 
     def _display_answer_with_flush(self, answer: str):
         """Display answer with flush output effect - streaming character by character."""
-        import time
         import sys
+        import time
 
         # Use configurable delays
         char_delay = self._flush_char_delay
@@ -3038,39 +2771,20 @@ class RichTerminalDisplay(TerminalDisplay):
         try:
             if hasattr(self, "orchestrator") and self.orchestrator:
                 status = self.orchestrator.get_status()
-                if (
-                    hasattr(self.orchestrator, "agent_states")
-                    and selected_agent in self.orchestrator.agent_states
-                ):
-                    stored_answer = self.orchestrator.agent_states[
-                        selected_agent
-                    ].answer
+                if hasattr(self.orchestrator, "agent_states") and selected_agent in self.orchestrator.agent_states:
+                    stored_answer = self.orchestrator.agent_states[selected_agent].answer
                     if stored_answer:
                         # Clean up the stored answer
-                        return (
-                            stored_answer.replace("\\", "\n").replace("**", "").strip()
-                        )
+                        return stored_answer.replace("\\", "\n").replace("**", "").strip()
 
                 # Alternative: try getting from status
-                if (
-                    "agent_states" in status
-                    and selected_agent in status["agent_states"]
-                ):
+                if "agent_states" in status and selected_agent in status["agent_states"]:
                     agent_state = status["agent_states"][selected_agent]
                     if hasattr(agent_state, "answer") and agent_state.answer:
-                        return (
-                            agent_state.answer.replace("\\", "\n")
-                            .replace("**", "")
-                            .strip()
-                        )
+                        return agent_state.answer.replace("\\", "\n").replace("**", "").strip()
                     elif isinstance(agent_state, dict) and "answer" in agent_state:
-                        return (
-                            agent_state["answer"]
-                            .replace("\\", "\n")
-                            .replace("**", "")
-                            .strip()
-                        )
-        except:
+                        return agent_state["answer"].replace("\\", "\n").replace("**", "").strip()
+        except Exception:
             pass
 
         # Fallback: extract from agent outputs
@@ -3091,17 +2805,11 @@ class RichTerminalDisplay(TerminalDisplay):
                 continue
 
             # Skip status indicators and tool outputs
-            if any(
-                marker in line
-                for marker in ["⚡", "🔄", "✅", "🗳️", "❌", "voted", "🔧", "status"]
-            ):
+            if any(marker in line for marker in ["⚡", "🔄", "✅", "🗳️", "❌", "voted", "🔧", "status"]):
                 continue
 
             # Stop at voting/coordination markers - we want the answer before voting
-            if any(
-                marker in line.lower()
-                for marker in ["final coordinated", "coordination", "voting"]
-            ):
+            if any(marker in line.lower() for marker in ["final coordinated", "coordination", "voting"]):
                 break
 
             # Collect meaningful content
@@ -3164,23 +2872,14 @@ class RichTerminalDisplay(TerminalDisplay):
         if not presentation_lines and agent_output:
             # Get the last few non-status lines as potential presentation content
             for line in reversed(agent_output[-10:]):  # Look at last 10 lines
-                if (
-                    line.strip()
-                    and not line.startswith("⚡")
-                    and not line.startswith("🔄")
-                    and not any(
-                        marker in line for marker in ["voted", "🗳️", "✅", "status"]
-                    )
-                ):
+                if line.strip() and not line.startswith("⚡") and not line.startswith("🔄") and not any(marker in line for marker in ["voted", "🗳️", "✅", "status"]):
                     presentation_lines.insert(0, line.strip())
                     if len(presentation_lines) >= 5:  # Limit to reasonable amount
                         break
 
         return "\n".join(presentation_lines) if presentation_lines else ""
 
-    def _display_final_presentation_content(
-        self, selected_agent: str, presentation_content: str
-    ):
+    def _display_final_presentation_content(self, selected_agent: str, presentation_content: str):
         """Display the final presentation content in a formatted panel with orchestrator query enhancements."""
         if not presentation_content.strip():
             return
@@ -3219,7 +2918,7 @@ class RichTerminalDisplay(TerminalDisplay):
             title=f"[bold]{selected_agent.upper()} Final Presentation[/bold]",
             border_style=self.colors["primary"],
             box=ROUNDED,
-            subtitle=f"[italic]Final presentation content[/italic]",
+            subtitle="[italic]Final presentation content[/italic]",
         )
 
         self.console.print(content_panel)
@@ -3227,9 +2926,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Add presentation completion indicator
         completion_text = Text()
-        completion_text.append(
-            "✅ Final presentation completed successfully", style=self.colors["success"]
-        )
+        completion_text.append("✅ Final presentation completed successfully", style=self.colors["success"])
         completion_panel = Panel(
             Align.center(completion_text),
             border_style=self.colors["success"],
@@ -3240,9 +2937,7 @@ class RichTerminalDisplay(TerminalDisplay):
         # Save final presentation to text file
         self._save_final_presentation_to_file(selected_agent, presentation_content)
 
-    def _save_final_presentation_to_file(
-        self, selected_agent: str, presentation_content: str
-    ):
+    def _save_final_presentation_to_file(self, selected_agent: str, presentation_content: str):
         """Save the final presentation content to a text file in agent_outputs directory."""
         try:
             # Create filename without timestamp (already in parent directory)
@@ -3259,15 +2954,12 @@ class RichTerminalDisplay(TerminalDisplay):
                 f.write("End of Final Presentation\n")
 
             # Also create a symlink to the latest presentation
-            latest_link = (
-                Path(self.output_dir)
-                / f"final_presentation_{selected_agent}_latest.txt"
-            )
+            latest_link = Path(self.output_dir) / f"final_presentation_{selected_agent}_latest.txt"
             if latest_link.exists():
                 latest_link.unlink()
             latest_link.symlink_to(filename)
 
-        except Exception as e:
+        except Exception:
             # Handle file write errors gracefully
             pass
 
@@ -3285,16 +2977,13 @@ class RichTerminalDisplay(TerminalDisplay):
                 f.write("=" * 60 + "\n\n")
 
             # Also create a symlink to the latest presentation
-            latest_link = (
-                Path(self.output_dir)
-                / f"final_presentation_{selected_agent}_latest.txt"
-            )
+            latest_link = Path(self.output_dir) / f"final_presentation_{selected_agent}_latest.txt"
             if latest_link.exists():
                 latest_link.unlink()
             latest_link.symlink_to(filename)
 
             return file_path
-        except Exception as e:
+        except Exception:
             # Handle file write errors gracefully
             return None
 
@@ -3304,7 +2993,7 @@ class RichTerminalDisplay(TerminalDisplay):
             if file_path and file_path.exists():
                 with open(file_path, "a", encoding="utf-8") as f:
                     f.write(content)
-        except Exception as e:
+        except Exception:
             # Handle file write errors gracefully
             pass
 
@@ -3315,19 +3004,15 @@ class RichTerminalDisplay(TerminalDisplay):
                 with open(file_path, "a", encoding="utf-8") as f:
                     f.write("\n\n" + "=" * 60 + "\n")
                     f.write("End of Final Presentation\n")
-        except Exception as e:
+        except Exception:
             # Handle file write errors gracefully
             pass
 
-    def _show_orchestrator_final_presentation(
-        self, selected_agent: str, vote_results: Dict[str, Any] = None
-    ):
+    def _show_orchestrator_final_presentation(self, selected_agent: str, vote_results: Dict[str, Any] = None):
         """Show the final presentation from the orchestrator for the selected agent."""
         import time
-        import traceback
 
         try:
-
             if not hasattr(self, "orchestrator") or not self.orchestrator:
                 return
 
@@ -3338,15 +3023,11 @@ class RichTerminalDisplay(TerminalDisplay):
                 async def _get_and_display_presentation():
                     """Helper to get and display presentation asynchronously."""
                     try:
-                        presentation_stream = self.orchestrator.get_final_presentation(
-                            selected_agent, vote_results
-                        )
+                        presentation_stream = self.orchestrator.get_final_presentation(selected_agent, vote_results)
 
                         # Display the presentation
-                        await self.display_final_presentation(
-                            selected_agent, presentation_stream, vote_results
-                        )
-                    except Exception as e:
+                        await self.display_final_presentation(selected_agent, presentation_stream, vote_results)
+                    except Exception:
                         raise
 
                 # Run the async function
@@ -3366,37 +3047,29 @@ class RichTerminalDisplay(TerminalDisplay):
                     loop.run_until_complete(_get_and_display_presentation())
                     # Add explicit wait to ensure presentation is fully displayed
                     time.sleep(0.5)
-                except Exception as e:
+                except Exception:
                     # If all else fails, try asyncio.run
                     try:
                         asyncio.run(_get_and_display_presentation())
                         # Add explicit wait to ensure presentation is fully displayed
                         time.sleep(0.5)
-                    except Exception as e2:
+                    except Exception:
                         # Last resort: show stored content
-                        self._display_final_presentation_content(
-                            selected_agent, "Unable to retrieve live presentation."
-                        )
+                        self._display_final_presentation_content(selected_agent, "Unable to retrieve live presentation.")
             else:
                 # Fallback: try to get stored presentation content
                 status = self.orchestrator.get_status()
                 if selected_agent in status.get("agent_states", {}):
-                    stored_answer = status["agent_states"][selected_agent].get(
-                        "answer", ""
-                    )
+                    stored_answer = status["agent_states"][selected_agent].get("answer", "")
                     if stored_answer:
-                        self._display_final_presentation_content(
-                            selected_agent, stored_answer
-                        )
+                        self._display_final_presentation_content(selected_agent, stored_answer)
                     else:
                         print("DEBUG: No stored answer found")
                 else:
                     print(f"DEBUG: Agent {selected_agent} not found in agent_states")
         except Exception as e:
             # Handle errors gracefully
-            error_text = Text(
-                f"❌ Error in final presentation: {e}", style=self.colors["error"]
-            )
+            error_text = Text(f"❌ Error in final presentation: {e}", style=self.colors["error"])
             self.console.print(error_text)
 
         # except Exception as e:
@@ -3451,13 +3124,13 @@ class RichTerminalDisplay(TerminalDisplay):
             if self._input_thread and self._input_thread.is_alive():
                 try:
                     self._input_thread.join(timeout=1.0)
-                except:
+                except Exception:
                     pass
 
             # Restore terminal settings
             try:
                 self._restore_terminal_settings()
-            except:
+            except Exception:
                 # Ignore errors during terminal restoration
                 pass
 
@@ -3475,7 +3148,7 @@ class RichTerminalDisplay(TerminalDisplay):
             if self._key_handler:
                 try:
                     self._key_handler.stop()
-                except:
+                except Exception:
                     pass
 
             # Set shutdown flag to prevent new timers
@@ -3508,10 +3181,8 @@ class RichTerminalDisplay(TerminalDisplay):
                 for agent_id, file_path in self.agent_files.items():
                     if file_path.exists():
                         with open(file_path, "a", encoding="utf-8") as f:
-                            f.write(
-                                f"\n=== SESSION ENDED at {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n"
-                            )
-            except:
+                            f.write(f"\n=== SESSION ENDED at {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+            except Exception:
                 pass
 
     def _schedule_priority_update(self, agent_id: str):
@@ -3532,10 +3203,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
     def _categorize_update(self, agent_id: str, content_type: str, content: str):
         """Categorize update by priority for layered refresh strategy."""
-        if content_type in ["status", "error", "tool"] or any(
-            keyword in content.lower()
-            for keyword in ["error", "failed", "completed", "voted"]
-        ):
+        if content_type in ["status", "error", "tool"] or any(keyword in content.lower() for keyword in ["error", "failed", "completed", "voted"]):
             self._critical_updates.add(agent_id)
             # Remove from other categories to avoid duplicate processing
             self._normal_updates.discard(agent_id)
@@ -3546,10 +3214,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 self._decorative_updates.discard(agent_id)
         else:
             # Decorative updates (progress, timestamps, etc.)
-            if (
-                agent_id not in self._critical_updates
-                and agent_id not in self._normal_updates
-            ):
+            if agent_id not in self._critical_updates and agent_id not in self._normal_updates:
                 self._decorative_updates.add(agent_id)
 
     def _schedule_layered_update(self, agent_id: str, is_critical: bool = False):
@@ -3595,9 +3260,7 @@ class RichTerminalDisplay(TerminalDisplay):
             self._batch_timer.cancel()
 
         # Set new batch timer
-        self._batch_timer = threading.Timer(
-            self._batch_timeout, self._process_update_batch
-        )
+        self._batch_timer = threading.Timer(self._batch_timeout, self._process_update_batch)
         self._batch_timer.start()
 
     def _process_update_batch(self):
@@ -3656,9 +3319,7 @@ class RichTerminalDisplay(TerminalDisplay):
                 self._last_update = current_time
                 self._refresh_executor.submit(self._async_update_components)
 
-        self._debounce_timers["main"] = threading.Timer(
-            self._debounce_delay, debounced_update
-        )
+        self._debounce_timers["main"] = threading.Timer(self._debounce_delay, debounced_update)
         self._debounce_timers["main"].start()
 
     def _should_skip_frame(self):
@@ -3670,10 +3331,7 @@ class RichTerminalDisplay(TerminalDisplay):
             if self._dropped_frames > 1:
                 return True
             # Skip if refresh executor is overloaded
-            if (
-                hasattr(self._refresh_executor, "_work_queue")
-                and self._refresh_executor._work_queue.qsize() > 2
-            ):
+            if hasattr(self._refresh_executor, "_work_queue") and self._refresh_executor._work_queue.qsize() > 2:
                 return True
 
         return False
@@ -3704,9 +3362,7 @@ class RichTerminalDisplay(TerminalDisplay):
                     future = self._refresh_executor.submit(self._update_footer_cache)
                     futures.append(future)
                 elif update_id in self.agent_ids:
-                    future = self._refresh_executor.submit(
-                        self._update_agent_panel_cache, update_id
-                    )
+                    future = self._refresh_executor.submit(self._update_agent_panel_cache, update_id)
                     futures.append(future)
 
             # Wait for all updates to complete
@@ -3729,21 +3385,21 @@ class RichTerminalDisplay(TerminalDisplay):
         """Update the cached header panel."""
         try:
             self._header_cache = self._create_header()
-        except:
+        except Exception:
             pass
 
     def _update_footer_cache(self):
         """Update the cached footer panel."""
         try:
             self._footer_cache = self._create_footer()
-        except:
+        except Exception:
             pass
 
     def _update_agent_panel_cache(self, agent_id: str):
         """Update the cached panel for a specific agent."""
         try:
             self._agent_panels_cache[agent_id] = self._create_agent_panel(agent_id)
-        except:
+        except Exception:
             pass
 
     def _refresh_display(self):
@@ -3764,10 +3420,7 @@ class RichTerminalDisplay(TerminalDisplay):
             return True
 
         # Check for error indicators
-        if any(
-            keyword in content.lower()
-            for keyword in ["error", "exception", "failed", "timeout"]
-        ):
+        if any(keyword in content.lower() for keyword in ["error", "exception", "failed", "timeout"]):
             return True
 
         return False
@@ -3792,9 +3445,7 @@ class RichTerminalDisplay(TerminalDisplay):
             self._web_search_truncate_on_status_change = enabled
             self._max_web_search_lines = max_lines
 
-    def set_flush_output(
-        self, enabled: bool, char_delay: float = 0.03, word_delay: float = 0.08
-    ):
+    def set_flush_output(self, enabled: bool, char_delay: float = 0.03, word_delay: float = 0.08):
         """Configure flush output settings for final answer display.
 
         Args:

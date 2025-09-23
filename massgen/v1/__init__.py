@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen - Multi-Agent Scaling System
 
@@ -43,27 +44,27 @@ Programmatic Usage:
 
 """
 
+# Configuration system
+from .config import ConfigurationError, create_config_from_models, load_config_from_yaml
+from .logging import MassLogManager
+
 # Core system components
 from .main import MassSystem, run_mass_agents, run_mass_with_config
-
-# Configuration system
-from .config import load_config_from_yaml, create_config_from_models, ConfigurationError
-
-# Configuration classes
-from .types import (
-    MassConfig,
-    OrchestratorConfig,
-    AgentConfig,
-    ModelConfig,
-    StreamingDisplayConfig,
-    LoggingConfig,
-    TaskInput,
-)
 
 # Advanced components (for custom usage)
 from .orchestrator import MassOrchestrator
 from .streaming_display import create_streaming_display
-from .logging import MassLogManager
+
+# Configuration classes
+from .types import (
+    AgentConfig,
+    LoggingConfig,
+    MassConfig,
+    ModelConfig,
+    OrchestratorConfig,
+    StreamingDisplayConfig,
+    TaskInput,
+)
 
 __version__ = "0.0.1"
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Claude Code Stream Backend - Streaming interface using claude-code-sdk-python.
 
@@ -33,7 +34,7 @@ Test Results:
 - Session: 42593707-bca6-40ad-b154-7dc1c222d319
 - Model: claude-sonnet-4-20250514 (Claude Code default)
 - Tools available: Task, Bash, Glob, Grep, LS, Read, Write, WebSearch, etc.
-- Answer provided: "2 + 2 = 4" 
+- Answer provided: "2 + 2 = 4"
 - Coordination: Agent voted for itself, selected as final answer
 - Performance: 70 seconds total (includes coordination overhead)
 
@@ -44,35 +45,34 @@ TODO:
 
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import re
+import sys
 import uuid
+import warnings
 from pathlib import Path
-from typing import Dict, List, Any, AsyncGenerator, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from claude_code_sdk import (  # type: ignore
-    ClaudeSDKClient,
+    AssistantMessage,
     ClaudeCodeOptions,
+    ClaudeSDKClient,
     ResultMessage,
     SystemMessage,
-    AssistantMessage,
-    UserMessage,
     TextBlock,
-    ToolUseBlock,
     ToolResultBlock,
+    ToolUseBlock,
+    UserMessage,
 )
-import sys
-import warnings
-import atexit
 
-
-from .base import LLMBackend, StreamChunk, FilesystemSupport
 from ..logger_config import (
     log_backend_activity,
     log_backend_agent_message,
     log_stream_chunk,
-    logger,
 )
+from .base import FilesystemSupport, LLMBackend, StreamChunk
 
 
 class ClaudeCodeBackend(LLMBackend):
@@ -140,13 +140,9 @@ class ClaudeCodeBackend(LLMBackend):
         # Get workspace paths from filesystem manager (required for Claude Code)
         # The filesystem manager handles all workspace setup and management
         if not self.filesystem_manager:
-            raise ValueError(
-                "Claude Code backend requires 'cwd' configuration for workspace management"
-            )
+            raise ValueError("Claude Code backend requires 'cwd' configuration for workspace management")
 
-        self._cwd: str = str(
-            Path(str(self.filesystem_manager.get_current_workspace())).resolve()
-        )
+        self._cwd: str = str(Path(str(self.filesystem_manager.get_current_workspace())).resolve())
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
 
@@ -155,21 +151,13 @@ class ClaudeCodeBackend(LLMBackend):
         # All warning filters
         warnings.filterwarnings("ignore", message="unclosed transport")
         warnings.filterwarnings("ignore", message="I/O operation on closed pipe")
-        warnings.filterwarnings(
-            "ignore", category=ResourceWarning, message="unclosed transport"
-        )
-        warnings.filterwarnings(
-            "ignore", category=ResourceWarning, message="unclosed event loop"
-        )
-        warnings.filterwarnings(
-            "ignore", category=ResourceWarning, message="unclosed <socket.socket"
-        )
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed transport")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed event loop")
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed <socket.socket")
         warnings.filterwarnings("ignore", category=RuntimeWarning, message="coroutine")
         warnings.filterwarnings("ignore", message="Exception ignored in")
         warnings.filterwarnings("ignore", message="sys:1: ResourceWarning")
-        warnings.filterwarnings(
-            "ignore", category=ResourceWarning, message="unclosed.*transport.*"
-        )
+        warnings.filterwarnings("ignore", category=ResourceWarning, message="unclosed.*transport.*")
         warnings.filterwarnings("ignore", message=".*BaseSubprocessTransport.*")
         warnings.filterwarnings("ignore", message=".*_ProactorBasePipeTransport.*")
         warnings.filterwarnings("ignore", message=".*Event loop is closed.*")
@@ -180,12 +168,8 @@ class ClaudeCodeBackend(LLMBackend):
             import asyncio.proactor_events
 
             # Store originals
-            original_subprocess_del = getattr(
-                asyncio.base_subprocess.BaseSubprocessTransport, "__del__", None
-            )
-            original_pipe_del = getattr(
-                asyncio.proactor_events._ProactorBasePipeTransport, "__del__", None
-            )
+            original_subprocess_del = getattr(asyncio.base_subprocess.BaseSubprocessTransport, "__del__", None)
+            original_pipe_del = getattr(asyncio.proactor_events._ProactorBasePipeTransport, "__del__", None)
 
             def silent_subprocess_del(self):
                 try:
@@ -207,13 +191,9 @@ class ClaudeCodeBackend(LLMBackend):
 
             # Apply patches
             if original_subprocess_del:
-                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = (
-                    silent_subprocess_del
-                )
+                asyncio.base_subprocess.BaseSubprocessTransport.__del__ = silent_subprocess_del
             if original_pipe_del:
-                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = (
-                    silent_pipe_del
-                )
+                asyncio.proactor_events._ProactorBasePipeTransport.__del__ = silent_pipe_del
         except Exception:
             pass  # If patching fails, fall back to warning filters only
 
@@ -309,9 +289,7 @@ class ClaudeCodeBackend(LLMBackend):
         if ResultMessage is not None and not isinstance(result_message, ResultMessage):
             return
         # Fallback: check if it has the expected attributes (for SDK compatibility)
-        if not hasattr(result_message, "usage") or not hasattr(
-            result_message, "total_cost_usd"
-        ):
+        if not hasattr(result_message, "usage") or not hasattr(result_message, "total_cost_usd"):
             return
 
         # Extract usage information from ResultMessage
@@ -331,22 +309,12 @@ class ClaudeCodeBackend(LLMBackend):
             self.token_usage.estimated_cost += result_message.total_cost_usd
         else:
             # Fallback: calculate cost if not provided
-            input_tokens = (
-                result_message.usage.get("input_tokens", 0)
-                if result_message.usage
-                else 0
-            )
-            output_tokens = (
-                result_message.usage.get("output_tokens", 0)
-                if result_message.usage
-                else 0
-            )
+            input_tokens = result_message.usage.get("input_tokens", 0) if result_message.usage else 0
+            output_tokens = result_message.usage.get("output_tokens", 0) if result_message.usage else 0
             cost = self.calculate_cost(input_tokens, output_tokens, "", result_message)
             self.token_usage.estimated_cost += cost
 
-    def update_token_usage(
-        self, messages: List[Dict[str, Any]], response_content: str, model: str
-    ):
+    def update_token_usage(self, messages: List[Dict[str, Any]], response_content: str, model: str):
         """Update token usage tracking (fallback method).
 
         Only used when no ResultMessage available. Provides estimated token
@@ -374,9 +342,7 @@ class ClaudeCodeBackend(LLMBackend):
         self.token_usage.output_tokens += output_tokens
 
         # Calculate estimated cost (no ResultMessage available)
-        cost = self.calculate_cost(
-            input_tokens, output_tokens, model, result_message=None
-        )
+        cost = self.calculate_cost(input_tokens, output_tokens, model, result_message=None)
         self.token_usage.estimated_cost += cost
 
     def get_supported_builtin_tools(self) -> List[str]:
@@ -437,9 +403,7 @@ class ClaudeCodeBackend(LLMBackend):
     #     # Will integrate with PermissionManager
     #     pass
 
-    def _build_system_prompt_with_workflow_tools(
-        self, tools: List[Dict[str, Any]], base_system: Optional[str] = None
-    ) -> str:
+    def _build_system_prompt_with_workflow_tools(self, tools: List[Dict[str, Any]], base_system: Optional[str] = None) -> str:
         """Build system prompt that includes workflow tools information.
 
         Creates comprehensive system prompt that instructs Claude on tool
@@ -460,77 +424,49 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Add workflow tools information if present
         if tools:
-            workflow_tools = [
-                t
-                for t in tools
-                if t.get("function", {}).get("name") in ["new_answer", "vote"]
-            ]
+            workflow_tools = [t for t in tools if t.get("function", {}).get("name") in ["new_answer", "vote"]]
             if workflow_tools:
                 system_parts.append("\n--- Coordination Actions ---")
                 for tool in workflow_tools:
                     name = tool.get("function", {}).get("name", "unknown")
-                    description = tool.get("function", {}).get(
-                        "description", "No description"
-                    )
+                    description = tool.get("function", {}).get("description", "No description")
                     system_parts.append(f"- {name}: {description}")
 
                     # Add usage examples for workflow tools
                     if name == "new_answer":
                         system_parts.append(
-                            '    Usage: {"tool_name": "new_answer", '
-                            '"arguments": {"content": "your improved answer. If any builtin tools were used, mention how they are used here."}}'
+                            '    Usage: {"tool_name": "new_answer", ' '"arguments": {"content": "your improved answer. If any builtin tools were used, mention how they are used here."}}',
                         )
                     elif name == "vote":
                         # Extract valid agent IDs from enum if available
                         agent_id_enum = None
                         for t in tools:
                             if t.get("function", {}).get("name") == "vote":
-                                agent_id_param = (
-                                    t.get("function", {})
-                                    .get("parameters", {})
-                                    .get("properties", {})
-                                    .get("agent_id", {})
-                                )
+                                agent_id_param = t.get("function", {}).get("parameters", {}).get("properties", {}).get("agent_id", {})
                                 if "enum" in agent_id_param:
                                     agent_id_enum = agent_id_param["enum"]
                                 break
 
                         if agent_id_enum:
                             agent_list = ", ".join(agent_id_enum)
-                            system_parts.append(
-                                f'    Usage: {{"tool_name": "vote", '
-                                f'"arguments": {{"agent_id": "agent1", '
-                                f'"reason": "explanation"}}}} // Choose agent_id from: {agent_list}'
-                            )
+                            system_parts.append(f'    Usage: {{"tool_name": "vote", ' f'"arguments": {{"agent_id": "agent1", ' f'"reason": "explanation"}}}} // Choose agent_id from: {agent_list}')
                         else:
-                            system_parts.append(
-                                '    Usage: {"tool_name": "vote", '
-                                '"arguments": {"agent_id": "agent1", '
-                                '"reason": "explanation"}}'
-                            )
+                            system_parts.append('    Usage: {"tool_name": "vote", ' '"arguments": {"agent_id": "agent1", ' '"reason": "explanation"}}')
 
                 system_parts.append("\n--- MassGen Coordination Instructions ---")
-                system_parts.append(
-                    "IMPORTANT: You must respond with a structured JSON decision at the end of your response."
-                )
+                system_parts.append("IMPORTANT: You must respond with a structured JSON decision at the end of your response.")
                 # system_parts.append(
                 #     "You must use the coordination tools (new_answer, vote) "
                 #     "to participate in multi-agent workflows."
                 # )
                 # system_parts.append(
                 #     "Make sure to include the JSON in the exact format shown in the usage examples above.")
-                system_parts.append(
-                    "The JSON MUST be formatted as a strict JSON code block:"
-                )
+                system_parts.append("The JSON MUST be formatted as a strict JSON code block:")
                 system_parts.append("1. Start with ```json on one line")
                 system_parts.append("2. Include your JSON content (properly formatted)")
                 system_parts.append("3. End with ``` on one line")
-                system_parts.append(
-                    'Example format:\n```json\n{"tool_name": "vote", "arguments": {"agent_id": "agent1", "reason": "explanation"}}\n```'
-                )
-                system_parts.append(
-                    "The JSON block should be placed at the very end of your response, after your analysis."
-                )
+                system_parts.append('Example format:\n```json\n{"tool_name": "vote", "arguments": {"agent_id": "agent1", "reason": "explanation"}}\n```')
+                system_parts.append("The JSON block should be placed at the very end of your response, after your analysis.")
 
         return "\n".join(system_parts)
 
@@ -552,9 +488,7 @@ class ClaudeCodeBackend(LLMBackend):
                 debug_info += f"\n[SYSTEM_FULL] {system_prompt}"
 
             # Yield a debug chunk that will be captured by the logging system
-            yield StreamChunk(
-                type="debug", content=debug_info, source="claude_code_backend"
-            )
+            yield StreamChunk(type="debug", content=debug_info, source="claude_code_backend")
 
         except Exception as e:
             # Log the error but don't break backend execution
@@ -564,9 +498,7 @@ class ClaudeCodeBackend(LLMBackend):
                 source="claude_code_backend",
             )
 
-    def extract_structured_response(
-        self, response_text: str
-    ) -> Optional[Dict[str, Any]]:
+    def extract_structured_response(self, response_text: str) -> Optional[Dict[str, Any]]:
         """Extract structured JSON response for Claude Code format.
 
         Looks for JSON in the format:
@@ -583,9 +515,7 @@ class ClaudeCodeBackend(LLMBackend):
 
             # Strategy 0: Look for JSON inside markdown code blocks first
             markdown_json_pattern = r"```json\s*(\{.*?\})\s*```"
-            markdown_matches = re.findall(
-                markdown_json_pattern, response_text, re.DOTALL
-            )
+            markdown_matches = re.findall(markdown_json_pattern, response_text, re.DOTALL)
 
             for match in reversed(markdown_matches):
                 try:
@@ -690,7 +620,7 @@ class ClaudeCodeBackend(LLMBackend):
                         "id": f"call_{uuid.uuid4().hex[:8]}",
                         "type": "function",
                         "function": {"name": tool_name, "arguments": arguments},
-                    }
+                    },
                 )
                 return tool_calls
 
@@ -700,8 +630,7 @@ class ClaudeCodeBackend(LLMBackend):
         # Look for JSON tool call patterns
         json_patterns = [
             r'\{"tool_name":\s*"([^"]+)",\s*"arguments":\s*' r"(\{[^}]*\})\}",
-            r'\{\s*"tool_name"\s*:\s*"([^"]+)"\s*,\s*"arguments"'
-            r"\s*:\s*(\{[^}]*\})\s*\}",
+            r'\{\s*"tool_name"\s*:\s*"([^"]+)"\s*,\s*"arguments"' r"\s*:\s*(\{[^}]*\})\s*\}",
         ]
 
         for pattern in json_patterns:
@@ -723,7 +652,7 @@ class ClaudeCodeBackend(LLMBackend):
                                 "id": f"call_{uuid.uuid4().hex[:8]}",
                                 "type": "function",
                                 "function": {"name": tool_name, "arguments": arguments},
-                            }
+                            },
                         )
                 except json.JSONDecodeError:
                     continue
@@ -741,11 +670,9 @@ class ClaudeCodeBackend(LLMBackend):
             ClaudeCodeOptions configured with provided parameters and
             security restrictions
         """
-        cwd_path = options_kwargs.get("cwd", os.getcwd())
+        options_kwargs.get("cwd", os.getcwd())
         permission_mode = options_kwargs.get("permission_mode", "acceptEdits")
-        allowed_tools = options_kwargs.get(
-            "allowed_tools", self.get_supported_builtin_tools()
-        )
+        allowed_tools = options_kwargs.get("allowed_tools", self.get_supported_builtin_tools())
 
         # Filter out parameters handled separately or not for ClaudeCodeOptions
         excluded_params = self.get_base_excluded_config_params() | {
@@ -756,9 +683,7 @@ class ClaudeCodeBackend(LLMBackend):
         }
 
         # Get cwd from filesystem manager (always available since we require it in __init__)
-        cwd_option = Path(
-            str(self.filesystem_manager.get_current_workspace())
-        ).resolve()
+        cwd_option = Path(str(self.filesystem_manager.get_current_workspace())).resolve()
         self._cwd = str(cwd_option)
 
         # Get hooks configuration from filesystem manager
@@ -795,9 +720,7 @@ class ClaudeCodeBackend(LLMBackend):
         self._client = ClaudeSDKClient(options)
         return self._client
 
-    async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
-    ) -> AsyncGenerator[StreamChunk, None]:
+    async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream a response with tool calling support using claude-code-sdk.
 
@@ -837,30 +760,20 @@ class ClaudeCodeBackend(LLMBackend):
                 ]
 
             # Extract system message from messages for append mode (always do this)
-            system_msg = next(
-                (msg for msg in messages if msg.get("role") == "system"), None
-            )
+            system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
             if system_msg:
                 system_content = system_msg.get("content", "")  # noqa: E128
             else:
                 system_content = ""
 
             # Build system prompt with tools information
-            workflow_system_prompt = self._build_system_prompt_with_workflow_tools(
-                tools or [], system_content
-            )
+            workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
 
             # Windows-specific handling: detect complex prompts that cause subprocess hang
             if sys.platform == "win32" and len(workflow_system_prompt) > 200:
                 # Windows with complex prompt: use post-connection delivery to avoid hang
-                print(
-                    f"[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery"
-                )
-                clean_params = {
-                    k: v
-                    for k, v in all_params.items()
-                    if k not in ["system_prompt", "append_system_prompt"]
-                }
+                print("[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
+                clean_params = {k: v for k, v in all_params.items() if k not in ["system_prompt", "append_system_prompt"]}
                 client = self.create_client(**clean_params)
                 self._pending_system_prompt = workflow_system_prompt
 
@@ -870,27 +783,21 @@ class ClaudeCodeBackend(LLMBackend):
                     # Handle different system prompt mode
                     if all_params.get("system_prompt"):
                         # Create client with system_prompt
-                        client = self.create_client(
-                            **{**all_params, "system_prompt": workflow_system_prompt}
-                        )
+                        client = self.create_client(**{**all_params, "system_prompt": workflow_system_prompt})
                     else:
                         # Create client with the enhanced system prompt
                         client = self.create_client(
                             **{
                                 **all_params,
                                 "append_system_prompt": workflow_system_prompt,
-                            }
+                            },
                         )
                     self._pending_system_prompt = None
 
                 except Exception as create_error:
                     # Fallback for unexpected failures
                     if sys.platform == "win32":
-                        clean_params = {
-                            k: v
-                            for k, v in all_params.items()
-                            if k not in ["system_prompt", "append_system_prompt"]
-                        }
+                        clean_params = {k: v for k, v in all_params.items() if k not in ["system_prompt", "append_system_prompt"]}
                         client = self.create_client(**clean_params)
                         self._pending_system_prompt = workflow_system_prompt
                     else:
@@ -903,10 +810,7 @@ class ClaudeCodeBackend(LLMBackend):
                 await client.connect()
 
                 # If we have a pending system prompt, deliver it at system level using /system command
-                if (
-                    hasattr(self, "_pending_system_prompt")
-                    and self._pending_system_prompt
-                ):
+                if hasattr(self, "_pending_system_prompt") and self._pending_system_prompt:
                     try:
                         # Use Claude Code's native /system command for proper system-level delivery
                         system_command = f"/system {self._pending_system_prompt}"
@@ -914,16 +818,13 @@ class ClaudeCodeBackend(LLMBackend):
 
                         # Consume the system response
                         async for response in client.receive_response():
-                            if (
-                                hasattr(response, "subtype")
-                                and response.subtype == "init"
-                            ):
+                            if hasattr(response, "subtype") and response.subtype == "init":
                                 # This is the system initialization response
                                 break
 
                         yield StreamChunk(
                             type="content",
-                            content=f"[SYSTEM] Applied system instructions at system level\n",
+                            content="[SYSTEM] Applied system instructions at system level\n",
                             source="claude_code",
                         )
 
@@ -947,9 +848,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Log backend inputs when we have workflow_system_prompt available
         if "workflow_system_prompt" in locals():
-            async for debug_chunk in self._log_backend_input(
-                messages, workflow_system_prompt, tools, kwargs
-            ):
+            async for debug_chunk in self._log_backend_input(messages, workflow_system_prompt, tools, kwargs):
                 yield debug_chunk
 
         # Format the messages for Claude Code
@@ -1018,19 +917,14 @@ class ClaudeCodeBackend(LLMBackend):
             )
             await client.query(combined_query)
         else:
-            log_stream_chunk(
-                "backend.claude_code", "error", "All user messages were empty", agent_id
-            )
-            yield StreamChunk(
-                type="error", error="All user messages were empty", source="claude_code"
-            )
+            log_stream_chunk("backend.claude_code", "error", "All user messages were empty", agent_id)
+            yield StreamChunk(type="error", error="All user messages were empty", source="claude_code")
             return
 
         # Stream response and convert to MassGen StreamChunks
         accumulated_content = ""
         try:
             async for message in client.receive_response():
-
                 if isinstance(message, (AssistantMessage, UserMessage)):
                     # Process assistant message content
                     for block in message.content:
@@ -1044,12 +938,8 @@ class ClaudeCodeBackend(LLMBackend):
                                 {"content": block.text},
                                 backend_name=self.get_provider_name(),
                             )
-                            log_stream_chunk(
-                                "backend.claude_code", "content", block.text, agent_id
-                            )
-                            yield StreamChunk(
-                                type="content", content=block.text, source="claude_code"
-                            )
+                            log_stream_chunk("backend.claude_code", "content", block.text, agent_id)
+                            yield StreamChunk(type="content", content=block.text, source="claude_code")
 
                         elif isinstance(block, ToolUseBlock):
                             # Claude Code's builtin tool usage
@@ -1089,9 +979,7 @@ class ClaudeCodeBackend(LLMBackend):
                             )
 
                     # Parse workflow tool calls from accumulated content
-                    workflow_tool_calls = self._parse_workflow_tool_calls(
-                        accumulated_content
-                    )
+                    workflow_tool_calls = self._parse_workflow_tool_calls(accumulated_content)
                     if workflow_tool_calls:
                         log_stream_chunk(
                             "backend.claude_code",
@@ -1109,9 +997,7 @@ class ClaudeCodeBackend(LLMBackend):
                     log_stream_chunk(
                         "backend.claude_code",
                         "complete_message",
-                        accumulated_content[:200]
-                        if len(accumulated_content) > 200
-                        else accumulated_content,
+                        accumulated_content[:200] if len(accumulated_content) > 200 else accumulated_content,
                         agent_id,
                     )
                     yield StreamChunk(
@@ -1178,7 +1064,12 @@ class ClaudeCodeBackend(LLMBackend):
 
             # Provide helpful Windows-specific guidance
             if "git-bash" in error_msg.lower() or "bash.exe" in error_msg.lower():
-                error_msg += "\n\nWindows Setup Required:\n1. Install Git Bash: https://git-scm.com/downloads/win\n2. Ensure git-bash is in PATH, or set: CLAUDE_CODE_GIT_BASH_PATH=C:\\Program Files\\Git\\bin\\bash.exe"
+                error_msg += (
+                    "\n\nWindows Setup Required:\n"
+                    "1. Install Git Bash: https://git-scm.com/downloads/win\n"
+                    "2. Ensure git-bash is in PATH, or set: "
+                    "CLAUDE_CODE_GIT_BASH_PATH=C:\\Program Files\\Git\\bin\\bash.exe"
+                )
             elif "exit code 1" in error_msg and "win32" in str(sys.platform):
                 error_msg += "\n\nThis may indicate missing git-bash on Windows. Please install Git Bash from https://git-scm.com/downloads/win"
 
@@ -1214,9 +1105,7 @@ class ClaudeCodeBackend(LLMBackend):
                     old_session_id = self._current_session_id
                     self._current_session_id = message.data["session_id"]
                     if old_session_id != self._current_session_id:
-                        print(
-                            f"[ClaudeCodeBackend] Session ID from SystemMessage: {old_session_id} → {self._current_session_id}"
-                        )
+                        print(f"[ClaudeCodeBackend] Session ID from SystemMessage: {old_session_id} → {self._current_session_id}")
 
                 # Extract working directory from system message data
                 if "cwd" in message.data and message.data["cwd"]:
@@ -1245,4 +1134,3 @@ class ClaudeCodeBackend(LLMBackend):
         """
         # Note: This won't work for async cleanup, but serves as documentation
         # Real cleanup should be done via explicit disconnect() calls
-        pass

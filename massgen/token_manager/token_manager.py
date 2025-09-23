@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Token and Cost Management Module
 Provides unified token estimation and cost calculation for all backends.
@@ -5,8 +6,9 @@ Provides unified token estimation and cost calculation for all backends.
 
 from __future__ import annotations
 
-from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union
+
 from ..logger_config import logger
 
 
@@ -64,9 +66,7 @@ class TokenCostCalculator:
             "claude-3-haiku": ModelPricing(0.00025, 0.00125, 200000, 4096),
         },
         "Google": {
-            "gemini-2.0-flash-exp": ModelPricing(
-                0.0, 0.0, 1048576, 8192
-            ),  # Free during experimental
+            "gemini-2.0-flash-exp": ModelPricing(0.0, 0.0, 1048576, 8192),  # Free during experimental
             "gemini-2.0-flash-thinking-exp": ModelPricing(0.0, 0.0, 32767, 8192),
             "gemini-1.5-pro": ModelPricing(0.00125, 0.005, 2097152, 8192),
             "gemini-1.5-flash": ModelPricing(0.000075, 0.0003, 1048576, 8192),
@@ -79,31 +79,15 @@ class TokenCostCalculator:
             "llama3.1-8b": ModelPricing(0.00001, 0.00001, 128000, 8192),
         },
         "Together": {
-            "meta-llama/Llama-3.3-70B-Instruct-Turbo": ModelPricing(
-                0.00059, 0.00079, 128000, 32768
-            ),
-            "meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo": ModelPricing(
-                0.00059, 0.00079, 128000, 32768
-            ),
-            "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": ModelPricing(
-                0.00088, 0.00088, 130000, 4096
-            ),
-            "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": ModelPricing(
-                0.00018, 0.00018, 131072, 65536
-            ),
-            "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo": ModelPricing(
-                0.00006, 0.00006, 131072, 16384
-            ),
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo": ModelPricing(0.00059, 0.00079, 128000, 32768),
+            "meta-llama/Llama-3.2-90B-Vision-Instruct-Turbo": ModelPricing(0.00059, 0.00079, 128000, 32768),
+            "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo": ModelPricing(0.00088, 0.00088, 130000, 4096),
+            "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": ModelPricing(0.00018, 0.00018, 131072, 65536),
+            "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo": ModelPricing(0.00006, 0.00006, 131072, 16384),
             "Qwen/QwQ-32B-Preview": ModelPricing(0.00015, 0.00015, 32768, 32768),
-            "Qwen/Qwen2.5-72B-Instruct-Turbo": ModelPricing(
-                0.00012, 0.00012, 32768, 8192
-            ),
-            "mistralai/Mixtral-8x22B-Instruct-v0.1": ModelPricing(
-                0.0009, 0.0009, 65536, 65536
-            ),
-            "deepseek-ai/deepseek-r1-distill-llama-70b": ModelPricing(
-                0.00015, 0.00015, 65536, 8192
-            ),
+            "Qwen/Qwen2.5-72B-Instruct-Turbo": ModelPricing(0.00012, 0.00012, 32768, 8192),
+            "mistralai/Mixtral-8x22B-Instruct-v0.1": ModelPricing(0.0009, 0.0009, 65536, 65536),
+            "deepseek-ai/deepseek-r1-distill-llama-70b": ModelPricing(0.00015, 0.00015, 65536, 8192),
         },
         "Fireworks": {
             "llama-3.3-70b": ModelPricing(0.0002, 0.0002, 128000, 16384),
@@ -147,9 +131,7 @@ class TokenCostCalculator:
         except Exception as e:
             logger.warning(f"Failed to initialize tiktoken: {e}")
 
-    def estimate_tokens(
-        self, text: Union[str, List[Dict[str, Any]]], method: str = "auto"
-    ) -> int:
+    def estimate_tokens(self, text: Union[str, List[Dict[str, Any]]], method: str = "auto") -> int:
         """
         Estimate token count for text or messages.
 
@@ -342,9 +324,7 @@ class TokenCostCalculator:
         provider_lower = provider.lower()
         return provider_map.get(provider_lower, provider)
 
-    def calculate_cost(
-        self, input_tokens: int, output_tokens: int, provider: str, model: str
-    ) -> float:
+    def calculate_cost(self, input_tokens: int, output_tokens: int, provider: str, model: str) -> float:
         """
         Calculate cost for token usage.
 
@@ -373,7 +353,7 @@ class TokenCostCalculator:
             f"Cost calculation for {provider}/{model}: "
             f"{input_tokens} input @ ${pricing.input_cost_per_1k}/1k = ${input_cost:.4f}, "
             f"{output_tokens} output @ ${pricing.output_cost_per_1k}/1k = ${output_cost:.4f}, "
-            f"total = ${total_cost:.4f}"
+            f"total = ${total_cost:.4f}",
         )
 
         return total_cost
@@ -424,8 +404,4 @@ class TokenCostCalculator:
 
     def format_usage_summary(self, usage: TokenUsage) -> str:
         """Format token usage summary for display."""
-        return (
-            f"Tokens: {usage.input_tokens:,} input, "
-            f"{usage.output_tokens:,} output, "
-            f"Cost: {self.format_cost(usage.estimated_cost)}"
-        )
+        return f"Tokens: {usage.input_tokens:,} input, " f"{usage.output_tokens:,} output, " f"Cost: {self.format_cost(usage.estimated_cost)}"

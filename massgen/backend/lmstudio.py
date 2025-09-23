@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+# -*- coding: utf-8 -*-
 """
 LM Studio backend using an OpenAI-compatible Chat Completions API.
 
@@ -11,34 +10,29 @@ This backend delegates most behavior to ChatCompletionsBackend, only
 customizing provider naming, API key resolution, and cost calculation.
 """
 
-from typing import Optional, List, Dict, Any, AsyncGenerator
-import subprocess
-import shutil
-import os
+from __future__ import annotations
+
 import platform
-import json
+import shutil
+import subprocess
 import time
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 import lmstudio as lms
 
-from .chat_completions import ChatCompletionsBackend
 from .base import StreamChunk
+from .chat_completions import ChatCompletionsBackend
 
 
 class LMStudioBackend(ChatCompletionsBackend):
     """LM Studio backend (OpenAI-compatible, local server)."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
-        super().__init__(
-            api_key="lm-studio", **kwargs
-        )  # Override to avoid environment-variable enforcement; LM Studio accepts any key
-        self._models_attempted = (
-            set()
-        )  # Track models this instance has attempted to load
+        super().__init__(api_key="lm-studio", **kwargs)  # Override to avoid environment-variable enforcement; LM Studio accepts any key
+        self._models_attempted = set()  # Track models this instance has attempted to load
         self.start_lmstudio_server(**kwargs)
 
-    async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
-    ) -> AsyncGenerator[StreamChunk, None]:
+    async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI-compatible Chat Completions API.
 
         LM Studio does not require special message conversions; this delegates to
@@ -145,9 +139,7 @@ class LMStudioBackend(ChatCompletionsBackend):
             try:
                 # Check if this instance already attempted to load this model
                 if model_name in self._models_attempted:
-                    print(
-                        f"Model '{model_name}' load already attempted by this instance."
-                    )
+                    print(f"Model '{model_name}' load already attempted by this instance.")
                     return
 
                 # Add brief wait to allow model to finish loading after download
@@ -180,9 +172,7 @@ class LMStudioBackend(ChatCompletionsBackend):
         """Stop the LM Studio server after receiving all chunks."""
         try:
             # Use lms server end command as specified in requirement
-            result = subprocess.run(
-                ["lms", "server", "end"], capture_output=True, text=True
-            )
+            result = subprocess.run(["lms", "server", "end"], capture_output=True, text=True)
 
             if result.returncode == 0:
                 print("LM Studio server ended successfully.")

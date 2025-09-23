@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen Orchestrator Agent - Chat interface that manages sub-agents internally.
 
@@ -17,28 +18,28 @@ TODOs:
 
 import asyncio
 import os
-import re
-import time
 import shutil
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Optional, Any, AsyncGenerator
+import time
 from dataclasses import dataclass, field
-from .message_templates import MessageTemplates
+from datetime import datetime
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
 from .chat_agent import ChatAgent
-from .utils import ActionType, AgentStatus
 from .coordination_tracker import CoordinationTracker
+from .logger_config import get_log_session_dir  # Import to get log directory
+from .logger_config import logger  # Import logger directly for INFO logging
 from .logger_config import (
+    log_coordination_step,
     log_orchestrator_activity,
     log_orchestrator_agent_message,
-    log_coordination_step,
-    log_tool_call,
     log_stream_chunk,
-    logger,  # Import logger directly for INFO logging
-    get_log_session_dir,  # Import to get log directory
+    log_tool_call,
 )
+from .message_templates import MessageTemplates
+from .utils import ActionType, AgentStatus
 
 
 @dataclass
@@ -60,9 +61,7 @@ class AgentState:
     restart_pending: bool = False
     is_killed: bool = False
     timeout_reason: Optional[str] = None
-    last_context: Optional[
-        Dict[str, Any]
-    ] = None  # Store the context sent to this agent
+    last_context: Optional[Dict[str, Any]] = None  # Store the context sent to this agent
 
 
 class Orchestrator(ChatAgent):
@@ -134,7 +133,7 @@ class Orchestrator(ChatAgent):
         self.message_templates = self.config.message_templates or MessageTemplates()
         # Create workflow tools for agents (vote and new_answer)
         self.workflow_tools = self.message_templates.get_standard_tools(
-            list(agents.keys())
+            list(agents.keys()),
         )
 
         # MassGen-specific state
@@ -215,10 +214,13 @@ class Orchestrator(ChatAgent):
 
         if not user_message:
             log_stream_chunk(
-                "orchestrator", "error", "No user message found in conversation"
+                "orchestrator",
+                "error",
+                "No user message found in conversation",
             )
             yield StreamChunk(
-                type="error", error="No user message found in conversation"
+                type="error",
+                error="No user message found in conversation",
             )
             return
 
@@ -231,28 +233,33 @@ class Orchestrator(ChatAgent):
             self.current_task = user_message
             # Reinitialize session with user prompt now that we have it
             self.coordination_tracker.initialize_session(
-                list(self.agents.keys()), self.current_task
+                list(self.agents.keys()),
+                self.current_task,
             )
             self.workflow_phase = "coordinating"
 
             async for chunk in self._coordinate_agents_with_timeout(
-                conversation_context
+                conversation_context,
             ):
                 yield chunk
 
         elif self.workflow_phase == "presenting":
             # Handle follow-up question with full conversation context
             async for chunk in self._handle_followup(
-                user_message, conversation_context
+                user_message,
+                conversation_context,
             ):
                 yield chunk
         else:
             # Already coordinating - provide status update
             log_stream_chunk(
-                "orchestrator", "content", "🔄 Coordinating agents, please wait..."
+                "orchestrator",
+                "content",
+                "🔄 Coordinating agents, please wait...",
             )
             yield StreamChunk(
-                type="content", content="🔄 Coordinating agents, please wait..."
+                type="content",
+                content="🔄 Coordinating agents, please wait...",
             )
             # Note: In production, you might want to queue follow-up questions
 
@@ -271,7 +278,8 @@ class Orchestrator(ChatAgent):
             yield chunk
 
     def _build_conversation_context(
-        self, messages: List[Dict[str, Any]]
+        self,
+        messages: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         """Build conversation context from message list."""
         conversation_history = []
@@ -314,7 +322,8 @@ class Orchestrator(ChatAgent):
             self.coordination_tracker.save_coordination_logs(log_session_dir)
 
     async def _coordinate_agents_with_timeout(
-        self, conversation_context: Optional[Dict[str, Any]] = None
+        self,
+        conversation_context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Execute coordination with orchestrator-level timeout protection."""
         self.coordination_start_time = time.time()
@@ -344,7 +353,7 @@ class Orchestrator(ChatAgent):
                     # Track tokens if this is a content chunk
                     if hasattr(chunk, "content") and chunk.content:
                         self.total_tokens += len(
-                            chunk.content.split()
+                            chunk.content.split(),
                         )  # Rough token estimation
 
                     yield chunk
@@ -352,14 +361,14 @@ class Orchestrator(ChatAgent):
         except asyncio.TimeoutError:
             self.is_orchestrator_timeout = True
             elapsed = time.time() - self.coordination_start_time
-            self.timeout_reason = (
-                f"Time limit exceeded ({elapsed:.1f}s/{timeout_seconds}s)"
-            )
+            self.timeout_reason = f"Time limit exceeded ({elapsed:.1f}s/{timeout_seconds}s)"
             # Track timeout for all agents that were still working
             for agent_id in self.agent_states.keys():
                 if not self.agent_states[agent_id].has_voted:
                     self.coordination_tracker.track_agent_action(
-                        agent_id, ActionType.TIMEOUT, self.timeout_reason
+                        agent_id,
+                        ActionType.TIMEOUT,
+                        self.timeout_reason,
                     )
 
             # Force cleanup of any active agent streams and tasks
@@ -371,7 +380,8 @@ class Orchestrator(ChatAgent):
                 yield chunk
 
     async def _coordinate_agents(
-        self, conversation_context: Optional[Dict[str, Any]] = None
+        self,
+        conversation_context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Execute unified MassGen coordination workflow with real-time streaming."""
         log_coordination_step(
@@ -415,18 +425,16 @@ class Orchestrator(ChatAgent):
 
         # Start streaming coordination with real-time agent output
         async for chunk in self._stream_coordination_with_agents(
-            votes, conversation_context
+            votes,
+            conversation_context,
         ):
             yield chunk
 
         # Determine final agent based on votes
-        current_answers = {
-            aid: state.answer
-            for aid, state in self.agent_states.items()
-            if state.answer
-        }
+        current_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
         self._selected_agent = self._determine_final_agent_from_votes(
-            votes, current_answers
+            votes,
+            current_answers,
         )
 
         log_coordination_step(
@@ -472,17 +480,9 @@ class Orchestrator(ChatAgent):
             if self.is_orchestrator_timeout:
                 break
             # Start any agents that aren't running and haven't voted yet
-            current_answers = {
-                aid: state.answer
-                for aid, state in self.agent_states.items()
-                if state.answer
-            }
+            current_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
             for agent_id in self.agents.keys():
-                if (
-                    agent_id not in active_streams
-                    and not self.agent_states[agent_id].has_voted
-                    and not self.agent_states[agent_id].is_killed
-                ):
+                if agent_id not in active_streams and not self.agent_states[agent_id].has_voted and not self.agent_states[agent_id].is_killed:
                     active_streams[agent_id] = self._stream_agent_execution(
                         agent_id,
                         self.current_task,
@@ -497,23 +497,22 @@ class Orchestrator(ChatAgent):
             for agent_id, stream in active_streams.items():
                 if agent_id not in active_tasks:
                     active_tasks[agent_id] = asyncio.create_task(
-                        self._get_next_chunk(stream)
+                        self._get_next_chunk(stream),
                     )
 
             if not active_tasks:
                 break
 
             done, _ = await asyncio.wait(
-                active_tasks.values(), return_when=asyncio.FIRST_COMPLETED
+                active_tasks.values(),
+                return_when=asyncio.FIRST_COMPLETED,
             )
 
             # Collect results from completed agents
             reset_signal = False
             voted_agents = {}
             answered_agents = {}
-            completed_agent_ids = (
-                set()
-            )  # Track all agents whose tasks completed, i.e., done, error, result.
+            completed_agent_ids = set()  # Track all agents whose tasks completed, i.e., done, error, result.
 
             # Process completed stream chunks
             for task in done:
@@ -527,16 +526,24 @@ class Orchestrator(ChatAgent):
                     if chunk_type == "content":
                         # Stream agent content in real-time with source info
                         log_stream_chunk(
-                            "orchestrator", "content", chunk_data, agent_id
+                            "orchestrator",
+                            "content",
+                            chunk_data,
+                            agent_id,
                         )
                         yield StreamChunk(
-                            type="content", content=chunk_data, source=agent_id
+                            type="content",
+                            content=chunk_data,
+                            source=agent_id,
                         )
 
                     elif chunk_type == "reasoning":
                         # Stream reasoning content with proper attribution
                         log_stream_chunk(
-                            "orchestrator", "reasoning", chunk_data, agent_id
+                            "orchestrator",
+                            "reasoning",
+                            chunk_data,
+                            agent_id,
                         )
                         yield chunk_data  # chunk_data is already a StreamChunk with source
 
@@ -574,7 +581,7 @@ class Orchestrator(ChatAgent):
                             )
                             if agent and agent.backend.filesystem_manager:
                                 agent.backend.filesystem_manager.log_current_state(
-                                    "after providing answer"
+                                    "after providing answer",
                                 )
                             # Always record answers, even from restarting agents (orchestrator accepts them)
 
@@ -585,9 +592,7 @@ class Orchestrator(ChatAgent):
                                 result_data,
                                 snapshot_timestamp=answer_timestamp,
                             )
-                            restart_triggered_id = (
-                                agent_id  # Last agent to provide new answer
-                            )
+                            restart_triggered_id = agent_id  # Last agent to provide new answer
                             reset_signal = True
                             log_stream_chunk(
                                 "orchestrator",
@@ -605,7 +610,7 @@ class Orchestrator(ChatAgent):
                             )
                             yield StreamChunk(
                                 type="content",
-                                content=f"✅ Answer provided\n",
+                                content="✅ Answer provided\n",
                                 source=agent_id,
                             )
 
@@ -645,9 +650,9 @@ class Orchestrator(ChatAgent):
                                 agent = self.agents.get(agent_id)
                                 if agent and agent.backend.filesystem_manager:
                                     self.agents.get(
-                                        agent_id
+                                        agent_id,
                                     ).backend.filesystem_manager.log_current_state(
-                                        "after voting"
+                                        "after voting",
                                     )
                                 voted_agents[agent_id] = result_data
                                 # Pass timestamp to coordination_tracker for mapping
@@ -675,16 +680,23 @@ class Orchestrator(ChatAgent):
                     elif chunk_type == "error":
                         # Agent error
                         self.coordination_tracker.track_agent_action(
-                            agent_id, ActionType.ERROR, chunk_data
+                            agent_id,
+                            ActionType.ERROR,
+                            chunk_data,
                         )
                         # Error ends the agent's current stream
                         completed_agent_ids.add(agent_id)
                         log_stream_chunk("orchestrator", "error", chunk_data, agent_id)
                         yield StreamChunk(
-                            type="content", content=f"❌ {chunk_data}", source=agent_id
+                            type="content",
+                            content=f"❌ {chunk_data}",
+                            source=agent_id,
                         )
                         log_stream_chunk(
-                            "orchestrator", "agent_status", "completed", agent_id
+                            "orchestrator",
+                            "agent_status",
+                            "completed",
+                            agent_id,
                         )
                         yield StreamChunk(
                             type="agent_status",
@@ -698,17 +710,24 @@ class Orchestrator(ChatAgent):
                         # Debug information - forward as StreamChunk for logging
                         log_stream_chunk("orchestrator", "debug", chunk_data, agent_id)
                         yield StreamChunk(
-                            type="debug", content=chunk_data, source=agent_id
+                            type="debug",
+                            content=chunk_data,
+                            source=agent_id,
                         )
 
                     elif chunk_type == "mcp_status":
                         # MCP status messages - forward with proper formatting
                         mcp_message = f"🔧 MCP: {chunk_data}"
                         log_stream_chunk(
-                            "orchestrator", "mcp_status", chunk_data, agent_id
+                            "orchestrator",
+                            "mcp_status",
+                            chunk_data,
+                            agent_id,
                         )
                         yield StreamChunk(
-                            type="content", content=mcp_message, source=agent_id
+                            type="content",
+                            content=mcp_message,
+                            source=agent_id,
                         )
 
                     elif chunk_type == "done":
@@ -725,11 +744,16 @@ class Orchestrator(ChatAgent):
 
                 except Exception as e:
                     self.coordination_tracker.track_agent_action(
-                        agent_id, ActionType.ERROR, f"Stream error - {e}"
+                        agent_id,
+                        ActionType.ERROR,
+                        f"Stream error - {e}",
                     )
                     completed_agent_ids.add(agent_id)
                     log_stream_chunk(
-                        "orchestrator", "error", f"❌ Stream error - {e}", agent_id
+                        "orchestrator",
+                        "error",
+                        f"❌ Stream error - {e}",
+                        agent_id,
                     )
                     yield StreamChunk(
                         type="content",
@@ -750,7 +774,8 @@ class Orchestrator(ChatAgent):
 
                 # Track restart signals
                 self.coordination_tracker.track_restart_signal(
-                    restart_triggered_id, list(self.agent_states.keys())
+                    restart_triggered_id,
+                    list(self.agent_states.keys()),
                 )
                 # Note that the agent that sent the restart signal had its stream end so we should mark as completed. NOTE the below breaks it.
                 self.coordination_tracker.complete_agent_restart(restart_triggered_id)
@@ -768,7 +793,8 @@ class Orchestrator(ChatAgent):
             for agent_id in completed_agent_ids:
                 if agent_id in answered_agents:
                     self.coordination_tracker.change_status(
-                        agent_id, AgentStatus.ANSWERED
+                        agent_id,
+                        AgentStatus.ANSWERED,
                     )
                 elif agent_id in voted_agents:
                     self.coordination_tracker.change_status(agent_id, AgentStatus.VOTED)
@@ -787,7 +813,8 @@ class Orchestrator(ChatAgent):
             await self._close_agent_stream(agent_id, active_streams)
 
     async def _copy_all_snapshots_to_temp_workspace(
-        self, agent_id: str
+        self,
+        agent_id: str,
     ) -> Optional[str]:
         """Copy all agents' latest workspace snapshots to a temporary workspace for context sharing.
 
@@ -828,10 +855,9 @@ class Orchestrator(ChatAgent):
                     all_snapshots[source_agent_id] = source_snapshot
 
         # Use the filesystem manager to copy snapshots to temp workspace
-        workspace_path = (
-            await agent.backend.filesystem_manager.copy_snapshots_to_temp_workspace(
-                all_snapshots, agent_mapping
-            )
+        workspace_path = await agent.backend.filesystem_manager.copy_snapshots_to_temp_workspace(
+            all_snapshots,
+            agent_mapping,
         )
         return str(workspace_path) if workspace_path else None
 
@@ -862,18 +888,17 @@ class Orchestrator(ChatAgent):
         Returns:
             The timestamp used for this snapshot
         """
-        from datetime import datetime
         import json
         import time
 
         logger.info(
-            f"[Orchestrator._save_agent_snapshot] Called for agent_id={agent_id}, has_answer={bool(answer_content)}, has_vote={bool(vote_data)}, is_final={is_final}"
+            f"[Orchestrator._save_agent_snapshot] Called for agent_id={agent_id}, has_answer={bool(answer_content)}, has_vote={bool(vote_data)}, is_final={is_final}",
         )
 
         agent = self.agents.get(agent_id)
         if not agent:
             logger.warning(
-                f"[Orchestrator._save_agent_snapshot] Agent {agent_id} not found in agents dict"
+                f"[Orchestrator._save_agent_snapshot] Agent {agent_id} not found in agents dict",
             )
             return None
 
@@ -897,12 +922,12 @@ class Orchestrator(ChatAgent):
                     # Write the answer content
                     answer_file.write_text(answer_content)
                     logger.info(
-                        f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}"
+                        f"[Orchestrator._save_agent_snapshot] Saved answer to {answer_file}",
                     )
 
             except Exception as e:
                 logger.warning(
-                    f"[Orchestrator._save_agent_snapshot] Failed to save answer for {agent_id}: {e}"
+                    f"[Orchestrator._save_agent_snapshot] Failed to save answer for {agent_id}: {e}",
                 )
 
         # Save vote if provided
@@ -916,11 +941,7 @@ class Orchestrator(ChatAgent):
                     vote_file = timestamped_dir / "vote.json"
 
                     # Get current state for context
-                    current_answers = {
-                        aid: state.answer
-                        for aid, state in self.agent_states.items()
-                        if state.answer
-                    }
+                    current_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
 
                     # Create anonymous agent mapping
                     agent_mapping = {}
@@ -931,39 +952,23 @@ class Orchestrator(ChatAgent):
                     comprehensive_vote_data = {
                         "voter_id": agent_id,
                         "voter_anon_id": next(
-                            (
-                                anon
-                                for anon, real in agent_mapping.items()
-                                if real == agent_id
-                            ),
+                            (anon for anon, real in agent_mapping.items() if real == agent_id),
                             agent_id,
                         ),
                         "voted_for": vote_data.get("agent_id", "unknown"),
                         "voted_for_anon": next(
-                            (
-                                anon
-                                for anon, real in agent_mapping.items()
-                                if real == vote_data.get("agent_id")
-                            ),
+                            (anon for anon, real in agent_mapping.items() if real == vote_data.get("agent_id")),
                             "unknown",
                         ),
                         "reason": vote_data.get("reason", ""),
                         "timestamp": timestamp,
                         "unix_timestamp": time.time(),
-                        "iteration": self.coordination_tracker.current_iteration
-                        if self.coordination_tracker
-                        else None,
-                        "round": self.coordination_tracker.max_round
-                        if self.coordination_tracker
-                        else None,
+                        "iteration": self.coordination_tracker.current_iteration if self.coordination_tracker else None,
+                        "round": self.coordination_tracker.max_round if self.coordination_tracker else None,
                         "available_options": list(current_answers.keys()),
                         "available_options_anon": [
                             next(
-                                (
-                                    anon
-                                    for anon, real in agent_mapping.items()
-                                    if real == aid
-                                ),
+                                (anon for anon, real in agent_mapping.items() if real == aid),
                                 aid,
                             )
                             for aid in sorted(current_answers.keys())
@@ -980,30 +985,31 @@ class Orchestrator(ChatAgent):
                     with open(vote_file, "w", encoding="utf-8") as f:
                         json.dump(comprehensive_vote_data, f, indent=2)
                     logger.info(
-                        f"[Orchestrator._save_agent_snapshot] Saved comprehensive vote to {vote_file}"
+                        f"[Orchestrator._save_agent_snapshot] Saved comprehensive vote to {vote_file}",
                     )
 
             except Exception as e:
                 import traceback
 
                 logger.error(
-                    f"[Orchestrator._save_agent_snapshot] Failed to save vote for {agent_id}: {e}"
+                    f"[Orchestrator._save_agent_snapshot] Failed to save vote for {agent_id}: {e}",
                 )
                 logger.error(
-                    f"[Orchestrator._save_agent_snapshot] Traceback: {traceback.format_exc()}"
+                    f"[Orchestrator._save_agent_snapshot] Traceback: {traceback.format_exc()}",
                 )
 
         # Save workspace snapshot with the same timestamp
         if agent.backend.filesystem_manager:
             logger.info(
-                f"[Orchestrator._save_agent_snapshot] Agent {agent_id} has filesystem_manager, calling save_snapshot with timestamp={timestamp if not is_final else None}"
+                f"[Orchestrator._save_agent_snapshot] Agent {agent_id} has filesystem_manager, calling save_snapshot with timestamp={timestamp if not is_final else None}",
             )
             await agent.backend.filesystem_manager.save_snapshot(
-                timestamp=timestamp if not is_final else None, is_final=is_final
+                timestamp=timestamp if not is_final else None,
+                is_final=is_final,
             )
         else:
             logger.info(
-                f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager"
+                f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager",
             )
 
         # Save context if provided (unified context saving)
@@ -1022,18 +1028,18 @@ class Orchestrator(ChatAgent):
                     if isinstance(context_data, dict):
                         # Pretty print dict/JSON data
                         context_file.write_text(
-                            json.dumps(context_data, indent=2, default=str)
+                            json.dumps(context_data, indent=2, default=str),
                         )
                     else:
                         # Save as string
                         context_file.write_text(str(context_data))
 
                     logger.info(
-                        f"[Orchestrator._save_agent_snapshot] Saved context to {context_file}"
+                        f"[Orchestrator._save_agent_snapshot] Saved context to {context_file}",
                     )
             except Exception as ce:
                 logger.warning(
-                    f"[Orchestrator._save_agent_snapshot] Failed to save context for {agent_id}: {ce}"
+                    f"[Orchestrator._save_agent_snapshot] Failed to save context for {agent_id}: {ce}",
                 )
 
         # Return the timestamp for tracking
@@ -1041,20 +1047,18 @@ class Orchestrator(ChatAgent):
 
     def get_last_context(self, agent_id: str) -> Any:
         """Get the last context for an agent, or None if not available."""
-        return (
-            self.agent_states[agent_id].last_context
-            if agent_id in self.agent_states
-            else None
-        )
+        return self.agent_states[agent_id].last_context if agent_id in self.agent_states else None
 
     async def _close_agent_stream(
-        self, agent_id: str, active_streams: Dict[str, AsyncGenerator]
+        self,
+        agent_id: str,
+        active_streams: Dict[str, AsyncGenerator],
     ) -> None:
         """Close and remove an agent stream safely."""
         if agent_id in active_streams:
             try:
                 await active_streams[agent_id].aclose()
-            except:
+            except Exception:
                 pass  # Ignore cleanup errors
             del active_streams[agent_id]
 
@@ -1064,7 +1068,9 @@ class Orchestrator(ChatAgent):
         return restart_pending
 
     def _normalize_workspace_paths_in_answers(
-        self, answers: Dict[str, str], viewing_agent_id: Optional[str] = None
+        self,
+        answers: Dict[str, str],
+        viewing_agent_id: Optional[str] = None,
     ) -> Dict[str, str]:
         """Normalize absolute workspace paths in agent answers to accessible temporary workspace paths.
 
@@ -1093,7 +1099,7 @@ class Orchestrator(ChatAgent):
             viewing_agent = self.agents.get(viewing_agent_id)
             if viewing_agent and viewing_agent.backend.filesystem_manager:
                 temp_workspace_base = str(
-                    viewing_agent.backend.filesystem_manager.agent_temporary_workspace
+                    viewing_agent.backend.filesystem_manager.agent_temporary_workspace,
                 )
         # Create anonymous agent mapping for consistent directory names
         agent_mapping = {}
@@ -1110,24 +1116,22 @@ class Orchestrator(ChatAgent):
                     continue
 
                 anon_agent_id = agent_mapping.get(
-                    other_agent_id, f"agent_{other_agent_id}"
+                    other_agent_id,
+                    f"agent_{other_agent_id}",
                 )
-                replace_path = (
-                    os.path.join(temp_workspace_base, anon_agent_id)
-                    if temp_workspace_base
-                    else anon_agent_id
-                )
+                replace_path = os.path.join(temp_workspace_base, anon_agent_id) if temp_workspace_base else anon_agent_id
                 other_workspace = str(
-                    other_agent.backend.filesystem_manager.get_current_workspace()
+                    other_agent.backend.filesystem_manager.get_current_workspace(),
                 )
                 logger.debug(
-                    f"[Orchestrator._normalize_workspace_paths_in_answers] Replacing {other_workspace} in answer from {agent_id} with path {replace_path}. original answer: {normalized_answer}"
+                    f"[Orchestrator._normalize_workspace_paths_in_answers] Replacing {other_workspace} in answer from {agent_id} with path {replace_path}. original answer: {normalized_answer}",
                 )
                 normalized_answer = normalized_answer.replace(
-                    other_workspace, replace_path
+                    other_workspace,
+                    replace_path,
                 )
                 logger.debug(
-                    f"[Orchestrator._normalize_workspace_paths_in_answers] Intermediate normalized answer: {normalized_answer}"
+                    f"[Orchestrator._normalize_workspace_paths_in_answers] Intermediate normalized answer: {normalized_answer}",
                 )
 
             normalized_answers[agent_id] = normalized_answer
@@ -1135,7 +1139,9 @@ class Orchestrator(ChatAgent):
         return normalized_answers
 
     def _normalize_workspace_paths_for_comparison(
-        self, content: str, replacement_path: str = "/workspace"
+        self,
+        content: str,
+        replacement_path: str = "/workspace",
     ) -> str:
         """
         Normalize all workspace paths in content to a canonical form for equality comparison.
@@ -1159,10 +1165,11 @@ class Orchestrator(ChatAgent):
 
             # Get this agent's workspace path
             workspace_path = str(
-                agent.backend.filesystem_manager.get_current_workspace()
+                agent.backend.filesystem_manager.get_current_workspace(),
             )
             normalized_content = normalized_content.replace(
-                workspace_path, replacement_path
+                workspace_path,
+                replacement_path,
             )
 
         return normalized_content
@@ -1176,7 +1183,9 @@ class Orchestrator(ChatAgent):
                     # Only track if not already tracked by timeout above
                     if not self.is_orchestrator_timeout:
                         self.coordination_tracker.track_agent_action(
-                            agent_id, ActionType.CANCELLED, "Coordination cleanup"
+                            agent_id,
+                            ActionType.CANCELLED,
+                            "Coordination cleanup",
                         )
                     task.cancel()
                     try:
@@ -1236,14 +1245,16 @@ class Orchestrator(ChatAgent):
         # Send primary error for the first tool call
         first_tool_call = tool_calls[0]
         error_result_msg = agent.backend.create_tool_result_message(
-            first_tool_call, primary_error_msg
+            first_tool_call,
+            primary_error_msg,
         )
         enforcement_msgs.append(error_result_msg)
 
         # Send secondary error messages for any additional tool calls (API requires response to ALL calls)
         for additional_tool_call in tool_calls[1:]:
             neutral_msg = agent.backend.create_tool_result_message(
-                additional_tool_call, secondary_error_msg
+                additional_tool_call,
+                secondary_error_msg,
             )
             enforcement_msgs.append(neutral_msg)
 
@@ -1303,10 +1314,12 @@ class Orchestrator(ChatAgent):
         self.agent_states[agent_id].restart_pending = False
 
         # Copy all agents' snapshots to temp workspace for context sharing
-        workspace_path = await self._copy_all_snapshots_to_temp_workspace(agent_id)
+        await self._copy_all_snapshots_to_temp_workspace(agent_id)
 
-        # Log workspace state before agent starts
+        # Clear the agent's workspace to prepare for new execution
+        # This preserves the previous agent's output for logging while giving a clean slate
         if agent.backend.filesystem_manager:
+            # agent.backend.filesystem_manager.clear_workspace()  # Don't clear for now.
             agent.backend.filesystem_manager.log_current_state("before execution")
 
         try:
@@ -1316,62 +1329,43 @@ class Orchestrator(ChatAgent):
             # Append filesystem system message, if applicable
             if agent.backend.filesystem_manager:
                 main_workspace = str(
-                    agent.backend.filesystem_manager.get_current_workspace()
+                    agent.backend.filesystem_manager.get_current_workspace(),
                 )
-                temp_workspace = (
-                    str(agent.backend.filesystem_manager.agent_temporary_workspace)
-                    if agent.backend.filesystem_manager.agent_temporary_workspace
-                    else None
-                )
+                temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
                 # Get context paths if available
-                context_paths = (
-                    agent.backend.filesystem_manager.path_permission_manager.get_context_paths()
-                    if agent.backend.filesystem_manager.path_permission_manager
-                    else []
-                )
+                context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
 
-                filesystem_system_message = (
-                    self.message_templates.filesystem_system_message(
-                        main_workspace=main_workspace,
-                        temp_workspace=temp_workspace,
-                        context_paths=context_paths,
-                    )
+                filesystem_system_message = self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace,
+                    context_paths=context_paths,
                 )
-                agent_system_message = (
-                    f"{agent_system_message}\n\n{filesystem_system_message}"
-                    if agent_system_message
-                    else filesystem_system_message
-                )
+                agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
             # Normalize workspace paths in agent answers for better comparison from this agent's perspective
-            normalized_answers = (
-                self._normalize_workspace_paths_in_answers(answers, agent_id)
-                if answers
-                else answers
-            )
+            normalized_answers = self._normalize_workspace_paths_in_answers(answers, agent_id) if answers else answers
 
             # Log the normalized answers this agent will see
             if normalized_answers:
                 logger.info(
-                    f"[Orchestrator] Agent {agent_id} sees normalized answers: {normalized_answers}"
+                    f"[Orchestrator] Agent {agent_id} sees normalized answers: {normalized_answers}",
                 )
             else:
                 logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
 
             # Build conversation with context support
             if conversation_context and conversation_context.get(
-                "conversation_history"
+                "conversation_history",
             ):
                 # Use conversation context-aware building
                 conversation = self.message_templates.build_conversation_with_context(
                     current_task=task,
                     conversation_history=conversation_context.get(
-                        "conversation_history", []
+                        "conversation_history",
+                        [],
                     ),
                     agent_summaries=normalized_answers,
-                    valid_agent_ids=list(normalized_answers.keys())
-                    if normalized_answers
-                    else None,
+                    valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
                 )
             else:
@@ -1379,9 +1373,7 @@ class Orchestrator(ChatAgent):
                 conversation = self.message_templates.build_initial_conversation(
                     task=task,
                     agent_summaries=normalized_answers,
-                    valid_agent_ids=list(normalized_answers.keys())
-                    if normalized_answers
-                    else None,
+                    valid_agent_ids=list(normalized_answers.keys()) if normalized_answers else None,
                     base_system_message=agent_system_message,
                 )
 
@@ -1399,7 +1391,8 @@ class Orchestrator(ChatAgent):
             # Log the messages being sent to the agent with backend info
             backend_name = None
             if hasattr(agent, "backend") and hasattr(
-                agent.backend, "get_provider_name"
+                agent.backend,
+                "get_provider_name",
             ):
                 backend_name = agent.backend.get_provider_name()
 
@@ -1428,12 +1421,12 @@ class Orchestrator(ChatAgent):
 
             for attempt in range(max_attempts):
                 logger.info(
-                    f"[Orchestrator] Agent {agent_id} attempt {attempt + 1}/{max_attempts}"
+                    f"[Orchestrator] Agent {agent_id} attempt {attempt + 1}/{max_attempts}",
                 )
 
                 if self._check_restart_pending(agent_id):
                     logger.info(
-                        f"[Orchestrator] Agent {agent_id} restarting due to restart_pending flag"
+                        f"[Orchestrator] Agent {agent_id} restarting due to restart_pending flag",
                     )
                     # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
                     yield (
@@ -1450,7 +1443,9 @@ class Orchestrator(ChatAgent):
                     # But we need the agent to have this in its history for subsequent calls
                     # First attempt: provide complete conversation and reset agent's history
                     chat_stream = agent.chat(
-                        conversation_messages, self.workflow_tools, reset_chat=True
+                        conversation_messages,
+                        self.workflow_tools,
+                        reset_chat=True,
                     )
                 else:
                     # Subsequent attempts: send enforcement message (set by error handling)
@@ -1458,7 +1453,9 @@ class Orchestrator(ChatAgent):
                     if isinstance(enforcement_msg, list):
                         # Tool message array
                         chat_stream = agent.chat(
-                            enforcement_msg, self.workflow_tools, reset_chat=False
+                            enforcement_msg,
+                            self.workflow_tools,
+                            reset_chat=False,
                         )
                     else:
                         # Single user message
@@ -1467,14 +1464,16 @@ class Orchestrator(ChatAgent):
                             "content": enforcement_msg,
                         }
                         chat_stream = agent.chat(
-                            [enforcement_message], self.workflow_tools, reset_chat=False
+                            [enforcement_message],
+                            self.workflow_tools,
+                            reset_chat=False,
                         )
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
 
                 logger.info(
-                    f"[Orchestrator] Agent {agent_id} starting to stream chat response..."
+                    f"[Orchestrator] Agent {agent_id} starting to stream chat response...",
                 )
 
                 async for chunk in chat_stream:
@@ -1485,7 +1484,8 @@ class Orchestrator(ChatAgent):
                         # Log received content
                         backend_name = None
                         if hasattr(agent, "backend") and hasattr(
-                            agent.backend, "get_provider_name"
+                            agent.backend,
+                            "get_provider_name",
                         ):
                             backend_name = agent.backend.get_provider_name()
                         log_orchestrator_agent_message(
@@ -1508,10 +1508,14 @@ class Orchestrator(ChatAgent):
                             reasoning_delta=getattr(chunk, "reasoning_delta", None),
                             reasoning_text=getattr(chunk, "reasoning_text", None),
                             reasoning_summary_delta=getattr(
-                                chunk, "reasoning_summary_delta", None
+                                chunk,
+                                "reasoning_summary_delta",
+                                None,
                             ),
                             reasoning_summary_text=getattr(
-                                chunk, "reasoning_summary_text", None
+                                chunk,
+                                "reasoning_summary_text",
+                                None,
                             ),
                             item_id=getattr(chunk, "item_id", None),
                             content_index=getattr(chunk, "content_index", None),
@@ -1535,7 +1539,8 @@ class Orchestrator(ChatAgent):
                         # Get backend name for logging
                         backend_name = None
                         if hasattr(agent, "backend") and hasattr(
-                            agent.backend, "get_provider_name"
+                            agent.backend,
+                            "get_provider_name",
                         ):
                             backend_name = agent.backend.get_provider_name()
 
@@ -1569,11 +1574,13 @@ class Orchestrator(ChatAgent):
                                 if answers:  # Only do mapping if answers exist
                                     agent_mapping = {}
                                     for i, real_id in enumerate(
-                                        sorted(answers.keys()), 1
+                                        sorted(answers.keys()),
+                                        1,
                                     ):
                                         agent_mapping[f"agent{i}"] = real_id
                                     real_agent_id = agent_mapping.get(
-                                        agent_voted_for, agent_voted_for
+                                        agent_voted_for,
+                                        agent_voted_for,
                                     )
 
                                 yield (
@@ -1583,23 +1590,19 @@ class Orchestrator(ChatAgent):
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
                                 log_tool_call(
-                                    agent_id, tool_name, tool_args, None, backend_name
+                                    agent_id,
+                                    tool_name,
+                                    tool_args,
+                                    None,
+                                    backend_name,
                                 )
                     elif chunk.type == "error":
                         # Stream error information to user interface
-                        error_msg = (
-                            getattr(chunk, "error", str(chunk.content))
-                            if hasattr(chunk, "error")
-                            else str(chunk.content)
-                        )
+                        error_msg = getattr(chunk, "error", str(chunk.content)) if hasattr(chunk, "error") else str(chunk.content)
                         yield ("content", f"❌ Error: {error_msg}\n")
 
                 # Check for multiple vote calls before processing
-                vote_calls = [
-                    tc
-                    for tc in tool_calls
-                    if agent.backend.extract_tool_name(tc) == "vote"
-                ]
+                vote_calls = [tc for tc in tool_calls if agent.backend.extract_tool_name(tc) == "vote"]
                 if len(vote_calls) > 1:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
@@ -1629,11 +1632,7 @@ class Orchestrator(ChatAgent):
                         return
 
                 # Check for mixed new_answer and vote calls - violates binary decision framework
-                new_answer_calls = [
-                    tc
-                    for tc in tool_calls
-                    if agent.backend.extract_tool_name(tc) == "new_answer"
-                ]
+                new_answer_calls = [tc for tc in tool_calls if agent.backend.extract_tool_name(tc) == "new_answer"]
                 if len(vote_calls) > 0 and len(new_answer_calls) > 0:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
@@ -1648,13 +1647,15 @@ class Orchestrator(ChatAgent):
 
                         # Send tool error response for all tool calls that caused the violation
                         enforcement_msg = self._create_tool_error_messages(
-                            agent, tool_calls, error_msg
+                            agent,
+                            tool_calls,
+                            error_msg,
                         )
                         continue  # Retry this attempt
                     else:
                         yield (
                             "error",
-                            f"Agent used both vote and new_answer tools in single response after max attempts",
+                            "Agent used both vote and new_answer tools in single response after max attempts",
                         )
                         yield ("done", None)
                         return
@@ -1668,7 +1669,7 @@ class Orchestrator(ChatAgent):
                         if tool_name == "vote":
                             # Log which agents we are choosing from
                             logger.info(
-                                f"[Orchestrator] Agent {agent_id} voting from options: {list(answers.keys()) if answers else 'No answers available'}"
+                                f"[Orchestrator] Agent {agent_id} voting from options: {list(answers.keys()) if answers else 'No answers available'}",
                             )
                             # Check if agent should restart - votes invalid during restart
                             if self._check_restart_pending(agent_id):
@@ -1695,7 +1696,9 @@ class Orchestrator(ChatAgent):
                                     yield ("content", f"❌ {error_msg}")
                                     # Create proper tool error message for retry
                                     enforcement_msg = self._create_tool_error_messages(
-                                        agent, [tool_call], error_msg
+                                        agent,
+                                        [tool_call],
+                                        error_msg,
                                     )
                                     continue
                                 else:
@@ -1712,12 +1715,14 @@ class Orchestrator(ChatAgent):
                             # Convert anonymous agent ID back to real agent ID
                             agent_mapping = {}
                             for i, real_agent_id in enumerate(
-                                sorted(answers.keys()), 1
+                                sorted(answers.keys()),
+                                1,
                             ):
                                 agent_mapping[f"agent{i}"] = real_agent_id
 
                             voted_agent = agent_mapping.get(
-                                voted_agent_anon, voted_agent_anon
+                                voted_agent_anon,
+                                voted_agent_anon,
                             )
 
                             # Handle invalid agent_id
@@ -1734,19 +1739,19 @@ class Orchestrator(ChatAgent):
                                     reverse_mapping = {
                                         real_id: f"agent{i}"
                                         for i, real_id in enumerate(
-                                            sorted(answers.keys()), 1
+                                            sorted(answers.keys()),
+                                            1,
                                         )
                                     }
-                                    valid_anon_agents = [
-                                        reverse_mapping[real_id]
-                                        for real_id in answers.keys()
-                                    ]
+                                    valid_anon_agents = [reverse_mapping[real_id] for real_id in answers.keys()]
                                     error_msg = f"Invalid agent_id '{voted_agent_anon}'. Valid agents: {', '.join(valid_anon_agents)}"
                                     # Send tool error result back to agent
                                     yield ("content", f"❌ {error_msg}")
                                     # Create proper tool error message for retry
                                     enforcement_msg = self._create_tool_error_messages(
-                                        agent, [tool_call], error_msg
+                                        agent,
+                                        [tool_call],
+                                        error_msg,
                                     )
                                     continue  # Retry with updated conversation
                                 else:
@@ -1778,20 +1783,13 @@ class Orchestrator(ChatAgent):
 
                             # Check for duplicate answer
                             # Normalize both new content and existing content to neutral paths for comparison
-                            normalized_new_content = (
-                                self._normalize_workspace_paths_for_comparison(content)
-                            )
+                            normalized_new_content = self._normalize_workspace_paths_for_comparison(content)
 
                             for existing_agent_id, existing_content in answers.items():
-                                normalized_existing_content = (
-                                    self._normalize_workspace_paths_for_comparison(
-                                        existing_content
-                                    )
+                                normalized_existing_content = self._normalize_workspace_paths_for_comparison(
+                                    existing_content,
                                 )
-                                if (
-                                    normalized_new_content.strip()
-                                    == normalized_existing_content.strip()
-                                ):
+                                if normalized_new_content.strip() == normalized_existing_content.strip():
                                     if attempt < max_attempts - 1:
                                         if self._check_restart_pending(agent_id):
                                             yield (
@@ -1803,10 +1801,10 @@ class Orchestrator(ChatAgent):
                                         error_msg = f"Answer already provided by {existing_agent_id}. Provide different answer or vote for existing one."
                                         yield ("content", f"❌ {error_msg}")
                                         # Create proper tool error message for retry
-                                        enforcement_msg = (
-                                            self._create_tool_error_messages(
-                                                agent, [tool_call], error_msg
-                                            )
+                                        enforcement_msg = self._create_tool_error_messages(
+                                            agent,
+                                            [tool_call],
+                                            error_msg,
                                         )
                                         continue
                                     else:
@@ -1840,7 +1838,7 @@ class Orchestrator(ChatAgent):
                         yield ("done", None)
                         return
                     if attempt < max_attempts - 1:
-                        yield ("content", f"🔄 needs to use workflow tools...\n")
+                        yield ("content", "🔄 needs to use workflow tools...\n")
                         # Reset to default enforcement message for this case
                         enforcement_msg = self.message_templates.enforcement_message()
                         continue  # Retry with updated conversation
@@ -1885,23 +1883,20 @@ class Orchestrator(ChatAgent):
                     content=f"🏆 Selected Agent: {self._selected_agent}\n",
                 )
 
-        if (
-            self._selected_agent
-            and self._selected_agent in self.agent_states
-            and self.agent_states[self._selected_agent].answer
-        ):
-            final_answer = self.agent_states[
-                self._selected_agent
-            ].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
+        if self._selected_agent and self._selected_agent in self.agent_states and self.agent_states[self._selected_agent].answer:
+            final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
 
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
 
             log_stream_chunk(
-                "orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n"
+                "orchestrator",
+                "content",
+                f"🏆 Selected Agent: {self._selected_agent}\n",
             )
             yield StreamChunk(
-                type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n"
+                type="content",
+                content=f"🏆 Selected Agent: {self._selected_agent}\n",
             )
             log_stream_chunk("orchestrator", "content", final_answer)
             yield StreamChunk(type="content", content=final_answer)
@@ -1941,11 +1936,7 @@ class Orchestrator(ChatAgent):
         )
 
         # Count available answers
-        available_answers = {
-            aid: state.answer
-            for aid, state in self.agent_states.items()
-            if state.answer and not state.is_killed
-        }
+        available_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer and not state.is_killed}
 
         log_stream_chunk(
             "orchestrator",
@@ -1978,14 +1969,11 @@ class Orchestrator(ChatAgent):
             return
 
         # Determine best available agent for presentation
-        current_votes = {
-            aid: state.votes
-            for aid, state in self.agent_states.items()
-            if state.votes and not state.is_killed
-        }
+        current_votes = {aid: state.votes for aid, state in self.agent_states.items() if state.votes and not state.is_killed}
 
         self._selected_agent = self._determine_final_agent_from_votes(
-            current_votes, available_answers
+            current_votes,
+            available_answers,
         )
 
         # Jump directly to get_final_presentation
@@ -2003,12 +1991,15 @@ class Orchestrator(ChatAgent):
         )
 
         async for chunk in self.get_final_presentation(
-            self._selected_agent, vote_results
+            self._selected_agent,
+            vote_results,
         ):
             yield chunk
 
     def _determine_final_agent_from_votes(
-        self, votes: Dict[str, Dict], agent_answers: Dict[str, str]
+        self,
+        votes: Dict[str, Dict],
+        agent_answers: Dict[str, str],
     ) -> str:
         """Determine which agent should present the final answer based on votes."""
         if not votes:
@@ -2027,9 +2018,7 @@ class Orchestrator(ChatAgent):
 
         # Find agents with maximum votes
         max_votes = max(vote_counts.values())
-        tied_agents = [
-            agent_id for agent_id, count in vote_counts.items() if count == max_votes
-        ]
+        tied_agents = [agent_id for agent_id, count in vote_counts.items() if count == max_votes]
 
         # Break ties by agent registration order (order in agent_states dict)
         for agent_id in agent_answers.keys():
@@ -2037,16 +2026,12 @@ class Orchestrator(ChatAgent):
                 return agent_id
 
         # Fallback to first tied agent
-        return (
-            tied_agents[0]
-            if tied_agents
-            else next(iter(agent_answers))
-            if agent_answers
-            else None
-        )
+        return tied_agents[0] if tied_agents else next(iter(agent_answers)) if agent_answers else None
 
     async def get_final_presentation(
-        self, selected_agent_id: str, vote_results: Dict[str, Any]
+        self,
+        selected_agent_id: str,
+        vote_results: Dict[str, Any],
     ) -> AsyncGenerator[StreamChunk, None]:
         """Ask the winning agent to present their final answer with voting context."""
         # Start tracking the final round
@@ -2054,10 +2039,13 @@ class Orchestrator(ChatAgent):
 
         if selected_agent_id not in self.agents:
             log_stream_chunk(
-                "orchestrator", "error", f"Selected agent {selected_agent_id} not found"
+                "orchestrator",
+                "error",
+                f"Selected agent {selected_agent_id} not found",
             )
             yield StreamChunk(
-                type="error", error=f"Selected agent {selected_agent_id} not found"
+                type="error",
+                error=f"Selected agent {selected_agent_id} not found",
             )
             return
 
@@ -2066,13 +2054,13 @@ class Orchestrator(ChatAgent):
         # Enable write access for final agent on context paths. This ensures that those paths marked `write` by the user are now writable (as all previous agents were read-only).
         if agent.backend.filesystem_manager:
             agent.backend.filesystem_manager.path_permission_manager.set_context_write_access_enabled(
-                True
+                True,
             )
 
         # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work
         temp_workspace_path = await self._copy_all_snapshots_to_temp_workspace(
-            selected_agent_id
+            selected_agent_id,
         )
         yield StreamChunk(
             type="debug",
@@ -2095,16 +2083,16 @@ class Orchestrator(ChatAgent):
             voting_summary += " (tie-broken by registration order)"
 
         # Get all answers for context
-        all_answers = {
-            aid: s.answer for aid, s in self.agent_states.items() if s.answer
-        }
+        all_answers = {aid: s.answer for aid, s in self.agent_states.items() if s.answer}
 
         # Normalize workspace paths in both voting summary and all answers for final presentation. Use same function for consistency.
         normalized_voting_summary = self._normalize_workspace_paths_in_answers(
-            {selected_agent_id: voting_summary}, selected_agent_id
+            {selected_agent_id: voting_summary},
+            selected_agent_id,
         )[selected_agent_id]
         normalized_all_answers = self._normalize_workspace_paths_in_answers(
-            all_answers, selected_agent_id
+            all_answers,
+            selected_agent_id,
         )
 
         # Use MessageTemplates to build the presentation message
@@ -2120,7 +2108,7 @@ class Orchestrator(ChatAgent):
 
         # Build system message with workspace context if available
         base_system_message = self.message_templates.final_presentation_system_message(
-            agent_system_message
+            agent_system_message,
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
@@ -2129,36 +2117,32 @@ class Orchestrator(ChatAgent):
                 self.coordination_tracker.change_status(aid, AgentStatus.COMPLETED)
 
         self.coordination_tracker.set_final_agent(
-            selected_agent_id, voting_summary, all_answers
+            selected_agent_id,
+            voting_summary,
+            all_answers,
         )
 
         # Add workspace context information to system message if workspace was restored
         if agent.backend.filesystem_manager and temp_workspace_path:
             main_workspace = str(
-                agent.backend.filesystem_manager.get_current_workspace()
+                agent.backend.filesystem_manager.get_current_workspace(),
             )
-            temp_workspace = (
-                str(agent.backend.filesystem_manager.agent_temporary_workspace)
-                if agent.backend.filesystem_manager.agent_temporary_workspace
-                else None
-            )
+            temp_workspace = str(agent.backend.filesystem_manager.agent_temporary_workspace) if agent.backend.filesystem_manager.agent_temporary_workspace else None
             # Get context paths if available
-            context_paths = (
-                agent.backend.filesystem_manager.path_permission_manager.get_context_paths()
-                if agent.backend.filesystem_manager.path_permission_manager
-                else []
-            )
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
 
-            base_system_message += (
-                "\n\n"
-                + self.message_templates.filesystem_system_message(
-                    main_workspace=main_workspace,
-                    temp_workspace=temp_workspace,
-                    context_paths=context_paths,
-                )
+            base_system_message += "\n\n" + self.message_templates.filesystem_system_message(
+                main_workspace=main_workspace,
+                temp_workspace=temp_workspace,
+                context_paths=context_paths,
             )
             # Add special note that we must not just cite answers from the temp workspace but instead create a synthesized final answer
-            base_system_message += "\n\nNote: When presenting the final answer, it is not sufficient to just read from existing temporary workspace files. Instead, you must write to your main workspace so that everything needed for the final answer is contained in your main workspace. This ensures the final answer is complete and self-contained."
+            base_system_message += (
+                "\n\nNote: When presenting the final answer, it is not sufficient to just read from existing "
+                "temporary workspace files. Instead, you must write to your main workspace so that everything needed "
+                "for the final answer is contained in your main workspace. This ensures the final answer is complete "
+                "and self-contained."
+            )
 
         # Create conversation with system and user messages
         presentation_messages = [
@@ -2178,11 +2162,7 @@ class Orchestrator(ChatAgent):
             "complete_vote_results": vote_results,  # Include ALL vote data
             "vote_counts": vote_counts,
             "voter_details": voter_details,
-            "all_votes": {
-                aid: state.votes
-                for aid, state in self.agent_states.items()
-                if state.votes
-            },  # All individual votes
+            "all_votes": {aid: state.votes for aid, state in self.agent_states.items() if state.votes},  # All individual votes
         }
 
         log_stream_chunk(
@@ -2207,10 +2187,15 @@ class Orchestrator(ChatAgent):
                 if chunk.type == "content" and chunk.content:
                     presentation_content += chunk.content
                     log_stream_chunk(
-                        "orchestrator", "content", chunk.content, selected_agent_id
+                        "orchestrator",
+                        "content",
+                        chunk.content,
+                        selected_agent_id,
                     )
                     yield StreamChunk(
-                        type="content", content=chunk.content, source=selected_agent_id
+                        type="content",
+                        content=chunk.content,
+                        source=selected_agent_id,
                     )
                 elif chunk.type in [
                     "reasoning",
@@ -2226,10 +2211,14 @@ class Orchestrator(ChatAgent):
                         reasoning_delta=getattr(chunk, "reasoning_delta", None),
                         reasoning_text=getattr(chunk, "reasoning_text", None),
                         reasoning_summary_delta=getattr(
-                            chunk, "reasoning_summary_delta", None
+                            chunk,
+                            "reasoning_summary_delta",
+                            None,
                         ),
                         reasoning_summary_text=getattr(
-                            chunk, "reasoning_summary_text", None
+                            chunk,
+                            "reasoning_summary_text",
+                            None,
                         ),
                         item_id=getattr(chunk, "item_id", None),
                         content_index=getattr(chunk, "content_index", None),
@@ -2237,7 +2226,10 @@ class Orchestrator(ChatAgent):
                     )
                     # Use the same format as main coordination for consistency
                     log_stream_chunk(
-                        "orchestrator", chunk.type, chunk.content, selected_agent_id
+                        "orchestrator",
+                        chunk.type,
+                        chunk.content,
+                        selected_agent_id,
                     )
                     yield reasoning_chunk
                 elif chunk.type == "backend_status":
@@ -2251,28 +2243,34 @@ class Orchestrator(ChatAgent):
     """
 
                     log_stream_chunk(
-                        "orchestrator", "content", content, selected_agent_id
+                        "orchestrator",
+                        "content",
+                        content,
+                        selected_agent_id,
                     )
                     yield StreamChunk(
-                        type="content", content=content, source=selected_agent_id
+                        type="content",
+                        content=content,
+                        source=selected_agent_id,
                     )
                 elif chunk.type == "mcp_status":
                     # Handle MCP status messages in final presentation
                     mcp_content = f"🔧 MCP: {chunk.content}"
                     log_stream_chunk(
-                        "orchestrator", "content", mcp_content, selected_agent_id
+                        "orchestrator",
+                        "content",
+                        mcp_content,
+                        selected_agent_id,
                     )
                     yield StreamChunk(
-                        type="content", content=mcp_content, source=selected_agent_id
+                        type="content",
+                        content=mcp_content,
+                        source=selected_agent_id,
                     )
 
                 elif chunk.type == "done":
                     # Save the final workspace snapshot (from final workspace directory)
-                    final_answer = (
-                        presentation_content.strip()
-                        if presentation_content.strip()
-                        else self.agent_states[selected_agent_id].answer
-                    )  # fallback to stored answer if no content generated
+                    final_answer = presentation_content.strip() if presentation_content.strip() else self.agent_states[selected_agent_id].answer  # fallback to stored answer if no content generated
                     final_context = self.get_last_context(selected_agent_id)
                     await self._save_agent_snapshot(
                         self._selected_agent,
@@ -2283,17 +2281,24 @@ class Orchestrator(ChatAgent):
 
                     # Track the final answer in coordination tracker
                     self.coordination_tracker.set_final_answer(
-                        selected_agent_id, final_answer, snapshot_timestamp="final"
+                        selected_agent_id,
+                        final_answer,
+                        snapshot_timestamp="final",
                     )
 
                     log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                     yield StreamChunk(type="done", source=selected_agent_id)
                 elif chunk.type == "error":
                     log_stream_chunk(
-                        "orchestrator", "error", chunk.error, selected_agent_id
+                        "orchestrator",
+                        "error",
+                        chunk.error,
+                        selected_agent_id,
                     )
                     yield StreamChunk(
-                        type="error", error=chunk.error, source=selected_agent_id
+                        type="error",
+                        error=chunk.error,
+                        source=selected_agent_id,
                     )
                 # Pass through other chunk types as-is but with source
                 else:
@@ -2308,11 +2313,7 @@ class Orchestrator(ChatAgent):
                             type=chunk.type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
-                            **{
-                                k: v
-                                for k, v in chunk.__dict__.items()
-                                if k not in ["type", "content", "source"]
-                            },
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},
                         )
                     else:
                         log_stream_chunk(
@@ -2325,11 +2326,7 @@ class Orchestrator(ChatAgent):
                             type=chunk.type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
-                            **{
-                                k: v
-                                for k, v in chunk.__dict__.items()
-                                if k not in ["type", "content", "source"]
-                            },
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},
                         )
 
         finally:
@@ -2343,7 +2340,10 @@ class Orchestrator(ChatAgent):
                 if stored_answer:
                     fallback_content = f"\n📋 Using stored answer as final presentation:\n\n{stored_answer}"
                     log_stream_chunk(
-                        "orchestrator", "content", fallback_content, selected_agent_id
+                        "orchestrator",
+                        "content",
+                        fallback_content,
+                        selected_agent_id,
                     )
                     yield StreamChunk(
                         type="content",
@@ -2366,7 +2366,8 @@ class Orchestrator(ChatAgent):
 
             # Mark final round as completed
             self.coordination_tracker.change_status(
-                selected_agent_id, AgentStatus.COMPLETED
+                selected_agent_id,
+                AgentStatus.COMPLETED,
             )
 
             # Save logs
@@ -2374,14 +2375,8 @@ class Orchestrator(ChatAgent):
 
     def _get_vote_results(self) -> Dict[str, Any]:
         """Get current vote results and statistics."""
-        agent_answers = {
-            aid: state.answer
-            for aid, state in self.agent_states.items()
-            if state.answer
-        }
-        votes = {
-            aid: state.votes for aid, state in self.agent_states.items() if state.votes
-        }
+        agent_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
+        votes = {aid: state.votes for aid, state in self.agent_states.items() if state.votes}
 
         # Count votes for each agent
         vote_counts = {}
@@ -2397,7 +2392,7 @@ class Orchestrator(ChatAgent):
                     {
                         "voter": voter_id,
                         "reason": vote_data.get("reason", "No reason provided"),
-                    }
+                    },
                 )
 
         # Determine winner
@@ -2405,11 +2400,7 @@ class Orchestrator(ChatAgent):
         is_tie = False
         if vote_counts:
             max_votes = max(vote_counts.values())
-            tied_agents = [
-                agent_id
-                for agent_id, count in vote_counts.items()
-                if count == max_votes
-            ]
+            tied_agents = [agent_id for agent_id, count in vote_counts.items() if count == max_votes]
             is_tie = len(tied_agents) > 1
 
             # Break ties by agent registration order
@@ -2440,11 +2431,7 @@ class Orchestrator(ChatAgent):
     def _determine_final_agent_from_states(self) -> Optional[str]:
         """Determine final agent based on current agent states."""
         # Find agents with answers
-        agents_with_answers = {
-            aid: state.answer
-            for aid, state in self.agent_states.items()
-            if state.answer
-        }
+        agents_with_answers = {aid: state.answer for aid, state in self.agent_states.items() if state.answer}
 
         if not agents_with_answers:
             return None
@@ -2453,24 +2440,31 @@ class Orchestrator(ChatAgent):
         return next(iter(agents_with_answers))
 
     async def _handle_followup(
-        self, user_message: str, conversation_context: Optional[Dict[str, Any]] = None
+        self,
+        user_message: str,
+        conversation_context: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Handle follow-up questions after presenting final answer with conversation context."""
         # For now, acknowledge with context awareness
         # Future: implement full re-coordination with follow-up context
 
-        if (
-            conversation_context
-            and len(conversation_context.get("conversation_history", [])) > 0
-        ):
+        if conversation_context and len(conversation_context.get("conversation_history", [])) > 0:
             log_stream_chunk(
                 "orchestrator",
                 "content",
-                f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or coordinate a new task that takes our conversation history into account.",
+                f"🤔 Thank you for your follow-up question in our ongoing conversation. "
+                f"I understand you're asking: '{user_message}'. Currently, the coordination is complete, "
+                f"but I can help clarify the answer or coordinate a new task that takes our conversation "
+                f"history into account.",
             )
             yield StreamChunk(
                 type="content",
-                content=f"🤔 Thank you for your follow-up question in our ongoing conversation. I understand you're asking: '{user_message}'. Currently, the coordination is complete, but I can help clarify the answer or coordinate a new task that takes our conversation history into account.",
+                content=(
+                    f"🤔 Thank you for your follow-up question in our ongoing conversation. "
+                    f"I understand you're asking: '{user_message}'. Currently, the coordination is complete, "
+                    f"but I can help clarify the answer or coordinate a new task that takes our conversation "
+                    f"history into account."
+                ),
             )
         else:
             log_stream_chunk(

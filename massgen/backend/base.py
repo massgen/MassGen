@@ -1,15 +1,17 @@
-from __future__ import annotations
-
+# -*- coding: utf-8 -*-
 """
 Base backend interface for LLM providers.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, AsyncGenerator, Optional, Union
 from dataclasses import dataclass
 from enum import Enum
-from ..token_manager import TokenUsage, TokenCostCalculator
-from ..formatter import MessageFormatter, ToolFormatter, MCPToolFormatter
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+
+from ..formatter import MCPToolFormatter, MessageFormatter, ToolFormatter
+from ..token_manager import TokenCostCalculator, TokenUsage
 
 
 class FilesystemSupport(Enum):
@@ -24,11 +26,10 @@ class FilesystemSupport(Enum):
 class StreamChunk:
     """Standardized chunk format for streaming responses."""
 
-    type: str  # "content", "tool_calls", "complete_message", "complete_response", "done", "error", "agent_status", "reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done", "backend_status"
+    type: str  # "content", "tool_calls", "complete_message", "complete_response", "done", "error",
+    # "agent_status", "reasoning", "reasoning_done", "reasoning_summary", "reasoning_summary_done", "backend_status"
     content: Optional[str] = None
-    tool_calls: Optional[
-        List[Dict[str, Any]]
-    ] = None  # User-defined function tools (need execution)
+    tool_calls: Optional[List[Dict[str, Any]]] = None  # User-defined function tools (need execution)
     complete_message: Optional[Dict[str, Any]] = None  # Complete assistant message
     response: Optional[Dict[str, Any]] = None  # Raw Responses API response
     error: Optional[str] = None
@@ -38,9 +39,7 @@ class StreamChunk:
     # Reasoning-related fields
     reasoning_delta: Optional[str] = None  # Delta text from reasoning stream
     reasoning_text: Optional[str] = None  # Complete reasoning text
-    reasoning_summary_delta: Optional[
-        str
-    ] = None  # Delta text from reasoning summary stream
+    reasoning_summary_delta: Optional[str] = None  # Delta text from reasoning summary stream
     reasoning_summary_text: Optional[str] = None  # Complete reasoning summary text
     item_id: Optional[str] = None  # Reasoning item ID
     content_index: Optional[int] = None  # Reasoning content index
@@ -74,9 +73,7 @@ class LLMBackend(ABC):
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
-                context_write_access_enabled = kwargs.get(
-                    "context_write_access_enabled", False
-                )
+                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
@@ -94,9 +91,7 @@ class LLMBackend(ABC):
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
-                context_write_access_enabled = kwargs.get(
-                    "context_write_access_enabled", False
-                )
+                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
@@ -105,9 +100,7 @@ class LLMBackend(ABC):
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
-                raise ValueError(
-                    f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration."
-                )
+                raise ValueError(f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration.")
 
             # Auto-setup permission hooks for function-based backends (default)
             if self.filesystem_manager:
@@ -117,21 +110,17 @@ class LLMBackend(ABC):
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""
-        from ..mcp_tools.hooks import FunctionHookManager, HookType
         from ..mcp_tools.filesystem_manager import PathPermissionManagerHook
+        from ..mcp_tools.hooks import FunctionHookManager, HookType
 
         # Create per-agent hook manager
         self.function_hook_manager = FunctionHookManager()
 
         # Create permission hook using the filesystem manager's permission manager
-        permission_hook = PathPermissionManagerHook(
-            self.filesystem_manager.path_permission_manager
-        )
+        permission_hook = PathPermissionManagerHook(self.filesystem_manager.path_permission_manager)
 
         # Register hook on this agent's hook manager only
-        self.function_hook_manager.register_global_hook(
-            HookType.PRE_CALL, permission_hook
-        )
+        self.function_hook_manager.register_global_hook(HookType.PRE_CALL, permission_hook)
 
     @classmethod
     def get_base_excluded_config_params(cls) -> set:
@@ -160,9 +149,7 @@ class LLMBackend(ABC):
         }
 
     @abstractmethod
-    async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
-    ) -> AsyncGenerator[StreamChunk, None]:
+    async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
         """
         Stream a response with tool calling support.
 
@@ -174,16 +161,12 @@ class LLMBackend(ABC):
         Yields:
             StreamChunk: Standardized response chunks
         """
-        pass
 
     @abstractmethod
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
-        pass
 
-    def estimate_tokens(
-        self, text: Union[str, List[Dict[str, Any]]], method: str = "auto"
-    ) -> int:
+    def estimate_tokens(self, text: Union[str, List[Dict[str, Any]]], method: str = "auto") -> int:
         """
         Estimate token count for text or messages.
 
@@ -196,9 +179,7 @@ class LLMBackend(ABC):
         """
         return self.token_calculator.estimate_tokens(text, method)
 
-    def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str
-    ) -> float:
+    def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
         """
         Calculate cost for token usage.
 
@@ -211,13 +192,9 @@ class LLMBackend(ABC):
             Estimated cost in USD
         """
         provider = self.get_provider_name()
-        return self.token_calculator.calculate_cost(
-            input_tokens, output_tokens, provider, model
-        )
+        return self.token_calculator.calculate_cost(input_tokens, output_tokens, provider, model)
 
-    def update_token_usage(
-        self, messages: List[Dict[str, Any]], response_content: str, model: str
-    ) -> TokenUsage:
+    def update_token_usage(self, messages: List[Dict[str, Any]], response_content: str, model: str) -> TokenUsage:
         """
         Update token usage tracking.
 
@@ -230,9 +207,7 @@ class LLMBackend(ABC):
             Updated TokenUsage object
         """
         provider = self.get_provider_name()
-        self.token_usage = self.token_calculator.update_token_usage(
-            self.token_usage, messages, response_content, provider, model
-        )
+        self.token_usage = self.token_calculator.update_token_usage(self.token_usage, messages, response_content, provider, model)
         return self.token_usage
 
     def get_token_usage(self) -> TokenUsage:
@@ -352,9 +327,7 @@ class LLMBackend(ABC):
         # Try multiple possible ID fields
         return tool_call.get("id") or tool_call.get("call_id") or ""
 
-    def create_tool_result_message(
-        self, tool_call: Dict[str, Any], result_content: str
-    ) -> Dict[str, Any]:
+    def create_tool_result_message(self, tool_call: Dict[str, Any], result_content: str) -> Dict[str, Any]:
         """
         Create a tool result message in this backend's expected format.
 

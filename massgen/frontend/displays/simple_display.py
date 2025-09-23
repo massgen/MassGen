@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Simple Display for MassGen Coordination
 
@@ -5,6 +6,7 @@ Basic text output display for minimal use cases and debugging.
 """
 
 from typing import Optional
+
 from .base_display import BaseDisplay
 
 
@@ -25,9 +27,7 @@ class SimpleDisplay(BaseDisplay):
         print(f"👥 Agents: {', '.join(self.agent_ids)}")
         print("=" * 50)
 
-    def update_agent_content(
-        self, agent_id: str, content: str, content_type: str = "thinking"
-    ):
+    def update_agent_content(self, agent_id: str, content: str, content_type: str = "thinking"):
         """Update content for a specific agent."""
         if agent_id not in self.agent_ids:
             return
@@ -86,9 +86,7 @@ class SimpleDisplay(BaseDisplay):
         if selected_agent:
             print(f"✅ Selected by: {selected_agent}")
         if vote_results:
-            vote_summary = ", ".join(
-                [f"{agent}: {votes}" for agent, votes in vote_results.items()]
-            )
+            vote_summary = ", ".join([f"{agent}: {votes}" for agent, votes in vote_results.items()])
             print(f"🗳️ Vote results: {vote_summary}")
         print("=" * 50)
 

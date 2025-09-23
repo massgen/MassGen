@@ -40,6 +40,8 @@ massgen/
 │   ├── exceptions.py       # Custom MCP exceptions
 │   ├── security.py         # Security validation and sanitization
 │   ├── filesystem_manager.py # Workspace and snapshot management
+│   ├── hooks.py            # Function hooks for permission management
+│   ├── workspace_copy_server.py # MCP server for file copying operations
 │   └── *.md                # Individual component documentation
 ├── frontend/               # User interface components
 │   ├── __init__.py
@@ -86,35 +88,202 @@ To add support for a new model provider:
 6. Add tests in `massgen/tests/`
 7. Update documentation
 
-### Installation and Setup
-
-#### Prerequisites
+## 📋 Prerequisites
 
 - Python 3.10 or higher
+- Git
 - API keys for the model providers you want to use
+- [uv](https://github.com/astral-sh/uv) for dependency management (recommended)
 
-#### Development Setup
+## 🚀 Development Setup
+
+### 1. Fork and Clone
 
 ```bash
-# Clone the repository
-git clone https://github.com/Leezekun/MassGen.git
+# Fork the repository on GitHub first, then:
+git clone https://github.com/YOUR_USERNAME/MassGen.git
 cd MassGen
 
-# Install uv for dependency management
+# Add upstream remote
+git remote add upstream https://github.com/Leezekun/MassGen.git
+```
+
+### 2. Create Development Environment
+
+```bash
+# Install uv for dependency management (if not already installed)
 pip install uv
 
 # Create virtual environment
 uv venv
 
-# Install dependencies (if requirements.txt exists)
-uv pip install -r requirements.txt
+# Activate virtual environment
+# On macOS/Linux:
+source .venv/bin/activate
+# On Windows:
+.venv\Scripts\activate
+
+# Install project in editable mode with all dependencies
+uv pip install -e .
+
+# Install development dependencies
+uv pip install -e ".[dev]"
 ```
 
-#### Environment Configuration
+### 3. Set Up Pre-commit Hooks
+
+Pre-commit hooks ensure code quality and consistency. Install them with:
+
+```bash
+# Install pre-commit hooks
+pre-commit install
+```
+
+### 4. Environment Configuration
 
 Create a `.env` file in the `massgen` directory as described in [README](README.md)
 
-### Contributing Areas
+## 🔧 Development Workflow
+
+> **Important**: Our next version is v0.0.23. If you want to contribute, please contribute to the `dev/v0.0.23` branch.
+
+### 1. Create Feature Branch
+
+```bash
+# Fetch latest changes from upstream
+git fetch upstream
+
+# Create feature branch from dev/v0.0.23
+git checkout -b feature/your-feature-name upstream/dev/v0.0.23
+```
+
+### 2. Make Your Changes
+
+Follow these guidelines while developing:
+
+- **Code Style**: Follow existing patterns and conventions in the codebase
+- **Documentation**: Update docstrings and README if needed
+- **Tests**: Add tests for new functionality
+- **Type Hints**: Use type hints for better code clarity
+
+### 3. Code Quality Checks
+
+Before committing, ensure your code passes all quality checks:
+
+```bash
+# Run pre-commit hooks on staged files
+pre-commit run
+
+# Or to check specific files:
+pre-commit run --files path/to/file1.py path/to/file2.py
+
+# Run individual tools on changed files:
+
+# Get list of changed Python files
+git diff --name-only --cached --diff-filter=ACM | grep '\.py$'
+
+# Format changed files with Black
+git diff --name-only --cached --diff-filter=ACM | grep '\.py$' | xargs black --line-length=79
+
+# Sort imports in changed files
+git diff --name-only --cached --diff-filter=ACM | grep '\.py$' | xargs isort
+
+# Check changed files with flake8
+git diff --name-only --cached --diff-filter=ACM | grep '\.py$' | xargs flake8 --extend-ignore=E203
+
+# Type checking on changed files
+git diff --name-only --cached --diff-filter=ACM | grep '\.py$' | xargs mypy
+
+# Security checks on changed files
+git diff --name-only --cached --diff-filter=ACM | grep '\.py$' | xargs bandit
+
+# Lint changed files with pylint
+git diff --name-only --cached --diff-filter=ACM | grep '\.py$' | xargs pylint
+
+# For testing all files (only when needed):
+pre-commit run --all-files
+```
+
+### 4. Testing
+
+```bash
+# Run all tests
+pytest massgen/tests/
+
+# Run specific test file
+pytest massgen/tests/test_specific.py
+
+# Run with coverage
+pytest --cov=massgen massgen/tests/
+
+# Test with different configurations
+uv run python -m massgen.cli --config massgen/configs/single_4omini.yaml "Test question"
+```
+
+### 5. Commit Your Changes
+
+```bash
+# Stage your changes
+git add .
+
+# Commit with descriptive message
+# Pre-commit hooks will run automatically
+git commit -m "feat: add support for new model provider"
+
+# If pre-commit hooks fail, fix the issues and commit again
+```
+
+Commit message format:
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation changes
+- `test:` Adding or updating tests
+- `refactor:` Code refactoring
+- `style:` Code style changes
+- `perf:` Performance improvements
+- `ci:` CI/CD changes
+
+### 6. Push and Create Pull Request
+
+```bash
+# Push to your fork
+git push origin feature/your-feature-name
+```
+
+Then create a pull request on GitHub:
+- Base branch: `dev/v0.0.23`
+- Compare branch: `feature/your-feature-name`
+- Add clear description of changes
+- Link any related issues
+
+## 🔍 Pre-commit Hooks Explained
+
+Our pre-commit configuration includes:
+
+### Python Code Quality
+- **check-ast**: Verify Python AST is valid
+- **black**: Code formatter (line length: 79)
+- **isort**: Import sorting
+- **flake8**: Style guide enforcement
+- **pylint**: Advanced linting (with custom disabled rules)
+- **mypy**: Static type checking
+
+### File Checks
+- **check-yaml**: Validate YAML syntax
+- **check-json**: Validate JSON syntax
+- **check-toml**: Validate TOML syntax
+- **check-docstring-first**: Ensure docstrings come before code
+- **trailing-whitespace**: Remove trailing whitespace
+- **fix-encoding-pragma**: Add `# -*- coding: utf-8 -*-` when needed
+- **add-trailing-comma**: Add trailing commas for better diffs
+
+### Security
+- **detect-private-key**: Prevent committing private keys
+
+### Package Quality
+- **pyroma**: Check package metadata quality
+
+## 🎯 Contributing Areas
 
 We welcome contributions in these areas:
 
@@ -129,29 +298,41 @@ We welcome contributions in these areas:
 - **Testing & Benchmarking**: Add test coverage and benchmarking frameworks
 - **Bug Fixes**: Fix issues and edge cases
 
-### Development Workflow
+## 📝 Pull Request Guidelines
 
-> **Important**: Our next version is v0.0.22. If you want to contribute, please contribute to the `dev/v0.0.22` branch.
+### Before Submitting
 
-1. **Fork the repository** and create a feature branch from `dev/v0.0.22`
-2. **Set up the development environment** following the setup instructions above
-3. **Make your changes** following the existing code style and patterns
-4. **Add tests** for new functionality
-5. **Update documentation** if needed
-6. **Test your changes** thoroughly with different configurations
-7. **Submit a pull request** with a clear description of your changes
+- [ ] Code passes all pre-commit hooks
+- [ ] Tests pass locally
+- [ ] Documentation is updated if needed
+- [ ] Commit messages follow convention
+- [ ] PR targets `dev/v0.0.23` branch
 
-### Testing
+### PR Description Should Include
 
-Run tests to ensure your changes work correctly:
+- **What**: Brief description of changes
+- **Why**: Motivation and context
+- **How**: Technical approach taken
+- **Testing**: How you tested the changes
+- **Screenshots**: If UI changes (if applicable)
 
-```bash
-# Run specific test files
-uv run python -m pytest massgen/tests/test_*.py
+### Review Process
 
-# Test with different configurations
-uv run python -m massgen.cli --config massgen/configs/single_4omini.yaml "Test question"
-```
+1. Automated checks will run on your PR
+2. Maintainers will review your code
+3. Address any feedback or requested changes
+4. Once approved, PR will be merged
+
+## 🐛 Reporting Issues
+
+When reporting issues, please include:
+
+- Python version
+- Operating system
+- Steps to reproduce
+- Expected vs actual behavior
+- Error messages/logs
+- Minimal reproducible example
 
 ## 🤝 Community
 
@@ -160,6 +341,29 @@ uv run python -m massgen.cli --config massgen/configs/single_4omini.yaml "Test q
 - **GitHub Issues**: Report bugs and request features
 - **GitHub Discussions**: Ask questions and share ideas
 
+## 📚 Additional Resources
+
+- [Main README](README.md)
+- [MCP Documentation](massgen/mcp_tools/README.md)
+- [Backend Implementation Guide](massgen/backend/README.md)
+- [Testing Guide](massgen/tests/README.md)
+
+## ⚠️ Important Notes
+
+### Dependencies
+- When adding new dependencies, update `pyproject.toml`
+- Use optional dependency groups for non-core features
+- Pin versions for critical dependencies
+
+### Backward Compatibility
+- Maintain backward compatibility when possible
+- Document breaking changes clearly
+- Update version numbers appropriately
+
+### Performance Considerations
+- Profile code for performance bottlenecks
+- Consider memory usage for large-scale operations
+- Optimize streaming and async operations
 
 ## 📄 License
 

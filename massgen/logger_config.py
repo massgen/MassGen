@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Centralized logging configuration for MassGen using loguru.
 
@@ -14,12 +15,12 @@ Color Scheme for Debug Logging:
 - Red: Coordination steps (🔄)
 """
 
-import sys
-import os
 import inspect
-from pathlib import Path
-from typing import Optional, Any
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
+
 from loguru import logger
 
 # Remove default logger to have full control
@@ -81,7 +82,14 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
             # Format the name to be more readable
             formatted_name = name if name else "{name}"
 
-            return f"<green>{{time:HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | <{name_color}>{formatted_name}</{name_color}>:<{name_color}>{{function}}</{name_color}>:<{name_color}>{{line}}</{name_color}> - {{message}}\n{{exception}}"
+            return (
+                f"<green>{{time:HH:mm:ss.SSS}}</green> | "
+                f"<level>{{level: <8}}</level> | "
+                f"<{name_color}>{formatted_name}</{name_color}>:"
+                f"<{name_color}>{{function}}</{name_color}>:"
+                f"<{name_color}>{{line}}</{name_color}> - "
+                f"{{message}}\n{{exception}}"
+            )
 
         logger.add(
             sys.stderr,
@@ -177,9 +185,7 @@ def _get_caller_info():
     return "unknown", 0
 
 
-def log_orchestrator_activity(
-    orchestrator_id: str, activity: str, details: dict = None
-):
+def log_orchestrator_activity(orchestrator_id: str, activity: str, details: dict = None):
     """
     Log orchestrator activities for debugging.
 
@@ -193,14 +199,10 @@ def log_orchestrator_activity(
     log = logger.bind(name=f"orchestrator.{orchestrator_id}:{func_name}:{line_num}")
     if _DEBUG_MODE:
         # Use magenta color for orchestrator activities
-        log.opt(colors=True).debug(
-            "<magenta>🎯 {}: {}</magenta>", activity, details or {}
-        )
+        log.opt(colors=True).debug("<magenta>🎯 {}: {}</magenta>", activity, details or {})
 
 
-def log_agent_message(
-    agent_id: str, direction: str, message: dict, backend_name: str = None
-):
+def log_agent_message(agent_id: str, direction: str, message: dict, backend_name: str = None):
     """
     Log agent messages (sent/received) for debugging.
 
@@ -242,9 +244,7 @@ def log_agent_message(
             )
 
 
-def log_orchestrator_agent_message(
-    agent_id: str, direction: str, message: dict, backend_name: str = None
-):
+def log_orchestrator_agent_message(agent_id: str, direction: str, message: dict, backend_name: str = None):
     """
     Log orchestrator-to-agent messages for debugging.
 
@@ -289,9 +289,7 @@ def log_orchestrator_agent_message(
             )
 
 
-def log_backend_agent_message(
-    agent_id: str, direction: str, message: dict, backend_name: str = None
-):
+def log_backend_agent_message(agent_id: str, direction: str, message: dict, backend_name: str = None):
     """
     Log backend-to-LLM messages for debugging.
 
@@ -336,9 +334,7 @@ def log_backend_agent_message(
             )
 
 
-def log_backend_activity(
-    backend_name: str, activity: str, details: dict = None, agent_id: str = None
-):
+def log_backend_activity(backend_name: str, activity: str, details: dict = None, agent_id: str = None):
     """
     Log backend activities for debugging.
 
@@ -361,14 +357,10 @@ def log_backend_activity(
 
     if _DEBUG_MODE:
         # Use yellow color for backend activities
-        log.opt(colors=True).debug(
-            "<yellow>⚙️ [{}] {}: {}</yellow>", log_name, activity, details or {}
-        )
+        log.opt(colors=True).debug("<yellow>⚙️ [{}] {}: {}</yellow>", log_name, activity, details or {})
 
 
-def log_mcp_activity(
-    backend_name: str, message: str, details: dict = None, agent_id: str = None
-):
+def log_mcp_activity(backend_name: str, message: str, details: dict = None, agent_id: str = None):
     """
     Log MCP (Model Context Protocol) activities at INFO level.
 
@@ -448,9 +440,7 @@ def log_coordination_step(step: str, details: dict = None):
         log.opt(colors=True).debug("<red>🔄 {}: {}</red>", step, details or {})
 
 
-def log_stream_chunk(
-    source: str, chunk_type: str, content: Any = None, agent_id: str = None
-):
+def log_stream_chunk(source: str, chunk_type: str, content: Any = None, agent_id: str = None):
     """
     Log stream chunks at INFO level (always logged to file).
 

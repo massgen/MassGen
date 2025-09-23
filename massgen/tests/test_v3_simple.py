@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Simple test script for MassGen basic functionality.
 Tests single agent and basic orchestrator functionality.
@@ -13,9 +14,9 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.response import ResponseBackend
-from massgen.chat_agent import SingleAgent
-from massgen.orchestrator import Orchestrator
+from massgen.backend.response import ResponseBackend  # noqa: E402
+from massgen.chat_agent import SingleAgent  # noqa: E402
+from massgen.orchestrator import Orchestrator  # noqa: E402
 
 
 async def test_single_agent():
@@ -51,9 +52,7 @@ async def test_single_agent():
             elif chunk.type == "done":
                 break
 
-        print(
-            f"\n✅ Single agent test completed. Response: '{response_content.strip()}'"
-        )
+        print(f"\n✅ Single agent test completed. Response: '{response_content.strip()}'")
         return True
 
     except Exception as e:
@@ -83,9 +82,7 @@ async def test_orchestrator_single():
 
         print("📤 Testing orchestrator with single agent...")
 
-        messages = [
-            {"role": "user", "content": "Explain photosynthesis in one sentence."}
-        ]
+        messages = [{"role": "user", "content": "Explain photosynthesis in one sentence."}]
         response_content = ""
 
         async for chunk in orchestrator.chat(messages):
@@ -98,9 +95,7 @@ async def test_orchestrator_single():
             elif chunk.type == "done":
                 break
 
-        print(
-            f"\n✅ Orchestrator single agent test completed. Response length: {len(response_content)} chars"
-        )
+        print(f"\n✅ Orchestrator single agent test completed. Response length: {len(response_content)} chars")
         return True
 
     except Exception as e:

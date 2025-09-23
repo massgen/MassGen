@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Unit tests for PathPermissionManager validation methods.
 
@@ -10,19 +11,21 @@ Tests the core permission validation logic including:
 """
 
 import asyncio
-import sys
 import os
-import tempfile
 import shutil
+import sys
+import tempfile
 from pathlib import Path
 
 # Add the massgen directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
-
-from massgen.mcp_tools.filesystem_manager import (
+from massgen.mcp_tools.filesystem_manager import (  # noqa: E402
     PathPermissionManager,
     Permission,
-    ManagedPath,
+)
+from massgen.mcp_tools.workspace_copy_server import (  # noqa: E402
+    _validate_path_access,
+    get_copy_file_pairs,
 )
 
 
@@ -60,7 +63,7 @@ class TestHelper:
     def create_permission_manager(self, context_write_enabled=False):
         """Helper to create a PathPermissionManager with test paths."""
         manager = PathPermissionManager(
-            context_write_access_enabled=context_write_enabled
+            context_write_access_enabled=context_write_enabled,
         )
 
         # Add workspace (always writable)
@@ -156,7 +159,7 @@ def test_validate_write_tool():
 
         if not allowed:
             print(
-                f"❌ Failed: Context path should be writable when enabled. Reason: {reason}"
+                f"❌ Failed: Context path should be writable when enabled. Reason: {reason}",
             )
             return False
 
@@ -171,7 +174,7 @@ def test_validate_write_tool():
             return False
         if "read-only context path" not in reason:
             print(
-                f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}"
+                f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}",
             )
             return False
 
@@ -179,14 +182,14 @@ def test_validate_write_tool():
         print("  Testing readonly path...")
         for context_write_enabled in [True, False]:
             manager = helper.create_permission_manager(
-                context_write_enabled=context_write_enabled
+                context_write_enabled=context_write_enabled,
             )
             tool_args = {"file_path": str(helper.readonly_dir / "readonly_file.txt")}
             allowed, reason = manager._validate_write_tool("Write", tool_args)
 
             if allowed:
                 print(
-                    f"❌ Failed: Readonly path should never be writable (context_write={context_write_enabled})"
+                    f"❌ Failed: Readonly path should never be writable (context_write={context_write_enabled})",
                 )
                 return False
 
@@ -258,7 +261,7 @@ def test_validate_command_tool():
                 return False
             if "Dangerous command pattern" not in reason:
                 print(
-                    f"❌ Failed: Expected 'Dangerous command pattern' for: {cmd}, got: {reason}"
+                    f"❌ Failed: Expected 'Dangerous command pattern' for: {cmd}, got: {reason}",
                 )
                 return False
 
@@ -280,7 +283,7 @@ def test_validate_command_tool():
 
             if not allowed:
                 print(
-                    f"❌ Failed: Safe command should be allowed: {cmd}. Reason: {reason}"
+                    f"❌ Failed: Safe command should be allowed: {cmd}. Reason: {reason}",
                 )
                 return False
 
@@ -306,7 +309,7 @@ def test_validate_command_tool():
                 return False
             if "read-only context path" not in reason:
                 print(
-                    f"❌ Failed: Expected 'read-only context path' for: {cmd}, got: {reason}"
+                    f"❌ Failed: Expected 'read-only context path' for: {cmd}, got: {reason}",
                 )
                 return False
 
@@ -327,7 +330,7 @@ def test_validate_command_tool():
 
             if not allowed:
                 print(
-                    f"❌ Failed: Write to workspace should be allowed: {cmd}. Reason: {reason}"
+                    f"❌ Failed: Write to workspace should be allowed: {cmd}. Reason: {reason}",
                 )
                 return False
 
@@ -357,7 +360,7 @@ def test_pre_tool_use_hook():
             return False
         if "read-only context path" not in reason:
             print(
-                f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}"
+                f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}",
             )
             return False
 
@@ -371,7 +374,7 @@ def test_pre_tool_use_hook():
             return False
         if "Dangerous command pattern" not in reason:
             print(
-                f"❌ Failed: Expected 'Dangerous command pattern' in reason, got: {reason}"
+                f"❌ Failed: Expected 'Dangerous command pattern' in reason, got: {reason}",
             )
             return False
 
@@ -382,12 +385,12 @@ def test_pre_tool_use_hook():
         for tool_name in read_tools:
             tool_args = {"file_path": str(helper.readonly_dir / "readonly_file.txt")}
             allowed, reason = asyncio.run(
-                manager.pre_tool_use_hook(tool_name, tool_args)
+                manager.pre_tool_use_hook(tool_name, tool_args),
             )
 
             if not allowed:
                 print(
-                    f"❌ Failed: Read tool should always be allowed: {tool_name}. Reason: {reason}"
+                    f"❌ Failed: Read tool should always be allowed: {tool_name}. Reason: {reason}",
                 )
                 return False
 
@@ -395,7 +398,7 @@ def test_pre_tool_use_hook():
         print("  Testing unknown tools...")
         tool_args = {"some_param": "value"}
         allowed, reason = asyncio.run(
-            manager.pre_tool_use_hook("CustomTool", tool_args)
+            manager.pre_tool_use_hook("CustomTool", tool_args),
         )
 
         if not allowed:
@@ -486,7 +489,7 @@ def test_extract_file_from_command():
             result = manager._extract_file_from_command(command, pattern)
             if result != expected:
                 print(
-                    f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'"
+                    f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'",
                 )
                 return False
 
@@ -503,7 +506,7 @@ def test_extract_file_from_command():
             result = manager._extract_file_from_command(command, pattern)
             if result != expected:
                 print(
-                    f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'"
+                    f"❌ Failed: Expected '{expected}' from '{command}', got '{result}'",
                 )
                 return False
 
@@ -511,6 +514,343 @@ def test_extract_file_from_command():
         return True
 
     finally:
+        helper.teardown()
+
+
+def test_workspace_copy_tools():
+    """Test workspace copy tool validation."""
+    print("\n📦 Testing workspace copy tool validation...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create temp workspace directory
+        temp_workspace_dir = helper.temp_dir / "temp_workspace"
+        temp_workspace_dir.mkdir(parents=True)
+        (temp_workspace_dir / "source_file.txt").write_text("source content")
+
+        # Test 1: copy_file and copy_files are detected as write tools
+        print("  Testing copy tool detection...")
+        manager = helper.create_permission_manager(context_write_enabled=False)
+
+        copy_tools = ["copy_file", "copy_files_batch", "mcp__workspace_copy__copy_file", "mcp__workspace_copy__copy_files_batch"]
+        for tool in copy_tools:
+            if not manager._is_write_tool(tool):
+                print(f"❌ Failed: {tool} should be detected as write tool")
+                return False
+
+        # Test 2: copy_file respects destination permissions
+        print("  Testing copy_file destination permissions...")
+
+        # Should allow copy to workspace
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination_path": str(helper.workspace_dir / "dest_file.txt"),
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_file to workspace should be allowed. Reason: {reason}")
+            return False
+
+        # Should block copy to readonly directory
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination_path": str(helper.readonly_dir / "dest_file.txt"),
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if allowed:
+            print("❌ Failed: copy_file to readonly directory should be blocked")
+            return False
+
+        # IMPORTANT: Test that we CAN copy FROM read-only paths
+        print("  Testing copy FROM read-only paths...")
+        tool_args = {
+            "source_path": str(helper.readonly_dir / "readonly_file.txt"),  # Source is read-only - this is OK
+            "destination_path": str(helper.workspace_dir / "copied_from_readonly.txt"),  # Dest is writable
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy FROM read-only path should be allowed. Reason: {reason}")
+            return False
+
+        # Also test copy_files_batch FROM read-only path
+        tool_args = {
+            "source_base_path": str(helper.readonly_dir),  # Source is read-only - this is OK
+            "destination_base_path": str(helper.workspace_dir / "copied_from_readonly"),  # Dest is writable
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_files_batch FROM read-only path should be allowed. Reason: {reason}")
+            return False
+
+        # Test 3: copy_files_batch validation
+        print("  Testing copy_files_batch destination permissions...")
+
+        # Should check destination_base_path, not source_base_path
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),  # This is fine, just reading from here
+            "destination_base_path": str(helper.workspace_dir / "output"),  # This needs write permission
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_files_batch to workspace subdirectory should be allowed. Reason: {reason}")
+            return False
+
+        # Should block copy to readonly directory
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),
+            "destination_base_path": str(helper.readonly_dir / "output"),
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if allowed:
+            print("❌ Failed: copy_files_batch to readonly directory should be blocked")
+            return False
+
+        # Test 4: _extract_file_path prioritizes destination paths
+        print("  Testing _extract_file_path with copy arguments...")
+
+        # Should extract destination_path when both source and destination are present
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source.txt"),
+            "destination_path": str(helper.workspace_dir / "dest.txt"),
+        }
+        extracted = manager._extract_file_path(tool_args)
+        if extracted != str(helper.workspace_dir / "dest.txt"):
+            print(f"❌ Failed: Should extract destination_path, got: {extracted}")
+            return False
+
+        # Should extract destination_base_path for batch operations
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),
+            "destination_base_path": str(helper.workspace_dir / "output"),
+        }
+        extracted = manager._extract_file_path(tool_args)
+        if extracted != str(helper.workspace_dir / "output"):
+            print(f"❌ Failed: Should extract destination_base_path, got: {extracted}")
+            return False
+
+        # Test 5: Test absolute path requirement and validation
+        print("  Testing absolute path validation...")
+
+        # Workspace copy tools should validate that destination paths are within allowed directories
+        # This tests the _validate_path_access functionality that was added
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination_path": str(helper.workspace_dir / "valid_destination.txt"),
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_file with valid absolute destination should be allowed. Reason: {reason}")
+            return False
+
+        # Test copy_files_batch with absolute destination_base_path
+        tool_args = {
+            "source_base_path": str(temp_workspace_dir),
+            "destination_base_path": str(helper.workspace_dir / "batch_output"),
+        }
+        allowed, reason = manager._validate_write_tool("copy_files_batch", tool_args)
+        if not allowed:
+            print(f"❌ Failed: copy_files_batch with valid absolute destination should be allowed. Reason: {reason}")
+            return False
+
+        # Test 6: Verify that destination paths outside allowed paths would be blocked
+        print("  Testing outside allowed paths...")
+
+        # Create a directory outside the allowed paths
+        outside_dir = helper.temp_dir / "outside_allowed"
+        outside_dir.mkdir(parents=True)
+
+        # This should be blocked because outside_dir is not in the manager's allowed paths
+        tool_args = {
+            "source_path": str(temp_workspace_dir / "source_file.txt"),
+            "destination_path": str(outside_dir / "should_be_blocked.txt"),
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        # Note: This might be allowed because unknown paths are allowed in the current implementation
+        # The actual path validation happens in the MCP server, not the permission manager
+        # So we're just testing the manager's file path extraction logic here
+
+        print("✅ Workspace copy tool validation works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+def test_workspace_copy_server_path_validation():
+    """Test the workspace copy server's absolute path validation logic."""
+    print("\n🏗️  Testing workspace copy server path validation...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # We need to modify ALLOWED_PATHS global for this test
+        import massgen.mcp_tools.workspace_copy_server as wc_server
+
+        # Store original ALLOWED_PATHS and WORKSPACE_PATH and set test paths
+        original_allowed_paths = wc_server.ALLOWED_PATHS.copy()
+        original_workspace_path = wc_server.WORKSPACE_PATH
+        wc_server.ALLOWED_PATHS = [
+            helper.workspace_dir.resolve(),
+            helper.context_dir.resolve(),
+            helper.readonly_dir.resolve(),
+        ]
+        wc_server.WORKSPACE_PATH = helper.workspace_dir.resolve()
+
+        # Create some test files
+        test_source_dir = helper.temp_dir / "source"
+        test_source_dir.mkdir()
+        (test_source_dir / "test_file.txt").write_text("test content")
+        (test_source_dir / "subdir" / "nested_file.txt").parent.mkdir(parents=True)
+        (test_source_dir / "subdir" / "nested_file.txt").write_text("nested content")
+
+        # Add source to allowed paths so we can read from it
+        wc_server.ALLOWED_PATHS.append(test_source_dir.resolve())
+
+        # Test 1: Valid absolute destination path
+        print("  Testing valid absolute destination path...")
+        try:
+            dest_path = helper.workspace_dir / "output"
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(test_source_dir),
+                destination_base_path=str(dest_path),
+            )
+            if len(file_pairs) < 2:  # Should find test_file.txt and nested_file.txt
+                print(f"❌ Failed: Expected at least 2 files, got {len(file_pairs)}")
+                return False
+            print(f"  ✓ Found {len(file_pairs)} files to copy")
+        except Exception as e:
+            print(f"❌ Failed: Valid absolute path should work. Error: {e}")
+            return False
+
+        # Test 2: Destination path outside allowed paths should fail
+        print("  Testing destination outside allowed paths...")
+        outside_dir = helper.temp_dir / "outside"
+        outside_dir.mkdir()
+
+        try:
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(test_source_dir),
+                destination_base_path=str(outside_dir / "output"),
+            )
+            print("❌ Failed: Should have raised ValueError for path outside allowed directories")
+            return False
+        except ValueError as e:
+            if "Path not in allowed directories" in str(e):
+                print("  ✓ Correctly blocked path outside allowed directories")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+        except Exception as e:
+            print(f"❌ Failed: Unexpected exception: {e}")
+            return False
+
+        # Test 3: Source path outside allowed paths should fail
+        print("  Testing source outside allowed paths...")
+        outside_source = helper.temp_dir / "outside_source"
+        outside_source.mkdir()
+        (outside_source / "bad_file.txt").write_text("bad content")
+
+        try:
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(outside_source),
+                destination_base_path=str(helper.workspace_dir / "output"),
+            )
+            print("❌ Failed: Should have raised ValueError for source outside allowed directories")
+            return False
+        except ValueError as e:
+            if "Path not in allowed directories" in str(e):
+                print("  ✓ Correctly blocked source outside allowed directories")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+
+        # Test 4: Empty destination_base_path should fail
+        print("  Testing empty destination_base_path...")
+        try:
+            file_pairs = get_copy_file_pairs(
+                source_base_path=str(test_source_dir),
+                destination_base_path="",
+            )
+            print("❌ Failed: Should have raised ValueError for empty destination_base_path")
+            return False
+        except ValueError as e:
+            if "destination_base_path is required" in str(e):
+                print("  ✓ Correctly required destination_base_path")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+
+        # Test 5: Test _validate_path_access directly
+        print("  Testing _validate_path_access function...")
+
+        # Valid path should not raise
+        try:
+            _validate_path_access(helper.workspace_dir / "test.txt", wc_server.ALLOWED_PATHS)
+            print("  ✓ Valid path accepted")
+        except Exception as e:
+            print(f"❌ Failed: Valid path should be accepted. Error: {e}")
+            return False
+
+        # Invalid path should raise
+        try:
+            _validate_path_access(outside_dir / "test.txt", wc_server.ALLOWED_PATHS)
+            print("❌ Failed: Invalid path should be rejected")
+            return False
+        except ValueError as e:
+            if "Path not in allowed directories" in str(e):
+                print("  ✓ Invalid path correctly rejected")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+
+        # Test 6: Test relative path resolution to workspace
+        print("  Testing relative path resolution...")
+        from massgen.mcp_tools.workspace_copy_server import _validate_and_resolve_paths
+
+        try:
+            source, dest = _validate_and_resolve_paths(
+                str(test_source_dir / "test_file.txt"),
+                "subdir/relative_dest.txt",  # Relative path
+            )
+            expected_dest = helper.workspace_dir / "subdir" / "relative_dest.txt"
+            if dest != expected_dest.resolve():
+                print(f"❌ Failed: Relative path should resolve to {expected_dest.resolve()}, got {dest}")
+                return False
+            print("  ✓ Relative path correctly resolved to workspace")
+        except Exception as e:
+            print(f"❌ Failed: Relative path resolution failed: {e}")
+            return False
+
+        # Test 7: Test relative path without workspace set
+        print("  Testing relative path without workspace...")
+        old_workspace = wc_server.WORKSPACE_PATH
+        wc_server.WORKSPACE_PATH = None
+        try:
+            source, dest = _validate_and_resolve_paths(
+                str(test_source_dir / "test_file.txt"),
+                "relative_dest.txt",
+            )
+            print("❌ Failed: Should have failed when WORKSPACE_PATH is None")
+            return False
+        except ValueError as e:
+            if "require WORKSPACE_PATH" in str(e):
+                print("  ✓ Correctly rejected relative path when workspace not set")
+            else:
+                print(f"❌ Failed: Unexpected error: {e}")
+                return False
+        finally:
+            wc_server.WORKSPACE_PATH = old_workspace
+
+        print("✅ Workspace copy server path validation works correctly")
+        return True
+
+    finally:
+        # Restore original ALLOWED_PATHS and WORKSPACE_PATH
+        wc_server.ALLOWED_PATHS = original_allowed_paths
+        wc_server.WORKSPACE_PATH = original_workspace_path
         helper.teardown()
 
 
@@ -527,6 +867,8 @@ def main():
         test_pre_tool_use_hook,
         test_context_write_access_toggle,
         test_extract_file_from_command,
+        test_workspace_copy_tools,
+        test_workspace_copy_server_path_validation,
     ]
 
     passed = 0

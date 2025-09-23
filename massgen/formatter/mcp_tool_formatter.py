@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Message formatter for different LLM APIs.
 Handles conversion between OpenAI, Claude, and Response API formats.
@@ -5,7 +6,7 @@ Handles conversion between OpenAI, Claude, and Response API formats.
 
 from __future__ import annotations
 
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from ..logger_config import logger
 
@@ -17,9 +18,7 @@ class MCPToolFormatter:
     """
 
     @staticmethod
-    def to_chat_completions_format(
-        mcp_functions: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    def to_chat_completions_format(mcp_functions: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Convert MCP tools (stdio + streamable-http) to Chat Completions format."""
         if not mcp_functions:
             return []
@@ -29,9 +28,7 @@ class MCPToolFormatter:
             tool = mcp_function.to_chat_completions_format()
             converted_tools.append(tool)
 
-        logger.info(
-            f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to Chat Completions format"
-        )
+        logger.info(f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to Chat Completions format")
         return converted_tools
 
     @staticmethod
@@ -59,15 +56,11 @@ class MCPToolFormatter:
         for mcp_function in mcp_functions.values():
             converted_tools.append(mcp_function.to_response_api_format())
 
-        logger.info(
-            f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format"
-        )
+        logger.info(f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format")
         return converted_tools
 
     @staticmethod
-    def convert_between_formats(
-        mcp_functions: Dict[str, Any], source_format: str, target_format: str
-    ) -> List[Dict[str, Any]]:
+    def convert_between_formats(mcp_functions: Dict[str, Any], source_format: str, target_format: str) -> List[Dict[str, Any]]:
         """
         Convert MCP functions from one format to another.
 
@@ -90,6 +83,4 @@ class MCPToolFormatter:
         elif target_format == "response_api":
             return MCPToolFormatter.to_response_api_format(mcp_functions)
 
-        raise ValueError(
-            f"Unsupported target format for MCP functions: {target_format}"
-        )
+        raise ValueError(f"Unsupported target format for MCP functions: {target_format}")

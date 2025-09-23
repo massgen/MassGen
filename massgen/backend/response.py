@@ -1,18 +1,20 @@
+# -*- coding: utf-8 -*-
 """
 Response API backend implementation.
 Standalone implementation optimized for the standard Response API format (originated by OpenAI).
 """
 from __future__ import annotations
+
 import os
-import json
-from typing import Dict, List, Any, AsyncGenerator, Optional
-from .mcp_backend import MCPBackend
-from .base import StreamChunk, FilesystemSupport
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from ..logger_config import (
     log_backend_agent_message,
     log_stream_chunk,
     logger,
 )
+from .base import FilesystemSupport, StreamChunk
+from .mcp_backend import MCPBackend
 
 
 class ResponseBackend(MCPBackend):
@@ -34,7 +36,7 @@ class ResponseBackend(MCPBackend):
             provider_tools.append({"type": "web_search"})
         if enable_code_interpreter:
             provider_tools.append(
-                {"type": "code_interpreter", "container": {"type": "auto"}}
+                {"type": "code_interpreter", "container": {"type": "auto"}},
             )
         return provider_tools
 
@@ -79,14 +81,14 @@ class ResponseBackend(MCPBackend):
         # Add MCP tools (stdio + streamable-http) as functions
         if self._mcp_functions:
             mcp_tools = self.mcp_tool_formatter.to_response_api_format(
-                self._mcp_functions
+                self._mcp_functions,
             )
             if mcp_tools:
                 if "tools" not in api_params:
                     api_params["tools"] = []
                 api_params["tools"].extend(mcp_tools)
                 logger.info(
-                    f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to OpenAI Response API"
+                    f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to OpenAI Response API",
                 )
         # Add provider tools (web search, code interpreter) if enabled
         provider_tools = self._get_provider_tools(all_params)
@@ -101,6 +103,7 @@ class ResponseBackend(MCPBackend):
     async def _create_stream(self, api_params: Dict[str, Any]) -> Any:
         """Create backend-specific streaming iterator."""
         import openai
+
         client = openai.AsyncOpenAI(api_key=self.api_key)
         return await client.responses.create(**api_params)
 
@@ -108,12 +111,7 @@ class ResponseBackend(MCPBackend):
         """Detect function calls from Response API chunks."""
         consumed = False
         if hasattr(chunk, "type"):
-            if (
-                chunk.type == "response.output_item.added"
-                and hasattr(chunk, "item")
-                and chunk.item
-                and getattr(chunk.item, "type", None) == "function_call"
-            ):
+            if chunk.type == "response.output_item.added" and hasattr(chunk, "item") and chunk.item and getattr(chunk.item, "type", None) == "function_call":
                 current_call = {
                     "call_id": getattr(chunk.item, "call_id", ""),
                     "name": getattr(chunk.item, "name", ""),
@@ -121,17 +119,11 @@ class ResponseBackend(MCPBackend):
                 }
                 logger.info(f"Function call detected: {current_call['name']}")
                 consumed = True
-            elif (
-                chunk.type == "response.function_call_arguments.delta"
-                and current_call is not None
-            ):
+            elif chunk.type == "response.function_call_arguments.delta" and current_call is not None:
                 delta = getattr(chunk, "delta", "")
                 current_call["arguments"] += delta
                 consumed = True
-            elif (
-                chunk.type == "response.output_item.done"
-                and current_call is not None
-            ):
+            elif chunk.type == "response.output_item.done" and current_call is not None:
                 captured_calls.append(current_call)
                 current_call = None
                 consumed = True
@@ -168,21 +160,28 @@ class ResponseBackend(MCPBackend):
         elif chunk_type == "response.reasoning_text.done":
             reasoning_text = getattr(chunk, "text", "")
             log_stream_chunk(
-                "backend.response", "reasoning_done", reasoning_text, self.agent_id
+                "backend.response",
+                "reasoning_done",
+                reasoning_text,
+                self.agent_id,
             )
             return StreamChunk(
                 type="reasoning_done",
-                content=f"\n🧠 [Reasoning Complete]\n",
+                content="\n🧠 [Reasoning Complete]\n",
                 reasoning_text=reasoning_text,
                 item_id=getattr(chunk, "item_id", None),
                 content_index=getattr(chunk, "content_index", None),
             )
 
         elif chunk_type == "response.reasoning_summary_text.delta" and hasattr(
-            chunk, "delta"
+            chunk,
+            "delta",
         ):
             log_stream_chunk(
-                "backend.response", "reasoning_summary", chunk.delta, self.agent_id
+                "backend.response",
+                "reasoning_summary",
+                chunk.delta,
+                self.agent_id,
             )
             return StreamChunk(
                 type="reasoning_summary",
@@ -195,11 +194,14 @@ class ResponseBackend(MCPBackend):
         elif chunk_type == "response.reasoning_summary_text.done":
             summary_text = getattr(chunk, "text", "")
             log_stream_chunk(
-                "backend.response", "reasoning_summary_done", summary_text, self.agent_id
+                "backend.response",
+                "reasoning_summary_done",
+                summary_text,
+                self.agent_id,
             )
             return StreamChunk(
                 type="reasoning_summary_done",
-                content=f"\n📋 [Reasoning Summary Complete]\n",
+                content="\n📋 [Reasoning Summary Complete]\n",
                 reasoning_summary_text=summary_text,
                 item_id=getattr(chunk, "item_id", None),
                 summary_index=getattr(chunk, "summary_index", None),
@@ -208,49 +210,65 @@ class ResponseBackend(MCPBackend):
         # Provider tool events
         elif chunk_type == "response.web_search_call.in_progress":
             log_stream_chunk(
-                "backend.response", "web_search", "Starting search", self.agent_id
+                "backend.response",
+                "web_search",
+                "Starting search",
+                self.agent_id,
             )
             return StreamChunk(
                 type="content",
-                content=f"\n🔍 [Provider Tool: Web Search] Starting search...",
+                content="\n🔍 [Provider Tool: Web Search] Starting search...",
             )
         elif chunk_type == "response.web_search_call.searching":
             log_stream_chunk("backend.response", "web_search", "Searching", self.agent_id)
             return StreamChunk(
-                type="content", content=f"\n🔍 [Provider Tool: Web Search] Searching..."
+                type="content",
+                content="\n🔍 [Provider Tool: Web Search] Searching...",
             )
         elif chunk_type == "response.web_search_call.completed":
             log_stream_chunk(
-                "backend.response", "web_search", "Search completed", self.agent_id
+                "backend.response",
+                "web_search",
+                "Search completed",
+                self.agent_id,
             )
             return StreamChunk(
                 type="content",
-                content=f"\n✅ [Provider Tool: Web Search] Search completed",
+                content="\n✅ [Provider Tool: Web Search] Search completed",
             )
 
         elif chunk_type == "response.code_interpreter_call.in_progress":
             log_stream_chunk(
-                "backend.response", "code_interpreter", "Starting execution", self.agent_id
+                "backend.response",
+                "code_interpreter",
+                "Starting execution",
+                self.agent_id,
             )
             return StreamChunk(
                 type="content",
-                content=f"\n💻 [Provider Tool: Code Interpreter] Starting execution...",
+                content="\n💻 [Provider Tool: Code Interpreter] Starting execution...",
             )
         elif chunk_type == "response.code_interpreter_call.executing":
             log_stream_chunk(
-                "backend.response", "code_interpreter", "Executing", self.agent_id
+                "backend.response",
+                "code_interpreter",
+                "Executing",
+                self.agent_id,
             )
             return StreamChunk(
                 type="content",
-                content=f"\n💻 [Provider Tool: Code Interpreter] Executing...",
+                content="\n💻 [Provider Tool: Code Interpreter] Executing...",
             )
         elif chunk_type == "response.code_interpreter_call.completed":
             log_stream_chunk(
-                "backend.response", "code_interpreter", "Execution completed", self.agent_id
+                "backend.response",
+                "code_interpreter",
+                "Execution completed",
+                self.agent_id,
             )
             return StreamChunk(
                 type="content",
-                content=f"\n✅ [Provider Tool: Code Interpreter] Execution completed",
+                content="\n✅ [Provider Tool: Code Interpreter] Execution completed",
             )
         elif chunk.type == "response.output_item.done":
             # Get search query or executed code details - show them right after completion
@@ -269,10 +287,7 @@ class ResponseBackend(MCPBackend):
                                 type="content",
                                 content=f"\n🔍 [Search Query] '{search_query}'\n",
                             )
-                elif (
-                    hasattr(chunk.item, "type")
-                    and chunk.item.type == "code_interpreter_call"
-                ):
+                elif hasattr(chunk.item, "type") and chunk.item.type == "code_interpreter_call":
                     if hasattr(chunk.item, "code") and chunk.item.code:
                         # Format code as a proper code block - don't assume language
                         log_stream_chunk(
@@ -321,11 +336,13 @@ class ResponseBackend(MCPBackend):
         # MCP events
         elif chunk_type == "response.mcp_list_tools.started":
             return StreamChunk(
-                type="content", content="\n🔧 [MCP] Listing available tools..."
+                type="content",
+                content="\n🔧 [MCP] Listing available tools...",
             )
         elif chunk_type == "response.mcp_list_tools.completed":
             return StreamChunk(
-                type="content", content="\n✅ [MCP] Tool listing completed"
+                type="content",
+                content="\n✅ [MCP] Tool listing completed",
             )
         elif chunk_type == "response.mcp_list_tools.failed":
             return StreamChunk(type="content", content="\n❌ [MCP] Tool listing failed")
@@ -333,16 +350,19 @@ class ResponseBackend(MCPBackend):
         elif chunk_type == "response.mcp_call.started":
             tool_name = getattr(chunk, "tool_name", "unknown")
             return StreamChunk(
-                type="content", content=f"\n🔧 [MCP] Calling tool '{tool_name}'..."
+                type="content",
+                content=f"\n🔧 [MCP] Calling tool '{tool_name}'...",
             )
         elif chunk_type == "response.mcp_call.in_progress":
             return StreamChunk(
-                type="content", content="\n⏳ [MCP] Tool execution in progress..."
+                type="content",
+                content="\n⏳ [MCP] Tool execution in progress...",
             )
         elif chunk_type == "response.mcp_call.completed":
             tool_name = getattr(chunk, "tool_name", "unknown")
             return StreamChunk(
-                type="content", content=f"\n✅ [MCP] Tool '{tool_name}' completed"
+                type="content",
+                content=f"\n✅ [MCP] Tool '{tool_name}' completed",
             )
         elif chunk_type == "response.mcp_call.failed":
             tool_name = getattr(chunk, "tool_name", "unknown")
@@ -419,7 +439,10 @@ class ResponseBackend(MCPBackend):
         }
 
     async def _stream_without_mcp(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream without MCP functionality (fallback mode)."""
         all_params = {**self.config, **kwargs}
@@ -438,7 +461,10 @@ class ResponseBackend(MCPBackend):
                 yield processed
 
     async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Main streaming entry point with MCP support."""
         async for chunk in self.stream_with_mcp_support(messages, tools, **kwargs):
@@ -483,10 +509,6 @@ class ResponseBackend(MCPBackend):
                 return obj.dict()
             else:
                 return dict(obj)
-        except:
+        except Exception:
             # Final fallback: extract key attributes manually
-            return {
-                key: getattr(obj, key, None)
-                for key in dir(obj)
-                if not key.startswith("_") and not callable(getattr(obj, key, None))
-            }
+            return {key: getattr(obj, key, None) for key in dir(obj) if not key.startswith("_") and not callable(getattr(obj, key, None))}

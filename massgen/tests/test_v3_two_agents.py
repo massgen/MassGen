@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script for MassGen two-agent coordination with terminal display.
 Tests orchestrator coordination between two agents with different expertise.
@@ -9,14 +10,14 @@ import os
 import sys
 from pathlib import Path
 
+from massgen.backend.response import ResponseBackend
+from massgen.chat_agent import SingleAgent
+from massgen.frontend.coordination_ui import CoordinationUI
+from massgen.orchestrator import Orchestrator
+
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from massgen.backend.response import ResponseBackend
-from massgen.chat_agent import SingleAgent
-from massgen.orchestrator import Orchestrator
-from massgen.frontend.coordination_ui import CoordinationUI
 
 
 async def test_two_agents_coordination():
@@ -62,9 +63,7 @@ async def test_two_agents_coordination():
         print()
 
         # Test question that benefits from both perspectives
-        test_question = (
-            "How does photosynthesis work and why is it important for life on Earth?"
-        )
+        test_question = "How does photosynthesis work and why is it important for life on Earth?"
 
         print(f"📝 Question: {test_question}")
         print("\n🎭 Starting two-agent coordination...")
@@ -117,9 +116,7 @@ async def test_two_agents_simple():
 
         print("📤 Testing simple coordination...")
 
-        messages = [
-            {"role": "user", "content": "What are the benefits of renewable energy?"}
-        ]
+        messages = [{"role": "user", "content": "What are the benefits of renewable energy?"}]
 
         response_content = ""
         async for chunk in orchestrator.chat(messages):
@@ -132,9 +129,7 @@ async def test_two_agents_simple():
             elif chunk.type == "done":
                 break
 
-        print(
-            f"\n✅ Simple test completed. Response length: {len(response_content)} characters"
-        )
+        print(f"\n✅ Simple test completed. Response length: {len(response_content)} characters")
         return True
 
     except Exception as e:

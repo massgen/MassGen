@@ -1,11 +1,12 @@
+# -*- coding: utf-8 -*-
 """
 Configuration validation for MCP tools integration.Provides comprehensive validation for MCP server configurations,
 backend integration settings, and orchestrator coordination parameters.
 """
 
 
-from ..logger_config import logger
-from typing import Dict, Any
+from typing import Any, Dict
+
 from .exceptions import MCPConfigurationError, MCPValidationError
 
 
@@ -36,9 +37,7 @@ class MCPConfigValidator:
             ) from e
 
     @classmethod
-    def validate_backend_mcp_config(
-        cls, backend_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def validate_backend_mcp_config(cls, backend_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Validate MCP configuration for a backend.
 
@@ -87,9 +86,7 @@ class MCPConfigValidator:
 
         # Check for duplicate server names
         server_names = [server["name"] for server in validated_servers]
-        duplicates = [
-            name for name in set(server_names) if server_names.count(name) > 1
-        ]
+        duplicates = [name for name in set(server_names) if server_names.count(name) > 1]
         if duplicates:
             raise MCPConfigurationError(
                 f"Duplicate server names found: {duplicates}",
@@ -141,9 +138,7 @@ class MCPConfigValidator:
         return validated_config
 
     @classmethod
-    def validate_orchestrator_config(
-        cls, orchestrator_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def validate_orchestrator_config(cls, orchestrator_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Validate orchestrator configuration for MCP integration.
 
@@ -161,18 +156,11 @@ class MCPConfigValidator:
             validated_agents = {}
             for agent_id, agent_config in agents.items():
                 if not isinstance(agent_config, dict):
-                    raise MCPConfigurationError(
-                        f"Agent '{agent_id}' configuration must be a dictionary"
-                    )
+                    raise MCPConfigurationError(f"Agent '{agent_id}' configuration must be a dictionary")
 
-                if (
-                    isinstance(agent_config.get("backend"), dict)
-                    and "mcp_servers" in agent_config["backend"]
-                ):
+                if isinstance(agent_config.get("backend"), dict) and "mcp_servers" in agent_config["backend"]:
                     agent_cfg_copy = agent_config.copy()
-                    agent_cfg_copy["backend"] = cls.validate_backend_mcp_config(
-                        agent_config["backend"]
-                    )
+                    agent_cfg_copy["backend"] = cls.validate_backend_mcp_config(agent_config["backend"])
                     validated_agents[agent_id] = agent_cfg_copy
                 else:
                     validated_agents[agent_id] = agent_config
@@ -183,27 +171,18 @@ class MCPConfigValidator:
             validated_list = []
             for idx, agent_config in enumerate(agents):
                 if not isinstance(agent_config, dict):
-                    raise MCPConfigurationError(
-                        f"Agent at index {idx} must be a dictionary"
-                    )
+                    raise MCPConfigurationError(f"Agent at index {idx} must be a dictionary")
 
-                if (
-                    isinstance(agent_config.get("backend"), dict)
-                    and "mcp_servers" in agent_config["backend"]
-                ):
+                if isinstance(agent_config.get("backend"), dict) and "mcp_servers" in agent_config["backend"]:
                     agent_cfg_copy = agent_config.copy()
-                    agent_cfg_copy["backend"] = cls.validate_backend_mcp_config(
-                        agent_config["backend"]
-                    )
+                    agent_cfg_copy["backend"] = cls.validate_backend_mcp_config(agent_config["backend"])
                     validated_list.append(agent_cfg_copy)
                 else:
                     validated_list.append(agent_config)
             validated_config["agents"] = validated_list
 
         else:
-            raise MCPConfigurationError(
-                "Agents configuration must be a dictionary or list"
-            )
+            raise MCPConfigurationError("Agents configuration must be a dictionary or list")
 
         return validated_config
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Base class for backends using OpenAI Chat Completions API format.
 Handles common message processing, tool conversion, and streaming patterns.
@@ -18,13 +19,11 @@ from __future__ import annotations
 
 # Standard library imports
 import asyncio
-from typing import Dict, List, Any, AsyncGenerator, Optional, Tuple, Callable
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 # Third-party imports
 from openai import AsyncOpenAI
 
-# Local imports
-from .base import LLMBackend, StreamChunk, FilesystemSupport
 from ..logger_config import (
     log_backend_activity,
     log_backend_agent_message,
@@ -32,27 +31,26 @@ from ..logger_config import (
     logger,
 )
 
+# Local imports
+from .base import FilesystemSupport, LLMBackend, StreamChunk
+
 # MCP integration imports
 try:
     from ..mcp_tools import (
-        MultiMCPClient,
-        MCPError,
-        MCPConnectionError,
-        MCPCircuitBreaker,
-        MCPConfigurationError,
-        MCPValidationError,
-        MCPTimeoutError,
-        MCPServerError,
-        MCPConfigValidator,
-        MCPErrorHandler,
-        MCPSetupManager,
-        MCPResourceManager,
-        MCPExecutionManager,
-        MCPRetryHandler,
-        MCPMessageManager,
-        MCPConfigHelper,
-        MCPCircuitBreakerManager,
         Function,
+        MCPCircuitBreaker,
+        MCPCircuitBreakerManager,
+        MCPConfigHelper,
+        MCPConnectionError,
+        MCPError,
+        MCPErrorHandler,
+        MCPExecutionManager,
+        MCPMessageManager,
+        MCPResourceManager,
+        MCPServerError,
+        MCPSetupManager,
+        MCPTimeoutError,
+        MultiMCPClient,
     )
 
 except ImportError as e:  # MCP not installed or import failed
@@ -102,7 +100,7 @@ class ChatCompletionsBackend(LLMBackend):
             "enable_code_interpreter",
             "allowed_tools",  # Tool filtering parameter
             "exclude_tools",  # Tool filtering parameter
-        }
+        },
     )
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
@@ -134,12 +132,12 @@ class ChatCompletionsBackend(LLMBackend):
                 logger.info("Circuit breaker initialized for MCP tools")
             else:
                 logger.warning(
-                    "MCP tools circuit breaker config not available, disabling circuit breaker functionality"
+                    "MCP tools circuit breaker config not available, disabling circuit breaker functionality",
                 )
                 self._circuit_breakers_enabled = False
         else:
             logger.warning(
-                "Circuit breakers not available - proceeding without circuit breaker protection"
+                "Circuit breakers not available - proceeding without circuit breaker protection",
             )
 
         # Transport Types:
@@ -197,7 +195,9 @@ class ChatCompletionsBackend(LLMBackend):
         try:
             # Normalize and separate MCP servers by transport type using mcp_tools utilities
             normalized_servers = MCPSetupManager.normalize_mcp_servers(
-                self.mcp_servers, backend_name=self.backend_name, agent_id=self.agent_id
+                self.mcp_servers,
+                backend_name=self.backend_name,
+                agent_id=self.agent_id,
             )
             mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(
                 normalized_servers,
@@ -211,22 +211,20 @@ class ChatCompletionsBackend(LLMBackend):
 
             # Apply circuit breaker filtering before connection attempts
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                filtered_servers = (
-                    MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
-                        mcp_tools_servers,
-                        self._mcp_tools_circuit_breaker,
-                        backend_name=self.backend_name,
-                        agent_id=self.agent_id,
-                    )
+                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
+                    mcp_tools_servers,
+                    self._mcp_tools_circuit_breaker,
+                    backend_name=self.backend_name,
+                    agent_id=self.agent_id,
                 )
                 if not filtered_servers:
                     logger.warning(
-                        "All MCP servers blocked by circuit breaker during setup"
+                        "All MCP servers blocked by circuit breaker during setup",
                     )
                     return
                 if len(filtered_servers) < len(mcp_tools_servers):
                     logger.info(
-                        f"Circuit breaker filtered {len(mcp_tools_servers) - len(filtered_servers)} servers during setup"
+                        f"Circuit breaker filtered {len(mcp_tools_servers) - len(filtered_servers)} servers during setup",
                     )
                 servers_to_use = filtered_servers
             else:
@@ -247,7 +245,7 @@ class ChatCompletionsBackend(LLMBackend):
             if not self._mcp_client:
                 self._mcp_initialized = False
                 logger.warning(
-                    "MCP client setup failed, falling back to no-MCP streaming"
+                    "MCP client setup failed, falling back to no-MCP streaming",
                 )
                 return
 
@@ -258,31 +256,19 @@ class ChatCompletionsBackend(LLMBackend):
                     backend_name=self.backend_name,
                     agent_id=self.agent_id,
                     hook_manager=getattr(self, "function_hook_manager", None),
-                )
+                ),
             )
             self._mcp_initialized = True
             logger.info(
-                f"Successfully initialized MCP mcp_tools sessions with {len(self._mcp_functions)} tools converted to functions"
+                f"Successfully initialized MCP mcp_tools sessions with {len(self._mcp_functions)} tools converted to functions",
             )
 
             # Record success for circuit breaker
-            if (
-                self._circuit_breakers_enabled
-                and self._mcp_tools_circuit_breaker
-                and self._mcp_client
-            ):
+            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client:
                 try:
-                    connected_server_names = (
-                        self._mcp_client.get_server_names()
-                        if hasattr(self._mcp_client, "get_server_names")
-                        else []
-                    )
+                    connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, "get_server_names") else []
                     if connected_server_names:
-                        connected_server_configs = [
-                            server
-                            for server in servers_to_use
-                            if server.get("name") in connected_server_names
-                        ]
+                        connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
                         if connected_server_configs:
                             await MCPCircuitBreakerManager.record_success(
                                 connected_server_configs,
@@ -292,7 +278,7 @@ class ChatCompletionsBackend(LLMBackend):
                             )
                 except Exception as cb_error:
                     logger.warning(
-                        f"Failed to record circuit breaker success: {cb_error}"
+                        f"Failed to record circuit breaker success: {cb_error}",
                     )
 
         except Exception as e:
@@ -300,11 +286,7 @@ class ChatCompletionsBackend(LLMBackend):
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
                 try:
                     await MCPCircuitBreakerManager.record_failure(
-                        servers_to_use
-                        if "servers_to_use" in locals()
-                        else mcp_tools_servers
-                        if "mcp_tools_servers" in locals()
-                        else [],
+                        servers_to_use if "servers_to_use" in locals() else mcp_tools_servers if "mcp_tools_servers" in locals() else [],
                         self._mcp_tools_circuit_breaker,
                         str(e),
                         backend_name=self.backend_name,
@@ -312,7 +294,7 @@ class ChatCompletionsBackend(LLMBackend):
                     )
                 except Exception as cb_error:
                     logger.warning(
-                        f"Failed to record circuit breaker failure: {cb_error}"
+                        f"Failed to record circuit breaker failure: {cb_error}",
                     )
 
             logger.warning(f"Failed to setup MCP sessions: {e}")
@@ -344,7 +326,7 @@ class ChatCompletionsBackend(LLMBackend):
         log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
 
         logger.warning(
-            f"MCP tool call #{call_index_snapshot} failed - {log_type}: {error}"
+            f"MCP tool call #{call_index_snapshot} failed - {log_type}: {error}",
         )
 
         # Yield detailed MCP error status as StreamChunk (similar to gemini.py)
@@ -385,7 +367,10 @@ class ChatCompletionsBackend(LLMBackend):
             yield chunk
 
     async def _execute_mcp_function_with_retry(
-        self, function_name: str, arguments_json: str, max_retries: int = 3
+        self,
+        function_name: str,
+        arguments_json: str,
+        max_retries: int = 3,
     ) -> Tuple[str, Any]:
         """Execute MCP function with exponential backoff retry logic."""
         import json
@@ -463,7 +448,7 @@ class ChatCompletionsBackend(LLMBackend):
         # Add MCP tools (stdio + streamable-http) as functions
         if self._mcp_functions:
             mcp_tools = self.mcp_tool_formatter.to_chat_completions_format(
-                self._mcp_functions
+                self._mcp_functions,
             )
             if mcp_tools:
                 # Track MCP function names for fallback filtering
@@ -472,7 +457,7 @@ class ChatCompletionsBackend(LLMBackend):
                     api_params["tools"] = []
                 api_params["tools"].extend(mcp_tools)
                 logger.info(
-                    f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to Chat Completions API"
+                    f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to Chat Completions API",
                 )
 
         return api_params
@@ -499,23 +484,24 @@ class ChatCompletionsBackend(LLMBackend):
                                 "query": {
                                     "type": "string",
                                     "description": "The search query to send to the web",
-                                }
+                                },
                             },
                             "required": ["query"],
                         },
                     },
-                }
+                },
             )
 
         if enable_code_interpreter:
             provider_tools.append(
-                {"type": "code_interpreter", "container": {"type": "auto"}}
+                {"type": "code_interpreter", "container": {"type": "auto"}},
             )
 
         return provider_tools
 
     def _convert_messages_for_mcp_chat_completions(
-        self, messages: List[Dict[str, Any]]
+        self,
+        messages: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """Convert messages for MCP Chat Completions format if needed."""
         # For Chat Completions, messages are already in the correct format
@@ -549,7 +535,9 @@ class ChatCompletionsBackend(LLMBackend):
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
         api_params = await self._build_chat_completions_api_params(
-            current_messages, tools, all_params
+            current_messages,
+            tools,
+            all_params,
         )
 
         # Add provider tools (web search, code interpreter) if enabled
@@ -603,22 +591,17 @@ class ChatCompletionsBackend(LLMBackend):
                                     current_tool_calls[index]["id"] = tool_call_delta.id
 
                                 # Function name
-                                if (
-                                    hasattr(tool_call_delta, "function")
-                                    and tool_call_delta.function
-                                ):
+                                if hasattr(tool_call_delta, "function") and tool_call_delta.function:
                                     if getattr(tool_call_delta.function, "name", None):
-                                        current_tool_calls[index]["function"][
-                                            "name"
-                                        ] = tool_call_delta.function.name
+                                        current_tool_calls[index]["function"]["name"] = tool_call_delta.function.name
 
                                     # Accumulate arguments (as string chunks)
                                     if getattr(
-                                        tool_call_delta.function, "arguments", None
+                                        tool_call_delta.function,
+                                        "arguments",
+                                        None,
                                     ):
-                                        current_tool_calls[index]["function"][
-                                            "arguments"
-                                        ] += tool_call_delta.function.arguments
+                                        current_tool_calls[index]["function"]["arguments"] += tool_call_delta.function.arguments
 
                     # Handle finish reason
                     if getattr(choice, "finish_reason", None):
@@ -631,9 +614,7 @@ class ChatCompletionsBackend(LLMBackend):
                                 arguments_str = call["function"]["arguments"]
 
                                 # Providers expect arguments to be a JSON string
-                                arguments_str_sanitized = (
-                                    arguments_str if arguments_str.strip() else "{}"
-                                )
+                                arguments_str_sanitized = arguments_str if arguments_str.strip() else "{}"
 
                                 final_tool_calls.append(
                                     {
@@ -643,7 +624,7 @@ class ChatCompletionsBackend(LLMBackend):
                                             "name": function_name,
                                             "arguments": arguments_str_sanitized,
                                         },
-                                    }
+                                    },
                                 )
 
                             # Convert to captured format for processing (ensure arguments is a JSON string)
@@ -651,18 +632,19 @@ class ChatCompletionsBackend(LLMBackend):
                                 args_value = tool_call["function"]["arguments"]
                                 if not isinstance(args_value, str):
                                     args_value = self.message_formatter._serialize_tool_arguments(
-                                        args_value
+                                        args_value,
                                     )
                                 captured_function_calls.append(
                                     {
                                         "call_id": tool_call["id"],
                                         "name": tool_call["function"]["name"],
                                         "arguments": args_value,
-                                    }
+                                    },
                                 )
 
                             yield StreamChunk(
-                                type="tool_calls", tool_calls=final_tool_calls
+                                type="tool_calls",
+                                tool_calls=final_tool_calls,
                             )
 
                             response_completed = True
@@ -676,38 +658,34 @@ class ChatCompletionsBackend(LLMBackend):
 
             except Exception as chunk_error:
                 yield StreamChunk(
-                    type="error", error=f"Chunk processing error: {chunk_error}"
+                    type="error",
+                    error=f"Chunk processing error: {chunk_error}",
                 )
                 continue
 
         # Execute any captured function calls
         if captured_function_calls and response_completed:
             # Check if any of the function calls are NOT MCP functions
-            non_mcp_functions = [
-                call
-                for call in captured_function_calls
-                if call["name"] not in self._mcp_functions
-            ]
+            non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self._mcp_functions]
 
             if non_mcp_functions:
                 logger.info(
-                    f"Non-MCP function calls detected (will be ignored in MCP execution): {[call['name'] for call in non_mcp_functions]}"
+                    f"Non-MCP function calls detected (will be ignored in MCP execution): {[call['name'] for call in non_mcp_functions]}",
                 )
 
             # Check circuit breaker status before executing MCP functions
             if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
                 # Get current mcp_tools servers using utility functions
                 normalized_servers = MCPSetupManager.normalize_mcp_servers(
-                    self.mcp_servers
+                    self.mcp_servers,
                 )
                 mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(
-                    normalized_servers
+                    normalized_servers,
                 )
 
-                filtered_servers = (
-                    MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
-                        mcp_tools_servers, self._mcp_tools_circuit_breaker
-                    )
+                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
+                    mcp_tools_servers,
+                    self._mcp_tools_circuit_breaker,
                 )
                 if not filtered_servers:
                     logger.warning("All MCP servers blocked by circuit breaker")
@@ -737,10 +715,10 @@ class ChatCompletionsBackend(LLMBackend):
                                 "function": {
                                     "name": call["name"],
                                     "arguments": self.message_formatter._serialize_tool_arguments(
-                                        call["arguments"]
+                                        call["arguments"],
                                     ),
                                 },
-                            }
+                            },
                         )
 
                 # Only add assistant message if we have tool calls to execute
@@ -754,6 +732,9 @@ class ChatCompletionsBackend(LLMBackend):
 
             # Execute functions and collect results
             tool_results = []
+            # Ensure every captured function call gets a result to prevent OpenAI hanging
+            processed_call_ids = set()
+
             for call in captured_function_calls:
                 function_name = call["name"]
                 if function_name in self._mcp_functions:
@@ -765,11 +746,7 @@ class ChatCompletionsBackend(LLMBackend):
                     )
 
                     # Yield detailed MCP status as StreamChunk (similar to gemini.py)
-                    tools_info = (
-                        f" ({len(self._mcp_functions)} tools available)"
-                        if self._mcp_functions
-                        else ""
-                    )
+                    tools_info = f" ({len(self._mcp_functions)} tools available)" if self._mcp_functions else ""
                     yield StreamChunk(
                         type="mcp_status",
                         status="mcp_tools_initiated",
@@ -783,24 +760,26 @@ class ChatCompletionsBackend(LLMBackend):
                             result_str,
                             result_obj,
                         ) = await self._execute_mcp_function_with_retry(
-                            function_name, call["arguments"]
+                            function_name,
+                            call["arguments"],
                         )
 
                         # Check if function failed after all retries
                         if isinstance(result_str, str) and result_str.startswith(
-                            "Error:"
+                            "Error:",
                         ):
                             # Log failure but still create tool response
                             logger.warning(
-                                f"MCP function {function_name} failed after retries: {result_str}"
+                                f"MCP function {function_name} failed after retries: {result_str}",
                             )
                             tool_results.append(
                                 {
                                     "tool_call_id": call["call_id"],
                                     "content": result_str,
                                     "success": False,
-                                }
+                                },
                             )
+                            processed_call_ids.add(call["call_id"])
                         else:
                             # Yield MCP success status as StreamChunk (similar to gemini.py)
                             yield StreamChunk(
@@ -816,8 +795,10 @@ class ChatCompletionsBackend(LLMBackend):
                                     "content": result_str,
                                     "success": True,
                                     "result_obj": result_obj,
-                                }
+                                },
                             )
+
+                        processed_call_ids.add(call["call_id"])
 
                     except Exception as e:
                         # Only catch unexpected non-MCP system errors
@@ -828,8 +809,9 @@ class ChatCompletionsBackend(LLMBackend):
                                 "tool_call_id": call["call_id"],
                                 "content": error_msg,
                                 "success": False,
-                            }
+                            },
                         )
+                        processed_call_ids.add(call["call_id"])
                         continue
 
                     # Yield function_call status
@@ -841,19 +823,27 @@ class ChatCompletionsBackend(LLMBackend):
                     )
 
                     logger.info(
-                        f"Executed MCP function {function_name} (stdio/streamable-http)"
+                        f"Executed MCP function {function_name} (stdio/streamable-http)",
                     )
                     mcp_functions_executed = True
+
+            # Ensure all captured function calls have results to prevent OpenAI hanging
+            for call in captured_function_calls:
+                if call["call_id"] not in processed_call_ids:
+                    logger.warning(f"Tool call {call['call_id']} for function {call['name']} was not processed - adding error result")
+                    tool_results.append(
+                        {
+                            "tool_call_id": call["call_id"],
+                            "content": f"Error: Tool call {call['call_id']} for function {call['name']} was not processed. This may indicate a validation or execution error.",
+                            "success": False,
+                        },
+                    )
 
             # Add all tool response messages after the assistant message
             for result in tool_results:
                 # Yield function_call_output status with preview
                 result_text = str(result["content"])
-                if (
-                    result.get("success")
-                    and hasattr(result.get("result_obj"), "content")
-                    and result["result_obj"].content
-                ):
+                if result.get("success") and hasattr(result.get("result_obj"), "content") and result["result_obj"].content:
                     obj = result["result_obj"]
                     if isinstance(obj.content, list) and len(obj.content) > 0:
                         first_item = obj.content[0]
@@ -884,12 +874,16 @@ class ChatCompletionsBackend(LLMBackend):
             # Trim history after function executions to bound memory usage
             if mcp_functions_executed:
                 updated_messages = MCPMessageManager.trim_message_history(
-                    updated_messages, self._max_mcp_message_history
+                    updated_messages,
+                    self._max_mcp_message_history,
                 )
 
                 # Recursive call with updated messages
                 async for chunk in self._stream_mcp_recursive(
-                    updated_messages, tools, client, **kwargs
+                    updated_messages,
+                    tools,
+                    client,
+                    **kwargs,
                 ):
                     yield chunk
             else:
@@ -908,10 +902,12 @@ class ChatCompletionsBackend(LLMBackend):
             return
 
     async def handle_chat_completions_stream_with_logging(
-        self, stream, enable_web_search: bool = False, agent_id: Optional[str] = None
+        self,
+        stream,
+        enable_web_search: bool = False,
+        agent_id: Optional[str] = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Handle standard Chat Completions API streaming format with logging."""
-        import json
 
         content = ""
         current_tool_calls = {}
@@ -931,12 +927,15 @@ class ChatCompletionsBackend(LLMBackend):
                         # Plain text content
                         if getattr(delta, "content", None):
                             # handle reasoning first
-                            reasoning_active_key = f"_reasoning_active"
+                            reasoning_active_key = "_reasoning_active"
                             if hasattr(self, reasoning_active_key):
-                                if getattr(self, reasoning_active_key) == True:
+                                if getattr(self, reasoning_active_key) is True:
                                     setattr(self, reasoning_active_key, False)
                                     log_stream_chunk(
-                                        log_prefix, "reasoning_done", "", agent_id
+                                        log_prefix,
+                                        "reasoning_done",
+                                        "",
+                                        agent_id,
                                     )
                                     yield StreamChunk(type="reasoning_done", content="")
                             content_chunk = delta.content
@@ -948,18 +947,24 @@ class ChatCompletionsBackend(LLMBackend):
                                 backend_name=provider_name,
                             )
                             log_stream_chunk(
-                                log_prefix, "content", content_chunk, agent_id
+                                log_prefix,
+                                "content",
+                                content_chunk,
+                                agent_id,
                             )
                             yield StreamChunk(type="content", content=content_chunk)
 
                         # Provider-specific reasoning/thinking streams (non-standard OpenAI fields)
                         if getattr(delta, "reasoning_content", None):
-                            reasoning_active_key = f"_reasoning_active"
+                            reasoning_active_key = "_reasoning_active"
                             setattr(self, reasoning_active_key, True)
                             thinking_delta = getattr(delta, "reasoning_content")
                             if thinking_delta:
                                 log_stream_chunk(
-                                    log_prefix, "reasoning", thinking_delta, agent_id
+                                    log_prefix,
+                                    "reasoning",
+                                    thinking_delta,
+                                    agent_id,
                                 )
                                 yield StreamChunk(
                                     type="reasoning",
@@ -971,7 +976,8 @@ class ChatCompletionsBackend(LLMBackend):
                         if getattr(delta, "tool_calls", None):
                             # handle reasoning first
                             reasoning_chunk = self._handle_reasoning_transition(
-                                log_prefix, agent_id
+                                log_prefix,
+                                agent_id,
                             )
                             if reasoning_chunk:
                                 yield reasoning_chunk
@@ -993,34 +999,29 @@ class ChatCompletionsBackend(LLMBackend):
                                     current_tool_calls[index]["id"] = tool_call_delta.id
 
                                 # Function name
-                                if (
-                                    hasattr(tool_call_delta, "function")
-                                    and tool_call_delta.function
-                                ):
+                                if hasattr(tool_call_delta, "function") and tool_call_delta.function:
                                     if getattr(tool_call_delta.function, "name", None):
-                                        current_tool_calls[index]["function"][
-                                            "name"
-                                        ] = tool_call_delta.function.name
+                                        current_tool_calls[index]["function"]["name"] = tool_call_delta.function.name
 
                                     # Accumulate arguments (as string chunks)
                                     if getattr(
-                                        tool_call_delta.function, "arguments", None
+                                        tool_call_delta.function,
+                                        "arguments",
+                                        None,
                                     ):
-                                        current_tool_calls[index]["function"][
-                                            "arguments"
-                                        ] += tool_call_delta.function.arguments
+                                        current_tool_calls[index]["function"]["arguments"] += tool_call_delta.function.arguments
 
                     # Handle finish reason
                     if getattr(choice, "finish_reason", None):
                         # handle reasoning first
                         reasoning_chunk = self._handle_reasoning_transition(
-                            log_prefix, agent_id
+                            log_prefix,
+                            agent_id,
                         )
                         if reasoning_chunk:
                             yield reasoning_chunk
 
                         if choice.finish_reason == "tool_calls" and current_tool_calls:
-
                             final_tool_calls = []
 
                             for index in sorted(current_tool_calls.keys()):
@@ -1029,9 +1030,7 @@ class ChatCompletionsBackend(LLMBackend):
                                 arguments_str = call["function"]["arguments"]
 
                                 # Providers expect arguments to be a JSON string
-                                arguments_str_sanitized = (
-                                    arguments_str if arguments_str.strip() else "{}"
-                                )
+                                arguments_str_sanitized = arguments_str if arguments_str.strip() else "{}"
 
                                 final_tool_calls.append(
                                     {
@@ -1041,14 +1040,18 @@ class ChatCompletionsBackend(LLMBackend):
                                             "name": function_name,
                                             "arguments": arguments_str_sanitized,
                                         },
-                                    }
+                                    },
                                 )
 
                             log_stream_chunk(
-                                log_prefix, "tool_calls", final_tool_calls, agent_id
+                                log_prefix,
+                                "tool_calls",
+                                final_tool_calls,
+                                agent_id,
                             )
                             yield StreamChunk(
-                                type="tool_calls", tool_calls=final_tool_calls
+                                type="tool_calls",
+                                tool_calls=final_tool_calls,
                             )
 
                             complete_message = {
@@ -1069,7 +1072,10 @@ class ChatCompletionsBackend(LLMBackend):
                             if search_sources_used > 0:
                                 search_complete_msg = f"\n✅ [Live Search Complete] Used {search_sources_used} sources\n"
                                 log_stream_chunk(
-                                    log_prefix, "content", search_complete_msg, agent_id
+                                    log_prefix,
+                                    "content",
+                                    search_complete_msg,
+                                    agent_id,
                                 )
                                 yield StreamChunk(
                                     type="content",
@@ -1083,10 +1089,14 @@ class ChatCompletionsBackend(LLMBackend):
                                     for i, citation in enumerate(chunk.citations, 1):
                                         citation_text += f"{i}. {citation}\n"
                                     log_stream_chunk(
-                                        log_prefix, "content", citation_text, agent_id
+                                        log_prefix,
+                                        "content",
+                                        citation_text,
+                                        agent_id,
                                     )
                                     yield StreamChunk(
-                                        type="content", content=citation_text
+                                        type="content",
+                                        content=citation_text,
                                     )
 
                             # Return final message
@@ -1109,7 +1119,10 @@ class ChatCompletionsBackend(LLMBackend):
                         if enable_web_search:
                             search_msg = f"\n📊 [Live Search] Using {search_sources_used} sources for real-time data\n"
                             log_stream_chunk(
-                                log_prefix, "content", search_msg, agent_id
+                                log_prefix,
+                                "content",
+                                search_msg,
+                                agent_id,
                             )
                             yield StreamChunk(
                                 type="content",
@@ -1136,16 +1149,16 @@ class ChatCompletionsBackend(LLMBackend):
     ) -> AsyncGenerator[StreamChunk, None]:
         """Centralized non-MCP streaming using Chat Completions format."""
         api_params = await self._build_chat_completions_api_params(
-            messages, tools, all_params
+            messages,
+            tools,
+            all_params,
         )
         log_backend_agent_message(
             agent_id or "default",
             "SEND",
             {
                 "messages": api_params["messages"],
-                "tools": len(api_params.get("tools", []))
-                if api_params.get("tools")
-                else 0,
+                "tools": len(api_params.get("tools", [])) if api_params.get("tools") else 0,
             },
             backend_name=self.get_provider_name(),
         )
@@ -1153,7 +1166,9 @@ class ChatCompletionsBackend(LLMBackend):
         try:
             stream = await client.chat.completions.create(**api_params)
             async for chunk in self.handle_chat_completions_stream_with_logging(
-                stream, enable_web_search, agent_id
+                stream,
+                enable_web_search,
+                agent_id,
             ):
                 yield chunk
         except Exception as e:
@@ -1161,7 +1176,10 @@ class ChatCompletionsBackend(LLMBackend):
             yield StreamChunk(type="error", error=str(e))
 
     async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI-compatible Chat Completions API."""
         # Extract agent_id for logging
@@ -1201,12 +1219,10 @@ class ChatCompletionsBackend(LLMBackend):
                     if use_mcp and self.mcp_servers:
                         # Count only stdio/streamable-http servers for display
                         normalized_servers = MCPSetupManager.normalize_mcp_servers(
-                            self.mcp_servers
+                            self.mcp_servers,
                         )
-                        mcp_tools_servers = (
-                            MCPSetupManager.separate_stdio_streamable_servers(
-                                normalized_servers
-                            )
+                        mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(
+                            normalized_servers,
                         )
                         if mcp_tools_servers:
                             yield StreamChunk(
@@ -1221,7 +1237,8 @@ class ChatCompletionsBackend(LLMBackend):
                         logger.info("Using recursive MCP execution mode")
 
                         current_messages = MCPMessageManager.trim_message_history(
-                            messages.copy(), 200
+                            messages.copy(),
+                            200,
                         )
 
                         # Yield MCP session initiation status
@@ -1234,7 +1251,10 @@ class ChatCompletionsBackend(LLMBackend):
 
                         # Start recursive MCP streaming
                         async for chunk in self._stream_mcp_recursive(
-                            current_messages, tools, client, **kwargs
+                            current_messages,
+                            tools,
+                            client,
+                            **kwargs,
                         ):
                             yield chunk
 
@@ -1242,7 +1262,11 @@ class ChatCompletionsBackend(LLMBackend):
                         # NON-MCP MODE: Use unified helper
                         logger.info("Using no-MCP mode")
                         async for chunk in self._stream_without_mcp(
-                            client, messages, tools, all_params, agent_id
+                            client,
+                            messages,
+                            tools,
+                            all_params,
+                            agent_id,
                         ):
                             yield chunk
                         return
@@ -1261,7 +1285,9 @@ class ChatCompletionsBackend(LLMBackend):
                         (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError),
                     ):
                         api_params = await self._build_chat_completions_api_params(
-                            messages, tools, all_params
+                            messages,
+                            tools,
+                            all_params,
                         )
                         provider_tools = self._get_provider_tools(all_params)
 
@@ -1275,7 +1301,10 @@ class ChatCompletionsBackend(LLMBackend):
                                 yield chunk
 
                         async for chunk in self._handle_mcp_error_and_fallback(
-                            e, api_params, provider_tools, fallback_stream
+                            e,
+                            api_params,
+                            provider_tools,
+                            fallback_stream,
                         ):
                             yield chunk
                     else:
@@ -1301,12 +1330,14 @@ class ChatCompletionsBackend(LLMBackend):
                         # Proceed with non-MCP streaming
                         stream = await client.chat.completions.create(**api_params)
                         async for chunk in self.handle_chat_completions_stream_with_logging(
-                            stream, all_params.get("enable_web_search", False), agent_id
+                            stream,
+                            all_params.get("enable_web_search", False),
+                            agent_id,
                         ):
                             yield chunk
                 except Exception as inner_e:
                     logger.error(
-                        f"Streaming error during MCP setup fallback: {inner_e}"
+                        f"Streaming error during MCP setup fallback: {inner_e}",
                     )
                     yield StreamChunk(type="error", error=str(inner_e))
                 finally:
@@ -1319,7 +1350,11 @@ class ChatCompletionsBackend(LLMBackend):
                 client = self._create_openai_client(**kwargs)
 
                 async for chunk in self._stream_without_mcp(
-                    client, messages, tools, all_params, agent_id
+                    client,
+                    messages,
+                    tools,
+                    all_params,
+                    agent_id,
                 ):
                     yield chunk
             except Exception as e:
@@ -1329,7 +1364,9 @@ class ChatCompletionsBackend(LLMBackend):
                 await self._cleanup_client(client)
 
     def create_tool_result_message(
-        self, tool_call: Dict[str, Any], result_content: str
+        self,
+        tool_call: Dict[str, Any],
+        result_content: str,
     ) -> Dict[str, Any]:
         """Create tool result message for Chat Completions format."""
         tool_call_id = self.extract_tool_call_id(tool_call)
@@ -1370,19 +1407,22 @@ class ChatCompletionsBackend(LLMBackend):
             pass
 
     def _handle_reasoning_transition(
-        self, log_prefix: str, agent_id: Optional[str]
+        self,
+        log_prefix: str,
+        agent_id: Optional[str],
     ) -> Optional[StreamChunk]:
         """Handle reasoning state transition and return StreamChunk if transition occurred."""
-        reasoning_active_key = f"_reasoning_active"
+        reasoning_active_key = "_reasoning_active"
         if hasattr(self, reasoning_active_key):
-            if getattr(self, reasoning_active_key) == True:
+            if getattr(self, reasoning_active_key) is True:
                 setattr(self, reasoning_active_key, False)
                 log_stream_chunk(log_prefix, "reasoning_done", "", agent_id)
                 return StreamChunk(type="reasoning_done", content="")
         return None
 
     def _sanitize_messages_for_api(
-        self, messages: List[Dict[str, Any]]
+        self,
+        messages: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         """
         Ensure assistant tool_calls are valid per OpenAI Chat Completions rules:
@@ -1394,7 +1434,7 @@ class ChatCompletionsBackend(LLMBackend):
         """
         try:
             sanitized: List[Dict[str, Any]] = []
-            n = len(messages)
+            len(messages)
             for i, msg in enumerate(messages):
                 if msg.get("role") == "assistant" and "tool_calls" in msg:
                     tool_calls = msg.get("tool_calls") or []
@@ -1404,17 +1444,12 @@ class ChatCompletionsBackend(LLMBackend):
                         if not tc_id:
                             continue
                         # Does a later tool message reference this id?
-                        has_match = any(
-                            (m.get("role") == "tool" and m.get("tool_call_id") == tc_id)
-                            for m in messages[i + 1 :]
-                        )
+                        has_match = any((m.get("role") == "tool" and m.get("tool_call_id") == tc_id) for m in messages[i + 1 :])
                         if has_match:
                             # Normalize arguments to string
                             fn = dict(tc.get("function", {}))
-                            fn[
-                                "arguments"
-                            ] = self.message_formatter._serialize_tool_arguments(
-                                fn.get("arguments")
+                            fn["arguments"] = self.message_formatter._serialize_tool_arguments(
+                                fn.get("arguments"),
                             )
                             valid_tc = dict(tc)
                             valid_tc["function"] = fn
@@ -1426,13 +1461,11 @@ class ChatCompletionsBackend(LLMBackend):
                     else:
                         # Keep as plain assistant if it has content; otherwise drop
                         if msg.get("content"):
-                            new_msg = {
-                                k: v for k, v in msg.items() if k != "tool_calls"
-                            }
+                            new_msg = {k: v for k, v in msg.items() if k != "tool_calls"}
                             sanitized.append(new_msg)
                         else:
                             logger.warning(
-                                "Dropping assistant tool_calls message without matching tool results"
+                                "Dropping assistant tool_calls message without matching tool results",
                             )
                             continue
                 else:
@@ -1440,19 +1473,21 @@ class ChatCompletionsBackend(LLMBackend):
             return sanitized
         except Exception as e:
             logger.warning(
-                f"sanitize_messages_for_api failed: {e}; using original messages"
+                f"sanitize_messages_for_api failed: {e}; using original messages",
             )
             return messages
 
     def _build_base_api_params(
-        self, messages: List[Dict[str, Any]], all_params: Dict[str, Any]
+        self,
+        messages: List[Dict[str, Any]],
+        all_params: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Build base API parameters for Chat Completions requests."""
         # Sanitize: remove trailing assistant tool_calls without corresponding tool results
         sanitized_messages = self._sanitize_messages_for_api(messages)
         # Convert messages to ensure tool call arguments are properly serialized
         converted_messages = self.message_formatter.to_chat_completions_format(
-            sanitized_messages
+            sanitized_messages,
         )
 
         api_params = {
@@ -1468,7 +1503,9 @@ class ChatCompletionsBackend(LLMBackend):
         return api_params
 
     def _prepare_tools_for_api(
-        self, tools: List[Dict[str, Any]], all_params: Dict[str, Any]
+        self,
+        tools: List[Dict[str, Any]],
+        all_params: Dict[str, Any],
     ) -> List[Dict[str, Any]]:
         """Prepare and combine framework tools with provider tools for API request."""
         api_tools = []
@@ -1489,7 +1526,9 @@ class ChatCompletionsBackend(LLMBackend):
         """Cleanup MCP connections."""
         if self._mcp_client:
             await MCPResourceManager.cleanup_mcp_client(
-                self._mcp_client, backend_name=self.backend_name, agent_id=self.agent_id
+                self._mcp_client,
+                backend_name=self.backend_name,
+                agent_id=self.agent_id,
             )
             self._mcp_client = None
             self._mcp_initialized = False
@@ -1500,7 +1539,9 @@ class ChatCompletionsBackend(LLMBackend):
         """Async context manager entry."""
         # Initialize MCP tools if configured
         await MCPResourceManager.setup_mcp_context_manager(
-            self, backend_name=self.backend_name, agent_id=self.agent_id
+            self,
+            backend_name=self.backend_name,
+            agent_id=self.agent_id,
         )
         return self
 

@@ -1,14 +1,15 @@
+# -*- coding: utf-8 -*-
 """
 Security utilities for MCP command validation and sanitization. These functions provide comprehensive security checks and validation for MCP servers and tools.
 """
 
+import ipaddress
 import re
 import shlex
 import socket
 import urllib.parse
 from pathlib import Path
-import ipaddress
-from typing import List, Dict, Any, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 
 def _normalize_security_level(level: str) -> str:
@@ -57,9 +58,7 @@ def prepare_command(
 
     # Check command length to prevent resource exhaustion
     if len(command) > max_length:
-        raise ValueError(
-            f"MCP command too long: {len(command)} > {max_length} characters"
-        )
+        raise ValueError(f"MCP command too long: {len(command)} > {max_length} characters")
 
     # Block dangerous characters that could enable shell injection
     dangerous_chars = [
@@ -110,9 +109,7 @@ def prepare_command(
     # Validate individual argument lengths
     for i, part in enumerate(parts):
         if len(part) > 500:  # Reasonable limit per argument
-            raise ValueError(
-                f"Command argument {i} too long: {len(part)} > 500 characters"
-            )
+            raise ValueError(f"Command argument {i} too long: {len(part)} > 500 characters")
 
     def _default_allowed(level: str) -> Set[str]:
         base_strict: Set[str] = {
@@ -147,6 +144,7 @@ def prepare_command(
             "go",
             "rust",
             "cargo",
+            "fastmcp",
             # System utilities (limited set)
             "sh",
             "bash",
@@ -169,10 +167,7 @@ def prepare_command(
 
     # Normalize security level for consistency
     normalized_level = _normalize_security_level(security_level)
-    allowed = {
-        name.lower()
-        for name in (allowed_executables or _default_allowed(normalized_level))
-    }
+    allowed = {name.lower() for name in (allowed_executables or _default_allowed(normalized_level))}
 
     # Extract executable path and name robustly
     executable_path = Path(parts[0])
@@ -180,9 +175,7 @@ def prepare_command(
     # Note: This is intentionally strict to prevent directory traversal attacks
     # Legitimate paths like /usr/bin/../bin/python should use /usr/bin/python instead
     if any(part == ".." for part in executable_path.parts):
-        raise ValueError(
-            "MCP command path cannot contain parent directory components ('..')"
-        )
+        raise ValueError("MCP command path cannot contain parent directory components ('..')")
 
     # Derive base executable name (strip common extensions)
     base_name = executable_path.name
@@ -194,10 +187,7 @@ def prepare_command(
             break
 
     if lower_name not in allowed:
-        raise ValueError(
-            f"MCP command executable '{base_name}' is not allowed (level={security_level}). "
-            f"Allowed executables: {sorted(allowed)}"
-        )
+        raise ValueError(f"MCP command executable '{base_name}' is not allowed (level={security_level}). " f"Allowed executables: {sorted(allowed)}")
 
     return parts
 
@@ -239,9 +229,7 @@ def validate_url(
 
     # Validate scheme
     if parsed.scheme not in ("http", "https"):
-        raise ValueError(
-            f"Unsupported URL scheme: {parsed.scheme}. Only http and https are allowed."
-        )
+        raise ValueError(f"Unsupported URL scheme: {parsed.scheme}. Only http and https are allowed.")
 
     # Validate hostname
     if not parsed.hostname:
@@ -265,50 +253,27 @@ def validate_url(
         except ValueError:
             ip_obj = None
 
-        def _is_forbidden_ip(
-            ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]
-        ) -> bool:
+        def _is_forbidden_ip(ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]) -> bool:
             if allow_private_ips:
                 return False
-            return (
-                ip.is_private
-                or ip.is_loopback
-                or ip.is_link_local
-                or ip.is_reserved
-                or ip.is_multicast
-                or ip.is_unspecified
-            )
+            return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified
 
         if ip_obj is not None:
             # Hostname is a literal IP
-            if _is_forbidden_ip(ip_obj) and not (
-                allow_localhost and ip_obj.is_loopback
-            ):
-                raise ValueError(
-                    f"IP address not allowed for security reasons: {hostname}"
-                )
+            if _is_forbidden_ip(ip_obj) and not (allow_localhost and ip_obj.is_loopback):
+                raise ValueError(f"IP address not allowed for security reasons: {hostname}")
         elif resolve_dns:
             # Resolve and validate all resolved addresses
             try:
-                port_for_resolution = (
-                    parsed.port
-                    if parsed.port is not None
-                    else (443 if parsed.scheme == "https" else 80)
-                )
-                addrinfos = socket.getaddrinfo(
-                    hostname, port_for_resolution, proto=socket.IPPROTO_TCP
-                )
+                port_for_resolution = parsed.port if parsed.port is not None else (443 if parsed.scheme == "https" else 80)
+                addrinfos = socket.getaddrinfo(hostname, port_for_resolution, proto=socket.IPPROTO_TCP)
                 for ai in addrinfos:
                     sockaddr = ai[4]
                     ip_literal = sockaddr[0]
                     try:
                         resolved_ip = ipaddress.ip_address(ip_literal)
-                        if _is_forbidden_ip(resolved_ip) and not (
-                            allow_localhost and resolved_ip.is_loopback
-                        ):
-                            raise ValueError(
-                                f"Resolved IP not allowed for security reasons: {hostname} -> {resolved_ip}"
-                            )
+                        if _is_forbidden_ip(resolved_ip) and not (allow_localhost and resolved_ip.is_loopback):
+                            raise ValueError(f"Resolved IP not allowed for security reasons: {hostname} -> {resolved_ip}")
                     except ValueError:
                         # Skip unparseable entries
                         continue
@@ -396,48 +361,34 @@ def validate_environment_variables(
         default_deny |= set()
 
     # Fix logic issue: if denied_vars is explicitly set to empty set, respect that choice
-    denylist_active = {
-        v.upper() for v in (denied_vars if denied_vars is not None else default_deny)
-    }
+    denylist_active = {v.upper() for v in (denied_vars if denied_vars is not None else default_deny)}
     allowlist_active = {v.upper() for v in (allowed_vars or set())}
 
     for key, value in env.items():
         if not isinstance(key, str) or not isinstance(value, str):
-            raise ValueError(
-                f"Environment variable key and value must be strings: {key}={value}"
-            )
+            raise ValueError(f"Environment variable key and value must be strings: {key}={value}")
 
         if len(key) > max_key_length:
-            raise ValueError(
-                f"Environment variable name too long: {len(key)} > {max_key_length}"
-            )
+            raise ValueError(f"Environment variable name too long: {len(key)} > {max_key_length}")
 
         if len(value) > max_value_length:
-            raise ValueError(
-                f"Environment variable value too long: {len(value)} > {max_value_length}"
-            )
+            raise ValueError(f"Environment variable value too long: {len(value)} > {max_value_length}")
 
         upper_key = key.upper()
 
         # Apply allow/deny policies
         if mode == "allowlist":
             if allowlist_active and upper_key not in allowlist_active:
-                raise ValueError(
-                    f"Environment variable '{key}' is not permitted by allowlist policy"
-                )
+                raise ValueError(f"Environment variable '{key}' is not permitted by allowlist policy")
         else:  # denylist
             if upper_key in denylist_active:
-                raise ValueError(
-                    f"Environment variable '{key}' is not allowed for security reasons"
-                )
+                raise ValueError(f"Environment variable '{key}' is not allowed for security reasons")
 
         # Check for dangerous patterns in values
         dangerous_patterns = ["$(", "`", "||", "&&", ";", "|"]
         for pattern in dangerous_patterns:
             if pattern in value:
-                raise ValueError(
-                    f"Environment variable '{key}' contains dangerous pattern: {pattern}"
-                )
+                raise ValueError(f"Environment variable '{key}' contains dangerous pattern: {pattern}")
 
         # Special check for ${...} - allow only simple environment variable references
         if "${" in value:
@@ -445,9 +396,7 @@ def validate_environment_variables(
             import re
 
             if not re.match(r"^[^$]*\$\{[A-Z_][A-Z0-9_]*\}[^$]*$", value):
-                raise ValueError(
-                    f"Environment variable '{key}' contains dangerous pattern: ${{"
-                )
+                raise ValueError(f"Environment variable '{key}' contains dangerous pattern: ${{")
 
         validated_env[key] = value
 
@@ -487,26 +436,18 @@ def validate_server_security(config: dict) -> dict:
 
     # Sanitize server name
     if not re.match(r"^[a-zA-Z0-9_-]+$", server_name):
-        raise ValueError(
-            "Server name can only contain alphanumeric characters, underscores, and hyphens"
-        )
+        raise ValueError("Server name can only contain alphanumeric characters, underscores, and hyphens")
 
     transport_type = validated_config.get("type", "stdio")
 
     # Optional security policy configuration
-    security_cfg = (
-        validated_config.get("security", {})
-        if isinstance(validated_config.get("security", {}), dict)
-        else {}
-    )
+    security_cfg = validated_config.get("security", {}) if isinstance(validated_config.get("security", {}), dict) else {}
     security_level = security_cfg.get("level", "strict")
 
     if transport_type == "stdio":
         # Validate stdio configuration
         if "command" not in validated_config and "args" not in validated_config:
-            raise ValueError(
-                "Stdio server configuration must include 'command' or 'args'"
-            )
+            raise ValueError("Stdio server configuration must include 'command' or 'args'")
 
         # Sanitize command if present
         if "command" in validated_config:
@@ -515,26 +456,18 @@ def validate_server_security(config: dict) -> dict:
                 validated_config["command"] = prepare_command(
                     validated_config["command"],
                     security_level=security_level,
-                    allowed_executables=set(
-                        security_cfg.get("allowed_executables", []) or []
-                    )
-                    or None,
+                    allowed_executables=set(security_cfg.get("allowed_executables", []) or []) or None,
                 )
             elif isinstance(validated_config["command"], list):
                 # Validate each part
                 if not validated_config["command"]:
                     raise ValueError("Command list cannot be empty")
                 # Validate the command list by joining and re-parsing
-                command_str = " ".join(
-                    shlex.quote(arg) for arg in validated_config["command"]
-                )
+                command_str = " ".join(shlex.quote(arg) for arg in validated_config["command"])
                 validated_config["command"] = prepare_command(
                     command_str,
                     security_level=security_level,
-                    allowed_executables=set(
-                        security_cfg.get("allowed_executables", []) or []
-                    )
-                    or None,
+                    allowed_executables=set(security_cfg.get("allowed_executables", []) or []) or None,
                 )
             else:
                 raise ValueError("Command must be a string or list")
@@ -549,17 +482,11 @@ def validate_server_security(config: dict) -> dict:
                 if not isinstance(arg, str):
                     raise ValueError(f"Argument {i} must be a string")
                 if len(arg) > 500:
-                    raise ValueError(
-                        f"Argument {i} too long: {len(arg)} > 500 characters"
-                    )
+                    raise ValueError(f"Argument {i} too long: {len(arg)} > 500 characters")
 
         # Validate environment variables if present
         if "env" in validated_config:
-            env_policy = (
-                security_cfg.get("env", {})
-                if isinstance(security_cfg.get("env", {}), dict)
-                else {}
-            )
+            env_policy = security_cfg.get("env", {}) if isinstance(security_cfg.get("env", {}), dict) else {}
             validated_config["env"] = validate_environment_variables(
                 validated_config["env"],
                 level=env_policy.get("level", security_level),
@@ -574,31 +501,23 @@ def validate_server_security(config: dict) -> dict:
             if not isinstance(cwd, str):
                 raise ValueError("Working directory must be a string")
             if len(cwd) > 500:
-                raise ValueError(
-                    f"Working directory path too long: {len(cwd)} > 500 characters"
-                )
+                raise ValueError(f"Working directory path too long: {len(cwd)} > 500 characters")
             cwd_path = Path(cwd)
             # Allow absolute or relative paths, but forbid parent traversal
             if any(part == ".." for part in cwd_path.parts):
-                raise ValueError(
-                    "Working directory cannot contain parent directory components ('..')"
-                )
+                raise ValueError("Working directory cannot contain parent directory components ('..')")
 
     elif transport_type == "streamable-http":
         # Validate streamable HTTP configuration
         if "url" not in validated_config:
-            raise ValueError(
-                f"{transport_type} server configuration must include 'url'"
-            )
+            raise ValueError(f"{transport_type} server configuration must include 'url'")
 
         # Prepare optional allowlist for hostnames if provided
         allowed_hostnames_cfg = security_cfg.get("allowed_hostnames")
         allowed_hostnames = None
         if isinstance(allowed_hostnames_cfg, (list, set, tuple)):
             # Keep only string-like entries and normalize to strings
-            allowed_hostnames = {
-                str(h) for h in allowed_hostnames_cfg if isinstance(h, (str, bytes))
-            }
+            allowed_hostnames = {str(h) for h in allowed_hostnames_cfg if isinstance(h, (str, bytes))}
 
         # Use enhanced URL validation
         validate_url(
@@ -633,23 +552,16 @@ def validate_server_security(config: dict) -> dict:
         # Validate http_read_timeout if present
         if "http_read_timeout" in validated_config:
             http_read_timeout = validated_config["http_read_timeout"]
-            if (
-                not isinstance(http_read_timeout, (int, float))
-                or http_read_timeout <= 0
-            ):
+            if not isinstance(http_read_timeout, (int, float)) or http_read_timeout <= 0:
                 raise ValueError("http_read_timeout must be a positive number")
             if http_read_timeout > 300:  # 5 minutes max
-                raise ValueError(
-                    f"http_read_timeout too large: {http_read_timeout} > 300 seconds"
-                )
+                raise ValueError(f"http_read_timeout too large: {http_read_timeout} > 300 seconds")
 
     else:
         # List supported transport types for better error messages
         supported_types = ["stdio", "streamable-http"]
         raise ValueError(
-            f"Unsupported transport type: {transport_type}. "
-            f"Supported types: {supported_types}. "
-            f"Note: 'sse' transport was deprecated in MCP v2025-03-26, use 'streamable-http' instead."
+            f"Unsupported transport type: {transport_type}. " f"Supported types: {supported_types}. " f"Note: 'sse' transport was deprecated in MCP v2025-03-26, use 'streamable-http' instead.",
         )
 
     return validated_config
@@ -718,14 +630,10 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
 
     # Validate characters - allow alphanumeric, underscore, hyphen, and dot
     if not re.match(r"^[a-zA-Z0-9_.-]+$", tool_name):
-        raise ValueError(
-            f"Tool name '{tool_name}' contains invalid characters. Only alphanumeric, underscore, hyphen, and dot are allowed."
-        )
+        raise ValueError(f"Tool name '{tool_name}' contains invalid characters. Only alphanumeric, underscore, hyphen, and dot are allowed.")
 
     if not re.match(r"^[a-zA-Z0-9_-]+$", server_name):
-        raise ValueError(
-            f"Server name '{server_name}' contains invalid characters. Only alphanumeric, underscore, and hyphen are allowed."
-        )
+        raise ValueError(f"Server name '{server_name}' contains invalid characters. Only alphanumeric, underscore, and hyphen are allowed.")
 
     # Sanitize names (additional safety)
     safe_server_name = "".join(c for c in server_name if c.isalnum() or c in "_-")
@@ -736,9 +644,7 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
     safe_tool_name = safe_tool_name.strip("_.-")
 
     if not safe_server_name:
-        raise ValueError(
-            f"Server name '{server_name}' becomes empty after sanitization"
-        )
+        raise ValueError(f"Server name '{server_name}' becomes empty after sanitization")
 
     if not safe_tool_name:
         raise ValueError(f"Tool name '{tool_name}' becomes empty after sanitization")
@@ -748,16 +654,12 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
 
     # Final length check
     if len(final_name) > 200:
-        raise ValueError(
-            f"Final tool name too long: {len(final_name)} > 200 characters"
-        )
+        raise ValueError(f"Final tool name too long: {len(final_name)} > 200 characters")
 
     return final_name
 
 
-def validate_tool_arguments(
-    arguments: Dict[str, Any], max_depth: int = 5, max_size: int = 10000
-) -> Dict[str, Any]:
+def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_size: int = 10000) -> Dict[str, Any]:
     """
     Validate tool arguments for security and size limits.
 
@@ -781,9 +683,7 @@ def validate_tool_arguments(
         nonlocal current_size
         current_size += amount
         if current_size > max_size:
-            raise ValueError(
-                f"Tool arguments too large: ~{current_size} > {max_size} bytes"
-            )
+            raise ValueError(f"Tool arguments too large: ~{current_size} > {max_size} bytes")
 
     def _size_for_primitive(value: Any) -> int:
         # Rough JSON-like size estimation for preventing extremely large payloads
@@ -842,9 +742,7 @@ def validate_tool_arguments(
         else:
             str_value = str(value)
             if len(str_value) > 1000:
-                raise ValueError(
-                    f"Value too large when converted to string: {len(str_value)} > 1000"
-                )
+                raise ValueError(f"Value too large when converted to string: {len(str_value)} > 1000")
             _add_size(_size_for_primitive(str_value))
             return str_value
 

@@ -1,17 +1,17 @@
+# -*- coding: utf-8 -*-
 """
 Test Azure OpenAI backend functionality.
 """
 
-import pytest
 import os
 import sys
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Add the parent directory to sys.path to allow relative imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-# Import directly from the backend module to avoid package-level imports
-from backend.azure_openai import AzureOpenAIBackend
+from backend.azure_openai import AzureOpenAIBackend  # noqa: E402
 
 
 class TestAzureOpenAIBackend:
@@ -46,17 +46,13 @@ class TestAzureOpenAIBackend:
     def test_init_missing_api_key(self):
         """Test initialization fails without API key."""
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(
-                ValueError, match="Azure OpenAI endpoint URL is required"
-            ):
+            with pytest.raises(ValueError, match="Azure OpenAI endpoint URL is required"):
                 AzureOpenAIBackend()
 
     def test_init_missing_endpoint(self):
         """Test initialization fails without endpoint."""
         with patch.dict(os.environ, {"AZURE_OPENAI_API_KEY": "test-key"}, clear=True):
-            with pytest.raises(
-                ValueError, match="Azure OpenAI endpoint URL is required"
-            ):
+            with pytest.raises(ValueError, match="Azure OpenAI endpoint URL is required"):
                 AzureOpenAIBackend()
 
     def test_init_missing_api_key_with_endpoint(self):
@@ -67,28 +63,20 @@ class TestAzureOpenAIBackend:
 
     def test_base_url_normalization(self):
         """Test base URL is properly normalized."""
-        backend = AzureOpenAIBackend(
-            api_key="test-key", base_url="https://test.openai.azure.com"
-        )
+        backend = AzureOpenAIBackend(api_key="test-key", base_url="https://test.openai.azure.com")
         assert backend.azure_endpoint == "https://test.openai.azure.com"
 
-        backend2 = AzureOpenAIBackend(
-            api_key="test-key", base_url="https://test2.openai.azure.com/"
-        )
+        backend2 = AzureOpenAIBackend(api_key="test-key", base_url="https://test2.openai.azure.com/")
         assert backend2.azure_endpoint == "https://test2.openai.azure.com"
 
     def test_get_provider_name(self):
         """Test provider name is correct."""
-        backend = AzureOpenAIBackend(
-            api_key="test-key", base_url="https://test.openai.azure.com/"
-        )
+        backend = AzureOpenAIBackend(api_key="test-key", base_url="https://test.openai.azure.com/")
         assert backend.get_provider_name() == "Azure OpenAI"
 
     def test_estimate_tokens(self):
         """Test token estimation."""
-        backend = AzureOpenAIBackend(
-            api_key="test-key", base_url="https://test.openai.azure.com/"
-        )
+        backend = AzureOpenAIBackend(api_key="test-key", base_url="https://test.openai.azure.com/")
         text = "This is a test message with several words."
         estimated = backend.estimate_tokens(text)
         assert estimated > 0
@@ -96,9 +84,7 @@ class TestAzureOpenAIBackend:
 
     def test_calculate_cost(self):
         """Test cost calculation."""
-        backend = AzureOpenAIBackend(
-            api_key="test-key", base_url="https://test.openai.azure.com/"
-        )
+        backend = AzureOpenAIBackend(api_key="test-key", base_url="https://test.openai.azure.com/")
 
         # Test GPT-4 cost calculation
         cost = backend.calculate_cost(1000, 500, "gpt-4o")
@@ -113,9 +99,7 @@ class TestAzureOpenAIBackend:
     @pytest.mark.asyncio
     async def test_stream_with_tools_missing_model(self):
         """Test stream_with_tools fails without model parameter."""
-        backend = AzureOpenAIBackend(
-            api_key="test-key", base_url="https://test.openai.azure.com/"
-        )
+        backend = AzureOpenAIBackend(api_key="test-key", base_url="https://test.openai.azure.com/")
 
         messages = [{"role": "user", "content": "Hello"}]
         tools = []
@@ -144,9 +128,7 @@ class TestAzureOpenAIBackend:
     @pytest.mark.asyncio
     async def test_stream_with_tools_with_model(self):
         """Test stream_with_tools works with model parameter."""
-        backend = AzureOpenAIBackend(
-            api_key="test-key", base_url="https://test.openai.azure.com/"
-        )
+        backend = AzureOpenAIBackend(api_key="test-key", base_url="https://test.openai.azure.com/")
 
         messages = [{"role": "user", "content": "Hello"}]
         tools = []
@@ -165,9 +147,7 @@ class TestAzureOpenAIBackend:
 
             # Test that it doesn't raise an error with model parameter
             try:
-                async for chunk in backend.stream_with_tools(
-                    messages, tools, model="gpt-4"
-                ):
+                async for chunk in backend.stream_with_tools(messages, tools, model="gpt-4"):
                     # Just consume the stream
                     pass
             except Exception as e:

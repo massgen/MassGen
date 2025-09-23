@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Message formatter for different LLM APIs.
 Handles conversion between OpenAI, Claude, and Response API formats.
@@ -6,7 +7,7 @@ Handles conversion between OpenAI, Claude, and Response API formats.
 from __future__ import annotations
 
 import json
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 
 class MessageFormatter:
@@ -16,9 +17,7 @@ class MessageFormatter:
     """
 
     @staticmethod
-    def to_chat_completions_format(
-        messages: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    def to_chat_completions_format(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Convert messages for Chat Completions API compatibility.
 
@@ -48,9 +47,7 @@ class MessageFormatter:
                             converted_function["arguments"] = "{}"
                         elif not isinstance(arguments, str):
                             # Handle other non-string types
-                            converted_function[
-                                "arguments"
-                            ] = MessageFormatter._serialize_tool_arguments(arguments)
+                            converted_function["arguments"] = MessageFormatter._serialize_tool_arguments(arguments)
                         # If it's already a string, keep it as-is
 
                         converted_call["function"] = converted_function
@@ -90,9 +87,9 @@ class MessageFormatter:
                                 "type": "tool_result",
                                 "tool_use_id": message.get("tool_call_id"),
                                 "content": message.get("content", ""),
-                            }
+                            },
                         ],
-                    }
+                    },
                 )
             elif message.get("type") == "function_call_output":
                 # Response API tool message -> Claude tool result
@@ -104,9 +101,9 @@ class MessageFormatter:
                                 "type": "tool_result",
                                 "tool_use_id": message.get("call_id"),
                                 "content": message.get("output", ""),
-                            }
+                            },
                         ],
-                    }
+                    },
                 )
             elif message.get("role") == "assistant" and "tool_calls" in message:
                 # Assistant message with tool calls - convert to Claude format
@@ -128,7 +125,7 @@ class MessageFormatter:
                             "id": tool_id,
                             "name": tool_name,
                             "input": tool_args,
-                        }
+                        },
                     )
 
                 converted_messages.append({"role": "assistant", "content": content})
@@ -177,9 +174,7 @@ class MessageFormatter:
                 converted_messages.append(message)
             elif message.get("role") == "assistant" and "tool_calls" in message:
                 # Assistant message with tool_calls - remove tool_calls when sending as input
-                cleaned_message = {
-                    k: v for k, v in message.items() if k != "tool_calls"
-                }
+                cleaned_message = {k: v for k, v in message.items() if k != "tool_calls"}
                 converted_messages.append(cleaned_message)
             else:
                 # For other message types, pass through as-is
@@ -188,9 +183,7 @@ class MessageFormatter:
         return converted_messages
 
     @staticmethod
-    def convert_between_formats(
-        messages: List[Dict[str, Any]], source_format: str, target_format: str
-    ) -> List[Dict[str, Any]]:
+    def convert_between_formats(messages: List[Dict[str, Any]], source_format: str, target_format: str) -> List[Dict[str, Any]]:
         """
         Convert messages from one format to another.
 
@@ -357,7 +350,5 @@ class MessageFormatter:
                 return json.dumps(arguments)
             except (TypeError, ValueError) as e:
                 # Logger not imported at module level, use print for warning
-                print(
-                    f"Warning: Failed to serialize tool arguments: {e}, arguments: {arguments}"
-                )
+                print(f"Warning: Failed to serialize tool arguments: {e}, arguments: {arguments}")
                 return "{}"
