@@ -20,6 +20,21 @@ repos:
     rev: v3.1.0
     hooks:
       - id: add-trailing-comma
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, massgen, docs/presentation]
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: [--profile=black, massgen, docs/presentation]
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.2.1
+    hooks:
+      - id: autoflake
+        args: [--in-place, --remove-all-unused-imports, --remove-unused-variables, massgen, docs/presentation]
   - repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
@@ -31,46 +46,46 @@ repos:
       - id: flake8
         args: [--max-line-length=200, --extend-ignore=E203, massgen, docs/presentation]
         exclude: ^docs
-  # - repo: https://github.com/pylint-dev/pylint
-  #   rev: v3.0.2
-  #   hooks:
-  #     - id: pylint
-  #       exclude:
-  #           (?x)(
-  #               ^docs
-  #               | \.md$
-  #               | \.html$
-  #               | ^examples
-  #         )
-  #       args: [
-  #         --max-line-length=200,
-  #         --disable=W0511,
-  #         --disable=W0718,
-  #         --disable=W0122,
-  #         --disable=C0103,
-  #         --disable=R0913,
-  #         --disable=E0401,
-  #         --disable=E1101,
-  #         --disable=C0415,
-  #         --disable=W0603,
-  #         --disable=R1705,
-  #         --disable=R0914,
-  #         --disable=E0601,
-  #         --disable=W0602,
-  #         --disable=W0604,
-  #         --disable=R0801,
-  #         --disable=R0902,
-  #         --disable=R0903,
-  #         --disable=C0123,
-  #         --disable=W0231,
-  #         --disable=W1113,
-  #         --disable=W0221,
-  #         --disable=R0401,
-  #         --disable=W0632,
-  #         --disable=W0123,
-  #         --disable=C3001,
-  #         massgen/backend
-  #       ]
+  - repo: https://github.com/pylint-dev/pylint
+    rev: v3.0.2
+    hooks:
+      - id: pylint
+        exclude:
+            (?x)(
+                ^docs
+                | \.md$
+                | \.html$
+                | ^examples
+          )
+        args: [
+          --max-line-length=200,
+          --disable=W0511,
+          --disable=W0718,
+          --disable=W0122,
+          --disable=C0103,
+          --disable=R0913,
+          --disable=E0401,
+          --disable=E1101,
+          --disable=C0415,
+          --disable=W0603,
+          --disable=R1705,
+          --disable=R0914,
+          --disable=E0601,
+          --disable=W0602,
+          --disable=W0604,
+          --disable=R0801,
+          --disable=R0902,
+          --disable=R0903,
+          --disable=C0123,
+          --disable=W0231,
+          --disable=W1113,
+          --disable=W0221,
+          --disable=R0401,
+          --disable=W0632,
+          --disable=W0123,
+          --disable=C3001,
+          massgen/backend
+        ]
 
   # - repo: https://github.com/pre-commit/mirrors-mypy
   #   rev: v1.7.0
