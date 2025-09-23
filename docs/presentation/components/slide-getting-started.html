@@ -6,13 +6,13 @@
                 # 1. Clone and setup<br>
                 git clone https://github.com/Leezekun/MassGen<br>
                 cd MassGen && pip install uv && uv venv<br><br>
-                
+
                 # 2. Configure API keys<br>
                 cp .env.example .env  # Add your API keys<br><br>
-                
+
                 # 3. Run single agent (quick test)<br>
                 uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
-                
+
                 # 4. Run multi-agent collaboration<br>
                 uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
             </div>

@@ -7,92 +7,92 @@
                         <!-- Orchestrator -->
                         <rect x="300" y="30" width="120" height="45" rx="8" fill="#74b9ff" stroke="#0984e3" stroke-width="2"/>
                         <text x="360" y="58" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="white">Orchestrator</text>
-                        
+
                         <!-- Agent streams with 5+ agents to show real-time streaming -->
                         <rect x="80" y="130" width="90" height="35" rx="5" fill="#fd79a8" stroke="#e84393" stroke-width="2"/>
                         <text x="125" y="152" text-anchor="middle" font-family="Arial" font-size="16" fill="white">Agent 1</text>
-                        
+
                         <rect x="200" y="130" width="90" height="35" rx="5" fill="#fd79a8" stroke="#e84393" stroke-width="2"/>
                         <text x="245" y="152" text-anchor="middle" font-family="Arial" font-size="16" fill="white">Agent 2</text>
-                        
+
                         <rect x="320" y="130" width="90" height="35" rx="5" fill="#fd79a8" stroke="#e84393" stroke-width="2"/>
                         <text x="365" y="152" text-anchor="middle" font-family="Arial" font-size="16" fill="white">Agent 3</text>
-                        
+
                         <rect x="440" y="130" width="90" height="35" rx="5" fill="#fd79a8" stroke="#e84393" stroke-width="2"/>
                         <text x="485" y="152" text-anchor="middle" font-family="Arial" font-size="16" fill="white">Agent 4</text>
-                        
+
                         <rect x="560" y="130" width="90" height="35" rx="5" fill="#fd79a8" stroke="#e84393" stroke-width="2"/>
                         <text x="605" y="152" text-anchor="middle" font-family="Arial" font-size="16" fill="white">Agent 5</text>
-                        
+
                         <!-- Streaming arrows showing AsyncGenerator pattern -->
                         <line x1="360" y1="85" x2="125" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
                         <line x1="360" y1="85" x2="245" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
                         <line x1="360" y1="85" x2="365" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
                         <line x1="360" y1="85" x2="485" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
                         <line x1="360" y1="85" x2="605" y2="120" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-                        
+
                         <!-- Streaming arrows from agents to chunks -->
                         <line x1="125" y1="175" x2="135" y2="190" stroke="#00b894" stroke-width="2" marker-end="url(#arrowhead-stream)"/>
                         <line x1="245" y1="175" x2="255" y2="190" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrowhead-stream)"/>
                         <line x1="365" y1="175" x2="375" y2="190" stroke="#a29bfe" stroke-width="2" marker-end="url(#arrowhead-stream)"/>
                         <line x1="485" y1="175" x2="495" y2="190" stroke="#00b894" stroke-width="2" marker-end="url(#arrowhead-stream)"/>
                         <line x1="605" y1="175" x2="615" y2="190" stroke="#ff7675" stroke-width="2" marker-end="url(#arrowhead-stream)"/>
-                        
+
                         <!-- StreamChunk types from each agent - async timing -->
                         <rect x="90" y="220" width="80" height="30" rx="5" fill="#00b894" stroke="#00cec9" stroke-width="2"/>
                         <text x="130" y="240" text-anchor="middle" font-family="Arial" font-size="14" fill="white">content</text>
                         <text x="130" y="210" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#666">t=1.2s</text>
-                        
+
                         <rect x="210" y="220" width="90" height="30" rx="5" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
                         <text x="255" y="240" text-anchor="middle" font-family="Arial" font-size="13" fill="white">new_answer</text>
                         <text x="255" y="210" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#666">t=2.1s</text>
-                        
+
                         <rect x="330" y="220" width="80" height="30" rx="5" fill="#a29bfe" stroke="#6c5ce7" stroke-width="2"/>
                         <text x="370" y="240" text-anchor="middle" font-family="Arial" font-size="13" fill="white">reasoning</text>
                         <text x="370" y="210" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#666">t=0.8s</text>
-                        
+
                         <rect x="450" y="220" width="80" height="30" rx="5" fill="#00b894" stroke="#00cec9" stroke-width="2"/>
                         <text x="490" y="240" text-anchor="middle" font-family="Arial" font-size="14" fill="white">content</text>
                         <text x="490" y="210" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#666">t=1.5s</text>
-                        
+
                         <rect x="570" y="220" width="80" height="30" rx="5" fill="#ff7675" stroke="#d63031" stroke-width="2"/>
                         <text x="610" y="240" text-anchor="middle" font-family="Arial" font-size="14" fill="white">voting</text>
                         <text x="610" y="210" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="#666">t=3.0s</text>
-                        
+
                         <!-- Multiple chunks to show async streaming -->
                         <rect x="110" y="260" width="60" height="22" rx="3" fill="#00b894" opacity="0.7"/>
                         <text x="140" y="274" text-anchor="middle" font-family="Arial" font-size="13" fill="white">chunk2</text>
-                        
+
                         <rect x="230" y="260" width="60" height="22" rx="3" fill="#fdcb6e" opacity="0.4"/>
                         <text x="260" y="274" text-anchor="middle" font-family="Arial" font-size="13" fill="white">paused</text>
-                        
+
                         <rect x="350" y="260" width="60" height="22" rx="3" fill="#a29bfe" opacity="0.7"/>
                         <text x="380" y="274" text-anchor="middle" font-family="Arial" font-size="13" fill="white">chunk1</text>
-                        
+
                         <rect x="470" y="260" width="60" height="22" rx="3" fill="#00b894" opacity="0.4"/>
                         <text x="500" y="274" text-anchor="middle" font-family="Arial" font-size="13" fill="white">stopping</text>
-                        
+
                         <rect x="590" y="260" width="60" height="22" rx="3" fill="#ff7675" opacity="0.8"/>
                         <text x="620" y="274" text-anchor="middle" font-family="Arial" font-size="13" fill="white">deciding</text>
-                        
+
                         <!-- Dynamic Task Management - show voting -->
-                        
+
                         <!-- Restart mechanism triggered by Agent 2's new_answer -->
                         <text x="350" y="340" text-anchor="middle" font-family="Arial" font-size="20" font-weight="bold" fill="#e74c3c">🔁 Dynamic Restart: new_answer triggers all</text>
-                        
+
                         <!-- Special arrow from Agent 2's new_answer -->
                         <line x1="255" y1="290" x2="255" y2="325" stroke="#e74c3c" stroke-width="4" marker-end="url(#arrowhead-red)"/>
                         <text x="270" y="310" font-family="Arial" font-size="14" font-weight="bold" fill="#e74c3c">triggers</text>
-                        
+
                         <!-- Restart arrows to other agents -->
                         <path d="M 300 350 Q 250 380 125 370" stroke="#e74c3c" stroke-width="3" fill="none" marker-end="url(#arrowhead-red)"/>
                         <path d="M 350 350 Q 400 380 485 370" stroke="#e74c3c" stroke-width="3" fill="none" marker-end="url(#arrowhead-red)"/>
                         <path d="M 400 350 Q 500 400 605 370" stroke="#e74c3c" stroke-width="3" fill="none" marker-end="url(#arrowhead-red)"/>
-                        
+
                         <text x="125" y="390" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#e74c3c">restarting</text>
                         <text x="485" y="390" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#e74c3c">restarting</text>
                         <text x="605" y="390" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#e74c3c">restarting</text>
-                        
+
                         <!-- Arrow markers -->
                         <defs>
                             <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">

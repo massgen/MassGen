@@ -5,19 +5,19 @@
             <div style="text-align: center; margin-bottom: 30px; color: #666; font-style: italic;">
                 Understanding current limitations and improvement opportunities
             </div>
-            
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;">
                 <div>
                     <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 4px solid #e74c3c; margin-bottom: 25px;">
                         <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🔭 The Problem</h3>
                         <div style="font-size: 0.95em; line-height: 1.5; color: #495057;">
-                            "How many stars would be detectable using the ESPRESSO spectrograph 
+                            "How many stars would be detectable using the ESPRESSO spectrograph
                             with S/N ≥ 10 in 1-hour exposure?"<br><br>
                             <strong>Candidates:</strong> Canopus, Polaris, and 4 synthetic stars<br>
                             <strong>Correct Answer:</strong> 2 stars (Canopus saturates detector)
                         </div>
                     </div>
-                    
+
                     <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 15px;">
                         <h3 style="margin: 0 0 15px 0;">❌ Orchestration Failed</h3>
                         <div style="font-size: 1.1em; text-align: center;">
@@ -29,34 +29,34 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div>
                     <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 10px 0;">✅ Claude (Correct)</h3>
                         <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
-                            "Canopus is too bright and would <strong>saturate the detector</strong> 
+                            "Canopus is too bright and would <strong>saturate the detector</strong>
                             in a 1-hour exposure. Only 2 stars are detectable without saturation."
                         </div>
                     </div>
-                    
+
                     <div style="background: linear-gradient(135deg, #e67e22, #d35400); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
                         <h3 style="margin: 0 0 10px 0;">❌ Others (Detailed but Wrong)</h3>
                         <div style="font-size: 0.9em; line-height: 1.4;">
-                            <strong>GPT-5, Gemini, Grok:</strong> Provided comprehensive magnitude calculations 
+                            <strong>GPT-5, Gemini, Grok:</strong> Provided comprehensive magnitude calculations
                             but <strong>failed to consider detector saturation</strong> → concluded 3 stars
                         </div>
                     </div>
-                    
+
                     <div style="background: linear-gradient(135deg, #95a5a6, #7f8c8d); color: white; padding: 20px; border-radius: 15px;">
                         <h3 style="margin: 0 0 10px 0;">🎯 What Happened</h3>
                         <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
-                            Orchestration selected Gemini for having "most accurate and comprehensive reasoning," 
+                            Orchestration selected Gemini for having "most accurate and comprehensive reasoning,"
                             prioritizing <strong>analysis quality over correctness</strong>
                         </div>
                     </div>
                 </div>
             </div>
-            
+
             <div style="display: flex; justify-content: space-between; gap: 30px; margin-top: 15px; margin-bottom: 80px;">
                 <div style="background: #fff3cd; padding: 20px; border-radius: 15px; border-left: 4px solid #f39c12; flex: 1;">
                     <strong style="color: #856404; font-size: 1.1em;">🔍 Root Cause:</strong><br>
