@@ -771,6 +771,7 @@ class MCPResourceManager:
                 timeout_seconds=timeout_seconds,
                 allowed_tools=allowed_tools,
                 exclude_tools=exclude_tools,
+                circuit_breaker=circuit_breaker,
             )
 
             # Record success in circuit breaker ONLY if servers actually connected

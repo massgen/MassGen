@@ -547,11 +547,6 @@ class MCPHandler:
         api_params: Dict[str, Any],
         provider_tools: List[Dict[str, Any]],
         stream_func: Callable[[Dict[str, Any]], AsyncGenerator[StreamChunk, None]],
-        *,
-        is_multi_agent_context: bool = False,
-        is_final_agent: bool = False,
-        original_tools: Optional[List[Dict[str, Any]]] = None,
-        existing_answers_available: bool = False,
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Handle MCP errors with fallback to non-MCP streaming.
@@ -561,10 +556,7 @@ class MCPHandler:
             api_params: Original API parameters
             provider_tools: Provider-specific tools for fallback
             stream_func: Fallback streaming function
-            is_multi_agent_context: Whether this is in a multi-agent context
-            is_final_agent: Whether this is the final agent in multi-agent orchestration
-            original_tools: Original tools before MCP filtering
-            existing_answers_available: Whether existing answers are available for voting
+            
 
         Yields:
             StreamChunk objects for error handling and fallback streaming
@@ -612,18 +604,7 @@ class MCPHandler:
                 for tool in fallback_params["tools"]
                 if tool.get("name") not in functions
             ]
-            fallback_params["tools"] = non_mcp_tools
-
-        # Intelligent coordination tool filtering based on context
-        if is_multi_agent_context and original_tools:
-            filtered_coordination_tools = self._filter_coordination_tools_for_context(
-                fallback_params.get("tools", []),
-                original_tools,
-                existing_answers_available=existing_answers_available,
-                is_final_agent=is_final_agent,
-            )
-            fallback_params["tools"] = filtered_coordination_tools
-
+            fallback_params["tools"] = non_mcp_tools 
         # Add back provider tools if they were present
         if provider_tools:
             if "tools" not in fallback_params:
@@ -644,99 +625,7 @@ class MCPHandler:
         async for chunk in stream_func(fallback_params):
             yield chunk
 
-    def _filter_coordination_tools_for_context(
-        self,
-        current_tools: List[Dict[str, Any]],
-        original_tools: List[Dict[str, Any]],
-        *,
-        existing_answers_available: bool = False,
-        is_final_agent: bool = False,
-    ) -> List[Dict[str, Any]]:
-        """
-        Filter coordination tools based on current context to prevent conflicts.
-
-        Args:
-            current_tools: Current list of tools after MCP filtering
-            original_tools: Original tools before MCP filtering
-            existing_answers_available: Whether existing answers are available for voting
-            is_final_agent: Whether this is the final agent in multi-agent orchestration
-
-        Returns:
-            Filtered list of tools that prevents vote/new_answer conflicts
-        """
-        # Identify coordination tools in the current tools list
-        coordination_tools = []
-        other_tools = []
-
-        for tool in current_tools:
-            tool_name = tool.get("name", "")
-            if self._is_coordination_tool(tool_name):
-                coordination_tools.append(tool)
-            else:
-                other_tools.append(tool)
-
-        # If no coordination tools, return as-is
-        if not coordination_tools:
-            return current_tools
-
-        # Context-aware tool filtering logic
-        filtered_coordination_tools = []
-
-        for tool in coordination_tools:
-            tool_name = tool.get("name", "")
-
-            # Only preserve coordination tools that are appropriate for the context
-            if self._should_preserve_coordination_tool(
-                tool_name,
-                original_tools,
-                existing_answers_available=existing_answers_available,
-                is_final_agent=is_final_agent,
-            ):
-                filtered_coordination_tools.append(tool)
-
-        # Combine filtered coordination tools with other tools
-        return other_tools + filtered_coordination_tools
-
-    def _is_coordination_tool(self, tool_name: str) -> bool:
-        """Check if a tool name is a coordination tool."""
-        coordination_tool_names = {"vote", "new_answer"}
-        return tool_name.lower() in coordination_tool_names
-
-    def _should_preserve_coordination_tool(
-        self,
-        tool_name: str,
-        original_tools: List[Dict[str, Any]],
-        *,
-        existing_answers_available: bool = False,
-        is_final_agent: bool = False,
-    ) -> bool:
-        """
-        Determine if a coordination tool should be preserved based on context.
-
-        Args:
-            tool_name: Name of the coordination tool
-            original_tools: Original tools list for context
-            existing_answers_available: Whether existing answers are available
-            is_final_agent: Whether this is the final agent
-
-        Returns:
-            True if the tool should be preserved, False otherwise
-        """
-        if not self._is_coordination_tool(tool_name):
-            return False
-
-        # Check if the tool was originally available
-        original_tool_names = {tool.get("name", "") for tool in original_tools}
-        if tool_name not in original_tool_names:
-            return False
-
-        # Context-aware preservation logic
-        if existing_answers_available:
-            # If answers exist, only preserve 'vote' tool
-            return tool_name.lower() == "vote"
-        else:
-            # If no answers exist, only preserve 'new_answer' tool
-            return tool_name.lower() == "new_answer"
+    
 
     def _get_backend_name(self) -> str:
         """Get the backend name for MCP operations."""

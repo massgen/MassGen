@@ -931,6 +931,7 @@ class MultiMCPClient:
         hooks: Optional[
             Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]
         ] = {},
+        circuit_breaker: Optional[MCPCircuitBreaker] = None,
     ):
         """
         Initialize MultiMCP client.
@@ -974,7 +975,7 @@ class MultiMCPClient:
         self._cleanup_done = False
 
         # Circuit breaker for failing servers
-        self._circuit_breaker = MCPCircuitBreaker()
+        self._circuit_breaker = circuit_breaker or MCPCircuitBreaker()
 
     async def connect(self) -> None:
         """Connect to all MCP servers and discover capabilities."""
@@ -1466,6 +1467,7 @@ class MultiMCPClient:
         timeout_seconds: int = 30,
         allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
+        circuit_breaker: Optional[MCPCircuitBreaker] = None,
     ) -> "MultiMCPClient":
         """
         Create and connect MultiMCP client in one step.
@@ -1484,6 +1486,7 @@ class MultiMCPClient:
             timeout_seconds=timeout_seconds,
             allowed_tools=allowed_tools,
             exclude_tools=exclude_tools,
+            circuit_breaker=circuit_breaker,
         )
         await client.connect()
         return client
