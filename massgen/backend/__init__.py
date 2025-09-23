@@ -14,6 +14,7 @@ TODO - Check if we indeed need to pass agent_id & session_id to backends
 """
 
 from .base import LLMBackend, StreamChunk, TokenUsage
+from .mcp_backend import MCPBackend
 from .chat_completions import ChatCompletionsBackend
 from .response import ResponseBackend
 from .grok import GrokBackend
@@ -38,6 +39,7 @@ except ImportError:
 
 __all__ = [
     "LLMBackend",
+    "MCPBackend",
     "StreamChunk",
     "TokenUsage",
     "ChatCompletionsBackend",
