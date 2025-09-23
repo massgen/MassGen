@@ -12,7 +12,7 @@ Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tool
 ## Key Technical Priorities
 
 1. **Backend Architecture Refactoring** (REQUIRED): Consolidate shared functionality across backends
-2. **Agent System Prompt Fixes** (REQUIRED): Resolve final agent human feedback expectations  
+2. **Agent System Prompt Fixes** (REQUIRED): Resolve final agent human feedback expectations
 3. **VLLM Local Model Support** (OPTIONAL): Enable high-performance local model inference
 4. **MCP Marketplace Integration** (OPTIONAL): Expand tool ecosystem through marketplace
 
