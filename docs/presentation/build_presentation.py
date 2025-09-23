@@ -78,6 +78,22 @@ def build_presentation(presentation_name):
             "Vision - Exponential Intelligence",
             "Call to Action - Build Agentic RecSys",
         ],
+        "recsys-short": [
+            "Title - RecSys'25 Tutorial",
+            "Problem - AI Scaling Challenges",
+            "Solution - Multi-Agent Collaboration",
+            "Evidence - Performance Gains",
+            "Architecture - System Design",
+            "Features & Capabilities",
+            "Tech - Message Passing Protocols",
+            "Tech - RecSys Architecture Deep Dive",
+            "Case Study - Success Through Collaboration",
+            "Benchmarking - Preliminary Results",
+            "Agentic Recommendation Applications",
+            "Demo - Live Examples",
+            "Getting Started - 60 Seconds",
+            "Call to Action - Build Agentic RecSys",
+        ],
         "columbia": [
             "Title - Columbia University",
             "Problem - Single-Agent Limitation",
@@ -213,6 +229,22 @@ def build_presentation(presentation_name):
             "slide-roadmap-vision",
             "slide-call-to-action-recsys",
         ],
+        "recsys-short": [
+            "slide-title-recsys",
+            "slide-the-problem",
+            "slide-the-solution-multi-agent-collaboration",
+            "slide-evidence-performance-gains",
+            "slide-architecture",
+            "slide-key-features-capabilities",
+            "slide-tech-deep-dive-backend-abstraction-challenges",
+            "slide-tech-deep-dive-binary-decision-framework-solution",
+            "slide-case-study-success-through-collaboration",
+            "slide-benchmarking-results",
+            "slide-recsys-applications",
+            "slide-live-demo-examples",
+            "slide-getting-started",
+            "slide-call-to-action-recsys",
+        ],
         "aibuilders": [
             "slide-title-aibuilders",  # AI Builders-specific title
             "slide-the-problem",
@@ -300,7 +332,7 @@ def build_presentation(presentation_name):
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python build_presentation.py <presentation_name>")
-        print("Available presentations: m2l, columbia, recsys, aibuilders")
+        print("Available presentations: m2l, columbia, recsys, recsys-short, aibuilders")
         sys.exit(1)
 
     presentation_name = sys.argv[1]

@@ -84,10 +84,28 @@
             }
         }
 
+        // Navigation visibility toggle
+        let navigationVisible = true;
+
+        function toggleNavigation() {
+            navigationVisible = !navigationVisible;
+            const navigation = document.querySelector('.navigation');
+            const slideNav = document.querySelector('.slide-nav');
+            const slideCounter = document.querySelector('.slide-counter');
+
+            const display = navigationVisible ? '' : 'none';
+
+            if (navigation) navigation.style.display = display;
+            if (slideNav) slideNav.style.display = display;
+            if (slideCounter) slideCounter.style.display = display;
+
+            console.log(navigationVisible ? 'Navigation shown' : 'Navigation hidden');
+        }
+
         // Enhanced keyboard navigation
         document.addEventListener('keydown', (e) => {
             // Prevent default behavior if we handle the key
-            const handledKeys = ['ArrowRight', 'ArrowLeft', ' ', 'Home', 'End'];
+            const handledKeys = ['ArrowRight', 'ArrowLeft', ' ', 'Home', 'End', 'n', 'N'];
             const numberKeys = e.key >= '1' && e.key <= '9';
 
             if (handledKeys.includes(e.key) || numberKeys) {
@@ -107,6 +125,10 @@
                     break;
                 case 'End':
                     showSlide(totalSlides - 1);
+                    break;
+                case 'n':
+                case 'N':
+                    toggleNavigation();
                     break;
                 default:
                     if (numberKeys) {
