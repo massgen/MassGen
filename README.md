@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.22 Features](#-latest-features-v0022)
+- [v0.0.23 Features](#-latest-features-v0023)
 - [Workspace Copy Tools](#-latest-features-v0022)
 - [Configuration Organization](#-latest-features-v0022)
 - [Enhanced File Operations](#-latest-features-v0022)
@@ -99,15 +99,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.21](#recent-achievements-v0021)
-  - [v0.0.3 - v0.0.20](#previous-achievements-v003-v0020)
+  - [v0.0.23](#recent-achievements-v0023)
+  - [v0.0.3 - v0.0.22](#previous-achievements-v003-v0022)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.23 Roadmap](#v0023-roadmap)
+- [v0.0.24 Roadmap](#v0024-roadmap)
 </details>
 
 <details open>
@@ -129,6 +129,18 @@ This project started with the "threads of thought" and "iterative refinement" id
 | **👥 Intelligence Sharing** | Agents share and learn from each other's work |
 | **🔄 Consensus Building** | Natural convergence through collaborative refinement |
 | **📊 Live Visualization** | See agents' working processes in real-time |
+
+---
+
+## 🆕 Latest Features (v0.0.23)
+
+**What's New in v0.0.23:**
+- **Backend Architecture Refactoring** - Major consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends
+- **Formatter Module** - Extracted message and tool formatting logic into dedicated `massgen/formatter/` module  
+- **Massive Code Deduplication** - Streamlined chat_completions.py, claude.py, and response.py for better maintainability
+- **Bug Fixes** - Fixed coordination table escape handling on macOS and FastMCP integration
+
+→ [See all release examples](massgen/configs/README.md#release-history--examples)
 
 ---
 
@@ -262,61 +274,6 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
 | **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
 
-## 🆕 Latest Features (v0.0.22)
-
-```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
-  "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, \
-  2) An interactive feature that helps users engage with the blog content (your choice - could be search, \
-  filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS \
-  animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be \
-  creative with the implementation details."
-```
-
-**Experience v0.0.22 Features:**
-
-See the latest workspace copy tools and configuration improvements in action:
-
-<p align="center">
-  <a href="assets/release_related_figures/copy_file.png">
-    <img src="assets/release_related_figures/copy_file.png" alt="v0.0.22 Workspace Copy Tools" width="400" height="300" style="margin-right: 10px; object-fit: cover;">
-  </a>
-  <a href="assets/release_related_figures/context_path.png">
-    <img src="assets/release_related_figures/context_path.png" alt="v0.0.22 Configuration Organization" width="400" height="300" style="object-fit: cover;">
-  </a>
-</p>
-
-**What's New in v0.0.22:**
-- **Workspace Copy Tools via MCP** - Seamlessly copy files between workspaces for efficient multi-agent collaboration
-- **Configuration Restructuring** - Organized configs by provider & use case (basic/, providers/, tools/, teams/) with comprehensive guides
-- **Enhanced File Operations** - Improved large-scale file handling with better security & workspace management
-- **Critical Bug Fixes** - Resolved write tool issues, path resolution bugs, and documentation improvements
-
-**Try v0.0.21-0.0.22 Features Now:**
-```bash
-# Grok with MCP tools - weather, search, and more
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml \
-  "What's the weather in Tokyo and how does it compare to London? Also tell me about any interesting \
-  events happening in both cities this week."
-
-# Multi-agent file collaboration with permission control
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/fs_permissions_test.yaml \
-  "Analyze all Python files in this project, identify potential security issues, and create a detailed report \
-  with recommendations for improvements."
-
-# Context sharing between Claude Code agents
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
-  "Create a comprehensive website about fascinating facts regarding large language models. Put everything \
-  in a single index.html file with embedded CSS and make it visually appealing."
-```
-
-→ [See all release examples](massgen/configs/README.md#release-history--examples)
-
----
 
 ### 4. 🏃 Run MassGen
 
@@ -646,7 +603,7 @@ orchestrator:
 # Claude with advanced tool chaining
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/claude_mcp_example.yaml \
-  "Research and compare weather in multiple cities"
+  "Research and compare weather in Beijing and Shanghai"
 ```
 
 **OpenAI (GPT-5 Series with MCP - v0.0.17+)**
@@ -654,15 +611,15 @@ uv run python -m massgen.cli \
 # GPT-5 with weather and external tools
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
-  "Plan a weekend trip based on weather forecasts"
+  "What's the weather of Tokyo"
 ```
 
 **Gemini (Multi-Server MCP - v0.0.15+)**
 ```bash
-# Gemini with multiple MCP services (Airbnb + Search)
+# Gemini with multiple MCP services 
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
-  "Find accommodations in Paris with neighborhood analysis"
+  "Find accommodations in Paris with neighborhood analysis"    # (requires BRAVE_API_KEY in .env)
 ```
 
 **Claude Code (Development Tools)**
@@ -711,18 +668,13 @@ uv run python -m massgen.cli \
 ```bash
 # Full-stack development with file operations
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_single.yaml \
-  "Create a Flask web app with user authentication and database integration"
-
-# Multi-agent code review and testing
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_flash2.5_gptoss.yaml \
-  "Debug and optimize this React application, then write comprehensive tests"
+  --config  massgen/configs/tools/filesystem/claude_code_single.yaml \
+  "Create a Flask web app with authentication"
 ```
 
-**Web Automation:**
+**Web Automation:** (still in test)
 ```bash
-# Browser automation with screenshots and reporting
+# Browser automation with screenshots and reporting 
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
   "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
@@ -864,32 +816,34 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.22)
+### Recent Achievements (v0.0.23)
 
-**🎉 Released: November 22, 2025**
+**🎉 Released: September 24, 2025**
 
-Version 0.0.22 introduces **Workspace Copy Tools via MCP** and **Configuration Organization**, establishing efficient multi-agent collaboration infrastructure:
+Version 0.0.23 introduces **Backend Architecture Refactoring** and **Formatter Module**, establishing cleaner, more maintainable codebase:
 
-#### Workspace Copy Tools via MCP
-- **File Copying Capabilities**: New `workspace_copy_server.py` with MCP-based file copying functionality (369 lines)
-- **Efficient Workspace Operations**: Support for copying files and directories between workspaces with streaming operations
-- **Automatic Workspace Management**: Workspace initialization and management for seamless agent collaboration
-- **Testing Infrastructure**: Comprehensive testing framework for copy operations and validation
+#### Backend Architecture Refactoring
+- **Major Code Consolidation**: New `base_with_mcp.py` base class consolidating common MCP functionality (488 lines)
+- **Massive Line Reduction**: Reduced ~1,932 lines across core backend files through deduplication
+- **Standardized MCP Integration**: Unified MCP client initialization and error handling across all backends
+- **Improved Maintainability**: Extracted shared MCP logic from individual backends into unified base class
 
-#### Configuration Organization
-- **Hierarchical Structure**: New organized structure with `basic/`, `providers/`, `tools/`, `teams/` directories
-- **Comprehensive Documentation**: Added detailed `README.md` for configuration guide and `BACKEND_CONFIGURATION.md`
-- **Provider-Specific Examples**: Organized configs by use case and provider (Claude, OpenAI, Gemini, Azure)
-- **Easier Navigation**: Configs organized by functionality for better user experience
+#### Formatter Module
+- **Dedicated Formatting Logic**: New `massgen/formatter/` module with specialized formatters
+- **Message Formatting**: `message_formatter.py` handles message formatting across backends
+- **Tool Formatting**: `tool_formatter.py` and `mcp_tool_formatter.py` manage tool call formatting
+- **Better Code Organization**: Separated formatting concerns from core backend logic
 
-#### Enhanced File Operations
-- **Large-Scale Operations**: Improved file handling for large-scale operations with better security
-- **Workspace Management**: Clear all temporary workspaces at startup for clean state
-- **Enhanced Security**: Security validation improvements in MCP tools and path handling
+#### Bug Fixes and Improvements
+- **Coordination Table**: Fixed escape key handling on macOS with updated display components
+- **FastMCP Integration**: Added fastmcp to dependencies for workspace copy MCP support
+- **Path Handling**: Improved relative path handling for better portability
 
-### Previous Achievements (v0.0.3-v0.0.21)
+### Recent Achievements (v0.0.23)
 
-✅ **Advanced Filesystem Permissions System (v0.0.21)**: Comprehensive permission management for agent file access with granular validation, user context paths with configurable READ/WRITE permissions, and per-agent permission enforcement
+✅ **Backend Architecture Refactoring (v0.0.23)**: Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends, extracted formatter module for better code organization, and improved maintainability through unified MCP integration
+
+✅ **Workspace Copy Tools via MCP (v0.0.22)**: Seamless file copying capabilities between workspaces, configuration organization with hierarchical structure, and enhanced file operations for large-scale collaboration
 
 ✅ **Grok MCP Integration (v0.0.21)**: Unified backend architecture with full MCP server support, filesystem capabilities through MCP servers, and enhanced configuration files
 
@@ -947,25 +901,25 @@ Version 0.0.22 introduces **Workspace Copy Tools via MCP** and **Configuration O
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.23 Roadmap
+### v0.0.24 Roadmap
 
-Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tools and configuration organization by addressing critical code architecture improvements and system reliability. Key priorities include:
+Version 0.0.24 builds upon the solid backend refactoring of v0.0.23 by focusing on local model support, orchestrator improvements, and enhanced agent communication. Key priorities include:
 
 #### Required Features
-- **Backend Architecture Refactoring**: Eliminate duplicated code in backend files including MCP, filesystem manager, and permission manager
+- **VLLM Local Model Support**: Add support for VLLM backends with local models for better performance and cost efficiency
 - **Agent System Prompt Fixes**: Fix the problem where the final agent expects human feedback through system prompt changes
 
 #### Optional Features
-- **VLLM Local Model Support**: Add support for VLLM backends with local models for better performance and cost efficiency
+- **Refactor Orchestrator**: Streamline orchestrator code for better maintainability and performance
 - **MCP Marketplace Integration**: Integrate MCP Marketplace support for expanded tool ecosystem
 
 Key technical approach:
-- **Code Deduplication**: Consolidate shared functionality across backends for improved maintainability
+- **Local Model Infrastructure**: Enable high-performance local model inference through VLLM with OpenAI-compatible API
 - **Autonomous Agent Behavior**: Ensure final agents complete tasks without expecting human feedback
-- **Local Model Infrastructure**: Enable high-performance local model inference through VLLM
-- **Marketplace Integration**: Expand tool ecosystem through MCP Marketplace discovery and installation
+- **Code Maintainability**: Streamline orchestrator code for improved performance and maintainability
+- **Tool Ecosystem**: Expand capabilities through MCP Marketplace discovery and installation
 
-For detailed milestones and technical specifications, see the [full v0.0.23 roadmap](ROADMAP_v0.0.23.md).
+For detailed milestones and technical specifications, see the [full v0.0.24 roadmap](ROADMAP_v0.0.24.md).
 
 ---
 
