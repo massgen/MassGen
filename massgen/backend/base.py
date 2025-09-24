@@ -324,8 +324,14 @@ class LLMBackend(ABC):
         Returns:
             Tool call ID string
         """
-        # Try multiple possible ID fields
-        return tool_call.get("id") or tool_call.get("call_id") or ""
+        # Check for Response API format
+        if "call_id" in tool_call:
+            return tool_call.get("call_id", "")
+        # Check for Chat Completions format or Claude native format (both use "id")
+        elif "id" in tool_call:
+            return tool_call.get("id", "")
+        else:
+            return ""
 
     def create_tool_result_message(self, tool_call: Dict[str, Any], result_content: str) -> Dict[str, Any]:
         """
