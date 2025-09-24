@@ -175,8 +175,8 @@ class AzureOpenAIBackend(LLMBackend):
                     elif converted.type == "done":
                         log_stream_chunk("backend.azure_openai", "done", None, agent_id)
                     # Yield non-content chunks immediately
-                    yield converted
                     last_yield_type = converted.type
+                    yield converted
 
             # Yield any remaining accumulated content
             if accumulated_content:

@@ -5,9 +5,8 @@ Standalone implementation optimized for the standard Response API format (origin
 """
 from __future__ import annotations
 
-import asyncio
 import os
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from ..logger_config import (
     log_backend_activity,
@@ -15,309 +14,34 @@ from ..logger_config import (
     log_stream_chunk,
     logger,
 )
-from .base import FilesystemSupport, LLMBackend, StreamChunk
 
-# MCP integration imports
-try:
-    from ..mcp_tools import (
-        Function,
-        MCPCircuitBreaker,
-        MCPCircuitBreakerManager,
-        MCPConfigHelper,
-        MCPConfigurationError,
-        MCPConfigValidator,
-        MCPConnectionError,
-        MCPError,
-        MCPErrorHandler,
-        MCPExecutionManager,
-        MCPMessageManager,
-        MCPResourceManager,
-        MCPRetryHandler,
-        MCPServerError,
-        MCPSetupManager,
-        MCPTimeoutError,
-        MCPValidationError,
-        MultiMCPClient,
-    )
-except ImportError as e:  # MCP not installed or import failed
-    logger.warning(f"MCP import failed: {e}")
-    MultiMCPClient = None  # type: ignore[assignment]
-    MCPError = ImportError  # type: ignore[assignment]
-    MCPConnectionError = ImportError  # type: ignore[assignment]
-    MCPConfigValidator = None  # type: ignore[assignment]
-    MCPCircuitBreaker = None  # type: ignore[assignment]
-    MCPConfigurationError = ImportError  # type: ignore[assignment]
-    MCPValidationError = ImportError  # type: ignore[assignment]
-    MCPTimeoutError = ImportError  # type: ignore[assignment]
-    MCPServerError = ImportError  # type: ignore[assignment]
-    Function = None  # type: ignore[assignment]
-    MCPErrorHandler = None  # type: ignore[assignment]
-    MCPSetupManager = None  # type: ignore[assignment]
-    MCPResourceManager = None  # type: ignore[assignment]
-    MCPExecutionManager = None  # type: ignore[assignment]
-    MCPRetryHandler = None  # type: ignore[assignment]
-    MCPMessageManager = None  # type: ignore[assignment]
-    MCPConfigHelper = None  # type: ignore[assignment]
-    MCPCircuitBreakerManager = None  # type: ignore[assignment]
+# MCP integration imports - now inherited from MCPBackend
+from ..mcp_tools import (
+    MCPCircuitBreakerManager,
+    MCPConnectionError,
+    MCPError,
+    MCPServerError,
+    MCPSetupManager,
+    MCPTimeoutError,
+)
+from .base import FilesystemSupport, StreamChunk
+from .base_with_mcp import MCPBackend
 
 
-class ResponseBackend(LLMBackend):
+class ResponseBackend(MCPBackend):
     """Backend using the standard Response API format."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
 
-        # MCP integration (filesystem MCP server may have been injected by base class)
-        self.mcp_servers = self.config.get("mcp_servers", [])
-        self.allowed_tools = kwargs.pop("allowed_tools", None)
-        self.exclude_tools = kwargs.pop("exclude_tools", None)
-        self._mcp_client: Optional[MultiMCPClient] = None
-        self._mcp_initialized = False
-
-        # MCP tool execution monitoring
-        self._mcp_tool_calls_count = 0
-        self._mcp_tool_failures = 0
-
-        # Circuit breaker for MCP tools (stdio + streamable-http) with explicit configuration
-        self._mcp_tools_circuit_breaker = None  # For stdio + streamable-http
-        self._circuit_breakers_enabled = MCPCircuitBreaker is not None
-
-        # Initialize circuit breaker if available
-        if self._circuit_breakers_enabled:
-            # Use shared utility to build circuit breaker configuration
-            mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools")
-
-            if mcp_tools_config:
-                self._mcp_tools_circuit_breaker = MCPCircuitBreaker(mcp_tools_config)
-                logger.info("Circuit breaker initialized for MCP tools")
-            else:
-                logger.warning("MCP tools circuit breaker config not available, disabling circuit breaker functionality")
-                self._circuit_breakers_enabled = False
-        else:
-            logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
-
-        # Transport Types:
-        # - "stdio" & "streamable-http": Use our mcp_tools folder (MultiMCPClient)
-
-        # Function registry for mcp_tools-based servers (stdio + streamable-http)
-        self.functions: Dict[str, Function] = {}
-
-        # Thread safety for counters
-        self._stats_lock = asyncio.Lock()
-
-        # Limit for message history growth within MCP execution loop
-        self._max_mcp_message_history = kwargs.pop("max_mcp_message_history", 200)
-
-        # Initialize backend name and agent ID for MCP operations
-        self.backend_name = self.get_provider_name()
-        self.agent_id = kwargs.get("agent_id", None)
-
-    async def _handle_mcp_error_and_fallback(
-        self,
-        error: Exception,
-        api_params: Dict[str, Any],
-        provider_tools: List[Dict[str, Any]],
-        stream_func: Callable[[Dict[str, Any]], AsyncGenerator[StreamChunk, None]],
-    ) -> AsyncGenerator[StreamChunk, None]:
-        """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
-
-        async with self._stats_lock:
-            self._mcp_tool_failures += 1
-            call_index_snapshot = self._mcp_tool_calls_count
-
-        log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
-
-        logger.warning(
-            f"MCP tool call #{call_index_snapshot} failed - {log_type}: {error}",
-        )
-
-        # Yield user-friendly error message
-        yield StreamChunk(
-            type="content",
-            content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
-        )
-
-        # Build non-MCP configuration and stream fallback
-        fallback_params = dict(api_params)
-
-        # Remove any MCP tools from the tools list
-        if "tools" in fallback_params:
-            non_mcp_tools = [tool for tool in fallback_params["tools"] if tool.get("type") != "mcp"]
-            fallback_params["tools"] = non_mcp_tools
-
-        # Add back provider tools if they were present
-        if provider_tools:
-            if "tools" not in fallback_params:
-                fallback_params["tools"] = []
-            fallback_params["tools"].extend(provider_tools)
-
-        async for chunk in stream_func(fallback_params):
-            yield chunk
-
-    async def _execute_mcp_function_with_retry(
-        self,
-        function_name: str,
-        arguments_json: str,
-        max_retries: int = 3,
-    ) -> List[str, Any]:
-        """Execute MCP function with exponential backoff retry logic."""
-        import json
-
-        # Convert JSON string to dict for shared utility
-        try:
-            args = json.loads(arguments_json)
-        except (json.JSONDecodeError, ValueError) as e:
-            return f"Error: Invalid JSON arguments: {e}"
-
-        # Stats callback for tracking
-        async def stats_callback(action: str) -> int:
-            async with self._stats_lock:
-                if action == "increment_calls":
-                    self._mcp_tool_calls_count += 1
-                    return self._mcp_tool_calls_count
-                elif action == "increment_failures":
-                    self._mcp_tool_failures += 1
-                    return self._mcp_tool_failures
-            return 0
-
-        # Circuit breaker callback
-        async def circuit_breaker_callback(event: str, error_msg: str) -> None:
-            # For individual function calls, we don't have server configurations readily available
-            # The circuit breaker manager should handle this gracefully with empty server list
-            if event == "failure":
-                await MCPCircuitBreakerManager.record_event([], self._mcp_tools_circuit_breaker, "failure", error_msg, backend_name=self.backend_name, agent_id=self.agent_id)
-            else:
-                await MCPCircuitBreakerManager.record_event([], self._mcp_tools_circuit_breaker, "success", backend_name=self.backend_name, agent_id=self.agent_id)
-
-        result = await MCPExecutionManager.execute_function_with_retry(
-            function_name=function_name,
-            args=args,
-            functions=self.functions,
-            max_retries=max_retries,
-            stats_callback=stats_callback,
-            circuit_breaker_callback=circuit_breaker_callback,
-            logger_instance=logger,
-        )
-
-        # Convert result to string for response.py compatibility
-        if isinstance(result, dict) and "error" in result:
-            error_msg = f"Error: {result['error']}"
-            return error_msg, result
-        return str(result), result
-
-    async def _setup_mcp_tools(self) -> None:
-        """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
-        if not self.mcp_servers or self._mcp_initialized:
-            return
-
-        try:
-            # Normalize and separate MCP servers by transport type using mcp_tools utilities
-            normalized_servers = MCPSetupManager.normalize_mcp_servers(
-                self.mcp_servers,
-                backend_name=self.backend_name,
-                agent_id=self.agent_id,
-            )
-            mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(
-                normalized_servers,
-                backend_name=self.backend_name,
-                agent_id=self.agent_id,
-            )
-
-            if not mcp_tools_servers:
-                logger.info("No stdio/streamable-http servers configured")
-                return
-
-            # Apply circuit breaker filtering before connection attempts
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
-                    mcp_tools_servers,
-                    self._mcp_tools_circuit_breaker,
-                    backend_name=self.backend_name,
-                    agent_id=self.agent_id,
-                )
-                if not filtered_servers:
-                    logger.warning("All MCP servers blocked by circuit breaker during setup")
-                    return
-                if len(filtered_servers) < len(mcp_tools_servers):
-                    logger.info(f"Circuit breaker filtered {len(mcp_tools_servers) - len(filtered_servers)} servers during setup")
-                servers_to_use = filtered_servers
-            else:
-                servers_to_use = mcp_tools_servers
-
-            # Setup MCP client using consolidated utilities
-            self._mcp_client = await MCPResourceManager.setup_mcp_client(
-                servers=servers_to_use,
-                allowed_tools=self.allowed_tools,
-                exclude_tools=self.exclude_tools,
-                circuit_breaker=self._mcp_tools_circuit_breaker,
-                timeout_seconds=30,
-                backend_name=self.backend_name,
-                agent_id=self.agent_id,
-            )
-
-            # Guard after client setup
-            if not self._mcp_client:
-                self._mcp_initialized = False
-                logger.warning("MCP client setup failed, falling back to no-MCP streaming")
-                return  # fall back to HTTP/no-MCP streaming paths
-
-            # Convert tools to functions using consolidated utility
-            self.functions.update(
-                MCPResourceManager.convert_tools_to_functions(
-                    self._mcp_client,
-                    backend_name=self.backend_name,
-                    agent_id=self.agent_id,
-                    hook_manager=getattr(self, "function_hook_manager", None),
-                ),
-            )
-            self._mcp_initialized = True
-            logger.info(
-                f"Successfully initialized MCP mcp_tools sessions with {len(self.functions)} tools converted to functions",
-            )
-
-            # Record success for circuit breaker
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client:
-                try:
-                    connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, "get_server_names") else []
-                    if connected_server_names:
-                        connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
-                        if connected_server_configs:
-                            await MCPCircuitBreakerManager.record_success(
-                                connected_server_configs,
-                                self._mcp_tools_circuit_breaker,
-                                backend_name=self.backend_name,
-                                agent_id=self.agent_id,
-                            )
-                except Exception as cb_error:
-                    logger.warning(f"Failed to record circuit breaker success: {cb_error}")
-
-        except Exception as e:
-            # Record failure for circuit breaker
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                try:
-                    await MCPCircuitBreakerManager.record_failure(
-                        servers_to_use if "servers_to_use" in locals() else mcp_tools_servers if "mcp_tools_servers" in locals() else [],
-                        self._mcp_tools_circuit_breaker,
-                        str(e),
-                        backend_name=self.backend_name,
-                        agent_id=self.agent_id,
-                    )
-                except Exception as cb_error:
-                    logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
-
-            logger.warning(f"Failed to setup MCP sessions: {e}")
-            self._mcp_client = None
-            self._mcp_initialized = False
-            self.functions = {}
-
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
         """Convert MCP tools (stdio + streamable-http) to OpenAI function declarations."""
-        if not self.functions:
+        if not self._mcp_functions:
             return []
 
         converted_tools = []
-        for function in self.functions.values():
+        for function in self._mcp_functions.values():
             converted_tools.append(function.to_openai_format())
 
         logger.debug(
@@ -360,7 +84,7 @@ class ResponseBackend(LLMBackend):
             api_params["tools"] = converted_tools
 
         # Add MCP tools (stdio + streamable-http) as functions
-        if self.functions:
+        if self._mcp_functions:
             mcp_tools = self._convert_mcp_tools_to_openai_format()
             if mcp_tools:
                 if "tools" not in api_params:
@@ -386,37 +110,6 @@ class ResponseBackend(LLMBackend):
             api_params["tools"].extend(provider_tools)
 
         return api_params
-
-    def convert_tools_to_response_api_format(
-        self,
-        tools: List[Dict[str, Any]],
-    ) -> List[Dict[str, Any]]:
-        """Convert tools from Chat Completions format to Response API format if needed.
-
-        Chat Completions format: {"type": "function", "function": {"name": ..., "description": ..., "parameters": ...}}
-        Response API format: {"type": "function", "name": ..., "description": ..., "parameters": ...}
-        """
-        if not tools:
-            return tools
-
-        converted_tools = []
-        for tool in tools:
-            if tool.get("type") == "function" and "function" in tool:
-                # Chat Completions format - convert to Response API format
-                func = tool["function"]
-                converted_tools.append(
-                    {
-                        "type": "function",
-                        "name": func["name"],
-                        "description": func["description"],
-                        "parameters": func.get("parameters", {}),
-                    },
-                )
-            else:
-                # Already in Response API format or non-function tool
-                converted_tools.append(tool)
-
-        return converted_tools
 
     def _process_stream_chunk(self, chunk, agent_id) -> StreamChunk:
         """Process individual stream chunks and convert to StreamChunk format."""
@@ -686,7 +379,7 @@ class ResponseBackend(LLMBackend):
         # Execute any captured function calls
         if captured_function_calls and response_completed:
             # Check if any of the function calls are NOT MCP functions
-            non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self.functions]
+            non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self._mcp_functions]
 
             if non_mcp_functions:
                 logger.info(f"Non-MCP function calls detected: {[call['name'] for call in non_mcp_functions]}. Ending MCP processing.")
@@ -694,25 +387,16 @@ class ResponseBackend(LLMBackend):
                 return
 
             # Check circuit breaker status before executing MCP functions
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                # Get current mcp_tools servers using utility functions
-                normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
-                mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
-
-                filtered_servers = MCPCircuitBreakerManager.apply_circuit_breaker_filtering(
-                    mcp_tools_servers,
-                    self._mcp_tools_circuit_breaker,
+            if not await super()._check_circuit_breaker_before_execution():
+                logger.warning("All MCP servers blocked by circuit breaker")
+                yield StreamChunk(
+                    type="mcp_status",
+                    status="mcp_blocked",
+                    content="⚠️ [MCP] All servers blocked by circuit breaker",
+                    source="circuit_breaker",
                 )
-                if not filtered_servers:
-                    logger.warning("All MCP servers blocked by circuit breaker")
-                    yield StreamChunk(
-                        type="mcp_status",
-                        status="mcp_blocked",
-                        content="⚠️ [MCP] All servers blocked by circuit breaker",
-                        source="circuit_breaker",
-                    )
-                    yield StreamChunk(type="done")
-                    return
+                yield StreamChunk(type="done")
+                return
 
             # Execute only MCP function calls
             mcp_functions_executed = False
@@ -722,7 +406,7 @@ class ResponseBackend(LLMBackend):
 
             for call in captured_function_calls:
                 function_name = call["name"]
-                if function_name in self.functions:
+                if function_name in self._mcp_functions:
                     # Yield MCP tool call status
                     yield StreamChunk(
                         type="mcp_status",
@@ -733,7 +417,7 @@ class ResponseBackend(LLMBackend):
 
                     try:
                         # Execute MCP function with retry and exponential backoff
-                        result, result_obj = await self._execute_mcp_function_with_retry(
+                        result, result_obj = await super()._execute_mcp_function_with_retry(
                             function_name,
                             call["arguments"],
                         )
@@ -854,7 +538,7 @@ class ResponseBackend(LLMBackend):
 
             # Trim history after function executions to bound memory usage
             if mcp_functions_executed:
-                updated_messages = MCPMessageManager.trim_message_history(updated_messages, self._max_mcp_message_history)
+                updated_messages = super()._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
                 async for chunk in self._stream_mcp_recursive(updated_messages, tools, client, **kwargs):
@@ -902,43 +586,17 @@ class ResponseBackend(LLMBackend):
 
                 try:
                     # Determine if MCP processing is needed
-                    use_mcp = bool(self.functions)
+                    use_mcp = bool(self._mcp_functions)
 
-                    # If MCP is configured but unavailable, inform the user and fall back
-                    if self.mcp_servers and not use_mcp:
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_unavailable",
-                            content="⚠️ [MCP] Setup failed or no tools available; continuing without MCP",
-                            source="mcp_setup",
-                        )
-
-                    # Yield MCP connection status if MCP tools are available
-                    if use_mcp and self.mcp_servers:
-                        # Count only stdio/streamable-http servers for display
-                        normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
-                        mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
-                        if mcp_tools_servers:
-                            yield StreamChunk(
-                                type="mcp_status",
-                                status="mcp_connected",
-                                content=f"✅ [MCP] Connected to {len(mcp_tools_servers)} servers",
-                                source="mcp_setup",
-                            )
+                    # Use parent class method to yield MCP status chunks
+                    async for status_chunk in super().yield_mcp_status_chunks(use_mcp):
+                        yield status_chunk
 
                     if use_mcp:
                         # MCP MODE: Recursive function call detection and execution
                         logger.info("Using recursive MCP execution mode")
 
-                        current_messages = MCPMessageManager.trim_message_history(messages.copy(), 200)
-
-                        # Yield MCP session initiation status
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_tools_initiated",
-                            content=f"🔧 [MCP] {len(self.functions)} tools available",
-                            source="mcp_session",
-                        )
+                        current_messages = super()._trim_message_history(messages.copy())
 
                         # Start recursive MCP streaming
                         async for chunk in self._stream_mcp_recursive(current_messages, tools, client, **kwargs):
@@ -1003,7 +661,7 @@ class ResponseBackend(LLMBackend):
                             async for chunk in stream:
                                 yield self._process_stream_chunk(chunk, agent_id)
 
-                        async for chunk in self._handle_mcp_error_and_fallback(
+                        async for chunk in super()._handle_mcp_error_and_fallback(
                             e,
                             api_params,
                             provider_tools,
@@ -1049,7 +707,7 @@ class ResponseBackend(LLMBackend):
                         yield self._process_stream_chunk(chunk, agent_id)
 
                 if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
-                    async for chunk in self._handle_mcp_error_and_fallback(
+                    async for chunk in super()._handle_mcp_error_and_fallback(
                         e,
                         api_params,
                         provider_tools,
@@ -1092,34 +750,6 @@ class ResponseBackend(LLMBackend):
         """Get list of builtin tools supported by OpenAI."""
         return ["web_search", "code_interpreter"]
 
-    def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool name from OpenAI format (handles both Chat Completions and Responses API)."""
-        # Check if it's Chat Completions format
-        if "function" in tool_call:
-            return tool_call.get("function", {}).get("name", "unknown")
-        # Otherwise assume Responses API format
-        return tool_call.get("name", "unknown")
-
-    def extract_tool_arguments(self, tool_call: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract tool arguments from OpenAI format (handles both Chat Completions and Responses API)."""
-        # Check if it's Chat Completions format
-        if "function" in tool_call:
-            return tool_call.get("function", {}).get("arguments", {})
-        # Otherwise assume Responses API format
-        arguments = tool_call.get("arguments", {})
-        if isinstance(arguments, str):
-            try:
-                import json
-
-                return json.loads(arguments)
-            except (json.JSONDecodeError, TypeError, ValueError):
-                return {}
-        return arguments
-
-    def extract_tool_call_id(self, tool_call: Dict[str, Any]) -> str:
-        """Extract tool call ID from OpenAI format (handles both Chat Completions and Responses API)."""
-        return tool_call.get("call_id") or tool_call.get("id") or ""
-
     def create_tool_result_message(
         self,
         tool_call: Dict[str, Any],
@@ -1147,76 +777,6 @@ class ResponseBackend(LLMBackend):
                 return obj.dict()
             else:
                 return dict(obj)
-        except (TypeError, ValueError, AttributeError):
+        except Exception:
             # Final fallback: extract key attributes manually
             return {key: getattr(obj, key, None) for key in dir(obj) if not key.startswith("_") and not callable(getattr(obj, key, None))}
-
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text (rough approximation)."""
-        return len(text) // 4
-
-    def calculate_cost(
-        self,
-        input_tokens: int,
-        output_tokens: int,
-        model: str,
-    ) -> float:
-        """Calculate cost for OpenAI token usage (2024-2025 pricing)."""
-        model_lower = model.lower()
-
-        if "gpt-4" in model_lower:
-            if "4o-mini" in model_lower:
-                input_cost = input_tokens * 0.00015 / 1000
-                output_cost = output_tokens * 0.0006 / 1000
-            elif "4o" in model_lower:
-                input_cost = input_tokens * 0.005 / 1000
-                output_cost = output_tokens * 0.020 / 1000
-            else:
-                input_cost = input_tokens * 0.03 / 1000
-                output_cost = output_tokens * 0.06 / 1000
-        elif "gpt-3.5" in model_lower:
-            input_cost = input_tokens * 0.0005 / 1000
-            output_cost = output_tokens * 0.0015 / 1000
-        else:
-            input_cost = input_tokens * 0.0005 / 1000
-            output_cost = output_tokens * 0.0015 / 1000
-
-        return input_cost + output_cost
-
-    async def cleanup_mcp(self) -> None:
-        """Cleanup MCP connections."""
-        if self._mcp_client:
-            await MCPResourceManager.cleanup_mcp_client(
-                self._mcp_client,
-                backend_name=self.backend_name,
-                agent_id=self.agent_id,
-            )
-            self._mcp_client = None
-            self._mcp_initialized = False
-            self.functions.clear()
-
-    async def __aenter__(self) -> "ResponseBackend":
-        """Async context manager entry."""
-        # Initialize MCP tools if configured
-        await MCPResourceManager.setup_mcp_context_manager(
-            self,
-            backend_name=self.backend_name,
-            agent_id=self.agent_id,
-        )
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[type],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[object],
-    ) -> None:
-        """Async context manager exit with automatic resource cleanup."""
-        await MCPResourceManager.cleanup_mcp_context_manager(
-            self,
-            logger_instance=logger,
-            backend_name=self.backend_name,
-            agent_id=self.agent_id,
-        )
-        # Don't suppress the original exception if one occurred
-        return False

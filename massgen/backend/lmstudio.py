@@ -54,125 +54,112 @@ class LMStudioBackend(ChatCompletionsBackend):
 
     def start_lmstudio_server(self, **kwargs):
         """Start LM Studio server after checking CLI and model availability."""
-        # Check if lms CLI is installed
-        lms_path = shutil.which("lms")
-        if not lms_path:
-            print("LM Studio CLI not found. Installing...")
-            try:
-                # Install LM Studio CLI based on platform
-                system = platform.system().lower()
-                if system == "darwin":  # macOS
-                    subprocess.run(["brew", "install", "lmstudio"], check=True)
-                elif system == "linux":
-                    # Download and install for Linux
-                    subprocess.run(
-                        ["curl", "-sSL", "https://lmstudio.ai/install.sh", "|", "sh"],
-                        shell=True,
-                        check=True,
-                    )
-                elif system == "windows":
-                    # Windows installation via PowerShell
-                    subprocess.run(
-                        [
-                            "powershell",
-                            "-Command",
-                            "iwr -useb https://lmstudio.ai/install.ps1 | iex",
-                        ],
-                        check=True,
-                    )
-                else:
-                    raise Exception(f"Unsupported platform: {system}")
-            except subprocess.CalledProcessError as e:
-                raise Exception(f"Failed to install LM Studio CLI: {e}")
+        self._ensure_cli_installed()
+        self._start_server()
+        model_name = kwargs.get("model", "")
+        if model_name:
+            self._handle_model(model_name)
 
-        # Start the server (in background/detached mode)
+    def _ensure_cli_installed(self):
+        """Ensure LM Studio CLI is installed."""
+        if shutil.which("lms"):
+            return
+        print("LM Studio CLI not found. Installing...")
         try:
-            # Start LM Studio server in background
-            # Use Popen instead of run to avoid blocking
-            process = subprocess.Popen(
+            system = platform.system().lower()
+            install_commands = {
+                "darwin": (["brew", "install", "lmstudio"], False),
+                "linux": (["curl", "-sSL", "https://lmstudio.ai/install.sh", "|", "sh"], True),
+                "windows": (["powershell", "-Command", "iwr -useb https://lmstudio.ai/install.ps1 | iex"], False),
+            }
+            if system not in install_commands:
+                raise RuntimeError(f"Unsupported platform: {system}")
+            cmd, use_shell = install_commands[system]
+            subprocess.run(cmd, shell=use_shell, check=True)
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Failed to install LM Studio CLI: {e}") from e
+
+    def _start_server(self):
+        """Start the LM Studio server in background mode."""
+        try:
+            with subprocess.Popen(
                 ["lms", "server", "start"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-            )
-
-            # Wait a bit for server to start
-            time.sleep(3)
-
-            # Check if process started successfully
-            if process.poll() is None:
-                print("LM Studio server started successfully (running in background).")
-            else:
-                stdout, stderr = process.communicate(timeout=1)
-                if stdout:
-                    print(f"Server output: {stdout}")
-                if stderr:
-                    stderr_lower = stderr.lower()
-                    if "success" in stderr_lower or "running on port" in stderr_lower:
-                        print(f"Server info: {stderr.strip()}")
-                    elif "warning" in stderr_lower or "warn" in stderr_lower:
-                        print(f"Server warning: {stderr.strip()}")
-                    else:
-                        print(f"Server error: {stderr.strip()}")
-                print("LM Studio server started successfully.")
-        except Exception as e:
-            raise Exception(f"Failed to start LM Studio server: {e}")
-
-        # Check if model exists locally
-        model_name = kwargs.get("model", "")
-        if model_name:
-            try:
-                # List available models using lms list
-                downloaded = lms.list_downloaded_models()
-
-                # Check if model is in the list
-                model_keys = [m.model_key for m in downloaded]
-                if model_name not in model_keys:
-                    print(f"Model '{model_name}' not found locally. Downloading...")
-                    # Download the model using lms get
-                    subprocess.run(["lms", "get", model_name], check=True)
-                    print(f"Model '{model_name}' downloaded successfully.")
-
-            except Exception as e:
-                print(f"Warning: Could not check/download model: {e}")
-
-            try:
-                # Check if this instance already attempted to load this model
-                if model_name in self._models_attempted:
-                    print(f"Model '{model_name}' load already attempted by this instance.")
-                    return
-
-                # Add brief wait to allow model to finish loading after download
-                time.sleep(5)
-
-                # List available models using lms list
-                loaded = lms.list_loaded_models()
-
-                # Check if model is in the list
-                # LLM objects have 'identifier' attribute, not 'model_key'
-                loaded_identifiers = [m.identifier for m in loaded]
-                if model_name not in loaded_identifiers:
-                    print(f"Model '{model_name}' not loaded. Loading...")
-                    # Mark model as attempted before loading to prevent race conditions
-                    self._models_attempted.add(model_name)
-                    # Load the model using lms load
-                    subprocess.run(["lms", "load", model_name], check=True)
-                    print(f"Model '{model_name}' loaded successfully.")
+            ) as process:
+                time.sleep(3)
+                if process.poll() is None:
+                    print("LM Studio server started successfully (running in background).")
                 else:
-                    print(f"Model '{model_name}' is already loaded.")
-                    # Mark as attempted since it's already available
-                    self._models_attempted.add(model_name)
+                    self._handle_server_output(process)
+        except Exception as e:
+            raise RuntimeError(f"Failed to start LM Studio server: {e}") from e
 
-            except subprocess.CalledProcessError as e:
-                print(f"Warning: Failed to load model '{model_name}': {e}")
-            except Exception as e:
-                print(f"Warning: Could not check loaded models: {e}")
+    def _handle_server_output(self, process):
+        """Handle server process output."""
+        stdout, stderr = process.communicate(timeout=1)
+        if stdout:
+            print(f"Server output: {stdout}")
+        if stderr:
+            self._process_stderr(stderr)
+        print("LM Studio server started successfully.")
+
+    def _process_stderr(self, stderr):
+        """Process server stderr output."""
+        stderr_lower = stderr.lower()
+        if "success" in stderr_lower or "running on port" in stderr_lower:
+            print(f"Server info: {stderr.strip()}")
+        elif "warning" in stderr_lower or "warn" in stderr_lower:
+            print(f"Server warning: {stderr.strip()}")
+        else:
+            print(f"Server error: {stderr.strip()}")
+
+    def _handle_model(self, model_name):
+        """Handle model downloading and loading."""
+        self._ensure_model_downloaded(model_name)
+        self._load_model_if_needed(model_name)
+
+    def _ensure_model_downloaded(self, model_name):
+        """Ensure model is downloaded locally."""
+        try:
+            downloaded = lms.list_downloaded_models()
+            model_keys = [m.model_key for m in downloaded]
+            if model_name not in model_keys:
+                print(f"Model '{model_name}' not found locally. Downloading...")
+                subprocess.run(["lms", "get", model_name], check=True)
+                print(f"Model '{model_name}' downloaded successfully.")
+        except Exception as e:
+            print(f"Warning: Could not check/download model: {e}")
+
+    def _load_model_if_needed(self, model_name):
+        """Load model if not already loaded."""
+        try:
+            if model_name in self._models_attempted:
+                print(f"Model '{model_name}' load already attempted by this instance.")
+                return
+
+            time.sleep(5)
+            loaded = lms.list_loaded_models()
+            loaded_identifiers = [m.identifier for m in loaded]
+            if model_name not in loaded_identifiers:
+                print(f"Model '{model_name}' not loaded. Loading...")
+                self._models_attempted.add(model_name)
+                subprocess.run(["lms", "load", model_name], check=True)
+                print(f"Model '{model_name}' loaded successfully.")
+            else:
+                print(f"Model '{model_name}' is already loaded.")
+                self._models_attempted.add(model_name)
+        except subprocess.CalledProcessError as e:
+            print(f"Warning: Failed to load model '{model_name}': {e}")
+        except Exception as e:
+            print(f"Warning: Could not check loaded models: {e}")
 
     def end_lmstudio_server(self):
         """Stop the LM Studio server after receiving all chunks."""
         try:
             # Use lms server end command as specified in requirement
-            result = subprocess.run(["lms", "server", "end"], capture_output=True, text=True)
+            result = subprocess.run(["lms", "server", "end"], capture_output=True, text=True, check=False)
 
             if result.returncode == 0:
                 print("LM Studio server ended successfully.")

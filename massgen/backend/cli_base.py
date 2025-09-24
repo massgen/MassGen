@@ -78,10 +78,10 @@ class CLIBackend(LLMBackend):
 
             return stdout.decode("utf-8")
 
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as exc:
             process.kill()
             await process.wait()
-            raise asyncio.TimeoutError(f"CLI command timed out after {self.timeout} seconds")
+            raise asyncio.TimeoutError(f"CLI command timed out after {self.timeout} seconds") from exc
 
     def _create_temp_file(self, content: str, suffix: str = ".txt") -> Path:
         """Create a temporary file with content.
@@ -93,10 +93,9 @@ class CLIBackend(LLMBackend):
         Returns:
             Path to temporary file
         """
-        temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False)
-        temp_file.write(content)
-        temp_file.close()
-        return Path(temp_file.name)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=suffix, delete=False) as temp_file:
+            temp_file.write(content)
+            return Path(temp_file.name)
 
     def _format_messages_for_cli(self, messages: List[Dict[str, Any]]) -> str:
         """Format messages for CLI input.

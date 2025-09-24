@@ -375,7 +375,6 @@ class LLMBackend(ABC):
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history but keeps session.
         """
-        pass  # Default implementation for stateless backends
 
     def reset_state(self) -> None:
         """
@@ -384,4 +383,3 @@ class LLMBackend(ABC):
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history and session state.
         """
-        pass  # Default implementation for stateless backends
