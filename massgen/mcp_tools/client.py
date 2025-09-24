@@ -1,32 +1,35 @@
+# -*- coding: utf-8 -*-
 """
-MCP client implementation for connecting to MCP servers. This module provides enhanced MCP client functionality to connect with MCP servers and integrate external tools and resources into the MassGen workflow.
+MCP client implementation for connecting to MCP servers. This module provides enhanced MCP client
+functionality to connect with MCP servers and integrate external tools and resources into the MassGen workflow.
 """
 import asyncio
-from ..logger_config import logger
 from datetime import timedelta
 from enum import Enum
 from types import TracebackType
-from typing import Dict, List, Any, Optional, Union, Callable, Awaitable
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 
-
-from .exceptions import (
-    MCPError, MCPConnectionError, MCPServerError,
-    MCPValidationError, MCPTimeoutError
-)
-from .security import (
-    sanitize_tool_name, prepare_command,
-    validate_tool_arguments
-)
-from .config_validator import MCPConfigValidator
-from .circuit_breaker import MCPCircuitBreaker
 from mcp import ClientSession, StdioServerParameters
+from mcp import types as mcp_types
 from mcp.client.stdio import get_default_environment, stdio_client
 from mcp.client.streamable_http import streamablehttp_client
-from mcp import types as mcp_types
+
+from ..logger_config import logger
+from .circuit_breaker import MCPCircuitBreaker
+from .config_validator import MCPConfigValidator
+from .exceptions import (
+    MCPConnectionError,
+    MCPError,
+    MCPServerError,
+    MCPTimeoutError,
+    MCPValidationError,
+)
+from .security import prepare_command, sanitize_tool_name, validate_tool_arguments
 
 
 class ConnectionState(Enum):
     """Connection state for MCP clients."""
+
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"
@@ -34,7 +37,11 @@ class ConnectionState(Enum):
     FAILED = "failed"
 
 
+# Hook types reference: https://docs.anthropic.com/en/docs/claude-code/sdk/sdk-python#hook-types
+class HookType(Enum):
+    """Available hook types for MCP tool execution."""
 
+    PRE_TOOL_USE = "PreToolUse"
 
 
 def _ensure_timedelta(value: Union[int, float, timedelta], default_seconds: float) -> timedelta:
@@ -49,7 +56,7 @@ def _ensure_timedelta(value: Union[int, float, timedelta], default_seconds: floa
             raise MCPValidationError(
                 f"Timeout must be positive, got {value.total_seconds()} seconds",
                 field="timeout",
-                value=value.total_seconds()
+                value=value.total_seconds(),
             )
         return value
     elif isinstance(value, (int, float)):
@@ -57,7 +64,7 @@ def _ensure_timedelta(value: Union[int, float, timedelta], default_seconds: floa
             raise MCPValidationError(
                 f"Timeout must be positive, got {value} seconds",
                 field="timeout",
-                value=value
+                value=value,
             )
         return timedelta(seconds=value)
     else:
@@ -90,6 +97,7 @@ class MCPClient:
         allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
         status_callback: Optional[Callable[[str, Dict[str, Any]], Awaitable[None]]] = None,
+        hooks: Optional[Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]] = None,
     ):
         """
         Initialize MCP client.
@@ -106,6 +114,7 @@ class MCPClient:
             allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
             status_callback: Optional async callback for status updates
+            hooks: Optional dict mapping hook types to lists of hook functions
         """
         # Validate and sanitize configuration
         self.config = MCPConfigValidator.validate_server_config(server_config)
@@ -115,6 +124,7 @@ class MCPClient:
         self.exclude_tools = exclude_tools
         self.use_official_library = True
         self.status_callback = status_callback
+        self.hooks = hooks or {}
         self.tools: Dict[str, mcp_types.Tool] = {}
         self.resources: Dict[str, mcp_types.Resource] = {}
         self.prompts: Dict[str, mcp_types.Prompt] = {}
@@ -143,7 +153,6 @@ class MCPClient:
         Ensures transport contexts are entered and exited within the same task to satisfy anyio CancelScope requirements.
         """
         async with self._connection_lock:
-            
             current_state = self._connection_state
 
             if current_state in (ConnectionState.CONNECTED, ConnectionState.CONNECTING):
@@ -152,7 +161,7 @@ class MCPClient:
 
             if current_state == ConnectionState.DISCONNECTING:
                 # Wait for disconnection to complete with timeout
-                for _ in range(50):  
+                for _ in range(50):
                     await asyncio.sleep(0.1)
                     if self._connection_state == ConnectionState.DISCONNECTED:
                         break
@@ -160,24 +169,27 @@ class MCPClient:
                     raise MCPConnectionError(
                         f"Timeout waiting for disconnection to complete: {self.name}",
                         server_name=self.name,
-                        timeout_seconds=5.0
+                        timeout_seconds=5.0,
                     )
 
             if self._connection_state != ConnectionState.DISCONNECTED:
                 raise MCPConnectionError(
                     f"Invalid state for connection: {self._connection_state}",
-                    server_name=self.name
+                    server_name=self.name,
                 )
 
             logger.info(f"Connecting to MCP server: {self.name}")
             self._connection_state = ConnectionState.CONNECTING
-            
+
             # Send connecting status if callback is available
             if self.status_callback:
-                await self.status_callback("connecting", {
-                    "server": self.name,
-                    "message": f"Connecting to MCP server: {self.name}"
-                })
+                await self.status_callback(
+                    "connecting",
+                    {
+                        "server": self.name,
+                        "message": f"Connecting to MCP server: {self.name}",
+                    },
+                )
 
             # Reset events for a new connection attempt
             self._connected_event = asyncio.Event()
@@ -194,7 +206,7 @@ class MCPClient:
                 raise MCPConnectionError(
                     f"Connection timeout after 30 seconds for MCP server {self.name}",
                     server_name=self.name,
-                    timeout_seconds=30.0
+                    timeout_seconds=30.0,
                 )
 
             if not self.session or not self._initialized or self._connection_state != ConnectionState.CONNECTED:
@@ -209,10 +221,8 @@ class MCPClient:
                 await self.disconnect()
                 raise MCPConnectionError(
                     f"Failed to connect to MCP server {self.name}: {err or 'unknown error'}",
-                    server_name=self.name
+                    server_name=self.name,
                 )
-
-
 
     def _create_transport_context(self):
         """Create the appropriate transport context manager based on config."""
@@ -245,23 +255,27 @@ class MCPClient:
                 env = {**get_default_environment(), **env}
             else:
                 env = get_default_environment()
-            
+
             # Perform environment variable substitution
-            import re
             import os
+            import re
+
             for key, value in env.items():
-                if isinstance(value, str) and '${' in value:
+                if isinstance(value, str) and "${" in value:
                     # Simple environment variable substitution for patterns like ${VAR_NAME}
                     def replace_env_var(match):
                         var_name = match.group(1)
-                        return os.environ.get(var_name, match.group(0))  # Return original if not found
-                    
-                    env[key] = re.sub(r'\$\{([A-Z_][A-Z0-9_]*)\}', replace_env_var, value)
+                        value = os.environ.get(var_name)
+                        if value is None or value.strip() == "":
+                            raise ValueError(f"Required environment variable '{var_name}' is not set")
+                        return value
+
+                    env[key] = re.sub(r"\$\{([A-Z_][A-Z0-9_]*)\}", replace_env_var, value)
 
             server_params = StdioServerParameters(
                 command=full_command[0],
                 args=full_command[1:] if len(full_command) > 1 else [],
-                env=env
+                env=env,
             )
             logger.debug(f"Created StdioServerParameters for {self.name}: {server_params.command} {server_params.args}")
             return stdio_client(server_params)
@@ -283,7 +297,7 @@ class MCPClient:
                 url=url,
                 headers=headers,
                 timeout=timeout,
-                sse_read_timeout=http_read_timeout
+                sse_read_timeout=http_read_timeout,
             )
         else:
             raise MCPConnectionError(f"Unsupported transport type: {transport_type}")
@@ -300,10 +314,7 @@ class MCPClient:
                 # Ensure timeout is a timedelta for ClientSession
                 session_timeout_timedelta = _ensure_timedelta(self.timeout_seconds, 30.0)
 
-                async with ClientSession(
-                    read, write,
-                    read_timeout_seconds=session_timeout_timedelta
-                ) as session:
+                async with ClientSession(read, write, read_timeout_seconds=session_timeout_timedelta) as session:
                     # Initialize and expose session
                     self.session = session
                     await self.session.initialize()
@@ -315,31 +326,37 @@ class MCPClient:
 
                     # Add prominent connection success message
                     logger.info(f"✅ MCP server '{self.name}' connected successfully!")
-                    
+
                     # Send connected status if callback is available
                     if self.status_callback:
-                        await self.status_callback("connected", {
-                            "server": self.name,
-                            "message": f"✅ MCP server '{self.name}' connected successfully!",
-                            "tools_count": len(self.tools),
-                            "resources_count": len(self.resources),
-                            "prompts_count": len(self.prompts)
-                        })
-                    
+                        await self.status_callback(
+                            "connected",
+                            {
+                                "server": self.name,
+                                "message": f"✅ MCP server '{self.name}' connected successfully!",
+                                "tools_count": len(self.tools),
+                                "resources_count": len(self.resources),
+                                "prompts_count": len(self.prompts),
+                            },
+                        )
+
                     # Wait until disconnect is requested
                     await self._disconnect_event.wait()
 
         except Exception as e:
             logger.error(f"MCP manager error for {self.name}: {e}", exc_info=True)
-            
+
             # Send error status if callback is available
             if self.status_callback:
-                await self.status_callback("error", {
-                    "server": self.name,
-                    "message": f"Failed to connect to MCP server '{self.name}': {e}",
-                    "error": str(e)
-                })
-            
+                await self.status_callback(
+                    "error",
+                    {
+                        "server": self.name,
+                        "message": f"Failed to connect to MCP server '{self.name}': {e}",
+                        "error": str(e),
+                    },
+                )
+
             if not self._connected_event.is_set():
                 self._connected_event.set()
         finally:
@@ -404,7 +421,6 @@ class MCPClient:
                 self.prompts.clear()
                 self.allowed_tools = None
 
-                
                 self._cleanup_done = True
                 logger.debug(f"Cleanup completed for MCPClient {self.name}")
 
@@ -424,15 +440,15 @@ class MCPClient:
                 resources_count = len(self.resources)
                 prompts_count = len(self.prompts)
 
-                logger.info(
-                    f"Discovered capabilities for {self.name}: "
-                    f"{tools_count} tools, {resources_count} resources, {prompts_count} prompts"
-                )
+                logger.info(f"Discovered capabilities for {self.name}: " f"{tools_count} tools, {resources_count} resources, {prompts_count} prompts")
             else:
                 logger.warning(f"No session available for capability discovery: {self.name}")
 
         except Exception as e:
-            logger.error(f"Failed to discover server capabilities for {self.name}: {e}", exc_info=True)
+            logger.error(
+                f"Failed to discover server capabilities for {self.name}: {e}",
+                exc_info=True,
+            )
             raise MCPConnectionError(f"Failed to discover server capabilities: {e}") from e
 
     async def _discover_capabilities_official(self) -> None:
@@ -440,7 +456,6 @@ class MCPClient:
         if not self.session:
             raise MCPConnectionError("No active session")
 
-        
         try:
             available_tools = await self.session.list_tools()
 
@@ -459,7 +474,7 @@ class MCPClient:
             available_resources = await self.session.list_resources()
             for resource in available_resources.resources:
                 # Validate resource before storing
-                if not hasattr(resource, 'uri') or not resource.uri:
+                if not hasattr(resource, "uri") or not resource.uri:
                     logger.warning(f"Invalid resource without URI from server {self.name}")
                     continue
                 self.resources[resource.uri] = resource
@@ -469,19 +484,30 @@ class MCPClient:
         except Exception as e:
             # Categorize error types for better handling
             error_msg = str(e).lower()
-            if any(phrase in error_msg for phrase in ["not supported", "not implemented", "method not found", "unknown method"]):
+            if any(
+                phrase in error_msg
+                for phrase in [
+                    "not supported",
+                    "not implemented",
+                    "method not found",
+                    "unknown method",
+                ]
+            ):
                 logger.debug(f"Resources not supported by server {self.name} (Error: {e})")
             elif "permission" in error_msg or "unauthorized" in error_msg:
                 logger.warning(f"Permission denied for resources on server {self.name}: {e}")
             else:
                 # Preserve original error context
-                logger.error(f"Unexpected error listing resources for {self.name}: {e}", exc_info=True)
-                
+                logger.error(
+                    f"Unexpected error listing resources for {self.name}: {e}",
+                    exc_info=True,
+                )
+
         try:
             available_prompts = await self.session.list_prompts()
             for prompt in available_prompts.prompts:
                 # Validate prompt before storing
-                if not hasattr(prompt, 'name') or not prompt.name:
+                if not hasattr(prompt, "name") or not prompt.name:
                     logger.warning(f"Invalid prompt without name from server {self.name}")
                     continue
                 self.prompts[prompt.name] = prompt
@@ -491,13 +517,24 @@ class MCPClient:
         except Exception as e:
             # Categorize error types for better handling
             error_msg = str(e).lower()
-            if any(phrase in error_msg for phrase in ["not supported", "not implemented", "method not found", "unknown method"]):
+            if any(
+                phrase in error_msg
+                for phrase in [
+                    "not supported",
+                    "not implemented",
+                    "method not found",
+                    "unknown method",
+                ]
+            ):
                 logger.debug(f"Prompts not supported by server {self.name} (Error: {e})")
             elif "permission" in error_msg or "unauthorized" in error_msg:
                 logger.warning(f"Permission denied for prompts on server {self.name}: {e}")
             else:
                 # Preserve original error context
-                logger.error(f"Unexpected error listing prompts for {self.name}: {e}", exc_info=True)
+                logger.error(
+                    f"Unexpected error listing prompts for {self.name}: {e}",
+                    exc_info=True,
+                )
 
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         """
@@ -521,14 +558,14 @@ class MCPClient:
             available_tools = list(self.tools.keys())
             raise MCPError(
                 f"Tool '{tool_name}' not available on server '{self.name}'",
-                context={"available_tools": available_tools, "server_name": self.name}
+                context={"available_tools": available_tools, "server_name": self.name},
             )
 
         if not self.session:
             raise MCPConnectionError(
                 "No active session",
                 server_name=self.name,
-                context={"tool_name": tool_name}
+                context={"tool_name": tool_name},
             )
 
         # Validate tool arguments
@@ -539,70 +576,102 @@ class MCPClient:
                 f"Invalid tool arguments: {e}",
                 field="arguments",
                 value=arguments,
-                context={"tool_name": tool_name, "server_name": self.name}
+                context={"tool_name": tool_name, "server_name": self.name},
             ) from e
 
+        # Execute pre-tool hooks
+        pre_tool_hooks = self.hooks.get(HookType.PRE_TOOL_USE, [])
+        # Log hook execution
+        logger.debug(f"Executing {len(pre_tool_hooks)} pre-tool hooks for {tool_name} on {self.name}")
+        for hook in pre_tool_hooks:
+            try:
+                allowed = await hook(tool_name, validated_arguments)
+                if not allowed:
+                    raise MCPValidationError(
+                        "Tool call blocked by pre-tool hook",
+                        field="tool_name",
+                        value=tool_name,
+                        context={"arguments": validated_arguments, "server_name": self.name},
+                    )
+            except Exception as e:
+                if isinstance(e, MCPValidationError):
+                    raise  # Re-raise validation errors from hooks
+                logger.warning(f"Pre-tool hook error for {tool_name} on {self.name}: {e}", exc_info=True)
+                # Hook errors don't block execution unless they explicitly raise MCPValidationError
+
         logger.debug(f"Calling tool {tool_name} on {self.name} with arguments: {validated_arguments}")
-        
+
         # Send tool call start status if callback is available
         if self.status_callback:
-            await self.status_callback("tool_call_start", {
-                "server": self.name,
-                "tool": tool_name,
-                "message": f"Calling tool '{tool_name}' on server '{self.name}'",
-                "arguments": validated_arguments
-            })
+            await self.status_callback(
+                "tool_call_start",
+                {
+                    "server": self.name,
+                    "tool": tool_name,
+                    "message": f"Calling tool '{tool_name}' on server '{self.name}'",
+                    "arguments": validated_arguments,
+                },
+            )
 
         try:
             # Add timeout to tool calls
             result = await asyncio.wait_for(
                 self.session.call_tool(tool_name, validated_arguments),
-                timeout=self.timeout_seconds
+                timeout=self.timeout_seconds,
             )
             logger.debug(f"Tool {tool_name} completed successfully on {self.name}")
-            
+
             # Send tool call success status if callback is available
             if self.status_callback:
-                await self.status_callback("tool_call_success", {
-                    "server": self.name,
-                    "tool": tool_name,
-                    "message": f"Tool '{tool_name}' executed successfully on server '{self.name}'"
-                })
-            
+                await self.status_callback(
+                    "tool_call_success",
+                    {
+                        "server": self.name,
+                        "tool": tool_name,
+                        "message": f"Tool '{tool_name}' executed successfully on server '{self.name}'",
+                    },
+                )
+
             return result
 
         except asyncio.TimeoutError:
             # Send tool call timeout status if callback is available
             if self.status_callback:
-                await self.status_callback("tool_call_timeout", {
-                    "server": self.name,
-                    "tool": tool_name,
-                    "message": f"Tool '{tool_name}' timed out after {self.timeout_seconds} seconds",
-                    "timeout": self.timeout_seconds
-                })
-            
+                await self.status_callback(
+                    "tool_call_timeout",
+                    {
+                        "server": self.name,
+                        "tool": tool_name,
+                        "message": f"Tool '{tool_name}' timed out after {self.timeout_seconds} seconds",
+                        "timeout": self.timeout_seconds,
+                    },
+                )
+
             raise MCPTimeoutError(
                 f"Tool call timed out after {self.timeout_seconds} seconds",
                 timeout_seconds=self.timeout_seconds,
                 operation=f"call_tool({tool_name})",
-                context={"tool_name": tool_name, "server_name": self.name}
+                context={"tool_name": tool_name, "server_name": self.name},
             )
         except Exception as e:
             logger.error(f"Tool call failed for {tool_name} on {self.name}: {e}", exc_info=True)
-            
+
             # Send tool call error status if callback is available
             if self.status_callback:
-                await self.status_callback("tool_call_error", {
-                    "server": self.name,
-                    "tool": tool_name,
-                    "message": f"Tool '{tool_name}' failed: {e}",
-                    "error": str(e)
-                })
-            
+                await self.status_callback(
+                    "tool_call_error",
+                    {
+                        "server": self.name,
+                        "tool": tool_name,
+                        "message": f"Tool '{tool_name}' failed: {e}",
+                        "error": str(e),
+                    },
+                )
+
             raise MCPServerError(
                 f"Tool call failed: {e}",
                 server_name=self.name,
-                context={"tool_name": tool_name, "arguments": validated_arguments}
+                context={"tool_name": tool_name, "arguments": validated_arguments},
             ) from e
 
     async def get_resource(self, uri: str) -> Any:
@@ -759,6 +828,7 @@ class MultiMCPClient:
         allowed_tools: Optional[List[str]] = None,
         exclude_tools: Optional[List[str]] = None,
         status_callback: Optional[Callable[[str, Dict[str, Any]], Awaitable[None]]] = None,
+        hooks: Optional[Dict[HookType, List[Callable[[str, Dict[str, Any]], Awaitable[bool]]]]] = {},
     ):
         """
         Initialize MultiMCP client.
@@ -769,13 +839,15 @@ class MultiMCPClient:
             allowed_tools: Optional list of tool names to include (if None, includes all)
             exclude_tools: Optional list of tool names to exclude (if None, excludes none)
             status_callback: Optional async callback for status updates
+            hooks: Optional dict mapping hook types to lists of hook functions
         """
         self.server_configs = [MCPConfigValidator.validate_server_config(config) for config in server_configs]
-        
+
         self.timeout_seconds = timeout_seconds
         self.allowed_tools = allowed_tools
         self.exclude_tools = exclude_tools
         self.status_callback = status_callback
+        self.hooks = hooks
 
         # Client management
         self.clients: Dict[str, MCPClient] = {}
@@ -801,14 +873,17 @@ class MultiMCPClient:
 
             logger.info(f"🔄 Setting up MCP sessions with {len(self.server_configs)} servers...")
             print(f"🔄 Setting up MCP sessions with {len(self.server_configs)} servers...")
-            
+
             # Send overall setup status if callback is available
             if self.status_callback:
-                await self.status_callback("setup_start", {
-                    "message": f"Setting up MCP sessions with {len(self.server_configs)} servers",
-                    "server_count": len(self.server_configs)
-                })
-            
+                await self.status_callback(
+                    "setup_start",
+                    {
+                        "message": f"Setting up MCP sessions with {len(self.server_configs)} servers",
+                        "server_count": len(self.server_configs),
+                    },
+                )
+
             await self._connect_all()
 
     async def _connect_all(self) -> None:
@@ -816,7 +891,48 @@ class MultiMCPClient:
         if self._initialized:
             return
 
-        # Create connection tasks for parallel execution
+        # Determine which servers need connection (not already connected)
+        servers_to_connect = []
+        connected_clients = {}
+
+        # First, check existing clients and reuse connected ones
+        for server_config in self.server_configs:
+            server_name = server_config["name"]
+            existing_client = self.clients.get(server_name)
+
+            # If client exists and is connected, reuse it
+            if existing_client and existing_client.is_connected():
+                logger.debug(f"Reusing already connected client for server: {server_name}")
+                connected_clients[server_name] = existing_client
+                # Re-register tools, resources, and prompts for consistency
+                for tool_name, tool in existing_client.tools.items():
+                    prefixed_name = sanitize_tool_name(tool_name, server_name)
+                    if prefixed_name not in self.tools:
+                        self.tools[prefixed_name] = tool
+                    else:
+                        logger.warning(f"Tool name collision: '{prefixed_name}' already exists from server '{server_name}'. " f"Overwriting with tool from server '{server_name}'")
+                    self._tool_to_client[prefixed_name] = server_name
+
+                for uri, resource in existing_client.resources.items():
+                    if uri not in self.resources:
+                        self.resources[uri] = resource
+                    else:
+                        logger.warning(f"Resource name collision: '{uri}' already exists from server '{server_name}'. " f"Overwriting with resource from server '{server_name}'")
+
+                for prompt_name, prompt in existing_client.prompts.items():
+                    prefixed_name = f"mcp__{server_name}__{prompt_name}"
+                    self.prompts[prefixed_name] = prompt
+            else:
+                # Server needs connection
+                servers_to_connect.append(server_config)
+                # Remove any disconnected client from tracking
+                if existing_client:
+                    logger.debug(f"Client for server {server_name} is not connected, will reconnect")
+                    await existing_client.disconnect()  # Explicitly disconnect the client
+
+        logger.info(f"Found {len(connected_clients)} already connected servers, {len(servers_to_connect)} servers need connection")
+
+        # Create connection tasks only for servers that need connection
         async def _connect_single_server(server_config: Dict[str, Any]) -> tuple[str, Optional[MCPClient]]:
             """Connect to a single server and return (server_name, client) or (server_name, None) on failure."""
             server_name = server_config["name"]
@@ -827,13 +943,14 @@ class MultiMCPClient:
                 return server_name, None
 
             try:
-                # Create client for this server
+                # Create new client (disconnected clients are handled in the calling method)
                 client = MCPClient(
                     server_config,
                     timeout_seconds=self.timeout_seconds,
                     allowed_tools=self.allowed_tools,
                     exclude_tools=self.exclude_tools,
                     status_callback=self.status_callback,
+                    hooks=self.hooks,
                 )
 
                 # Connect the client (this will start its background manager)
@@ -849,73 +966,69 @@ class MultiMCPClient:
                 self._circuit_breaker.record_failure(server_name)
                 return server_name, None
 
-        # Execute all connections in parallel
-        connection_tasks = [_connect_single_server(config) for config in self.server_configs]
-        connection_results = await asyncio.gather(*connection_tasks, return_exceptions=True)
+        # Execute connections in parallel only for servers that need connection
+        if servers_to_connect:
+            connection_tasks = [_connect_single_server(config) for config in servers_to_connect]
+            connection_results = await asyncio.gather(*connection_tasks, return_exceptions=True)
 
-        connected_clients = {}
-        for result in connection_results:
-            if isinstance(result, Exception):
-                logger.error(f"Connection task failed with exception: {result}")
-                continue
+            for result in connection_results:
+                if isinstance(result, Exception):
+                    logger.error(f"Connection task failed with exception: {result}")
+                    continue
 
-            server_name, client = result
-            if client is not None:
-                connected_clients[server_name] = client
+                server_name, client = result
+                if client is not None:
+                    connected_clients[server_name] = client
 
-                # Register tools with server prefix
-                for tool_name, tool in client.tools.items():
-                    prefixed_name = sanitize_tool_name(tool_name, server_name)
+                    # Register tools with server prefix
+                    for tool_name, tool in client.tools.items():
+                        prefixed_name = sanitize_tool_name(tool_name, server_name)
 
-                    # Check for tool name collisions
-                    if prefixed_name in self.tools:
-                        existing_server = self._tool_to_client.get(prefixed_name, "unknown")
-                        logger.warning(
-                            f"Tool name collision: '{prefixed_name}' already exists from server '{existing_server}'. "
-                            f"Overwriting with tool from server '{server_name}'"
-                        )
+                        # Check for tool name collisions
+                        if prefixed_name in self.tools:
+                            existing_server = self._tool_to_client.get(prefixed_name, "unknown")
+                            logger.warning(f"Tool name collision: '{prefixed_name}' already exists from server '{existing_server}'. " f"Overwriting with tool from server '{server_name}'")
 
-                    self.tools[prefixed_name] = tool
-                    self._tool_to_client[prefixed_name] = server_name
+                        self.tools[prefixed_name] = tool
+                        self._tool_to_client[prefixed_name] = server_name
 
-                # Register resources
-                for uri, resource in client.resources.items():
-                    self.resources[uri] = resource
+                    # Register resources
+                    for uri, resource in client.resources.items():
+                        self.resources[uri] = resource
 
-                # Register prompts with server prefix (consistent with tool naming)
-                for prompt_name, prompt in client.prompts.items():
-                    # Use consistent naming pattern: mcp__server__prompt
-                    prefixed_name = f"mcp__{server_name}__{prompt_name}"
+                    # Register prompts with server prefix (consistent with tool naming)
+                    for prompt_name, prompt in client.prompts.items():
+                        # Use consistent naming pattern: mcp__server__prompt
+                        prefixed_name = f"mcp__{server_name}__{prompt_name}"
 
-                    # Check for prompt name collisions
-                    if prefixed_name in self.prompts:
-                        logger.warning(
-                            f"Prompt name collision: '{prefixed_name}' already exists. "
-                            f"Overwriting with prompt from server '{server_name}'"
-                        )
+                        # Check for prompt name collisions
+                        if prefixed_name in self.prompts:
+                            logger.warning(f"Prompt name collision: '{prefixed_name}' already exists. " f"Overwriting with prompt from server '{server_name}'")
 
-                    self.prompts[prefixed_name] = prompt
+                        self.prompts[prefixed_name] = prompt
 
-                logger.info(f"Registered server '{server_name}' with {len(client.tools)} tools, "
-                           f"{len(client.resources)} resources, {len(client.prompts)} prompts")
+                    logger.info(f"Registered server '{server_name}' with {len(client.tools)} tools, " f"{len(client.resources)} resources, {len(client.prompts)} prompts")
+        else:
+            logger.info("No servers need connection, all servers are already connected")
 
         # Only set clients dict after all connections are attempted
         self.clients = connected_clients
         self._initialized = True
 
-        logger.info(f"MultiMCP client initialized with {len(self.clients)} servers, "
-                   f"{len(self.tools)} tools, {len(self.resources)} resources, {len(self.prompts)} prompts")
-        
+        logger.info(f"MultiMCP client initialized with {len(self.clients)} servers, " f"{len(self.tools)} tools, {len(self.resources)} resources, {len(self.prompts)} prompts")
+
         # Send setup complete status if callback is available
         if self.status_callback:
-            await self.status_callback("setup_complete", {
-                "message": f"MCP setup complete: {len(self.clients)} servers connected",
-                "connected_servers": len(self.clients),
-                "total_tools": len(self.tools),
-                "total_resources": len(self.resources),
-                "total_prompts": len(self.prompts)
-            })
-
+            await self.status_callback(
+                "setup_complete",
+                {
+                    "message": f"MCP setup complete: {len(self.clients)} servers connected",
+                    "connected_servers": len(self.clients),
+                    "total_tools": len(self.tools),
+                    "total_resources": len(self.resources),
+                    "total_prompts": len(self.prompts),
+                },
+            )
 
     async def disconnect(self) -> None:
         """Disconnect from all MCP servers."""
@@ -925,14 +1038,11 @@ class MultiMCPClient:
 
             # Disconnect all clients concurrently
             if self.clients:
-                disconnect_tasks = [
-                    client.disconnect() 
-                    for client in self.clients.values()
-                ]
-                
+                disconnect_tasks = [client.disconnect() for client in self.clients.values()]
+
                 # Wait for all disconnections, but don't fail if some have errors
                 results = await asyncio.gather(*disconnect_tasks, return_exceptions=True)
-                
+
                 # Log any disconnection errors
                 for i, result in enumerate(results):
                     if isinstance(result, Exception):
@@ -967,14 +1077,14 @@ class MultiMCPClient:
             raise MCPValidationError(
                 "Tool name must be a non-empty string",
                 field="tool_name",
-                value=tool_name
+                value=tool_name,
             )
 
         if not isinstance(arguments, dict):
             raise MCPValidationError(
                 "Tool arguments must be a dictionary",
                 field="arguments",
-                value=type(arguments).__name__
+                value=type(arguments).__name__,
             )
 
         # Check if tool exists
@@ -985,8 +1095,8 @@ class MultiMCPClient:
                 context={
                     "requested_tool": tool_name,
                     "available_tools": available_tools[:10],  # Limit for readability
-                    "total_available": len(available_tools)
-                }
+                    "total_available": len(available_tools),
+                },
             )
 
         server_name = self._tool_to_client[tool_name]
@@ -996,12 +1106,12 @@ class MultiMCPClient:
             raise MCPConnectionError(
                 f"Server '{server_name}' not connected",
                 server_name=server_name,
-                context={"tool_name": tool_name}
+                context={"tool_name": tool_name},
             )
 
         # Extract original tool name (remove prefix)
         if tool_name.startswith(f"mcp__{server_name}__"):
-            original_tool_name = tool_name[len(f"mcp__{server_name}__"):]
+            original_tool_name = tool_name[len(f"mcp__{server_name}__") :]
         else:
             # Fallback for non-prefixed names
             original_tool_name = tool_name
@@ -1162,8 +1272,7 @@ class MultiMCPClient:
         """Get list of tools for a specific server."""
         if server_name not in self.clients:
             return []
-        return [name for name, client_name in self._tool_to_client.items()
-                if client_name == server_name]
+        return [name for name, client_name in self._tool_to_client.items() if client_name == server_name]
 
     def is_connected(self) -> bool:
         """Check if any servers are connected."""

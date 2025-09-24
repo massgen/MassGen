@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen Backend System - Multi-Provider LLM Integration
 
@@ -15,15 +16,15 @@ TODO - Check if we indeed need to pass agent_id & session_id to backends
 
 from .base import LLMBackend, StreamChunk, TokenUsage
 from .chat_completions import ChatCompletionsBackend
-from .response import ResponseBackend
-from .grok import GrokBackend
-from .lmstudio import LMStudioBackend
 from .claude import ClaudeBackend
-from .gemini import GeminiBackend
-from .cli_base import CLIBackend
 
 # from .claude_code_cli import ClaudeCodeCLIBackend  # File removed
 from .claude_code import ClaudeCodeBackend
+from .cli_base import CLIBackend
+from .gemini import GeminiBackend
+from .grok import GrokBackend
+from .lmstudio import LMStudioBackend
+from .response import ResponseBackend
 
 # from .gemini_cli import GeminiCLIBackend
 

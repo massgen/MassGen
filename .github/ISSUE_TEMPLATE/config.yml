@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/adithyagaurav/MassGen/blob/main/README.md
+    about: Check our documentation for usage guides and examples
+  - name: Discussions
+    url: https://github.com/adithyagaurav/MassGen/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Discord Community
+    url: https://discord.massgen.ai
+    about: Join our Discord for real-time support and discussions

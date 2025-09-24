@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Agent configuration for MassGen framework following input_cases_reference.md
 Simplified configuration focused on the proven binary decision approach.
@@ -8,7 +9,7 @@ deprecated patterns. Update to reflect current backend architecture.
 
 import warnings
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     from .message_templates import MessageTemplates
@@ -57,27 +58,25 @@ class AgentConfig:
     def custom_system_instruction(self) -> Optional[str]:
         """
         DEPRECATED: Use backend-specific system prompt parameters instead.
-        
+
         For Claude Code: use append_system_prompt or system_prompt in backend_params
         For other backends: use their respective system prompt parameters
         """
         if self._custom_system_instruction is not None:
             warnings.warn(
-                "custom_system_instruction is deprecated. Use backend-specific "
-                "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
+                "custom_system_instruction is deprecated. Use backend-specific " "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
         return self._custom_system_instruction
-    
+
     @custom_system_instruction.setter
     def custom_system_instruction(self, value: Optional[str]) -> None:
         if value is not None:
             warnings.warn(
-                "custom_system_instruction is deprecated. Use backend-specific "
-                "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
+                "custom_system_instruction is deprecated. Use backend-specific " "system prompt parameters instead (e.g., append_system_prompt for Claude Code)",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
         self._custom_system_instruction = value
 
@@ -180,9 +179,7 @@ class AgentConfig:
         return cls(backend_params=backend_params)
 
     @classmethod
-    def create_grok_config(
-        cls, model: str = "grok-2-1212", enable_web_search: bool = False, **kwargs
-    ) -> "AgentConfig":
+    def create_grok_config(cls, model: str = "grok-2-1212", enable_web_search: bool = False, **kwargs) -> "AgentConfig":
         """Create xAI Grok configuration.
 
         Args:
@@ -400,9 +397,7 @@ class AgentConfig:
     # =============================================================================
 
     @classmethod
-    def for_research_task(
-        cls, model: str = "gpt-4o", backend: str = "openai"
-    ) -> "AgentConfig":
+    def for_research_task(cls, model: str = "gpt-4o", backend: str = "openai") -> "AgentConfig":
         """Create configuration optimized for research tasks.
 
         Based on econometrics test success patterns:
@@ -421,14 +416,10 @@ class AgentConfig:
             # Maximum power research config - all tools available
             return cls.create_claude_code_config(model)
         else:
-            raise ValueError(
-                f"Research configuration not available for backend: {backend}"
-            )
+            raise ValueError(f"Research configuration not available for backend: {backend}")
 
     @classmethod
-    def for_computational_task(
-        cls, model: str = "gpt-4o", backend: str = "openai"
-    ) -> "AgentConfig":
+    def for_computational_task(cls, model: str = "gpt-4o", backend: str = "openai") -> "AgentConfig":
         """Create configuration optimized for computational tasks.
 
         Based on Tower of Hanoi test success patterns:
@@ -445,14 +436,10 @@ class AgentConfig:
             # Maximum power computational config - all tools available
             return cls.create_claude_code_config(model)
         else:
-            raise ValueError(
-                f"Computational configuration not available for backend: {backend}"
-            )
+            raise ValueError(f"Computational configuration not available for backend: {backend}")
 
     @classmethod
-    def for_analytical_task(
-        cls, model: str = "gpt-4o-mini", backend: str = "openai"
-    ) -> "AgentConfig":
+    def for_analytical_task(cls, model: str = "gpt-4o-mini", backend: str = "openai") -> "AgentConfig":
         """Create configuration optimized for analytical tasks.
 
         Based on general reasoning test patterns:
@@ -471,9 +458,7 @@ class AgentConfig:
             # Maximum power analytical config - all tools available
             return cls.create_claude_code_config(model)
         else:
-            raise ValueError(
-                f"Analytical configuration not available for backend: {backend}"
-            )
+            raise ValueError(f"Analytical configuration not available for backend: {backend}")
 
     @classmethod
     def for_expert_domain(
@@ -500,9 +485,7 @@ class AgentConfig:
         elif backend == "gemini":
             config = cls.create_gemini_config(model, enable_web_search=True)
         else:
-            raise ValueError(
-                f"Domain expert configuration not available for backend: {backend}"
-            )
+            raise ValueError(f"Domain expert configuration not available for backend: {backend}")
 
         config.custom_system_instruction = instruction
         return config
@@ -530,16 +513,12 @@ class AgentConfig:
         valid_agent_ids = list(agent_summaries.keys()) if agent_summaries else None
 
         # Build base conversation
-        conversation = templates.build_initial_conversation(
-            task=task, agent_summaries=agent_summaries, valid_agent_ids=valid_agent_ids
-        )
+        conversation = templates.build_initial_conversation(task=task, agent_summaries=agent_summaries, valid_agent_ids=valid_agent_ids)
 
         # Add custom system instruction if provided
         if self.custom_system_instruction:
             base_system = conversation["system_message"]
-            conversation[
-                "system_message"
-            ] = f"{self.custom_system_instruction}\n\n{base_system}"
+            conversation["system_message"] = f"{self.custom_system_instruction}\n\n{base_system}"
 
         # Add backend configuration
         conversation.update(
@@ -547,7 +526,7 @@ class AgentConfig:
                 "backend_params": self.get_backend_params(),
                 "session_id": session_id,
                 "agent_id": self.agent_id,
-            }
+            },
         )
 
         return conversation
@@ -597,7 +576,7 @@ class AgentConfig:
                     {
                         "role": additional_message_role,
                         "content": str(additional_message),
-                    }
+                    },
                 )
 
         # Add enforcement if requested (Case 3)
@@ -626,13 +605,9 @@ class AgentConfig:
         Returns:
             Conversation with enforcement message added
         """
-        return self.continue_conversation(
-            existing_messages=existing_messages, enforce_tools=True
-        )
+        return self.continue_conversation(existing_messages=existing_messages, enforce_tools=True)
 
-    def add_tool_result(
-        self, existing_messages: list, tool_call_id: str, result: str
-    ) -> Dict[str, Any]:
+    def add_tool_result(self, existing_messages: list, tool_call_id: str, result: str) -> Dict[str, Any]:
         """Add tool result to conversation.
 
         Args:
@@ -645,13 +620,9 @@ class AgentConfig:
         """
         tool_message = {"role": "tool", "tool_call_id": tool_call_id, "content": result}
 
-        return self.continue_conversation(
-            existing_messages=existing_messages, additional_message=tool_message
-        )
+        return self.continue_conversation(existing_messages=existing_messages, additional_message=tool_message)
 
-    def handle_case4_error_recovery(
-        self, existing_messages: list, clarification: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def handle_case4_error_recovery(self, existing_messages: list, clarification: Optional[str] = None) -> Dict[str, Any]:
         """Handle Case 4: Error recovery after tool failure.
 
         Args:
@@ -739,22 +710,16 @@ class AgentConfig:
 # =============================================================================
 
 
-def create_research_config(
-    model: str = "gpt-4o", backend: str = "openai"
-) -> AgentConfig:
+def create_research_config(model: str = "gpt-4o", backend: str = "openai") -> AgentConfig:
     """Create configuration for research tasks (web search enabled)."""
     return AgentConfig.for_research_task(model, backend)
 
 
-def create_computational_config(
-    model: str = "gpt-4o", backend: str = "openai"
-) -> AgentConfig:
+def create_computational_config(model: str = "gpt-4o", backend: str = "openai") -> AgentConfig:
     """Create configuration for computational tasks (code execution enabled)."""
     return AgentConfig.for_computational_task(model, backend)
 
 
-def create_analytical_config(
-    model: str = "gpt-4o-mini", backend: str = "openai"
-) -> AgentConfig:
+def create_analytical_config(model: str = "gpt-4o-mini", backend: str = "openai") -> AgentConfig:
     """Create configuration for analytical tasks (no special tools)."""
     return AgentConfig.for_analytical_task(model, backend)

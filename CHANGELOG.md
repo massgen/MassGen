@@ -5,6 +5,215 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.22] - 2025-09-22
+
+### Added
+- **Workspace Copy Tools via MCP**: New file copying capabilities for efficient workspace operations
+  - Added `workspace_copy_server.py` with MCP-based file copying functionality (369 lines)
+  - Support for copying files and directories between workspaces
+  - Efficient handling of large files with streaming operations
+  - Testing infrastructure for copy operations
+
+- **Configuration Organization**: Major restructuring of configuration files for better usability
+  - New hierarchical structure: `basic/`, `providers/`, `tools/`, `teams/` directories
+  - Added comprehensive `README.md` for configuration guide
+  - New `BACKEND_CONFIGURATION.md` with detailed backend setup
+  - Organized configs by use case and provider for easier navigation
+  - Added provider-specific examples (Claude, OpenAI, Gemini, Azure)
+
+- **Enhanced File Operations**: Improved file handling for large-scale operations
+  - Clear all temporary workspaces at startup for clean state
+  - Enhanced security validation in MCP tools
+
+### Changed
+
+- **Workspace Management**: Optimized workspace operations and path handling
+  - Enhanced `filesystem_manager.py` with 193 additional lines
+  - Run MCP servers through FastMCP to avoid banner displays
+
+- **Backend Enhancements**: Improved backend capabilities
+  - Improved `response.py` with better error handling
+
+### Fixed
+- **Write Tool Call Issues**: Resolved large character count problems
+  - Fixed write tool call issues when dealing with large character counts
+
+- **Path Resolution Issues**: Resolved various path-related bugs
+  - Fixed relative/absolute path workspace issues
+  - Improved path validation and normalization
+
+- **Documentation Fixes**: Corrected multiple documentation issues
+  - Fixed broken links in case studies
+  - Fixed config file paths in documentation and examples
+  - Corrected example commands with proper paths
+
+### Technical Details
+- **Commits**: 50+ commits including workspace copy, configuration restructuring, and documentation improvements
+- **Files Modified**: 90+ files across configs, backend, mcp_tools, and documentation
+- **Major Refactoring**: Configuration file reorganization into logical categories
+- **New Documentation**: Added 762+ lines of documentation for configs and backends
+- **Contributors**: @ncrispino @qidanrui @Henry-811 and the MassGen team
+
+## [0.0.21] - 2025-09-19
+
+### Added
+- **Advanced Filesystem Permissions System**: Comprehensive permission management for agent file access
+  - New `PathPermissionManager` class for granular permission validation
+  - User context paths with configurable READ/WRITE permissions for multi-agent file sharing
+  - Test suite for permission validation in `test_path_permission_manager.py`
+  - Documentation in `permissions_and_context_files.md` for implementation guide
+  
+- **Function Hook Manager**: Per-agent function call permission system
+  - Refactored `FunctionHookManager` to be per-agent rather than global
+  - Pre-tool-use hooks for validating file operations before execution
+  - Support for write permission enforcement during context agent operations
+  - Integration with all function-based backends (OpenAI, Claude, Chat Completions)
+
+- **Grok MCP Integration**: Extended MCP support to Grok backend
+  - Migrated Grok backend to inherit from Chat Completions backend
+  - Full MCP server support for Grok including stdio and HTTP transports
+  - Filesystem support through MCP servers
+  
+- **New Configuration Files**: Added test and example configurations
+  - `grok3_mini_mcp_test.yaml`: Grok MCP testing configuration
+  - `grok3_mini_mcp_example.yaml`: Grok MCP usage example
+  - `grok3_mini_streamable_http_test.yaml`: Grok HTTP streaming test
+  - `grok_single_agent.yaml`: Single Grok agent configuration
+  - `fs_permissions_test.yaml`: Filesystem permissions testing configuration
+
+### Changed
+- **Backend Architecture**: Unified backend implementations and permission support
+  - Grok backend refactored to use Chat Completions backend
+  - All backends now support per-agent permission management
+  - Enhanced context file support across Claude, Gemini, and OpenAI backends
+  
+### Technical Details
+- **Commits**: 20+ commits including permission system, Grok MCP, and terminal improvements
+- **Files Modified**: 40+ files across backends, MCP tools, permissions, and display modules
+- **New Features**: Filesystem permissions, per-agent hooks, Grok MCP via Chat Completions
+- **Contributors**: @Eric-Shang @ncrispino @qidanrui @Henry-811 and the MassGen team
+
+## [0.0.20] - 2025-09-17
+
+### Added
+- **Claude Backend MCP Support**: Extended MCP (Model Context Protocol) integration to Claude backend
+  - Filesystem support through MCP servers (`FilesystemSupport.MCP`) for Claude backend
+  - Support for both stdio and HTTP-based MCP servers with Claude Messages API
+  - Seamless integration with existing Claude function calling and tool use
+  - Recursive execution model allowing Claude to autonomously chain multiple tool calls in sequence without user intervention
+  - Enhanced error handling and retry mechanisms for Claude MCP operations
+
+- **MCP Configuration Examples**: New YAML configurations for Claude MCP usage
+  - `claude_mcp_test.yaml`: Basic Claude MCP testing with test server
+  - `claude_mcp_example.yaml`: Claude MCP integration example
+  - `claude_streamable_http_test.yaml`: HTTP transport testing for Claude MCP
+
+- **Documentation**: Enhanced MCP technical documentation
+  - `MCP_IMPLEMENTATION_CLAUDE_BACKEND.md`: Complete technical documentation for Claude MCP integration
+  - Detailed architecture diagrams and implementation guides
+
+### Changed
+- **Backend Enhancements**: Improved MCP support across backends
+  - Extended MCP integration from Gemini and Chat Completions to include Claude backend
+  - Enhanced error reporting and debugging for MCP operations
+  - Added Kimi/Moonshot API key support in Chat Completions backend
+
+### Technical Details
+- **New Features**: Claude backend MCP integration with recursive execution model
+- **Files Modified**: Claude backend modules (`claude.py`), MCP tools, configuration examples
+- **MCP Coverage**: Major backends now support MCP (Claude, Gemini, Chat Completions including OpenAI)
+- **Contributors**: @praneeth999 @qidanrui @sonichi @ncrispino @Henry-811 MassGen development team
+
+## [0.0.19] - 2025-09-15
+
+### Added
+- **Coordination Tracking System**: Comprehensive tracking of multi-agent coordination events
+  - New `coordination_tracker.py` with `CoordinationTracker` class for capturing agent state transitions
+  - Event-based tracking with timestamps and context preservation
+  - Support for recording answers, votes, and coordination phases
+  - New `create_coordination_table.py` utility in `massgen/frontend/displays/` for generating coordination reports
+
+- **Enhanced Agent Status Management**: New enums for better state tracking
+  - Added `ActionType` enum in `massgen/utils.py`: NEW_ANSWER, VOTE, VOTE_IGNORED, ERROR, TIMEOUT, CANCELLED
+  - Added `AgentStatus` enum in `massgen/utils.py`: STREAMING, VOTED, ANSWERED, RESTARTING, ERROR, TIMEOUT, COMPLETED
+  - Improved state machine for agent coordination lifecycle
+
+### Changed
+- **Frontend Display Enhancements**: Improved terminal interface with coordination visualization
+  - Modified `massgen/frontend/displays/rich_terminal_display.py` to add coordination table display method
+  - Added new terminal menu option 'r' to display coordination table
+  - Enhanced menu system with better organization of debugging tools
+  - Support for rich-formatted tables showing agent interactions across rounds
+
+### Technical Details
+- **Commits**: 20+ commits including coordination tracking system and frontend enhancements
+- **Files Modified**: 5+ files across coordination tracking, frontend displays, and utilities
+- **New Features**: Coordination event tracking with visualization capabilities
+- **Contributors**: @ncrispino @qidanrui @sonichi @a5507203 @Henry-811 and the MassGen team
+
+## [0.0.18] - 2025-09-12
+
+### Added
+- **Chat Completions MCP Support**: Extended MCP (Model Context Protocol) integration to ChatCompletions-based backends
+  - Full MCP support for all Chat Completions providers (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter)
+  - Filesystem support through MCP servers (`FilesystemSupport.MCP`) for Chat Completions backend
+  - Cross-provider function calling compatibility enabling seamless MCP tool execution across different providers
+  - Universal MCP server compatibility with existing stdio and streamable-http transports
+
+- **New MCP Configuration Examples**: Added 9 new Chat Completions MCP configurations
+  - GPT-OSS configurations: `gpt_oss_mcp_example.yaml`, `gpt_oss_mcp_test.yaml`, `gpt_oss_streamable_http_test.yaml`
+  - Qwen API configurations: `qwen_api_mcp_example.yaml`, `qwen_api_mcp_test.yaml`, `qwen_api_streamable_http_test.yaml`
+  - Qwen Local configurations: `qwen_local_mcp_example.yaml`, `qwen_local_mcp_test.yaml`, `qwen_local_streamable_http_test.yaml`
+
+- **Enhanced LMStudio Backend**: Improved local model support
+  - Better tracking of attempted model loads
+  - Improved server output handling and error reporting
+
+### Changed
+- **Backend Architecture**: Major MCP framework expansion
+  - Extended existing v0.0.15 MCP infrastructure to support all ChatCompletions providers
+  - Refactored `chat_completions.py` with 1200+ lines of MCP integration code
+  - Enhanced error handling and retry mechanisms for provider-specific quirks
+
+- **CLI Improvements**: Better backend creation and provider detection
+  - Enhanced backend creation logic for improved provider handling
+  - Better system message handling for different backend types
+
+### Technical Details
+- **Main Feature**: Chat Completions MCP integration enabling all providers to use MCP tools
+- **Files Modified**: 20+ files across backend, mcp_tools, configurations, and CLI
+- **Contributors**: @praneeth999 @qidanrui @sonichi @a5507203 @ncrispino @Henry-811 and the MassGen team
+
+## [0.0.17] - 2025-09-10
+
+### Added
+- **OpenAI Backend MCP Support**: Extended MCP (Model Context Protocol) integration to OpenAI backend
+  - Full MCP tool discovery and execution capabilities for OpenAI models
+  - Support for both stdio and HTTP-based MCP servers with OpenAI
+  - Seamless integration with existing OpenAI function calling
+  - Robust error handling and retry mechanisms
+
+- **MCP Configuration Examples**: New YAML configurations for OpenAI MCP usage
+  - `gpt5_mini_mcp_test.yaml`: Basic OpenAI MCP testing with test server
+  - `gpt5_mini_mcp_example.yaml`: Weather service integration example for OpenAI
+  - `gpt5_mini_streamable_http_test.yaml`: HTTP transport testing for OpenAI MCP
+  - Enhanced existing multi-agent configurations with OpenAI MCP support
+
+- **Documentation**: Added case studies and technical documentation
+  - `unified-filesystem-mcp-integration.md`: Case study demonstrating unified filesystem capabilities with MCP integration across multiple backends (from v0.0.16)
+  - `MCP_INTEGRATION_RESPONSE_BACKEND.md`: Technical documentation for MCP integration with response backends
+
+### Changed
+- **Backend Enhancements**: Improved MCP support across backends
+  - Extended MCP integration from Gemini and Claude Code to include OpenAI backend
+  - Unified MCP tool handling across all supported backends
+  - Enhanced error reporting and debugging for MCP operations
+
+### Technical Details
+- **New Features**: OpenAI backend MCP integration
+- **Documentation**: Added case study for unified filesystem MCP integration
+- **Contributors**: @praneeth999 @qidanrui @sonichi @ncrispino @a5507203 @Henry-811 and the MassGen team
+
 ## [0.0.16] - 2025-09-08
 
 ### Added

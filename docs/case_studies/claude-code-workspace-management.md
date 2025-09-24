@@ -44,7 +44,7 @@ Prior to v0.0.12, for multiple Claude Code agents to collaborate, they need to u
 
 ### Baseline Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
 ### Expected Result
@@ -83,7 +83,7 @@ The new logging and workspace features would be considered successful if:
 MassGen v0.0.14 (September 1, 2025)
 
 ### Config
-Configuration file: [`massgen/configs/claude_code_context_sharing.yaml`](../../massgen/configs/claude_code_context_sharing.yaml)
+Configuration file: [`massgen/configs/tools/filesystem/claude_code_context_sharing.yaml`](../../massgen/configs/tools/filesystem/claude_code_context_sharing.yaml)
 
 Key workspace configuration:
 ```yaml
@@ -98,7 +98,7 @@ agents:
 
 ### Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
 <h2 id="agents">🤖 Agents</h2>

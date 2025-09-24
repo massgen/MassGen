@@ -59,11 +59,11 @@ MassGen v0.0.15 introduces the Model Context Protocol (MCP) integration for Gemi
 "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 
 ### Baseline Config
-Prior to v0.0.15, Gemini agents would use a standard multi-agent configuration like `massgen/configs/two_agents_gemini.yaml` without any MCP server configuration.
+Prior to v0.0.15, Gemini agents would use a standard multi-agent configuration like `massgen/configs/basic/multi/two_agents_gemini.yaml` without any MCP server configuration.
 
 ### Baseline Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/two_agents_gemini.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
+uv run python -m massgen.cli --config massgen/configs/basic/multi/two_agents_gemini.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 ```
 
 ### Expected Result 

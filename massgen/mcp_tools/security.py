@@ -1,14 +1,15 @@
+# -*- coding: utf-8 -*-
 """
 Security utilities for MCP command validation and sanitization. These functions provide comprehensive security checks and validation for MCP servers and tools.
 """
 
+import ipaddress
 import re
 import shlex
 import socket
 import urllib.parse
 from pathlib import Path
-import ipaddress
-from typing import List, Dict, Any, Optional, Set, Union
+from typing import Any, Dict, List, Optional, Set, Union
 
 
 def _normalize_security_level(level: str) -> str:
@@ -60,18 +61,32 @@ def prepare_command(
         raise ValueError(f"MCP command too long: {len(command)} > {max_length} characters")
 
     # Block dangerous characters that could enable shell injection
-    dangerous_chars = ["&", "|", ";", "`", "$", "(", ")", "<", ">", "&&", "||", ">>", "<<"]
+    dangerous_chars = [
+        "&",
+        "|",
+        ";",
+        "`",
+        "$",
+        "(",
+        ")",
+        "<",
+        ">",
+        "&&",
+        "||",
+        ">>",
+        "<<",
+    ]
     for char in dangerous_chars:
         if char in command:
             raise ValueError(f"MCP command cannot contain shell metacharacters: {char}")
 
     # Block dangerous patterns
     dangerous_patterns = [
-        r'\$\{.*\}',  # Variable expansion
-        r'\$\(.*\)',  # Command substitution
-        r'`.*`',      # Backtick command substitution
-        r'\.\./',     # Directory traversal
-        r'\\\.\\',    # Windows directory traversal
+        r"\$\{.*\}",  # Variable expansion
+        r"\$\(.*\)",  # Command substitution
+        r"`.*`",  # Backtick command substitution
+        r"\.\./",  # Directory traversal
+        r"\\\.\\",  # Windows directory traversal
     ]
 
     for pattern in dangerous_patterns:
@@ -99,16 +114,45 @@ def prepare_command(
     def _default_allowed(level: str) -> Set[str]:
         base_strict: Set[str] = {
             # Python interpreters
-            "python", "python3", "python3.8", "python3.9", "python3.10",
-            "python3.11", "python3.12", "python3.13", "python3.14", "py",
+            "python",
+            "python3",
+            "python3.8",
+            "python3.9",
+            "python3.10",
+            "python3.11",
+            "python3.12",
+            "python3.13",
+            "python3.14",
+            "py",
             # Python package managers
-            "uv", "uvx", "pipx", "pip", "pip3",
+            "uv",
+            "uvx",
+            "pipx",
+            "pip",
+            "pip3",
             # Node.js ecosystem
-            "node", "npm", "npx", "yarn", "pnpm", "bun",
+            "node",
+            "npm",
+            "npx",
+            "yarn",
+            "pnpm",
+            "bun",
             # Other runtimes
-            "deno", "java", "ruby", "go", "rust", "cargo",
+            "deno",
+            "java",
+            "ruby",
+            "go",
+            "rust",
+            "cargo",
+            "fastmcp",
             # System utilities (limited set)
-            "sh", "bash", "zsh", "fish", "powershell", "pwsh", "cmd",
+            "sh",
+            "bash",
+            "zsh",
+            "fish",
+            "powershell",
+            "pwsh",
+            "cmd",
         }
         if level == "strict":
             return base_strict
@@ -143,10 +187,7 @@ def prepare_command(
             break
 
     if lower_name not in allowed:
-        raise ValueError(
-            f"MCP command executable '{base_name}' is not allowed (level={security_level}). "
-            f"Allowed executables: {sorted(allowed)}"
-        )
+        raise ValueError(f"MCP command executable '{base_name}' is not allowed (level={security_level}). " f"Allowed executables: {sorted(allowed)}")
 
     return parts
 
@@ -187,7 +228,7 @@ def validate_url(
         raise ValueError(f"Invalid URL format: {e}")
 
     # Validate scheme
-    if parsed.scheme not in ('http', 'https'):
+    if parsed.scheme not in ("http", "https"):
         raise ValueError(f"Unsupported URL scheme: {parsed.scheme}. Only http and https are allowed.")
 
     # Validate hostname
@@ -215,14 +256,7 @@ def validate_url(
         def _is_forbidden_ip(ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address]) -> bool:
             if allow_private_ips:
                 return False
-            return (
-                ip.is_private
-                or ip.is_loopback
-                or ip.is_link_local
-                or ip.is_reserved
-                or ip.is_multicast
-                or ip.is_unspecified
-            )
+            return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast or ip.is_unspecified
 
         if ip_obj is not None:
             # Hostname is a literal IP
@@ -231,7 +265,7 @@ def validate_url(
         elif resolve_dns:
             # Resolve and validate all resolved addresses
             try:
-                port_for_resolution = parsed.port if parsed.port is not None else (443 if parsed.scheme == 'https' else 80)
+                port_for_resolution = parsed.port if parsed.port is not None else (443 if parsed.scheme == "https" else 80)
                 addrinfos = socket.getaddrinfo(hostname, port_for_resolution, proto=socket.IPPROTO_TCP)
                 for ai in addrinfos:
                     sockaddr = ai[4]
@@ -239,9 +273,7 @@ def validate_url(
                     try:
                         resolved_ip = ipaddress.ip_address(ip_literal)
                         if _is_forbidden_ip(resolved_ip) and not (allow_localhost and resolved_ip.is_loopback):
-                            raise ValueError(
-                                f"Resolved IP not allowed for security reasons: {hostname} -> {resolved_ip}"
-                            )
+                            raise ValueError(f"Resolved IP not allowed for security reasons: {hostname} -> {resolved_ip}")
                     except ValueError:
                         # Skip unparseable entries
                         continue
@@ -254,7 +286,21 @@ def validate_url(
             raise ValueError(f"Invalid port number: {parsed.port}")
 
         # Block dangerous ports
-        dangerous_ports = {22, 23, 25, 53, 135, 139, 445, 1433, 1521, 3306, 3389, 5432, 6379}
+        dangerous_ports = {
+            22,
+            23,
+            25,
+            53,
+            135,
+            139,
+            445,
+            1433,
+            1521,
+            3306,
+            3389,
+            5432,
+            6379,
+        }
         if parsed.port in dangerous_ports:
             raise ValueError(f"Port {parsed.port} is not allowed for security reasons")
 
@@ -299,12 +345,15 @@ def validate_environment_variables(
 
     # Defaults tuned per level
     default_deny: Set[str] = {
-        'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'PYTHONPATH',
-        'PWD', 'OLDPWD'
+        "LD_LIBRARY_PATH",
+        "DYLD_LIBRARY_PATH",
+        "PYTHONPATH",
+        "PWD",
+        "OLDPWD",
     }
     # In strict mode, also block these commonly sensitive variables
     if normalized_level == "strict":
-        default_deny |= {'PATH', 'HOME', 'USER', 'USERNAME', 'SHELL'}
+        default_deny |= {"PATH", "HOME", "USER", "USERNAME", "SHELL"}
     elif normalized_level == "moderate":
         # Allow PATH and HOME by default in moderate/permissive
         default_deny |= set()
@@ -336,16 +385,17 @@ def validate_environment_variables(
                 raise ValueError(f"Environment variable '{key}' is not allowed for security reasons")
 
         # Check for dangerous patterns in values
-        dangerous_patterns = ['$(', '`', '||', '&&', ';', '|']
+        dangerous_patterns = ["$(", "`", "||", "&&", ";", "|"]
         for pattern in dangerous_patterns:
             if pattern in value:
                 raise ValueError(f"Environment variable '{key}' contains dangerous pattern: {pattern}")
-        
+
         # Special check for ${...} - allow only simple environment variable references
-        if '${' in value:
+        if "${" in value:
             # Allow patterns like ${VARIABLE_NAME} but block complex expressions
             import re
-            if not re.match(r'^[^$]*\$\{[A-Z_][A-Z0-9_]*\}[^$]*$', value):
+
+            if not re.match(r"^[^$]*\$\{[A-Z_][A-Z0-9_]*\}[^$]*$", value):
                 raise ValueError(f"Environment variable '{key}' contains dangerous pattern: ${{")
 
         validated_env[key] = value
@@ -385,7 +435,7 @@ def validate_server_security(config: dict) -> dict:
         raise ValueError(f"Server name too long: {len(server_name)} > 100 characters")
 
     # Sanitize server name
-    if not re.match(r'^[a-zA-Z0-9_-]+$', server_name):
+    if not re.match(r"^[a-zA-Z0-9_-]+$", server_name):
         raise ValueError("Server name can only contain alphanumeric characters, underscores, and hyphens")
 
     transport_type = validated_config.get("type", "stdio")
@@ -511,9 +561,7 @@ def validate_server_security(config: dict) -> dict:
         # List supported transport types for better error messages
         supported_types = ["stdio", "streamable-http"]
         raise ValueError(
-            f"Unsupported transport type: {transport_type}. "
-            f"Supported types: {supported_types}. "
-            f"Note: 'sse' transport was deprecated in MCP v2025-03-26, use 'streamable-http' instead."
+            f"Unsupported transport type: {transport_type}. " f"Supported types: {supported_types}. " f"Note: 'sse' transport was deprecated in MCP v2025-03-26, use 'streamable-http' instead.",
         )
 
     return validated_config
@@ -557,19 +605,34 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
 
     # Reserved tool names that shouldn't be used
     reserved_names = {
-        'connect', 'disconnect', 'list', 'help', 'version', 'status',
-        'health', 'ping', 'debug', 'admin', 'system',
-        'config', 'settings', 'auth', 'login', 'logout', 'exit', 'quit'
+        "connect",
+        "disconnect",
+        "list",
+        "help",
+        "version",
+        "status",
+        "health",
+        "ping",
+        "debug",
+        "admin",
+        "system",
+        "config",
+        "settings",
+        "auth",
+        "login",
+        "logout",
+        "exit",
+        "quit",
     }
 
     if tool_name.lower() in reserved_names:
         raise ValueError(f"Tool name '{tool_name}' is reserved and cannot be used")
 
     # Validate characters - allow alphanumeric, underscore, hyphen, and dot
-    if not re.match(r'^[a-zA-Z0-9_.-]+$', tool_name):
+    if not re.match(r"^[a-zA-Z0-9_.-]+$", tool_name):
         raise ValueError(f"Tool name '{tool_name}' contains invalid characters. Only alphanumeric, underscore, hyphen, and dot are allowed.")
 
-    if not re.match(r'^[a-zA-Z0-9_-]+$', server_name):
+    if not re.match(r"^[a-zA-Z0-9_-]+$", server_name):
         raise ValueError(f"Server name '{server_name}' contains invalid characters. Only alphanumeric, underscore, and hyphen are allowed.")
 
     # Sanitize names (additional safety)
@@ -631,7 +694,7 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             return 4 if value else 5  # true/false
         if isinstance(value, (int, float)):
             return len(str(value))
-        if isinstance(value, str): 
+        if isinstance(value, str):
             return len(value) + 2
         return len(str(value)) + 2
 
@@ -640,7 +703,7 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             raise ValueError(f"Tool arguments nested too deeply: {depth} > {max_depth}")
 
         if isinstance(value, dict):
-            if len(value) > 100: 
+            if len(value) > 100:
                 raise ValueError(f"Dictionary too large: {len(value)} > 100 keys")
             _add_size(2)
             validated: Dict[str, Any] = {}
@@ -656,18 +719,18 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             return validated
 
         elif isinstance(value, list):
-            if len(value) > 1000:  
+            if len(value) > 1000:
                 raise ValueError(f"List too large: {len(value)} > 1000 items")
             _add_size(2)
             validated_list = []
             for idx, item in enumerate(value):
                 if idx > 0:
-                    _add_size(1)  
+                    _add_size(1)
                 validated_list.append(_validate_value(item, depth + 1))
             return validated_list
 
         elif isinstance(value, str):
-            if len(value) > 10000:  
+            if len(value) > 10000:
                 raise ValueError(f"String too long: {len(value)} > 10000 characters")
             _add_size(_size_for_primitive(value))
             return value
@@ -682,5 +745,5 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
                 raise ValueError(f"Value too large when converted to string: {len(str_value)} > 1000")
             _add_size(_size_for_primitive(str_value))
             return str_value
-        
+
     return _validate_value(arguments)

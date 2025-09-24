@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 MassGen Example: Three Agent Coordination
 
-This example demonstrates three-agent coordination using the 
-multi-region coordination UI. Three agents with different specialties work 
+This example demonstrates three-agent coordination using the
+multi-region coordination UI. Three agents with different specialties work
 together on a question that benefits from multiple perspectives.
 
 Features:
@@ -16,15 +17,15 @@ Note: Requires OPENAI_API_KEY in environment.
 """
 
 import asyncio
-import sys
 import os
+import sys
+
+from massgen import Orchestrator, ResponseBackend, create_simple_agent
+from massgen.frontend.coordination_ui import coordinate_with_terminal_ui
 
 # Add project root to path
 project_root = os.path.dirname(__file__)
 sys.path.insert(0, project_root)
-
-from massgen import create_simple_agent, ResponseBackend, Orchestrator
-from massgen.frontend.coordination_ui import coordinate_with_terminal_ui
 
 
 async def three_agent_example():
@@ -65,9 +66,7 @@ async def three_agent_example():
         print("  • educator: Clear explanations")
 
         # Create orchestrator
-        orchestrator = Orchestrator(
-            agents={"scientist": scientist, "engineer": engineer, "educator": educator}
-        )
+        orchestrator = Orchestrator(agents={"scientist": scientist, "engineer": engineer, "educator": educator})
         print("✅ orchestrator ready")
 
         # Question that benefits from multiple perspectives
@@ -83,14 +82,14 @@ async def three_agent_example():
             logging_enabled=False,
         )
 
-        print(f"\n✅ Three agent coordination completed!")
+        print("\n✅ Three agent coordination completed!")
 
         # Show results
         orchestrator_status = orchestrator.get_status()
         selected_agent = orchestrator_status.get("selected_agent")
         vote_results = orchestrator_status.get("vote_results", {})
 
-        print(f"\n📊 Results:")
+        print("\n📊 Results:")
         print(f"🏆 Selected agent: {selected_agent}")
         if vote_results.get("vote_counts"):
             for agent, votes in vote_results["vote_counts"].items():

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Base Display Interface for MassGen Coordination
 
@@ -5,7 +6,7 @@ Defines the interface that all display implementations must follow.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional
+from typing import List, Optional
 
 
 class BaseDisplay(ABC):
@@ -22,12 +23,9 @@ class BaseDisplay(ABC):
     @abstractmethod
     def initialize(self, question: str, log_filename: Optional[str] = None):
         """Initialize the display with question and optional log file."""
-        pass
 
     @abstractmethod
-    def update_agent_content(
-        self, agent_id: str, content: str, content_type: str = "thinking"
-    ):
+    def update_agent_content(self, agent_id: str, content: str, content_type: str = "thinking"):
         """Update content for a specific agent.
 
         Args:
@@ -35,7 +33,6 @@ class BaseDisplay(ABC):
             content: The content to add/update
             content_type: Type of content ("thinking", "tool", "status")
         """
-        pass
 
     @abstractmethod
     def update_agent_status(self, agent_id: str, status: str):
@@ -45,7 +42,6 @@ class BaseDisplay(ABC):
             agent_id: The agent whose status to update
             status: New status ("waiting", "working", "completed")
         """
-        pass
 
     @abstractmethod
     def add_orchestrator_event(self, event: str):
@@ -54,7 +50,6 @@ class BaseDisplay(ABC):
         Args:
             event: The coordination event message
         """
-        pass
 
     @abstractmethod
     def show_final_answer(self, answer: str, vote_results=None, selected_agent=None):
@@ -65,12 +60,10 @@ class BaseDisplay(ABC):
             vote_results: Dictionary of vote results (optional)
             selected_agent: The selected agent (optional)
         """
-        pass
 
     @abstractmethod
     def cleanup(self):
         """Clean up display resources."""
-        pass
 
     def get_agent_content(self, agent_id: str) -> List[str]:
         """Get all content for a specific agent."""
@@ -84,9 +77,7 @@ class BaseDisplay(ABC):
         """Get all orchestrator events."""
         return self.orchestrator_events.copy()
 
-    def process_reasoning_content(
-        self, chunk_type: str, content: str, source: str
-    ) -> str:
+    def process_reasoning_content(self, chunk_type: str, content: str, source: str) -> str:
         """Process reasoning content and add prefixes as needed.
 
         Args:
@@ -101,9 +92,7 @@ class BaseDisplay(ABC):
             # Track if we're in an active reasoning for this source
             reasoning_active_key = f"_reasoning_active_{source}"
 
-            if not hasattr(self, reasoning_active_key) or not getattr(
-                self, reasoning_active_key, False
-            ):
+            if not hasattr(self, reasoning_active_key) or not getattr(self, reasoning_active_key, False):
                 # Start of new reasoning - add prefix and mark as active
                 setattr(self, reasoning_active_key, True)
                 return f"🧠 [Reasoning Started]\n{content}\n"
@@ -116,15 +105,13 @@ class BaseDisplay(ABC):
             reasoning_active_key = f"_reasoning_active_{source}"
             if hasattr(self, reasoning_active_key):
                 setattr(self, reasoning_active_key, False)
-            return f"\n🧠 [Reasoning Complete]\n"
+            return "\n🧠 [Reasoning Complete]\n"
 
         elif chunk_type == "reasoning_summary":
             # Track if we're in an active summary for this source
             summary_active_key = f"_summary_active_{source}"
 
-            if not hasattr(self, summary_active_key) or not getattr(
-                self, summary_active_key, False
-            ):
+            if not hasattr(self, summary_active_key) or not getattr(self, summary_active_key, False):
                 # Start of new summary - add prefix and mark as active
                 setattr(self, summary_active_key, True)
                 return f"📋 [Reasoning Summary]\n{content}\n"

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Event loop/resource cleanup tests for multiple backends without changing code.
 These tests mock SDK async clients and assert aclose() is awaited by backends.
@@ -17,7 +18,7 @@ from typing import Any, List
 
 import pytest
 
-from massgen.backend import ResponseBackend, GrokBackend, ClaudeBackend
+from massgen.backend import ClaudeBackend, GrokBackend, ResponseBackend
 
 
 # ---- Common fakes ----
@@ -112,7 +113,6 @@ class _FakeOpenAIClientForGrok(_FakeAsyncClientBase):
 
 @pytest.mark.asyncio
 async def test_grok_backend_stream_closes_client(monkeypatch):
-    import massgen.backend.grok as gb
     import sys
 
     created: List[_FakeOpenAIClientForGrok] = []
@@ -156,7 +156,6 @@ class _FakeAnthropicClient(_FakeAsyncClientBase):
 
 @pytest.mark.asyncio
 async def test_claude_backend_stream_closes_client(monkeypatch):
-    import massgen.backend.claude as cb
     import sys
 
     created: List[_FakeAnthropicClient] = []

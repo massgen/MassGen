@@ -1,82 +1,82 @@
         <!-- Slide 10: Tech Deep Dive - Binary Decision Framework Solution -->
         <div class="slide">
-            <div class="icon">🎯</div>
-            <h2>Tech Deep Dive: Binary Decision Framework Solution</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
-                <div>
-                    <ul style="font-size: 1.4em;">
-                        <li><strong>⚖️ Binary Choice:</strong> Each agent must choose: vote OR new_answer</li>
-                        <li><strong>💥 Vote Invalidation:</strong> Any new_answer invalidates ALL existing votes</li>
-                        <li><strong>🔄 Reset & Restart:</strong> All agents restart with updated answer context</li>
-                        <li><strong>🎭 Anonymous Voting:</strong> Agents see "agent1", "agent2" etc.</li>
-                    </ul>
-                </div>
-                <div style="text-align: center;">
-                    <svg viewBox="0 0 500 380" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 450px; height: auto;">
-                        <!-- Round 1 -->
-                        <text x="250" y="25" text-anchor="middle" font-family="Arial" font-size="15" font-weight="bold" fill="#2c3e50">Round 1: Agents 1,3,4 vote for Agent 4</text>
-                        
-                        <!-- Agents with votes -->
-                        <rect x="50" y="45" width="80" height="25" rx="3" fill="#00b894" stroke="#00cec9" stroke-width="1"/>
-                        <text x="90" y="62" text-anchor="middle" font-family="Arial" font-size="12" fill="white">Vote: agent4</text>
-                        
-                        <rect x="140" y="45" width="80" height="25" rx="3" fill="#ddd" stroke="#bbb" stroke-width="1"/>
-                        <text x="180" y="62" text-anchor="middle" font-family="Arial" font-size="12" fill="#666">No vote yet</text>
-                        
-                        <rect x="230" y="45" width="80" height="25" rx="3" fill="#00b894" stroke="#00cec9" stroke-width="1"/>
-                        <text x="270" y="62" text-anchor="middle" font-family="Arial" font-size="12" fill="white">Vote: agent4</text>
-                        
-                        <rect x="320" y="45" width="80" height="25" rx="3" fill="#a29bfe" stroke="#6c5ce7" stroke-width="1"/>
-                        <text x="360" y="62" text-anchor="middle" font-family="Arial" font-size="12" fill="white">Answer+Vote</text>
-                        
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="font-size: 2.5em; margin-bottom: 10px;">🎯</div>
+                <h2 style="font-size: 2.8em; color: #2c3e50; margin-bottom: 15px;">Tech Deep Dive: Binary Decision Framework Solution</h2>
+                <div style="height: 4px; width: 120px; background: linear-gradient(135deg, #667eea, #764ba2); margin: 0 auto; border-radius: 2px;"></div>
+            </div>
+            <div style="height: 70vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div style="text-align: center; position: relative; width: 100%; max-width: 900px;">
+                    <svg viewBox="0 0 650 290" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+                        <!-- Agent labels (once) -->
+                        <text x="110" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 1</text>
+                        <text x="190" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 2</text>
+                        <text x="270" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 3</text>
+                        <text x="350" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 4</text>
+
+                        <!-- Current state -->
+                        <rect x="80" y="40" width="60" height="30" rx="5" fill="#00b894"/>
+                        <text x="110" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Vote: 4</text>
+
+                        <rect x="160" y="40" width="60" height="30" rx="5" fill="#fd79a8"/>
+                        <text x="190" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Writing</text>
+
+                        <rect x="240" y="40" width="60" height="30" rx="5" fill="#00b894"/>
+                        <text x="270" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Vote: 4</text>
+
+                        <rect x="320" y="40" width="60" height="30" rx="5" fill="#a29bfe"/>
+                        <text x="350" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Vote: 4</text>
+
+                        <text x="480" y="50" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2e7d32">⚖️ Binary Choice:</text>
+                        <text x="480" y="68" text-anchor="middle" font-family="Arial" font-size="14" fill="#2e7d32">vote OR new_answer</text>
+
                         <!-- Disruption -->
-                        <text x="250" y="105" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#e74c3c">⚡ Agent 2 provides new_answer</text>
-                        
-                        <!-- Reset arrows -->
-                        <path d="M 90 75 L 90 90" stroke="#e74c3c" stroke-width="2" marker-end="url(#x-mark)"/>
-                        <path d="M 270 75 L 270 90" stroke="#e74c3c" stroke-width="2" marker-end="url(#x-mark)"/>
-                        <path d="M 360 75 L 360 90" stroke="#e74c3c" stroke-width="2" marker-end="url(#x-mark)"/>
-                        
-                        <!-- Reset mechanism -->
-                        <rect x="140" y="120" width="80" height="25" rx="3" fill="#fd79a8" stroke="#e84393" stroke-width="1"/>
-                        <text x="180" y="137" text-anchor="middle" font-family="Arial" font-size="12" fill="white">new_answer</text>
-                        
-                        <!-- Round 2 -->
-                        <text x="250" y="175" text-anchor="middle" font-family="Arial" font-size="15" font-weight="bold" fill="#2c3e50">Round 2: All agents restart with 2 answers</text>
-                        
-                        <!-- New state -->
-                        <rect x="50" y="195" width="80" height="25" rx="3" fill="#74b9ff" stroke="#0984e3" stroke-width="1"/>
-                        <text x="90" y="212" text-anchor="middle" font-family="Arial" font-size="11" fill="white">restart_pending</text>
-                        
-                        <rect x="140" y="195" width="80" height="25" rx="3" fill="#a29bfe" stroke="#6c5ce7" stroke-width="1"/>
-                        <text x="180" y="212" text-anchor="middle" font-family="Arial" font-size="11" fill="white">Has new answer</text>
-                        
-                        <rect x="230" y="195" width="80" height="25" rx="3" fill="#74b9ff" stroke="#0984e3" stroke-width="1"/>
-                        <text x="270" y="212" text-anchor="middle" font-family="Arial" font-size="11" fill="white">restart_pending</text>
-                        
-                        <rect x="320" y="195" width="80" height="25" rx="3" fill="#a29bfe" stroke="#6c5ce7" stroke-width="1"/>
-                        <text x="360" y="212" text-anchor="middle" font-family="Arial" font-size="11" fill="white">Has old answer</text>
-                        
-                        <!-- Binary decision -->
-                        <text x="250" y="250" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#2c3e50">Each agent decides: vote OR new_answer</text>
-                        
-                        <!-- Key insight -->
-                        <rect x="70" y="265" width="360" height="28" rx="5" fill="#fff3cd" stroke="#f39c12" stroke-width="2"/>
-                        <text x="250" y="283" text-anchor="middle" font-family="Arial" font-size="13" font-weight="bold" fill="#856404">🔑 Any new_answer resets ALL votes</text>
-                        
-                        <!-- Vote invalidation note -->
-                        <text x="250" y="315" text-anchor="middle" font-family="Arial" font-size="12" fill="#e74c3c">Votes from Round 1: ❌ INVALID</text>
-                        <text x="250" y="335" text-anchor="middle" font-family="Arial" font-size="12" fill="#27ae60">New decisions needed based on 2 available answers</text>
-                        
-                        <!-- Markers -->
+                        <text x="325" y="100" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#e74c3c">Agent 2 provides new_answer</text>
+                        <text x="325" y="120" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#e74c3c">→ ALL VOTES RESET</text>
+
+                        <!-- After reset -->
+                        <text x="325" y="155" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#2c3e50">After Reset:</text>
+
+                        <rect x="80" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="110" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <rect x="160" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="190" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <rect x="240" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="270" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <rect x="320" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="350" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <!-- Results of async decisions -->
+                        <text x="325" y="220" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2c3e50">Async Results:</text>
+
+                        <rect x="80" y="230" width="60" height="25" rx="5" fill="#00b894"/>
+                        <text x="110" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Vote: 2</text>
+
+                        <rect x="160" y="230" width="60" height="25" rx="5" fill="#00b894"/>
+                        <text x="190" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Vote: 2</text>
+
+                        <rect x="240" y="230" width="60" height="25" rx="5" fill="#fd79a8"/>
+                        <text x="270" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Writing</text>
+
+                        <rect x="320" y="230" width="60" height="25" rx="5" fill="#74b9ff"/>
+                        <text x="350" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Deciding</text>
+
+                        <!-- Cycle indication -->
+                        <text x="325" y="275" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">→ If new_answer: reset again</text>
+
+
+                        <!-- Enhanced markers -->
                         <defs>
-                            <marker id="x-mark" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
-                                <path d="M 2 2 L 8 8 M 8 2 L 2 8" stroke="#e74c3c" stroke-width="2"/>
+                            <marker id="arrow-down" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto">
+                                <path d="M 2 2 L 5 8 L 8 2" stroke="#e74c3c" stroke-width="2" fill="#e74c3c"/>
                             </marker>
                         </defs>
                     </svg>
-                    <div style="margin-top: 15px; font-size: 1em; color: #7f8c8d;">
-                        <strong>Key Innovation:</strong> Dynamic equilibrium through vote invalidation
+                    <div style="margin-top: 30px; padding: 20px 35px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 20px; color: white; box-shadow: 0 15px 40px rgba(0,0,0,0.3);">
+                        <div style="font-size: 1.4em; font-weight: bold;">🎯 Key Innovation: Vote Invalidation Creates Dynamic Consensus</div>
                     </div>
                 </div>
             </div>
