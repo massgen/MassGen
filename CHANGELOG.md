@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reduced `claude.py` by 700+ lines
   - Simplified `response.py` by 468+ lines
   - Total reduction: ~1,932 lines removed across core backend files
-  
+
 ### Fixed
 - **Coordination Table Display**: Fixed escape key handling on macOS
   - Updated `create_coordination_table.py` and `rich_terminal_display.py`
@@ -94,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - User context paths with configurable READ/WRITE permissions for multi-agent file sharing
   - Test suite for permission validation in `test_path_permission_manager.py`
   - Documentation in `permissions_and_context_files.md` for implementation guide
-  
+
 - **Function Hook Manager**: Per-agent function call permission system
   - Refactored `FunctionHookManager` to be per-agent rather than global
   - Pre-tool-use hooks for validating file operations before execution
@@ -105,7 +105,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Migrated Grok backend to inherit from Chat Completions backend
   - Full MCP server support for Grok including stdio and HTTP transports
   - Filesystem support through MCP servers
-  
+
 - **New Configuration Files**: Added test and example configurations
   - `grok3_mini_mcp_test.yaml`: Grok MCP testing configuration
   - `grok3_mini_mcp_example.yaml`: Grok MCP usage example
@@ -118,7 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Grok backend refactored to use Chat Completions backend
   - All backends now support per-agent permission management
   - Enhanced context file support across Claude, Gemini, and OpenAI backends
-  
+
 ### Technical Details
 - **Commits**: 20+ commits including permission system, Grok MCP, and terminal improvements
 - **Files Modified**: 40+ files across backends, MCP tools, permissions, and display modules
@@ -343,7 +343,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Debug mode support via `--debug` CLI flag for verbose logging
   - Consistent logging format across all backends, including Claude, Gemini, Grok, Azure OpenAI, and other providers
   - Color-coded log levels for better visibility (DEBUG: cyan, INFO: green)
-  
+
 - **Windows Platform Support**: Enhanced cross-platform compatibility
   - Windows-specific fixes for terminal display and color output
   - Improved path handling for Windows file systems
@@ -744,7 +744,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Backend Response Handling**: Multiple bug fixes in response.py for proper parameter handling
 
 ### Changed
-- **Documentation Updates**: 
+- **Documentation Updates**:
   - Updated README.md to highlight GPT-5 series support
   - Changed example commands to use GPT-5 models
   - Added new backend configuration examples with GPT-5 specific parameters

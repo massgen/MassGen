@@ -136,7 +136,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **What's New in v0.0.23:**
 - **Backend Architecture Refactoring** - Major consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends
-- **Formatter Module** - Extracted message and tool formatting logic into dedicated `massgen/formatter/` module  
+- **Formatter Module** - Extracted message and tool formatting logic into dedicated `massgen/formatter/` module
 - **Massive Code Deduplication** - Streamlined chat_completions.py, claude.py, and response.py for better maintainability
 - **Bug Fixes** - Fixed coordination table escape handling on macOS and FastMCP integration
 
@@ -616,7 +616,7 @@ uv run python -m massgen.cli \
 
 **Gemini (Multi-Server MCP - v0.0.15+)**
 ```bash
-# Gemini with multiple MCP services 
+# Gemini with multiple MCP services
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
   "Find accommodations in Paris with neighborhood analysis"    # (requires BRAVE_API_KEY in .env)
@@ -674,7 +674,7 @@ uv run python -m massgen.cli \
 
 **Web Automation:** (still in test)
 ```bash
-# Browser automation with screenshots and reporting 
+# Browser automation with screenshots and reporting
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
   "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
