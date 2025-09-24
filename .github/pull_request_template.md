@@ -50,7 +50,7 @@ Brief description of the changes in this PR
 # uv run pre-commit install
 # git diff --name-only HEAD~1 | xargs uv run pre-commit run --files # for last commit
 # git diff --name-only origin/<base branch>...HEAD | xargs uv run pre-commit run --files # for all commits in PR
-# git add --all # if any fixes were applied
+# git add <your file> # if any fixes were applied
 # git commit -m "chore: apply pre-commit fixes"
 # git push origin <branch-name>
 ```

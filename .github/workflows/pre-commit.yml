@@ -50,8 +50,11 @@ jobs:
           # For PRs, get files changed between base and head
           git diff --name-only --diff-filter=ACMRTUXB ${{ github.event.pull_request.base.sha }} ${{ github.sha }} > changed_files.txt
         else
-          # For pushes, get files changed in the last commit
-          git diff --name-only --diff-filter=ACMRTUXB HEAD~1 HEAD > changed_files.txt
+          # For pushes, compare with default branch (usually main)
+          BASE_BRANCH="${{ github.event.repository.default_branch }}"
+          BASE_SHA=$(git rev-parse origin/$BASE_BRANCH)
+          git fetch origin $BASE_BRANCH
+          git diff --name-only --diff-filter=ACMRTUXB $BASE_SHA ${{ github.sha }} > changed_files.txt
         fi
         echo "Changed files:"
         cat changed_files.txt

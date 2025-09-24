@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Workspace Copy MCP Server for MassGen - Phase 1 Implementation
 
@@ -10,13 +11,13 @@ Tools provided:
 - copy_files_batch: Copy multiple files with pattern matching and exclusions
 """
 
-import os
-import sys
 import argparse
+import fnmatch
+import os
 import shutil
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple
-import fnmatch
+from typing import Any, Dict, List, Optional, Tuple
+
 import fastmcp
 
 mcp = fastmcp.FastMCP("Workspace Copy")
@@ -26,12 +27,7 @@ ALLOWED_PATHS: List[Path] = []
 WORKSPACE_PATH: Optional[Path] = None
 
 
-def get_copy_file_pairs(
-    source_base_path: str,
-    destination_base_path: str = "",
-    include_patterns: Optional[List[str]] = None,
-    exclude_patterns: Optional[List[str]] = None
-) -> List[Tuple[Path, Path]]:
+def get_copy_file_pairs(source_base_path: str, destination_base_path: str = "", include_patterns: Optional[List[str]] = None, exclude_patterns: Optional[List[str]] = None) -> List[Tuple[Path, Path]]:
     """
     Get all source->destination file pairs that would be copied by copy_files_batch.
 
@@ -193,24 +189,14 @@ def _perform_copy(source: Path, destination: Path, overwrite: bool = False) -> D
 
         if source.is_file():
             shutil.copy2(source, destination)
-            return {
-                "type": "file",
-                "source": str(source),
-                "destination": str(destination),
-                "size": destination.stat().st_size
-            }
+            return {"type": "file", "source": str(source), "destination": str(destination), "size": destination.stat().st_size}
         elif source.is_dir():
             if destination.exists():
                 shutil.rmtree(destination)
             shutil.copytree(source, destination)
 
             file_count = len([f for f in destination.rglob("*") if f.is_file()])
-            return {
-                "type": "directory",
-                "source": str(source),
-                "destination": str(destination),
-                "file_count": file_count
-            }
+            return {"type": "directory", "source": str(source), "destination": str(destination), "file_count": file_count}
         else:
             raise ValueError(f"Source is neither file nor directory: {source}")
 
@@ -219,11 +205,7 @@ def _perform_copy(source: Path, destination: Path, overwrite: bool = False) -> D
 
 
 @mcp.tool()
-def copy_file(
-    source_path: str,
-    destination_path: str,
-    overwrite: bool = False
-) -> Dict[str, Any]:
+def copy_file(source_path: str, destination_path: str, overwrite: bool = False) -> Dict[str, Any]:
     """
     Copy a file or directory from any accessible path to the agent's workspace.
 
@@ -243,11 +225,7 @@ def copy_file(
     source, destination = _validate_and_resolve_paths(source_path, destination_path)
     result = _perform_copy(source, destination, overwrite)
 
-    return {
-        "success": True,
-        "operation": "copy_file",
-        "details": result
-    }
+    return {"success": True, "operation": "copy_file", "details": result}
 
 
 @mcp.tool()
@@ -256,7 +234,7 @@ def copy_files_batch(
     destination_base_path: str = "",
     include_patterns: Optional[List[str]] = None,
     exclude_patterns: Optional[List[str]] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
 ) -> Dict[str, Any]:
     """
     Copy multiple files with pattern matching and exclusions.
@@ -284,15 +262,12 @@ def copy_files_batch(
         exclude_patterns = []
 
     try:
-
         copied_files = []
         skipped_files = []
         errors = []
 
         # Get all file pairs to copy
-        file_pairs = get_copy_file_pairs(
-            source_base_path, destination_base_path, include_patterns, exclude_patterns
-        )
+        file_pairs = get_copy_file_pairs(source_base_path, destination_base_path, include_patterns, exclude_patterns)
 
         # Process each file pair
         for source_file, dest_file in file_pairs:
@@ -301,10 +276,7 @@ def copy_files_batch(
             try:
                 # Check if destination exists
                 if dest_file.exists() and not overwrite:
-                    skipped_files.append({
-                        "path": rel_path_str,
-                        "reason": "destination exists (overwrite=false)"
-                    })
+                    skipped_files.append({"path": rel_path_str, "reason": "destination exists (overwrite=false)"})
                     continue
 
                 # Create parent directories
@@ -313,40 +285,20 @@ def copy_files_batch(
                 # Copy file
                 shutil.copy2(source_file, dest_file)
 
-                copied_files.append({
-                    "source": str(source_file),
-                    "destination": str(dest_file),
-                    "relative_path": rel_path_str,
-                    "size": dest_file.stat().st_size
-                })
+                copied_files.append({"source": str(source_file), "destination": str(dest_file), "relative_path": rel_path_str, "size": dest_file.stat().st_size})
 
             except Exception as e:
-                errors.append({
-                    "path": rel_path_str,
-                    "error": str(e)
-                })
+                errors.append({"path": rel_path_str, "error": str(e)})
 
         return {
             "success": True,
             "operation": "copy_files_batch",
-            "summary": {
-                "copied": len(copied_files),
-                "skipped": len(skipped_files),
-                "errors": len(errors)
-            },
-            "details": {
-                "copied_files": copied_files,
-                "skipped_files": skipped_files,
-                "errors": errors
-            }
+            "summary": {"copied": len(copied_files), "skipped": len(skipped_files), "errors": len(errors)},
+            "details": {"copied_files": copied_files, "skipped_files": skipped_files, "errors": errors},
         }
 
     except Exception as e:
-        return {
-            "success": False,
-            "operation": "copy_files_batch",
-            "error": str(e)
-        }
+        return {"success": False, "operation": "copy_files_batch", "error": str(e)}
 
 
 if __name__ == "__main__":

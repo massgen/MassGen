@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassAgent implementations that wrap the existing agent backends.
 
@@ -5,20 +6,14 @@ This module provides MassAgent-compatible wrappers for the existing
 OpenAI, Gemini, and Grok agent implementations.
 """
 
-import os
-import sys
-import copy
-import time
-import traceback
-from typing import Callable, Union, Optional, List, Dict, Any
+from typing import Callable, Dict, List, Optional
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from .agent import MassAgent
 from .types import ModelConfig, TaskInput
-from .tools import register_tool
+
+load_dotenv()
 
 
 class OpenAIMassAgent(MassAgent):
@@ -32,7 +27,6 @@ class OpenAIMassAgent(MassAgent):
         stream_callback: Optional[Callable] = None,
         **kwargs,
     ):
-
         # Pass all configuration to parent, including agent_type
         super().__init__(
             agent_id=agent_id,
@@ -54,7 +48,6 @@ class GrokMassAgent(OpenAIMassAgent):
         stream_callback: Optional[Callable] = None,
         **kwargs,
     ):
-
         # Pass all configuration to parent, including agent_type
         super().__init__(
             agent_id=agent_id,
@@ -76,7 +69,6 @@ class GeminiMassAgent(OpenAIMassAgent):
         stream_callback: Optional[Callable] = None,
         **kwargs,
     ):
-
         # Pass all configuration to parent, including agent_type
         super().__init__(
             agent_id=agent_id,
@@ -157,19 +149,13 @@ class GeminiMassAgent(OpenAIMassAgent):
                 if working_messages[-1].get("role", "") == "user":
                     if not function_call_enabled:
                         working_messages[-1]["content"] += (
-                            "\n\n"
-                            + "Note that the `add_answer` and `vote` tools are not enabled now. Please prioritize using the built-in tools to analyze the task first."
+                            "\n\n" + "Note that the `add_answer` and `vote` tools are not enabled now. Please prioritize using the built-in tools to analyze the task first."
                         )
                     else:
-                        working_messages[-1]["content"] += (
-                            "\n\n"
-                            + "Note that the `add_answer` and `vote` tools are enabled now."
-                        )
+                        working_messages[-1]["content"] += "\n\n" + "Note that the `add_answer` and `vote` tools are enabled now."
 
                 # Call LLM with current conversation
-                result = self.process_message(
-                    messages=working_messages, tools=available_tools
-                )
+                result = self.process_message(messages=working_messages, tools=available_tools)
 
                 # Before Making the new result into effect, check if there is any update from other agents that are unseen by this agent
                 agents_with_update = self.check_update()
@@ -180,29 +166,18 @@ class GeminiMassAgent(OpenAIMassAgent):
 
                 # Add assistant response
                 if result.text:
-                    working_messages.append(
-                        {"role": "assistant", "content": result.text}
-                    )
+                    working_messages.append({"role": "assistant", "content": result.text})
 
                 # Execute function calls if any
                 if result.function_calls:
                     # Deduplicate function calls by their name
-                    result.function_calls = self.deduplicate_function_calls(
-                        result.function_calls
-                    )
-                    function_outputs, successful_called = self._execute_function_calls(
-                        result.function_calls, invalid_vote_options=agents_with_update
-                    )
+                    result.function_calls = self.deduplicate_function_calls(result.function_calls)
+                    function_outputs, successful_called = self._execute_function_calls(result.function_calls, invalid_vote_options=agents_with_update)
 
                     renew_conversation = False
-                    for function_call, function_output, successful_called in zip(
-                        result.function_calls, function_outputs, successful_called
-                    ):
+                    for function_call, function_output, successful_called in zip(result.function_calls, function_outputs, successful_called):
                         # If call `add_answer`, we need to rebuild the conversation history with new answers
-                        if (
-                            function_call.get("name") == "add_answer"
-                            and successful_called
-                        ):
+                        if function_call.get("name") == "add_answer" and successful_called:
                             renew_conversation = True
                             break
 
@@ -213,17 +188,13 @@ class GeminiMassAgent(OpenAIMassAgent):
 
                     if not renew_conversation:
                         # Add all function call results to the current conversation
-                        for function_call, function_output in zip(
-                            result.function_calls, function_outputs
-                        ):
+                        for function_call, function_output in zip(result.function_calls, function_outputs):
                             working_messages.extend([function_call, function_output])
                         # If we have used custom tools, switch to built-in tools in the next round
                         if tool_switch:
                             available_tools = built_in_tools
                             function_call_enabled = False
-                            print(
-                                f"🔄 Agent {self.agent_id} (Gemini) switching to built-in tools in the next round"
-                            )
+                            print(f"🔄 Agent {self.agent_id} (Gemini) switching to built-in tools in the next round")
                     else:  # Renew the conversation
                         (
                             working_status,
@@ -259,16 +230,14 @@ class GeminiMassAgent(OpenAIMassAgent):
                                 {
                                     "role": "user",
                                     "content": "Finish your work above by making a tool call of `vote` or `add_answer`. Make sure you actually call the tool.",
-                                }
+                                },
                             )
 
                     # Switch to custom tools in the next round
                     if tool_switch:
                         available_tools = system_tools + custom_tools
                         function_call_enabled = True
-                        print(
-                            f"🔄 Agent {self.agent_id} (Gemini) switching to custom tools in the next round"
-                        )
+                        print(f"🔄 Agent {self.agent_id} (Gemini) switching to custom tools in the next round")
 
                 curr_round += 1
                 self.state.chat_round += 1
@@ -278,9 +247,7 @@ class GeminiMassAgent(OpenAIMassAgent):
                     break
 
             except Exception as e:
-                print(
-                    f"❌ Agent {self.agent_id} error in round {self.state.chat_round}: {e}"
-                )
+                print(f"❌ Agent {self.agent_id} error in round {self.state.chat_round}: {e}")
                 if self.orchestrator:
                     self.orchestrator.mark_agent_failed(self.agent_id, str(e))
 
@@ -318,9 +285,7 @@ def create_agent(
     }
 
     if agent_type not in agent_classes:
-        raise ValueError(
-            f"Unknown agent type: {agent_type}. Available types: {list(agent_classes.keys())}"
-        )
+        raise ValueError(f"Unknown agent type: {agent_type}. Available types: {list(agent_classes.keys())}")
 
     return agent_classes[agent_type](
         agent_id=agent_id,

@@ -1,7 +1,7 @@
 # OpenAI GPT-5 Models - Backend Implementation Notes
 
-> **Status**: Latest information as of August 2025  
-> **Source**: OpenAI Platform Documentation - GPT-5 Guide  
+> **Status**: Latest information as of August 2025
+> **Source**: OpenAI Platform Documentation - GPT-5 Guide
 > **Impact**: Major updates required for MassGen backend implementations
 
 ## Overview
@@ -40,7 +40,7 @@ GPT-5 represents OpenAI's most intelligent model series, with significant archit
 ```python
 # New text.verbosity parameter
 {
-    "model": "gpt-5", 
+    "model": "gpt-5",
     "text": {
         "verbosity": "low"  # Options: low, medium, high
     }
@@ -53,7 +53,7 @@ GPT-5 represents OpenAI's most intelligent model series, with significant archit
 # Freeform tool inputs - no longer restricted to JSON
 {
     "type": "custom",
-    "name": "code_exec", 
+    "name": "code_exec",
     "description": "Executes arbitrary python code"
 }
 ```
@@ -103,13 +103,13 @@ GPT-5 **works best** with the Responses API due to:
 # New parameters to add to response.py
 api_params = {
     "model": "gpt-5",
-    "input": messages,  # Note: 'input' not 'messages' 
+    "input": messages,  # Note: 'input' not 'messages'
     "reasoning": {"effort": "medium"},  # NEW
     "text": {"verbosity": "medium"},    # NEW
     "tools": tools,
     "tool_choice": {                   # ENHANCED
         "type": "allowed_tools",
-        "mode": "auto", 
+        "mode": "auto",
         "tools": allowed_subset
     }
 }
@@ -143,7 +143,7 @@ def convert_tools_for_gpt5(tools):
 
 Based on historical patterns, expect:
 - **gpt-5**: ~$15-20 per 1M input tokens, $60-80 per 1M output tokens
-- **gpt-5-mini**: ~$1-2 per 1M input tokens, $5-8 per 1M output tokens  
+- **gpt-5-mini**: ~$1-2 per 1M input tokens, $5-8 per 1M output tokens
 - **gpt-5-nano**: ~$0.25-0.50 per 1M input tokens, $1-2 per 1M output tokens
 
 **Note**: Reasoning effort affects token usage - minimal uses fewer reasoning tokens.
@@ -156,7 +156,7 @@ Based on historical patterns, expect:
 3. **Update agent_config.py** - Add GPT-5 model configurations
 4. **Test tool compatibility** - Ensure custom tools work with MassGen framework
 
-### Medium Priority  
+### Medium Priority
 1. **Implement CoT passing** - Between conversation turns
 2. **Add verbosity controls** - Cost optimization feature
 3. **Update pricing calculations** - New model pricing
@@ -174,7 +174,7 @@ GPT-5 excels at coding tasks. Recommended prompt patterns:
 system_prompt = """
 You are a software engineering agent with well-defined responsibilities.
 - Use functions.run for code execution tasks
-- Test changes with unit tests or Python commands  
+- Test changes with unit tests or Python commands
 - Generate clean, semantically correct markdown
 - Format code with proper fences and inline backticks
 Before you call a tool, explain why you are calling it.
@@ -191,10 +191,10 @@ For web development tasks, GPT-5 performs best with:
 
 ## Integration Timeline
 
-**Phase 1 (Immediate)**: Basic GPT-5 support via updated response.py  
-**Phase 2 (Week 2)**: Dedicated GPT-5 backend with all new features  
-**Phase 3 (Month 1)**: Full CoT integration and optimization  
-**Phase 4 (Month 2)**: Advanced features (custom tools, allowed tools)  
+**Phase 1 (Immediate)**: Basic GPT-5 support via updated response.py
+**Phase 2 (Week 2)**: Dedicated GPT-5 backend with all new features
+**Phase 3 (Month 1)**: Full CoT integration and optimization
+**Phase 4 (Month 2)**: Advanced features (custom tools, allowed tools)
 
 ## Testing Strategy
 
@@ -205,7 +205,7 @@ For web development tasks, GPT-5 performs best with:
 
 ---
 
-**Next Steps**: 
+**Next Steps**:
 1. Update response.py to support basic GPT-5 parameters
 2. Create comprehensive test suite for GPT-5 features
 3. Implement gradual rollout strategy for existing MassGen users

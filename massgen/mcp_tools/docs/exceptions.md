@@ -403,27 +403,27 @@ async def connect_with_error_handling():
         "command": "python",
         "args": ["-m", "example_server"]
     }
-    
+
     try:
         async with MCPClient(server_config) as client:
             result = await client.call_tool("example_tool", {"param": "value"})
             return result
-            
+
     except MCPConnectionError as e:
         print(f"Connection failed: {e}")
         print(f"Server: {e.server_name}, Transport: {e.transport_type}")
         # Implement retry logic
-        
+
     except MCPTimeoutError as e:
         print(f"Operation timed out: {e}")
         print(f"Operation: {e.operation}, Timeout: {e.timeout_seconds}s")
         # Implement timeout handling
-        
+
     except MCPServerError as e:
         print(f"Server error: {e}")
         print(f"Server code: {e.code}, HTTP status: {e.http_status}")
         # Handle server-side errors
-        
+
     except MCPError as e:
         print(f"General MCP error: {e}")
         e.log_error()  # Log with structured context
@@ -438,11 +438,11 @@ from massgen.mcp_tools.exceptions import MCPConnectionError, MCPTimeoutError
 
 async def robust_tool_call(client, tool_name, arguments, max_retries=3):
     """Call tool with automatic retry on certain errors."""
-    
+
     for attempt in range(max_retries):
         try:
             return await client.call_tool(tool_name, arguments)
-            
+
         except MCPTimeoutError as e:
             if attempt < max_retries - 1:
                 wait_time = 2 ** attempt  # Exponential backoff
@@ -452,7 +452,7 @@ async def robust_tool_call(client, tool_name, arguments, max_retries=3):
             else:
                 print(f"Tool call failed after {max_retries} attempts")
                 raise
-                
+
         except MCPConnectionError as e:
             if attempt < max_retries - 1:
                 print(f"Connection error on attempt {attempt + 1}, reconnecting...")
@@ -460,7 +460,7 @@ async def robust_tool_call(client, tool_name, arguments, max_retries=3):
                 continue
             else:
                 raise
-                
+
         except Exception as e:
             # Don't retry on other errors
             print(f"Non-retryable error: {e}")
@@ -482,7 +482,7 @@ logging.basicConfig(
 
 class StructuredErrorHandler(logging.Handler):
     """Custom handler for structured MCP error logging."""
-    
+
     def emit(self, record):
         if hasattr(record, 'mcp_error'):
             error_data = record.mcp_error
@@ -550,18 +550,18 @@ from massgen.mcp_tools.exceptions import MCPError
 
 class CustomMCPError(MCPError):
     """Custom MCP error with additional sanitization."""
-    
+
     def _sanitize_context(self, context):
         # Call parent sanitization first
         sanitized = super()._sanitize_context(context)
-        
+
         # Add custom sanitization rules
         custom_sensitive = {'internal_id', 'session_token', 'private_key'}
-        
+
         for key, value in sanitized.items():
             if any(sensitive in key.lower() for sensitive in custom_sensitive):
                 sanitized[key] = "[CUSTOM_REDACTED]"
-                
+
         return sanitized
 
 # Usage
@@ -594,7 +594,7 @@ from massgen.mcp_tools.exceptions import MCPConnectionError, MCPServerError
 
 async def call_with_circuit_breaker(client, circuit_breaker, server_name, tool_name, args):
     """Call tool with circuit breaker protection."""
-    
+
     # Check if server should be skipped
     if circuit_breaker.should_skip_server(server_name):
         raise MCPConnectionError(
@@ -602,23 +602,23 @@ async def call_with_circuit_breaker(client, circuit_breaker, server_name, tool_n
             server_name=server_name,
             context={"circuit_breaker": "open"}
         )
-    
+
     try:
         result = await client.call_tool(tool_name, args)
         # Record success
         circuit_breaker.record_success(server_name)
         return result
-        
+
     except (MCPConnectionError, MCPServerError) as e:
         # Record failure for circuit breaker
         circuit_breaker.record_failure(server_name)
-        
+
         # Add circuit breaker context to error
         e.context = e.context or {}
         e.context.update({
             "circuit_breaker_failures": circuit_breaker.get_server_status(server_name)[0]
         })
-        
+
         raise
 ```
 
@@ -632,30 +632,30 @@ from massgen.mcp_tools.exceptions import MCPConfigurationError, MCPValidationErr
 
 def validate_and_handle_config(config):
     """Validate configuration with proper error handling."""
-    
+
     try:
         validated_config = MCPConfigValidator.validate_server_config(config)
         return validated_config
-        
+
     except MCPConfigurationError as e:
         # Configuration-specific error handling
         print(f"Configuration error: {e}")
-        
+
         if e.missing_keys:
             print(f"Missing required keys: {e.missing_keys}")
-            
+
         if e.config_file:
             print(f"Check configuration file: {e.config_file}")
-            
+
         # Log structured error
         e.log_error()
         raise
-        
+
     except MCPValidationError as e:
         # Validation-specific error handling
         print(f"Validation error in field '{e.field}': {e}")
         print(f"Expected: {e.expected_type}, Got: {type(e.value).__name__}")
-        
+
         # Log with additional context
         e.log_error()
         raise
@@ -692,14 +692,14 @@ except MCPConnectionError as e:
     if e.transport_type == "stdio":
         print(f"Check command: {stdio_config.get('command')}")
         print(f"Check environment: {stdio_config.get('env', {})}")
-        
+
         # Test command manually
         import subprocess
         try:
             result = subprocess.run(
-                stdio_config['command'], 
-                capture_output=True, 
-                text=True, 
+                stdio_config['command'],
+                capture_output=True,
+                text=True,
                 timeout=10
             )
             print(f"Command output: {result.stdout}")
@@ -715,7 +715,7 @@ except MCPConnectionError as e:
     if e.transport_type == "streamable-http":
         print(f"Check URL: {http_config.get('url')}")
         print(f"Check headers: {http_config.get('headers', {})}")
-        
+
         # Test HTTP connectivity
         import aiohttp
         async with aiohttp.ClientSession() as session:
@@ -746,7 +746,7 @@ except MCPServerError as e:
     print(f"Server error code: {e.code}")
     print(f"HTTP status: {e.http_status}")
     print(f"Response data: {e.response_data}")
-    
+
     # Check for specific error patterns
     if e.code == -32602:  # Invalid params
         print("Check tool arguments format")
@@ -774,10 +774,10 @@ try:
     result = await client.call_tool("slow_tool", args)
 except MCPTimeoutError as e:
     print(f"Timeout: {e.timeout_seconds}s, Elapsed: {e.elapsed_seconds}s")
-    
+
     # Adjust timeout for slow operations
     client.timeout_seconds = 60  # Increase timeout
-    
+
     # Or implement chunked processing
     if "large_file" in args:
         # Process in smaller chunks
@@ -802,13 +802,13 @@ try:
     config = MCPConfigValidator.validate_server_config(raw_config)
 except MCPConfigurationError as e:
     print(f"Configuration error: {e}")
-    
+
     if e.missing_keys:
         print(f"Add missing keys: {e.missing_keys}")
-        
+
     if e.config_file:
         print(f"Check file: {e.config_file}")
-        
+
     # Show expected format
     example_config = {
         "name": "server-name",
@@ -828,17 +828,17 @@ from massgen.mcp_tools.exceptions import format_error_chain
 
 def analyze_error_chain(exception):
     """Analyze and report on exception chains."""
-    
+
     chain = format_error_chain(exception)
     print(f"Error chain: {chain}")
-    
+
     # Extract root cause
     current = exception
     while current.__cause__ or current.__context__:
         current = current.__cause__ or current.__context__
-    
+
     print(f"Root cause: {type(current).__name__}: {current}")
-    
+
     # Check for common patterns
     if "ConnectionRefusedError" in chain:
         print("Suggestion: Check if server is running and port is correct")
@@ -856,38 +856,38 @@ from massgen.mcp_tools.exceptions import MCPError
 
 class ErrorAnalyzer:
     """Analyze error patterns for debugging."""
-    
+
     def __init__(self):
         self.error_counts = defaultdict(int)
         self.error_contexts = []
-    
+
     def record_error(self, error: MCPError):
         """Record error for analysis."""
         error_type = type(error).__name__
         self.error_counts[error_type] += 1
         self.error_contexts.append(error.to_dict())
-    
+
     def get_summary(self):
         """Get error summary."""
         total_errors = sum(self.error_counts.values())
-        
+
         summary = {
             "total_errors": total_errors,
             "error_types": dict(self.error_counts),
             "most_common": max(self.error_counts.items(), key=lambda x: x[1]) if self.error_counts else None
         }
-        
+
         return summary
-    
+
     def get_server_errors(self):
         """Get errors by server."""
         server_errors = defaultdict(int)
-        
+
         for context in self.error_contexts:
             server_name = context.get("context", {}).get("server_name")
             if server_name:
                 server_errors[server_name] += 1
-                
+
         return dict(server_errors)
 
 # Usage
@@ -898,7 +898,7 @@ try:
     pass
 except MCPError as e:
     analyzer.record_error(e)
-    
+
 # Analyze patterns
 summary = analyzer.get_summary()
 print(f"Error summary: {summary}")
@@ -917,21 +917,21 @@ from massgen.mcp_tools.exceptions import MCPError, MCPTimeoutError
 
 async def robust_async_operation():
     """Best practices for async error handling."""
-    
+
     tasks = []
-    
+
     try:
         # Create multiple tasks
         for i in range(5):
             task = asyncio.create_task(some_mcp_operation(i))
             tasks.append(task)
-        
+
         # Wait for all tasks with timeout
         results = await asyncio.wait_for(
             asyncio.gather(*tasks, return_exceptions=True),
             timeout=30.0
         )
-        
+
         # Process results and handle exceptions
         for i, result in enumerate(results):
             if isinstance(result, MCPError):
@@ -941,22 +941,22 @@ async def robust_async_operation():
                 print(f"Task {i} unexpected error: {result}")
             else:
                 print(f"Task {i} succeeded: {result}")
-                
+
     except asyncio.TimeoutError:
         # Cancel remaining tasks
         for task in tasks:
             if not task.done():
                 task.cancel()
-        
+
         # Wait for cancellation
         await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         raise MCPTimeoutError(
             "Batch operation timed out",
             timeout_seconds=30.0,
             operation="batch_mcp_operations"
         )
-    
+
     except Exception as e:
         # Handle unexpected errors
         print(f"Unexpected error in async operation: {e}")
@@ -973,7 +973,7 @@ from datetime import datetime
 # Configure structured logging for MCP errors
 def setup_mcp_logging():
     """Set up logging configuration for MCP operations."""
-    
+
     # Create formatter for structured logs
     class MCPFormatter(logging.Formatter):
         def format(self, record):
@@ -983,26 +983,26 @@ def setup_mcp_logging():
                 'logger': record.name,
                 'message': record.getMessage(),
             }
-            
+
             # Add MCP error context if present
             if hasattr(record, 'mcp_error'):
                 log_entry['mcp_error'] = record.mcp_error
-            
+
             # Add exception info if present
             if record.exc_info:
                 log_entry['exception'] = self.formatException(record.exc_info)
-            
+
             return json.dumps(log_entry)
-    
+
     # Set up handler
     handler = logging.StreamHandler()
     handler.setFormatter(MCPFormatter())
-    
+
     # Configure MCP logger
     mcp_logger = logging.getLogger('massgen.mcp_tools')
     mcp_logger.setLevel(logging.INFO)
     mcp_logger.addHandler(handler)
-    
+
     return mcp_logger
 
 # Usage
@@ -1022,10 +1022,10 @@ from massgen.mcp_tools.exceptions import MCPError, MCPConnectionError
 
 class MCPService:
     """Service class demonstrating error propagation patterns."""
-    
+
     def __init__(self, client):
         self.client = client
-    
+
     async def high_level_operation(self, data):
         """High-level operation that may fail."""
         try:
@@ -1038,10 +1038,10 @@ class MCPService:
                 'operation': 'high_level_operation',
                 'data_size': len(str(data))
             })
-            
+
             # Re-raise with additional context
             raise
-    
+
     async def _process_data(self, data):
         """Internal processing that may fail."""
         try:
@@ -1065,11 +1065,11 @@ try:
 except MCPError as e:
     # Handle service-level errors
     print(f"Service error: {e}")
-    
+
     # Check for specific error codes
     if e.error_code == "SERVICE_UNAVAILABLE":
         print("Service is temporarily unavailable")
-    
+
     # Log with full context
     e.log_error()
 ```
@@ -1083,11 +1083,11 @@ from massgen.mcp_tools.exceptions import MCPConnectionError, MCPTimeoutError
 
 class TestMCPErrorHandling:
     """Test cases for MCP error handling."""
-    
+
     @pytest.mark.asyncio
     async def test_connection_error_handling(self):
         """Test connection error scenarios."""
-        
+
         # Mock client that raises connection error
         mock_client = AsyncMock()
         mock_client.call_tool.side_effect = MCPConnectionError(
@@ -1095,20 +1095,20 @@ class TestMCPErrorHandling:
             server_name="test-server",
             transport_type="stdio"
         )
-        
+
         # Test error handling
         with pytest.raises(MCPConnectionError) as exc_info:
             await mock_client.call_tool("test_tool", {})
-        
+
         error = exc_info.value
         assert error.server_name == "test-server"
         assert error.transport_type == "stdio"
         assert "Connection failed" in str(error)
-    
+
     @pytest.mark.asyncio
     async def test_timeout_error_handling(self):
         """Test timeout error scenarios."""
-        
+
         mock_client = AsyncMock()
         mock_client.call_tool.side_effect = MCPTimeoutError(
             "Operation timed out",
@@ -1116,18 +1116,18 @@ class TestMCPErrorHandling:
             operation="call_tool",
             elapsed_seconds=30.5
         )
-        
+
         with pytest.raises(MCPTimeoutError) as exc_info:
             await mock_client.call_tool("slow_tool", {})
-        
+
         error = exc_info.value
         assert error.timeout_seconds == 30.0
         assert error.elapsed_seconds == 30.5
         assert error.operation == "call_tool"
-    
+
     def test_error_sanitization(self):
         """Test that sensitive data is properly sanitized."""
-        
+
         error = MCPConnectionError(
             "Auth failed",
             context={
@@ -1137,24 +1137,24 @@ class TestMCPErrorHandling:
                 "server": "api.example.com"
             }
         )
-        
+
         # Check sanitization
         assert error.context["username"] == "test_user"
         assert error.context["password"] == "[REDACTED]"
         assert error.context["api_key"] == "[REDACTED]"
         assert error.context["server"] == "api.example.com"
-    
+
     def test_error_serialization(self):
         """Test error serialization to dict."""
-        
+
         error = MCPConnectionError(
             "Test error",
             server_name="test-server",
             error_code="TEST_ERROR"
         )
-        
+
         error_dict = error.to_dict()
-        
+
         assert error_dict["error_type"] == "MCPConnectionError"
         assert error_dict["message"] == "Test error"
         assert error_dict["error_code"] == "TEST_ERROR"

@@ -4,15 +4,15 @@ agent:
     type: "claude_code"
     cwd: "claude_code_workspace_discord_mcp"
     permission_mode: "bypassPermissions"
-    
-    # Discord MCP server 
+
+    # Discord MCP server
     mcp_servers:
       discord:
         type: "stdio"
         command: "npx"
         args: ["-y", "mcp-discord", "--config", "${DISCORD_BOT_TOKEN}"]
-          env:
-            NOTION_TOKEN: "${NOTION_TOKEN_ONE}" 
+        env:
+            NOTION_TOKEN: "${NOTION_TOKEN_ONE}"
 
     allowed_tools:
       - "Read"

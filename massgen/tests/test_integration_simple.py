@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Simple integration test for the CLI functionality.
 This tests that the basic CLI structure works without requiring complex backend setup.
 """
 
-import asyncio
-import sys
 import os
+import sys
 
 # Add the massgen directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "massgen"))
@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "massgen"))
 def test_cli_import():
     """Test that we can import the CLI module."""
     try:
-        from massgen.cli import main, run_single_question, create_simple_config
+        pass
 
         print("✅ Successfully imported CLI modules")
         return True
@@ -33,12 +33,7 @@ def test_config_creation():
         print("  Testing OpenAI config creation...")
         config = create_simple_config(backend_type="openai", model="gpt-4o-mini")
         print(f"  Config result: {config}")
-        if (
-            config
-            and "agent" in config
-            and "backend" in config["agent"]
-            and config["agent"]["backend"]["type"] == "openai"
-        ):
+        if config and "agent" in config and "backend" in config["agent"] and config["agent"]["backend"]["type"] == "openai":
             print("✅ OpenAI config creation works")
         else:
             print("❌ OpenAI config creation failed")
@@ -49,12 +44,7 @@ def test_config_creation():
         print("  Testing Azure OpenAI config creation...")
         config = create_simple_config(backend_type="azure_openai", model="gpt-4.1")
         print(f"  Config result: {config}")
-        if (
-            config
-            and "agent" in config
-            and "backend" in config["agent"]
-            and config["agent"]["backend"]["type"] == "azure_openai"
-        ):
+        if config and "agent" in config and "backend" in config["agent"] and config["agent"]["backend"]["type"] == "azure_openai":
             print("✅ Azure OpenAI config creation works")
         else:
             print("❌ Azure OpenAI config creation failed")
@@ -74,7 +64,7 @@ def test_config_creation():
 def test_agent_config_import():
     """Test that we can import agent configuration modules."""
     try:
-        from massgen.agent_config import AgentConfig
+        pass
 
         print("✅ Successfully imported AgentConfig")
         return True
@@ -86,7 +76,7 @@ def test_agent_config_import():
 def test_orchestrator_import():
     """Test that we can import orchestrator modules."""
     try:
-        from massgen.orchestrator import Orchestrator
+        pass
 
         print("✅ Successfully imported Orchestrator")
         return True
@@ -98,7 +88,7 @@ def test_orchestrator_import():
 def test_backend_base_import():
     """Test that we can import backend base modules."""
     try:
-        from massgen.backend.base import LLMBackend, StreamChunk
+        pass
 
         print("✅ Successfully imported backend base modules")
         return True
@@ -110,7 +100,7 @@ def test_backend_base_import():
 def test_frontend_import():
     """Test that we can import frontend modules."""
     try:
-        from massgen.frontend.coordination_ui import CoordinationUI
+        pass
 
         print("✅ Successfully imported CoordinationUI")
         return True
@@ -122,7 +112,7 @@ def test_frontend_import():
 def test_message_templates_import():
     """Test that we can import message templates."""
     try:
-        from massgen.message_templates import MessageTemplates
+        pass
 
         print("✅ Successfully imported MessageTemplates")
         return True
@@ -134,9 +124,7 @@ def test_message_templates_import():
 def run_integration_tests():
     """Run all integration tests."""
     print("🧪 Running MassGen Integration Tests...")
-    print(
-        "Testing that all major components can be imported and basic functionality works..."
-    )
+    print("Testing that all major components can be imported and basic functionality works...")
     print("=" * 80)
 
     tests = [

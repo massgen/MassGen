@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen Streaming Display System
 
@@ -8,13 +9,13 @@ Provides real-time multi-region display for MassGen agents with:
 """
 
 import os
-import time
-import threading
-import unicodedata
-import sys
 import re
-from typing import Dict, List, Optional, Callable, Union
+import sys
+import threading
+import time
+import unicodedata
 from datetime import datetime
+from typing import Callable, Dict, List, Optional
 
 
 class MultiRegionDisplay:
@@ -47,9 +48,7 @@ class MultiRegionDisplay:
         self._agent_vote_targets: Dict[int, Optional[int]] = {}
         self._agent_chat_rounds: Dict[int, int] = {}
         self._agent_update_counts: Dict[int, int] = {}  # Track update history count
-        self._agent_votes_cast: Dict[
-            int, int
-        ] = {}  # Track number of votes cast by each agent
+        self._agent_votes_cast: Dict[int, int] = {}  # Track number of votes cast by each agent
 
         # Simplified, consistent border tracking
         self._display_cache = None  # Single cache object for all dimensions
@@ -72,7 +71,7 @@ class MultiRegionDisplay:
             r"\][^\x07]*(?:\x07|\x1B\\)"  # OSC sequences
             r"|"
             r"[PX^_][^\x1B]*\x1B\\"  # Other escape sequences
-            r")"
+            r")",
         )
 
         # Initialize logging directory and files
@@ -83,7 +82,7 @@ class MultiRegionDisplay:
         """Get terminal width with conservative fallback."""
         try:
             return os.get_terminal_size().columns
-        except:
+        except OSError:
             return 120  # Safe default
 
     def _calculate_layout(self, num_agents: int):
@@ -93,7 +92,6 @@ class MultiRegionDisplay:
         """
         # Invalidate cache if agent count changed or no cache exists
         if self._display_cache is None or self._last_agent_count != num_agents:
-
             terminal_width = self._get_terminal_width()
 
             # More conservative calculation to prevent overflow
@@ -103,9 +101,7 @@ class MultiRegionDisplay:
             safety_margin = 10  # Increased safety margin for terminal variations
 
             available_width = terminal_width - border_chars - safety_margin
-            col_width = max(
-                25, available_width // num_agents
-            )  # Minimum 25 chars per column
+            col_width = max(25, available_width // num_agents)  # Minimum 25 chars per column
 
             # Calculate actual total width used
             total_width = (col_width * num_agents) + border_chars
@@ -236,9 +232,7 @@ class MultiRegionDisplay:
                 char_width = self._get_char_width(char)
 
                 # Check if we can fit this character
-                if (
-                    current_width + char_width > max_width - 1
-                ):  # Save space for ellipsis
+                if current_width + char_width > max_width - 1:  # Save space for ellipsis
                     # Try to add ellipsis if possible
                     if current_width < max_width:
                         result += "…"
@@ -287,9 +281,7 @@ class MultiRegionDisplay:
         for part in content_parts:
             if self._get_display_width(part) != self._display_cache["col_width"]:
                 # Re-pad if width is incorrect
-                part = self._pad_to_width(
-                    part, self._display_cache["col_width"], "left"
-                )
+                part = self._pad_to_width(part, self._display_cache["col_width"], "left")
             validated_parts.append(part)
 
         # Join content with borders: │content1│content2│content3│
@@ -377,9 +369,7 @@ class MultiRegionDisplay:
             self._pending_update = True
 
             # Schedule update after delay
-            self._update_timer = threading.Timer(
-                self._update_delay, self._execute_display_update
-            )
+            self._update_timer = threading.Timer(self._update_delay, self._execute_display_update)
             self._update_timer.start()
 
     def _execute_display_update(self):
@@ -391,9 +381,7 @@ class MultiRegionDisplay:
             # Prevent concurrent updates
             if self._display_updating:
                 # Reschedule if another update is in progress
-                self._update_timer = threading.Timer(
-                    self._update_delay, self._execute_display_update
-                )
+                self._update_timer = threading.Timer(self._update_delay, self._execute_display_update)
                 self._update_timer.start()
                 return
 
@@ -435,9 +423,7 @@ class MultiRegionDisplay:
             # Log status change with emoji
             old_emoji = status_change_emoji.get(old_status, "❓")
             new_emoji = status_change_emoji.get(status, "❓")
-            status_msg = (
-                f"{old_emoji}→{new_emoji} Agent {agent_id}: {old_status} → {status}"
-            )
+            status_msg = f"{old_emoji}→{new_emoji} Agent {agent_id}: {old_status} → {status}"
             self.add_system_message(status_msg)
 
     def update_phase(self, old_phase: str, new_phase: str):
@@ -452,9 +438,7 @@ class MultiRegionDisplay:
         with self._lock:
             self.vote_distribution = vote_dist.copy()
 
-    def update_consensus_status(
-        self, representative_id: int, vote_dist: Dict[int, int]
-    ):
+    def update_consensus_status(self, representative_id: int, vote_dist: Dict[int, int]):
         """Update when consensus is reached."""
         with self._lock:
             self.consensus_reached = True
@@ -513,26 +497,20 @@ class MultiRegionDisplay:
 
         # Initialize system log file
         with open(self.system_log_file, "w", encoding="utf-8") as f:
-            f.write(f"MassGen System Messages Log\n")
-            f.write(
-                f"Session started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-            )
+            f.write("MassGen System Messages Log\n")
+            f.write(f"Session started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write("=" * 80 + "\n\n")
 
     def _get_agent_log_file(self, agent_id: int) -> str:
         """Get or create the log file path for a specific agent."""
         if agent_id not in self.agent_log_files:
             # Use simple filename: agent_0.txt, agent_1.txt, etc.
-            self.agent_log_files[agent_id] = os.path.join(
-                self.session_logs_dir, f"agent_{agent_id}.txt"
-            )
+            self.agent_log_files[agent_id] = os.path.join(self.session_logs_dir, f"agent_{agent_id}.txt")
 
             # Initialize agent log file
             with open(self.agent_log_files[agent_id], "w", encoding="utf-8") as f:
                 f.write(f"MassGen Agent {agent_id} Output Log\n")
-                f.write(
-                    f"Session started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                )
+                f.write(f"Session started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write("=" * 80 + "\n\n")
 
         return self.agent_log_files[agent_id]
@@ -631,14 +609,11 @@ class MultiRegionDisplay:
         """Handle terminal resize by resetting cached dimensions."""
         try:
             current_width = os.get_terminal_size().columns
-            if (
-                self._display_cache
-                and abs(current_width - self._display_cache["terminal_width"]) > 2
-            ):
+            if self._display_cache and abs(current_width - self._display_cache["terminal_width"]) > 2:
                 # Even small changes should invalidate cache for border alignment
                 self._invalidate_display_cache()
                 return True
-        except:
+        except OSError:
             # If we can't detect terminal size, invalidate cache to be safe
             self._invalidate_display_cache()
             return True
@@ -658,9 +633,7 @@ class MultiRegionDisplay:
             # Write to system log
             self._write_system_log(formatted_message + "\n")
 
-    def format_agent_notification(
-        self, agent_id: int, notification_type: str, content: str
-    ):
+    def format_agent_notification(self, agent_id: int, notification_type: str, content: str):
         """Format agent notifications for display."""
         notification_emoji = {
             "update": "📢",
@@ -670,9 +643,7 @@ class MultiRegionDisplay:
         }
 
         emoji = notification_emoji.get(notification_type, "📨")
-        notification_msg = (
-            f"{emoji} Agent {agent_id} received {notification_type} notification"
-        )
+        notification_msg = f"{emoji} Agent {agent_id} received {notification_type} notification"
         self.add_system_message(notification_msg)
 
     def _update_display_immediate(self):
@@ -699,9 +670,7 @@ class MultiRegionDisplay:
             # Fallback to simple text output if display fails
             print(f"Display error: {e}")
             for agent_id in sorted(self.agent_outputs.keys()):
-                print(
-                    f"Agent {agent_id}: {self.agent_outputs[agent_id][-100:]}"
-                )  # Last 100 chars
+                print(f"Agent {agent_id}: {self.agent_outputs[agent_id][-100:]}")  # Last 100 chars
             return
 
         # Split content into lines for each agent and limit to max_lines
@@ -723,7 +692,6 @@ class MultiRegionDisplay:
 
         # ANSI color codes
         BRIGHT_CYAN = "\033[96m"
-        BRIGHT_BLUE = "\033[94m"
         BRIGHT_GREEN = "\033[92m"
         BRIGHT_YELLOW = "\033[93m"
         BRIGHT_MAGENTA = "\033[95m"
@@ -748,9 +716,7 @@ class MultiRegionDisplay:
 
         # Subtitle line
         subtitle_text = "🔬 Advanced Agent Collaboration Framework"
-        subtitle_line_content = self._pad_to_width(
-            subtitle_text, total_width - 2, "center"
-        )
+        subtitle_line_content = self._pad_to_width(subtitle_text, total_width - 2, "center")
         subtitle_line = f"{BRIGHT_CYAN}║{BRIGHT_GREEN}{subtitle_line_content}{RESET}{BRIGHT_CYAN}║{RESET}"
         print(subtitle_line)
 
@@ -798,7 +764,7 @@ class MultiRegionDisplay:
         try:
             header_line = self._create_bordered_line(header_parts, total_width)
             print(header_line)
-        except Exception as e:
+        except Exception:
             # Fallback to simple border if formatting fails
             print("─" * total_width)
 
@@ -812,19 +778,11 @@ class MultiRegionDisplay:
 
             # Format state info with better handling of color codes (removed redundant status)
             state_info = []
-            state_info.append(
-                f"{BRIGHT_WHITE}Round:{RESET} {BRIGHT_GREEN}{chat_round}{RESET}"
-            )
-            state_info.append(
-                f"{BRIGHT_WHITE}#Updates:{RESET} {BRIGHT_MAGENTA}{update_count}{RESET}"
-            )
-            state_info.append(
-                f"{BRIGHT_WHITE}#Votes:{RESET} {BRIGHT_CYAN}{votes_cast}{RESET}"
-            )
+            state_info.append(f"{BRIGHT_WHITE}Round:{RESET} {BRIGHT_GREEN}{chat_round}{RESET}")
+            state_info.append(f"{BRIGHT_WHITE}#Updates:{RESET} {BRIGHT_MAGENTA}{update_count}{RESET}")
+            state_info.append(f"{BRIGHT_WHITE}#Votes:{RESET} {BRIGHT_CYAN}{votes_cast}{RESET}")
             if vote_target:
-                state_info.append(
-                    f"{BRIGHT_WHITE}Vote →{RESET} {BRIGHT_GREEN}{vote_target}{RESET}"
-                )
+                state_info.append(f"{BRIGHT_WHITE}Vote →{RESET} {BRIGHT_GREEN}{vote_target}{RESET}")
             else:
                 state_info.append(f"{BRIGHT_WHITE}Vote →{RESET} None")
 
@@ -837,7 +795,7 @@ class MultiRegionDisplay:
         try:
             state_line = self._create_bordered_line(state_parts, total_width)
             print(state_line)
-        except Exception as e:
+        except Exception:
             # Fallback to simple border if formatting fails
             print("─" * total_width)
 
@@ -850,18 +808,12 @@ class MultiRegionDisplay:
                 answer_path = self.get_agent_answer_path_for_display(agent_id)
                 if answer_path:
                     # Shortened display path
-                    display_path = (
-                        answer_path.replace(os.getcwd() + "/", "")
-                        if answer_path.startswith(os.getcwd())
-                        else answer_path
-                    )
+                    display_path = answer_path.replace(os.getcwd() + "/", "") if answer_path.startswith(os.getcwd()) else answer_path
 
                     # Safe path truncation with better width handling
                     prefix = "📄 Answers: "
                     # More conservative calculation
-                    max_path_len = max(
-                        10, col_width - self._get_display_width(prefix) - 8
-                    )
+                    max_path_len = max(10, col_width - self._get_display_width(prefix) - 8)
                     if len(display_path) > max_path_len:
                         display_path = "..." + display_path[-(max_path_len - 3) :]
 
@@ -871,21 +823,13 @@ class MultiRegionDisplay:
                     # Fallback to log file path if answer path not available
                     log_path = self.get_agent_log_path_for_display(agent_id)
                     if log_path:
-                        display_path = (
-                            log_path.replace(os.getcwd() + "/", "")
-                            if log_path.startswith(os.getcwd())
-                            else log_path
-                        )
+                        display_path = log_path.replace(os.getcwd() + "/", "") if log_path.startswith(os.getcwd()) else log_path
                         prefix = "📁 Log: "
-                        max_path_len = max(
-                            10, col_width - self._get_display_width(prefix) - 8
-                        )
+                        max_path_len = max(10, col_width - self._get_display_width(prefix) - 8)
                         if len(display_path) > max_path_len:
                             display_path = "..." + display_path[-(max_path_len - 3) :]
                         link_text = f"{prefix}{UNDERLINE}{display_path}{RESET}"
-                        link_content = self._pad_to_width(
-                            link_text, col_width, "center"
-                        )
+                        link_content = self._pad_to_width(link_text, col_width, "center")
                     else:
                         link_content = self._pad_to_width("", col_width, "center")
                 link_parts.append(link_content)
@@ -894,7 +838,7 @@ class MultiRegionDisplay:
             try:
                 log_line = self._create_bordered_line(link_parts, total_width)
                 print(log_line)
-            except Exception as e:
+            except Exception:
                 # Fallback to simple border if formatting fails
                 print("─" * total_width)
 
@@ -915,11 +859,10 @@ class MultiRegionDisplay:
             try:
                 content_line = self._create_bordered_line(content_parts, total_width)
                 print(content_line)
-            except Exception as e:
+            except Exception:
                 # Fallback: print content without borders to maintain functionality
-                simple_line = " | ".join(content_parts)[: total_width - 4] + " " * max(
-                    0, total_width - 4 - len(simple_line)
-                )
+                simple_line = " | ".join(content_parts)[: total_width - 4]
+                simple_line = simple_line + " " * max(0, total_width - 4 - len(simple_line))
                 print(f"│ {simple_line} │")
 
         # System status section with exact width
@@ -927,37 +870,21 @@ class MultiRegionDisplay:
             print(f"\n{border_line}")
 
             # System state header
-            phase_color = (
-                BRIGHT_YELLOW if self.current_phase == "collaboration" else BRIGHT_GREEN
-            )
+            phase_color = BRIGHT_YELLOW if self.current_phase == "collaboration" else BRIGHT_GREEN
             consensus_color = BRIGHT_GREEN if self.consensus_reached else BRIGHT_RED
             consensus_text = "✅ YES" if self.consensus_reached else "❌ NO"
 
             system_state_info = []
-            system_state_info.append(
-                f"{BRIGHT_WHITE}Phase:{RESET} {phase_color}{self.current_phase.upper()}{RESET}"
-            )
-            system_state_info.append(
-                f"{BRIGHT_WHITE}Consensus:{RESET} {consensus_color}{consensus_text}{RESET}"
-            )
-            system_state_info.append(
-                f"{BRIGHT_WHITE}Debate Rounds:{RESET} {BRIGHT_CYAN}{self.debate_rounds}{RESET}"
-            )
+            system_state_info.append(f"{BRIGHT_WHITE}Phase:{RESET} {phase_color}{self.current_phase.upper()}{RESET}")
+            system_state_info.append(f"{BRIGHT_WHITE}Consensus:{RESET} {consensus_color}{consensus_text}{RESET}")
+            system_state_info.append(f"{BRIGHT_WHITE}Debate Rounds:{RESET} {BRIGHT_CYAN}{self.debate_rounds}{RESET}")
             if self.representative_agent_id:
-                system_state_info.append(
-                    f"{BRIGHT_WHITE}Representative Agent:{RESET} {BRIGHT_GREEN}{self.representative_agent_id}{RESET}"
-                )
+                system_state_info.append(f"{BRIGHT_WHITE}Representative Agent:{RESET} {BRIGHT_GREEN}{self.representative_agent_id}{RESET}")
             else:
-                system_state_info.append(
-                    f"{BRIGHT_WHITE}Representative Agent:{RESET} None"
-                )
+                system_state_info.append(f"{BRIGHT_WHITE}Representative Agent:{RESET} None")
 
-            system_header_text = (
-                f"{BRIGHT_CYAN}📋 SYSTEM STATE{RESET} - {' | '.join(system_state_info)}"
-            )
-            system_header_line = self._create_system_bordered_line(
-                system_header_text, total_width
-            )
+            system_header_text = f"{BRIGHT_CYAN}📋 SYSTEM STATE{RESET} - {' | '.join(system_state_info)}"
+            system_header_line = self._create_system_bordered_line(system_header_text, total_width)
             print(system_header_line)
 
             # System log file link
@@ -965,24 +892,16 @@ class MultiRegionDisplay:
                 system_log_path = self.get_system_log_path_for_display()
                 if system_log_path:
                     UNDERLINE = "\033[4m"
-                    display_path = (
-                        system_log_path.replace(os.getcwd() + "/", "")
-                        if system_log_path.startswith(os.getcwd())
-                        else system_log_path
-                    )
+                    display_path = system_log_path.replace(os.getcwd() + "/", "") if system_log_path.startswith(os.getcwd()) else system_log_path
 
                     # Safe path truncation with consistent width handling
                     prefix = "📁 Log: "
-                    max_path_len = max(
-                        10, total_width - self._get_display_width(prefix) - 15
-                    )
+                    max_path_len = max(10, total_width - self._get_display_width(prefix) - 15)
                     if len(display_path) > max_path_len:
                         display_path = "..." + display_path[-(max_path_len - 3) :]
 
                     system_link_text = f"{prefix}{UNDERLINE}{display_path}{RESET}"
-                    system_link_line = self._create_system_bordered_line(
-                        system_link_text, total_width
-                    )
+                    system_link_line = self._create_system_bordered_line(system_link_text, total_width)
                     print(system_link_line)
 
             print(border_line)
@@ -990,16 +909,12 @@ class MultiRegionDisplay:
             # System messages with exact width and validation
             if self.consensus_reached and self.representative_agent_id is not None:
                 consensus_msg = f"🎉 CONSENSUS REACHED! Representative: Agent {self.representative_agent_id}"
-                consensus_line = self._create_system_bordered_line(
-                    consensus_msg, total_width
-                )
+                consensus_line = self._create_system_bordered_line(consensus_msg, total_width)
                 print(consensus_line)
 
             # Vote distribution with validation
             if self.vote_distribution:
-                vote_msg = "📊  Vote Distribution: " + ", ".join(
-                    [f"Agent {k}→{v} votes" for k, v in self.vote_distribution.items()]
-                )
+                vote_msg = "📊  Vote Distribution: " + ", ".join([f"Agent {k}→{v} votes" for k, v in self.vote_distribution.items()])
 
                 # Use the new safe wrapping method
                 max_content_width = total_width - 2
@@ -1009,16 +924,12 @@ class MultiRegionDisplay:
                 else:
                     # Wrap vote distribution using safe method
                     vote_header = "📊  Vote Distribution:"
-                    header_line = self._create_system_bordered_line(
-                        vote_header, total_width
-                    )
+                    header_line = self._create_system_bordered_line(vote_header, total_width)
                     print(header_line)
 
                     for agent_id, votes in self.vote_distribution.items():
                         vote_detail = f"   Agent {agent_id}: {votes} votes"
-                        detail_line = self._create_system_bordered_line(
-                            vote_detail, total_width
-                        )
+                        detail_line = self._create_system_bordered_line(vote_detail, total_width)
                         print(detail_line)
 
             # Regular system messages with validation
@@ -1038,9 +949,7 @@ class MultiRegionDisplay:
                         if self._get_display_width(test_line) > max_content_width:
                             # Print current line if it has content
                             if current_line.strip():
-                                line = self._create_system_bordered_line(
-                                    current_line.strip(), total_width
-                                )
+                                line = self._create_system_bordered_line(current_line.strip(), total_width)
                                 print(line)
                             current_line = word
                         else:
@@ -1048,9 +957,7 @@ class MultiRegionDisplay:
 
                     # Print final line if it has content
                     if current_line.strip():
-                        line = self._create_system_bordered_line(
-                            current_line.strip(), total_width
-                        )
+                        line = self._create_system_bordered_line(current_line.strip(), total_width)
                         print(line)
 
         # Final border
@@ -1077,9 +984,7 @@ class StreamingOrchestrator:
         save_logs: bool = True,
         answers_dir: Optional[str] = None,
     ):
-        self.display = MultiRegionDisplay(
-            display_enabled, max_lines, save_logs, answers_dir
-        )
+        self.display = MultiRegionDisplay(display_enabled, max_lines, save_logs, answers_dir)
         self.stream_callback = stream_callback
 
     def stream_output(self, agent_id: int, content: str):
@@ -1111,9 +1016,7 @@ class StreamingOrchestrator:
         self.display.update_vote_distribution(vote_dist)
         self.display.force_update_display()
 
-    def update_consensus_status(
-        self, representative_id: int, vote_dist: Dict[int, int]
-    ):
+    def update_consensus_status(self, representative_id: int, vote_dist: Dict[int, int]):
         """Update consensus status - immediate update for critical state changes."""
         self.display.update_consensus_status(representative_id, vote_dist)
         self.display.force_update_display()
@@ -1153,9 +1056,7 @@ class StreamingOrchestrator:
         self.display.update_debate_rounds(rounds)
         self.display.force_update_display()
 
-    def format_agent_notification(
-        self, agent_id: int, notification_type: str, content: str
-    ):
+    def format_agent_notification(self, agent_id: int, notification_type: str, content: str):
         """Format agent notifications - immediate update for notifications."""
         self.display.format_agent_notification(agent_id, notification_type, content)
         self.display.force_update_display()
@@ -1185,6 +1086,4 @@ def create_streaming_display(
     answers_dir: Optional[str] = None,
 ) -> StreamingOrchestrator:
     """Create a streaming orchestrator with display capabilities."""
-    return StreamingOrchestrator(
-        display_enabled, stream_callback, max_lines, save_logs, answers_dir
-    )
+    return StreamingOrchestrator(display_enabled, stream_callback, max_lines, save_logs, answers_dir)

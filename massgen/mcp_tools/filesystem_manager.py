@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Filesystem Manager for MassGen - Handles workspace and snapshot management.
 
@@ -14,23 +15,27 @@ The manager is backend-agnostic and works with any backend that has filesystem
 MCP tools configured.
 """
 
-import os
 import shutil
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, Optional, List, Any, Tuple
-from enum import Enum
 from dataclasses import dataclass
-from ..logger_config import logger, get_log_session_dir
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+from ..logger_config import get_log_session_dir, logger
+
 
 class Permission(Enum):
     """File access permission types."""
+
     READ = "read"
     WRITE = "write"
+
 
 @dataclass
 class ManagedPath:
     """Represents any managed path with its permissions and type."""
+
     path: Path
     permission: Permission
     path_type: str  # "workspace", "temp_workspace", "context", etc.
@@ -44,9 +49,11 @@ class ManagedPath:
         except ValueError:
             return False
 
+
 class PathPermissionManager:
     """
-    Manages all filesystem paths and implements PreToolUse hook functionality similar to Claude Code, allowing us to intercept and validate tool calls based on some predefined rules (here, permissions).
+    Manages all filesystem paths and implements PreToolUse hook functionality similar to Claude Code,
+    allowing us to intercept and validate tool calls based on some predefined rules (here, permissions).
 
     This manager handles all types of paths with unified permission control:
     - Workspace paths (typically write)
@@ -61,7 +68,10 @@ class PathPermissionManager:
         Initialize path permission manager.
 
         Args:
-            context_write_access_enabled: Whether write access is enabled for context paths (workspace paths always have write access). If False, we change all context paths to read-only. Can be later updated with set_context_write_access_enabled(), in which case all existing context paths will be updated accordingly so that those that were "write" in YAML become writable again.
+            context_write_access_enabled: Whether write access is enabled for context paths (workspace paths always
+                have write access). If False, we change all context paths to read-only. Can be later updated with
+                set_context_write_access_enabled(), in which case all existing context paths will be updated
+                accordingly so that those that were "write" in YAML become writable again.
         """
         self.managed_paths: List[ManagedPath] = []
         self.context_write_access_enabled = context_write_access_enabled
@@ -69,9 +79,7 @@ class PathPermissionManager:
         # Cache for quick permission lookups
         self._permission_cache: Dict[Path, Permission] = {}
 
-        logger.info(
-            f"[PathPermissionManager] Initialized with context_write_access_enabled={context_write_access_enabled}"
-        )
+        logger.info(f"[PathPermissionManager] Initialized with context_write_access_enabled={context_write_access_enabled}")
 
     def add_path(self, path: Path, permission: Permission, path_type: str) -> None:
         """
@@ -86,11 +94,7 @@ class PathPermissionManager:
             logger.warning(f"[PathPermissionManager] Path does not exist: {path}")
             return
 
-        managed_path = ManagedPath(
-            path=path.resolve(),
-            permission=permission,
-            path_type=path_type
-        )
+        managed_path = ManagedPath(path=path.resolve(), permission=permission, path_type=path_type)
 
         self.managed_paths.append(managed_path)
         # Clear cache when adding new paths
@@ -108,10 +112,7 @@ class PathPermissionManager:
         context_paths = []
         for mp in self.managed_paths:
             if mp.path_type == "context":
-                context_paths.append({
-                    "path": str(mp.path),
-                    "permission": mp.permission.value
-                })
+                context_paths.append({"path": str(mp.path), "permission": mp.permission.value})
         return context_paths
 
     def set_context_write_access_enabled(self, enabled: bool) -> None:
@@ -182,16 +183,10 @@ class PathPermissionManager:
                     logger.debug(f"[PathPermissionManager] Coordination agent: forcing context path {path} to read-only (YAML had write)")
 
             # Create managed path with original permission stored for context paths
-            managed_path = ManagedPath(
-                path=path.resolve(),
-                permission=actual_permission,
-                path_type="context",
-                original_permission=yaml_permission
-            )
+            managed_path = ManagedPath(path=path.resolve(), permission=actual_permission, path_type="context", original_permission=yaml_permission)
             self.managed_paths.append(managed_path)
             self._permission_cache.clear()
             logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, original: {yaml_permission.value})")
-
 
     def get_permission(self, path: Path) -> Optional[Permission]:
         """
@@ -213,7 +208,11 @@ class PathPermissionManager:
         # Find containing managed path
         for managed_path in self.managed_paths:
             if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
-                logger.info(f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} (from {managed_path.path}, type: {managed_path.path_type}, original: {managed_path.original_permission})")
+                logger.info(
+                    f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} "
+                    f"(from {managed_path.path}, type: {managed_path.path_type}, "
+                    f"original: {managed_path.original_permission})",
+                )
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission
 
@@ -265,13 +264,13 @@ class PathPermissionManager:
 
         # Pattern matches tools that modify files/directories
         write_patterns = [
-            r".*[Ww]rite.*",      # Write, write_file, NotebookWrite, etc.
-            r".*[Ee]dit.*",       # Edit, edit_file, MultiEdit, NotebookEdit, etc.
-            r".*[Cc]reate.*",     # create_directory, etc.
-            r".*[Mm]ove.*",       # move_file, etc.
-            r".*[Dd]elete.*",     # delete operations
-            r".*[Rr]emove.*",     # remove operations
-            r".*[Cc]opy.*",       # copy_file, copy_files_batch, etc.
+            r".*[Ww]rite.*",  # Write, write_file, NotebookWrite, etc.
+            r".*[Ee]dit.*",  # Edit, edit_file, MultiEdit, NotebookEdit, etc.
+            r".*[Cc]reate.*",  # create_directory, etc.
+            r".*[Mm]ove.*",  # move_file, etc.
+            r".*[Dd]elete.*",  # delete operations
+            r".*[Rr]emove.*",  # remove operations
+            r".*[Cc]opy.*",  # copy_file, copy_files_batch, etc.
         ]
 
         for pattern in write_patterns:
@@ -324,9 +323,7 @@ class PathPermissionManager:
                 return (False, "copy_files_batch requires source_base_path")
 
             # Get all file pairs (this also validates path restrictions)
-            file_pairs = get_copy_file_pairs(
-                source_base_path, destination_base_path, include_patterns, exclude_patterns
-            )
+            file_pairs = get_copy_file_pairs(source_base_path, destination_base_path, include_patterns, exclude_patterns)
 
             # Check permissions for each destination path
             blocked_paths = []
@@ -358,17 +355,32 @@ class PathPermissionManager:
 
         # Dangerous patterns to block
         dangerous_patterns = [
-            "rm ", "rm -", "rmdir", "del ",
-            "sudo ", "su ", "chmod ", "chown ",
-            "format ", "fdisk", "mkfs",
+            "rm ",
+            "rm -",
+            "rmdir",
+            "del ",
+            "sudo ",
+            "su ",
+            "chmod ",
+            "chown ",
+            "format ",
+            "fdisk",
+            "mkfs",
         ]
 
         # File modification patterns to check when write access disabled
         write_patterns = [
-            ">", ">>",  # Redirects
-            "mv ", "move ", "cp ", "copy ",
-            "touch ", "mkdir ", "echo ",
-            "sed -i", "perl -i",  # In-place edits
+            ">",
+            ">>",  # Redirects
+            "mv ",
+            "move ",
+            "cp ",
+            "copy ",
+            "touch ",
+            "mkdir ",
+            "echo ",
+            "sed -i",
+            "perl -i",  # In-place edits
         ]
 
         for pattern in write_patterns:
@@ -394,7 +406,17 @@ class PathPermissionManager:
         # - Claude Code: file_path, notebook_path
         # - MCP filesystem: path, source, destination
         # - Workspace copy: source_path, destination_path, source_base_path, destination_base_path
-        path_keys = ["file_path", "path", "filename", "file", "notebook_path", "target", "destination", "destination_path", "destination_base_path"]  # source paths should NOT be checked bc they are always read from, not written to
+        path_keys = [
+            "file_path",
+            "path",
+            "filename",
+            "file",
+            "notebook_path",
+            "target",
+            "destination",
+            "destination_path",
+            "destination_base_path",
+        ]  # source paths should NOT be checked bc they are always read from, not written to
 
         for key in path_keys:
             if key in tool_args:
@@ -412,7 +434,7 @@ class PathPermissionManager:
                 # Get the part after redirect, strip whitespace and quotes
                 target = parts[1].strip().split()[0] if parts[1].strip() else None
                 if target:
-                    return target.strip('"\'')
+                    return target.strip("\"'")
 
         # For commands like mv, cp
         if pattern in ["mv ", "cp ", "move ", "copy "]:
@@ -432,7 +454,7 @@ class PathPermissionManager:
                 idx = parts.index(pattern.strip())
                 if idx + 1 < len(parts):
                     # The first argument is the target
-                    return parts[idx + 1].strip('"\'')
+                    return parts[idx + 1].strip("\"'")
             except (ValueError, IndexError):
                 pass
 
@@ -463,12 +485,7 @@ class PathPermissionManager:
 
         return "\n".join(lines)
 
-    async def validate_context_access(
-        self,
-        input_data: Dict[str, Any],
-        tool_use_id: Optional[str],
-        context: Any  # HookContext from claude_code_sdk
-    ) -> Dict[str, Any]:
+    async def validate_context_access(self, input_data: Dict[str, Any], tool_use_id: Optional[str], context: Any) -> Dict[str, Any]:  # HookContext from claude_code_sdk
         """
         Claude Code SDK compatible hook function for PreToolUse.
 
@@ -482,21 +499,15 @@ class PathPermissionManager:
         """
         logger.info(f"[PathPermissionManager] PreToolUse hook called for tool_use_id={tool_use_id}, input_data={input_data}")
 
-        tool_name = input_data.get('tool_name', '')
-        tool_input = input_data.get('tool_input', {})
+        tool_name = input_data.get("tool_name", "")
+        tool_input = input_data.get("tool_input", {})
 
         # Use our existing validation logic
         allowed, reason = await self.pre_tool_use_hook(tool_name, tool_input)
 
         if not allowed:
             logger.warning(f"[PathPermissionManager] Blocked {tool_name}: {reason}")
-            return {
-                'hookSpecificOutput': {
-                    'hookEventName': 'PreToolUse',
-                    'permissionDecision': 'deny',
-                    'permissionDecisionReason': reason or 'Access denied based on context path permissions'
-                }
-            }
+            return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": reason or "Access denied based on context path permissions"}}
 
         return {}  # Empty response means allow
 
@@ -518,30 +529,16 @@ class PathPermissionManager:
             return {}
 
         return {
-            'PreToolUse': [
+            "PreToolUse": [
                 # Apply context validation to write tools
-                HookMatcher(
-                    matcher='Write',
-                    hooks=[self.validate_context_access]
-                ),
-                HookMatcher(
-                    matcher='Edit',
-                    hooks=[self.validate_context_access]
-                ),
-                HookMatcher(
-                    matcher='MultiEdit',
-                    hooks=[self.validate_context_access]
-                ),
-                HookMatcher(
-                    matcher='NotebookEdit',
-                    hooks=[self.validate_context_access]
-                ),
-                HookMatcher(
-                    matcher='Bash',
-                    hooks=[self.validate_context_access]
-                ),
-            ]
+                HookMatcher(matcher="Write", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="Edit", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="MultiEdit", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="NotebookEdit", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="Bash", hooks=[self.validate_context_access]),
+            ],
         }
+
 
 class FilesystemManager:
     """
@@ -569,14 +566,10 @@ class FilesystemManager:
             context_paths: List of context path configurations for access control
             context_write_access_enabled: Whether write access is enabled for context paths
         """
-        self.agent_id = (
-            None  # Will be set by orchestrator via setup_orchestration_paths
-        )
+        self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
 
         # Initialize path permission manager
-        self.path_permission_manager = PathPermissionManager(
-            context_write_access_enabled=context_write_access_enabled
-        )
+        self.path_permission_manager = PathPermissionManager(context_write_access_enabled=context_write_access_enabled)
 
         # Add context paths if provided
         if context_paths:
@@ -601,19 +594,13 @@ class FilesystemManager:
         self.cwd = self._setup_workspace(cwd)
 
         # Add workspace to path manager (workspace is typically writable)
-        self.path_permission_manager.add_path(
-            self.cwd, Permission.WRITE, "workspace"
-        )
+        self.path_permission_manager.add_path(self.cwd, Permission.WRITE, "workspace")
         # Add temporary workspace to path manager (read-only)
-        self.path_permission_manager.add_path(
-            self.agent_temporary_workspace_parent, Permission.READ, "temp_workspace"
-        )
+        self.path_permission_manager.add_path(self.agent_temporary_workspace_parent, Permission.READ, "temp_workspace")
 
         # Orchestration-specific paths (set by setup_orchestration_paths)
         self.snapshot_storage = None  # Path for storing workspace snapshots
-        self.agent_temporary_workspace = (
-            None  # Full path for this specific agent's temporary workspace
-        )
+        self.agent_temporary_workspace = None  # Full path for this specific agent's temporary workspace
 
         # Track whether we're using a temporary workspace
         self._using_temporary = False
@@ -634,9 +621,7 @@ class FilesystemManager:
             snapshot_storage: Base path for storing workspace snapshots
             agent_temporary_workspace: Base path for temporary workspace during context sharing
         """
-        logger.info(
-            f"[FilesystemManager.setup_orchestration_paths] Called for agent_id={agent_id}, snapshot_storage={snapshot_storage}, agent_temporary_workspace={agent_temporary_workspace}"
-        )
+        logger.info(f"[FilesystemManager.setup_orchestration_paths] Called for agent_id={agent_id}, snapshot_storage={snapshot_storage}, agent_temporary_workspace={agent_temporary_workspace}")
         self.agent_id = agent_id
 
         # Setup snapshot storage if provided
@@ -646,9 +631,7 @@ class FilesystemManager:
 
         # Setup temporary workspace for context sharing
         if agent_temporary_workspace and self.agent_id:
-            self.agent_temporary_workspace = self._setup_workspace(
-                self.agent_temporary_workspace_parent / self.agent_id
-            )
+            self.agent_temporary_workspace = self._setup_workspace(self.agent_temporary_workspace_parent / self.agent_id)
 
         # Also setup log directories if we have an agent_id
         if self.agent_id:
@@ -660,7 +643,7 @@ class FilesystemManager:
     def _setup_workspace(self, cwd: str) -> Path:
         """Setup workspace directory, creating if needed and clearing existing files safely."""
         # Add parent directory prefix if not already present
-        cwd_path = Path(cwd)
+        Path(cwd)
         workspace = Path(cwd).resolve()
 
         # Safety checks
@@ -676,9 +659,7 @@ class FilesystemManager:
         if workspace.exists() and workspace.is_dir():
             for item in workspace.iterdir():
                 if item.is_symlink():
-                    logger.warning(
-                        f"[FilesystemManager.save_snapshot] Skipping symlink during clear: {item}"
-                    )
+                    logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink during clear: {item}")
                 if item.is_file():
                     item.unlink()
                 elif item.is_dir():
@@ -718,7 +699,7 @@ class FilesystemManager:
         """
         # Get context paths using the existing method
         context_paths = self.path_permission_manager.get_context_paths()
-        context_paths_str = ",".join([cp["path"] for cp in context_paths])
+        ",".join([cp["path"] for cp in context_paths])
 
         config = {
             "name": "workspace_copy",
@@ -728,7 +709,7 @@ class FilesystemManager:
             "env": {
                 "FASTMCP_SHOW_CLI_BANNER": "false",
                 "WORKSPACE_PATH": str(self.cwd),  # Pass workspace path via environment
-            }
+            },
         }
 
         # Add all managed paths from path permission manager
@@ -755,22 +736,16 @@ class FilesystemManager:
             if "filesystem" not in existing_names:
                 mcp_servers.append(self.get_mcp_filesystem_config())
             else:
-                logger.warning(
-                    "[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present"
-                )
+                logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present")
 
             # Add workspace copy server if missing
             if "workspace_copy" not in existing_names:
                 mcp_servers.append(self.get_workspace_copy_mcp_config())
             else:
-                logger.warning(
-                    "[FilesystemManager.inject_filesystem_mcp] Custom workspace_copy MCP server already present"
-                )
+                logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom workspace_copy MCP server already present")
 
         except Exception as e:
-            logger.warning(
-                f"[FilesystemManager.inject_filesystem_mcp] Error checking existing MCP servers: {e}"
-            )
+            logger.warning(f"[FilesystemManager.inject_filesystem_mcp] Error checking existing MCP servers: {e}")
 
         # Update backend config
         backend_config["mcp_servers"] = mcp_servers
@@ -814,9 +789,7 @@ class FilesystemManager:
         self.path_permission_manager.context_write_access_enabled = True
         logger.info("[FilesystemManager] Context write access enabled - agent can now modify files with write permissions")
 
-    async def save_snapshot(
-        self, timestamp: Optional[str] = None, is_final: bool = False
-    ) -> None:
+    async def save_snapshot(self, timestamp: Optional[str] = None, is_final: bool = False) -> None:
         """
         Save a snapshot of the workspace. Always saves to snapshot_storage if available (keeping only most recent).
         Additionally saves to log directories if logging is enabled.
@@ -828,25 +801,18 @@ class FilesystemManager:
 
         TODO: reimplement without 'shutil' and 'os' operations for true async, though we may not need to worry about race conditions here since only one agent writes at a time
         """
-        logger.info(
-            f"[FilesystemManager.save_snapshot] Called for agent_id={self.agent_id}, is_final={is_final}, snapshot_storage={self.snapshot_storage}"
-        )
+        logger.info(f"[FilesystemManager.save_snapshot] Called for agent_id={self.agent_id}, is_final={is_final}, snapshot_storage={self.snapshot_storage}")
 
         # Use current workspace as source
         source_dir = self.cwd
         source_path = Path(source_dir)
 
         if not source_path.exists() or not source_path.is_dir():
-            logger.warning(
-                f"[FilesystemManager] Source path invalid - exists: {source_path.exists()}, "
-                f"is_dir: {source_path.is_dir() if source_path.exists() else False}"
-            )
+            logger.warning(f"[FilesystemManager] Source path invalid - exists: {source_path.exists()}, " f"is_dir: {source_path.is_dir() if source_path.exists() else False}")
             return
 
         if not any(source_path.iterdir()):
-            logger.warning(
-                f"[FilesystemManager.save_snapshot] Source path {source_path} is empty, skipping snapshot"
-            )
+            logger.warning(f"[FilesystemManager.save_snapshot] Source path {source_path} is empty, skipping snapshot")
             return
 
         try:
@@ -859,9 +825,7 @@ class FilesystemManager:
                 items_copied = 0
                 for item in source_path.iterdir():
                     if item.is_symlink():
-                        logger.warning(
-                            f"[FilesystemManager.save_snapshot] Skipping symlink: {item}"
-                        )
+                        logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
                         continue
                     if item.is_file():
                         shutil.copy2(item, self.snapshot_storage / item.name)
@@ -869,9 +833,7 @@ class FilesystemManager:
                         shutil.copytree(item, self.snapshot_storage / item.name)
                     items_copied += 1
 
-                logger.info(
-                    f"[FilesystemManager] Saved snapshot with {items_copied} items to {self.snapshot_storage}"
-                )
+                logger.info(f"[FilesystemManager] Saved snapshot with {items_copied} items to {self.snapshot_storage}")
 
             # --- 2. Save to log directories ---
             log_session_dir = get_log_session_dir()
@@ -881,24 +843,18 @@ class FilesystemManager:
                     if dest_dir.exists():
                         shutil.rmtree(dest_dir)
                     dest_dir.mkdir(parents=True, exist_ok=True)
-                    logger.info(
-                        f"[FilesystemManager.save_snapshot] Final log snapshot dest_dir: {dest_dir}"
-                    )
+                    logger.info(f"[FilesystemManager.save_snapshot] Final log snapshot dest_dir: {dest_dir}")
                 else:
                     if not timestamp:
                         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
                     dest_dir = log_session_dir / self.agent_id / timestamp / "workspace"
                     dest_dir.mkdir(parents=True, exist_ok=True)
-                    logger.info(
-                        f"[FilesystemManager.save_snapshot] Regular log snapshot dest_dir: {dest_dir}"
-                    )
+                    logger.info(f"[FilesystemManager.save_snapshot] Regular log snapshot dest_dir: {dest_dir}")
 
                 items_copied = 0
                 for item in source_path.iterdir():
                     if item.is_symlink():
-                        logger.warning(
-                            f"[FilesystemManager.save_snapshot] Skipping symlink: {item}"
-                        )
+                        logger.warning(f"[FilesystemManager.save_snapshot] Skipping symlink: {item}")
                         continue
                     if item.is_file():
                         shutil.copy2(item, dest_dir / item.name)
@@ -906,16 +862,13 @@ class FilesystemManager:
                         shutil.copytree(item, dest_dir / item.name, dirs_exist_ok=True)
                     items_copied += 1
 
-                logger.info(
-                    f"[FilesystemManager] Saved {'final' if is_final else 'regular'} "
-                    f"log snapshot with {items_copied} items to {dest_dir}"
-                )
+                logger.info(f"[FilesystemManager] Saved {'final' if is_final else 'regular'} " f"log snapshot with {items_copied} items to {dest_dir}")
 
         except Exception as e:
             logger.exception(f"[FilesystemManager.save_snapshot] Snapshot failed: {e}")
             return
 
-        logger.info(f"[FilesystemManager] Snapshot saved successfully, workspace preserved for logs and debugging")
+        logger.info("[FilesystemManager] Snapshot saved successfully, workspace preserved for logs and debugging")
 
     def clear_workspace(self) -> None:
         """
@@ -936,7 +889,7 @@ class FilesystemManager:
             return
 
         try:
-            logger.info(f"[FilesystemManager] Clearing workspace at agent startup. Current contents:")
+            logger.info("[FilesystemManager] Clearing workspace at agent startup. Current contents:")
             items_to_clear = list(workspace_path.iterdir())
 
             for item in items_to_clear:
@@ -949,7 +902,7 @@ class FilesystemManager:
                 elif item.is_dir():
                     shutil.rmtree(item)
 
-            logger.info(f"[FilesystemManager] Workspace cleared successfully, ready for new agent execution")
+            logger.info("[FilesystemManager] Workspace cleared successfully, ready for new agent execution")
 
         except Exception as e:
             logger.error(f"[FilesystemManager] Failed to clear workspace: {e}")
@@ -989,15 +942,13 @@ class FilesystemManager:
                 elif item.is_dir():
                     shutil.rmtree(item)
 
-            logger.info(f"[FilesystemManager] Temp workspace parent cleared successfully")
+            logger.info("[FilesystemManager] Temp workspace parent cleared successfully")
 
         except Exception as e:
             logger.error(f"[FilesystemManager] Failed to clear temp workspace parent: {e}")
             # Don't raise - orchestration can continue without clean temp workspace
 
-    async def copy_snapshots_to_temp_workspace(
-        self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]
-    ) -> Optional[Path]:
+    async def copy_snapshots_to_temp_workspace(self, all_snapshots: Dict[str, Path], agent_mapping: Dict[str, str]) -> Optional[Path]:
         """
         Copy snapshots from multiple agents to temporary workspace for context sharing.
 
@@ -1034,9 +985,7 @@ class FilesystemManager:
 
         return self.agent_temporary_workspace
 
-    def _log_workspace_contents(
-        self, workspace_path: Path, workspace_name: str, context: str = ""
-    ) -> None:
+    def _log_workspace_contents(self, workspace_path: Path, workspace_name: str, context: str = "") -> None:
         """
         Log the contents of a workspace directory for visibility.
 
@@ -1046,39 +995,23 @@ class FilesystemManager:
             context: Additional context (e.g., "before execution", "after execution")
         """
         if not workspace_path or not workspace_path.exists():
-            logger.info(
-                f"[FilesystemManager.{workspace_name}] {context} - Workspace does not exist: {workspace_path}"
-            )
+            logger.info(f"[FilesystemManager.{workspace_name}] {context} - Workspace does not exist: {workspace_path}")
             return
 
         try:
             files = list(workspace_path.rglob("*"))
-            file_paths = [
-                str(f.relative_to(workspace_path)) for f in files if f.is_file()
-            ]
-            dir_paths = [
-                str(f.relative_to(workspace_path)) for f in files if f.is_dir()
-            ]
+            file_paths = [str(f.relative_to(workspace_path)) for f in files if f.is_file()]
+            dir_paths = [str(f.relative_to(workspace_path)) for f in files if f.is_dir()]
 
-            logger.info(
-                f"[FilesystemManager.{workspace_name}] {context} - Workspace: {workspace_path}"
-            )
+            logger.info(f"[FilesystemManager.{workspace_name}] {context} - Workspace: {workspace_path}")
             if file_paths:
-                logger.info(
-                    f"[FilesystemManager.{workspace_name}] {context} - Files ({len(file_paths)}): {file_paths}"
-                )
+                logger.info(f"[FilesystemManager.{workspace_name}] {context} - Files ({len(file_paths)}): {file_paths}")
             if dir_paths:
-                logger.info(
-                    f"[FilesystemManager.{workspace_name}] {context} - Directories ({len(dir_paths)}): {dir_paths}"
-                )
+                logger.info(f"[FilesystemManager.{workspace_name}] {context} - Directories ({len(dir_paths)}): {dir_paths}")
             if not file_paths and not dir_paths:
-                logger.info(
-                    f"[FilesystemManager.{workspace_name}] {context} - Empty workspace"
-                )
+                logger.info(f"[FilesystemManager.{workspace_name}] {context} - Empty workspace")
         except Exception as e:
-            logger.warning(
-                f"[FilesystemManager.{workspace_name}] {context} - Error reading workspace: {e}"
-            )
+            logger.warning(f"[FilesystemManager.{workspace_name}] {context} - Error reading workspace: {e}")
 
     def log_current_state(self, context: str = "") -> None:
         """
@@ -1087,22 +1020,14 @@ class FilesystemManager:
         Args:
             context: Context for the logging (e.g., "before execution", "after answer")
         """
-        agent_context = (
-            f"agent_id={self.agent_id}, {context}"
-            if context
-            else f"agent_id={self.agent_id}"
-        )
+        agent_context = f"agent_id={self.agent_id}, {context}" if context else f"agent_id={self.agent_id}"
 
         # Log main workspace
-        self._log_workspace_contents(
-            self.get_current_workspace(), "main_workspace", agent_context
-        )
+        self._log_workspace_contents(self.get_current_workspace(), "main_workspace", agent_context)
 
         # Log temp workspace if it exists
         if self.agent_temporary_workspace:
-            self._log_workspace_contents(
-                self.agent_temporary_workspace, "temp_workspace", agent_context
-            )
+            self._log_workspace_contents(self.agent_temporary_workspace, "temp_workspace", agent_context)
 
     def set_temporary_workspace(self, use_temporary: bool = True) -> None:
         """
@@ -1148,9 +1073,7 @@ class FilesystemManager:
                 try:
                     p.relative_to(parent)
                 except ValueError:
-                    raise AssertionError(
-                        f"Refusing to delete workspace outside of parent: {p}"
-                    )
+                    raise AssertionError(f"Refusing to delete workspace outside of parent: {p}")
 
             if p == Path("/") or len(p.parts) < 3:
                 raise AssertionError(f"Unsafe path for deletion: {p}")
@@ -1176,10 +1099,11 @@ class PathPermissionManagerHook:
         """Execute permission check using PathPermissionManager."""
         try:
             # Import hook result here to avoid circular imports
-            from .hooks import HookResult
-
             # Parse arguments from JSON string
             import json
+
+            from .hooks import HookResult
+
             try:
                 tool_args = json.loads(arguments) if arguments else {}
             except (json.JSONDecodeError, ValueError) as e:
@@ -1187,22 +1111,14 @@ class PathPermissionManagerHook:
                 tool_args = {}
 
             # Call the existing pre_tool_use_hook method
-            allowed, reason = await self.path_permission_manager.pre_tool_use_hook(
-                function_name, tool_args
-            )
+            allowed, reason = await self.path_permission_manager.pre_tool_use_hook(function_name, tool_args)
 
             if not allowed:
                 logger.info(f"[PathPermissionManagerHook] Blocked {function_name}: {reason}")
 
-            return HookResult(
-                allowed=allowed,
-                metadata={"reason": reason} if reason else {}
-            )
+            return HookResult(allowed=allowed, metadata={"reason": reason} if reason else {})
 
         except Exception as e:
             logger.error(f"[PathPermissionManagerHook] Error checking permissions for {function_name}: {e}")
             # Fail closed - deny access on permission check errors
-            return HookResult(
-                allowed=False,
-                metadata={"error": str(e), "reason": "Permission check failed"}
-            )
+            return HookResult(allowed=False, metadata={"error": str(e), "reason": "Permission check failed"})

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script for MassGen three-agent coordination with terminal display.
 Tests orchestrator coordination between three agents with diverse expertise.
@@ -13,10 +14,10 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.backend.response import ResponseBackend
-from massgen.chat_agent import SingleAgent
-from massgen.orchestrator import Orchestrator
-from massgen.frontend.coordination_ui import CoordinationUI
+from massgen.backend.response import ResponseBackend  # noqa: E402
+from massgen.chat_agent import SingleAgent  # noqa: E402
+from massgen.frontend.coordination_ui import CoordinationUI  # noqa: E402
+from massgen.orchestrator import Orchestrator  # noqa: E402
 
 
 async def test_three_agents_coordination():
@@ -128,9 +129,7 @@ async def test_three_agents_simple():
             system_message="You are an evaluator. Focus on assessment and quality control.",
         )
 
-        orchestrator = Orchestrator(
-            agents={"planner": planner, "executor": executor, "evaluator": evaluator}
-        )
+        orchestrator = Orchestrator(agents={"planner": planner, "executor": executor, "evaluator": evaluator})
 
         print("📤 Testing simple three-agent coordination...")
 
@@ -138,7 +137,7 @@ async def test_three_agents_simple():
             {
                 "role": "user",
                 "content": "How can we improve team productivity in a remote work environment?",
-            }
+            },
         ]
 
         response_content = ""
@@ -152,9 +151,7 @@ async def test_three_agents_simple():
             elif chunk.type == "done":
                 break
 
-        print(
-            f"\n✅ Simple test completed. Response length: {len(response_content)} characters"
-        )
+        print(f"\n✅ Simple test completed. Response length: {len(response_content)} characters")
         return True
 
     except Exception as e:
@@ -194,9 +191,7 @@ async def test_three_agents_consensus():
             system_message="You are a skeptical viewpoint agent. Focus on potential challenges and risks.",
         )
 
-        orchestrator = Orchestrator(
-            agents={"optimist": optimist, "realist": realist, "skeptic": skeptic}
-        )
+        orchestrator = Orchestrator(agents={"optimist": optimist, "realist": realist, "skeptic": skeptic})
 
         print("📤 Testing consensus building with diverse viewpoints...")
 
@@ -205,7 +200,7 @@ async def test_three_agents_consensus():
             {
                 "role": "user",
                 "content": "What is the future outlook for artificial intelligence in healthcare?",
-            }
+            },
         ]
 
         response_content = ""
@@ -219,9 +214,7 @@ async def test_three_agents_consensus():
             elif chunk.type == "done":
                 break
 
-        print(
-            f"\n✅ Consensus test completed. Response length: {len(response_content)} characters"
-        )
+        print(f"\n✅ Consensus test completed. Response length: {len(response_content)} characters")
         return True
 
     except Exception as e:

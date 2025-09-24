@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Real test of ClaudeCodeBackend with actual Claude Code API calls.
 This test outputs the actual stream chunks to verify functionality.
@@ -6,6 +7,7 @@ This test outputs the actual stream chunks to verify functionality.
 
 import asyncio
 import os
+
 from massgen.backend.claude_code import ClaudeCodeBackend
 
 
@@ -32,7 +34,7 @@ async def test_real_stream_with_tools():
         {
             "role": "user",
             "content": "Hello! Can you tell me what 2+2 equals and show your calculation?",
-        }
+        },
     ]
 
     try:
@@ -45,9 +47,7 @@ async def test_real_stream_with_tools():
 
         async for chunk in backend.stream_with_tools(messages, []):
             chunk_count += 1
-            print(
-                f"[{chunk_count:2d}] Type: {chunk.type:<20} Source: {chunk.source or 'None':<20}"
-            )
+            print(f"[{chunk_count:2d}] Type: {chunk.type:<20} Source: {chunk.source or 'None':<20}")
 
             if chunk.type == "content":
                 print(f"     Content: {repr(chunk.content)}")
@@ -65,7 +65,7 @@ async def test_real_stream_with_tools():
             elif chunk.type == "error":
                 print(f"     Error: {chunk.error}")
             elif chunk.type == "done":
-                print(f"     ✅ Stream completed")
+                print("     ✅ Stream completed")
                 break
 
             print()
@@ -98,15 +98,13 @@ async def test_real_stream_with_tools():
         {
             "role": "user",
             "content": "Great! Now can you show me how to calculate the result times 5?",
-        }
+        },
     )
 
     try:
         print("\n📨 Sending multi-turn messages:")
         for i, msg in enumerate(messages):
-            print(
-                f"  [{i+1}] {msg['role']}: {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}"
-            )
+            print(f"  [{i+1}] {msg['role']}: {msg['content'][:100]}{'...' if len(msg['content']) > 100 else ''}")
 
         print("\n📡 Stream chunks received:")
         print("-" * 40)
@@ -116,9 +114,7 @@ async def test_real_stream_with_tools():
 
         async for chunk in backend.stream_with_tools(messages, []):
             chunk_count += 1
-            print(
-                f"[{chunk_count:2d}] Type: {chunk.type:<20} Source: {chunk.source or 'None':<20}"
-            )
+            print(f"[{chunk_count:2d}] Type: {chunk.type:<20} Source: {chunk.source or 'None':<20}")
 
             if chunk.type == "content":
                 print(f"     Content: {repr(chunk.content)}")
@@ -126,7 +122,7 @@ async def test_real_stream_with_tools():
             elif chunk.type == "complete_response":
                 print(f"     Response metadata: {chunk.response}")
             elif chunk.type == "done":
-                print(f"     ✅ Stream completed")
+                print("     ✅ Stream completed")
                 break
 
             print()
@@ -171,7 +167,7 @@ async def test_with_workflow_tools():
                         "content": {
                             "type": "string",
                             "description": "Your improved answer",
-                        }
+                        },
                     },
                     "required": ["content"],
                 },
@@ -204,7 +200,7 @@ async def test_with_workflow_tools():
         {
             "role": "user",
             "content": "You are participating in a multi-agent workflow. Please provide an answer about the benefits of Python programming, then use the new_answer tool to submit your response.",
-        }
+        },
     ]
 
     try:
@@ -220,9 +216,7 @@ async def test_with_workflow_tools():
 
         async for chunk in backend.stream_with_tools(messages, workflow_tools):
             chunk_count += 1
-            print(
-                f"[{chunk_count:2d}] Type: {chunk.type:<20} Source: {chunk.source or 'None':<20}"
-            )
+            print(f"[{chunk_count:2d}] Type: {chunk.type:<20} Source: {chunk.source or 'None':<20}")
 
             if chunk.type == "content":
                 print(f"     Content: {repr(chunk.content)}")
@@ -233,7 +227,7 @@ async def test_with_workflow_tools():
             elif chunk.type == "complete_response":
                 print(f"     Response metadata: {chunk.response}")
             elif chunk.type == "done":
-                print(f"     ✅ Stream completed")
+                print("     ✅ Stream completed")
                 break
 
             print()
@@ -243,9 +237,7 @@ async def test_with_workflow_tools():
         print(f"📝 Workflow content length: {len(workflow_content)} chars")
         print(f"🛠️  Detected tool calls: {len(detected_tool_calls)}")
         for i, tool_call in enumerate(detected_tool_calls):
-            print(
-                f"     [{i+1}] {tool_call.get('function', {}).get('name', 'unknown')}: {tool_call}"
-            )
+            print(f"     [{i+1}] {tool_call.get('function', {}).get('name', 'unknown')}: {tool_call}")
         print(f"💰 Token usage: {backend.get_token_usage()}")
 
         if workflow_content:

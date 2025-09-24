@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
 """
 MCP-specific exceptions with enhanced error handling and context preservation.
 """
 
-from ..logger_config import logger
-from typing import Optional, Dict, Any, Union
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Union
+
+from ..logger_config import logger
 
 
 class MCPError(Exception):
@@ -58,7 +60,6 @@ class MCPError(Exception):
         return " | ".join(parts)
 
     def to_dict(self) -> Dict[str, Any]:
-
         return {
             "error_type": self.__class__.__name__,
             "message": self.original_message,
@@ -178,7 +179,6 @@ class MCPValidationError(MCPError):
         if field:
             context["field"] = field
         if value is not None:
-
             try:
                 context["value"] = str(value)[:100]  # Limit length
             except Exception:

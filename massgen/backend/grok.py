@@ -1,14 +1,11 @@
-from __future__ import annotations
-
-from openai import AsyncOpenAI
-
+# -*- coding: utf-8 -*-
 """
 Grok/xAI backend is using the chat_completions backend for streaming.
 It overrides methods for Grok-specific features (Grok Live Search).
 
 ✅ TESTED: Backend works correctly with architecture
 - ✅ Grok API integration working (through chat_completions)
-- ✅ Streaming functionality working correctly  
+- ✅ Streaming functionality working correctly
 - ✅ SingleAgent integration working
 - ✅ Error handling and pricing calculations implemented
 - ✅ Web search is working through Grok Live Search
@@ -18,13 +15,16 @@ TODO for future releases:
 - Test multi-agent orchestrator integration
 - Validate advanced Grok-specific features
 """
+# -*- coding: utf-8 -*-
+from __future__ import annotations
 
 import os
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
+from openai import AsyncOpenAI
+
+from ..logger_config import log_stream_chunk
 from .chat_completions import ChatCompletionsBackend
-from ..logger_config import (
-    log_stream_chunk,
-)
 
 
 class GrokBackend(ChatCompletionsBackend):
@@ -41,9 +41,7 @@ class GrokBackend(ChatCompletionsBackend):
 
         return openai.AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
-    def _build_base_api_params(
-        self, messages: List[Dict[str, Any]], all_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _build_base_api_params(self, messages: List[Dict[str, Any]], all_params: Dict[str, Any]) -> Dict[str, Any]:
         """Build base API params for xAI's Grok API."""
         api_params = super()._build_base_api_params(messages, all_params)
 
@@ -52,12 +50,9 @@ class GrokBackend(ChatCompletionsBackend):
         if enable_web_search:
             # Check for conflict with manually specified search_parameters
             existing_extra = api_params.get("extra_body", {})
-            if (
-                    isinstance(existing_extra, dict)
-                    and "search_parameters" in existing_extra
-            ):
+            if isinstance(existing_extra, dict) and "search_parameters" in existing_extra:
                 error_message = "Conflict: Cannot use both 'enable_web_search: true' and manual 'extra_body.search_parameters'. Use one or the other."
-                log_stream_chunk('backend.grok', 'error', error_message, self.agent_id)
+                log_stream_chunk("backend.grok", "error", error_message, self.agent_id)
                 raise ValueError(error_message)
             # Merge search_parameters into existing extra_body
             search_params = {"mode": "auto", "return_citations": True}
@@ -74,43 +69,3 @@ class GrokBackend(ChatCompletionsBackend):
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by Grok."""
         return ["web_search"]
-
-    def estimate_tokens(self, text: str) -> int:
-        """Estimate token count for text (rough approximation)."""
-        return int(len(text.split()) * 1.3)
-
-    def calculate_cost(
-        self, input_tokens: int, output_tokens: int, model: str
-    ) -> float:
-        """Calculate cost for token usage."""
-        model_lower = model.lower()
-
-        # Handle -mini models with lower costs
-        if "grok-2" in model_lower:
-            if "mini" in model_lower:
-                input_cost = (input_tokens / 1_000_000) * 1.0  # Lower cost for mini
-                output_cost = (output_tokens / 1_000_000) * 5.0
-            else:
-                input_cost = (input_tokens / 1_000_000) * 2.0
-                output_cost = (output_tokens / 1_000_000) * 10.0
-        elif "grok-3" in model_lower:
-            if "mini" in model_lower:
-                input_cost = (input_tokens / 1_000_000) * 2.5  # Lower cost for mini
-                output_cost = (output_tokens / 1_000_000) * 7.5
-            else:
-                input_cost = (input_tokens / 1_000_000) * 5.0
-                output_cost = (output_tokens / 1_000_000) * 15.0
-        elif "grok-4" in model_lower:
-            if "mini" in model_lower:
-                input_cost = (input_tokens / 1_000_000) * 4.0  # Lower cost for mini
-                output_cost = (output_tokens / 1_000_000) * 10.0
-            else:
-                input_cost = (input_tokens / 1_000_000) * 8.0
-                output_cost = (output_tokens / 1_000_000) * 20.0
-        else:
-            # Default fallback (assume grok-3 pricing)
-            input_cost = (input_tokens / 1_000_000) * 5.0
-            output_cost = (output_tokens / 1_000_000) * 15.0
-
-        return input_cost + output_cost
-

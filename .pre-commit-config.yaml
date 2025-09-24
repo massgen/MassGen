@@ -20,6 +20,16 @@ repos:
     rev: v3.1.0
     hooks:
       - id: add-trailing-comma
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black]
+  - repo: https://github.com/pycqa/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args: [--in-place, --remove-all-unused-imports, --remove-unused-variables]
   - repo: https://github.com/psf/black
     rev: 23.3.0
     hooks:
@@ -35,12 +45,13 @@ repos:
   #   rev: v3.0.2
   #   hooks:
   #     - id: pylint
-  #       exclude:
-  #           (?x)(
-  #               ^docs
-  #               | \.md$
-  #               | \.html$
-  #               | ^examples
+  #       files: ^massgen/backend/
+  #       exclude: |
+  #         (?x)(
+  #             ^docs
+  #             | \.md$
+  #             | \.html$
+  #             | ^examples
   #         )
   #       args: [
   #         --max-line-length=200,
@@ -48,12 +59,15 @@ repos:
   #         --disable=W0718,
   #         --disable=W0122,
   #         --disable=C0103,
+  #         --disable=C0302,
   #         --disable=R0913,
   #         --disable=E0401,
   #         --disable=E1101,
   #         --disable=C0415,
   #         --disable=W0603,
+  #         --disable=W0613,
   #         --disable=R1705,
+  #         --disable=R1723,
   #         --disable=R0914,
   #         --disable=E0601,
   #         --disable=W0602,
@@ -61,6 +75,7 @@ repos:
   #         --disable=R0801,
   #         --disable=R0902,
   #         --disable=R0903,
+  #         --disable=R0912,
   #         --disable=C0123,
   #         --disable=W0231,
   #         --disable=W1113,
@@ -68,8 +83,7 @@ repos:
   #         --disable=R0401,
   #         --disable=W0632,
   #         --disable=W0123,
-  #         --disable=C3001,
-  #         massgen/backend
+  #         --disable=C3001
   #       ]
 
   # - repo: https://github.com/pre-commit/mirrors-mypy

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script to examine how conversation context is built for LLM input.
 Shows the exact message templates and context structure without making API calls.
@@ -6,13 +7,13 @@ Shows the exact message templates and context structure without making API calls
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict
 
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from massgen.message_templates import MessageTemplates
+from massgen.message_templates import MessageTemplates  # noqa: E402
 
 
 def print_message_structure(title: str, conversation: Dict[str, Any]):
@@ -28,13 +29,13 @@ def print_message_structure(title: str, conversation: Dict[str, Any]):
     print(system_msg)
 
     # User message
-    print(f"\n📨 USER MESSAGE:")
+    print("\n📨 USER MESSAGE:")
     print("-" * 40)
     user_msg = conversation["user_message"]
     print(user_msg)
 
     # Tools
-    print(f"\n🔧 TOOLS PROVIDED:")
+    print("\n🔧 TOOLS PROVIDED:")
     print("-" * 40)
     tools = conversation.get("tools", [])
     for i, tool in enumerate(tools, 1):
@@ -42,7 +43,7 @@ def print_message_structure(title: str, conversation: Dict[str, Any]):
         tool_desc = tool.get("function", {}).get("description", "No description")
         print(f"{i}. {tool_name}: {tool_desc}")
 
-    print(f"\n📊 STATISTICS:")
+    print("\n📊 STATISTICS:")
     print(f"   System message length: {len(system_msg)} chars")
     print(f"   User message length: {len(user_msg)} chars")
     print(f"   Tools provided: {len(tools)}")
@@ -70,22 +71,18 @@ def test_turn1_context():
     user_msg = conversation["user_message"]
     has_history = "CONVERSATION_HISTORY" in user_msg
     has_original = "ORIGINAL MESSAGE" in user_msg
-    has_answers = (
-        "CURRENT ANSWERS" in user_msg and "no answers available yet" in user_msg
-    )
+    has_answers = "CURRENT ANSWERS" in user_msg and "no answers available yet" in user_msg
 
-    print(f"\n✅ VALIDATION:")
+    print("\n✅ VALIDATION:")
     print(f"   Contains conversation history section: {has_history}")
     print(f"   Contains original message section: {has_original}")
     print(f"   Contains empty answers section: {has_answers}")
-    print(
-        f"   System message mentions context: {'conversation' in conversation['system_message'].lower()}"
-    )
+    print(f"   System message mentions context: {'conversation' in conversation['system_message'].lower()}")
 
 
 def test_turn2_context():
     """Test context building for the second turn (with history)."""
-    print(f"\n🔷 TURN 2 CONTEXT BUILDING")
+    print("\n🔷 TURN 2 CONTEXT BUILDING")
     print("Scenario: User asks follow-up, with previous exchange in history")
 
     templates = MessageTemplates()
@@ -95,7 +92,11 @@ def test_turn2_context():
         {"role": "user", "content": "What are the main benefits of renewable energy?"},
         {
             "role": "assistant",
-            "content": "Renewable energy offers several key benefits including environmental sustainability, economic advantages, and energy security. It reduces greenhouse gas emissions, creates jobs, and decreases dependence on fossil fuel imports.",
+            "content": (
+                "Renewable energy offers several key benefits including environmental "
+                "sustainability, economic advantages, and energy security. It reduces "
+                "greenhouse gas emissions, creates jobs, and decreases dependence on fossil fuel imports."
+            ),
         },
     ]
 
@@ -103,9 +104,7 @@ def test_turn2_context():
     conversation = templates.build_conversation_with_context(
         current_task="What about the challenges and limitations?",
         conversation_history=conversation_history,
-        agent_summaries={
-            "researcher": "Key benefits include environmental and economic advantages."
-        },
+        agent_summaries={"researcher": "Key benefits include environmental and economic advantages."},
         valid_agent_ids=["researcher"],
     )
 
@@ -113,27 +112,20 @@ def test_turn2_context():
 
     # Verify structure
     user_msg = conversation["user_message"]
-    has_history = (
-        "CONVERSATION_HISTORY" in user_msg
-        and "User: What are the main benefits" in user_msg
-    )
-    has_original = (
-        "ORIGINAL MESSAGE" in user_msg and "challenges and limitations" in user_msg
-    )
+    has_history = "CONVERSATION_HISTORY" in user_msg and "User: What are the main benefits" in user_msg
+    has_original = "ORIGINAL MESSAGE" in user_msg and "challenges and limitations" in user_msg
     has_answers = "CURRENT ANSWERS" in user_msg and "researcher" in user_msg
 
-    print(f"\n✅ VALIDATION:")
+    print("\n✅ VALIDATION:")
     print(f"   Contains conversation history: {has_history}")
     print(f"   Contains current question: {has_original}")
     print(f"   Contains agent answers: {has_answers}")
-    print(
-        f"   System message is context-aware: {'conversation' in conversation['system_message'].lower()}"
-    )
+    print(f"   System message is context-aware: {'conversation' in conversation['system_message'].lower()}")
 
 
 def test_turn3_context():
     """Test context building for the third turn (extended history)."""
-    print(f"\n🔷 TURN 3 CONTEXT BUILDING")
+    print("\n🔷 TURN 3 CONTEXT BUILDING")
     print("Scenario: User asks third question, with extended conversation history")
 
     templates = MessageTemplates()
@@ -167,17 +159,11 @@ def test_turn3_context():
 
     # Verify structure
     user_msg = conversation["user_message"]
-    has_full_history = (
-        "CONVERSATION_HISTORY" in user_msg and user_msg.count("User:") >= 2
-    )
+    has_full_history = "CONVERSATION_HISTORY" in user_msg and user_msg.count("User:") >= 2
     has_original = "ORIGINAL MESSAGE" in user_msg and "governments support" in user_msg
-    has_multiple_answers = (
-        "CURRENT ANSWERS" in user_msg
-        and "researcher" in user_msg
-        and "analyst" in user_msg
-    )
+    has_multiple_answers = "CURRENT ANSWERS" in user_msg and "researcher" in user_msg and "analyst" in user_msg
 
-    print(f"\n✅ VALIDATION:")
+    print("\n✅ VALIDATION:")
     print(f"   Contains full conversation history: {has_full_history}")
     print(f"   Contains current question: {has_original}")
     print(f"   Contains multiple agent answers: {has_multiple_answers}")
@@ -186,7 +172,7 @@ def test_turn3_context():
 
 def test_context_comparison():
     """Compare context building across different turns."""
-    print(f"\n🔍 CONTEXT COMPARISON ACROSS TURNS")
+    print("\n🔍 CONTEXT COMPARISON ACROSS TURNS")
     print("=" * 80)
 
     templates = MessageTemplates()
@@ -209,9 +195,7 @@ def test_context_comparison():
     conv2 = templates.build_conversation_with_context(
         current_task="How efficient is it?",
         conversation_history=history,
-        agent_summaries={
-            "expert": "Solar energy harnesses sunlight for power generation."
-        },
+        agent_summaries={"expert": "Solar energy harnesses sunlight for power generation."},
     )
 
     # Turn 3: Extended history
@@ -241,12 +225,10 @@ def test_context_comparison():
     print(f"   Turn 2 (with history):   {len(conv2['user_message']):,} chars")
     print(f"   Turn 3 (extended):       {len(conv3['user_message']):,} chars")
 
-    print(f"\n📈 CONTEXT ELEMENTS:")
+    print("\n📈 CONTEXT ELEMENTS:")
     elements = ["CONVERSATION_HISTORY", "ORIGINAL MESSAGE", "CURRENT ANSWERS"]
 
-    for i, (conv, turn) in enumerate(
-        [(conv1, "Turn 1"), (conv2, "Turn 2"), (conv3, "Turn 3")], 1
-    ):
+    for i, (conv, turn) in enumerate([(conv1, "Turn 1"), (conv2, "Turn 2"), (conv3, "Turn 3")], 1):
         user_msg = conv["user_message"]
         print(f"\n   {turn}:")
         for element in elements:
@@ -274,7 +256,7 @@ def main():
         test_turn3_context()
         test_context_comparison()
 
-        print(f"\n🎉 ALL CONTEXT BUILDING TESTS COMPLETED")
+        print("\n🎉 ALL CONTEXT BUILDING TESTS COMPLETED")
         print("=" * 80)
         print("✅ Message templates properly build conversation context")
         print("✅ Context grows appropriately with conversation history")

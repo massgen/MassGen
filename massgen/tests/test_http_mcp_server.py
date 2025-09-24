@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
 """Simple FastMCP Streamable HTTP Server"""
-from mcp.server.fastmcp import FastMCP
-from datetime import datetime
 import random
+from datetime import datetime
+
+from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("simple_test")
 
@@ -25,7 +27,7 @@ def get_birthdays() -> str:
 @mcp.tool()
 def random_data(count: int = 3) -> str:
     """Generate random test data"""
-    data = [f"Item {i+1}: {random.randint(1,100)}" for i in range(count)]
+    data = [f"Item {i+1}: {random.randint(1, 100)}" for i in range(count)]
     return "\n".join(data)
 
 

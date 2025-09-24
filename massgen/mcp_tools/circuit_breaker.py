@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MCP Circuit Breaker implementation for handling server failures.
 
@@ -5,9 +6,10 @@ Provides unified failure tracking and circuit breaker functionality across all M
 """
 
 import time
-from ..logger_config import logger, log_mcp_activity
-from typing import Dict, Optional, Tuple
 from dataclasses import dataclass
+from typing import Dict, Optional, Tuple
+
+from ..logger_config import log_mcp_activity
 
 
 @dataclass
@@ -60,9 +62,7 @@ class MCPCircuitBreaker:
         self.agent_id = agent_id
         self._server_status: Dict[str, ServerStatus] = {}
 
-    def should_skip_server(
-        self, server_name: str, agent_id: Optional[str] = None
-    ) -> bool:
+    def should_skip_server(self, server_name: str, agent_id: Optional[str] = None) -> bool:
         """
         Check if server should be skipped due to circuit breaker.
 
@@ -175,10 +175,7 @@ class MCPCircuitBreaker:
             return (0, 0.0, False)
 
         status = self._server_status[server_name]
-        is_circuit_open = (
-            status.failure_count >= self.config.max_failures
-            and self.should_skip_server(server_name)
-        )
+        is_circuit_open = status.failure_count >= self.config.max_failures and self.should_skip_server(server_name)
 
         return (status.failure_count, status.last_failure_time, is_circuit_open)
 
@@ -203,8 +200,7 @@ class MCPCircuitBreaker:
                     "last_failure_time": status.last_failure_time,
                     "backoff_time": backoff_time,
                     "time_remaining": time_remaining,
-                    "is_circuit_open": time_remaining > 0
-                    and status.failure_count >= self.config.max_failures,
+                    "is_circuit_open": time_remaining > 0 and status.failure_count >= self.config.max_failures,
                 }
 
         return failing_servers

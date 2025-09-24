@@ -1,0 +1,146 @@
+# Steps to trigger the release:
+#   # 1. Switch to main branch
+#   git checkout main
+
+#   # 2. Ensure main is up to date
+#   git pull origin main
+
+#   # 3. Create tag
+#   git tag v1.0.0
+
+#   # 4. Push tag to remote
+#   git push origin v1.0.0
+
+name: Auto Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Get version from tag
+        id: version
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          echo "VERSION_WITHOUT_V=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # Generate changelog between tags
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "## What's Changed" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "Initial release 🎉" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+            echo "## What's Changed" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+
+            # Get commit messages
+            git log ${PREVIOUS_TAG}..HEAD --pretty=format:"* %s by @%an in %h" | while read line; do
+              echo "$line" >> $GITHUB_OUTPUT
+            done
+
+            echo "" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build distribution
+        run: |
+          python -m build
+          ls -la dist/
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          release_name: Release ${{ steps.version.outputs.VERSION }}
+          body: |
+            # Release ${{ steps.version.outputs.VERSION }}
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Installation
+
+            You can install this version directly from the source:
+            ```bash
+            pip install git+https://github.com/${{ github.repository }}@${{ steps.version.outputs.VERSION }}
+            ```
+
+            Or download the source code and install locally:
+            ```bash
+            tar -xzf <archive>.tar.gz
+            cd <directory>
+            pip install .
+            ```
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
+
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/*.tar.gz
+          asset_name: ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION_WITHOUT_V }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload wheel if exists
+        if: hashFiles('dist/*.whl') != ''
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/*.whl
+          asset_name: ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION_WITHOUT_V }}-py3-none-any.whl
+          asset_content_type: application/zip
+
+      - name: Post release summary
+        run: |
+          echo "### 🎉 Release ${{ steps.version.outputs.VERSION }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL**: https://github.com/${{ github.repository }}/releases/tag/${{ steps.version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Assets**:" >> $GITHUB_STEP_SUMMARY
+          echo "- Source code (tar.gz)" >> $GITHUB_STEP_SUMMARY
+          echo "- Source code (zip)" >> $GITHUB_STEP_SUMMARY
+          ls -la dist/ | grep -E "\.(tar\.gz|whl)$" | awk '{print "- "$9}' >> $GITHUB_STEP_SUMMARY

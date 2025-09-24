@@ -2,14 +2,14 @@
 
 ## API Status & Availability (2025)
 
-✅ **Production Ready**: Claude API is stable and production-ready  
-✅ **Active Development**: Regular updates with new features in 2025  
-✅ **Strong SDK Support**: Official Python SDK with async/sync support  
+✅ **Production Ready**: Claude API is stable and production-ready
+✅ **Active Development**: Regular updates with new features in 2025
+✅ **Strong SDK Support**: Official Python SDK with async/sync support
 
 ## Models Available (2025)
 
 - **Claude 4 Opus**: Most capable, hybrid with extended thinking mode
-- **Claude 4 Sonnet**: Balanced performance, also available to free users  
+- **Claude 4 Sonnet**: Balanced performance, also available to free users
 - **Claude 3.7 Sonnet**: Previous generation, still supported
 - **Claude 3.5 Haiku**: Fastest, cost-effective option
 
@@ -17,7 +17,7 @@
 
 ### ✅ Excellent Multi-Tool Support
 **Key Advantage**: Claude can combine ALL tool types in a single request:
-- ✅ **Server-side tools** (web search, code execution) 
+- ✅ **Server-side tools** (web search, code execution)
 - ✅ **User-defined functions** (custom tools)
 - ✅ **File processing** via Files API
 - ✅ **No restrictions** on combining different tool types
@@ -114,7 +114,7 @@ response = await beta_client.beta.messages.create(
 
 ## Advanced Features (2025)
 
-### New Beta Features  
+### New Beta Features
 - **Code execution**: Python sandbox with server-side execution
   - Header: `"anthropic-beta": "code-execution-2025-05-22"`
   - Tool type: `code_execution_20250522`
@@ -144,7 +144,7 @@ response = await beta_client.beta.messages.create(
 
 **Production Readiness:**
 - ✅ Stable API with predictable pricing
-- ✅ No session limits or experimental restrictions  
+- ✅ No session limits or experimental restrictions
 - ✅ Strong error handling and rate limits
 
 ## Implementation Recommendation
@@ -165,7 +165,7 @@ response = await beta_client.beta.messages.create(
 
 ### Suggested Implementation Order:
 1. ✅ OpenAI Backend (completed)
-2. ✅ Grok Backend (completed) 
+2. ✅ Grok Backend (completed)
 3. 🎯 **Claude Backend** (recommended next)
 4. ⏳ Gemini Backend (when API supports multi-tools)
 
@@ -175,27 +175,27 @@ response = await beta_client.beta.messages.create(
 class ClaudeBackend(LLMBackend):
     def __init__(self, api_key: Optional[str] = None):
         self.client = anthropic.AsyncAnthropic(api_key=api_key)
-    
+
     async def stream_with_tools(self, messages, tools, **kwargs):
         # Can freely combine all tool types
         combined_tools = []
-        
-        # Add server-side tools  
+
+        # Add server-side tools
         if kwargs.get("enable_web_search"):
             combined_tools.append({"type": "web_search_20250305"})
-        
+
         if kwargs.get("enable_code_execution"):
             combined_tools.append({"type": "code_execution_20250522"})
-        
+
         # Add user-defined tools
         if tools:
             combined_tools.extend(tools)
-        
+
         # Single API call with all tools - USE BETA CLIENT FOR CODE EXECUTION
         headers = {}
         if kwargs.get("enable_code_execution"):
             headers["anthropic-beta"] = "code-execution-2025-05-22"
-            
+
         stream = await self.client.beta.messages.create(
             model="claude-3-5-sonnet-20241022",
             messages=messages,
@@ -203,7 +203,7 @@ class ClaudeBackend(LLMBackend):
             headers=headers,
             stream=True
         )
-        
+
         async for event in stream:
             yield StreamChunk(...)
 ```
@@ -219,13 +219,13 @@ class ClaudeBackend(LLMBackend):
 ### ✅ Tool Execution Pattern
 Claude's code execution is **server-side** - Claude executes the code and streams results back:
 1. Send request with `code_execution_20250522` tool
-2. Claude generates code and executes it server-side  
+2. Claude generates code and executes it server-side
 3. Claude streams back execution results automatically
 4. No client-side tool execution needed for code execution tools
 
 ### ✅ Streaming Event Types to Handle
 - `content_block_start`: Tool use begins
-- `content_block_delta`: Tool input streaming  
+- `content_block_delta`: Tool input streaming
 - `input_json_delta`: Tool arguments as JSON fragments
 - Tool execution results are streamed as additional content blocks
 

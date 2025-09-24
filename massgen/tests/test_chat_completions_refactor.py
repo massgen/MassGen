@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test script to verify ChatCompletionsBackend refactoring.
 Tests integration with different OpenAI-compatible providers.
@@ -6,7 +7,7 @@ Tests integration with different OpenAI-compatible providers.
 
 import asyncio
 import os
-from typing import Dict, Any
+
 from massgen.backend import ChatCompletionsBackend
 
 
@@ -45,9 +46,7 @@ async def test_together_ai_backend():
     print(f"API Key configured: {'Yes' if backend.api_key else 'No'}")
 
     # Test cost calculation with Together AI model
-    cost = backend.calculate_cost(
-        1000, 500, "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo"
-    )
+    cost = backend.calculate_cost(1000, 500, "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo")
     print(f"Cost for 1000 input + 500 output tokens (fallback pricing): ${cost:.4f}")
 
 
@@ -83,7 +82,7 @@ async def test_tool_conversion():
                 "properties": {"location": {"type": "string"}},
                 "required": ["location"],
             },
-        }
+        },
     ]
 
     converted = backend.convert_tools_to_chat_completions_format(response_tools)
@@ -104,7 +103,7 @@ async def test_tool_conversion():
                     "required": ["query"],
                 },
             },
-        }
+        },
     ]
 
     converted_chat = backend.convert_tools_to_chat_completions_format(chat_tools)
