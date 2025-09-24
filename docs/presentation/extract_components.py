@@ -59,18 +59,18 @@ def clean_slide_title(title):
 
 def main():
     # Create components directory
-    components_dir = Path("/Users/wangchi/Code/MassGen/docs/presentation/components")
+    components_dir = Path("components")
     components_dir.mkdir(exist_ok=True)
 
     print("Extracting components from working presentations...")
 
     # Extract from m2l.html (this will be our base/generic version)
-    m2l_slides = extract_slides_from_file("/Users/wangchi/Code/MassGen/docs/presentation/m2l.html")
+    m2l_slides = extract_slides_from_file("m2l.html")
     print(f"Found {len(m2l_slides)} slides in m2l.html")
 
     # Extract head and navigation
-    head_content = extract_head_section("/Users/wangchi/Code/MassGen/docs/presentation/m2l.html")
-    nav_content = extract_navigation_section("/Users/wangchi/Code/MassGen/docs/presentation/m2l.html")
+    head_content = extract_head_section("m2l.html")
+    nav_content = extract_navigation_section("m2l.html")
 
     # Save head component (generic)
     (components_dir / "head.html").write_text(head_content)

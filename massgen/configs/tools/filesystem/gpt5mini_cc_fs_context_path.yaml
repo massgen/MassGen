@@ -22,7 +22,7 @@ orchestrator:
     agent_temporary_workspace: "temp_workspaces"
     # Context paths applied to all agents - read-only access during orchestration, write for final agent if specified
     context_paths:
-      - path: "/home/nick/GitHubProjects/MassGen/massgen/configs/resources/v0.0.21-example"
+      - path: "massgen/configs/resources/v0.0.21-example"
         permission: "write"
 
 # UI Configuration
