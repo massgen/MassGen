@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to achieve unanimous consensus th
 
 **Command:**
 ```
-uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Which AI won IMO 2025?"
+uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "Which AI won IMO 2025?"
 ```
 
 **Prompt:** Which AI won IMO 2025?
