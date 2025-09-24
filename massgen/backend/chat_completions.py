@@ -338,22 +338,21 @@ class ChatCompletionsBackend(MCPBackend):
 
             # Create single assistant message with all tool calls
             if captured_function_calls:
-                # First add the assistant message with ALL tool_calls
+                # First add the assistant message with ALL tool_calls (both MCP and non-MCP)
                 all_tool_calls = []
                 for call in captured_function_calls:
-                    if self.is_mcp_tool_call(call["name"]):
-                        all_tool_calls.append(
-                            {
-                                "id": call["call_id"],
-                                "type": "function",
-                                "function": {
-                                    "name": call["name"],
-                                    "arguments": self.formatter._serialize_tool_arguments(call["arguments"]),
-                                },
+                    all_tool_calls.append(
+                        {
+                            "id": call["call_id"],
+                            "type": "function",
+                            "function": {
+                                "name": call["name"],
+                                "arguments": self.formatter._serialize_tool_arguments(call["arguments"]),
                             },
-                        )
+                        },
+                    )
 
-                # Only add assistant message if we have tool calls to execute
+                # Add assistant message with all tool calls
                 if all_tool_calls:
                     assistant_message = {
                         "role": "assistant",
@@ -442,6 +441,16 @@ class ChatCompletionsBackend(MCPBackend):
 
                     logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
                     mcp_functions_executed = True
+                else:
+                    # For non-MCP functions, add a dummy tool result to maintain message consistency
+                    logger.info(f"Non-MCP function {function_name} detected, creating placeholder response")
+                    tool_results.append(
+                        {
+                            "tool_call_id": call["call_id"],
+                            "content": f"Function {function_name} is not available in this MCP session.",
+                            "success": False,
+                        },
+                    )
 
             # Add all tool response messages after the assistant message
             for result in tool_results:
@@ -865,54 +874,6 @@ class ChatCompletionsBackend(MCPBackend):
                 log_stream_chunk(log_prefix, "reasoning_done", "", agent_id)
                 return StreamChunk(type="reasoning_done", content="")
         return None
-
-    def _sanitize_messages_for_api(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Ensure assistant tool_calls are valid per OpenAI Chat Completions rules:
-        - For any assistant message with tool_calls, each tool_call.id must have a following
-          tool message with matching tool_call_id in the subsequent history.
-        - Remove any tool_calls lacking matching tool results; drop the whole assistant message
-          if no valid tool_calls remain and it has no useful content.
-        This prevents 400 wrong_api_format errors.
-        """
-        try:
-            sanitized: List[Dict[str, Any]] = []
-            len(messages)
-            for i, msg in enumerate(messages):
-                if msg.get("role") == "assistant" and "tool_calls" in msg:
-                    tool_calls = msg.get("tool_calls") or []
-                    valid_tool_calls = []
-                    for tc in tool_calls:
-                        tc_id = tc.get("id")
-                        if not tc_id:
-                            continue
-                        # Does a later tool message reference this id?
-                        has_match = any((m.get("role") == "tool" and m.get("tool_call_id") == tc_id) for m in messages[i + 1 :])
-                        if has_match:
-                            # Normalize arguments to string
-                            fn = dict(tc.get("function", {}))
-                            fn["arguments"] = self.formatter._serialize_tool_arguments(fn.get("arguments"))
-                            valid_tc = dict(tc)
-                            valid_tc["function"] = fn
-                            valid_tool_calls.append(valid_tc)
-                    if valid_tool_calls:
-                        new_msg = dict(msg)
-                        new_msg["tool_calls"] = valid_tool_calls
-                        sanitized.append(new_msg)
-                    else:
-                        # Keep as plain assistant if it has content; otherwise drop
-                        if msg.get("content"):
-                            new_msg = {k: v for k, v in msg.items() if k != "tool_calls"}
-                            sanitized.append(new_msg)
-                        else:
-                            logger.warning("Dropping assistant tool_calls message without matching tool results")
-                            continue
-                else:
-                    sanitized.append(msg)
-            return sanitized
-        except Exception as e:
-            logger.warning(f"sanitize_messages_for_api failed: {e}; using original messages")
-            return messages
 
     def _prepare_tools_for_api(self, tools: List[Dict[str, Any]], all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Prepare and combine framework tools with provider tools for API request."""

@@ -75,7 +75,7 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
 
         # Direct passthrough of all parameters except those handled separately
         for key, value in all_params.items():
-            if key not in self.EXCLUDED_API_PARAMS and value is not None:
+            if key not in self.get_excluded_params() and value is not None:
                 api_params[key] = value
 
         return api_params
@@ -89,7 +89,7 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
         """Build Chat Completions API parameters."""
         # Sanitize messages if needed
         if hasattr(self.backend, "_sanitize_messages_for_api"):
-            messages = self.backend._sanitize_messages_for_api(messages)
+            messages = self._sanitize_messages_for_api(messages)
 
         # Convert messages to Chat Completions format
         converted_messages = self.formatter.format_messages(messages)
@@ -128,3 +128,49 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
             api_params["tools"] = combined_tools
 
         return api_params
+
+    def _sanitize_messages_for_api(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Ensure assistant tool_calls are valid per OpenAI Chat Completions rules:
+        - For any assistant message with tool_calls, each tool_call.id must have a following
+          tool message with matching tool_call_id in the subsequent history.
+        - Remove any tool_calls lacking matching tool results; drop the whole assistant message
+          if no valid tool_calls remain and it has no useful content.
+        This prevents 400 wrong_api_format errors.
+        """
+        try:
+            sanitized: List[Dict[str, Any]] = []
+            len(messages)
+            for i, msg in enumerate(messages):
+                if msg.get("role") == "assistant" and "tool_calls" in msg:
+                    tool_calls = msg.get("tool_calls") or []
+                    valid_tool_calls = []
+                    for tc in tool_calls:
+                        tc_id = tc.get("id")
+                        if not tc_id:
+                            continue
+                        # Does a later tool message reference this id?
+                        has_match = any((m.get("role") == "tool" and m.get("tool_call_id") == tc_id) for m in messages[i + 1 :])
+                        if has_match:
+                            # Normalize arguments to string
+                            fn = dict(tc.get("function", {}))
+                            fn["arguments"] = self.formatter._serialize_tool_arguments(fn.get("arguments"))
+                            valid_tc = dict(tc)
+                            valid_tc["function"] = fn
+                            valid_tool_calls.append(valid_tc)
+                    if valid_tool_calls:
+                        new_msg = dict(msg)
+                        new_msg["tool_calls"] = valid_tool_calls
+                        sanitized.append(new_msg)
+                    else:
+                        # Keep as plain assistant if it has content; otherwise drop
+                        if msg.get("content"):
+                            new_msg = {k: v for k, v in msg.items() if k != "tool_calls"}
+                            sanitized.append(new_msg)
+                        else:
+                            continue
+                else:
+                    sanitized.append(msg)
+            return sanitized
+        except Exception:
+            return messages
