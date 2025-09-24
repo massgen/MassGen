@@ -254,7 +254,7 @@ class ResponseBackend(MCPBackend):
         # Default chunk - this should not happen for valid responses
         return StreamChunk(type="content", content="")
 
-    async def _stream_mcp_recursive(
+    async def _stream_with_mcp_tools(
         self,
         current_messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -483,7 +483,7 @@ class ResponseBackend(MCPBackend):
                 updated_messages = super()._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
-                async for chunk in self._stream_mcp_recursive(updated_messages, tools, client, **kwargs):
+                async for chunk in self._stream_with_mcp_tools(updated_messages, tools, client, **kwargs):
                     yield chunk
             else:
                 # No MCP functions were executed, we're done
@@ -541,28 +541,16 @@ class ResponseBackend(MCPBackend):
                         current_messages = super()._trim_message_history(messages.copy())
 
                         # Start recursive MCP streaming
-                        async for chunk in self._stream_mcp_recursive(current_messages, tools, client, **kwargs):
+                        async for chunk in self._stream_with_mcp_tools(current_messages, tools, client, **kwargs):
                             yield chunk
 
                     else:
                         # NON-MCP MODE: Simple passthrough streaming
                         logger.info("Using no-MCP mode")
 
-                        all_params = {**self.config, **kwargs}
-                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
-
-                        stream = await client.responses.create(**api_params)
-
-                        async for chunk in stream:
-                            processed = self._process_stream_chunk(chunk, agent_id)
-                            if processed.type == "complete_response":
-                                # Yield the complete response first
-                                yield processed
-                                # Then signal completion with done chunk
-                                log_stream_chunk("backend.response", "done", None, agent_id)
-                                yield StreamChunk(type="done")
-                            else:
-                                yield processed
+                        # Start non-MCP streaming
+                        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                            yield chunk
 
                 except Exception as e:
                     # Enhanced error handling for MCP-related errors during streaming
@@ -584,44 +572,15 @@ class ResponseBackend(MCPBackend):
                             except Exception as cb_error:
                                 logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
 
-                        # Use local error handling function
-                        all_params = {**self.config, **kwargs}
-                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
-
-                        # Get provider tools for fallback
-                        provider_tools = []
-                        enable_web_search = all_params.get("enable_web_search", False)
-                        enable_code_interpreter = all_params.get("enable_code_interpreter", False)
-                        if enable_web_search:
-                            provider_tools.append({"type": "web_search"})
-                        if enable_code_interpreter:
-                            provider_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
-
-                        # Use inline fallback logic instead of deleted stream_without_mcp method
-                        async def fallback_stream(params):
-                            stream = await client.responses.create(**params)
-                            async for chunk in stream:
-                                yield self._process_stream_chunk(chunk, agent_id)
-
-                        async for chunk in super()._handle_mcp_error_and_fallback(
-                            e,
-                            api_params,
-                            provider_tools,
-                            fallback_stream,
-                        ):
+                        # Handle MCP exceptions with fallback
+                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
                             yield chunk
                     else:
                         logger.error(f"Streaming error: {e}")
                         yield StreamChunk(type="error", error=str(e))
 
                 finally:
-                    # Ensure the underlying HTTP client is properly closed to avoid event loop issues
-                    try:
-                        if hasattr(client, "aclose"):
-                            await client.aclose()
-                    except Exception:
-                        # Suppress cleanup errors so we don't mask primary exceptions
-                        pass
+                    await self._cleanup_client(client)
         except Exception as e:
             # Handle exceptions that occur during MCP setup (__aenter__) or teardown
             # Provide a clear user-facing message and fall back to non-MCP streaming
@@ -630,31 +589,9 @@ class ResponseBackend(MCPBackend):
 
                 client = openai.AsyncOpenAI(api_key=self.api_key)
 
-                all_params = {**self.config, **kwargs}
-                api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
-
-                # Get provider tools for fallback
-                provider_tools = []
-                enable_web_search = all_params.get("enable_web_search", False)
-                enable_code_interpreter = all_params.get("enable_code_interpreter", False)
-                if enable_web_search:
-                    provider_tools.append({"type": "web_search"})
-                if enable_code_interpreter:
-                    provider_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
-
-                # Fallback stream that bypasses MCP entirely
-                async def fallback_stream(params):
-                    stream = await client.responses.create(**params)
-                    async for chunk in stream:
-                        yield self._process_stream_chunk(chunk, agent_id)
-
                 if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
-                    async for chunk in super()._handle_mcp_error_and_fallback(
-                        e,
-                        api_params,
-                        provider_tools,
-                        fallback_stream,
-                    ):
+                    # Handle MCP exceptions with fallback
+                    async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
                         yield chunk
                 else:
                     # Generic setup error: still notify if MCP was configured
@@ -667,18 +604,13 @@ class ResponseBackend(MCPBackend):
                         )
 
                     # Proceed with non-MCP streaming
-                    stream = await client.responses.create(**api_params)
-                    async for chunk in stream:
-                        yield self._process_stream_chunk(chunk, agent_id)
+                    async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                        yield chunk
             except Exception as inner_e:
                 logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
                 yield StreamChunk(type="error", error=str(inner_e))
             finally:
-                try:
-                    if "client" in locals() and hasattr(client, "aclose"):
-                        await client.aclose()
-                except Exception:
-                    pass
+                await self._cleanup_client(client)
 
     def get_provider_name(self) -> str:
         """Get the provider name."""

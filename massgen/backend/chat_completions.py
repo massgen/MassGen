@@ -856,14 +856,6 @@ class ChatCompletionsBackend(MCPBackend):
         base_url = all_params.get("base_url", "https://api.openai.com/v1")
         return openai.AsyncOpenAI(api_key=self.api_key, base_url=base_url)
 
-    async def _cleanup_client(self, client: Optional[AsyncOpenAI]) -> None:
-        """Clean up OpenAI client resources."""
-        try:
-            if client is not None and hasattr(client, "aclose"):
-                await client.aclose()
-        except Exception:
-            pass
-
     def _handle_reasoning_transition(self, log_prefix: str, agent_id: Optional[str]) -> Optional[StreamChunk]:
         """Handle reasoning state transition and return StreamChunk if transition occurred."""
         reasoning_active_key = "_reasoning_active"

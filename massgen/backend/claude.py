@@ -763,11 +763,8 @@ class ClaudeBackend(MCPBackend):
                         logger.error(f"Streaming error: {e}")
                         yield StreamChunk(type="error", error=str(e))
                 finally:
-                    try:
-                        if hasattr(client, "aclose"):
-                            await client.aclose()
-                    except Exception:
-                        pass
+                    self._cleanup_client(client)
+
         except Exception as e:
             # Handle exceptions that occur during MCP setup (__aenter__) or teardown
             try:
@@ -824,11 +821,7 @@ class ClaudeBackend(MCPBackend):
                 logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
                 yield StreamChunk(type="error", error=str(inner_e))
             finally:
-                try:
-                    if "client" in locals() and hasattr(client, "aclose"):
-                        await client.aclose()
-                except Exception:
-                    pass
+                self._cleanup_client(client)
 
     def get_provider_name(self) -> str:
         """Get the provider name."""

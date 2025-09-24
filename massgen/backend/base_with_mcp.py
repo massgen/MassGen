@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
-from ..logger_config import logger
+from ..logger_config import log_stream_chunk, logger
 from .base import LLMBackend, StreamChunk
 
 # MCP integration imports
@@ -280,13 +280,55 @@ class MCPBackend(LLMBackend):
             return f"Error: {result['error']}", result
         return str(result), result
 
-    async def _handle_mcp_error_and_fallback(
+    async def _stream_without_mcp_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Simple passthrough streaming without MCP processing."""
+        agent_id = kwargs.get("agent_id", None)
+        all_params = {**self.config, **kwargs}
+        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
+
+        # Remove any MCP tools from the tools list
+        if "tools" in api_params:
+            non_mcp_tools = []
+            for tool in api_params.get("tools", []):
+                # Check different formats for MCP tools
+                if tool.get("type") == "function":
+                    name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
+                    if name and name in self._mcp_function_names:
+                        continue
+                elif tool.get("type") == "mcp":
+                    continue
+                non_mcp_tools.append(tool)
+            api_params["tools"] = non_mcp_tools
+
+        stream = await client.responses.create(**api_params)
+
+        async for chunk in stream:
+            processed = self._process_stream_chunk(chunk, agent_id)
+            if processed.type == "complete_response":
+                # Yield the complete response first
+                yield processed
+                # Then signal completion with done chunk
+                log_stream_chunk("backend.response", "done", None, agent_id)
+                yield StreamChunk(type="done")
+            else:
+                yield processed
+
+    async def _stream_handle_mcp_exceptions(
         self,
         error: Exception,
-        api_params: Dict[str, Any],
-        provider_tools: List[Dict[str, Any]],
-        stream_func: Callable[[Dict[str, Any]], AsyncGenerator[StreamChunk, None]],
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
+        """Handle MCP exceptions with fallback streaming."""
+
         """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
         async with self._stats_lock:
             self._mcp_tool_failures += 1
@@ -313,31 +355,7 @@ class MCPBackend(LLMBackend):
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
 
-        # Build non-MCP configuration and stream fallback
-        fallback_params = dict(api_params)
-
-        # Remove any MCP tools from the tools list
-        if "tools" in fallback_params:
-            non_mcp_tools = []
-            for tool in fallback_params.get("tools", []):
-                # Check different formats for MCP tools
-                if tool.get("type") == "function":
-                    name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
-                    if name and name in self._mcp_function_names:
-                        continue
-                elif tool.get("type") == "mcp":
-                    continue
-                non_mcp_tools.append(tool)
-            fallback_params["tools"] = non_mcp_tools
-
-        # Add back provider tools if they were present
-        if provider_tools:
-            if "tools" not in fallback_params:
-                fallback_params["tools"] = []
-            fallback_params["tools"].extend(provider_tools)
-
-        async for chunk in stream_func(fallback_params):
-            yield chunk
+        await self._stream_without_mcp_tools(messages, tools, client, **kwargs)
 
     def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
         """Track MCP function names for fallback filtering."""

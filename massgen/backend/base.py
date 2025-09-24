@@ -382,3 +382,11 @@ class LLMBackend(ABC):
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history and session state.
         """
+
+    async def _cleanup_client(self, client: Any) -> None:
+        """Clean up OpenAI client resources."""
+        try:
+            if client is not None and hasattr(client, "aclose"):
+                await client.aclose()
+        except Exception:
+            pass
