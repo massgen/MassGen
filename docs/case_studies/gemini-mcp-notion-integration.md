@@ -106,7 +106,7 @@ The new MCP integration would be considered successful if:
 MassGen v0.0.15 (September 5, 2025)
 
 ### New Config
-Configuration file: [`massgen/configs/gemini_notion_mcp.yaml`](../../massgen/configs/gemini_notion_mcp.yaml)
+Configuration file: [`massgen/configs/tools/mcp/gemini_notion_mcp.yaml`](../../massgen/configs/tools/mcp/gemini_notion_mcp.yaml)
 
 Key MCP configuration:
 ```yaml
@@ -121,7 +121,7 @@ mcp_servers:
 
 ### Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_notion_mcp.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_notion_mcp.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 ```
 
 <h2 id="agents">🤖 Agents</h2>

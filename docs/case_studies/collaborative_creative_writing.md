@@ -7,7 +7,7 @@ This case study demonstrates **MassGen**'s ability to achieve unanimous consensu
 ## Command
 
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
+uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
 ```
 
 **Prompt:**  

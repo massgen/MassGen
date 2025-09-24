@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to handle exhaustive knowledge co
 
 ## Command:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gpt5_nano.yaml "provide as many ways to computer the n-th fibonacci number as possible"
+uv run python -m massgen.cli --config massgen/configs/providers/openai/gpt5_nano.yaml "provide as many ways to computer the n-th fibonacci number as possible"
 ```
 
 **Prompt:** provide as many ways to computer the n-th fibonacci number as possible
