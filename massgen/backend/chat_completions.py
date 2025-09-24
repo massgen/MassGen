@@ -33,6 +33,8 @@ from ..logger_config import (
 # Local imports
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
+from .utils.api_params_handler import ChatCompletionsAPIParamsHandler
+from .utils.formatter import ChatCompletionsFormatter
 
 # MCP integration imports
 try:
@@ -97,6 +99,8 @@ class ChatCompletionsBackend(MCPBackend):
         super().__init__(api_key, **kwargs)
         # Backend name is already set in MCPBackend, but we may need to override it
         self.backend_name = self.get_provider_name()
+        self.formatter = ChatCompletionsFormatter()
+        self.api_params_handler = ChatCompletionsAPIParamsHandler(self)
 
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
@@ -128,32 +132,6 @@ class ChatCompletionsBackend(MCPBackend):
             return "Kimi"
         else:
             return "ChatCompletion"
-
-    async def _build_chat_completions_api_params(
-        self,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]],
-        all_params: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """Build Chat Completions API parameters with MCP integration."""
-        # Build base API parameters
-        api_params = self._build_base_api_params(messages, all_params)
-
-        # Prepare and add tools
-        api_tools = self._prepare_tools_for_api(tools, all_params)
-        if api_tools:
-            api_params["tools"] = api_tools
-
-        # Add MCP tools (stdio + streamable-http) as functions
-        if self._mcp_functions:
-            mcp_tools = self.get_mcp_tools_formatted(self.mcp_tool_formatter)
-            if mcp_tools:
-                if "tools" not in api_params:
-                    api_params["tools"] = []
-                api_params["tools"].extend(mcp_tools)
-                logger.info(f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to Chat Completions API")
-
-        return api_params
 
     def _get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Return provider tools (web_search, code_interpreter) in Chat Completions format.
@@ -222,7 +200,7 @@ class ChatCompletionsBackend(MCPBackend):
 
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
-        api_params = await self._build_chat_completions_api_params(current_messages, tools, all_params)
+        api_params = await self.api_params_handler.build_api_params(current_messages, tools, all_params)
 
         # Add provider tools (web search, code interpreter) if enabled
         provider_tools = self._get_provider_tools(all_params)
@@ -311,7 +289,7 @@ class ChatCompletionsBackend(MCPBackend):
                             for tool_call in final_tool_calls:
                                 args_value = tool_call["function"]["arguments"]
                                 if not isinstance(args_value, str):
-                                    args_value = self.message_formatter._serialize_tool_arguments(args_value)
+                                    args_value = self.formatter._serialize_tool_arguments(args_value)
                                 captured_function_calls.append(
                                     {
                                         "call_id": tool_call["id"],
@@ -370,7 +348,7 @@ class ChatCompletionsBackend(MCPBackend):
                                 "type": "function",
                                 "function": {
                                     "name": call["name"],
-                                    "arguments": self.message_formatter._serialize_tool_arguments(call["arguments"]),
+                                    "arguments": self.formatter._serialize_tool_arguments(call["arguments"]),
                                 },
                             },
                         )
@@ -710,7 +688,7 @@ class ChatCompletionsBackend(MCPBackend):
         agent_id: Optional[str],
     ) -> AsyncGenerator[StreamChunk, None]:
         """Centralized non-MCP streaming using Chat Completions format."""
-        api_params = await self._build_chat_completions_api_params(messages, tools, all_params)
+        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
         log_backend_agent_message(
             agent_id or "default",
             "SEND",
@@ -789,7 +767,7 @@ class ChatCompletionsBackend(MCPBackend):
                         e,
                         (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError),
                     ):
-                        api_params = await self._build_chat_completions_api_params(messages, tools, all_params)
+                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
                         provider_tools = self._get_provider_tools(all_params)
 
                         async def fallback_stream(params):
@@ -812,7 +790,7 @@ class ChatCompletionsBackend(MCPBackend):
                             )
 
                         # Use existing non-MCP logic (fallback)
-                        api_params = self._build_base_api_params(messages, all_params)
+                        api_params = self.api_params_handler.build_base_api_params(messages, all_params)
 
                         # Note: base_url is excluded here as it's handled during client creation
                         if "base_url" in api_params:
@@ -921,7 +899,7 @@ class ChatCompletionsBackend(MCPBackend):
                         if has_match:
                             # Normalize arguments to string
                             fn = dict(tc.get("function", {}))
-                            fn["arguments"] = self.message_formatter._serialize_tool_arguments(fn.get("arguments"))
+                            fn["arguments"] = self.formatter._serialize_tool_arguments(fn.get("arguments"))
                             valid_tc = dict(tc)
                             valid_tc["function"] = fn
                             valid_tool_calls.append(valid_tc)
@@ -944,32 +922,13 @@ class ChatCompletionsBackend(MCPBackend):
             logger.warning(f"sanitize_messages_for_api failed: {e}; using original messages")
             return messages
 
-    def _build_base_api_params(self, messages: List[Dict[str, Any]], all_params: Dict[str, Any]) -> Dict[str, Any]:
-        """Build base API parameters for Chat Completions requests."""
-        # Sanitize: remove trailing assistant tool_calls without corresponding tool results
-        sanitized_messages = self._sanitize_messages_for_api(messages)
-        # Convert messages to ensure tool call arguments are properly serialized
-        converted_messages = self.message_formatter.to_chat_completions_format(sanitized_messages)
-
-        api_params = {
-            "messages": converted_messages,
-            "stream": True,
-        }
-
-        # Direct passthrough of all parameters except those handled separately
-        for key, value in all_params.items():
-            if key not in self.EXCLUDED_API_PARAMS and value is not None:
-                api_params[key] = value
-
-        return api_params
-
     def _prepare_tools_for_api(self, tools: List[Dict[str, Any]], all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Prepare and combine framework tools with provider tools for API request."""
         api_tools = []
 
         # Add framework tools (convert to Chat Completions format)
         if tools:
-            converted_tools = self.tool_formatter.to_chat_completions_format(tools)
+            converted_tools = self.formatter.format_tools(tools)
             api_tools.extend(converted_tools)
 
         # Add provider tools (web search, code interpreter) if enabled

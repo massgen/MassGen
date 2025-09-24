@@ -10,8 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-from ..formatter import MCPToolFormatter, MessageFormatter, ToolFormatter
-from ..token_manager import TokenCostCalculator, TokenUsage
+from .utils.token_manager import TokenCostCalculator, TokenUsage
 
 
 class FilesystemSupport(Enum):
@@ -55,9 +54,6 @@ class LLMBackend(ABC):
         self.config = kwargs
 
         # Initialize utility classes
-        self.message_formatter = MessageFormatter()
-        self.tool_formatter = ToolFormatter()
-        self.mcp_tool_formatter = MCPToolFormatter()
         self.token_usage = TokenUsage()
         self.token_calculator = TokenCostCalculator()
 
@@ -108,6 +104,9 @@ class LLMBackend(ABC):
                 self._setup_permission_hooks()
         else:
             self.filesystem_manager = None
+
+        self.formatter = None
+        self.api_params_handler = None
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""

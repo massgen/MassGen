@@ -26,6 +26,8 @@ from ..mcp_tools import (
 )
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
+from .utils.api_params_handler import ResponseAPIParamsHandler
+from .utils.formatter import ResponseFormatter
 
 
 class ResponseBackend(MCPBackend):
@@ -34,6 +36,8 @@ class ResponseBackend(MCPBackend):
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.formatter = ResponseFormatter()
+        self.api_params_handler = ResponseAPIParamsHandler(self)
 
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
         """Convert MCP tools (stdio + streamable-http) to OpenAI function declarations."""
@@ -48,68 +52,6 @@ class ResponseBackend(MCPBackend):
             f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format",
         )
         return converted_tools
-
-    async def _build_response_api_params(
-        self,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]],
-        all_params: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """Build OpenAI Response API parameters with MCP integration."""
-        # Convert messages to Response API format
-        converted_messages = self.message_formatter.to_response_api_format(messages)
-
-        # Response API parameters (uses 'input', not 'messages')
-        api_params = {"input": converted_messages, "stream": True}
-
-        # Direct passthrough of all parameters except those handled separately
-        excluded_params = self.get_base_excluded_config_params() | {
-            # Response backend specific exclusions
-            "enable_web_search",
-            "enable_code_interpreter",
-            "allowed_tools",
-            "exclude_tools",
-        }
-        for key, value in all_params.items():
-            if key not in excluded_params and value is not None:
-                # Handle OpenAI Response API parameter name differences
-                if key == "max_tokens":
-                    api_params["max_output_tokens"] = value
-                else:
-                    api_params[key] = value
-
-        # Add framework tools (convert to Response API format)
-        if tools:
-            converted_tools = self.tool_formatter.to_response_api_format(tools)
-            api_params["tools"] = converted_tools
-
-        # Add MCP tools (stdio + streamable-http) as functions
-        if self._mcp_functions:
-            mcp_tools = self._convert_mcp_tools_to_openai_format()
-            if mcp_tools:
-                if "tools" not in api_params:
-                    api_params["tools"] = []
-                api_params["tools"].extend(mcp_tools)
-                logger.info(f"Added {len(mcp_tools)} MCP tools (stdio + streamable-http) to OpenAI Response API")
-
-        # Add provider tools (web search, code interpreter) if enabled
-        provider_tools = []
-        enable_web_search = all_params.get("enable_web_search", False)
-        enable_code_interpreter = all_params.get("enable_code_interpreter", False)
-
-        if enable_web_search:
-            provider_tools.append({"type": "web_search"})
-        if enable_code_interpreter:
-            provider_tools.append(
-                {"type": "code_interpreter", "container": {"type": "auto"}},
-            )
-
-        if provider_tools:
-            if "tools" not in api_params:
-                api_params["tools"] = []
-            api_params["tools"].extend(provider_tools)
-
-        return api_params
 
     def _process_stream_chunk(self, chunk, agent_id) -> StreamChunk:
         """Process individual stream chunks and convert to StreamChunk format."""
@@ -323,7 +265,7 @@ class ResponseBackend(MCPBackend):
 
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
-        api_params = await self._build_response_api_params(current_messages, tools, all_params)
+        api_params = await self.api_params_handler.build_api_params(current_messages, tools, all_params)
 
         agent_id = kwargs["agent_id"]
         # Start streaming
@@ -607,7 +549,7 @@ class ResponseBackend(MCPBackend):
                         logger.info("Using no-MCP mode")
 
                         all_params = {**self.config, **kwargs}
-                        api_params = await self._build_response_api_params(messages, tools, all_params)
+                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
 
                         stream = await client.responses.create(**api_params)
 
@@ -644,7 +586,7 @@ class ResponseBackend(MCPBackend):
 
                         # Use local error handling function
                         all_params = {**self.config, **kwargs}
-                        api_params = await self._build_response_api_params(messages, tools, all_params)
+                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
 
                         # Get provider tools for fallback
                         provider_tools = []
@@ -689,7 +631,7 @@ class ResponseBackend(MCPBackend):
                 client = openai.AsyncOpenAI(api_key=self.api_key)
 
                 all_params = {**self.config, **kwargs}
-                api_params = await self._build_response_api_params(messages, tools, all_params)
+                api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
 
                 # Get provider tools for fallback
                 provider_tools = []

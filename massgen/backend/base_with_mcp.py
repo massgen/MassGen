@@ -461,26 +461,14 @@ class MCPBackend(LLMBackend):
         """Check if a tool call is an MCP function."""
         return tool_name in self._mcp_functions
 
-    def get_mcp_tools_formatted(self, formatter) -> List[Dict[str, Any]]:
+    def get_mcp_tools_formatted(self) -> List[Dict[str, Any]]:
         """Get MCP tools formatted for specific API format."""
         if not self._mcp_functions:
             return []
 
         # Determine format based on backend type
         mcp_tools = []
-        provider_name = self.get_provider_name().lower()
-
-        # Claude backend uses claude format
-        if "claude" in provider_name and hasattr(formatter, "to_claude_format"):
-            mcp_tools = formatter.to_claude_format(self._mcp_functions)
-        # OpenAI/ChatCompletions backends use chat completions format
-        elif hasattr(formatter, "to_chat_completions_format"):
-            mcp_tools = formatter.to_chat_completions_format(self._mcp_functions)
-        else:
-            # Fallback to direct conversion
-            for function in self._mcp_functions.values():
-                if hasattr(function, "to_openai_format"):
-                    mcp_tools.append(function.to_openai_format())
+        mcp_tools = self.formatter.format_mcp_tools(self._mcp_functions)
 
         # Track function names for fallback filtering
         self._track_mcp_function_names(mcp_tools)

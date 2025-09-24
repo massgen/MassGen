@@ -41,6 +41,8 @@ from ..mcp_tools.backend_utils import (
 )
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
+from .utils.api_params_handler import ClaudeAPIParamsHandler
+from .utils.formatter import ClaudeFormatter
 
 
 class ClaudeBackend(MCPBackend):
@@ -51,6 +53,8 @@ class ClaudeBackend(MCPBackend):
         self.api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
         self.search_count = 0  # Track web search usage for pricing
         self.code_session_hours = 0.0  # Track code execution usage
+        self.formatter = ClaudeFormatter()
+        self.api_params_handler = ClaudeAPIParamsHandler(self)
 
     async def _handle_mcp_error_and_fallback_claude(
         self,
@@ -119,68 +123,6 @@ class ClaudeBackend(MCPBackend):
             return [result_str]
         return [result_str, result_obj]
 
-    async def _build_claude_api_params(
-        self,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]],
-        all_params: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """Build Anthropic Messages API parameters with MCP integration."""
-        # Convert messages to Claude format and extract system message
-        converted_messages, system_message = self.message_formatter.to_claude_format(messages)
-
-        # Combine tools
-        combined_tools: List[Dict[str, Any]] = []
-
-        # Server-side tools
-        enable_web_search = all_params.get("enable_web_search", False)
-        enable_code_execution = all_params.get("enable_code_execution", False)
-        if enable_web_search:
-            combined_tools.append({"type": "web_search_20250305", "name": "web_search"})
-        if enable_code_execution:
-            combined_tools.append({"type": "code_execution_20250522", "name": "code_execution"})
-
-        # User-defined tools
-        if tools:
-            converted_tools = self.tool_formatter.to_claude_format(tools)
-            combined_tools.extend(converted_tools)
-
-        # MCP tools
-        if self._mcp_functions:
-            mcp_tools = self.get_mcp_tools_formatted(self.mcp_tool_formatter)
-            combined_tools.extend(mcp_tools)
-
-        # Build API parameters
-        api_params: Dict[str, Any] = {"messages": converted_messages, "stream": True}
-
-        if system_message:
-            api_params["system"] = system_message
-        if combined_tools:
-            api_params["tools"] = combined_tools
-
-        # Direct passthrough of all parameters except those handled separately
-        # Use base class exclusions plus Claude-specific ones
-        excluded_params = self.get_base_excluded_config_params().union(
-            {
-                "enable_web_search",
-                "enable_code_execution",
-                "allowed_tools",
-                "exclude_tools",
-            },
-        )
-        for key, value in all_params.items():
-            if key not in excluded_params and value is not None:
-                api_params[key] = value
-
-        # Claude API requires max_tokens - add default if not provided
-        if "max_tokens" not in api_params:
-            api_params["max_tokens"] = 4096
-
-        if all_params.get("enable_code_execution"):
-            api_params["betas"] = ["code-execution-2025-05-22"]
-
-        return api_params
-
     async def _stream_mcp_recursive(
         self,
         current_messages: List[Dict[str, Any]],
@@ -192,7 +134,7 @@ class ClaudeBackend(MCPBackend):
 
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
-        api_params = await self._build_claude_api_params(current_messages, tools, all_params)
+        api_params = await self.api_params_handler.build_api_params(current_messages, tools, all_params)
 
         agent_id = kwargs.get("agent_id", None)
 
@@ -559,7 +501,7 @@ class ClaudeBackend(MCPBackend):
                     else:
                         # NON-MCP MODE
                         all_params = {**self.config, **kwargs}
-                        api_params = await self._build_claude_api_params(messages, tools, all_params)
+                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
 
                         # Helper to run a stream with given params (used also for fallback)
                         async def run_stream(params: Dict[str, Any]):
@@ -798,7 +740,7 @@ class ClaudeBackend(MCPBackend):
 
                         # Build params and provider tools for fallback
                         all_params = {**self.config, **kwargs}
-                        api_params = await self._build_claude_api_params(messages, tools, all_params)
+                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
                         provider_tools = []
                         if all_params.get("enable_web_search", False):
                             provider_tools.append({"type": "web_search_20250305", "name": "web_search"})
@@ -834,7 +776,7 @@ class ClaudeBackend(MCPBackend):
                 client = anthropic.AsyncAnthropic(api_key=self.api_key)
 
                 all_params = {**self.config, **kwargs}
-                api_params = await self._build_claude_api_params(messages, tools, all_params)
+                api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
 
                 provider_tools = []
                 if all_params.get("enable_web_search", False):
