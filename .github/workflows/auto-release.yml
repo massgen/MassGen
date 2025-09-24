@@ -119,7 +119,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/*.tar.gz
+          asset_path: dist/*.tar.gz
           asset_name: ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION_WITHOUT_V }}.tar.gz
           asset_content_type: application/gzip
 
@@ -130,7 +130,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/*.whl
+          asset_path: dist/*.whl
           asset_name: ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION_WITHOUT_V }}-py3-none-any.whl
           asset_content_type: application/zip
 
