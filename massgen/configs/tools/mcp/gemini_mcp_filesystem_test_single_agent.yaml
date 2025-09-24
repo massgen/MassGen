@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config configs/gemini_mcp_filesystem_test.yaml "Please create a Python script with a hello world function in various fictional languages and save it directly into a file in your workspace."
+# uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test_single_agent.yaml "Please create a Python script with a hello world function in various fictional languages and save it directly into a file in your workspace."
 agents:
   - id: "gemini_agent1"
     backend:
