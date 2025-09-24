@@ -1,47 +1,47 @@
-# MassGen v0.0.23 Roadmap
+# MassGen v0.0.24 Roadmap
 
 ## Overview
 
-Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tools and configuration organization by addressing critical code architecture improvements and system reliability. Key enhancements include:
+Version 0.0.24 builds upon the solid backend refactoring of v0.0.23 by focusing on local model support, orchestrator improvements, and enhanced agent communication. Key enhancements include:
 
-- **Backend Architecture Refactoring** (Required): 🏗️ Eliminate duplicated code in backend files including MCP, filesystem manager, and permission manager
+- **VLLM Local Model Support** (Required): 🚀 Add support for VLLM backends with local models for better performance and cost efficiency
 - **Agent System Prompt Fixes** (Required): 🔧 Fix the problem where the final agent expects human feedback through system prompt changes
-- **VLLM Local Model Support** (Optional): 🚀 Add support for VLLM backends with local models for better performance and cost efficiency
+- **Refactor Orchestrator** (Optional): 🏗️ Streamline orchestrator code for better maintainability and performance
 - **MCP Marketplace Integration** (Optional): 🛍️ Integrate MCP Marketplace support for expanded tool ecosystem
 
 ## Key Technical Priorities
 
-1. **Backend Architecture Refactoring** (REQUIRED): Consolidate shared functionality across backends
+1. **VLLM Local Model Support** (REQUIRED): Enable high-performance local model inference
 2. **Agent System Prompt Fixes** (REQUIRED): Resolve final agent human feedback expectations
-3. **VLLM Local Model Support** (OPTIONAL): Enable high-performance local model inference
+3. **Refactor Orchestrator** (OPTIONAL): Streamline orchestrator code for better maintainability
 4. **MCP Marketplace Integration** (OPTIONAL): Expand tool ecosystem through marketplace
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Backend Architecture Refactoring (REQUIRED)
+### 🎯 Milestone 1: VLLM Local Model Support (REQUIRED)
 
-**Goal**: Eliminate duplicated code in backend files including MCP, filesystem manager, and permission manager
+**Goal**: Add support for VLLM backends with local models for better performance and cost efficiency
 
-#### 1.1 Code Deduplication (REQUIRED)
-- [ ] Identify and analyze duplicated code patterns across backend files
-- [ ] Create shared base classes for common MCP functionality
-- [ ] Consolidate filesystem manager implementations into unified interface
-- [ ] Unify permission manager across all backends
-- [ ] Implement shared utility functions for common operations
+#### 1.1 VLLM Integration (REQUIRED)
+- [ ] Research VLLM API compatibility and requirements
+- [ ] Design VLLM backend architecture for MassGen integration
+- [ ] Implement VLLM backend with OpenAI-compatible API support
+- [ ] Add model loading and management capabilities
+- [ ] Implement streaming response support for VLLM models
 
-#### 1.2 MCP Integration Consolidation (REQUIRED)
-- [ ] Create unified MCP client interface for all backends
-- [ ] Standardize MCP server configuration handling
-- [ ] Implement shared MCP tool discovery and execution logic
-- [ ] Consolidate MCP error handling and retry mechanisms
-- [ ] Create common MCP security validation framework
+#### 1.2 Local Model Management (REQUIRED)
+- [ ] Add automatic model downloading and setup
+- [ ] Implement model configuration and parameter management
+- [ ] Create model switching and hot-loading capabilities
+- [ ] Add GPU resource management and optimization
+- [ ] Implement model performance monitoring
 
-#### 1.3 Architecture Improvements (REQUIRED)
-- [ ] Design and implement shared backend base class
-- [ ] Create plugin architecture for backend extensions
-- [ ] Implement dependency injection for shared components
-- [ ] Add comprehensive test coverage for refactored code
-- [ ] Update documentation for new architecture
+#### 1.3 Performance Optimization (REQUIRED)
+- [ ] Optimize VLLM backend for multi-agent coordination
+- [ ] Implement batching and request optimization
+- [ ] Add memory management for large models
+- [ ] Create performance benchmarking tools
+- [ ] Add configuration examples and documentation
 
 
 ### 🎯 Milestone 2: Agent System Prompt Fixes (REQUIRED)
@@ -69,30 +69,30 @@ Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tool
 - [ ] Create migration guide for existing configurations
 
 
-### 🎯 Milestone 3: VLLM Local Model Support (OPTIONAL)
+### 🎯 Milestone 3: Refactor Orchestrator (OPTIONAL)
 
-**Goal**: Add support for VLLM backends with local models for better performance and cost efficiency
+**Goal**: Streamline orchestrator code for better maintainability and performance
 
-#### 3.1 VLLM Integration (OPTIONAL)
-- [ ] Research VLLM API compatibility and requirements
-- [ ] Design VLLM backend architecture for MassGen integration
-- [ ] Implement VLLM backend with OpenAI-compatible API support
-- [ ] Add model loading and management capabilities
-- [ ] Implement streaming response support for VLLM models
+#### 3.1 Code Organization (OPTIONAL)
+- [ ] Analyze current orchestrator code structure and identify improvement areas
+- [ ] Extract coordination logic into separate modules
+- [ ] Simplify agent communication flow and state management
+- [ ] Remove duplicated code and consolidate utility functions
+- [ ] Improve error handling and recovery mechanisms
 
-#### 3.2 Local Model Management (OPTIONAL)
-- [ ] Add automatic model downloading and setup
-- [ ] Implement model configuration and parameter management
-- [ ] Create model switching and hot-loading capabilities
-- [ ] Add GPU resource management and optimization
-- [ ] Implement model performance monitoring
+#### 3.2 Performance Improvements (OPTIONAL)
+- [ ] Optimize agent coordination and message passing
+- [ ] Implement efficient state tracking and updates
+- [ ] Add caching for frequently accessed data
+- [ ] Improve memory usage for long-running sessions
+- [ ] Optimize snapshot and workspace management
 
-#### 3.3 Performance Optimization (OPTIONAL)
-- [ ] Optimize VLLM backend for multi-agent coordination
-- [ ] Implement batching and request optimization
-- [ ] Add memory management for large models
-- [ ] Create performance benchmarking tools
-- [ ] Add configuration examples and documentation
+#### 3.3 Testing and Documentation (OPTIONAL)
+- [ ] Add comprehensive unit tests for orchestrator components
+- [ ] Create integration tests for multi-agent scenarios
+- [ ] Update orchestrator documentation and architecture diagrams
+- [ ] Add performance benchmarks and profiling tools
+- [ ] Create migration guide for any breaking changes
 
 
 ### 🎯 Milestone 4: MCP Marketplace Integration (OPTIONAL)
@@ -124,29 +124,29 @@ Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tool
 
 ### Functional Requirements (REQUIRED)
 
-- [ ] Consolidated backend architecture with eliminated code duplication
-- [ ] Unified MCP, filesystem manager, and permission manager implementations
+- [ ] Functional VLLM backend with local model support
+- [ ] OpenAI-compatible API support for VLLM integration
 - [ ] Fixed final agent behavior without human feedback expectations
 - [ ] Autonomous final agent decision-making and task completion
-- [ ] Backward compatibility with all existing v0.0.22 configurations
+- [ ] Backward compatibility with all existing v0.0.23 configurations
 
 ### Functional Requirements (OPTIONAL)
-- [ ] Functional VLLM backend with local model support
+- [ ] Streamlined orchestrator with improved maintainability
 - [ ] Basic MCP Marketplace integration for tool discovery and installation
-- [ ] Performance improvements from local model usage
+- [ ] Performance improvements from orchestrator refactoring
 
 ### Performance Requirements (REQUIRED)
-- [ ] No performance degradation from architecture refactoring
-- [ ] Improved maintainability through reduced code duplication
-- [ ] Consistent behavior across all backends after refactoring
+- [ ] No performance degradation from VLLM integration
+- [ ] Efficient model loading and memory management
+- [ ] Support for batched inference in multi-agent scenarios
 - [ ] Reliable final agent completion without hanging
 
 ### Quality Requirements (REQUIRED)
-- [ ] Comprehensive test coverage for refactored backend architecture
-- [ ] Documentation for new unified architecture
+- [ ] Comprehensive test coverage for VLLM backend
+- [ ] Documentation for VLLM setup and configuration
 - [ ] Integration tests for system prompt fixes
-- [ ] Security validation for refactored components
-- [ ] Migration guide for any breaking changes
+- [ ] Security validation for local model deployment
+- [ ] Migration guide for transitioning to VLLM backend
 
 ## Dependencies & Risks
 
@@ -163,16 +163,11 @@ Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tool
 4. **Platform Compatibility**: *Mitigation*: Cross-platform testing, abstraction layers
 5. **Data Loss**: *Mitigation*: Transaction-like operations, rollback mechanisms
 
-## Post-v0.0.23 Considerations
+## Post-v0.0.24 Considerations
 
-### Future Enhancements (v0.0.24+)
-- **Enhanced Debugging Interface**: Improve debugging capabilities and fix scroll issues for long generated results
-- **Sandboxed Code Execution**: Implement secure code execution in Docker/sandbox environments
-  - Research sandbox requirements: Docker vs direct command execution
-  - Analyze security implications and motivations for sandboxing
-  - Investigate Claude Code's current sandbox implementation
-  - Design CLI examples and command structure for sandbox operations
-  - Evaluate which backends require sandbox support
+### Future Enhancements (v0.0.25+)
+- **Refactor Send/Receive Messaging**: Extract messaging system to use stream chunks class for multimodal support
+- **Pre-commit Hooks and Unit Tests**: Ensure comprehensive testing coverage and code quality for all components
 - **Advanced VLLM Features**: Extended VLLM capabilities beyond basic model support
 - **Enterprise MCP Marketplace**: Advanced marketplace features for organizations
 
@@ -186,26 +181,26 @@ Version 0.0.23 builds upon the solid foundation of v0.0.22's workspace copy tool
 
 | Week | Focus | Key Deliverables | Status |
 |------|-------|------------------|--------|
-| 1 | Backend Refactoring | Code deduplication and unified architecture | ⏳ **PENDING** |
+| 1 | VLLM Integration | VLLM backend implementation and model support | ⏳ **PENDING** |
 | 2 | System Prompt Fixes | Autonomous final agent behavior | ⏳ **PENDING** |
-| 3 | Optional Features | VLLM and MCP Marketplace integration | ⏳ **PENDING** |
-| 4 | Release Preparation | Final testing and v0.0.23 release | ⏳ **PENDING** |
+| 3 | Optional Features | Orchestrator refactoring and MCP Marketplace | ⏳ **PENDING** |
+| 4 | Release Preparation | Final testing and v0.0.24 release | ⏳ **PENDING** |
 
 ## Getting Started
 
 ### For Contributors
 
-1. Analyze duplicated code patterns across backend implementations
-2. Design unified architecture for MCP, filesystem, and permission management
+1. Research VLLM API compatibility and integration requirements
+2. Implement VLLM backend with OpenAI-compatible API support
 3. Investigate and fix final agent human feedback expectations
-4. Research VLLM integration requirements and implementation approach
-5. Create comprehensive tests for refactored architecture
+4. Consider orchestrator refactoring for improved maintainability
+5. Create comprehensive tests for new VLLM backend
 
 ### For Users
-- v0.0.23 will provide cleaner, more maintainable backend architecture
+- v0.0.24 will provide VLLM support for local model deployment
 - Final agents will complete tasks autonomously without expecting human feedback
-- All v0.0.22 configurations will continue to work unchanged
-- Optional VLLM support will enable cost-effective local model usage
+- All v0.0.23 configurations will continue to work unchanged
+- VLLM backend will enable cost-effective and high-performance local model usage
 
 ---
 
