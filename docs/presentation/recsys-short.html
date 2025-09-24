@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MassGen presentation at M2L Summer School.">
+    <meta name="theme-color" content="#667eea">
+    <title>MassGen: Scaling AI Through Multi-Agent Collaboration | M2L Summer School</title>
+    <link rel="preconnect" href="https://docs.ag2.ai">
+    <link rel="preconnect" href="https://github.com">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            overflow: hidden;
+        }
+
+        .slideshow-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .slide {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            padding: 60px;
+            box-sizing: border-box;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .slide h1 {
+            font-size: 3.5em;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .slide h2 {
+            font-size: 2.8em;
+            color: #34495e;
+            margin-bottom: 40px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .slide .subtitle {
+            font-size: 1.4em;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .slide .speaker-info {
+            font-size: 1.3em;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .slide .summit-info {
+            font-size: 1.1em;
+            color: #3498db;
+            text-align: center;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .slide ul {
+            font-size: 1.8em;
+            line-height: 1.8;
+            color: #2c3e50;
+            list-style: none;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .slide li {
+            margin-bottom: 25px;
+            padding-left: 40px;
+            position: relative;
+        }
+
+        .slide li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 0 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .slide-nav {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            max-width: 250px;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: #3498db;
+            transform: scale(1.3);
+        }
+
+        .nav-dot:hover {
+            background: rgba(255,255,255,0.6);
+        }
+
+        .icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .code-snippet {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            width: 95%;
+            max-width: 1200px;
+            font-size: 1.1em;
+            margin: 20px auto;
+        }
+
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .architecture-diagram {
+            width: 100%;
+            height: 60vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .arch-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .arch-component {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+        }
+
+        .arch-component:hover {
+            transform: translateY(-3px);
+        }
+
+        .orchestrator {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+        }
+
+        .agent {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            min-width: 160px;
+            padding: 20px;
+        }
+
+        .hub {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+        }
+
+        .agents-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .agents-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .collaboration-note {
+            font-size: 1.2em;
+            color: #2c3e50;
+            font-weight: bold;
+            text-align: center;
+            background: rgba(116, 185, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: 2px dashed #74b9ff;
+        }
+
+        .component-icon {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .component-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .component-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .flow-arrow {
+            font-size: 3em;
+            color: #3498db;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .demo-box {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            font-size: 1.1em;
+        }
+
+        .metrics-comparison {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 30px;
+        }
+
+        .metrics-box {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+            border: 3px solid;
+        }
+
+        .metrics-box.single {
+            border-color: #3498db;
+        }
+
+        .metrics-box.multi {
+            border-color: #e74c3c;
+        }
+
+        .metrics-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .metrics-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .version-evolution {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .version-box {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .version-box.current {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            transform: scale(1.05);
+        }
+
+        .call-to-action {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .cta-links {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .cta-link {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .cta-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-3px);
+        }
+
+        .inline-link {
+            color: #3498db;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .inline-link:hover {
+            color: #2980b9;
+        }
+
+        .version-badge {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 20px;
+            animation: pulse 2s infinite;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid #3498db;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .datahack-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .slide {
+                padding: 20px;
+                font-size: 14px;
+            }
+
+            .slide h1 {
+                font-size: 2.2em;
+                margin-bottom: 20px;
+            }
+
+            .slide h2 {
+                font-size: 1.8em;
+                margin-bottom: 25px;
+            }
+
+            .slide ul {
+                font-size: 1.2em;
+                max-width: 100%;
+            }
+
+            .slide li {
+                margin-bottom: 15px;
+                padding-left: 25px;
+            }
+
+            .navigation {
+                bottom: 15px;
+                right: 15px;
+            }
+
+            .nav-btn {
+                padding: 8px 12px;
+                font-size: 14px;
+                margin: 0 2px;
+            }
+
+            .slide-counter {
+                bottom: 15px;
+                left: 15px;
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+
+            .slide-nav {
+                top: 15px;
+                right: 15px;
+                padding: 10px;
+            }
+
+            .nav-grid {
+                max-width: 200px;
+                gap: 6px;
+            }
+
+            .nav-dot {
+                width: 10px;
+                height: 10px;
+            }
+
+            .metrics-comparison {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .demo-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .version-evolution {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .architecture-diagram {
+                height: 50vh;
+                padding: 10px;
+            }
+
+            .arch-component {
+                min-width: 140px;
+                padding: 15px;
+                font-size: 0.9em;
+            }
+
+            .code-snippet {
+                font-size: 0.9em;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slideshow-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 80px; margin: 40px 0 50px 0;">
+                <div style="text-align: center;">
+                    <img src="https://github.com/Leezekun/MassGen/blob/main/assets/logo.png?raw=true" alt="MassGen logo featuring multi-agent collaboration design" style="width: 280px; height: 280px; object-fit: contain;" loading="lazy">
+                </div>
+                <div style="text-align: center;">
+                    <img src="https://docs.ag2.ai/latest/docs/blog/2025-04-16-Reasoning/img/threads.jpeg" alt="Diagram showing collaborative AI agents working together in parallel threads" style="width: 300px; height: 280px; object-fit: cover; border-radius: 20px; box-shadow: 0 12px 35px rgba(0,0,0,0.15);" loading="lazy">
+                </div>
+            </div>
+
+            <div class="subtitle" style="font-size: 2.2em; margin: 30px 0; text-align: center; font-weight: 600; color: #2c3e50;">Scaling AI Through Multi-Agent Collaboration</div>
+            <!-- <div class="speaker-info">Chi Wang</div> -->
+
+            <div style="background: rgba(168, 85, 247, 0.08); padding: 30px; border-radius: 20px; margin: 40px 0; border-left: 5px solid #a855f7;">
+                <div class="event-context" style="text-align: center; font-size: 1.5em; color: #7c3aed;">
+                    🎯 <strong style="font-size: 1.1em;">RecSys'25 Tutorial</strong><br>
+                    <div style="margin: 20px 0; font-size: 1.1em; color: #4b5563;"><em>Agentic Recommendation Systems</em></div>
+                    <div style="font-size: 1em; color: #6b7280;">📍 Prague, Czech Republic • September 26, 2025</div>
+                </div>
+            </div>
+
+            <div class="contact-info" style="text-align: center; margin-top: 30px; font-size: 1.6em; background: rgba(52, 152, 219, 0.1); padding: 20px; border-radius: 10px;">
+                <span style="color: #2c3e50;">🌐 </span>
+                <a href="https://massgen.ai" style="color: #3498db; text-decoration: underline; font-weight: bold; font-size: 1.1em;">massgen.ai</a>
+                <span style="color: #2c3e50; margin: 0 20px; font-weight: bold;">|</span>
+                <a href="https://github.com/Leezekun/MassGen" style="color: #3498db; text-decoration: underline; font-weight: bold; font-size: 1.1em;">GitHub</a>
+            </div>
+        </div>
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <div class="icon">📈</div>
+            <h2>How Do We Scale Up AI?</h2>
+            <div style="max-width: 1000px; margin: 0 auto;">
+                <div style="background: #f8f9fa; padding: 40px; border-radius: 20px; border: 2px solid #dee2e6; margin-bottom: 30px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⚡</div>
+                        <h3 style="color: #2c3e50; font-size: 1.8em;">Traditional Scaling Laws Hit Limits</h3>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px; color: #e74c3c;">💡</div>
+                            <h4 style="color: #e74c3c; margin-bottom: 10px;">Power Crisis</h4>
+                            <div style="font-size: 1.1em; color: #2c3e50; line-height: 1.6;">
+                                <strong>4-16 GW by 2030</strong><br>
+                                <span style="font-size: 0.9em; color: #666;">Enough to power entire cities</span>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px; color: #e74c3c;">📚</div>
+                            <h4 style="color: #e74c3c; margin-bottom: 10px;">Data Depletion</h4>
+                            <div style="font-size: 1.1em; color: #2c3e50; line-height: 1.6;">
+                                <strong>Depleted by 2026-2028</strong><br>
+                                <span style="font-size: 0.9em; color: #666;">Quality text data exhausted</span>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px; color: #e74c3c;">🚧</div>
+                            <h4 style="color: #e74c3c; margin-bottom: 10px;">Performance Plateau</h4>
+                            <div style="font-size: 1.1em; color: #2c3e50; line-height: 1.6;">
+                                <strong>GPT-5 delayed >1 year</strong><br>
+                                <span style="font-size: 0.9em; color: #666;">Early training runs failed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff3cd; padding: 25px; border-radius: 15px; border-left: 4px solid #f39c12; text-align: center;">
+                        <h4 style="margin: 0 0 15px 0; font-size: 1.4em; color: #f39c12;">⚠️ Inference-time scaling</h4>
+                        <div style="font-size: 1.3em; color: #2c3e50; line-height: 1.6;">
+                            <strong>No universal way to leverage improvements & address limitations</strong><br>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px; border-radius: 15px;">
+                        <div style="font-size: 1.5em; font-weight: bold; margin-bottom: 10px;">The New Paradigm:</div>
+                        <div style="font-size: 1.3em;">Model → Agent → <strong>Multi-Agent Systems</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: The Solution - Multi-Agent Collaboration -->
+        <div class="slide">
+            <div class="icon">🤝</div>
+            <h2>The Promise of Multi-Agent Collaboration</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
+                <div>
+                    <ul style="font-size: 1.6em;">
+                        <li><strong>Study Group Dynamics:</strong> Like humans collaborating on complex problems</li>
+                        <li><strong>Cross-Ecosystem Integration:</strong> Bridge Claude, Gemini, GPT, Grok, and specialized coding agents</li>
+                        <li><strong>Emergent Intelligence:</strong> Collective problem-solving beyond individual capabilities</li>
+                        <li><strong>Real-time Intelligence Sharing:</strong> Agents learn and adapt from each other</li>
+                    </ul>
+                </div>
+                <div style="text-align: center;">
+                    <img src="https://docs.ag2.ai/latest/docs/blog/2025-04-16-Reasoning/img/cognition.jpg" alt="Visual representation of collaborative AI reasoning and cognitive processes" style="width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);" loading="lazy">
+                    <div style="margin-top: 15px; font-size: 1.1em; color: #2c3e50;">
+                        <div style="font-style: italic; margin-bottom: 10px;">The Promise of Collaborative Reasoning</div>
+                        <div style="font-size: 0.9em; color: #3498db; margin-bottom: 8px;">
+                            📖 <a href="https://root.massgen.ai" style="color: #3498db; text-decoration: none;">root.massgen.ai - "Myth of Reasoning"</a>
+                        </div>
+                        <div style="font-size: 0.85em; color: #27ae60;">
+                            🏗️ Built on AG2's foundational multi-agent research and community
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Evidence - Performance Gains -->
+        <div class="slide">
+            <div class="icon">📈</div>
+            <h2>Proven Performance Gains</h2>
+            <div class="metrics-comparison" style="justify-content: space-between; gap: 15px;">
+                <div class="metrics-box single">
+                    <div class="metrics-title" style="color: #3498db;">Grok-4 Standard</div>
+                    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #3498db, #2980b9); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">1</div>
+                    <div>Single Agent Processing</div>
+                    <div class="metrics-value" style="color: #3498db;">38.6%</div>
+                    <div style="color: #666; font-size: 1em;">Last Human Exam Score</div>
+                    <div style="color: #666; font-size: 1em; margin-top: 8px;">$30/month</div>
+                </div>
+                <div class="metrics-box multi">
+                    <div class="metrics-title" style="color: #e74c3c;">Grok-4 Heavy</div>
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 15px;">
+                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8em;">A1</div>
+                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8em;">A2</div>
+                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8em;">A3</div>
+                    </div>
+                    <div>Multi-Agent Collaboration</div>
+                    <div class="metrics-value" style="color: #e74c3c;">44.4%</div>
+                    <div style="color: #666; font-size: 1em;">Last Human Exam Score</div>
+                    <div style="color: #666; font-size: 1em; margin-top: 8px;">$300/month</div>
+                </div>
+                <div class="metrics-box" style="border-color: #27ae60;">
+                    <div class="metrics-title" style="color: #27ae60;">Gemini 2.5 DeepThink</div>
+                    <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #27ae60, #2ecc71); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.7em;">🏆</div>
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #f39c12, #e67e22); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.7em;">🥇</div>
+                    </div>
+                    <div>Competition Gold Medals</div>
+                    <div class="metrics-value" style="color: #27ae60; font-size: 1.8em;">IMO + ICPC</div>
+                    <div style="color: #666; font-size: 0.9em;">5/6 IMO Problems (2024)</div>
+                    <div style="color: #666; font-size: 0.9em;">10/12 ICPC Problems (2025)</div>
+                    <div style="color: #27ae60; font-size: 0.8em; margin-top: 8px; font-weight: bold;">First AI Gold Medals</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e8; border-left: 4px solid #27ae60; border-radius: 8px;">
+                <strong style="font-size: 1.4em; color: #27ae60;">🚀 Multi-Agent Revolution</strong><br>
+                <span style="color: #666; font-style: italic;">"Individual AI excellence + Multi-agent coordination = Next frontier of AI capabilities"</span>
+            </div>
+        </div>
+
+        <!-- Slide 6: Architecture -->
+        <div class="slide">
+            <div class="architecture-diagram" style="height: 70vh; margin-top: 0;">
+                <div class="arch-flow">
+                    <div class="arch-component orchestrator">
+                        <div class="component-icon">🚀</div>
+                        <div class="component-title" style="font-size: 1.8em;">MassGen Orchestrator</div>
+                        <div class="component-desc" style="font-size: 1.2em;">Task Distribution & Coordination</div>
+                    </div>
+
+                    <div class="flow-arrow">↓</div>
+
+                    <div class="agents-container">
+                        <div class="agents-row">
+                            <div class="arch-component agent">
+                                <div class="component-icon">🏗️</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 1</div>
+                                <div class="component-desc" style="font-size: 1.1em;">Anthropic/Claude</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">👨‍💻</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 2</div>
+                                <div class="component-desc" style="font-size: 1.1em;">Claude Code</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">🌟</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 3</div>
+                                <div class="component-desc" style="font-size: 1.1em;">Google/Gemini</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">🤖</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 4</div>
+                                <div class="component-desc" style="font-size: 1.1em;">OpenAI/GPT</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">⚡</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 5</div>
+                                <div class="component-desc" style="font-size: 1.1em;">xAI/Grok</div>
+                            </div>
+                        </div>
+                        <div class="collaboration-note" style="font-size: 1.3em;">↕ Real-time Collaboration ↕</div>
+                    </div>
+
+                    <div class="flow-arrow">↓</div>
+
+                    <div class="arch-component hub">
+                        <div class="component-icon">🔄</div>
+                        <div class="component-title" style="font-size: 1.6em;">Shared Collaboration Hub</div>
+                        <div class="component-desc" style="font-size: 1.1em;">Real-time Notification & Consensus</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Key Features & Capabilities -->
+        <div class="slide">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="font-size: 2.5em; margin-bottom: 10px;">🚀</div>
+                <h2 style="font-size: 2.8em; color: #2c3e50; margin-bottom: 15px;">Key Features & Capabilities</h2>
+                <div style="height: 4px; width: 120px; background: linear-gradient(135deg, #667eea, #764ba2); margin: 0 auto; border-radius: 2px;"></div>
+            </div>
+            <div style="position: relative; display: flex; justify-content: center; align-items: center; height: 65vh;">
+                <!-- Central Iterative Refinement -->
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
+                    <div style="background: linear-gradient(135deg, #f39c12, #e67e22); padding: 35px; border-radius: 25px; color: white; box-shadow: 0 15px 40px rgba(0,0,0,0.3); text-align: center; min-width: 320px;">
+                        <div style="font-size: 3.5em; margin-bottom: 15px;">🔄</div>
+                        <div style="font-size: 1.8em; font-weight: bold; margin-bottom: 20px;">Iterative Refinement</div>
+                        <img src="https://docs.ag2.ai/latest/docs/blog/2025-04-16-Reasoning/img/iter.jpg" alt="Diagram showing iterative refinement cycles in multi-agent collaboration" style="width: 100%; max-width: 280px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.4);" loading="lazy">
+                        <div style="margin-top: 12px; font-size: 1.0em; font-style: italic; opacity: 0.9;">
+                            The Reality of Reasoning
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Left: Multi-Backend Support -->
+                <div style="position: absolute; top: 8%; left: 15%; text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 20px; color: white; box-shadow: 0 8px 25px rgba(0,0,0,0.15); width: 180px;">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">⚙️</div>
+                    <div style="font-size: 1.2em; font-weight: bold;">Multi-Backend Support</div>
+                </div>
+
+                <!-- Top Right: Parallel Processing -->
+                <div style="position: absolute; top: 8%; right: 15%; text-align: center; padding: 20px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 20px; color: white; box-shadow: 0 8px 25px rgba(0,0,0,0.15); width: 180px;">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">⚡</div>
+                    <div style="font-size: 1.2em; font-weight: bold;">Parallel Processing</div>
+                </div>
+
+                <!-- Bottom Left: Intelligence Sharing -->
+                <div style="position: absolute; bottom: 8%; left: 15%; text-align: center; padding: 20px; background: linear-gradient(135deg, #27ae60, #2ecc71); border-radius: 20px; color: white; box-shadow: 0 8px 25px rgba(0,0,0,0.15); width: 180px;">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">👥</div>
+                    <div style="font-size: 1.2em; font-weight: bold;">Intelligence Sharing</div>
+                </div>
+
+                <!-- Bottom Right: Consensus Building -->
+                <div style="position: absolute; bottom: 8%; right: 15%; text-align: center; padding: 20px; background: linear-gradient(135deg, #9b59b6, #8e44ad); border-radius: 20px; color: white; box-shadow: 0 8px 25px rgba(0,0,0,0.15); width: 180px;">
+                    <div style="font-size: 2.5em; margin-bottom: 10px;">🎯</div>
+                    <div style="font-size: 1.2em; font-weight: bold;">Consensus Building</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Tech Deep Dive - Backend Abstraction Challenges -->
+        <div class="slide">
+            <div class="icon">🔧</div>
+            <h2>Tech Deep Dive: Backend Abstraction Challenges</h2>
+            <div style="text-align: center; margin: 20px 0;">
+                <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 1000px; height: auto;">
+                    <defs>
+                        <marker id="arrowhead2-slide9" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
+                            <polygon points="0 0, 12 5, 0 10" fill="#4a5568" />
+                        </marker>
+                        <filter id="shadow-slide9" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="4" dy="4" stdDeviation="6" flood-color="#00000025"/>
+                        </filter>
+                        <linearGradient id="abstractionGradient-slide9" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Background -->
+                    <rect width="1200" height="700" fill="#f8f9fa"/>
+
+                    <!-- Title -->
+                    <text x="600" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#2c3e50">
+                        🎭 Unified Interface Challenge
+                    </text>
+
+                    <!-- Backend Boxes - Better spaced horizontally -->
+                    <!-- Claude Code -->
+                    <rect x="80" y="110" width="220" height="120" rx="15" fill="#fff3cd" stroke="#f39c12" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="190" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#f39c12">Claude Code CLI</text>
+                    <text x="190" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">Context sharing</text>
+                    <text x="190" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">across agents</text>
+
+                    <!-- Gemini -->
+                    <rect x="340" y="110" width="220" height="120" rx="15" fill="#ffebee" stroke="#e74c3c" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="450" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#e74c3c">Gemini API</text>
+                    <text x="450" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">Can't mix builtin +</text>
+                    <text x="450" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">custom tools</text>
+
+                    <!-- GPT-5 -->
+                    <rect x="600" y="110" width="220" height="120" rx="15" fill="#e1f5fe" stroke="#0288d1" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="710" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#0288d1">GPT-5</text>
+                    <text x="710" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">API changes</text>
+                    <text x="710" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">(reasoning, streaming)</text>
+
+                    <!-- Most Backends -->
+                    <rect x="860" y="110" width="220" height="120" rx="15" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="970" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#7b1fa2">Most Backends</text>
+                    <text x="970" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">Unable to autonomously</text>
+                    <text x="970" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">collaborate</text>
+
+                    <!-- Simplified arrows - cleaner convergence -->
+                    <line x1="190" y1="240" x2="450" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+                    <line x1="450" y1="240" x2="520" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+                    <line x1="710" y1="240" x2="680" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+                    <line x1="970" y1="240" x2="750" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+
+                    <!-- Unified ChatAgent Protocol (Abstraction Layer) - More prominent -->
+                    <rect x="200" y="340" width="800" height="160" rx="25" fill="url(#abstractionGradient-slide9)" filter="url(#shadow-slide9)" stroke="#5a67d8" stroke-width="2"/>
+                    <text x="600" y="385" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">
+                        🎯 Unified ChatAgent Protocol
+                    </text>
+
+                    <!-- Features inside protocol - Better spacing and typography -->
+                    <rect x="280" y="420" width="180" height="70" rx="12" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="2"/>
+                    <text x="370" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">⚙️ StreamChunk</text>
+                    <text x="370" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white">Normalization</text>
+
+                    <rect x="510" y="420" width="180" height="70" rx="12" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="2"/>
+                    <text x="600" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">🔀 Workarounds</text>
+                    <text x="600" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white">Backend-specific</text>
+
+                    <rect x="740" y="420" width="180" height="70" rx="12" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="2"/>
+                    <text x="830" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">🛠️ Tool Integration</text>
+                    <text x="830" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white">MCP, Web, Code</text>
+
+                    <!-- Arrow to result -->
+                    <line x1="600" y1="535" x2="600" y2="550" stroke="#4a5568" stroke-width="5" marker-end="url(#arrowhead2-slide9)"/>
+
+                    <!-- Separate Result: Binary Decision Framework - Better positioned -->
+                    <rect x="200" y="565" width="800" height="90" rx="20" fill="#fff3cd" stroke="#f39c12" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="600" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#f39c12">
+                        🧠 Binary Decision Framework
+                    </text>
+                    <text x="600" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#b7950b">
+                        Intelligent agent coordination and workspace sharing
+                    </text>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Slide 10: Tech Deep Dive - Binary Decision Framework Solution -->
+        <div class="slide">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="font-size: 2.5em; margin-bottom: 10px;">🎯</div>
+                <h2 style="font-size: 2.8em; color: #2c3e50; margin-bottom: 15px;">Tech Deep Dive: Binary Decision Framework Solution</h2>
+                <div style="height: 4px; width: 120px; background: linear-gradient(135deg, #667eea, #764ba2); margin: 0 auto; border-radius: 2px;"></div>
+            </div>
+            <div style="height: 70vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div style="text-align: center; position: relative; width: 100%; max-width: 900px;">
+                    <svg viewBox="0 0 650 290" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: auto;">
+                        <!-- Agent labels (once) -->
+                        <text x="110" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 1</text>
+                        <text x="190" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 2</text>
+                        <text x="270" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 3</text>
+                        <text x="350" y="25" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">Agent 4</text>
+
+                        <!-- Current state -->
+                        <rect x="80" y="40" width="60" height="30" rx="5" fill="#00b894"/>
+                        <text x="110" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Vote: 4</text>
+
+                        <rect x="160" y="40" width="60" height="30" rx="5" fill="#fd79a8"/>
+                        <text x="190" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Writing</text>
+
+                        <rect x="240" y="40" width="60" height="30" rx="5" fill="#00b894"/>
+                        <text x="270" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Vote: 4</text>
+
+                        <rect x="320" y="40" width="60" height="30" rx="5" fill="#a29bfe"/>
+                        <text x="350" y="59" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Vote: 4</text>
+
+                        <text x="480" y="50" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2e7d32">⚖️ Binary Choice:</text>
+                        <text x="480" y="68" text-anchor="middle" font-family="Arial" font-size="14" fill="#2e7d32">vote OR new_answer</text>
+
+                        <!-- Disruption -->
+                        <text x="325" y="100" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#e74c3c">Agent 2 provides new_answer</text>
+                        <text x="325" y="120" text-anchor="middle" font-family="Arial" font-size="18" font-weight="bold" fill="#e74c3c">→ ALL VOTES RESET</text>
+
+                        <!-- After reset -->
+                        <text x="325" y="155" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold" fill="#2c3e50">After Reset:</text>
+
+                        <rect x="80" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="110" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <rect x="160" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="190" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <rect x="240" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="270" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <rect x="320" y="170" width="60" height="30" rx="5" fill="#74b9ff"/>
+                        <text x="350" y="189" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="white">Deciding</text>
+
+                        <!-- Results of async decisions -->
+                        <text x="325" y="220" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#2c3e50">Async Results:</text>
+
+                        <rect x="80" y="230" width="60" height="25" rx="5" fill="#00b894"/>
+                        <text x="110" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Vote: 2</text>
+
+                        <rect x="160" y="230" width="60" height="25" rx="5" fill="#00b894"/>
+                        <text x="190" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Vote: 2</text>
+
+                        <rect x="240" y="230" width="60" height="25" rx="5" fill="#fd79a8"/>
+                        <text x="270" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Writing</text>
+
+                        <rect x="320" y="230" width="60" height="25" rx="5" fill="#74b9ff"/>
+                        <text x="350" y="246" text-anchor="middle" font-family="Arial" font-size="12" font-weight="bold" fill="white">Deciding</text>
+
+                        <!-- Cycle indication -->
+                        <text x="325" y="275" text-anchor="middle" font-family="Arial" font-size="14" font-weight="bold" fill="#666">→ If new_answer: reset again</text>
+
+
+                        <!-- Enhanced markers -->
+                        <defs>
+                            <marker id="arrow-down" markerWidth="10" markerHeight="10" refX="5" refY="8" orient="auto">
+                                <path d="M 2 2 L 5 8 L 8 2" stroke="#e74c3c" stroke-width="2" fill="#e74c3c"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                    <div style="margin-top: 30px; padding: 20px 35px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 20px; color: white; box-shadow: 0 15px 40px rgba(0,0,0,0.3);">
+                        <div style="font-size: 1.4em; font-weight: bold;">🎯 Key Innovation: Vote Invalidation Creates Dynamic Consensus</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Case Study - Success Through Collaboration -->
+        <div class="slide">
+            <div class="icon">🔬</div>
+            <h2>Case Study: Success Through Peer Correction</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666; font-style: italic;">
+                Graduate-level physics question from GPQA-Diamond benchmark
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;">
+                <div>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 4px solid #3498db; margin-bottom: 25px;">
+                        <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🌌 The Problem</h3>
+                        <div style="font-size: 0.95em; line-height: 1.5; color: #495057;">
+                            A quasar shows a peak at 790 nm wavelength. Given Lambda-CDM cosmological parameters
+                            (H₀ = 70 km/s/Mpc, Ωₘ = 0.3, ΩΛ = 0.7), what is the comoving distance?<br><br>
+                            <strong>Options:</strong> A) 8 Gpc  B) 7 Gpc  C) 6 Gpc  D) 9 Gpc
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 15px 0;">🎯 Final Result</h3>
+                        <div style="font-size: 1.1em; text-align: center;">
+                            <div style="font-size: 2em; margin: 15px 0;">✅</div>
+                            <strong>Correct Answer: A (8 Gpc)</strong><br>
+                            <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                                Orchestration succeeded where individual agents initially failed
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">🤖 Round 1: Initial Answers</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4;">
+                            <strong>Claude:</strong> "I calculate ~6 Gpc → Answer C"<br>
+                            <strong>GPT-5:</strong> "I get ~8.95 Gpc → Answer D"<br>
+                            <strong>Gemini:</strong> "~6.1 Gpc → Answer C"
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">🔄 Self-Correction Process</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            <strong>Claude observes:</strong> "There is significant discrepancy in calculations:
+                            Agent1 gets ~6.1 Gpc, Agent2 gets ~8.95 Gpc. Let me re-examine..."
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 10px 0;">✨ Breakthrough Moment</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            <strong>Claude revises:</strong> "Standard cosmological calculators yield 8000-8500 Mpc
+                            for z=5.5. This equals 8.0-8.5 Gpc, closest to option A."<br><br>
+                            <strong>Result:</strong> 3/4 agents converge on correct answer
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(39, 174, 96, 0.1); border-radius: 15px; border: 2px dashed #27ae60;">
+                <strong style="color: #27ae60; font-size: 1.2em;">💡 Success Mechanism:</strong><br>
+                <span style="color: #155724; font-size: 1.1em;">Peer observation → Discrepancy detection → Self-correction → Consensus</span>
+            </div>
+        </div>
+
+        <!-- Slide 15: Benchmarking Results -->
+        <div class="slide">
+            <div class="icon">📊</div>
+            <h2>Benchmarking: Preliminary Results</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666;">
+                <em>Scientific evaluation across graduate-level reasoning, instruction-following, and narrative tasks</em>
+            </div>
+
+            <!-- Visual Performance Chart -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin: 30px 0;">
+                <!-- GPQA-Diamond Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">🧪 GPQA-Diamond</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Graduate Physics/Chemistry</div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 87.4%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">87.4% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 85.9%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">85.9%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok-4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 85.4%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">85.4%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 84.8%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">84.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 68.2%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">68.2%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IFEval Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">📋 IFEval</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Instruction Following</div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 88%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">88.0% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 87.4%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">87.4%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok-4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 84.7%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">84.7%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 66%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">66.0%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 63.6%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">63.6%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MuSR Chart -->
+                <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <h3 style="text-align: center; color: #2c3e50; margin-bottom: 20px; font-size: 1.1em;">📖 MuSR</h3>
+                    <div style="font-size: 0.85em; color: #666; text-align: center; margin-bottom: 20px;">Narrative Reasoning</div>
+
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Gemini</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 18px; border-radius: 9px; position: relative; overflow: hidden;">
+                                <div style="background: #27ae60; width: 69.6%; height: 100%; border-radius: 9px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em; font-weight: bold;">69.6% 🏆</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">GPT-5</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #9b59b6; width: 69.2%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">69.2%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">MassGen</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); width: 68.3%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">68.3%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Grok-4</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #3498db; width: 67.6%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">67.6%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 0.9em; min-width: 80px;">Claude</span>
+                            <div style="flex: 1; margin: 0 10px; background: #eee; height: 16px; border-radius: 8px; position: relative; overflow: hidden;">
+                                <div style="background: #95a5a6; width: 62.8%; height: 100%; border-radius: 8px; position: relative;">
+                                    <span style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); color: white; font-size: 0.7em;">62.8%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overall Performance Summary -->
+            <div style="text-align: center; margin-top: 20px;">
+                <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 20px; display: inline-block; box-shadow: 0 8px 25px rgba(0,0,0,0.15);">
+                    <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">🏆 Overall Champion</div>
+                    <div style="font-size: 2.2em; font-weight: bold; margin: 10px 0;">MassGen: 81.2%</div>
+                    <div style="font-size: 0.9em; opacity: 0.9;">Wins 2/3 benchmarks • Statistically significant</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px;">
+                <div style="background: #d4edda; padding: 15px; border-radius: 12px; border-left: 4px solid #27ae60; flex: 1; max-width: 260px;">
+                    <strong style="color: #155724; font-size: 1em;">✅ Key Results:</strong><br>
+                    <div style="color: #155724; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • <strong>Highest on 2/3</strong> benchmarks<br>
+                        • <strong>Best overall</strong> average<br>
+                        • <strong>Consistent</strong> performance
+                    </div>
+                </div>
+                <div style="background: #fff3cd; padding: 15px; border-radius: 12px; border-left: 4px solid #f39c12; flex: 1; max-width: 260px;">
+                    <strong style="color: #856404; font-size: 1em;">📈 Statistical:</strong><br>
+                    <div style="color: #856404; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • vs Claude: <strong>p = 1.4e-07</strong> ⭐⭐⭐<br>
+                        • vs Gemini: <strong>p = 1.1e-28</strong> ⭐⭐⭐<br>
+                        • Not due to chance
+                    </div>
+                </div>
+                <div style="background: #d1ecf1; padding: 15px; border-radius: 12px; border-left: 4px solid #17a2b8; flex: 1; max-width: 260px;">
+                    <strong style="color: #0c5460; font-size: 1em;">🔬 Research Gap:</strong><br>
+                    <div style="color: #0c5460; margin-top: 8px; line-height: 1.3; font-size: 0.9em;">
+                        • <strong>Oracle:</strong> 95.5% (GPQA)<br>
+                        • <strong>Actual:</strong> 87.4%<br>
+                        • <strong>Potential:</strong> 8.1 points
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 22: RecSys Applications -->
+        <div class="slide">
+            <div class="icon">🎯</div>
+            <h2>Agentic Recommendation Applications</h2>
+
+            <div style="background: rgba(99, 102, 241, 0.05); padding: 30px; border-radius: 15px; margin: 30px 0; border-left: 4px solid #6366f1; text-align: center;">
+                <h3 style="color: #4338ca; margin-bottom: 20px; font-size: 1.6em;">Multi-Agent Personalization Pipeline</h3>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin: 50px 0;">
+                <div style="background: white; border: 1px solid #e5e7eb; padding: 30px; border-radius: 15px; text-align: center;">
+                    <div style="font-size: 4em; margin-bottom: 20px; color: #059669;">🔍</div>
+                    <h3 style="margin-bottom: 15px; font-size: 1.6em; color: #1f2937;">Content Analysis</h3>
+                    <div style="font-size: 1em; color: #6b7280; line-height: 1.5;">
+                        Multiple agents analyze user behavior, content features, and contextual signals simultaneously
+                    </div>
+                </div>
+
+                <div style="background: white; border: 1px solid #e5e7eb; padding: 30px; border-radius: 15px; text-align: center;">
+                    <div style="font-size: 4em; margin-bottom: 20px; color: #dc2626;">⚖️</div>
+                    <h3 style="margin-bottom: 15px; font-size: 1.6em; color: #1f2937;">Preference Fusion</h3>
+                    <div style="font-size: 1em; color: #6b7280; line-height: 1.5;">
+                        Collaborative filtering, content-based, and deep learning agents debate optimal recommendations
+                    </div>
+                </div>
+
+                <div style="background: white; border: 1px solid #e5e7eb; padding: 30px; border-radius: 15px; text-align: center;">
+                    <div style="font-size: 4em; margin-bottom: 20px; color: #7c3aed;">🎯</div>
+                    <h3 style="margin-bottom: 15px; font-size: 1.6em; color: #1f2937;">Dynamic Ranking</h3>
+                    <div style="font-size: 1em; color: #6b7280; line-height: 1.5;">
+                        Real-time consensus building for personalized item ranking and diversity optimization
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: rgba(156, 163, 175, 0.05); padding: 25px; border-radius: 15px; margin: 40px 0; text-align: center;">
+                <h3 style="color: #4b5563; margin: 0; font-size: 1.5em;">Cross-domain expertise, multi-objective optimization, explainable recommendations</h3>
+            </div>
+        </div>
+
+        <!-- Slide 21: Live Demo Examples -->
+        <div class="slide">
+            <div class="icon">🎬</div>
+            <h2>Live Demonstrations</h2>
+            <div class="demo-grid">
+                <div class="demo-box">
+                    <strong>🌐 LLM Fun Facts Website (v0.0.14):</strong> Claude Code agents create interactive websites with enhanced logging and workspace isolation
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Conflict-free parallel development with comprehensive versioning
+                    </div>
+                </div>
+                <div class="demo-box">
+                    <strong>📁 Unified Filesystem (v0.0.16):</strong> Cross-backend collaboration between Gemini and Claude Code agents creating educational content with shared workspace management
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> First-time cross-backend coordination producing comprehensive 25-slide presentations
+                    </div>
+                </div>
+                <div class="demo-box">
+                    <strong>🏆 IMO 2025 Winner Research:</strong> Multi-agent fact-checking → unanimous consensus on Google DeepMind victory
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Accurate identification despite conflicting information
+                    </div>
+                </div>
+                <div class="demo-box">
+                    <strong>💰 Technical Analysis:</strong> Complex Grok-4 HLE pricing calculation through iterative refinement
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Accurate cost estimates through collaborative validation
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="https://case.massgen.ai" style="color: #3498db; font-size: 1.4em; text-decoration: underline; font-weight: bold;">📚 case.massgen.ai - Complete Case Studies</a>
+            </div>
+        </div>
+
+        <!-- Slide 23: Getting Started -->
+        <div class="slide">
+            <div class="icon">⚡</div>
+            <h2>Get Started in 60 Seconds</h2>
+            <div class="code-snippet">
+                # 1. Clone and setup<br>
+                git clone https://github.com/Leezekun/MassGen<br>
+                cd MassGen && pip install uv && uv venv<br><br>
+
+                # 2. Configure API keys<br>
+                cp .env.example .env  # Add your API keys<br><br>
+
+                # 3. Run single agent (quick test)<br>
+                uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
+
+                # 4. Run multi-agent collaboration<br>
+                uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                <div style="text-align: center; padding: 20px; background: rgba(46, 204, 113, 0.1); border-radius: 15px;">
+                    <h3 style="color: #27ae60; margin-bottom: 15px;">✅ Supported Models & Providers</h3>
+                    <div style="font-size: 1em; line-height: 1.5;">
+                        <div style="font-weight: bold; margin-bottom: 8px;">🏢 Major Providers:</div>
+                        <div>Anthropic Claude & Claude Code • Google Gemini • OpenAI GPT • xAI Grok • ZAI GLM</div>
+                        <div style="font-weight: bold; margin: 12px 0 8px 0;">🏠 Local & Extended:</div>
+                        <div>Cerebras • Fireworks • Groq • LM Studio • OpenRouter • Together...</div>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 20px; background: rgba(52, 152, 219, 0.1); border-radius: 15px;">
+                    <h3 style="color: #3498db; margin-bottom: 15px;">🛠️ Advanced Tools</h3>
+                    <div style="font-size: 1.1em;">Web Search • Code Execution • MCP Tools • File Operations • Browser Automation • Advanced Permissions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 25: Call to Action -->
+        <div class="slide" style="background: linear-gradient(135deg, #667eea, #764ba2), url('https://github.com/Leezekun/MassGen/blob/main/assets/cos.png?raw=true'); background-size: cover; background-blend-mode: overlay; background-position: center;">
+            <div class="icon">🚀</div>
+            <h2 style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Build Agentic Recommendation Systems</h2>
+            <div class="call-to-action" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);">
+                <div style="font-size: 1.4em; margin-bottom: 20px; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);">
+                    <strong>Multi-Agent Personalization at Scale</strong>
+                </div>
+                <div class="cta-links">
+                    <a href="https://github.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">⭐ github.massgen.ai</a>
+                    <a href="https://discord.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">💬 discord.massgen.ai</a>
+                    <a href="https://x.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">🐦 x.massgen.ai</a>
+                    <a href="https://massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">🌐 massgen.ai</a>
+                </div>
+                <div style="margin-top: 30px;">
+                    <div class="version-badge" style="background: linear-gradient(135deg, #e74c3c, #c0392b); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">
+                        🚀 v0.0.3→v0.0.22 Latest | 10+ providers; Claude Code CLI; GPT-5 & GPT-OSS; Local Models; MCP Integration; Unified Filesystem
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px; font-size: 1.2em; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">
+                <strong>Thank you RecSys'25!</strong><br>
+                <span style="color: #e8f4fd; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Questions & Discussion</span>
+            </div>
+        </div>
+    </div>
+<!-- Navigation -->
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / <span id="total-slides">24</span>
+    </div>
+
+    <div class="slide-nav">
+        <div class="nav-grid" id="nav-grid">
+            <!-- Dots will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)" aria-label="Go to previous slide">← Previous</button>
+        <button class="nav-btn" id="next-btn" onclick="changeSlide(1)" aria-label="Go to next slide">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        // Slide titles for navigation
+        const slideTitles = [
+            "Title - RecSys'25 Tutorial",
+            "Problem - AI Scaling Challenges",
+            "Solution - Multi-Agent Collaboration",
+            "Evidence - Performance Gains",
+            "Architecture - System Design",
+            "Features & Capabilities",
+            "Tech - Message Passing Protocols",
+            "Tech - RecSys Architecture Deep Dive",
+            "Case Study - Success Through Collaboration",
+            "Benchmarking - Preliminary Results",
+            "Agentic Recommendation Applications",
+            "Demo - Live Examples",
+            "Getting Started - 60 Seconds",
+            "Call to Action - Build Agentic RecSys"
+        ];
+
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        // Generate navigation dots
+        const navGrid = document.getElementById('nav-grid');
+        for (let i = 0; i < totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot';
+            dot.title = `Slide ${i + 1}: ${slideTitles[i]}`;
+            dot.onclick = () => showSlide(i);
+            navGrid.appendChild(dot);
+        }
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+
+            // Update navigation dots
+            document.querySelectorAll('.nav-dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+
+            // Update navigation buttons
+            document.getElementById('prev-btn').disabled = currentSlide === 0;
+            document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            if (direction === 1 && currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            } else if (direction === -1 && currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Navigation visibility toggle
+        let navigationVisible = true;
+
+        function toggleNavigation() {
+            navigationVisible = !navigationVisible;
+            const navigation = document.querySelector('.navigation');
+            const slideNav = document.querySelector('.slide-nav');
+            const slideCounter = document.querySelector('.slide-counter');
+
+            const display = navigationVisible ? '' : 'none';
+
+            if (navigation) navigation.style.display = display;
+            if (slideNav) slideNav.style.display = display;
+            if (slideCounter) slideCounter.style.display = display;
+
+            console.log(navigationVisible ? 'Navigation shown' : 'Navigation hidden');
+        }
+
+        // Enhanced keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            // Prevent default behavior if we handle the key
+            const handledKeys = ['ArrowRight', 'ArrowLeft', ' ', 'Home', 'End', 'n', 'N'];
+            const numberKeys = e.key >= '1' && e.key <= '9';
+
+            if (handledKeys.includes(e.key) || numberKeys) {
+                e.preventDefault();
+            }
+
+            switch(e.key) {
+                case 'ArrowRight':
+                case ' ':
+                    changeSlide(1);
+                    break;
+                case 'ArrowLeft':
+                    changeSlide(-1);
+                    break;
+                case 'Home':
+                    showSlide(0);
+                    break;
+                case 'End':
+                    showSlide(totalSlides - 1);
+                    break;
+                case 'n':
+                case 'N':
+                    toggleNavigation();
+                    break;
+                default:
+                    if (numberKeys) {
+                        const slideNum = parseInt(e.key) - 1;
+                        if (slideNum < totalSlides) {
+                            showSlide(slideNum);
+                        }
+                    }
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>
