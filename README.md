@@ -42,7 +42,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>✨ Key Features</h3></summary>
 
 - [Cross-Model/Agent Synergy](#-key-features-1)
-- [Parallel Processing](#-key-features-1)  
+- [Parallel Processing](#-key-features-1)
 - [Intelligence Sharing](#-key-features-1)
 - [Consensus Building](#-key-features-1)
 - [Live Visualization](#-key-features-1)
@@ -64,7 +64,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 - [Parallel Processing](#%EF%B8%8F-system-design-1)
 - [Real-time Collaboration](#%EF%B8%8F-system-design-1)
 - [Convergence Detection](#%EF%B8%8F-system-design-1)
-- [Adaptive Coordination](#%EF%B8%8F-system-design-1) 
+- [Adaptive Coordination](#%EF%B8%8F-system-design-1)
 </details>
 
 <details open>
@@ -279,11 +279,11 @@ uv run python -m massgen.cli \
 See the latest workspace copy tools and configuration improvements in action:
 
 <p align="center">
-  <a href="release_related_figures/copy_file.png">
-    <img src="release_related_figures/copy_file.png" alt="v0.0.22 Workspace Copy Tools" width="400" height="300" style="margin-right: 10px; object-fit: cover;">
+  <a href="assets/release_related_figures/copy_file.png">
+    <img src="assets/release_related_figures/copy_file.png" alt="v0.0.22 Workspace Copy Tools" width="400" height="300" style="margin-right: 10px; object-fit: cover;">
   </a>
-  <a href="release_related_figures/context_path.png">
-    <img src="release_related_figures/context_path.png" alt="v0.0.22 Configuration Organization" width="400" height="300" style="object-fit: cover;">
+  <a href="assets/release_related_figures/context_path.png">
+    <img src="assets/release_related_figures/context_path.png" alt="v0.0.22 Configuration Organization" width="400" height="300" style="object-fit: cover;">
   </a>
 </p>
 
@@ -351,10 +351,10 @@ uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI develop
 Use the `agent` field to define a single agent with its backend and settings:
 
 ```yaml
-agent: 
+agent:
   id: "<agent_name>"
   backend:
-    type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend 
+    type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
@@ -386,7 +386,7 @@ uv run python -m massgen.cli \
 ```yaml
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
-    backend: 
+    backend:
       type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" |  "zai" | "lmstudio" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
@@ -436,7 +436,7 @@ uv run python -m massgen.cli \
   "Find the best restaurants in Paris and save the recommendations to a file"
 ```
 
-**Configuration:** 
+**Configuration:**
 
 ```yaml
 agents:
@@ -478,7 +478,7 @@ agents:
     - "mcp__weather__get_current_weather"
     - "mcp__test_server__mcp_echo"
     - "mcp__test_server__add_numbers"
-  
+
   exclude_tools:                        # Optional: blacklist specific tools
     - "mcp__test_server__current_time"
 ```
@@ -530,7 +530,7 @@ agents:
     backend:
       type: "claude_code"
       cwd: "workspace1"            # Agent-specific workspace
-      
+
   - id: "reviewer"
     backend:
       type: "gemini"
@@ -546,7 +546,7 @@ orchestrator:
 
 **Workspace Management:**
 - **Isolated Workspaces**: Each agent's `cwd` is fully isolated and writable
-- **Snapshot Storage**: Share workspace context between Claude Code agents  
+- **Snapshot Storage**: Share workspace context between Claude Code agents
 - **Temporary Workspaces**: Agents can access previous coordination results
 
 → [View more filesystem examples](massgen/configs/tools/filesystem/)
@@ -592,7 +592,7 @@ orchestrator:
   context_paths:
     - path: "/home/user/my-project/src"
       permission: "read"           # Agents can analyze your code
-    - path: "/home/user/my-project/docs"  
+    - path: "/home/user/my-project/docs"
       permission: "write"          # Final agent can update docs
 
 # Advanced: Multi-Agent Project Collaboration
@@ -601,10 +601,10 @@ agents:
     backend:
       type: "gemini"
       cwd: "analysis_workspace"
-      
+
   - id: "implementer"
     backend:
-      type: "claude_code"  
+      type: "claude_code"
       cwd: "implementation_workspace"
 
 orchestrator:
@@ -619,14 +619,14 @@ orchestrator:
 
 **This showcases project integration:**
 - **Real Project Access** - Work with your actual codebases, not copies
-- **Secure Permissions** - Granular control over what agents can read/modify  
+- **Secure Permissions** - Granular control over what agents can read/modify
 - **Multi-Agent Collaboration** - Multiple agents safely work on the same project
 - **Context Agents** (during coordination): Always READ-only access to protect your files
 - **Final Agent** (final execution): Gets the configured permission (READ or write)
 
 **Use Cases:**
 - **Code Review**: Agents analyze your source code and suggest improvements
-- **Documentation**: Agents read project docs to understand context and generate updates  
+- **Documentation**: Agents read project docs to understand context and generate updates
 - **Data Processing**: Agents access shared datasets and generate analysis reports
 - **Project Migration**: Agents examine existing projects and create modernized versions
 
@@ -759,7 +759,7 @@ MassGen configurations are organized by features and use cases. See the [Configu
 - **Provider examples**: [OpenAI](massgen/configs/providers/openai/) | [Claude](massgen/configs/providers/claude/) | [Gemini](massgen/configs/providers/gemini/)
 - **Specialized teams**: [Creative](massgen/configs/teams/creative/) | [Research](massgen/configs/teams/research/) | [Development](massgen/configs/teams/development/)
 
-See MCP server setup guides: [Discord MCP](massgen/configs/docs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/docs/TWITTER_MCP_ENESCINAR_SETUP.md) 
+See MCP server setup guides: [Discord MCP](massgen/configs/docs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/docs/TWITTER_MCP_ENESCINAR_SETUP.md)
 
 #### Backend Configuration Reference
 
@@ -981,7 +981,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-<div align="center"> 
+<div align="center">
 
 **⭐ Star this repo if you find it useful! ⭐**
 
