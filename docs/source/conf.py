@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -8,45 +9,42 @@ import sys
 from datetime import datetime
 
 # Add project root to Python path
-sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'MassGen'
-copyright = f'{datetime.now().year}, MassGen Team'
-author = 'MassGen Team'
-release = '0.0.17'
-version = '0.0.17'
+project = "MassGen"
+copyright = f"{datetime.now().year}, MassGen Team"
+author = "MassGen Team"
+release = "0.0.17"
+version = "0.0.17"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.todo',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.githubpages",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
 ]
 
 # Add optional extensions if available
 try:
-    import myst_parser
-    extensions.append('myst_parser')
+    extensions.append("myst_parser")
 except ImportError:
     print("Warning: myst_parser not installed. Markdown support disabled.")
 
 try:
-    import sphinx_copybutton
-    extensions.append('sphinx_copybutton')
+    extensions.append("sphinx_copybutton")
 except ImportError:
     print("Warning: sphinx_copybutton not installed.")
 
 try:
-    import sphinx_design
-    extensions.append('sphinx_design')
+    extensions.append("sphinx_design")
 except ImportError:
     print("Warning: sphinx_design not installed. Grid support disabled.")
 
@@ -65,16 +63,16 @@ myst_enable_extensions = [
     "tasklist",
 ]
 
-templates_path = ['_templates']
+templates_path = ["_templates"]
 exclude_patterns = []
 
 # Autodoc settings
 autodoc_default_options = {
-    'members': True,
-    'member-order': 'bysource',
-    'special-members': '__init__',
-    'undoc-members': True,
-    'exclude-members': '__weakref__'
+    "members": True,
+    "member-order": "bysource",
+    "special-members": "__init__",
+    "undoc-members": True,
+    "exclude-members": "__weakref__",
 }
 
 # -- Options for HTML output -------------------------------------------------
@@ -82,39 +80,38 @@ autodoc_default_options = {
 
 # Try to use sphinx_rtd_theme, fall back to alabaster if not available
 try:
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
+    html_theme = "sphinx_rtd_theme"
 except ImportError:
-    html_theme = 'alabaster'
+    html_theme = "alabaster"
     print("Warning: sphinx_rtd_theme not installed. Using alabaster theme.")
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # Theme options
 html_theme_options = {
-    'logo_only': False,
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': False,
-    'style_nav_header_background': '#2980B9',
+    "logo_only": False,
+    "display_version": True,
+    "prev_next_buttons_location": "bottom",
+    "style_external_links": False,
+    "style_nav_header_background": "#2980B9",
     # TOC options
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "navigation_depth": 4,
+    "includehidden": True,
+    "titles_only": False,
 }
 
 # Logo and favicon
-html_logo = '../../assets/logo.png'
-html_favicon = '../../assets/logo.png'
+html_logo = "../../assets/logo.png"
+html_favicon = "../../assets/logo.png"
 
 # Additional HTML context
 html_context = {
-    'display_github': True,
-    'github_user': 'Leezekun',
-    'github_repo': 'MassGen',
-    'github_version': 'main',
-    'conf_py_path': '/docs/source/',
+    "display_github": True,
+    "github_user": "Leezekun",
+    "github_repo": "MassGen",
+    "github_version": "main",
+    "conf_py_path": "/docs/source/",
 }
 
 # Copy button configuration
@@ -123,14 +120,9 @@ copybutton_prompt_is_regexp = True
 
 # Intersphinx mapping
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
-
-# Custom CSS
-html_css_files = [
-    'custom.css',
-]
 
 # Show todo notes
 todo_include_todos = True
