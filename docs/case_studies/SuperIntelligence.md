@@ -11,7 +11,7 @@ uv run python -m massgen.cli --config massgen/configs/providers/openai/gpt5_nano
 
 **Agents:**
 * Agent 1: gpt-5-nano-1 (minimal reasoning)
-* Agent 2: gpt-5-nano-2 (medium reasoning)  
+* Agent 2: gpt-5-nano-2 (medium reasoning)
 * Agent 3: gpt-5-nano-3 (high reasoning) - Designated Representative Agent
 
 **Watch the recorded demo:**
@@ -53,7 +53,7 @@ Each agent approached the super intelligence question from different angles, wit
 The voting process revealed interesting dynamics in cross-agent evaluation and reasoning quality recognition:
 
 1. **Agent 1's Evolution:** Initially voted for itself, then switched to Agent 3, recognizing its "compact, practical framework addressing safety, alignment, governance, deployment practices, and research directions"
-2. **Agent 2's Self-Recognition:** Voted for itself, acknowledging its "thorough, structured, and balanced treatment of superintelligence risk" 
+2. **Agent 2's Self-Recognition:** Voted for itself, acknowledging its "thorough, structured, and balanced treatment of superintelligence risk"
 3. **Agent 3's Strategic Assessment:** Voted for Agent 2, recognizing it "offers a comprehensive, balanced framework: clear terminology, default safety/alignment, staged deployment with safeguards, governance and collaboration, concrete guiding questions, and humility"
 4. **Final Voting Pattern:** Agent 2: 2 votes (Agent 2 + Agent 3), Agent 3: 1 vote (Agent 1)
 

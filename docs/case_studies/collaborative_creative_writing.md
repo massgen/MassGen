@@ -10,15 +10,15 @@ This case study demonstrates **MassGen**'s ability to achieve unanimous consensu
 uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
 ```
 
-**Prompt:**  
+**Prompt:**
 `Write a short story about a robot who discovers music.`
 
 ---
 
 ## Agents
 
-- **Agent 1**: gemini-2.5-flash (**Designated Representative Agent**)  
-- **Agent 2**: gpt-4o  
+- **Agent 1**: gemini-2.5-flash (**Designated Representative Agent**)
+- **Agent 2**: gpt-4o
 - **Agent 3**: claude-3-5-haiku
 
 **Watch the recorded demo:**
@@ -73,10 +73,10 @@ The voting process revealed remarkable consensus on creative quality assessment:
 
 **Agent 1** was selected to present the final answer, featuring:
 
-- **Rich Sensory Detail**: Vivid descriptions of the robot's auditory processing and physical sensations  
-- **Character Arc**: Clear transformation from mechanical efficiency to artistic curiosity  
-- **Emotional Resonance**: Effective portrayal of artificial consciousness discovering beauty  
-- **Narrative Structure**: Well-paced progression from discovery through experimentation to transformation  
+- **Rich Sensory Detail**: Vivid descriptions of the robot's auditory processing and physical sensations
+- **Character Arc**: Clear transformation from mechanical efficiency to artistic curiosity
+- **Emotional Resonance**: Effective portrayal of artificial consciousness discovering beauty
+- **Narrative Structure**: Well-paced progression from discovery through experimentation to transformation
 - **Thematic Depth**: Exploration of purpose, curiosity, and the universal nature of artistic appreciation
 
 ---

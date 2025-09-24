@@ -11,7 +11,7 @@ uv run python -m massgen.cli --config massgen/configs/providers/openai/gpt5_nano
 
 **Agents:**
 * Agent 1: gpt-5-nano-1
-* Agent 2: gpt-5-nano-2  
+* Agent 2: gpt-5-nano-2
 * Agent 3: gpt-5-nano-3 (Designated Representative Agent)
 
 **Watch the recorded demo:**

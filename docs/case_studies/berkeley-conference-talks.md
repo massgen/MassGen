@@ -10,15 +10,15 @@ This case study demonstrates **MassGen**'s ability to handle specialized researc
 uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
 ```
 
-**Prompt:**  
+**Prompt:**
 `give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits`
 
 ---
 
 ## Agents
 
-- **Agent 1**: gemini-2.5-flash (**Designated Representative Agent**)  
-- **Agent 2**: gpt-4o  
+- **Agent 1**: gemini-2.5-flash (**Designated Representative Agent**)
+- **Agent 2**: gpt-4o
 - **Agent 3**: claude-3-5-haiku
 
 **Watch the recorded demo:**
@@ -45,13 +45,13 @@ Each agent demonstrated different levels of precision in adhering to the user's 
 
 A defining feature of this session was the agents' ability to recognize and evaluate adherence to the user's explicit constraints:
 
-- **Source Verification**:  
+- **Source Verification**:
   Agent 1 explicitly acknowledged in its voting that it _"correctly ensured that the sources included the word 'Berkeley' and did not include talks from other summits, fulfilling all constraints of the original message."_
 
-- **Framework Specificity**:  
+- **Framework Specificity**:
   Agent 1's second vote specifically noted its _"more focused list of talks directly related to 'agent frameworks', explicitly mentioning specific frameworks like DSPy and the Google Agent Development Kit (ADK).”_
 
-- **Precision Recognition**:  
+- **Precision Recognition**:
   Agent 2 emphasized that its response _"ensures relevancy by explicitly mentioning Berkeley, per the original request."_
 
 ---
@@ -60,16 +60,16 @@ A defining feature of this session was the agents' ability to recognize and eval
 
 The voting process revealed sophisticated evaluation of constraint adherence and research precision:
 
-- **Self-Assessment with Constraint Awareness**:  
+- **Self-Assessment with Constraint Awareness**:
   Agent 1 voted for itself twice, with both votes explicitly referencing **constraint compliance** and **framework specificity**.
 
-- **Quality vs. Constraint Tension**:  
+- **Quality vs. Constraint Tension**:
   Agent 2 voted for itself, recognizing its comprehensive coverage while emphasizing **Berkeley source compliance**.
 
-- **Cross-Agent Validation**:  
+- **Cross-Agent Validation**:
   Agent 3 voted for Agent 1, praising it for providing _"the most comprehensive and verified information about the Berkeley Agentic AI Summit 2025, with specific details about agent framework talks sourced directly from the summit's materials."_
 
-- **Final Consensus**:  
+- **Final Consensus**:
   **Agent 1 achieved majority support (2 out of 3 votes)**, with agents specifically recognizing its **superior constraint adherence** and **framework precision**.
 
 ---
@@ -78,10 +78,10 @@ The voting process revealed sophisticated evaluation of constraint adherence and
 
 **Agent 1** was selected to present the final answer, featuring:
 
-- **Strict Source Compliance**: All information explicitly tied to **Berkeley-sourced materials**  
-- **Framework Precision**: Talk titles that explicitly mentioned specific frameworks (_DSPy_, _ADK_, _MCP_, _LlamaIndex_)  
-- **Constraint Acknowledgment**: Clear distinction from other **non-Berkeley agentic AI summits**  
-- **Technical Accuracy**: Proper identification of **framework-specific** versus general agentic system content  
+- **Strict Source Compliance**: All information explicitly tied to **Berkeley-sourced materials**
+- **Framework Precision**: Talk titles that explicitly mentioned specific frameworks (_DSPy_, _ADK_, _MCP_, _LlamaIndex_)
+- **Constraint Acknowledgment**: Clear distinction from other **non-Berkeley agentic AI summits**
+- **Technical Accuracy**: Proper identification of **framework-specific** versus general agentic system content
 - **Comprehensive Coverage**: Both **keynotes** and **technical sessions** while maintaining constraint adherence
 
 ---

@@ -7,13 +7,13 @@ This case study demonstrates MassGen's ability to achieve unanimous consensus on
 uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
-**Prompt:**  
+**Prompt:**
 How much does it cost to run HLE benchmark with Grok-4
 
 ## Agents:
 
-- Agent 1: gemini2.5flash (Designated Winner)  
-- Agent 2: gpt-4o  
+- Agent 1: gemini2.5flash (Designated Winner)
+- Agent 2: gpt-4o
 - Agent 3: claude-3-5-haiku
 
 **Watch the recorded demo:**
@@ -38,17 +38,17 @@ Each agent approached the complex pricing question from different analytical per
 
 A key strength demonstrated in this session was the agents' commitment to thorough research:
 
-- Agent 3 conducted three separate web searches, each time deepening its understanding and providing more precise details about benchmark costs and model configurations  
-- Agent 1 integrated comparative cost data from similar reasoning model benchmarks, citing specific examples like Artificial Analysis's $2,767 cost for evaluating OpenAI's o1 model  
+- Agent 3 conducted three separate web searches, each time deepening its understanding and providing more precise details about benchmark costs and model configurations
+- Agent 1 integrated comparative cost data from similar reasoning model benchmarks, citing specific examples like Artificial Analysis's $2,767 cost for evaluating OpenAI's o1 model
 - All agents recognized the importance of token consumption patterns for reasoning models, which generate significantly more tokens than standard models
 
 ## The Vote: Clear Recognition of Quality
 
 The voting process revealed unanimous recognition of Agent 1's superior comprehensive analysis:
 
-- Agent 1 voted for itself, citing its comprehensive and well-reasoned approach with strong cost estimates  
-- Agent 2 voted for Agent 1, recognizing its "detailed cost analysis and comparison to other reasoning benchmarks, including specific token cost breakdown"  
-- Agent 3 voted for Agent 1, praising its "more comprehensive and detailed explanation" with "comparative insights from similar benchmarking efforts"  
+- Agent 1 voted for itself, citing its comprehensive and well-reasoned approach with strong cost estimates
+- Agent 2 voted for Agent 1, recognizing its "detailed cost analysis and comparison to other reasoning benchmarks, including specific token cost breakdown"
+- Agent 3 voted for Agent 1, praising its "more comprehensive and detailed explanation" with "comparative insights from similar benchmarking efforts"
 
 This resulted in a unanimous 3-0 consensus, demonstrating clear quality differentiation.
 
@@ -56,10 +56,10 @@ This resulted in a unanimous 3-0 consensus, demonstrating clear quality differen
 
 Agent 1 presented the final response, featuring:
 
-- **Precise pricing structure:** $3.00 per million input tokens, $15.00 per million output tokens, with blended rate of $6.00 per million tokens  
-- **Comprehensive benchmark context:** 2,500-3,000 expert-crafted questions across multiple disciplines, with 10-14% requiring multi-modal comprehension  
-- **Real-world cost comparisons:** Cited specific examples including Artificial Analysis's $2,767 cost for o1 evaluation and $5,200 for testing a dozen reasoning models  
-- **Performance considerations:** Detailed breakdown of Grok-4's accuracy rates (26.9% without tools, 41.0% with tools, 50.7% in Heavy configuration)  
+- **Precise pricing structure:** $3.00 per million input tokens, $15.00 per million output tokens, with blended rate of $6.00 per million tokens
+- **Comprehensive benchmark context:** 2,500-3,000 expert-crafted questions across multiple disciplines, with 10-14% requiring multi-modal comprehension
+- **Real-world cost comparisons:** Cited specific examples including Artificial Analysis's $2,767 cost for o1 evaluation and $5,200 for testing a dozen reasoning models
+- **Performance considerations:** Detailed breakdown of Grok-4's accuracy rates (26.9% without tools, 41.0% with tools, 50.7% in Heavy configuration)
 - **Practical cost estimate:** "Hundreds to thousands of dollars" range based on token consumption patterns
 
 ## Conclusion
