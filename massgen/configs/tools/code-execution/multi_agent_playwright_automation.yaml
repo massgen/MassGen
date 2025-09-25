@@ -1,26 +1,26 @@
 # uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "browse https://github.com/Leezekun/MassGen and suggest improvement. Include screenshots and suggestions in a PDF."
 agents:
-  # - id: "claude_code_playwright_automation"
-  #   backend:
-  #     type: "claude_code"
-  #     cwd: "workspace1"
-  #     # Playwright MCP server with advanced configuration
-  #     mcp_servers:
-  #       playwright:
-  #         type: "stdio"
-  #         command: "npx"
-  #         args: [
-  #           "@playwright/mcp@latest",
-  #           "--browser=chrome",  # Use Chrome browser
-  #           "--caps=vision,pdf", # Enable vision and PDF capabilities
-  #           "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
-  #           # "--save-trace"       # Save Playwright traces for debugging
-  #         ]
+  - id: "claude_code_playwright_automation"
+    backend:
+      type: "claude_code"
+      cwd: "workspace1"
+      # Playwright MCP server with advanced configuration
+      mcp_servers:
+        playwright:
+          type: "stdio"
+          command: "npx"
+          args: [
+            "@playwright/mcp@latest",
+            "--browser=chrome",  # Use Chrome browser
+            "--caps=vision,pdf", # Enable vision and PDF capabilities
+            "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
+            # "--save-trace"       # Save Playwright traces for debugging
+          ]
 
-  - id: "gpt-5-nano_analysis"
+  - id: "gpt-5-mini_analysis"
     backend:
       type: "openai"
-      model: "gpt-5-nano"
+      model: "gpt-5-mini"
       cwd: "workspace2"
       text:
         verbosity: "medium"
