@@ -27,15 +27,7 @@ from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
 
 import anthropic
 
-from ..logger_config import (
-    log_backend_activity,
-    log_backend_agent_message,
-    log_stream_chunk,
-    logger,
-)
-
-# MCP imports are handled by the base class MCPBackend
-from ..mcp_tools import MCPConnectionError, MCPError, MCPServerError, MCPTimeoutError
+from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..mcp_tools.backend_utils import MCPErrorHandler
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
@@ -53,382 +45,6 @@ class ClaudeBackend(MCPBackend):
         self.code_session_hours = 0.0  # Track code execution usage
         self.formatter = ClaudeFormatter()
         self.api_params_handler = ClaudeAPIParamsHandler(self)
-
-    async def stream_with_tools(
-        self,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]],
-        **kwargs,
-    ) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using Claude's Messages API with MCP integration and fallback."""
-        agent_id = kwargs.get("agent_id", None)
-
-        log_backend_activity(
-            "claude",
-            "Starting stream_with_tools",
-            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id,
-        )
-
-        # Use async context manager for proper MCP resource management
-        try:
-            async with self:
-                client = self._create_client(**kwargs)
-                try:
-                    # Determine if MCP processing is needed
-                    use_mcp = bool(self._mcp_functions)
-
-                    # If MCP is configured but unavailable, inform the user and fall back
-                    if self.mcp_servers and not use_mcp:
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_unavailable",
-                            content="⚠️ [MCP] Setup failed or no tools available; continuing without MCP",
-                            source="mcp_setup",
-                        )
-
-                    # Yield MCP connection status if MCP tools are available
-                    if use_mcp and self.mcp_servers:
-                        server_count = self.get_mcp_server_count()
-                        if server_count > 0:
-                            yield StreamChunk(
-                                type="mcp_status",
-                                status="mcp_connected",
-                                content=f"✅ [MCP] Connected to {server_count} servers",
-                                source="mcp_setup",
-                            )
-
-                    if use_mcp:
-                        # MCP MODE
-                        logger.info("Using recursive MCP execution mode (Claude)")
-                        current_messages = self._trim_message_history(messages.copy())
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_tools_initiated",
-                            content=f"🔧 [MCP] {len(self._mcp_functions)} tools available",
-                            source="mcp_session",
-                        )
-                        async for chunk in self._stream_with_mcp_tools(current_messages, tools, client, **kwargs):
-                            yield chunk
-                    else:
-                        # NON-MCP MODE
-                        all_params = {**self.config, **kwargs}
-                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
-
-                        # Helper to run a stream with given params (used also for fallback)
-                        async def run_stream(params: Dict[str, Any]):
-                            # Log messages being sent (limited to non-MCP for now)
-                            converted_messages = params.get("messages", [])
-                            combined_tools = params.get("tools", [])
-                            log_backend_agent_message(
-                                agent_id or "default",
-                                "SEND",
-                                {
-                                    "messages": converted_messages,
-                                    "tools": len(combined_tools) if combined_tools else 0,
-                                },
-                                backend_name="claude",
-                            )
-                            if "betas" in params:
-                                st = await client.beta.messages.create(**params)
-                            else:
-                                st = await client.messages.create(**params)
-
-                            async for chunk in self._process_stream(st, all_params, agent_id):
-                                yield chunk
-
-                        # Run normal stream
-                        async for chunk in run_stream(api_params):
-                            yield chunk
-
-                except Exception as e:
-                    # Enhanced error handling for MCP-related errors during streaming
-                    if isinstance(
-                        e,
-                        (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError),
-                    ):
-                        await self._record_mcp_circuit_breaker_failure(e, agent_id)
-
-                        # Handle MCP exceptions with fallback
-                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
-                            yield chunk
-                    else:
-                        logger.error(f"Streaming error: {e}")
-                        yield StreamChunk(type="error", error=str(e))
-                finally:
-                    self._cleanup_client(client)
-
-        except Exception as e:
-            # Handle exceptions that occur during MCP setup (__aenter__) or teardown
-            try:
-                client = self._create_client(**kwargs)
-
-                if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
-                    # Handle MCP exceptions with fallback
-                    async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
-                        yield chunk
-                else:
-                    # Generic setup error: still notify if MCP was configured
-                    if self.mcp_servers:
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_unavailable",
-                            content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
-                            source="mcp_setup",
-                        )
-
-                    # Proceed with non-MCP streaming
-                    async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
-                        yield chunk
-
-                # all_params = {**self.config, **kwargs}
-                # api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
-
-                # provider_tools = []
-                # if all_params.get("enable_web_search", False):
-                #     provider_tools.append({"type": "web_search_20250305", "name": "web_search"})
-                # if all_params.get("enable_code_execution", False):
-                #     provider_tools.append({"type": "code_execution_20250522", "name": "code_execution"})
-
-                # async def fallback_stream(params: Dict[str, Any]):
-                #     # Minimal non-MCP streaming for fallback
-                #     if "betas" in params:
-                #         st = await client.beta.messages.create(**params)
-                #     else:
-                #         st = await client.messages.create(**params)
-                #     content_local = ""
-                #     async for event in st:
-                #         if event.type == "content_block_delta" and hasattr(event, "delta") and event.delta.type == "text_delta":
-                #             text_chunk = event.delta.text
-                #             content_local += text_chunk
-                #             yield StreamChunk(type="content", content=text_chunk)
-                #         elif event.type == "message_stop":
-                #             yield StreamChunk(
-                #                 type="complete_message",
-                #                 complete_message={
-                #                     "role": "assistant",
-                #                     "content": content_local.strip(),
-                #                 },
-                #             )
-                #             yield StreamChunk(type="done")
-                #             return
-
-                # if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
-                #     async for chunk in self._handle_mcp_error_and_fallback(e, api_params, provider_tools, fallback_stream):
-                #         yield chunk
-                # else:
-                #     if self.mcp_servers:
-                #         yield StreamChunk(
-                #             type="mcp_status",
-                #             status="mcp_unavailable",
-                #             content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
-                #             source="mcp_setup",
-                #         )
-                #     async for chunk in fallback_stream(api_params):
-                #         yield chunk
-            except Exception as inner_e:
-                logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
-                yield StreamChunk(type="error", error=str(inner_e))
-            finally:
-                self._cleanup_client(client)
-
-    async def _process_stream(
-        self,
-        stream,
-        all_params: Dict[str, Any],
-        agent_id: Optional[str],
-    ) -> AsyncGenerator[StreamChunk, None]:
-        """Process stream events and yield StreamChunks."""
-        content_local = ""
-        current_tool_uses_local: Dict[str, Dict[str, Any]] = {}
-
-        async for chunk in stream:
-            try:
-                if chunk.type == "message_start":
-                    continue
-                elif chunk.type == "content_block_start":
-                    if hasattr(chunk, "content_block"):
-                        if chunk.content_block.type == "tool_use":
-                            tool_id = chunk.content_block.id
-                            tool_name = chunk.content_block.name
-                            current_tool_uses_local[tool_id] = {
-                                "id": tool_id,
-                                "name": tool_name,
-                                "input": "",
-                                "index": getattr(chunk, "index", None),
-                            }
-                        elif chunk.content_block.type == "server_tool_use":
-                            tool_id = chunk.content_block.id
-                            tool_name = chunk.content_block.name
-                            current_tool_uses_local[tool_id] = {
-                                "id": tool_id,
-                                "name": tool_name,
-                                "input": "",
-                                "index": getattr(chunk, "index", None),
-                                "server_side": True,
-                            }
-                            if tool_name == "code_execution":
-                                yield StreamChunk(
-                                    type="content",
-                                    content="\n💻 [Code Execution] Starting...\n",
-                                )
-                            elif tool_name == "web_search":
-                                yield StreamChunk(
-                                    type="content",
-                                    content="\n🔍 [Web Search] Starting search...\n",
-                                )
-                        elif chunk.content_block.type == "code_execution_tool_result":
-                            result_block = chunk.content_block
-                            result_parts = []
-                            if hasattr(result_block, "stdout") and result_block.stdout:
-                                result_parts.append(f"Output: {result_block.stdout.strip()}")
-                            if hasattr(result_block, "stderr") and result_block.stderr:
-                                result_parts.append(f"Error: {result_block.stderr.strip()}")
-                            if hasattr(result_block, "return_code") and result_block.return_code != 0:
-                                result_parts.append(f"Exit code: {result_block.return_code}")
-                            if result_parts:
-                                result_text = f"\n💻 [Code Execution Result]\n{chr(10).join(result_parts)}\n"
-                                yield StreamChunk(
-                                    type="content",
-                                    content=result_text,
-                                )
-                elif chunk.type == "content_block_delta":
-                    if hasattr(chunk, "delta"):
-                        if chunk.delta.type == "text_delta":
-                            text_chunk = chunk.delta.text
-                            content_local += text_chunk
-                            log_backend_agent_message(
-                                agent_id or "default",
-                                "RECV",
-                                {"content": text_chunk},
-                                backend_name="claude",
-                            )
-                            log_stream_chunk(
-                                "backend.claude",
-                                "content",
-                                text_chunk,
-                                agent_id,
-                            )
-                            yield StreamChunk(type="content", content=text_chunk)
-                        elif chunk.delta.type == "input_json_delta":
-                            if hasattr(chunk, "index"):
-                                for (
-                                    tool_id,
-                                    tool_data,
-                                ) in current_tool_uses_local.items():
-                                    if tool_data.get("index") == chunk.index:
-                                        partial_json = getattr(
-                                            chunk.delta,
-                                            "partial_json",
-                                            "",
-                                        )
-                                        tool_data["input"] += partial_json
-                                        break
-                elif chunk.type == "content_block_stop":
-                    if hasattr(chunk, "index"):
-                        for (
-                            tool_id,
-                            tool_data,
-                        ) in current_tool_uses_local.items():
-                            if tool_data.get("index") == chunk.index and tool_data.get("server_side"):
-                                tool_name = tool_data.get("name", "")
-                                tool_input = tool_data.get("input", "")
-                                try:
-                                    parsed_input = json.loads(tool_input) if tool_input else {}
-                                except json.JSONDecodeError:
-                                    parsed_input = {"raw_input": tool_input}
-                                if tool_name == "code_execution":
-                                    code = parsed_input.get("code", "")
-                                    if code:
-                                        yield StreamChunk(
-                                            type="content",
-                                            content=f"💻 [Code] {code}\n",
-                                        )
-                                    yield StreamChunk(
-                                        type="content",
-                                        content="✅ [Code Execution] Completed\n",
-                                    )
-                                elif tool_name == "web_search":
-                                    query = parsed_input.get("query", "")
-                                    if query:
-                                        yield StreamChunk(
-                                            type="content",
-                                            content=f"🔍 [Query] '{query}'\n",
-                                        )
-                                    yield StreamChunk(
-                                        type="content",
-                                        content="✅ [Web Search] Completed\n",
-                                    )
-                                tool_data["processed"] = True
-                                break
-                elif chunk.type == "message_delta":
-                    pass
-                elif chunk.type == "message_stop":
-                    # Build final response and yield tool_calls for user-defined non-MCP tools
-                    user_tool_calls = []
-                    for tool_use in current_tool_uses_local.values():
-                        tool_name = tool_use.get("name", "")
-                        is_server_side = tool_use.get("server_side", False)
-                        if not is_server_side and tool_name not in ["web_search", "code_execution"]:
-                            tool_input = tool_use.get("input", "")
-                            try:
-                                parsed_input = json.loads(tool_input) if tool_input else {}
-                            except json.JSONDecodeError:
-                                parsed_input = {"raw_input": tool_input}
-                            user_tool_calls.append(
-                                {
-                                    "id": tool_use["id"],
-                                    "type": "function",
-                                    "function": {
-                                        "name": tool_name,
-                                        "arguments": parsed_input,
-                                    },
-                                },
-                            )
-
-                    if user_tool_calls:
-                        log_stream_chunk(
-                            "backend.claude",
-                            "tool_calls",
-                            user_tool_calls,
-                            agent_id,
-                        )
-                        yield StreamChunk(
-                            type="tool_calls",
-                            tool_calls=user_tool_calls,
-                        )
-
-                    complete_message = {
-                        "role": "assistant",
-                        "content": content_local.strip(),
-                    }
-                    if user_tool_calls:
-                        complete_message["tool_calls"] = user_tool_calls
-                    log_stream_chunk(
-                        "backend.claude",
-                        "complete_message",
-                        complete_message,
-                        agent_id,
-                    )
-                    yield StreamChunk(
-                        type="complete_message",
-                        complete_message=complete_message,
-                    )
-
-                    # Track usage for pricing
-                    if all_params.get("enable_web_search", False):
-                        self.search_count += 1
-                    if all_params.get("enable_code_execution", False):
-                        self.code_session_hours += 0.083
-
-                    log_stream_chunk("backend.claude", "done", None, agent_id)
-                    yield StreamChunk(type="done")
-                    return
-            except Exception as event_error:
-                error_msg = f"Event processing error: {event_error}"
-                log_stream_chunk("backend.claude", "error", error_msg, agent_id)
-                yield StreamChunk(type="error", error=error_msg)
-                continue
 
     async def _stream_with_mcp_tools(
         self,
@@ -658,7 +274,7 @@ class ClaudeBackend(MCPBackend):
                 try:
                     # Execute MCP function
                     args_json = json.dumps(tool_call["function"]["arguments"]) if isinstance(tool_call["function"].get("arguments"), (dict, list)) else tool_call["function"].get("arguments", "{}")
-                    result_list = await self._execute_mcp_function_with_retry_claude(function_name, args_json)
+                    result_list = await self._execute_mcp_function_with_retry(function_name, args_json)
                     if not result_list or (isinstance(result_list[0], str) and result_list[0].startswith("Error:")):
                         logger.warning(f"MCP function {function_name} failed after retries: {result_list[0] if result_list else 'unknown error'}")
                         continue
@@ -746,6 +362,204 @@ class ClaudeBackend(MCPBackend):
             )
             yield StreamChunk(type="done")
             return
+
+    async def _process_stream(
+        self,
+        stream,
+        all_params: Dict[str, Any],
+        agent_id: Optional[str],
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Process stream events and yield StreamChunks."""
+        content_local = ""
+        current_tool_uses_local: Dict[str, Dict[str, Any]] = {}
+
+        async for chunk in stream:
+            try:
+                if chunk.type == "message_start":
+                    continue
+                elif chunk.type == "content_block_start":
+                    if hasattr(chunk, "content_block"):
+                        if chunk.content_block.type == "tool_use":
+                            tool_id = chunk.content_block.id
+                            tool_name = chunk.content_block.name
+                            current_tool_uses_local[tool_id] = {
+                                "id": tool_id,
+                                "name": tool_name,
+                                "input": "",
+                                "index": getattr(chunk, "index", None),
+                            }
+                        elif chunk.content_block.type == "server_tool_use":
+                            tool_id = chunk.content_block.id
+                            tool_name = chunk.content_block.name
+                            current_tool_uses_local[tool_id] = {
+                                "id": tool_id,
+                                "name": tool_name,
+                                "input": "",
+                                "index": getattr(chunk, "index", None),
+                                "server_side": True,
+                            }
+                            if tool_name == "code_execution":
+                                yield StreamChunk(
+                                    type="content",
+                                    content="\n💻 [Code Execution] Starting...\n",
+                                )
+                            elif tool_name == "web_search":
+                                yield StreamChunk(
+                                    type="content",
+                                    content="\n🔍 [Web Search] Starting search...\n",
+                                )
+                        elif chunk.content_block.type == "code_execution_tool_result":
+                            result_block = chunk.content_block
+                            result_parts = []
+                            if hasattr(result_block, "stdout") and result_block.stdout:
+                                result_parts.append(f"Output: {result_block.stdout.strip()}")
+                            if hasattr(result_block, "stderr") and result_block.stderr:
+                                result_parts.append(f"Error: {result_block.stderr.strip()}")
+                            if hasattr(result_block, "return_code") and result_block.return_code != 0:
+                                result_parts.append(f"Exit code: {result_block.return_code}")
+                            if result_parts:
+                                result_text = f"\n💻 [Code Execution Result]\n{chr(10).join(result_parts)}\n"
+                                yield StreamChunk(
+                                    type="content",
+                                    content=result_text,
+                                )
+                elif chunk.type == "content_block_delta":
+                    if hasattr(chunk, "delta"):
+                        if chunk.delta.type == "text_delta":
+                            text_chunk = chunk.delta.text
+                            content_local += text_chunk
+                            log_backend_agent_message(
+                                agent_id or "default",
+                                "RECV",
+                                {"content": text_chunk},
+                                backend_name="claude",
+                            )
+                            log_stream_chunk(
+                                "backend.claude",
+                                "content",
+                                text_chunk,
+                                agent_id,
+                            )
+                            yield StreamChunk(type="content", content=text_chunk)
+                        elif chunk.delta.type == "input_json_delta":
+                            if hasattr(chunk, "index"):
+                                for (
+                                    tool_id,
+                                    tool_data,
+                                ) in current_tool_uses_local.items():
+                                    if tool_data.get("index") == chunk.index:
+                                        partial_json = getattr(
+                                            chunk.delta,
+                                            "partial_json",
+                                            "",
+                                        )
+                                        tool_data["input"] += partial_json
+                                        break
+                elif chunk.type == "content_block_stop":
+                    if hasattr(chunk, "index"):
+                        for (
+                            tool_id,
+                            tool_data,
+                        ) in current_tool_uses_local.items():
+                            if tool_data.get("index") == chunk.index and tool_data.get("server_side"):
+                                tool_name = tool_data.get("name", "")
+                                tool_input = tool_data.get("input", "")
+                                try:
+                                    parsed_input = json.loads(tool_input) if tool_input else {}
+                                except json.JSONDecodeError:
+                                    parsed_input = {"raw_input": tool_input}
+                                if tool_name == "code_execution":
+                                    code = parsed_input.get("code", "")
+                                    if code:
+                                        yield StreamChunk(
+                                            type="content",
+                                            content=f"💻 [Code] {code}\n",
+                                        )
+                                    yield StreamChunk(
+                                        type="content",
+                                        content="✅ [Code Execution] Completed\n",
+                                    )
+                                elif tool_name == "web_search":
+                                    query = parsed_input.get("query", "")
+                                    if query:
+                                        yield StreamChunk(
+                                            type="content",
+                                            content=f"🔍 [Query] '{query}'\n",
+                                        )
+                                    yield StreamChunk(
+                                        type="content",
+                                        content="✅ [Web Search] Completed\n",
+                                    )
+                                tool_data["processed"] = True
+                                break
+                elif chunk.type == "message_delta":
+                    pass
+                elif chunk.type == "message_stop":
+                    # Build final response and yield tool_calls for user-defined non-MCP tools
+                    user_tool_calls = []
+                    for tool_use in current_tool_uses_local.values():
+                        tool_name = tool_use.get("name", "")
+                        is_server_side = tool_use.get("server_side", False)
+                        if not is_server_side and tool_name not in ["web_search", "code_execution"]:
+                            tool_input = tool_use.get("input", "")
+                            try:
+                                parsed_input = json.loads(tool_input) if tool_input else {}
+                            except json.JSONDecodeError:
+                                parsed_input = {"raw_input": tool_input}
+                            user_tool_calls.append(
+                                {
+                                    "id": tool_use["id"],
+                                    "type": "function",
+                                    "function": {
+                                        "name": tool_name,
+                                        "arguments": parsed_input,
+                                    },
+                                },
+                            )
+
+                    if user_tool_calls:
+                        log_stream_chunk(
+                            "backend.claude",
+                            "tool_calls",
+                            user_tool_calls,
+                            agent_id,
+                        )
+                        yield StreamChunk(
+                            type="tool_calls",
+                            tool_calls=user_tool_calls,
+                        )
+
+                    complete_message = {
+                        "role": "assistant",
+                        "content": content_local.strip(),
+                    }
+                    if user_tool_calls:
+                        complete_message["tool_calls"] = user_tool_calls
+                    log_stream_chunk(
+                        "backend.claude",
+                        "complete_message",
+                        complete_message,
+                        agent_id,
+                    )
+                    yield StreamChunk(
+                        type="complete_message",
+                        complete_message=complete_message,
+                    )
+
+                    # Track usage for pricing
+                    if all_params.get("enable_web_search", False):
+                        self.search_count += 1
+                    if all_params.get("enable_code_execution", False):
+                        self.code_session_hours += 0.083
+
+                    log_stream_chunk("backend.claude", "done", None, agent_id)
+                    yield StreamChunk(type="done")
+                    return
+            except Exception as event_error:
+                error_msg = f"Event processing error: {event_error}"
+                log_stream_chunk("backend.claude", "error", error_msg, agent_id)
+                yield StreamChunk(type="error", error=error_msg)
+                continue
 
     async def _handle_mcp_error_and_fallback(
         self,
