@@ -11,6 +11,9 @@ from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 from .utils.token_manager import TokenCostCalculator, TokenUsage
+from .utils.filesystem_manager import PathPermissionManagerHook, FilesystemManager
+from ..mcp_tools.hooks import FunctionHookManager, HookType
+
 
 
 class FilesystemSupport(Enum):
@@ -63,8 +66,6 @@ class LLMBackend(ABC):
         if cwd:
             filesystem_support = self.get_filesystem_support()
             if filesystem_support == FilesystemSupport.MCP:
-                # Backend supports MCP - inject filesystem MCP server
-                from ..mcp_tools.filesystem_manager import FilesystemManager
 
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
@@ -81,8 +82,6 @@ class LLMBackend(ABC):
                 # Inject filesystem MCP server into configuration
                 self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
             elif filesystem_support == FilesystemSupport.NATIVE:
-                # Backend has native filesystem support - create manager but don't inject MCP
-                from ..mcp_tools.filesystem_manager import FilesystemManager
 
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
@@ -110,9 +109,6 @@ class LLMBackend(ABC):
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""
-        from ..mcp_tools.filesystem_manager import PathPermissionManagerHook
-        from ..mcp_tools.hooks import FunctionHookManager, HookType
-
         # Create per-agent hook manager
         self.function_hook_manager = FunctionHookManager()
 

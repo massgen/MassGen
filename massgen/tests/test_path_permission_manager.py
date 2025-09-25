@@ -20,11 +20,11 @@ from pathlib import Path
 # Add the massgen directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from massgen.mcp_tools.filesystem_manager import (  # noqa: E402
+from massgen.backend.utils.filesystem_manager import (  # noqa: E402
     PathPermissionManager,
     Permission,
 )
-from massgen.mcp_tools.workspace_copy_server import (  # noqa: E402
+from massgen.backend.utils.filesystem_manager.workspace_copy_server import (  # noqa: E402
     _validate_path_access,
     get_copy_file_pairs,
 )
@@ -713,7 +713,7 @@ def test_workspace_copy_server_path_validation():
 
         # Test 6: Test relative path resolution to workspace
         print("  Testing relative path resolution...")
-        from massgen.mcp_tools.workspace_copy_server import _validate_and_resolve_paths
+        from massgen.backend.utils.filesystem_manager.workspace_copy_server import _validate_and_resolve_paths
 
         try:
             source, dest = _validate_and_resolve_paths(str(test_source_dir / "test_file.txt"), "subdir/relative_dest.txt")  # Relative path

@@ -372,7 +372,7 @@ The v0.0.16 unified filesystem support establishes the foundation for expanding 
 
 | Feature | Status | Implementation | Notes |
 |---------|---------|---------------|--------|
-| FilesystemManager Class | ✅ Complete | `massgen/mcp_tools/filesystem_manager.py` | Unified filesystem for Gemini & Claude Code |
+| FilesystemManager Class | ✅ Complete | `massgen/backend/utils/filesystem_manager/` | Unified filesystem for Gemini & Claude Code |
 | MCP Filesystem Integration | ✅ Complete | MCP server auto-configuration | Gemini agents gain filesystem access |
 | Unified Configuration Syntax | ✅ Complete | Identical `cwd` support for Gemini & Claude Code | Ready for future backend expansion |
 | Enhanced Logging & Orchestration | ✅ Complete | Timestamped versioning | Comprehensive workflow tracking |
