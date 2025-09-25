@@ -412,6 +412,18 @@ class ResponseBackend(MCPBackend):
         )
         return converted_tools
 
+    async def _process_stream(self, stream, all_params, agent_id=None):
+        async for chunk in stream:
+            processed = self._process_stream_chunk(chunk, agent_id)
+            if processed.type == "complete_response":
+                # Yield the complete response first
+                yield processed
+                # Then signal completion with done chunk
+                log_stream_chunk("backend.response", "done", None, agent_id)
+                yield StreamChunk(type="done")
+            else:
+                yield processed
+
     def _process_stream_chunk(self, chunk, agent_id) -> StreamChunk:
         """Process individual stream chunks and convert to StreamChunk format."""
         if not hasattr(chunk, "type"):

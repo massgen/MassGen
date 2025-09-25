@@ -17,15 +17,14 @@ MCP tools configured.
 
 import shutil
 from datetime import datetime
-
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ....logger_config import get_log_session_dir, logger
 from ....mcp_tools.client import HookType
-
 from ._base import Permission
 from ._path_permission_manager import PathPermissionManager
+
 
 class FilesystemManager:
     """
@@ -567,5 +566,3 @@ class FilesystemManager:
             shutil.rmtree(p)
         except Exception as e:
             logger.warning(f"[FilesystemManager] cleanup failed for {p}: {e}")
-
-

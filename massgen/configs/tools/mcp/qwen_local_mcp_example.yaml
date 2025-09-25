@@ -1,11 +1,11 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config configs/qwen_local_mcp_example.yaml "whats the weather of Tokyo"
+#   uv run python -m massgen.cli --config massgen/configs/tools/mcp/qwen_local_mcp_example.yaml "whats the weather of Tokyo"
 agents:
-  - id: "qwen3-4b-mcp_weather" # Cerebras AI  
+  - id: "qwen3-4b-mcp_weather" # Cerebras AI
     backend:
       type: "lmstudio"
-      model: "qwen/qwen3-4b-2507" 
+      model: "qwen/qwen3-4b-2507"
       mcp_servers:
         - name: "weather"
           type: "stdio"

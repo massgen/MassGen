@@ -1,14 +1,13 @@
+# -*- coding: utf-8 -*-
 import json
-
 from dataclasses import dataclass
-
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from ._base import Permission
-
 from ....logger_config import logger
 from ....mcp_tools.hooks import HookResult
+from ._base import Permission
+
 
 @dataclass
 class ManagedPath:
@@ -517,6 +516,7 @@ class PathPermissionManager:
             ],
         }
 
+
 # Hook implementation for PathPermissionManager
 class PathPermissionManagerHook:
     """
@@ -553,4 +553,3 @@ class PathPermissionManagerHook:
             logger.error(f"[PathPermissionManagerHook] Error checking permissions for {function_name}: {e}")
             # Fail closed - deny access on permission check errors
             return HookResult(allowed=False, metadata={"error": str(e), "reason": "Permission check failed"})
-

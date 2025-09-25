@@ -34,7 +34,7 @@ MassGen v0.0.16 introduces unified filesystem support for Gemini agents through 
 
 <h1 id="planning-phase">📋 PLANNING PHASE</h1>
 
-<h2 id="evaluation-design">📝 Evaluation Design</h2> 
+<h2 id="evaluation-design">📝 Evaluation Design</h2>
 
 ### Prompt
 "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
@@ -350,7 +350,7 @@ MassGen v0.0.16 represents a **fundamental breakthrough** in multi-agent system 
 - **MCP Integration**: Clean approach to filesystem operations via Model Context Protocol for Gemini agents
 - **Cross-Backend Workspace Sharing**: First-time collaboration between Gemini and Claude Code backends
 
-### 🤝 **Collaborative Excellence** 
+### 🤝 **Collaborative Excellence**
 - **Backend Parity**: Gemini agents now have equivalent filesystem capabilities to Claude Code agents
 - **Intelligent Coordination**: Agents can access, analyze, and build upon each other's work across backend boundaries
 - **Enhanced Quality**: Cross-backend collaboration produces superior results than single-backend workflows

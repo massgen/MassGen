@@ -10,10 +10,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-from .utils.token_manager import TokenCostCalculator, TokenUsage
-from .utils.filesystem_manager import PathPermissionManagerHook, FilesystemManager
 from ..mcp_tools.hooks import FunctionHookManager, HookType
-
+from .utils.filesystem_manager import FilesystemManager, PathPermissionManagerHook
+from .utils.token_manager import TokenCostCalculator, TokenUsage
 
 
 class FilesystemSupport(Enum):
@@ -66,7 +65,6 @@ class LLMBackend(ABC):
         if cwd:
             filesystem_support = self.get_filesystem_support()
             if filesystem_support == FilesystemSupport.MCP:
-
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
@@ -82,7 +80,6 @@ class LLMBackend(ABC):
                 # Inject filesystem MCP server into configuration
                 self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
             elif filesystem_support == FilesystemSupport.NATIVE:
-
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config

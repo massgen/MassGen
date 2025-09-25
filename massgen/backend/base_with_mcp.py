@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+from abc import abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
-from ..logger_config import log_stream_chunk, logger
+from ..logger_config import logger
 from .base import LLMBackend, StreamChunk
 
 # MCP integration imports
@@ -95,6 +96,10 @@ class MCPBackend(LLMBackend):
         # Initialize backend name and agent ID for MCP operations
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
+
+    @abstractmethod
+    async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
+        """Process stream."""
 
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
@@ -306,18 +311,12 @@ class MCPBackend(LLMBackend):
                 non_mcp_tools.append(tool)
             api_params["tools"] = non_mcp_tools
 
-        stream = await client.responses.create(**api_params)
+        if "openai" in self.get_provider_name().lower():
+            stream = await client.responses.create(**api_params)
+        else:
+            stream = await client.chat.completions.create(**api_params)
 
-        async for chunk in stream:
-            processed = self._process_stream_chunk(chunk, agent_id)
-            if processed.type == "complete_response":
-                # Yield the complete response first
-                yield processed
-                # Then signal completion with done chunk
-                log_stream_chunk("backend.response", "done", None, agent_id)
-                yield StreamChunk(type="done")
-            else:
-                yield processed
+        await self._process_stream(stream, all_params, agent_id)
 
     async def _stream_handle_mcp_exceptions(
         self,

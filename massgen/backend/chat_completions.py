@@ -30,45 +30,14 @@ from ..logger_config import (
     logger,
 )
 
+# MCP integration imports
+from ..mcp_tools import MCPConnectionError, MCPError, MCPServerError, MCPTimeoutError
+
 # Local imports
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
 from .utils.api_params_handler import ChatCompletionsAPIParamsHandler
 from .utils.formatter import ChatCompletionsFormatter
-
-# MCP integration imports
-try:
-    from ..mcp_tools import (
-        MCPConnectionError,
-        MCPError,
-        MCPServerError,
-        MCPTimeoutError,
-    )
-
-except ImportError as e:  # MCP not installed or import failed
-    logger.warning(f"MCP import failed: {e}")
-    # Create fallback assignments for all MCP imports
-    _mcp_fallbacks = {
-        "MultiMCPClient": None,
-        "MCPCircuitBreaker": None,
-        "Function": None,
-        "MCPConfigValidator": None,
-        "MCPErrorHandler": None,
-        "MCPSetupManager": None,
-        "MCPResourceManager": None,
-        "MCPExecutionManager": None,
-        "MCPRetryHandler": None,
-        "MCPMessageManager": None,
-        "MCPConfigHelper": None,
-        "MCPCircuitBreakerManager": None,
-        "MCPError": ImportError,
-        "MCPConnectionError": ImportError,
-        "MCPConfigurationError": ImportError,
-        "MCPValidationError": ImportError,
-        "MCPTimeoutError": ImportError,
-        "MCPServerError": ImportError,
-    }
-    globals().update(_mcp_fallbacks)
 
 
 class ChatCompletionsBackend(MCPBackend):
@@ -83,18 +52,6 @@ class ChatCompletionsBackend(MCPBackend):
 
     """
 
-    # Parameters to exclude when building API requests
-    # Merge base class exclusions with backend-specific ones
-    EXCLUDED_API_PARAMS = MCPBackend.get_base_excluded_config_params().union(
-        {
-            "base_url",  # Used for client initialization, not API calls
-            "enable_web_search",
-            "enable_code_interpreter",
-            "allowed_tools",  # Tool filtering parameter
-            "exclude_tools",  # Tool filtering parameter
-        },
-    )
-
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         # Backend name is already set in MCPBackend, but we may need to override it
@@ -102,94 +59,92 @@ class ChatCompletionsBackend(MCPBackend):
         self.formatter = ChatCompletionsFormatter()
         self.api_params_handler = ChatCompletionsAPIParamsHandler(self)
 
-    def get_provider_name(self) -> str:
-        """Get the name of this provider."""
-        # Check if provider name was explicitly set in config
-        if "provider" in self.config:
-            return self.config["provider"]
-        elif "provider_name" in self.config:
-            return self.config["provider_name"]
+    async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
+        """Stream response using OpenAI-compatible Chat Completions API."""
+        # Extract agent_id for logging
+        agent_id = kwargs.get("agent_id", None)
 
-        # Try to infer from base_url
-        base_url = self.config.get("base_url", "")
-        if "openai.com" in base_url:
-            return "OpenAI"
-        elif "cerebras.ai" in base_url:
-            return "Cerebras AI"
-        elif "together.xyz" in base_url:
-            return "Together AI"
-        elif "fireworks.ai" in base_url:
-            return "Fireworks AI"
-        elif "groq.com" in base_url:
-            return "Groq"
-        elif "openrouter.ai" in base_url:
-            return "OpenRouter"
-        elif "z.ai" in base_url or "bigmodel.cn" in base_url:
-            return "ZAI"
-        elif "nebius.com" in base_url:
-            return "Nebius AI Studio"
-        elif "moonshot.ai" in base_url or "moonshot.cn" in base_url:
-            return "Kimi"
+        log_backend_activity(
+            self.get_provider_name(),
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id,
+        )
+
+        # Check if MCP is configured
+        if self.mcp_servers:
+            # Use MCP mode with async context manager
+            client = None
+            try:
+                async with self:
+                    client = self._create_openai_client(**kwargs)
+
+                    # Determine if MCP processing is needed AFTER setup
+                    use_mcp = bool(self._mcp_functions)
+
+                    # Yield MCP status chunks from parent class
+                    async for chunk in self.yield_mcp_status_chunks(use_mcp):
+                        yield chunk
+
+                    if use_mcp:
+                        # MCP MODE: Recursive function call detection and execution
+                        logger.info("Using recursive MCP execution mode")
+
+                        current_messages = self._trim_message_history(messages.copy())
+
+                        # Start recursive MCP streaming
+                        async for chunk in self._stream_with_mcp_tools(current_messages, tools, client, **kwargs):
+                            yield chunk
+
+                    else:
+                        # NON-MCP MODE: Use unified helper
+                        logger.info("Using no-MCP mode")
+                        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                            yield chunk
+                        return
+            except Exception as e:
+                # Handle exceptions that occur during MCP setup (__aenter__) or teardown
+                # Provide a clear user-facing message and fall back to non-MCP streaming
+                client = None
+                try:
+                    client = self._create_openai_client(**kwargs)
+
+                    if isinstance(
+                        e,
+                        (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError),
+                    ):
+                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                            yield chunk
+                    else:
+                        # Generic setup error: still notify if MCP was configured
+                        if self.mcp_servers:
+                            yield StreamChunk(
+                                type="content",
+                                content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
+                            )
+                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                            yield chunk
+
+                except Exception as inner_e:
+                    logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
+                    yield StreamChunk(type="error", error=str(inner_e))
+                finally:
+                    # Ensure the underlying HTTP client is properly closed to avoid event loop issues
+                    await self._cleanup_client(client)
         else:
-            return "ChatCompletion"
+            client = None
+            try:
+                client = self._create_openai_client(**kwargs)
 
-    def _get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Return provider tools (web_search, code_interpreter) in Chat Completions format.
+                async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                    yield chunk
+            except Exception as e:
+                logger.error(f"Chat Completions API error: {str(e)}")
+                yield StreamChunk(type="error", error=str(e))
+            finally:
+                await self._cleanup_client(client)
 
-        Ensures consistent definitions across all code paths.
-        """
-        provider_tools: List[Dict[str, Any]] = []
-        enable_web_search = all_params.get("enable_web_search", False)
-        enable_code_interpreter = all_params.get("enable_code_interpreter", False)
-
-        if enable_web_search:
-            provider_tools.append(
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "web_search",
-                        "description": "Search the web for current or factual information",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "query": {
-                                    "type": "string",
-                                    "description": "The search query to send to the web",
-                                },
-                            },
-                            "required": ["query"],
-                        },
-                    },
-                },
-            )
-
-        if enable_code_interpreter:
-            provider_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
-
-        return provider_tools
-
-    def _convert_messages_for_mcp_chat_completions(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Convert messages for MCP Chat Completions format if needed."""
-        # For Chat Completions, messages are already in the correct format
-        # Just ensure tool result messages use the correct format
-        converted_messages = []
-
-        for message in messages:
-            if message.get("type") == "function_call_output":
-                # Convert Response API format to Chat Completions format
-                converted_message = {
-                    "role": "tool",
-                    "tool_call_id": message.get("call_id"),
-                    "content": message.get("output", ""),
-                }
-                converted_messages.append(converted_message)
-            else:
-                # Pass through other messages as-is
-                converted_messages.append(message.copy())
-
-        return converted_messages
-
-    async def _stream_mcp_recursive(
+    async def _stream_with_mcp_tools(
         self,
         current_messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -203,7 +158,7 @@ class ChatCompletionsBackend(MCPBackend):
         api_params = await self.api_params_handler.build_api_params(current_messages, tools, all_params)
 
         # Add provider tools (web search, code interpreter) if enabled
-        provider_tools = self._get_provider_tools(all_params)
+        provider_tools = self.api_params_handler.get_provider_tools(all_params)
 
         if provider_tools:
             if "tools" not in api_params:
@@ -489,7 +444,7 @@ class ChatCompletionsBackend(MCPBackend):
                 updated_messages = self._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
-                async for chunk in self._stream_mcp_recursive(updated_messages, tools, client, **kwargs):
+                async for chunk in self._stream_with_mcp_tools(updated_messages, tools, client, **kwargs):
                     yield chunk
             else:
                 # No MCP functions were executed, we're done
@@ -506,13 +461,14 @@ class ChatCompletionsBackend(MCPBackend):
             )
             return
 
-    async def handle_chat_completions_stream_with_logging(self, stream, enable_web_search: bool = False, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
+    async def _process_stream(self, stream, all_params, agent_id) -> AsyncGenerator[StreamChunk, None]:
         """Handle standard Chat Completions API streaming format with logging."""
 
         content = ""
         current_tool_calls = {}
         search_sources_used = 0
         provider_name = self.get_provider_name()
+        enable_web_search = all_params.get("enable_web_search", False)
         log_prefix = f"backend.{provider_name.lower().replace(' ', '_')}"
 
         async for chunk in stream:
@@ -527,12 +483,9 @@ class ChatCompletionsBackend(MCPBackend):
                         # Plain text content
                         if getattr(delta, "content", None):
                             # handle reasoning first
-                            reasoning_active_key = "_reasoning_active"
-                            if hasattr(self, reasoning_active_key):
-                                if getattr(self, reasoning_active_key) is True:
-                                    setattr(self, reasoning_active_key, False)
-                                    log_stream_chunk(log_prefix, "reasoning_done", "", agent_id)
-                                    yield StreamChunk(type="reasoning_done", content="")
+                            reasoning_chunk = self._handle_reasoning_transition(log_prefix, agent_id)
+                            if reasoning_chunk:
+                                yield reasoning_chunk
                             content_chunk = delta.content
                             content += content_chunk
                             log_backend_agent_message(
@@ -688,152 +641,6 @@ class ChatCompletionsBackend(MCPBackend):
         log_stream_chunk(log_prefix, "done", None, agent_id)
         yield StreamChunk(type="done")
 
-    async def _stream_without_mcp(
-        self,
-        client,
-        messages: List[Dict[str, Any]],
-        tools: List[Dict[str, Any]],
-        all_params: Dict[str, Any],
-        agent_id: Optional[str],
-    ) -> AsyncGenerator[StreamChunk, None]:
-        """Centralized non-MCP streaming using Chat Completions format."""
-        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
-        log_backend_agent_message(
-            agent_id or "default",
-            "SEND",
-            {
-                "messages": api_params["messages"],
-                "tools": len(api_params.get("tools", [])) if api_params.get("tools") else 0,
-            },
-            backend_name=self.get_provider_name(),
-        )
-        enable_web_search = all_params.get("enable_web_search", False)
-        try:
-            stream = await client.chat.completions.create(**api_params)
-            async for chunk in self.handle_chat_completions_stream_with_logging(stream, enable_web_search, agent_id):
-                yield chunk
-        except Exception as e:
-            logger.error(f"Streaming error (non-MCP): {e}")
-            yield StreamChunk(type="error", error=str(e))
-
-    async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using OpenAI-compatible Chat Completions API."""
-        # Extract agent_id for logging
-        agent_id = kwargs.get("agent_id", None)
-
-        log_backend_activity(
-            self.get_provider_name(),
-            "Starting stream_with_tools",
-            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id,
-        )
-
-        # Check if MCP is configured
-        if self.mcp_servers:
-            # Use MCP mode with async context manager
-            client = None
-            try:
-                async with self:
-                    # Merge constructor config with stream kwargs (stream kwargs take priority)
-                    all_params = {**self.config, **kwargs}
-
-                    client = self._create_openai_client(**kwargs)
-
-                    # Determine if MCP processing is needed AFTER setup
-                    use_mcp = bool(self._mcp_functions)
-
-                    # Yield MCP status chunks from parent class
-                    async for chunk in self.yield_mcp_status_chunks(use_mcp):
-                        yield chunk
-
-                    if use_mcp:
-                        # MCP MODE: Recursive function call detection and execution
-                        logger.info("Using recursive MCP execution mode")
-
-                        current_messages = self._trim_message_history(messages.copy())
-
-                        # Start recursive MCP streaming
-                        async for chunk in self._stream_mcp_recursive(current_messages, tools, client, **kwargs):
-                            yield chunk
-
-                    else:
-                        # NON-MCP MODE: Use unified helper
-                        logger.info("Using no-MCP mode")
-                        async for chunk in self._stream_without_mcp(client, messages, tools, all_params, agent_id):
-                            yield chunk
-                        return
-            except Exception as e:
-                # Handle exceptions that occur during MCP setup (__aenter__) or teardown
-                # Provide a clear user-facing message and fall back to non-MCP streaming
-                client = None
-                try:
-                    # Merge constructor config with stream kwargs (stream kwargs take priority)
-                    all_params = {**self.config, **kwargs}
-
-                    client = self._create_openai_client(**kwargs)
-
-                    if isinstance(
-                        e,
-                        (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError),
-                    ):
-                        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
-                        provider_tools = self._get_provider_tools(all_params)
-
-                        async def fallback_stream(params):
-                            stream = await client.chat.completions.create(**params)
-                            async for chunk in self.handle_chat_completions_stream_with_logging(
-                                stream,
-                                all_params.get("enable_web_search", False),
-                                agent_id,
-                            ):
-                                yield chunk
-
-                        async for chunk in self._handle_mcp_error_and_fallback(e, api_params, provider_tools, fallback_stream):
-                            yield chunk
-                    else:
-                        # Generic setup error: still notify if MCP was configured
-                        if self.mcp_servers:
-                            yield StreamChunk(
-                                type="content",
-                                content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
-                            )
-
-                        # Use existing non-MCP logic (fallback)
-                        api_params = self.api_params_handler.build_base_api_params(messages, all_params)
-
-                        # Note: base_url is excluded here as it's handled during client creation
-                        if "base_url" in api_params:
-                            del api_params["base_url"]
-
-                        # Prepare and add tools
-                        api_tools = self._prepare_tools_for_api(tools, all_params)
-                        if api_tools:
-                            api_params["tools"] = api_tools
-
-                        # Proceed with non-MCP streaming
-                        stream = await client.chat.completions.create(**api_params)
-                        async for chunk in self.handle_chat_completions_stream_with_logging(stream, all_params.get("enable_web_search", False), agent_id):
-                            yield chunk
-                except Exception as inner_e:
-                    logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
-                    yield StreamChunk(type="error", error=str(inner_e))
-                finally:
-                    # Ensure the underlying HTTP client is properly closed to avoid event loop issues
-                    await self._cleanup_client(client)
-        else:
-            client = None
-            try:
-                all_params = {**self.config, **kwargs}
-                client = self._create_openai_client(**kwargs)
-
-                async for chunk in self._stream_without_mcp(client, messages, tools, all_params, agent_id):
-                    yield chunk
-            except Exception as e:
-                logger.error(f"Chat Completions API error: {str(e)}")
-                yield StreamChunk(type="error", error=str(e))
-            finally:
-                await self._cleanup_client(client)
-
     def create_tool_result_message(self, tool_call: Dict[str, Any], result_content: str) -> Dict[str, Any]:
         """Create tool result message for Chat Completions format."""
         tool_call_id = self.extract_tool_call_id(tool_call)
@@ -846,6 +653,58 @@ class ChatCompletionsBackend(MCPBackend):
     def extract_tool_result_content(self, tool_result_message: Dict[str, Any]) -> str:
         """Extract content from Chat Completions tool result message."""
         return tool_result_message.get("content", "")
+
+    def _convert_messages_for_mcp_chat_completions(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Convert messages for MCP Chat Completions format if needed."""
+        # For Chat Completions, messages are already in the correct format
+        # Just ensure tool result messages use the correct format
+        converted_messages = []
+
+        for message in messages:
+            if message.get("type") == "function_call_output":
+                # Convert Response API format to Chat Completions format
+                converted_message = {
+                    "role": "tool",
+                    "tool_call_id": message.get("call_id"),
+                    "content": message.get("output", ""),
+                }
+                converted_messages.append(converted_message)
+            else:
+                # Pass through other messages as-is
+                converted_messages.append(message.copy())
+
+        return converted_messages
+
+    def get_provider_name(self) -> str:
+        """Get the name of this provider."""
+        # Check if provider name was explicitly set in config
+        if "provider" in self.config:
+            return self.config["provider"]
+        elif "provider_name" in self.config:
+            return self.config["provider_name"]
+
+        # Try to infer from base_url
+        base_url = self.config.get("base_url", "")
+        if "openai.com" in base_url:
+            return "OpenAI"
+        elif "cerebras.ai" in base_url:
+            return "Cerebras AI"
+        elif "together.xyz" in base_url:
+            return "Together AI"
+        elif "fireworks.ai" in base_url:
+            return "Fireworks AI"
+        elif "groq.com" in base_url:
+            return "Groq"
+        elif "openrouter.ai" in base_url:
+            return "OpenRouter"
+        elif "z.ai" in base_url or "bigmodel.cn" in base_url:
+            return "ZAI"
+        elif "nebius.com" in base_url:
+            return "Nebius AI Studio"
+        elif "moonshot.ai" in base_url or "moonshot.cn" in base_url:
+            return "Kimi"
+        else:
+            return "ChatCompletion"
 
     def get_filesystem_support(self) -> FilesystemSupport:
         """Chat Completions supports filesystem through MCP servers."""
@@ -874,19 +733,3 @@ class ChatCompletionsBackend(MCPBackend):
                 log_stream_chunk(log_prefix, "reasoning_done", "", agent_id)
                 return StreamChunk(type="reasoning_done", content="")
         return None
-
-    def _prepare_tools_for_api(self, tools: List[Dict[str, Any]], all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Prepare and combine framework tools with provider tools for API request."""
-        api_tools = []
-
-        # Add framework tools (convert to Chat Completions format)
-        if tools:
-            converted_tools = self.formatter.format_tools(tools)
-            api_tools.extend(converted_tools)
-
-        # Add provider tools (web search, code interpreter) if enabled
-        provider_tools = self._get_provider_tools(all_params)
-        if provider_tools:
-            api_tools.extend(provider_tools)
-
-        return api_tools
