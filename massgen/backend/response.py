@@ -8,22 +8,10 @@ from __future__ import annotations
 import os
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from ..logger_config import (
-    log_backend_activity,
-    log_backend_agent_message,
-    log_stream_chunk,
-    logger,
-)
+import openai
+from openai import AsyncOpenAI
 
-# MCP integration imports - now inherited from MCPBackend
-from ..mcp_tools import (
-    MCPCircuitBreakerManager,
-    MCPConnectionError,
-    MCPError,
-    MCPServerError,
-    MCPSetupManager,
-    MCPTimeoutError,
-)
+from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
 from .utils.api_params_handler import ResponseAPIParamsHandler
@@ -46,109 +34,8 @@ class ResponseBackend(MCPBackend):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI Response API with unified MCP/non-MCP processing."""
-
-        agent_id = kwargs.get("agent_id", None)
-
-        log_backend_activity(
-            self.get_provider_name(),
-            "Starting stream_with_tools",
-            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
-            agent_id=agent_id,
-        )
-
-        # Catch setup errors by wrapping the context manager itself
-        try:
-            # Use async context manager for proper MCP resource management
-            async with self:
-                import openai
-
-                client = openai.AsyncOpenAI(api_key=self.api_key)
-
-                try:
-                    # Determine if MCP processing is needed
-                    use_mcp = bool(self._mcp_functions)
-
-                    # Use parent class method to yield MCP status chunks
-                    async for status_chunk in super().yield_mcp_status_chunks(use_mcp):
-                        yield status_chunk
-
-                    if use_mcp:
-                        # MCP MODE: Recursive function call detection and execution
-                        logger.info("Using recursive MCP execution mode")
-
-                        current_messages = super()._trim_message_history(messages.copy())
-
-                        # Start recursive MCP streaming
-                        async for chunk in self._stream_with_mcp_tools(current_messages, tools, client, **kwargs):
-                            yield chunk
-
-                    else:
-                        # NON-MCP MODE: Simple passthrough streaming
-                        logger.info("Using no-MCP mode")
-
-                        # Start non-MCP streaming
-                        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
-                            yield chunk
-
-                except Exception as e:
-                    # Enhanced error handling for MCP-related errors during streaming
-                    if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
-                        # Record failure for circuit breaker
-                        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
-                            try:
-                                # Get current mcp_tools servers for circuit breaker failure recording
-                                normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
-                                mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
-
-                                await MCPCircuitBreakerManager.record_failure(
-                                    mcp_tools_servers,
-                                    self._mcp_tools_circuit_breaker,
-                                    str(e),
-                                    backend_name=self.backend_name,
-                                    agent_id=agent_id,
-                                )
-                            except Exception as cb_error:
-                                logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
-
-                        # Handle MCP exceptions with fallback
-                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
-                            yield chunk
-                    else:
-                        logger.error(f"Streaming error: {e}")
-                        yield StreamChunk(type="error", error=str(e))
-
-                finally:
-                    await self._cleanup_client(client)
-        except Exception as e:
-            # Handle exceptions that occur during MCP setup (__aenter__) or teardown
-            # Provide a clear user-facing message and fall back to non-MCP streaming
-            try:
-                import openai
-
-                client = openai.AsyncOpenAI(api_key=self.api_key)
-
-                if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
-                    # Handle MCP exceptions with fallback
-                    async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
-                        yield chunk
-                else:
-                    # Generic setup error: still notify if MCP was configured
-                    if self.mcp_servers:
-                        yield StreamChunk(
-                            type="mcp_status",
-                            status="mcp_unavailable",
-                            content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
-                            source="mcp_setup",
-                        )
-
-                    # Proceed with non-MCP streaming
-                    async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
-                        yield chunk
-            except Exception as inner_e:
-                logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
-                yield StreamChunk(type="error", error=str(inner_e))
-            finally:
-                await self._cleanup_client(client)
+        async for chunk in super().stream_with_tools(messages, tools, **kwargs):
+            yield chunk
 
     async def _stream_with_mcp_tools(
         self,
@@ -173,7 +60,6 @@ class ResponseBackend(MCPBackend):
         response_completed = False
 
         async for chunk in stream:
-            print(chunk)
             if hasattr(chunk, "type"):
                 # Detect function call start
                 if chunk.type == "response.output_item.added" and hasattr(chunk, "item") and chunk.item and getattr(chunk.item, "type", None) == "function_call":
@@ -642,6 +528,9 @@ class ResponseBackend(MCPBackend):
     def extract_tool_result_content(self, tool_result_message: Dict[str, Any]) -> str:
         """Extract content from OpenAI Responses API tool result message."""
         return tool_result_message.get("output", "")
+
+    def _create_client(self, **kwargs) -> AsyncOpenAI:
+        return openai.AsyncOpenAI(api_key=self.api_key)
 
     def _convert_to_dict(self, obj) -> Dict[str, Any]:
         """Convert any object to dictionary with multiple fallback methods."""
