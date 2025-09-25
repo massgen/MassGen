@@ -114,3 +114,20 @@ repos:
     hooks:
       - id: pyroma
         args: [.]
+  - repo: local
+    hooks:
+      - id: check-massgen-python-file-length
+        name: Check massgen Python file length (max 700 lines)
+        entry: >
+          sh -c 'for file in "$@"; do
+            if echo "$file" | grep -q "^massgen/"; then
+              lines=$(wc -l < "$file");
+              if [ "$lines" -gt 700 ]; then
+                echo "Error: $file has $lines lines (max 700 allowed for massgen files)";
+                exit 1;
+              fi;
+            fi;
+          done' --
+        language: system
+        files: ^massgen/.*\.py$
+        pass_filenames: true
