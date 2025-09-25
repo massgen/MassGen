@@ -2143,7 +2143,31 @@ Make your decision and include the JSON at the very end of your response."""
                 {"error": str(e)},
                 agent_id=self.agent_id,
             )
-
+        # Close internal aiohttp session held by google-genai BaseApiClient
+        try:
+            if client is not None:
+                base_client = getattr(client, "_api_client", None)
+                if base_client is not None:
+                    session = getattr(base_client, "_aiohttp_session", None)
+                    if session is not None and hasattr(session, "close"):
+                        if not session.closed:
+                            await session.close()
+                            log_backend_activity(
+                                "gemini",
+                                "Closed google-genai aiohttp session",
+                                {},
+                                agent_id=self.agent_id,
+                            )
+                        base_client._aiohttp_session = None
+                        # Yield control to allow connector cleanup
+                        await asyncio.sleep(0)
+        except Exception as e:
+            log_backend_activity(
+                "gemini",
+                "Failed to close google-genai aiohttp session",
+                {"error": str(e)},
+                agent_id=self.agent_id,
+            )
         # Close internal async transport if exposed
         try:
             if client is not None and hasattr(client, "aio") and client.aio is not None:
