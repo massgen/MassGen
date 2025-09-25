@@ -187,35 +187,11 @@ class MCPBackend(LLMBackend):
             logger.info(f"Successfully initialized MCP sessions with {len(self._mcp_functions)} tools converted to functions")
 
             # Record success for circuit breaker
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client and MCPCircuitBreakerManager:
-                try:
-                    connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, "get_server_names") else []
-                    if connected_server_names:
-                        connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
-                        if connected_server_configs:
-                            await MCPCircuitBreakerManager.record_success(
-                                connected_server_configs,
-                                self._mcp_tools_circuit_breaker,
-                                backend_name=self.backend_name,
-                                agent_id=self.agent_id,
-                            )
-                except Exception as cb_error:
-                    logger.warning(f"Failed to record circuit breaker success: {cb_error}")
+            await self._record_mcp_circuit_breaker_success(servers_to_use)
 
         except Exception as e:
             # Record failure for circuit breaker
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and MCPCircuitBreakerManager:
-                try:
-                    await MCPCircuitBreakerManager.record_failure(
-                        servers_to_use if "servers_to_use" in locals() else mcp_tools_servers if "mcp_tools_servers" in locals() else [],
-                        self._mcp_tools_circuit_breaker,
-                        str(e),
-                        backend_name=self.backend_name,
-                        agent_id=self.agent_id,
-                    )
-                except Exception as cb_error:
-                    logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
-
+            self._record_mcp_circuit_breaker_failure(e, self.agent_id)
             logger.warning(f"Failed to setup MCP sessions: {e}")
             self._mcp_client = None
             self._mcp_initialized = False
@@ -410,10 +386,16 @@ class MCPBackend(LLMBackend):
 
         if "openai" in self.get_provider_name().lower():
             stream = await client.responses.create(**api_params)
+        elif "claude" in self.get_provider_name().lower():
+            if "betas" in api_params:
+                stream = await client.beta.messages.create(**api_params)
+            else:
+                stream = await client.messages.create(**api_params)
         else:
             stream = await client.chat.completions.create(**api_params)
 
-        await self._process_stream(stream, all_params, agent_id)
+        async for chunk in self._process_stream(stream, all_params, agent_id):
+            yield chunk
 
     async def _stream_handle_mcp_exceptions(
         self,
@@ -451,7 +433,8 @@ class MCPBackend(LLMBackend):
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
 
-        await self._stream_without_mcp_tools(messages, tools, client, **kwargs)
+        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+            yield chunk
 
     def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
         """Track MCP function names for fallback filtering."""
@@ -502,6 +485,23 @@ class MCPBackend(LLMBackend):
                 )
             except Exception as cb_error:
                 logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
+
+    async def _record_mcp_circuit_breaker_success(self, servers_to_use: List[Dict[str, Any]]) -> None:
+        """Record MCP success for circuit breaker if enabled."""
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client and MCPCircuitBreakerManager:
+            try:
+                connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, "get_server_names") else []
+                if connected_server_names:
+                    connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
+                    if connected_server_configs:
+                        await MCPCircuitBreakerManager.record_success(
+                            connected_server_configs,
+                            self._mcp_tools_circuit_breaker,
+                            backend_name=self.backend_name,
+                            agent_id=self.agent_id,
+                        )
+            except Exception as cb_error:
+                logger.warning(f"Failed to record circuit breaker success: {cb_error}")
 
     def _trim_message_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Trim message history to prevent unbounded growth."""
