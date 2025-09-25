@@ -729,7 +729,25 @@ class FilesystemManager:
         """
         # Get existing mcp_servers configuration
         mcp_servers = backend_config.get("mcp_servers", [])
-        existing_names = [server.get("name") for server in mcp_servers]
+
+        # Handle both list format and Claude Code dict format
+        if isinstance(mcp_servers, dict):
+            # Claude Code format: {"playwright": {...}, "filesystem": {...}}
+            existing_names = list(mcp_servers.keys())
+            # Convert to list format for append operations
+            converted_servers = []
+            for name, server_config in mcp_servers.items():
+                if isinstance(server_config, dict):
+                    server = server_config.copy()
+                    server["name"] = name
+                    converted_servers.append(server)
+            mcp_servers = converted_servers
+        elif isinstance(mcp_servers, list):
+            # List format: [{"name": "playwright", ...}, ...]
+            existing_names = [server.get("name") for server in mcp_servers if isinstance(server, dict)]
+        else:
+            existing_names = []
+            mcp_servers = []
 
         try:
             # Add filesystem server if missing

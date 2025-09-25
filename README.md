@@ -385,7 +385,7 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 # Weather service with GPT-5
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
-  "What's the weather forecast for San Francisco this week?"
+  "What's the weather forecast for New York this week?"
 
 # Multi-tool MCP with Gemini - Search + Weather + Filesystem
 uv run python -m massgen.cli \
@@ -624,11 +624,16 @@ uv run python -m massgen.cli \
 
 **Claude Code (Development Tools)**
 ```bash
-# Professional development environment
+# Professional development environment with auto-configured workspace
 uv run python -m massgen.cli \
   --backend claude_code \
   --model sonnet \
   "Create a Flask web app with authentication"
+
+# Default workspace directories created automatically:
+# - workspace1/              (working directory)
+# - snapshots/              (workspace snapshots)
+# - temp_workspaces/        (temporary agent workspaces)
 ```
 
 **Local Models (LM Studio - v0.0.7+)**
@@ -675,6 +680,7 @@ uv run python -m massgen.cli \
 **Web Automation:** (still in test)
 ```bash
 # Browser automation with screenshots and reporting
+# Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
   "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"

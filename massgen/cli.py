@@ -312,7 +312,11 @@ def create_simple_config(
     if base_url:
         backend_config["base_url"] = base_url
 
-    return {
+    # Add required workspace configuration for Claude Code backend
+    if backend_type == "claude_code":
+        backend_config["cwd"] = "workspace1"
+
+    config = {
         "agent": {
             "id": "agent1",
             "backend": backend_config,
@@ -320,6 +324,15 @@ def create_simple_config(
         },
         "ui": {"display_type": "rich_terminal", "logging_enabled": True},
     }
+
+    # Add orchestrator config with snapshot/temp dirs for Claude Code
+    if backend_type == "claude_code":
+        config["orchestrator"] = {
+            "snapshot_storage": "snapshots",
+            "agent_temporary_workspace": "temp_workspaces",
+        }
+
+    return config
 
 
 async def run_question_with_history(
@@ -785,6 +798,39 @@ Environment Variables:
             logger.debug("Creating agents from config...")
         # Extract orchestrator config for agent setup
         orchestrator_cfg = config.get("orchestrator", {})
+
+        # Check if any agent has cwd (filesystem support) and validate orchestrator config
+        agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
+        has_cwd = any("cwd" in agent.get("backend", {}) for agent in agent_entries)
+
+        if has_cwd:
+            if not orchestrator_cfg:
+                raise ConfigurationError(
+                    "Agents with 'cwd' (filesystem support) require orchestrator configuration.\n"
+                    "Please add an 'orchestrator' section to your config file.\n\n"
+                    "Example (customize paths as needed):\n"
+                    "orchestrator:\n"
+                    '  snapshot_storage: "your_snapshot_dir"\n'
+                    '  agent_temporary_workspace: "your_temp_dir"',
+                )
+
+            # Check for required fields in orchestrator config
+            if "snapshot_storage" not in orchestrator_cfg:
+                raise ConfigurationError(
+                    "Missing 'snapshot_storage' in orchestrator configuration.\n"
+                    "This is required for agents with filesystem support (cwd).\n\n"
+                    "Add to your orchestrator section:\n"
+                    '  snapshot_storage: "your_snapshot_dir"  # Directory for workspace snapshots',
+                )
+
+            if "agent_temporary_workspace" not in orchestrator_cfg:
+                raise ConfigurationError(
+                    "Missing 'agent_temporary_workspace' in orchestrator configuration.\n"
+                    "This is required for agents with filesystem support (cwd).\n\n"
+                    "Add to your orchestrator section:\n"
+                    '  agent_temporary_workspace: "your_temp_dir"  # Directory for temporary agent workspaces',
+                )
+
         agents = create_agents_from_config(config, orchestrator_cfg)
 
         if not agents:
