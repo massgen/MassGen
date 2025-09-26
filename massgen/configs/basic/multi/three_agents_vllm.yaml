@@ -1,0 +1,20 @@
+# MassGen Three Agent Configuration with vllm and opensource models
+agents:
+  - id: "gpt-oss"
+    backend:
+      type: "chatcompletion"
+      model: "gpt-oss-120b"
+      base_url: "https://api.cerebras.ai/v1"
+  - id: "qwen"
+    backend:
+      type: "vllm"
+      model: "Qwen/Qwen3-4B"
+      base_url: "http://localhost:8000/v1" #Change this to your vLLM server
+  - id: "glm"
+    backend:
+      type: "chatcompletion"
+      model: "glm-4.5"
+      base_url: "https://api.z.ai/api/paas/v4"
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
