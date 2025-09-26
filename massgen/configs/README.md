@@ -242,6 +242,12 @@ Most configurations use environment variables for API keys:
 - `massgen/configs/tools/filesystem/fs_permissions_test.yaml` - Permission-controlled file sharing
 - `massgen/configs/tools/filesystem/claude_code_context_sharing.yaml` - Agent workspace sharing
 
+**Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/case_studies/v0.0.21-filesystem-permissions.md)
+```bash
+# Multi-agent collaboration with granular filesystem permissions
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+```
+
 ### v0.0.20
 **New Features:** Claude MCP Support with Recursive Execution
 - `massgen/configs/tools/mcp/claude_mcp_example.yaml` - Claude with MCP tools
@@ -252,10 +258,26 @@ Most configurations use environment variables for API keys:
 - `massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml` - GPT-5 with MCP tools
 - `massgen/configs/tools/mcp/gpt5mini_claude_code_discord_mcp_example.yaml` - Multi-agent MCP
 
+### v0.0.16
+**New Features:** Unified Filesystem Support with MCP Integration
+**Case Study:** [Cross-Backend Collaboration with Gemini MCP Filesystem](../../docs/case_studies/unified-filesystem-mcp-integration.md)
+```bash
+# Gemini and Claude Code agents with unified filesystem via MCP
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
+```
+
 ### v0.0.15
 **New Features:** Gemini MCP Integration
 - `massgen/configs/tools/mcp/gemini_mcp_example.yaml` - Gemini with weather MCP
 - `massgen/configs/tools/mcp/multimcp_gemini.yaml` - Multiple MCP servers
+
+### v0.0.12 - v0.0.14
+**New Features:** Enhanced Logging and Workspace Management
+**Case Study:** [Claude Code Workspace Management with Comprehensive Logging](../../docs/case_studies/claude-code-workspace-management.md)
+```bash
+# Multi-agent Claude Code collaboration with enhanced workspace isolation
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+```
 
 ### v0.0.10
 **New Features:** Azure OpenAI Support
