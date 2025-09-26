@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 vLLM backend using an OpenAI-compatible Chat Completions API.
 
@@ -12,9 +13,10 @@ vLLM-specific extra_body parameters.
 from __future__ import annotations
 
 import os
-from typing import Optional, List, Dict, Any, AsyncGenerator
-from .chat_completions import ChatCompletionsBackend
+from typing import Any, AsyncGenerator, Dict, List, Optional
+
 from .base import StreamChunk
+from .chat_completions import ChatCompletionsBackend
 
 
 class VLLMBackend(ChatCompletionsBackend):
@@ -32,7 +34,7 @@ class VLLMBackend(ChatCompletionsBackend):
     def get_provider_name(self) -> str:
         """Return the provider name for this backend."""
         return "vLLM"
-        
+
     def _build_vllm_extra_body(self, kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Build vLLM-specific extra_body parameters and strip them from kwargs."""
         extra_body: Dict[str, Any] = {}
@@ -53,7 +55,10 @@ class VLLMBackend(ChatCompletionsBackend):
         return extra_body
 
     async def stream_with_tools(
-        self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI-compatible Chat Completions API with vLLM-specific parameters.
         vLLM supports additional parameters through extra_body for features like
@@ -72,7 +77,7 @@ class VLLMBackend(ChatCompletionsBackend):
 
     def get_supported_builtin_tools(self) -> List[str]:  # type: ignore[override]
         """Return list of supported builtin tools.
-        
+
         vLLM (local OpenAI-compatible) does not provide provider-specific builtin tools.
         """
         return []
