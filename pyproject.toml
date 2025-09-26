@@ -45,6 +45,7 @@ dependencies = [
     "aiohttp>=3.8.0",
     "fastmcp>=2.12.3",
     "sphinx-rtd-theme>=3.0.2",
+    "sphinx-book-theme>=1.1.4",
 ]
 
 [project.optional-dependencies]
@@ -219,4 +220,5 @@ dev = [
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
     "sphinx-rtd-theme>=3.0.2",
+    "sphinx-book-theme>=1.1.4",
 ]

@@ -78,12 +78,12 @@ autodoc_default_options = {
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-# Try to use sphinx_rtd_theme, fall back to alabaster if not available
+# Try to use sphinx_book_theme, fall back to alabaster if not available
 try:
-    html_theme = "sphinx_rtd_theme"
+    html_theme = "sphinx_book_theme"
 except ImportError:
     html_theme = "alabaster"
-    print("Warning: sphinx_rtd_theme not installed. Using alabaster theme.")
+    print("Warning: sphinx_book_theme not installed. Using alabaster theme.")
 html_static_path = ["_static"]
 
 # Theme options
