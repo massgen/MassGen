@@ -55,6 +55,7 @@ from .backend.lmstudio import LMStudioBackend
 
 # Import main classes for convenience
 from .backend.response import ResponseBackend
+from .backend.vllm import VLLMBackend
 from .chat_agent import (
     ChatAgent,
     ConfigurableAgent,
@@ -77,6 +78,7 @@ __all__ = [
     "GeminiBackend",
     "GrokBackend",
     "LMStudioBackend",
+    "VLLMBackend",
     # Agents
     "ChatAgent",
     "SingleAgent",
