@@ -5,6 +5,126 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.23] - 2025-09-24
+
+### Added
+- **Backend Architecture Refactoring**: Major consolidation of MCP functionality
+  - New `base_with_mcp.py` base class consolidating common MCP functionality (488 lines)
+  - Extracted shared MCP logic from individual backends into unified base class
+  - Standardized MCP client initialization and error handling across all backends
+
+- **Formatter Module**: Extracted message and tool formatting logic into dedicated module
+  - New `massgen/formatter/` module with specialized formatters
+  - `message_formatter.py`: Handles message formatting across backends
+  - `tool_formatter.py`: Manages tool call formatting
+  - `mcp_tool_formatter.py`: Specialized MCP tool formatting
+
+### Changed
+- **Backend Consolidation**: Massive code deduplication across backends
+  - Reduced `chat_completions.py` by 700+ lines
+  - Reduced `claude.py` by 700+ lines
+  - Simplified `response.py` by 468+ lines
+  - Total reduction: ~1,932 lines removed across core backend files
+
+### Fixed
+- **Coordination Table Display**: Fixed escape key handling on macOS
+  - Updated `create_coordination_table.py` and `rich_terminal_display.py`
+
+### Technical Details
+- **Commits**: 20+ commits focusing on backend refactoring and infrastructure improvements
+- **Files Modified**: 100+ files across backend, documentation, CI/CD, and presentation components
+- **Lines Changed**: Net reduction of ~1,932 lines through backend consolidation
+- **Major Refactor**: MCP functionality extracted into shared `base_with_mcp.py` base class
+- **Contributors**: @qidanrui @ncrispino @Henry-811 and the MassGen team
+
+## [0.0.22] - 2025-09-22
+
+### Added
+- **Workspace Copy Tools via MCP**: New file copying capabilities for efficient workspace operations
+  - Added `workspace_copy_server.py` with MCP-based file copying functionality (369 lines)
+  - Support for copying files and directories between workspaces
+  - Efficient handling of large files with streaming operations
+  - Testing infrastructure for copy operations
+
+- **Configuration Organization**: Major restructuring of configuration files for better usability
+  - New hierarchical structure: `basic/`, `providers/`, `tools/`, `teams/` directories
+  - Added comprehensive `README.md` for configuration guide
+  - New `BACKEND_CONFIGURATION.md` with detailed backend setup
+  - Organized configs by use case and provider for easier navigation
+  - Added provider-specific examples (Claude, OpenAI, Gemini, Azure)
+
+- **Enhanced File Operations**: Improved file handling for large-scale operations
+  - Clear all temporary workspaces at startup for clean state
+  - Enhanced security validation in MCP tools
+
+### Changed
+
+- **Workspace Management**: Optimized workspace operations and path handling
+  - Enhanced `filesystem_manager.py` with 193 additional lines
+  - Run MCP servers through FastMCP to avoid banner displays
+
+- **Backend Enhancements**: Improved backend capabilities
+  - Improved `response.py` with better error handling
+
+### Fixed
+- **Write Tool Call Issues**: Resolved large character count problems
+  - Fixed write tool call issues when dealing with large character counts
+
+- **Path Resolution Issues**: Resolved various path-related bugs
+  - Fixed relative/absolute path workspace issues
+  - Improved path validation and normalization
+
+- **Documentation Fixes**: Corrected multiple documentation issues
+  - Fixed broken links in case studies
+  - Fixed config file paths in documentation and examples
+  - Corrected example commands with proper paths
+
+### Technical Details
+- **Commits**: 50+ commits including workspace copy, configuration restructuring, and documentation improvements
+- **Files Modified**: 90+ files across configs, backend, mcp_tools, and documentation
+- **Major Refactoring**: Configuration file reorganization into logical categories
+- **New Documentation**: Added 762+ lines of documentation for configs and backends
+- **Contributors**: @ncrispino @qidanrui @Henry-811 and the MassGen team
+
+## [0.0.21] - 2025-09-19
+
+### Added
+- **Advanced Filesystem Permissions System**: Comprehensive permission management for agent file access
+  - New `PathPermissionManager` class for granular permission validation
+  - User context paths with configurable READ/WRITE permissions for multi-agent file sharing
+  - Test suite for permission validation in `test_path_permission_manager.py`
+  - Documentation in `permissions_and_context_files.md` for implementation guide
+
+- **Function Hook Manager**: Per-agent function call permission system
+  - Refactored `FunctionHookManager` to be per-agent rather than global
+  - Pre-tool-use hooks for validating file operations before execution
+  - Support for write permission enforcement during context agent operations
+  - Integration with all function-based backends (OpenAI, Claude, Chat Completions)
+
+- **Grok MCP Integration**: Extended MCP support to Grok backend
+  - Migrated Grok backend to inherit from Chat Completions backend
+  - Full MCP server support for Grok including stdio and HTTP transports
+  - Filesystem support through MCP servers
+
+- **New Configuration Files**: Added test and example configurations
+  - `grok3_mini_mcp_test.yaml`: Grok MCP testing configuration
+  - `grok3_mini_mcp_example.yaml`: Grok MCP usage example
+  - `grok3_mini_streamable_http_test.yaml`: Grok HTTP streaming test
+  - `grok_single_agent.yaml`: Single Grok agent configuration
+  - `fs_permissions_test.yaml`: Filesystem permissions testing configuration
+
+### Changed
+- **Backend Architecture**: Unified backend implementations and permission support
+  - Grok backend refactored to use Chat Completions backend
+  - All backends now support per-agent permission management
+  - Enhanced context file support across Claude, Gemini, and OpenAI backends
+
+### Technical Details
+- **Commits**: 20+ commits including permission system, Grok MCP, and terminal improvements
+- **Files Modified**: 40+ files across backends, MCP tools, permissions, and display modules
+- **New Features**: Filesystem permissions, per-agent hooks, Grok MCP via Chat Completions
+- **Contributors**: @Eric-Shang @ncrispino @qidanrui @Henry-811 and the MassGen team
+
 ## [0.0.20] - 2025-09-17
 
 ### Added
@@ -223,7 +343,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Debug mode support via `--debug` CLI flag for verbose logging
   - Consistent logging format across all backends, including Claude, Gemini, Grok, Azure OpenAI, and other providers
   - Color-coded log levels for better visibility (DEBUG: cyan, INFO: green)
-  
+
 - **Windows Platform Support**: Enhanced cross-platform compatibility
   - Windows-specific fixes for terminal display and color output
   - Improved path handling for Windows file systems
@@ -624,7 +744,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Backend Response Handling**: Multiple bug fixes in response.py for proper parameter handling
 
 ### Changed
-- **Documentation Updates**: 
+- **Documentation Updates**:
   - Updated README.md to highlight GPT-5 series support
   - Changed example commands to use GPT-5 models
   - Added new backend configuration examples with GPT-5 specific parameters

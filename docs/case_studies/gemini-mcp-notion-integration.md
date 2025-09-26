@@ -59,14 +59,14 @@ MassGen v0.0.15 introduces the Model Context Protocol (MCP) integration for Gemi
 "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 
 ### Baseline Config
-Prior to v0.0.15, Gemini agents would use a standard multi-agent configuration like `massgen/configs/two_agents_gemini.yaml` without any MCP server configuration.
+Prior to v0.0.15, Gemini agents would use a standard multi-agent configuration like `massgen/configs/basic/multi/two_agents_gemini.yaml` without any MCP server configuration.
 
 ### Baseline Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/two_agents_gemini.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
+uv run python -m massgen.cli --config massgen/configs/basic/multi/two_agents_gemini.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 ```
 
-### Expected Result 
+### Expected Result
 Agents would generate excellent todo list content but would be unable to create Notion pages, store the content, or verify the results. They would likely provide instructions for manual copy-pasting to Notion instead.
 
 <h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
@@ -106,7 +106,7 @@ The new MCP integration would be considered successful if:
 MassGen v0.0.15 (September 5, 2025)
 
 ### New Config
-Configuration file: [`massgen/configs/gemini_notion_mcp.yaml`](../../massgen/configs/gemini_notion_mcp.yaml)
+Configuration file: [`massgen/configs/tools/mcp/gemini_notion_mcp.yaml`](../../massgen/configs/tools/mcp/gemini_notion_mcp.yaml)
 
 Key MCP configuration:
 ```yaml
@@ -121,7 +121,7 @@ mcp_servers:
 
 ### Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_notion_mcp.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_notion_mcp.yaml "Generate and refine a structured Todo list for learning about LLM multi-agent systems, complete with exciting objectives and fun activities. Each time you have a new version, create a new Notion page with a title and the current date and time (including hours, minutes, seconds, and milliseconds) to store the list. Then, verify that you can access the page and read back the content. Create this page as a subpage under an existing notion page called 'LLM Agent Research (x)', where x is either 1 or 2 depending on which you have access to."
 ```
 
 <h2 id="agents">🤖 Agents</h2>
@@ -154,7 +154,7 @@ A key change is that MassGen agents can now **interact with external systems** t
 - **Real artifacts created**: Actual Notion pages with URLs that persist beyond the MassGen session
 - **Read-back verification by both agents**: `API-get-block-children` called by Agent 1 (≈14:12:30–14:12:43) and Agent 2 (≈14:12:37–14:12:43) to confirm content accessibility.
 ```
-🔧 MCP: ✅ MCP Tool Response from API-post-page: 
+🔧 MCP: ✅ MCP Tool Response from API-post-page:
 {"object":"page","id":"26480a06-b67b-81b4-b5a5-dbbf472df2cc",...}
 ```
 
@@ -194,7 +194,7 @@ The success of this case study supports the MCP integration approach and demonst
 
 <h3 id="status-tracker">📌 Status Tracker</h3>
 - ✅ Planning phase completed
-- ✅ Features implemented  
+- ✅ Features implemented
 - ✅ Testing completed
 - ✅ Demo recorded
 - ✅ Results analyzed

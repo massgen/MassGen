@@ -1,15 +1,11 @@
-import inspect
+# -*- coding: utf-8 -*-
+import ast
 import json
-import random
+import math
+import operator
 import subprocess
 import sys
-import time
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Union, Optional, Dict, List
-import ast
-import operator
-import math
+from typing import Any, Dict, Optional
 
 # Global tool registry
 register_tool = {}
@@ -51,7 +47,7 @@ def python_interpreter(code: str, timeout: Optional[int] = 10) -> Dict[str, Any]
                 "returncode": result.returncode,
                 "success": result.returncode == 0,
                 "error": None,
-            }
+            },
         )
 
     except subprocess.TimeoutExpired:
@@ -62,7 +58,7 @@ def python_interpreter(code: str, timeout: Optional[int] = 10) -> Dict[str, Any]
                 "returncode": -1,
                 "success": False,
                 "error": f"Code execution timed out after {timeout} seconds",
-            }
+            },
         )
 
     except Exception as e:
@@ -73,7 +69,7 @@ def python_interpreter(code: str, timeout: Optional[int] = 10) -> Dict[str, Any]
                 "returncode": -1,
                 "success": False,
                 "error": f"Failed to execute code: {str(e)}",
-            }
+            },
         )
 
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen - Multi-Agent System Generator (Foundation Release)
 
@@ -46,26 +47,27 @@ Usage:
             print(chunk.content, end="")
 """
 
-# Import main classes for convenience
-from .backend.response import ResponseBackend
+from .agent_config import AgentConfig
 from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
 from .backend.lmstudio import LMStudioBackend
+
+# Import main classes for convenience
+from .backend.response import ResponseBackend
 from .chat_agent import (
     ChatAgent,
-    SingleAgent,
     ConfigurableAgent,
-    create_simple_agent,
+    SingleAgent,
+    create_computational_agent,
     create_expert_agent,
     create_research_agent,
-    create_computational_agent,
+    create_simple_agent,
 )
-from .orchestrator import Orchestrator, create_orchestrator
 from .message_templates import MessageTemplates, get_templates
-from .agent_config import AgentConfig
+from .orchestrator import Orchestrator, create_orchestrator
 
-__version__ = "0.0.20"
+__version__ = "0.0.23"
 __author__ = "MassGen Contributors"
 
 __all__ = [

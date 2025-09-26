@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MCP (Model Context Protocol) integration for MassGen.
 
@@ -11,37 +12,50 @@ Features:
 - Modern transport methods (stdio, streamable-http)
 """
 
-from .client import MCPClient, MultiMCPClient
-from .circuit_breaker import MCPCircuitBreaker, CircuitBreakerConfig
-from .exceptions import (
-    MCPError,
-    MCPConnectionError,
-    MCPServerError,
-    MCPValidationError,
-    MCPTimeoutError,
-    MCPAuthenticationError,
-    MCPConfigurationError,
-    MCPResourceError,
-    handle_mcp_error,
-    format_error_chain,
-)
-from .security import prepare_command, sanitize_tool_name, validate_url
-from .config_validator import MCPConfigValidator, validate_mcp_integration
 from mcp import types as mcp_types
 
 # shared utilities for backend integration
 from .backend_utils import (
     Function,
-    MCPErrorHandler,
-    MCPRetryHandler,
-    MCPMessageManager,
-    MCPConfigHelper,
     MCPCircuitBreakerManager,
-    MCPResourceManager,
-    MCPSetupManager,
+    MCPConfigHelper,
+    MCPErrorHandler,
     MCPExecutionManager,
+    MCPMessageManager,
+    MCPResourceManager,
+    MCPRetryHandler,
+    MCPSetupManager,
 )
+from .circuit_breaker import CircuitBreakerConfig, MCPCircuitBreaker
+from .client import MCPClient, MultiMCPClient
+from .config_validator import MCPConfigValidator, validate_mcp_integration
 from .converters import MCPConverters, MCPFormatValidator
+from .exceptions import (
+    MCPAuthenticationError,
+    MCPConfigurationError,
+    MCPConnectionError,
+    MCPError,
+    MCPResourceError,
+    MCPServerError,
+    MCPTimeoutError,
+    MCPValidationError,
+    format_error_chain,
+    handle_mcp_error,
+)
+
+# Permission management
+from .filesystem_manager import PathPermissionManagerHook
+
+# Hook system for function call interception
+from .hooks import (
+    FunctionHook,
+    FunctionHookManager,
+    HookResult,
+    HookType,
+    PermissionClientSession,
+    convert_sessions_to_permission_sessions,
+)
+from .security import prepare_command, sanitize_tool_name, validate_url
 
 __all__ = [
     # Core client classes
@@ -83,4 +97,13 @@ __all__ = [
     "MCPExecutionManager",
     "MCPConverters",
     "MCPFormatValidator",
+    # Hook system
+    "HookType",
+    "FunctionHook",
+    "HookResult",
+    "FunctionHookManager",
+    "PermissionClientSession",
+    "convert_sessions_to_permission_sessions",
+    # Permission management
+    "PathPermissionManagerHook",
 ]

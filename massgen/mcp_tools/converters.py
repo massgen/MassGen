@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
 """
 MCP format conversion utilities for different Backends.
 Provides consistent format conversion across all backend implementations.
 """
 from __future__ import annotations
-from typing import Dict, List, Any, Tuple
+
+from typing import Any, Dict, List, Tuple
+
 from ..logger_config import logger
 
 # Import Function class
@@ -17,9 +20,7 @@ class MCPConverters:
     """Format conversion utilities for different Backends."""
 
     @staticmethod
-    def to_chat_completions_format(
-        functions: Dict[str, Function]
-    ) -> List[Dict[str, Any]]:
+    def to_chat_completions_format(functions: Dict[str, Function]) -> List[Dict[str, Any]]:
         """Convert Function objects to Chat Completions format.
 
         Args:
@@ -37,13 +38,9 @@ class MCPConverters:
                 tool = function.to_chat_completions_format()
                 converted_tools.append(tool)
             except Exception as e:
-                logger.error(
-                    f"Failed to convert function {function.name} to Chat Completions format: {e}"
-                )
+                logger.error(f"Failed to convert function {function.name} to Chat Completions format: {e}")
 
-        logger.debug(
-            f"Converted {len(converted_tools)} functions to Chat Completions format"
-        )
+        logger.debug(f"Converted {len(converted_tools)} functions to Chat Completions format")
         return converted_tools
 
     @staticmethod
@@ -65,13 +62,9 @@ class MCPConverters:
                 tool = function.to_openai_format()
                 converted_tools.append(tool)
             except Exception as e:
-                logger.error(
-                    f"Failed to convert function {function.name} to Response API format: {e}"
-                )
+                logger.error(f"Failed to convert function {function.name} to Response API format: {e}")
 
-        logger.debug(
-            f"Converted {len(converted_tools)} functions to Response API format"
-        )
+        logger.debug(f"Converted {len(converted_tools)} functions to Response API format")
         return converted_tools
 
     @staticmethod
@@ -93,9 +86,7 @@ class MCPConverters:
                 tool = function.to_claude_format()
                 converted_tools.append(tool)
             except Exception as e:
-                logger.error(
-                    f"Failed to convert function {function.name} to Claude format: {e}"
-                )
+                logger.error(f"Failed to convert function {function.name} to Claude format: {e}")
 
         logger.debug(f"Converted {len(converted_tools)} functions to Claude format")
         return converted_tools
@@ -110,9 +101,7 @@ class MCPConverters:
         return ["chat_completions", "response_api", "claude"]
 
     @staticmethod
-    def convert_to_format(
-        functions: Dict[str, Function], format_type: str
-    ) -> List[Dict[str, Any]]:
+    def convert_to_format(functions: Dict[str, Function], format_type: str) -> List[Dict[str, Any]]:
         """Convert functions to specified format.
 
         Args:
@@ -135,9 +124,7 @@ class MCPConverters:
             return MCPConverters.to_claude_format(functions)
         else:
             supported = MCPConverters.get_supported_formats()
-            raise ValueError(
-                f"Unsupported format type: {format_type}. Supported: {supported}"
-            )
+            raise ValueError(f"Unsupported format type: {format_type}. Supported: {supported}")
 
     @staticmethod
     def validate_function_dict(functions: Any) -> bool:
@@ -252,9 +239,7 @@ class MCPFormatValidator:
         return all(field in tool for field in required_fields)
 
     @staticmethod
-    def validate_tools_for_format(
-        tools: List[Dict[str, Any]], format_type: str
-    ) -> Tuple[bool, List[str]]:
+    def validate_tools_for_format(tools: List[Dict[str, Any]], format_type: str) -> Tuple[bool, List[str]]:
         """Validate list of tools for specified format.
 
         Args:
@@ -285,8 +270,6 @@ class MCPFormatValidator:
 
             if not valid:
                 tool_name = tool.get("name", f"tool_{i}")
-                errors.append(
-                    f"Invalid {format_type} format for tool '{tool_name}' at index {i}"
-                )
+                errors.append(f"Invalid {format_type} format for tool '{tool_name}' at index {i}")
 
         return len(errors) == 0, errors

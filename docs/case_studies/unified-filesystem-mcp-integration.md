@@ -67,7 +67,7 @@ ui:
 
 ### Baseline Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 ```
 
 <h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
@@ -107,7 +107,7 @@ The unified filesystem support would be considered successful if:
 MassGen v0.0.16 (September 8, 2025)
 
 ### New Configuration
-Configuration file: [`massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml`](../../massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml)
+Configuration file: [`massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml`](../../massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml)
 
 Key breakthrough - **identical filesystem configuration across backends**:
 ```yaml
@@ -131,7 +131,7 @@ orchestrator:
 
 ### Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
 ```
 
 <h2 id="agents">🤖 Agents</h2>

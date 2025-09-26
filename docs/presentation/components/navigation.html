@@ -22,20 +22,20 @@
         // Slide titles for navigation
         const slideTitles = [
             "Title - M2L Summer School",
-            "Problem - Single-Agent Limitation", 
+            "Problem - Single-Agent Limitation",
             "Solution - Multi-Agent Collaboration",
             "AG2 - Research Foundation",
             "Evidence - Performance Gains",
             "Architecture - System Design",
             "Features & Capabilities",
             "Tech - Async Streaming",
-            "Tech - Backend Challenges", 
+            "Tech - Backend Challenges",
             "Tech - Binary Decision Framework",
             "Context Sharing - Challenge",
             "Context Sharing - Solution v0.0.12",
             "Context Sharing - In Action",
             "Benchmarking - Multi-Domain Performance",
-            "Case Study - Success Through Collaboration", 
+            "Case Study - Success Through Collaboration",
             "Case Study - When Coordination Fails",
             "Coordination Psychology - Voting Behavior",
             "Evolution",
@@ -63,14 +63,14 @@
             slides[currentSlide].classList.remove('active');
             currentSlide = (n + totalSlides) % totalSlides;
             slides[currentSlide].classList.add('active');
-            
+
             document.getElementById('current-slide').textContent = currentSlide + 1;
-            
+
             // Update navigation dots
             document.querySelectorAll('.nav-dot').forEach((dot, index) => {
                 dot.classList.toggle('active', index === currentSlide);
             });
-            
+
             // Update navigation buttons
             document.getElementById('prev-btn').disabled = currentSlide === 0;
             document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
@@ -84,16 +84,34 @@
             }
         }
 
+        // Navigation visibility toggle
+        let navigationVisible = true;
+
+        function toggleNavigation() {
+            navigationVisible = !navigationVisible;
+            const navigation = document.querySelector('.navigation');
+            const slideNav = document.querySelector('.slide-nav');
+            const slideCounter = document.querySelector('.slide-counter');
+
+            const display = navigationVisible ? '' : 'none';
+
+            if (navigation) navigation.style.display = display;
+            if (slideNav) slideNav.style.display = display;
+            if (slideCounter) slideCounter.style.display = display;
+
+            console.log(navigationVisible ? 'Navigation shown' : 'Navigation hidden');
+        }
+
         // Enhanced keyboard navigation
         document.addEventListener('keydown', (e) => {
             // Prevent default behavior if we handle the key
-            const handledKeys = ['ArrowRight', 'ArrowLeft', ' ', 'Home', 'End'];
+            const handledKeys = ['ArrowRight', 'ArrowLeft', ' ', 'Home', 'End', 'n', 'N'];
             const numberKeys = e.key >= '1' && e.key <= '9';
-            
+
             if (handledKeys.includes(e.key) || numberKeys) {
                 e.preventDefault();
             }
-            
+
             switch(e.key) {
                 case 'ArrowRight':
                 case ' ':
@@ -107,6 +125,10 @@
                     break;
                 case 'End':
                     showSlide(totalSlides - 1);
+                    break;
+                case 'n':
+                case 'N':
+                    toggleNavigation();
                     break;
                 default:
                     if (numberKeys) {

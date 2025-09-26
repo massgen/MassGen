@@ -1,0 +1,23 @@
+# MassGen Configuration
+# Usage:
+# uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test.yaml " Please create a Python script with a hello world function in various fictional languages and save it directly into a file in your workspace."
+agents:
+  - id: "gemini_agent1"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace1"  # Working directory for file operations
+
+  - id: "gemini_agent2"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace2"  # Working directory for file operations
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
