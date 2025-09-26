@@ -1,4 +1,4 @@
-# MassGen Two Agent Configuration both calling the same vLLM model
+# MassGen Two Agent Configuration both calling the same vLLM model for testing
 agents:
   - id: "qwen1"
     backend:
@@ -10,7 +10,7 @@ agents:
       type: "vllm"
       model: "Qwen/Qwen3-0.6B"
       base_url: "http://localhost:8000/v1"
- 
+
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
