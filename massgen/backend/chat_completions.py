@@ -13,6 +13,7 @@ Supported Providers and Environment Variables:
 - Nebius AI Studio: NEBIUS_API_KEY
 - OpenRouter: OPENROUTER_API_KEY
 - ZAI: ZAI_API_KEY
+- POE: POE_API_KEY
 """
 
 from __future__ import annotations
@@ -620,6 +621,8 @@ class ChatCompletionsBackend(MCPBackend):
             return "Nebius AI Studio"
         elif "moonshot.ai" in base_url or "moonshot.cn" in base_url:
             return "Kimi"
+        elif "poe.com" in base_url:
+            return "POE"
         else:
             return "ChatCompletion"
 

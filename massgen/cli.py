@@ -126,6 +126,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - Groq (groq.com) -> GROQ_API_KEY
     - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
     - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
+    - POE (poe.com) -> POE_API_KEY
     """
     backend_type = backend_type.lower()
 
@@ -191,6 +192,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 api_key = os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
                 if not api_key:
                     raise ConfigurationError("Kimi/Moonshot API key not found. Set MOONSHOT_API_KEY or KIMI_API_KEY or provide in config.")
+            elif base_url and "poe.com" in base_url:
+                api_key = os.getenv("POE_API_KEY")
+                if not api_key:
+                    raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -661,6 +666,7 @@ Environment Variables:
     GROQ_API_KEY        - For Groq (groq.com)
     NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
     OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
+    POE_API_KEY         - For POE (poe.com)
 
   Note: The chatcompletion backend auto-detects the provider from the base_url
         and uses the appropriate environment variable for API key.
