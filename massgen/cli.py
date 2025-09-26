@@ -39,6 +39,7 @@ from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
+from .backend.vllm import VLLMBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .frontend.coordination_ui import CoordinationUI
 from .orchestrator import Orchestrator
@@ -205,6 +206,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
         return LMStudioBackend(**kwargs)
 
+    elif backend_type == "vllm":
+        # vLLM local server (OpenAI-compatible). Defaults handled by backend.
+        return VLLMBackend(**kwargs)
+
     elif backend_type == "claude_code":
         # ClaudeCodeBackend using claude-code-sdk-python
         # Authentication handled by backend (API key or subscription)
@@ -277,6 +282,8 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         elif backend_type_lower == "lmstudio":
             agent_config = AgentConfig.create_lmstudio_config(**backend_params)
+        elif backend_type_lower == "vllm":
+            agent_config = AgentConfig.create_vllm_config(**backend_params)
         else:
             agent_config = AgentConfig(backend_params=backend_config)
 

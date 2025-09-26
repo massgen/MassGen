@@ -213,6 +213,16 @@ class AgentConfig:
         if enable_web_search:
             backend_params["enable_web_search"] = True
         return cls(backend_params=backend_params)
+    
+    @classmethod
+    def create_vllm_config(cls, model: str = None, **kwargs) -> "AgentConfig":
+        """Create vLLM configuration (OpenAI-compatible local server).
+        """
+        backend_params = {"model": model, **kwargs}
+        if model is None:
+            raise ValueError("Model is required for vLLM configuration")
+
+        return cls(backend_params=backend_params)
 
     @classmethod
     def create_gemini_config(
