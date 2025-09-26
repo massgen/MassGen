@@ -113,27 +113,6 @@ jobs:
           draft: false
           prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
 
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/*.tar.gz
-          asset_name: ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION_WITHOUT_V }}.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Upload wheel if exists
-        if: hashFiles('dist/*.whl') != ''
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/*.whl
-          asset_name: ${{ github.event.repository.name }}-${{ steps.version.outputs.VERSION_WITHOUT_V }}-py3-none-any.whl
-          asset_content_type: application/zip
-
       - name: Post release summary
         run: |
           echo "### 🎉 Release ${{ steps.version.outputs.VERSION }} Created Successfully!" >> $GITHUB_STEP_SUMMARY
