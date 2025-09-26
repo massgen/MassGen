@@ -169,6 +169,7 @@ class FilesystemManager:
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
             ],
+            "cwd": str(self.cwd),  # Set working directory for filesystem server (important for relative paths)
         }
 
         # Add all managed paths from path permission manager

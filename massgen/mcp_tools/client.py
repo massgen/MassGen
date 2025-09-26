@@ -272,12 +272,16 @@ class MCPClient:
 
                     env[key] = re.sub(r"\$\{([A-Z_][A-Z0-9_]*)\}", replace_env_var, value)
 
+            # Extract cwd if provided in config
+            cwd = self.config.get("cwd")
+
             server_params = StdioServerParameters(
                 command=full_command[0],
                 args=full_command[1:] if len(full_command) > 1 else [],
                 env=env,
+                cwd=cwd,
             )
-            logger.debug(f"Created StdioServerParameters for {self.name}: {server_params.command} {server_params.args}")
+            logger.debug(f"Created StdioServerParameters for {self.name}: {server_params.command} {server_params.args} (cwd={cwd})")
             return stdio_client(server_params)
 
         elif transport_type == "streamable-http":
