@@ -5,6 +5,65 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.24] - 2025-09-26
+
+### Added
+- **vLLM Backend Support**: Complete integration with vLLM for high-performance local model serving
+  - New `vllm.py` backend supporting VLLM's OpenAI-compatible API
+  - Configuration examples in `three_agents_vllm.yaml`
+  - Comprehensive documentation in `vllm_implementation.md`
+  - Support for large-scale model inference with optimized performance
+
+- **POE Provider Support**: Extended ChatCompletions backend to support POE (Platform for Open Exploration)
+  - Added POE provider integration for accessing multiple AI models through a single platform
+  - Seamless integration with existing ChatCompletions infrastructure
+
+- **GPT-5-Codex Model Recognition**: Added GPT-5-Codex to model registry
+  - Extended model mappings in `utils.py` to recognize gpt-5-codex as a valid OpenAI model
+
+- **Backend Utility Modules**: Major refactoring for improved modularity
+  - New `api_params_handler` module for centralized API parameter management
+  - New `formatter` module for standardized message formatting across backends
+  - New `token_manager` module for unified token counting and management
+  - Extracted filesystem utilities into dedicated `filesystem_manager` module
+
+### Changed
+- **Backend Consolidation**: Significant code refactoring and simplification
+  - Refactored `chat_completions.py` and `response.py` with cleaner API handler patterns
+  - Moved filesystem management from `mcp_tools` to `backend/utils/filesystem_manager`
+  - Improved separation of concerns with specialized handler modules
+  - Enhanced code reusability across different backend implementations
+
+- **Documentation Updates**: Improved documentation structure
+  - Moved `permissions_and_context_files.md` to backend docs
+  - Added multi-source agent integration design documentation
+  - Updated filesystem permissions case study for v0.0.21 and v0.0.22 features
+
+- **CI/CD Pipeline**: Enhanced automated release process
+  - Updated auto-release workflow for better reliability
+  - Improved GitHub Actions configuration
+
+- **Pre-commit Configuration**: Updated code quality tools
+  - Enhanced pre-commit hooks for better code consistency
+  - Updated linting rules for improved code standards
+
+### Fixed
+- **Streaming Chunk Processing**: Resolved critical bugs in chunk handling
+  - Fixed chunk processing errors in response streaming
+  - Improved error handling for malformed chunks
+  - Better resilience in stream processing pipeline
+
+- **Gemini Backend Session Management**: Improved cleanup
+  - Implemented proper session closure for google-genai aiohttp client
+  - Added explicit cleanup of aiohttp sessions to prevent potential resource leaks
+
+### Technical Details
+- **Commits**: 35 commits including backend refactoring, vLLM integration, and bug fixes
+- **Files Modified**: 50+ files across backend, utilities, configurations, and documentation
+- **Major Refactor**: Complete restructuring of backend utilities
+- **New Backend**: vLLM integration for high-performance local inference
+- **Contributors**: @qidanrui @sonichi @praneeth999 @ncrispino @Henry-811 and the MassGen team
+
 ## [0.0.23] - 2025-09-24
 
 ### Added

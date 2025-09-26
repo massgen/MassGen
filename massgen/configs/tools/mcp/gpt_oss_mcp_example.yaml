@@ -1,8 +1,8 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config configs/gpt_oss_mcp_example.yaml "whats the weather of Tokyo"
+#   uv run python -m massgen.cli --config massgen/configs/tools/mcp/gpt_oss_mcp_example.yaml "whats the weather of Tokyo"
 agents:
-  - id: "gpt-oss-mcp_weather" # Cerebras AI  
+  - id: "gpt-oss-mcp_weather" # Cerebras AI
     backend:
       type: "chatcompletion"
       model: "gpt-oss-120b"

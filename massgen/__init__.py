@@ -55,6 +55,7 @@ from .backend.lmstudio import LMStudioBackend
 
 # Import main classes for convenience
 from .backend.response import ResponseBackend
+from .backend.vllm import VLLMBackend
 from .chat_agent import (
     ChatAgent,
     ConfigurableAgent,
@@ -67,7 +68,7 @@ from .chat_agent import (
 from .message_templates import MessageTemplates, get_templates
 from .orchestrator import Orchestrator, create_orchestrator
 
-__version__ = "0.0.23"
+__version__ = "0.0.24"
 __author__ = "MassGen Contributors"
 
 __all__ = [
@@ -77,6 +78,7 @@ __all__ = [
     "GeminiBackend",
     "GrokBackend",
     "LMStudioBackend",
+    "VLLMBackend",
     # Agents
     "ChatAgent",
     "SingleAgent",

@@ -39,6 +39,7 @@ from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
+from .backend.vllm import VLLMBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .frontend.coordination_ui import CoordinationUI
 from .orchestrator import Orchestrator
@@ -125,6 +126,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - Groq (groq.com) -> GROQ_API_KEY
     - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
     - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
+    - POE (poe.com) -> POE_API_KEY
     """
     backend_type = backend_type.lower()
 
@@ -190,6 +192,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 api_key = os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
                 if not api_key:
                     raise ConfigurationError("Kimi/Moonshot API key not found. Set MOONSHOT_API_KEY or KIMI_API_KEY or provide in config.")
+            elif base_url and "poe.com" in base_url:
+                api_key = os.getenv("POE_API_KEY")
+                if not api_key:
+                    raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -204,6 +210,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     elif backend_type == "lmstudio":
         # LM Studio local server (OpenAI-compatible). Defaults handled by backend.
         return LMStudioBackend(**kwargs)
+
+    elif backend_type == "vllm":
+        # vLLM local server (OpenAI-compatible). Defaults handled by backend.
+        return VLLMBackend(**kwargs)
 
     elif backend_type == "claude_code":
         # ClaudeCodeBackend using claude-code-sdk-python
@@ -277,6 +287,8 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             agent_config = AgentConfig.create_chatcompletion_config(**backend_params)
         elif backend_type_lower == "lmstudio":
             agent_config = AgentConfig.create_lmstudio_config(**backend_params)
+        elif backend_type_lower == "vllm":
+            agent_config = AgentConfig.create_vllm_config(**backend_params)
         else:
             agent_config = AgentConfig(backend_params=backend_config)
 
@@ -654,6 +666,7 @@ Environment Variables:
     GROQ_API_KEY        - For Groq (groq.com)
     NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
     OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
+    POE_API_KEY         - For POE (poe.com)
 
   Note: The chatcompletion backend auto-detects the provider from the base_url
         and uses the appropriate environment variable for API key.
