@@ -21,21 +21,118 @@ This document outlines the design for extending MassGen to support agents from m
 - Leverage existing ConfigurableAgent for orchestrator integration
 - Maintain binary decision framework for coordination
 
+### 4. Multi-Agent Group Integration
+- **Existing framework multi-agent groups (e.g., AG2 GroupChat) act as single agents in MassGen**
+- Non-parallel multi-agent conversations from frameworks are treated as one voting unit
+- MassGen orchestrates at the framework level, not individual agents within frameworks
+
 ## Architecture
 
-### Agent Adapter Interface
+### Integration Layers
+
+```
+┌─────────────────────────────────────────────┐
+│          MassGen Orchestrator               │
+├─────────────────────────────────────────────┤
+│         ConfigurableAgent Layer             │
+├─────────────────────────────────────────────┤
+│      FrameworkAgentBackend (New)            │ (extends LLMBackend)
+├─────────────────────────────────────────────┤
+│        Framework Adapters (New)             │
+├─────────┬───────────┬───────────┬───────────┤
+│   AG2   │ LangChain │ Black Box │  Remote   │
+└─────────┴───────────┴───────────┴───────────┘
+```
+
+### Core Backend Implementation
 
 ```python
-class FrameworkAgentAdapter(ChatAgent):
+class FrameworkAgentBackend(LLMBackend):
     """
-    Base adapter for integrating framework-specific agents into MassGen.
-    Translates between MassGen's ChatAgent interface and framework-specific APIs.
+    Universal backend for external agent frameworks.
+    Extends LLMBackend to integrate with MassGen's existing infrastructure.
     """
     
-    async def chat(self, messages, tools=None, **kwargs) -> AsyncGenerator[StreamChunk, None]:
-        # Translate MassGen messages to framework format
-        # Execute framework agent
-        # Stream responses back in MassGen format
+    def __init__(self, framework: str, **kwargs):
+        super().__init__(**kwargs)
+        self.framework = framework.lower()
+        self.adapter = self._create_adapter(kwargs)
+        
+    def _create_adapter(self, config: Dict[str, Any]) -> FrameworkAdapter:
+        """Factory method to create framework-specific adapters."""
+        from ..adapters import adapter_registry
+        
+        adapter_class = adapter_registry.get(self.framework)
+        if not adapter_class:
+            raise ValueError(f"Unsupported framework: {self.framework}")
+            
+        return adapter_class(config)
+    
+    async def stream_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """
+        Stream responses from framework agents.
+        """
+        # Convert messages to framework format
+        framework_messages = self.adapter.convert_messages_to_framework(messages)
+        framework_tools = self.adapter.convert_tools_to_framework(tools)
+        
+        # Execute through adapter
+        async for chunk in self.adapter.execute_streaming(
+            framework_messages,
+            framework_tools,
+            **kwargs
+        ):
+            yield chunk
+    
+    def get_provider_name(self) -> str:
+        return f"Framework:{self.framework}"
+```
+
+### Framework Adapter Base Class
+
+```python
+from abc import ABC, abstractmethod
+
+class FrameworkAdapter(ABC):
+    """
+    Base adapter for integrating external agent frameworks.
+    Each framework implements this interface.
+    """
+    
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self._setup_adapter()
+    
+    @abstractmethod
+    def _setup_adapter(self) -> None:
+        """Initialize framework-specific components."""
+        pass
+    
+    @abstractmethod
+    def convert_messages_to_framework(self, messages: List[Dict[str, Any]]) -> Any:
+        """Convert MassGen messages to framework format."""
+        pass
+    
+    @abstractmethod
+    def convert_tools_to_framework(self, tools: List[Dict[str, Any]]) -> Any:
+        """Convert MassGen tools to framework format."""
+        pass
+    
+    @abstractmethod
+    async def execute_streaming(
+        self,
+        messages: Any,
+        tools: Any,
+        **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """
+        Execute agent and yield streaming chunks.
+        """
         pass
 ```
 
@@ -43,76 +140,124 @@ class FrameworkAgentAdapter(ChatAgent):
 
 #### LangChain Adapter
 ```python
-class LangChainAgentAdapter(FrameworkAgentAdapter):
-    def __init__(self, chain_or_agent, agent_id=None):
-        self.langchain_agent = chain_or_agent
-        # Configure tools, memory, callbacks etc.
+class LangChainAdapter(FrameworkAdapter):
+    """Adapter for LangChain agents and chains."""
+    
+    def _setup_adapter(self) -> None:
+        """Initialize LangChain components."""
+        from langchain.agents import initialize_agent
+        # Setup based on config
+        self.chain_type = self.config.get("chain_type", "agent")
+        self._initialize_agent()
 ```
 
-#### AutoGen/AG2 Adapter
+#### AutoGen/AG2 Adapter  
 ```python
-class AutoGenAgentAdapter(FrameworkAgentAdapter):
-    def __init__(self, autogen_config, agent_id=None):
-        self.autogen_assistant = AssistantAgent(config=autogen_config)
-        # Handle conversation patterns, code execution
+class AG2Adapter(FrameworkAdapter):
+    """Adapter for AG2/AutoGen agents including GroupChat support."""
+    
+    def _setup_adapter(self) -> None:
+        """Initialize AG2 agent or group chat."""
+        import autogen
+        
+        self.agent_type = self.config.get("agent_type", "AssistantAgent")
+        self.agent_config = self.config.get("agent_config", {})
+        self.group_config = self.config.get("group_config", None)
+        
+        if self.group_config:
+            self._setup_group_chat()
+        else:
+            self._setup_single_agent()
 ```
 
 #### OpenAI Assistants Adapter
 ```python
-class OpenAIAssistantAdapter(FrameworkAgentAdapter):
-    def __init__(self, assistant_id, agent_id=None):
-        self.assistant = client.beta.assistants.retrieve(assistant_id)
-        self.thread = client.beta.threads.create()
-        # Manage thread-based conversations
+class OpenAIAssistantAdapter(FrameworkAdapter):
+    """Adapter for OpenAI Assistants API."""
+    
+    def _setup_adapter(self) -> None:
+        self.assistant_id = self.config.get("assistant_id")
+        self.client = self._get_openai_client()
+        self.thread = self.client.beta.threads.create()
 ```
 
 #### SmolAgent Adapter
 ```python
-class SmolAgentAdapter(FrameworkAgentAdapter):
-    def __init__(self, smol_agent, agent_id=None):
-        self.agent = smol_agent
-        # Handle SmolAgent's tool calling patterns
-```
+class SmolAgentAdapter(FrameworkAdapter):
+    """Adapter for SmolAgent framework."""
+    
+    def _setup_adapter(self) -> None:
+        from smolagents import Agent
+        self.model_id = self.config.get("model_id")
+        self.tools = self._setup_tools()
 
-### Cloud Agent Integration
+### Remote Agent Integration
 
 For agents running remotely (cloud services, microservices):
 
 ```python
-class RemoteAgentAdapter(FrameworkAgentAdapter):
-    def __init__(self, endpoint_url, auth_config=None, agent_id=None):
-        self.endpoint = endpoint_url
-        self.auth = auth_config
-        # HTTP/WebSocket communication with remote agent
+class RemoteAgentAdapter(FrameworkAdapter):
+    """Adapter for remote agents via HTTP/WebSocket/gRPC."""
+    
+    def _setup_adapter(self) -> None:
+        self.connection_type = self.config.get("connection", {}).get("type", "http")
+        self.url = self.config.get("connection", {}).get("url")
+        
+        if self.connection_type == "http":
+            self._setup_http_client()
+        elif self.connection_type == "websocket":
+            self._setup_websocket_client()
 ```
 
-### Local Process Agents
+### Black Box Agent Support
 
-For agents running as separate processes:
+MassGen supports integrating any pre-existing agent as a "black box" without requiring knowledge of its internal implementation:
 
 ```python
-class ProcessAgentAdapter(FrameworkAgentAdapter):
-    def __init__(self, command, working_dir=None, agent_id=None):
-        self.command = command
-        self.process = None
-        # Manage subprocess lifecycle and IPC
+class BlackBoxAdapter(FrameworkAdapter):
+    """
+    Universal adapter for black box agents.
+    Supports multiple communication methods.
+    """
+    
+    def _setup_adapter(self) -> None:
+        self.communication_method = self.config.get("communication_method")
+        
+        if self.communication_method == "http":
+            self.communicator = HTTPCommunicator(self.config)
+        elif self.communication_method == "process":
+            self.communicator = ProcessCommunicator(self.config)
+        elif self.communication_method == "file":
+            self.communicator = FileCommunicator(self.config)
 ```
 
 ## Orchestrator Integration
 
 ### Making Framework Agents MassGen-Compatible
 
-Framework agents are wrapped with ConfigurableAgent to enable participation in MassGen's coordination workflow:
+Framework agents are integrated through the FrameworkAgentBackend and wrapped with ConfigurableAgent:
 
 ```python
-# Example: Wrapping a LangChain agent for orchestration
-langchain_adapter = LangChainAgentAdapter(langchain_agent)
-configurable_agent = ConfigurableAgent(
-    backend=langchain_adapter,
-    agent_id="langchain_expert",
-    config=AgentConfig(
-        message_templates=MessageTemplates()  # Provides vote/new_answer tools
-    )
+# Example: Integrating an AG2 agent into MassGen orchestration
+from massgen.backend.framework import FrameworkAgentBackend
+from massgen.chat_agent import ConfigurableAgent
+from massgen.agent_config import AgentConfig
+
+# Create framework backend
+ag2_backend = FrameworkAgentBackend(
+    framework="ag2",
+    agent_type="AssistantAgent",
+    agent_config={
+        "name": "research_expert",
+        "llm_config": {"model": "gpt-4"},
+        "system_message": "You are a research specialist."
+    }
+)
+
+# Wrap with ConfigurableAgent for orchestration
+ag2_agent = ConfigurableAgent(
+    backend=ag2_backend,
+    config=AgentConfig()  # Provides vote/new_answer tools
 )
 ```
 
@@ -127,50 +272,45 @@ This allows framework agents to:
 The orchestrator handles framework agents identically to native agents:
 
 ```python
+from massgen.orchestrator import Orchestrator
+
 orchestrator = Orchestrator(
     agents={
-        "native_agent": SingleAgent(backend=OpenAIBackend()),
-        "langchain_agent": ConfigurableAgent(backend=LangChainAdapter(...)),
-        "autogen_agent": ConfigurableAgent(backend=AutoGenAdapter(...)),
-        "cloud_agent": ConfigurableAgent(backend=RemoteAgentAdapter(...))
+        "native_agent": native_massgen_agent,
+        "ag2_agent": ag2_agent,  # Using FrameworkAgentBackend
+        "langchain_agent": langchain_agent,
+        "blackbox_agent": blackbox_agent
     }
 )
 ```
 
 All agents execute in parallel during coordination rounds, regardless of their implementation framework.
 
-## Communication Protocol
+## Key Integration Concepts
 
-### Message Translation
+### Framework Multi-Agent Groups as Single MassGen Agents
 
-Framework adapters translate between MassGen's message format and framework-specific formats:
-
-```python
-# MassGen format
-messages = [
-    {"role": "system", "content": "..."},
-    {"role": "user", "content": "..."},
-    {"role": "assistant", "content": "...", "tool_calls": [...]}
-]
-
-# Adapter translates to framework format (e.g., LangChain)
-langchain_messages = [
-    SystemMessage(content="..."),
-    HumanMessage(content="..."),
-    AIMessage(content="...", tool_calls=[...])
-]
-```
-
-### Tool Integration
-
-Framework agents can use their native tools while also supporting MassGen workflow tools:
+When frameworks like AG2 have their own multi-agent groups (e.g., GroupChat), these entire groups participate as **single agents** in MassGen's orchestration:
 
 ```python
-class FrameworkAgentAdapter:
-    def merge_tools(self, framework_tools, massgen_tools):
-        # Combine framework-specific tools with vote/new_answer
-        # Translate tool schemas between formats
-        return unified_tools
+# AG2 GroupChat with 3 agents internally
+ag2_research_team = FrameworkAgentBackend(
+    framework="ag2",
+    group_config={
+        "agents": [
+            {"type": "AssistantAgent", "config": {"name": "researcher"}},
+            {"type": "AssistantAgent", "config": {"name": "analyst"}},
+            {"type": "AssistantAgent", "config": {"name": "writer"}}
+        ]
+    }
+)
+
+# In MassGen orchestration, the entire GroupChat votes as one unit
+orchestrator = Orchestrator(agents={
+    "research_team": ag2_research_team,  # One voting entity
+    "native_coder": massgen_native_agent,
+    "reviewer": another_agent
+})
 ```
 
 ## Configuration System
@@ -180,160 +320,584 @@ class FrameworkAgentAdapter:
 ```yaml
 agents:
   - id: "agent_id"
-    type: "framework"  # New field for framework agents
-    framework: "langchain|autogen|ag2|langgraph|openai_assistant|smolagent"
-    
-    # Framework-specific configuration
-    framework_config:
-      # Varies by framework
+    backend:
+      type: "ag2"  # Direct backend type (ag2, langchain, remote, blackbox, etc.)
       
-    # Optional: Override with MassGen configuration
-    massgen_config:
-      message_templates: ...
-      timeout_config: ...
+      # Framework-specific configuration
+      agent_type: "AssistantAgent"
+      agent_config:
+        name: "expert"
+        llm_config:
+          model: "gpt-4"
+      
+      # Optional: GroupChat configuration for AG2
+      group_config:
+        agents: [...]
+        chat_config: {...}
 ```
 
-### Dynamic Agent Loading
+## Configuration Examples
+
+### Single AG2 Agent
+
+```yaml
+# ag2_single.yaml
+agents:
+  - id: "python_expert"
+    backend:
+      type: "ag2"
+      agent_type: "AssistantAgent"
+      agent_config:
+        name: "python_expert"
+        system_message: |
+          You are a Python programming expert.
+          Help users write clean, efficient Python code.
+        llm_config:
+          model: "gpt-4"
+          temperature: 0.7
+          max_tokens: 2000
+        code_execution_config:
+          work_dir: "./code_workspace"
+          use_docker: false
+```
+
+### AG2 GroupChat Configuration
+
+```yaml
+# ag2_groupchat.yaml
+agents:
+  - id: "ag2_research_team"
+    backend:
+      type: "ag2"
+      
+      # GroupChat configuration - entire group acts as one MassGen agent
+      group_config:
+        # Define agents in the group
+        agents:
+          - type: "AssistantAgent"
+            config:
+              name: "researcher"
+              system_message: |
+                You are a research specialist.
+                Find and analyze information from various sources.
+              llm_config:
+                model: "gpt-4"
+                temperature: 0.7
+          
+          - type: "AssistantAgent"
+            config:
+              name: "analyst"
+              system_message: |
+                You are a data analyst.
+                Analyze research findings and identify patterns.
+              llm_config:
+                model: "gpt-4"
+                temperature: 0.5
+          
+          - type: "AssistantAgent"
+            config:
+              name: "writer"
+              system_message: |
+                You are a technical writer.
+                Synthesize findings into clear, concise reports.
+              llm_config:
+                model: "gpt-4"
+                temperature: 0.8
+        
+        # GroupChat settings
+        chat_config:
+          max_round: 10
+          speaker_selection_method: "auto"
+          allow_repeat_speaker: false
+        
+        # GroupChatManager settings
+        manager_config:
+          name: "research_team_manager"
+          system_message: "Coordinate the research team effectively."
+          llm_config:
+            model: "gpt-4"
+            temperature: 0.5
+```
+
+### Mixed Framework Team
+
+```yaml
+# mixed_team.yaml
+agents:
+  # AG2 GroupChat for research (one voting unit)
+  - id: "research_group"
+    backend:
+      type: "ag2"
+      group_config:
+        agents:
+          - type: "AssistantAgent"
+            config:
+              name: "web_researcher"
+              system_message: "Search and gather information."
+          - type: "AssistantAgent"
+            config:
+              name: "fact_checker"
+              system_message: "Verify facts and sources."
+        chat_config:
+          max_round: 5
+  
+  # Native MassGen agent
+  - id: "coder"
+    backend:
+      type: "openai"
+      model: "gpt-4"
+    system_message: "Write code based on research findings."
+  
+  # LangChain agent
+  - id: "documenter"
+    backend:
+      type: "langchain"
+      chain_type: "agent"
+      agent_config:
+        agent_type: "openai-functions"
+        model_name: "gpt-4"
+      tools: ["serpapi", "wikipedia"]
+
+orchestrator:
+  timeout_seconds: 1800
+```
+
+### Remote/Cloud Agent
+
+```yaml
+# remote_agent.yaml
+agents:
+  - id: "cloud_expert"
+    backend:
+      type: "remote"
+      endpoint_url: "https://api.example.com/agent"
+      auth_config:
+        api_key: "${REMOTE_API_KEY}"
+      protocol: "http"
+      timeout: 300
+```
+
+### Black Box Subprocess Agent
+
+```yaml
+# subprocess_agent.yaml
+agents:
+  - id: "local_python_agent"
+    backend:
+      type: "blackbox"
+      communication_method: "pipe"
+      command: ["python", "my_agent.py"]
+      working_dir: "./agents"
+      env:
+        AGENT_MODE: "production"
+```
+
+### CLI Backend Factory Updates
+
+The CLI's `create_backend` function will be updated to use the adapter registry for framework detection:
 
 ```python
-def load_framework_agent(config):
-    framework = config.get("framework")
+# In massgen/cli.py - modification to existing create_backend function
+def create_backend(backend_type: str, **kwargs) -> Any:
+    """Create backend instance from type and parameters."""
+    backend_type = backend_type.lower()
     
-    if framework == "langchain":
-        return LangChainAgentAdapter(**config["framework_config"])
-    elif framework == "autogen":
-        return AutoGenAgentAdapter(**config["framework_config"])
-    # ... other frameworks
+    # Check if this is a framework/adapter type
+    from massgen.adapters import adapter_registry
     
-    # Wrap with ConfigurableAgent for orchestration
-    return ConfigurableAgent(
-        backend=adapter,
-        config=config.get("massgen_config", AgentConfig())
-    )
+    if backend_type in adapter_registry:
+        # Use FrameworkAgentBackend for all registered adapter types
+        from massgen.backend.framework import FrameworkAgentBackend
+        return FrameworkAgentBackend(framework=backend_type, **kwargs)
+    
+    # Existing backend types (openai, claude, gemini, etc.)
+    elif backend_type == "openai":
+        # ... existing code ...
+    # ... other existing backends ...
 ```
 
+This approach provides several benefits:
+
+1. **Single Source of Truth**: The adapter registry defines all supported framework types
+2. **Cleaner Configuration**: Users specify `type: "ag2"` directly without nested framework config
+3. **Easy Extension**: New frameworks are added to the registry, automatically available in CLI
+4. **Type Safety**: Registry ensures only valid framework types are used
+
 ## Detailed Implementation
+
+### Core Backend Implementation
+
+```python
+# massgen/backend/framework.py
+from typing import Dict, List, Any, AsyncGenerator, Optional
+from .base import LLMBackend, StreamChunk, FilesystemSupport
+
+class FrameworkAgentBackend(LLMBackend):
+    """
+    Universal backend for external agent frameworks.
+    Delegates execution to framework-specific adapters.
+    """
+    
+    EXCLUDED_API_PARAMS = LLMBackend.get_base_excluded_config_params().union({
+        "framework",
+        "agent_type",
+        "agent_config",
+        "group_config",
+        "connection",
+    })
+    
+    def __init__(self, framework: str, **kwargs):
+        super().__init__(**kwargs)
+        self.framework = framework.lower()
+        self.adapter = self._create_adapter(kwargs)
+        
+    def _create_adapter(self, config: Dict[str, Any]) -> 'FrameworkAdapter':
+        """Factory method to create framework-specific adapters."""
+        from ..adapters import adapter_registry
+        
+        adapter_class = adapter_registry.get(self.framework)
+        if not adapter_class:
+            raise ValueError(f"Unsupported framework: {self.framework}")
+            
+        return adapter_class(config)
+    
+    async def stream_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """
+        Stream responses from framework agents.
+        Handles message/tool conversion and streaming simulation.
+        """
+        # Convert messages to framework format
+        framework_messages = self.adapter.convert_messages_to_framework(messages)
+        framework_tools = self.adapter.convert_tools_to_framework(tools)
+        
+        # Execute through adapter
+        async for chunk in self.adapter.execute_streaming(
+            framework_messages,
+            framework_tools,
+            **kwargs
+        ):
+            yield chunk
+    
+    def get_provider_name(self) -> str:
+        return f"Framework:{self.framework}"
+    
+    def get_filesystem_support(self) -> FilesystemSupport:
+        """Framework agents may have their own filesystem access."""
+        return self.adapter.get_filesystem_support()
+    
+    def estimate_tokens(self, text: str) -> int:
+        """Estimate tokens using framework's method if available."""
+        # Default implementation - can be overridden by adapter
+        return len(text) // 4
+    
+    def calculate_cost(self, input_tokens: int, output_tokens: int, model: str) -> float:
+        """Calculate cost based on framework's pricing."""
+        # Default free for local frameworks - adapters can override
+        return 0.0
+```
 
 ### Base Framework Adapter
 
 ```python
 # massgen/adapters/base.py
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, AsyncGenerator
-import asyncio
-import json
-from dataclasses import dataclass
+from typing import Any, Dict, List, AsyncGenerator, Optional
+from ..backend.base import StreamChunk, FilesystemSupport
 
-from ..backend.base import LLMBackend, StreamChunk
-from ..chat_agent import ChatAgent
-
-@dataclass
-class FrameworkConfig:
-    """Configuration for framework-specific settings."""
-    framework_name: str
-    connection_params: Dict[str, Any]
-    tool_mapping: Dict[str, str] = None  # Map MassGen tools to framework tools
-    message_format: str = "openai"  # openai, langchain, autogen, etc.
-    supports_streaming: bool = True
-    supports_async: bool = True
-    retry_config: Dict[str, Any] = None
-
-class FrameworkAgentAdapter(LLMBackend):
+class FrameworkAdapter(ABC):
     """
-    Base adapter for integrating framework-specific agents into MassGen.
-    Implements LLMBackend interface to work with ConfigurableAgent.
+    Base adapter for integrating external agent frameworks.
+    Each framework implements this interface.
     """
     
-    def __init__(self, config: FrameworkConfig):
+    def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.message_converter = MessageConverter(config.message_format)
-        self.tool_converter = ToolConverter(config.tool_mapping)
-        self._session_state = {}
-        
+        self._setup_adapter()
+    
     @abstractmethod
-    async def _execute_framework_agent(
-        self, 
-        messages: List[Dict], 
-        tools: Optional[List[Dict]] = None,
-        **kwargs
-    ) -> AsyncGenerator[Any, None]:
-        """Execute the framework-specific agent logic."""
+    def _setup_adapter(self) -> None:
+        """Initialize framework-specific components."""
         pass
     
-    async def stream_with_tools(
+    @abstractmethod
+    def convert_messages_to_framework(
+        self, 
+        messages: List[Dict[str, Any]]
+    ) -> Any:
+        """Convert MassGen messages to framework format."""
+        pass
+    
+    @abstractmethod
+    def convert_tools_to_framework(
         self,
-        messages: List[Dict[str, Any]],
-        tools: Optional[List[Dict[str, Any]]] = None,
-        agent_id: Optional[str] = None,
-        session_id: Optional[str] = None,
+        tools: List[Dict[str, Any]]
+    ) -> Any:
+        """Convert MassGen tools to framework format."""
+        pass
+    
+    @abstractmethod
+    async def execute_streaming(
+        self,
+        messages: Any,
+        tools: Any,
         **kwargs
     ) -> AsyncGenerator[StreamChunk, None]:
         """
-        Main entry point for MassGen integration.
-        Translates messages, executes framework agent, and streams responses.
+        Execute agent and yield streaming chunks.
+        Must simulate streaming for non-streaming frameworks.
         """
-        # Convert messages to framework format
-        framework_messages = self.message_converter.to_framework(messages)
-        
-        # Merge MassGen workflow tools with framework tools
-        if tools:
-            framework_tools = self.tool_converter.merge_tools(
-                tools, 
-                self._get_framework_native_tools()
+        pass
+    
+    def get_filesystem_support(self) -> FilesystemSupport:
+        """Default: no filesystem support."""
+        return FilesystemSupport.NONE
+
+    # Utility methods for streaming simulation
+    async def simulate_streaming(
+        self,
+        content: str,
+        chunk_size: int = 50
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Helper to simulate streaming for non-streaming responses."""
+        import asyncio
+        for i in range(0, len(content), chunk_size):
+            chunk = content[i:i + chunk_size]
+            yield StreamChunk(
+                type="content",
+                content=chunk
             )
-        else:
-            framework_tools = self._get_framework_native_tools()
+            await asyncio.sleep(0.01)  # Small delay for realistic streaming
         
-        # Execute framework agent
-        try:
-            async for chunk in self._execute_framework_agent(
-                framework_messages,
-                framework_tools,
-                agent_id=agent_id,
-                session_id=session_id,
-                **kwargs
-            ):
-                # Convert framework response to StreamChunk
-                yield self._convert_to_stream_chunk(chunk, agent_id)
+        # Send final complete message
+        yield StreamChunk(
+            type="complete_message",
+            complete_message={
+                "role": "assistant",
+                "content": content
+            }
+        )
+```
+
+### AG2 (AutoGen) Adapter Implementation
+
+```python
+# massgen/adapters/ag2_adapter.py
+from typing import List, Dict, Any, Optional, AsyncGenerator
+import asyncio
+from ..backend.base import StreamChunk
+from .base import FrameworkAdapter
+
+class AG2Adapter(FrameworkAdapter):
+    """
+    Adapter for AG2/AutoGen agents including GroupChat support.
+    """
+    
+    def _setup_adapter(self) -> None:
+        """Initialize AG2 agent or group chat."""
+        self.agent_type = self.config.get("agent_type", "AssistantAgent")
+        self.agent_config = self.config.get("agent_config", {})
+        self.group_config = self.config.get("group_config", None)
+        
+        if self.group_config:
+            # Create GroupChat with multiple agents
+            self._setup_group_chat()
+        else:
+            # Create single AG2 agent
+            self._setup_single_agent()
+    
+    def _setup_single_agent(self):
+        """Create a single AG2 agent."""
+        if self.agent_type == "AssistantAgent":
+            from autogen import AssistantAgent
+            self.agent = AssistantAgent(**self.agent_config)
+        elif self.agent_type == "UserProxyAgent":
+            from autogen import UserProxyAgent
+            self.agent = UserProxyAgent(**self.agent_config)
+        else:
+            raise ValueError(f"Unsupported AG2 agent type: {self.agent_type}")
+    
+    def _setup_group_chat(self):
+        """Create AG2 GroupChat with multiple agents."""
+        from autogen import GroupChat, GroupChatManager
+        
+        # Create agents for the group
+        agents = []
+        for agent_def in self.group_config.get("agents", []):
+            agent_type = agent_def.get("type", "AssistantAgent")
+            agent_config = agent_def.get("config", {})
+            
+            if agent_type == "AssistantAgent":
+                from autogen import AssistantAgent
+                agent = AssistantAgent(**agent_config)
+            elif agent_type == "UserProxyAgent":
+                from autogen import UserProxyAgent
+                agent = UserProxyAgent(**agent_config)
+            else:
+                continue
                 
-        except Exception as e:
-            # Handle framework-specific errors
-            yield self._create_error_chunk(str(e), agent_id)
+            agents.append(agent)
+        
+        # Create GroupChat
+        group_chat_config = self.group_config.get("chat_config", {})
+        self.group_chat = GroupChat(
+            agents=agents,
+            messages=[],
+            **group_chat_config
+        )
+        
+        # Create GroupChatManager
+        manager_config = self.group_config.get("manager_config", {})
+        self.agent = GroupChatManager(
+            groupchat=self.group_chat,
+            **manager_config
+        )
     
-    def _convert_to_stream_chunk(self, framework_chunk: Any, agent_id: str) -> StreamChunk:
-        """Convert framework-specific chunk to MassGen StreamChunk."""
-        if isinstance(framework_chunk, dict):
-            return StreamChunk(
-                content=framework_chunk.get("content", ""),
-                chunk_type=framework_chunk.get("type", "content"),
-                agent_id=agent_id,
-                metadata=framework_chunk.get("metadata", {})
-            )
-        elif isinstance(framework_chunk, str):
-            return StreamChunk(
-                content=framework_chunk,
-                chunk_type="content",
-                agent_id=agent_id
-            )
+    def convert_messages_to_framework(
+        self, 
+        messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Convert MassGen messages to AG2 format."""
+        ag2_messages = []
+        for msg in messages:
+            role = msg["role"]
+            content = msg["content"]
+            
+            if role == "system":
+                # AG2 uses system_message in agent config, not in messages
+                continue
+            elif role == "user":
+                ag2_messages.append({"role": "user", "content": content})
+            elif role == "assistant":
+                ag2_messages.append({"role": "assistant", "content": content})
+            elif role == "tool":
+                # Convert tool result to AG2 format
+                ag2_messages.append({
+                    "role": "function",
+                    "name": msg.get("name", "tool"),
+                    "content": content
+                })
+        
+        return ag2_messages
+    
+    def convert_tools_to_framework(
+        self,
+        tools: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Convert MassGen tools to AG2 function format."""
+        ag2_functions = []
+        for tool in tools:
+            if "function" in tool:
+                func = tool["function"]
+                ag2_functions.append({
+                    "name": func["name"],
+                    "description": func.get("description", ""),
+                    "parameters": func.get("parameters", {})
+                })
+        return ag2_functions
+    
+    async def execute_streaming(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """
+        Execute AG2 agent and stream response.
+        AG2 doesn't support native streaming, so we simulate it.
+        """
+        # For GroupChat, we need to handle the conversation differently
+        if hasattr(self, 'group_chat'):
+            response = await self._execute_group_chat(messages, tools)
         else:
-            # Handle other chunk types
-            return StreamChunk(
-                content=str(framework_chunk),
-                chunk_type="content",
-                agent_id=agent_id
-            )
+            response = await self._execute_single_agent(messages, tools)
+        
+        # Simulate streaming of the response
+        async for chunk in self.simulate_streaming(response):
+            yield chunk
     
-    def _get_framework_native_tools(self) -> List[Dict]:
-        """Get native tools available in the framework."""
-        return []
+    async def _execute_single_agent(
+        self, 
+        messages: List[Dict[str, Any]], 
+        tools: List[Dict[str, Any]]
+    ) -> str:
+        """Execute single AG2 agent."""
+        # Extract last user message
+        user_message = ""
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                user_message = msg["content"]
+                break
+        
+        # Register tools if provided
+        if tools:
+            self._register_tools(tools)
+        
+        # Create a UserProxyAgent for interaction
+        from autogen import UserProxyAgent
+        user_proxy = UserProxyAgent(
+            name="user_proxy",
+            human_input_mode="NEVER",
+            max_consecutive_auto_reply=0,
+            code_execution_config={"use_docker": False}
+        )
+        
+        # Run conversation
+        response = await asyncio.to_thread(
+            user_proxy.initiate_chat,
+            self.agent,
+            message=user_message,
+            clear_history=False
+        )
+        
+        # Extract response
+        last_message = self.agent.last_message()
+        return last_message.get("content", "")
     
-    def is_stateful(self) -> bool:
-        """Check if the backend maintains conversation state."""
-        return True  # Most frameworks maintain state
+    async def _execute_group_chat(
+        self, 
+        messages: List[Dict[str, Any]], 
+        tools: List[Dict[str, Any]]
+    ) -> str:
+        """Execute AG2 GroupChat."""
+        # Extract last user message
+        user_message = ""
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                user_message = msg["content"]
+                break
+        
+        # Add message to group chat
+        self.group_chat.messages.append({"role": "user", "content": user_message})
+        
+        # Run group chat manager
+        response = await asyncio.to_thread(
+            self.agent.run_chat,
+            self.group_chat.messages[-1],
+            self.group_chat
+        )
+        
+        return response
     
-    async def reset_state(self) -> None:
-        """Reset the framework agent's state."""
-        self._session_state.clear()
+    def _register_tools(self, tools: List[Dict[str, Any]]):
+        """Register tools as AG2 functions."""
+        for tool in tools:
+            if "function" in tool:
+                func = tool["function"]
+                
+                # Create a wrapper function for the tool
+                def tool_wrapper(**kwargs):
+                    # This would call the actual tool implementation
+                    return f"Tool {func['name']} called with {kwargs}"
+                
+                # Register with the agent
+                self.agent.register_function(
+                    function_map={func["name"]: tool_wrapper}
+                )
 ```
 
 ### LangChain Adapter Implementation
@@ -342,104 +906,65 @@ class FrameworkAgentAdapter(LLMBackend):
 # massgen/adapters/langchain_adapter.py
 from typing import List, Dict, Any, Optional, AsyncGenerator
 import asyncio
-from langchain.agents import AgentExecutor
-from langchain.memory import ConversationBufferMemory
-from langchain.schema import BaseMessage, HumanMessage, AIMessage, SystemMessage
-from langchain.tools import BaseTool
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from ..backend.base import StreamChunk
+from .base import FrameworkAdapter
 
-class LangChainAgentAdapter(FrameworkAgentAdapter):
-    """Adapter for LangChain agents and chains."""
+class LangChainAdapter(FrameworkAdapter):
+    """
+    Adapter for LangChain agents and chains.
+    """
     
-    def __init__(
-        self, 
-        agent_or_chain: Any,
-        memory: Optional[Any] = None,
-        tools: Optional[List[BaseTool]] = None,
-        config: Optional[FrameworkConfig] = None
-    ):
-        if config is None:
-            config = FrameworkConfig(
-                framework_name="langchain",
-                connection_params={},
-                message_format="langchain",
-                supports_streaming=True
-            )
-        super().__init__(config)
+    def _setup_adapter(self) -> None:
+        """Initialize LangChain agent or chain."""
+        from langchain.agents import initialize_agent, AgentType
+        from langchain.chains import ConversationChain
+        from langchain.memory import ConversationBufferMemory
         
-        self.agent = agent_or_chain
-        self.memory = memory or ConversationBufferMemory(
+        chain_type = self.config.get("chain_type", "agent")
+        
+        if chain_type == "agent":
+            self._setup_agent()
+        elif chain_type == "conversation":
+            self._setup_conversation_chain()
+        else:
+            raise ValueError(f"Unsupported chain type: {chain_type}")
+    
+    def _setup_agent(self):
+        """Setup LangChain agent."""
+        from langchain.agents import initialize_agent, AgentType
+        from langchain.llms import OpenAI
+        from langchain.memory import ConversationBufferMemory
+        
+        # Get LLM configuration
+        llm_config = self.config.get("llm_config", {})
+        llm = OpenAI(**llm_config)
+        
+        # Setup memory
+        memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True
         )
-        self.tools = tools or []
-        self.streaming_handler = StreamingStdOutCallbackHandler()
         
-    async def _execute_framework_agent(
-        self,
-        messages: List[Dict],
-        tools: Optional[List[Dict]] = None,
-        **kwargs
-    ) -> AsyncGenerator[Dict, None]:
-        """Execute LangChain agent with streaming support."""
+        # Get tools
+        tools = self._get_langchain_tools()
         
-        # Convert messages to LangChain format
-        langchain_messages = self._convert_messages(messages)
-        
-        # Add tools if provided
-        if tools:
-            self._update_agent_tools(tools)
-        
-        # Create streaming callback
-        stream_queue = asyncio.Queue()
-        
-        async def stream_callback(token: str):
-            await stream_queue.put({
-                "content": token,
-                "type": "content"
-            })
-        
-        # Execute agent asynchronously
-        if isinstance(self.agent, AgentExecutor):
-            # For agent executors
-            response_task = asyncio.create_task(
-                self._run_agent_executor(
-                    langchain_messages[-1].content if langchain_messages else "",
-                    stream_callback
-                )
-            )
-        else:
-            # For chains
-            response_task = asyncio.create_task(
-                self._run_chain(
-                    langchain_messages,
-                    stream_callback
-                )
-            )
-        
-        # Stream tokens as they arrive
-        while True:
-            try:
-                chunk = await asyncio.wait_for(stream_queue.get(), timeout=0.1)
-                yield chunk
-            except asyncio.TimeoutError:
-                if response_task.done():
-                    break
-                continue
-        
-        # Get final result
-        result = await response_task
-        
-        # Handle tool calls if present
-        if "tool_calls" in result:
-            yield {
-                "content": "",
-                "type": "tool_calls",
-                "metadata": {"tool_calls": result["tool_calls"]}
-            }
+        # Initialize agent
+        agent_config = self.config.get("agent_config", {})
+        self.agent = initialize_agent(
+            tools=tools,
+            llm=llm,
+            agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+            memory=memory,
+            **agent_config
+        )
     
-    def _convert_messages(self, messages: List[Dict]) -> List[BaseMessage]:
-        """Convert MassGen messages to LangChain messages."""
+    def convert_messages_to_framework(
+        self, 
+        messages: List[Dict[str, Any]]
+    ) -> List[Any]:
+        """Convert MassGen messages to LangChain format."""
+        from langchain.schema import HumanMessage, AIMessage, SystemMessage
+        
         langchain_messages = []
         for msg in messages:
             role = msg["role"]
@@ -451,199 +976,148 @@ class LangChainAgentAdapter(FrameworkAgentAdapter):
                 langchain_messages.append(HumanMessage(content=content))
             elif role == "assistant":
                 langchain_messages.append(AIMessage(content=content))
-            elif role == "tool":
-                # Handle tool messages
-                langchain_messages.append(
-                    HumanMessage(
-                        content=f"Tool Result: {content}",
-                        additional_kwargs={"tool_call_id": msg.get("tool_call_id")}
-                    )
-                )
         
         return langchain_messages
     
-    async def _run_agent_executor(
-        self, 
-        input_text: str, 
-        stream_callback: Any
-    ) -> Dict:
-        """Run AgentExecutor with streaming."""
-        def sync_callback(token):
-            asyncio.create_task(stream_callback(token))
+    def convert_tools_to_framework(
+        self,
+        tools: List[Dict[str, Any]]
+    ) -> List[Any]:
+        """Convert MassGen tools to LangChain format."""
+        from langchain.tools import Tool
         
-        # Configure callbacks
-        callbacks = [type('StreamCallback', (), {
-            'on_llm_new_token': lambda token, **kwargs: sync_callback(token)
-        })()]
+        langchain_tools = []
+        for tool in tools:
+            if "function" in tool:
+                func = tool["function"]
+                
+                # Create wrapper function
+                def tool_func(query: str) -> str:
+                    return f"Called {func['name']} with: {query}"
+                
+                langchain_tools.append(
+                    Tool(
+                        name=func["name"],
+                        description=func.get("description", ""),
+                        func=tool_func
+                    )
+                )
+        
+        return langchain_tools
+    
+    async def execute_streaming(
+        self,
+        messages: List[Any],
+        tools: List[Any],
+        **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Execute LangChain agent with streaming."""
+        # Extract the last user message
+        user_input = ""
+        for msg in reversed(messages):
+            if hasattr(msg, "content") and msg.__class__.__name__ == "HumanMessage":
+                user_input = msg.content
+                break
         
         # Run agent
-        result = await asyncio.to_thread(
-            self.agent.arun,
-            input_text,
-            callbacks=callbacks
+        response = await asyncio.to_thread(
+            self.agent.run,
+            user_input
         )
         
-        return {"content": result, "type": "final"}
+        # Simulate streaming
+        async for chunk in self.simulate_streaming(response):
+            yield chunk
     
-    async def _run_chain(
-        self,
-        messages: List[BaseMessage],
-        stream_callback: Any
-    ) -> Dict:
-        """Run a LangChain chain with streaming."""
-        # Update memory with messages
-        for msg in messages[:-1]:  # Add all but last message to memory
-            self.memory.chat_memory.add_message(msg)
+    def _get_langchain_tools(self) -> List[Any]:
+        """Get configured LangChain tools."""
+        from langchain.tools import Tool
         
-        # Run chain with last message
-        result = await asyncio.to_thread(
-            self.agent.arun,
-            messages[-1].content if messages else ""
-        )
+        tools = []
+        tool_configs = self.config.get("tools", [])
         
-        return {"content": result, "type": "final"}
+        for tool_config in tool_configs:
+            if tool_config["type"] == "serpapi":
+                from langchain.tools import DuckDuckGoSearchRun
+                tools.append(DuckDuckGoSearchRun())
+            elif tool_config["type"] == "wikipedia":
+                from langchain.tools import WikipediaQueryRun
+                from langchain.utilities import WikipediaAPIWrapper
+                tools.append(WikipediaQueryRun(api_wrapper=WikipediaAPIWrapper()))
+        
+        return tools
 ```
 
-### AutoGen/AG2 Adapter Implementation
+### SmolAgent Adapter
 
 ```python
-# massgen/adapters/autogen_adapter.py
-from typing import List, Dict, Any, Optional, AsyncGenerator
-import asyncio
-from autogen import AssistantAgent, UserProxyAgent, ConversableAgent
-from autogen.code_utils import extract_code
+# massgen/adapters/smolagent_adapter.py
+from typing import List, Dict, Any, AsyncGenerator
+from ..backend.base import StreamChunk
+from .base import FrameworkAdapter
 
-class AutoGenAgentAdapter(FrameworkAgentAdapter):
-    """Adapter for AutoGen/AG2 agents."""
+class SmolAgentAdapter(FrameworkAdapter):
+    """
+    Adapter for HuggingFace SmolAgent framework agents.
+    """
     
-    def __init__(
-        self,
-        agent_config: Dict[str, Any],
-        code_execution_config: Optional[Dict] = None,
-        human_input_mode: str = "NEVER",
-        max_consecutive_auto_reply: int = 10,
-        config: Optional[FrameworkConfig] = None
-    ):
-        if config is None:
-            config = FrameworkConfig(
-                framework_name="autogen",
-                connection_params=agent_config,
-                supports_streaming=False  # AutoGen doesn't natively support streaming
-            )
-        super().__init__(config)
+    def _setup_adapter(self):
+        from smolagents import Agent, Tool
         
-        # Create AutoGen assistant
-        self.assistant = AssistantAgent(
-            name=agent_config.get("name", "assistant"),
-            llm_config=agent_config.get("llm_config"),
-            system_message=agent_config.get("system_message", ""),
-            max_consecutive_auto_reply=max_consecutive_auto_reply,
-            human_input_mode=human_input_mode
-        )
+        self.agent_type = self.config.get("agent_type", "Agent")
+        self.agent_config = self.config.get("agent_config", {})
         
-        # Create user proxy for execution
-        self.user_proxy = UserProxyAgent(
-            name="user_proxy",
-            code_execution_config=code_execution_config or {"use_docker": False},
-            human_input_mode="NEVER",
-            max_consecutive_auto_reply=0
-        )
-        
-        self.conversation_history = []
-        
-    async def _execute_framework_agent(
-        self,
-        messages: List[Dict],
-        tools: Optional[List[Dict]] = None,
-        **kwargs
-    ) -> AsyncGenerator[Dict, None]:
-        """Execute AutoGen agent."""
-        
-        # Process conversation history
-        for msg in messages:
-            if msg["role"] == "user":
-                user_message = msg["content"]
-                break
+        # Create SmolAgent
+        if self.agent_type == "Agent":
+            self.agent = Agent(**self.agent_config)
         else:
-            user_message = "Continue the conversation"
-        
-        # Register tools as functions if provided
-        if tools:
-            self._register_tools_as_functions(tools)
-        
-        # Create message queue for pseudo-streaming
-        response_parts = []
-        
-        # Execute in thread pool since AutoGen is sync
-        def run_autogen():
-            # Initiate chat
-            self.user_proxy.initiate_chat(
-                self.assistant,
-                message=user_message,
-                clear_history=False
-            )
-            
-            # Get response from conversation
-            last_message = self.assistant.last_message()
-            return last_message["content"]
-        
-        # Run AutoGen in thread
-        response = await asyncio.to_thread(run_autogen)
-        
-        # Parse response for code blocks
-        code_blocks = extract_code(response)
-        
-        # Stream response in chunks
-        if code_blocks:
-            # First yield the text before code
-            text_parts = response.split("```")
-            if text_parts[0]:
-                yield {
-                    "content": text_parts[0],
-                    "type": "content"
-                }
-            
-            # Yield code blocks
-            for code in code_blocks:
-                yield {
-                    "content": f"```{code[0]}\n{code[1]}\n```",
-                    "type": "code",
-                    "metadata": {"language": code[0]}
-                }
-            
-            # Yield remaining text
-            if len(text_parts) > 2:
-                yield {
-                    "content": text_parts[-1],
-                    "type": "content"
-                }
-        else:
-            # Stream response in smaller chunks for better UX
-            chunk_size = 50
-            for i in range(0, len(response), chunk_size):
-                yield {
-                    "content": response[i:i+chunk_size],
-                    "type": "content"
-                }
-                await asyncio.sleep(0.01)  # Small delay for streaming effect
+            raise ValueError(f"Unsupported SmolAgent type: {self.agent_type}")
     
-    def _register_tools_as_functions(self, tools: List[Dict]):
-        """Register MassGen tools as AutoGen functions."""
+    def convert_messages_to_framework(self, messages: List[Dict]) -> str:
+        """Convert messages to SmolAgent format (single prompt)."""
+        # SmolAgent typically works with a single prompt
+        # Extract the last user message or concatenate conversation
+        for message in reversed(messages):
+            if message["role"] == "user":
+                return message["content"]
+        return ""
+    
+    def convert_tools_to_framework(self, tools: List[Dict]) -> List:
+        """Convert MassGen tools to SmolAgent tools."""
+        smol_tools = []
         for tool in tools:
-            if tool.get("function"):
-                func_schema = tool["function"]
-                
-                # Create a wrapper function
-                async def tool_wrapper(**kwargs):
-                    # Call the actual tool
-                    return await self._execute_tool(func_schema["name"], kwargs)
-                
-                # Register with assistant
-                self.assistant.register_function(
-                    function_map={
-                        func_schema["name"]: tool_wrapper
-                    }
-                )
+            # Create SmolAgent tool wrapper
+            # Note: This is a simplified example
+            # Real implementation would need proper tool conversion
+            pass
+        return smol_tools
+    
+    async def execute_streaming(
+        self,
+        messages: str,  # SmolAgent uses string prompt
+        tools: List,
+        **kwargs
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Execute SmolAgent and stream response."""
+        # SmolAgent doesn't support streaming natively
+        response = await self._run_agent(messages, tools)
+        
+        # Simulate streaming
+        async for chunk in self.simulate_streaming(response):
+            yield chunk
+    
+    async def _run_agent(self, prompt: str, tools: List) -> str:
+        """Run the SmolAgent."""
+        import asyncio
+        
+        # Run synchronous agent in thread pool
+        result = await asyncio.to_thread(
+            self.agent.run,
+            prompt,
+            tools=tools
+        )
+        
+        return result
 ```
 
 ### Black Box Agent Support
@@ -675,30 +1149,16 @@ class BlackBoxAgentProtocol(Protocol):
         """Check if agent is responsive."""
         ...
 
-class BlackBoxAdapter(FrameworkAgentAdapter):
+class BlackBoxAdapter(FrameworkAdapter):
     """
     Universal adapter for black box agents.
     Requires only a communication protocol, not framework knowledge.
     """
     
-    def __init__(
-        self,
-        communication_method: str,  # "http", "websocket", "pipe", "file", "grpc"
-        connection_config: Dict[str, Any],
-        protocol_version: str = "1.0",
-        config: Optional[FrameworkConfig] = None
-    ):
-        if config is None:
-            config = FrameworkConfig(
-                framework_name="blackbox",
-                connection_params=connection_config,
-                supports_streaming=True
-            )
-        super().__init__(config)
-        
-        self.communication_method = communication_method
-        self.connection_config = connection_config
-        self.protocol_version = protocol_version
+    def _setup_adapter(self) -> None:
+        """Initialize black box agent communication."""
+        self.communication_method = self.config.get("communication_method", "http")
+        self.protocol_version = self.config.get("protocol_version", "1.0")
         
         # Initialize appropriate communicator
         self.communicator = self._create_communicator()
@@ -706,22 +1166,36 @@ class BlackBoxAdapter(FrameworkAgentAdapter):
     def _create_communicator(self):
         """Create appropriate communicator based on method."""
         if self.communication_method == "http":
-            return HTTPCommunicator(self.connection_config)
+            return HTTPCommunicator(self.config)
         elif self.communication_method == "pipe":
-            return PipeCommunicator(self.connection_config)
+            return PipeCommunicator(self.config)
         elif self.communication_method == "file":
-            return FileCommunicator(self.connection_config)
+            return FileCommunicator(self.config)
         elif self.communication_method == "grpc":
-            return GRPCCommunicator(self.connection_config)
+            return GRPCCommunicator(self.config)
         else:
             raise ValueError(f"Unknown communication method: {self.communication_method}")
     
-    async def _execute_framework_agent(
+    def convert_messages_to_framework(
+        self, 
+        messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Black box agents use standard message format."""
+        return messages
+    
+    def convert_tools_to_framework(
         self,
-        messages: List[Dict],
-        tools: Optional[List[Dict]] = None,
+        tools: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Black box agents use standard tool format."""
+        return tools
+    
+    async def execute_streaming(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
         **kwargs
-    ) -> AsyncGenerator[Dict, None]:
+    ) -> AsyncGenerator[StreamChunk, None]:
         """Execute black box agent through standardized protocol."""
         
         # Prepare standardized request
@@ -734,7 +1208,14 @@ class BlackBoxAdapter(FrameworkAgentAdapter):
         
         # Send request and stream response
         async for response in self.communicator.exchange(request):
-            yield response
+            # Convert response to StreamChunk
+            yield StreamChunk(
+                type=response.get("type", "content"),
+                content=response.get("content", ""),
+                tool_calls=response.get("tool_calls"),
+                complete_message=response.get("complete_message"),
+                error=response.get("error")
+            )
 ```
 
 #### Communication Methods
@@ -934,26 +1415,16 @@ from typing import List, Dict, Any, Optional, AsyncGenerator
 import json
 from urllib.parse import urljoin
 
-class RemoteAgentAdapter(FrameworkAgentAdapter):
+class RemoteAgentAdapter(FrameworkAdapter):
     """Adapter for agents running as remote services."""
     
-    def __init__(
-        self,
-        endpoint_url: str,
-        auth_config: Optional[Dict] = None,
-        protocol: str = "http",  # http, websocket
-        timeout: int = 300,
-        retry_config: Optional[Dict] = None,
-        config: Optional[FrameworkConfig] = None
-    ):
-        if config is None:
-            config = FrameworkConfig(
-                framework_name="remote",
-                connection_params={"endpoint": endpoint_url},
-                supports_streaming=protocol == "websocket",
-                retry_config=retry_config or {"max_retries": 3, "backoff": 2}
-            )
-        super().__init__(config)
+    def _setup_adapter(self) -> None:
+        """Initialize remote agent connection."""
+        self.endpoint_url = self.config.get("endpoint_url")
+        self.auth_config = self.config.get("auth_config", {})
+        self.protocol = self.config.get("protocol", "http")
+        self.timeout = self.config.get("timeout", 300)
+        self.session = None
         
         self.endpoint_url = endpoint_url
         self.auth_config = auth_config or {}
@@ -1110,180 +1581,41 @@ class RemoteAgentAdapter(FrameworkAgentAdapter):
 
 ### Message and Tool Converters
 
-```python
-# massgen/adapters/converters.py
-from typing import List, Dict, Any, Optional
-import json
+**Note**: Message and tool conversion is handled directly within each adapter's `convert_messages_to_framework` and `convert_tools_to_framework` methods. This keeps the conversion logic close to where it's used and allows each framework adapter to handle its specific requirements.
 
-class MessageConverter:
-    """Convert messages between MassGen and framework formats."""
-    
-    def __init__(self, target_format: str = "openai"):
-        self.target_format = target_format
-        self.converters = {
-            "openai": self._to_openai,
-            "langchain": self._to_langchain,
-            "autogen": self._to_autogen,
-            "custom": self._to_custom
-        }
-    
-    def to_framework(self, messages: List[Dict]) -> Any:
-        """Convert MassGen messages to framework format."""
-        converter = self.converters.get(self.target_format, self._to_openai)
-        return converter(messages)
-    
-    def from_framework(self, framework_response: Any) -> Dict:
-        """Convert framework response to MassGen format."""
-        if self.target_format == "langchain":
-            return self._from_langchain(framework_response)
-        elif self.target_format == "autogen":
-            return self._from_autogen(framework_response)
-        else:
-            return self._from_openai(framework_response)
-    
-    def _to_openai(self, messages: List[Dict]) -> List[Dict]:
-        """Already in OpenAI format."""
-        return messages
-    
-    def _to_langchain(self, messages: List[Dict]) -> List:
-        """Convert to LangChain message objects."""
-        # This would import and create actual LangChain message objects
-        # Simplified for illustration
-        return [
-            {"type": msg["role"], "content": msg["content"]}
-            for msg in messages
-        ]
-    
-    def _to_autogen(self, messages: List[Dict]) -> List[Dict]:
-        """Convert to AutoGen format."""
-        autogen_messages = []
-        for msg in messages:
-            if msg["role"] == "system":
-                # AutoGen uses system message differently
-                continue
-            autogen_messages.append({
-                "role": msg["role"],
-                "content": msg["content"],
-                "name": msg.get("name", msg["role"])
-            })
-        return autogen_messages
-    
-    def _to_custom(self, messages: List[Dict]) -> Any:
-        """Custom format conversion."""
-        # Implement custom conversion logic
-        return messages
-
-class ToolConverter:
-    """Convert and merge tools between MassGen and frameworks."""
-    
-    def __init__(self, tool_mapping: Optional[Dict[str, str]] = None):
-        self.tool_mapping = tool_mapping or {}
-    
-    def merge_tools(
-        self, 
-        massgen_tools: List[Dict],
-        framework_tools: List[Dict]
-    ) -> List[Dict]:
-        """Merge MassGen workflow tools with framework native tools."""
-        merged = []
-        
-        # Add MassGen tools (vote, new_answer)
-        for tool in massgen_tools:
-            if self._is_workflow_tool(tool):
-                merged.append(self._convert_workflow_tool(tool))
-            else:
-                merged.append(tool)
-        
-        # Add framework native tools
-        for tool in framework_tools:
-            if not self._is_duplicate(tool, merged):
-                merged.append(tool)
-        
-        return merged
-    
-    def _is_workflow_tool(self, tool: Dict) -> bool:
-        """Check if tool is a MassGen workflow tool."""
-        name = tool.get("function", {}).get("name", "")
-        return name in ["vote", "new_answer"]
-    
-    def _convert_workflow_tool(self, tool: Dict) -> Dict:
-        """Convert MassGen workflow tool for framework."""
-        # Keep workflow tools as-is for framework to handle
-        return tool
-    
-    def _is_duplicate(self, tool: Dict, existing: List[Dict]) -> bool:
-        """Check if tool already exists."""
-        tool_name = tool.get("function", {}).get("name", "")
-        for existing_tool in existing:
-            if existing_tool.get("function", {}).get("name", "") == tool_name:
-                return True
-        return False
-```
-
-### Factory and Registry
+### Adapter Registry
 
 ```python
-# massgen/adapters/factory.py
-from typing import Dict, Any, Optional, Type
-from .base import FrameworkAgentAdapter
-from .langchain_adapter import LangChainAgentAdapter
-from .autogen_adapter import AutoGenAgentAdapter
+# massgen/adapters/__init__.py
+from typing import Dict, Type
+from .base import FrameworkAdapter
+from .ag2_adapter import AG2Adapter
+from .langchain_adapter import LangChainAdapter
+from .langgraph_adapter import LangGraphAdapter
+from .smolagent_adapter import SmolAgentAdapter
+from .blackbox_adapter import BlackBoxAdapter
 from .remote_adapter import RemoteAgentAdapter
+# Global adapter registry used by FrameworkAgentBackend
+adapter_registry: Dict[str, Type[FrameworkAdapter]] = {
+    # Framework-specific adapters
+    "ag2": AG2Adapter,
+    "autogen": AG2Adapter,  # AG2 is the new name for AutoGen
+    "langchain": LangChainAdapter,
+    "langgraph": LangGraphAdapter,
+    "smolagent": SmolAgentAdapter,
+    
+    # Black box adapter for any external agent (including subprocess)
+    "blackbox": BlackBoxAdapter,
+    "process": BlackBoxAdapter,  # Alias - uses pipe communication
+    "local": BlackBoxAdapter,    # Alias - uses pipe communication
+    
+    # Remote agent adapter (HTTP/WebSocket APIs)
+    "remote": RemoteAgentAdapter,
+}
 
-class FrameworkAdapterRegistry:
-    """Registry for framework adapters."""
-    
-    _adapters: Dict[str, Type[FrameworkAgentAdapter]] = {
-        # Framework-specific adapters
-        "langchain": LangChainAgentAdapter,
-        "autogen": AutoGenAgentAdapter,
-        "ag2": AutoGenAgentAdapter,  # AG2 uses same adapter
-        "langgraph": LangGraphAdapter,
-        "openai_assistant": OpenAIAssistantAdapter,
-        "smolagent": SmolAgentAdapter,
-        
-        # Black box adapters
-        "blackbox": BlackBoxAdapter,
-        
-        # Remote adapters
-        "remote": RemoteAgentAdapter,
-        "cloud": RemoteAgentAdapter,
-    }
-    
-    @classmethod
-    def register(cls, name: str, adapter_class: Type[FrameworkAgentAdapter]):
-        """Register a new adapter."""
-        cls._adapters[name] = adapter_class
-    
-    @classmethod
-    def create(cls, framework: str, config: Dict[str, Any]) -> FrameworkAgentAdapter:
-        """Create an adapter instance."""
-        adapter_class = cls._adapters.get(framework)
-        if not adapter_class:
-            raise ValueError(f"Unknown framework: {framework}")
-        
-        return adapter_class(**config)
-
-def load_framework_agent(config: Dict[str, Any]) -> ChatAgent:
-    """Load a framework agent from configuration."""
-    from ..chat_agent import ConfigurableAgent
-    from ..agent_config import AgentConfig
-    
-    framework = config.get("framework")
-    framework_config = config.get("framework_config", {})
-    massgen_config = config.get("massgen_config")
-    
-    # Create adapter
-    adapter = FrameworkAdapterRegistry.create(framework, framework_config)
-    
-    # Wrap with ConfigurableAgent for orchestration
-    agent_config = AgentConfig(**massgen_config) if massgen_config else AgentConfig()
-    
-    return ConfigurableAgent(
-        backend=adapter,
-        agent_id=config.get("id"),
-        config=agent_config
-    )
+def register_adapter(name: str, adapter_class: Type[FrameworkAdapter]):
+    """Register a new adapter in the global registry."""
+    adapter_registry[name] = adapter_class
 ```
 
 ## File Structure and Organization
@@ -1294,9 +1626,9 @@ def load_framework_agent(config: Dict[str, Any]) -> ChatAgent:
 massgen/
 ├── adapters/                      # All framework adapter implementations
 │   ├── __init__.py               # Export main adapter classes
-│   ├── base.py                   # Base FrameworkAgentAdapter class
-│   ├── converters.py             # MessageConverter and ToolConverter classes
-│   ├── factory.py                # FrameworkAdapterRegistry and load_framework_agent
+│   ├── base.py                   # Base FrameworkAdapter class
+│   ├── registry.py               # Adapter registry and registration functions
+│   ├── __init__.py               # Contains adapter_registry for all adapters
 │   │
 │   ├── blackbox/                 # Black box agent support
 │   │   ├── __init__.py
@@ -1317,9 +1649,7 @@ massgen/
 │   │
 │   ├── remote/                   # Remote and cloud agent adapters
 │   │   ├── __init__.py
-│   │   ├── remote_adapter.py    # RemoteAgentAdapter (HTTP/WebSocket)
-│   │   ├── cloud_adapter.py     # CloudAgentAdapter (extends RemoteAdapter)
-│   │   └── process_adapter.py   # ProcessAgentAdapter (local subprocess)
+│   │   └── remote_adapter.py    # RemoteAgentAdapter (HTTP/WebSocket)
 │   │
 │   └── utils/                    # Adapter utilities
 │       ├── __init__.py
@@ -1360,18 +1690,13 @@ massgen/
 **`massgen/adapters/base.py`**
 ```python
 # Contains:
-- FrameworkConfig dataclass
-- FrameworkAgentAdapter abstract base class
-- Common adapter utilities
+- FrameworkAdapter abstract base class
+- StreamChunk simulation utilities
+- Common adapter base functionality
 ```
 
 **`massgen/adapters/converters.py`**
-```python
-# Contains:
-- MessageConverter class
-- ToolConverter class
-- Format conversion utilities
-```
+**Note**: Message and tool conversion is now integrated directly into each adapter implementation.
 
 **`massgen/adapters/factory.py`**
 ```python
@@ -1434,22 +1759,9 @@ massgen/
 - SSE (Server-Sent Events) handling
 ```
 
-**`massgen/adapters/remote/cloud_adapter.py`**
-```python
-# Contains:
-- CloudAgentAdapter class (extends RemoteAgentAdapter)
-- Cloud provider specific authentication
-- Service discovery mechanisms
-```
+**Note**: Cloud agents (AWS Lambda, Google Cloud Functions, etc.) can be integrated using `RemoteAgentAdapter` with appropriate authentication configuration. No separate cloud adapter is needed.
 
-**`massgen/adapters/remote/process_adapter.py`**
-```python
-# Contains:
-- ProcessAgentAdapter class
-- Subprocess management
-- IPC (Inter-Process Communication) handling
-- Local agent process lifecycle
-```
+**Note**: Local subprocess agents are handled by `BlackBoxAdapter` with `communication_method: "pipe"` using the `PipeCommunicator`. This avoids duplication since subprocess communication is just one method of black box agent integration.
 
 #### 4. Utility Modules
 
@@ -1520,35 +1832,39 @@ from .adapters.factory import (
     FrameworkAdapterRegistry,
     load_framework_agent
 )
-from .adapters.base import FrameworkAgentAdapter
+from .adapters.base import FrameworkAdapter
 
 __all__ = [
     # ... existing exports ...
     "FrameworkAdapterRegistry",
     "load_framework_agent",
-    "FrameworkAgentAdapter",
+    "FrameworkAdapter",
 ]
 ```
 
 ### Configuration Schema Updates
 
-**`massgen/schemas/agent_config_schema.json`** (new file)
+**`massgen/schemas/agent_config_schema.json`** (updates to existing file)
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
     "frameworkAgent": {
       "type": "object",
-      "required": ["id", "type", "framework", "framework_config"],
+      "required": ["id", "backend"],
       "properties": {
         "id": {"type": "string"},
-        "type": {"const": "framework"},
-        "framework": {
-          "enum": ["langchain", "autogen", "ag2", "langgraph", 
-                   "openai_assistant", "smolagent", "remote", "cloud"]
+        "backend": {
+          "type": "object",
+          "required": ["type"],
+          "properties": {
+            "type": {
+              "enum": ["ag2", "langchain", "langgraph", "smolagent", "blackbox", "remote"]
+            }
+          },
+          "additionalProperties": true
         },
-        "framework_config": {"type": "object"},
-        "massgen_config": {"$ref": "#/definitions/massgenConfig"}
+        "system_message": {"type": "string"}
       }
     },
     "nativeAgent": {
@@ -1569,7 +1885,7 @@ __all__ = [
 **`massgen/tests/adapters/test_base_adapter.py`**
 ```python
 # Tests for:
-- FrameworkAgentAdapter abstract methods
+- FrameworkAdapter abstract methods
 - Message conversion pipeline
 - Tool merging logic
 - Streaming functionality
@@ -1602,166 +1918,31 @@ The main entry points for using framework agents:
 from massgen import load_framework_agent, FrameworkAdapterRegistry
 
 # For extending with custom frameworks:
-from massgen.adapters.base import FrameworkAgentAdapter
+from massgen.adapters.base import FrameworkAdapter
 
 # For direct adapter usage:
 from massgen.adapters.frameworks import (
-    LangChainAgentAdapter,
-    AutoGenAgentAdapter
+    LangChainAdapter,
+    AG2Adapter
 )
 from massgen.adapters.remote import RemoteAgentAdapter
 ```
 
-## Implementation Phases
+## Implementation Plan
 
-### Phase 1: Core Infrastructure (Week 1-2)
-**Goal**: Establish the foundation for framework-agnostic agent integration
+### Phase 1: Core Infrastructure + AG2 (Week 1)
+1. Create `FrameworkAgentBackend` class extending `LLMBackend`
+2. Implement base `FrameworkAdapter` with streaming simulation
+3. Add framework detection to CLI backend factory
+4. Implement AG2 adapter with single agent and GroupChat support
+5. Create message and tool converters
+6. Write comprehensive test suite for AG2 integration
 
-**Tasks**:
-- Create `massgen/adapters/` directory structure with all subdirectories
-- Implement `base.py` with:
-  - `FrameworkConfig` dataclass
-  - `FrameworkAgentAdapter` abstract base class inheriting from `LLMBackend`
-  - Core streaming and state management methods
-- Implement `converters.py` with:
-  - `MessageConverter` class for format translations
-  - `ToolConverter` class for tool schema mappings
-  - Support for OpenAI, LangChain, and AutoGen formats
-- Create `factory.py` with:
-  - `FrameworkAdapterRegistry` class
-  - `load_framework_agent()` function
-  - Dynamic adapter registration mechanism
-- Write unit tests for core components in `tests/adapters/`
-- Update `massgen/__init__.py` with new exports
-
-**Deliverables**:
-- Working adapter base infrastructure
-- Message/tool conversion pipeline
-- Registry pattern implementation
-- 90%+ test coverage for core components
-
-### Phase 2: Black Box Agent Support (Week 2-3)
-**Goal**: Enable integration of any existing agent without framework knowledge
-
-**Tasks**:
-- Implement `blackbox/blackbox_adapter.py` with:
-  - `BlackBoxAdapter` class
-  - Protocol version negotiation
-  - Generic request/response handling
-- Create communicator implementations:
-  - `pipe_communicator.py` for stdin/stdout communication
-  - `http_communicator.py` for REST API communication
-  - `file_communicator.py` for file-based communication
-- Develop wrapper script templates:
-  - Python wrapper example (`examples/wrappers/python_wrapper.py`)
-  - Node.js wrapper example (`examples/wrappers/nodejs_wrapper.js`)
-  - Shell script wrapper (`examples/wrappers/shell_wrapper.sh`)
-- Create protocol documentation:
-  - Request/response format specification
-  - Error handling guidelines
-  - Performance best practices
-- Write integration tests with mock black box agents
-- Create example configurations for common use cases
-
-**Deliverables**:
-- Complete black box agent support
-- Multiple communication methods
-- Wrapper script templates in 3+ languages
-- Protocol specification document
-- Working examples with Docker containers
-
-### Phase 3: Popular Framework Adapters (Week 3-5)
-**Goal**: Implement adapters for the most widely-used agent frameworks
-
-**Tasks**:
-- **LangChain Adapter**:
-  - Implement `frameworks/langchain_adapter.py`
-  - Support for chains, agents, and tools
-  - Memory management integration
-  - Streaming callback implementation
-  - Test with ReAct and ConversationalAgent examples
-- **AutoGen/AG2 Adapter**:
-  - Implement `frameworks/autogen_adapter.py`
-  - AssistantAgent and UserProxyAgent support
-  - Code execution configuration
-  - Multi-agent conversation handling
-  - Test with code generation and data analysis examples
-- **OpenAI Assistants Adapter**:
-  - Implement `frameworks/openai_assistant_adapter.py`
-  - Thread management
-  - File handling and retrieval
-  - Function calling support
-  - Test with existing OpenAI assistants
-- Create framework-specific example configurations
-- Write framework-specific integration tests
-- Document framework-specific limitations and workarounds
-
-**Deliverables**:
-- 3 fully functional framework adapters
-- Framework-specific test suites
-- Example configurations for each framework
-- Performance benchmarks comparing frameworks
-
-### Phase 4: Remote and Cloud Integration (Week 4-5)
-**Goal**: Enable distributed agent architectures
-
-**Tasks**:
-- Implement `remote/remote_adapter.py` with:
-  - HTTP/HTTPS client with retry logic
-  - WebSocket client for real-time streaming
-  - SSE (Server-Sent Events) support
-  - Connection pooling and keepalive
-- Add `remote/cloud_adapter.py` with:
-  - AWS Lambda integration
-  - Google Cloud Functions support
-  - Azure Functions compatibility
-  - Generic webhook support
-- Implement `remote/process_adapter.py` with:
-  - Local subprocess management
-  - Process lifecycle control
-  - Resource monitoring
-  - Automatic restart on failure
-- Create `utils/auth.py` with:
-  - OAuth2 authentication
-  - API key management
-  - JWT token handling
-  - Custom header injection
-- Develop cloud deployment templates:
-  - Terraform configurations
-  - Kubernetes manifests
-  - Docker Compose files
-- Write stress tests for remote agents
-
-**Deliverables**:
-- Complete remote agent support
-- Cloud provider integrations
-- Authentication utilities
-- Deployment templates and guides
-- Load testing results
-
-### Phase 5: Advanced Features and Optimization (Week 5-6)
-**Goal**: Add remaining frameworks and optimize performance
-
-**Tasks**:
-- **Additional Framework Adapters**:
-  - Implement `frameworks/langgraph_adapter.py`
-  - Implement `frameworks/smolagent_adapter.py`
-  - Add support for CrewAI (if needed)
-- **Streaming and Performance**:
-  - Implement `utils/streaming.py` with queue management
-  - Add chunk batching and buffering
-  - Implement backpressure handling
-  - Add metrics collection
-- **Reliability Features**:
-  - Implement `utils/retry.py` with exponential backoff
-  - Add circuit breaker pattern
-  - Implement health checks
-  - Add connection pooling
-- **Orchestrator Enhancements**:
-  - Update orchestrator for framework agent loading
-  - Add framework-aware scheduling
-  - Implement cost-based agent selection
-  - Add framework-specific timeout handling
+### Phase 2: Additional Frameworks (As Needed)
+- LangChain adapter when LangChain integration is required
+- Remote agent adapter for HTTP/WebSocket agents
+- Other framework adapters based on user requirements
+- Each can be implemented independently as demand arises
 - Create comprehensive documentation:
   - Integration guide for new frameworks
   - Performance tuning guide
@@ -1933,9 +2114,8 @@ uv run python -m massgen.cli --config blackbox_file_agent.yaml "Transform the da
 # research_mixed_team.yaml
 agents:
   - id: "web_researcher"
-    type: "framework"
-    framework: "langchain"
-    framework_config:
+    backend:
+      type: "langchain"
       chain_type: "ReActChain"
       llm:
         provider: "openai"
@@ -1959,9 +2139,8 @@ agents:
       and provide statistical insights.
   
   - id: "report_writer"
-    type: "framework"
-    framework: "autogen"
-    framework_config:
+    backend:
+      type: "ag2"  # AG2 is the new name for AutoGen
       llm_config:
         model: "claude-3-sonnet"
         temperature: 0.7
@@ -1984,11 +2163,80 @@ ui:
 
 Run commands with specific prompts:
 ```bash
-# Analyze market trends
-uv run python -m massgen.cli --config research_mixed_team.yaml "Analyze current market trends in renewable energy technology and identify top investment opportunities"
+# Research quantum computing
+uv run python -m massgen.cli --config ag2_groupchat.yaml "Research the latest developments in quantum computing and analyze their potential impact on cryptography"
 ```
 
-### Example 2: Parallel Data Science Agents
+### Example 2: Mixed Team Configuration
+
+```yaml
+# Mixed team: AG2 GroupChat + Native MassGen agents
+agents:
+  # AG2 GroupChat for research
+  - id: "ag2_research_group"
+    backend:
+      type: "ag2"
+      
+      group_config:
+        agents:
+          - type: "AssistantAgent"
+            config:
+              name: "web_researcher"
+              system_message: "Search and gather information from the web."
+              llm_config:
+                model: "gpt-4"
+          
+          - type: "AssistantAgent"  
+            config:
+              name: "fact_checker"
+              system_message: "Verify facts and check sources."
+              llm_config:
+                model: "gpt-4"
+        
+        chat_config:
+          max_round: 5
+          speaker_selection_method: "round_robin"
+  
+  # Native MassGen agent for code
+  - id: "native_coder"
+    backend:
+      type: "openai"
+      model: "gpt-4"
+      enable_code_interpreter: true
+    system_message: "You write and debug code based on research findings."
+  
+  # LangChain agent for documentation
+  - id: "langchain_documenter"
+    backend:
+      type: "langchain"
+      
+      chain_type: "agent"
+      agent_config:
+        agent_type: "openai-functions"
+        model_name: "gpt-4"
+        temperature: 0.7
+        tools: ["serpapi", "wikipedia"]
+      
+      memory_config:
+        type: "ConversationSummaryMemory"
+        llm_model_name: "gpt-3.5-turbo"
+
+# Orchestrator configuration
+orchestrator:
+  timeout_seconds: 1800
+  
+  # Enable workspace sharing between agents
+  context_sharing:
+    enabled: true
+    snapshot_storage: "./agent_snapshots"
+    
+  # Orchestration strategy
+  strategy:
+    type: "voting"
+    min_votes: 2
+```
+
+### Example 3: Parallel Data Science Agents
 
 ```yaml
 # data_science_team.yaml
@@ -2014,9 +2262,8 @@ agents:
       and model prototyping.
   
   - id: "ag2_specialist"
-    type: "framework"
-    framework: "ag2"
-    framework_config:
+    backend:
+      type: "ag2"
       agent_type: "AssistantAgent"
       name: "DataScienceSpecialist"
       llm_config:
@@ -2067,11 +2314,8 @@ ui:
 
 Run commands with specific prompts:
 ```bash
-# Analyze sales data and create visualizations
-uv run python -m massgen.cli --config data_science_team.yaml "Analyze the sales_data.csv file and create visualizations showing revenue trends by region and product category"
-
-# Build a predictive model for customer churn
-uv run python -m massgen.cli --config data_science_team.yaml "Build and evaluate a machine learning model to predict customer churn using the customer_behavior.parquet dataset"
+# Process data through black box agents
+uv run python -m massgen.cli --config blackbox_agents.yaml "Process the customer data through our proprietary system and generate insights"
 ```
 
 ## Black Box Agent Advantages
@@ -2095,7 +2339,7 @@ agents:
     type: "blackbox"
     communication_method: "http"
     connection_config:
-      endpoint: "https://internal.company.com/ai-agent/v2"
+      endpoint: "https://internal.co gmpany.com/ai-agent/v2"
       headers:
         Authorization: "Bearer ${COMPANY_TOKEN}"
 ```
