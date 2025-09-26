@@ -226,7 +226,14 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.23 - Latest
+### v0.0.24 - Latest
+**New Features:** vLLM Backend Support, Backend Utility Modules
+- `massgen/configs/basic/multi/three_agents_vllm.yaml` - vLLM with Cerebras and ZAI backends
+- `massgen/configs/basic/multi/two_qwen_vllm.yaml` - Dual vLLM agents for testing
+- POE provider support for accessing multiple AI models through single platform
+- GPT-5-Codex model recognition for enhanced code generation capabilities
+
+### v0.0.23
 **New Features:** Backend Architecture Refactoring, Formatter Module
 - Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends
 - Extracted message and tool formatting logic into dedicated `massgen/formatter/` module
