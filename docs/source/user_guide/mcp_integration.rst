@@ -60,7 +60,7 @@ Register tools with the MCP server:
    class CustomMCPTool(MCPTool):
        name = "custom_tool"
        description = "A custom MCP tool"
-       
+
        def execute(self, params):
            # Tool implementation
            return {"result": "success"}
@@ -371,7 +371,7 @@ Create and use MCP plugins:
            # Modify request before sending
            request.headers["X-Custom"] = "value"
            return request
-       
+
        def on_response(self, response):
            # Process response
            return response

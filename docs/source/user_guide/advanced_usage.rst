@@ -57,16 +57,16 @@ Create agents dynamically based on task requirements:
    class TaskBasedOrchestrator(DynamicOrchestrator):
        def create_agents_for_task(self, task):
            agents = []
-           
+
            if "research" in task.lower():
                agents.append(Agent(name="Researcher", backend=backend))
-           
+
            if "code" in task.lower():
                agents.append(Agent(name="Coder", backend=backend))
-           
+
            if "review" in task.lower():
                agents.append(Agent(name="Reviewer", backend=backend))
-           
+
            return agents
 
    orchestrator = TaskBasedOrchestrator()
@@ -223,7 +223,7 @@ Create highly specialized agents:
                "security",
                "maintainability"
            ]
-       
+
        def review_code(self, code):
            reviews = {}
            for criterion in self.review_criteria:
@@ -255,7 +255,7 @@ Optimize parallel agent execution:
            batch_size=5,
            use_thread_pool=True
        )
-       
+
        tasks = ["Task 1", "Task 2", "Task 3", ...]
        results = await orchestrator.batch_process(tasks)
        return results
@@ -466,15 +466,15 @@ Test individual agents:
        mock_backend = MockBackend(
            responses=["Mocked response"]
        )
-       
+
        agent = Agent(
            name="TestAgent",
            backend=mock_backend
        )
-       
+
        tester = AgentTester(agent)
        result = tester.test_response("Test input")
-       
+
        assert "Mocked response" in result
 
 Integration Testing
@@ -494,12 +494,12 @@ Test agent interactions:
                "agent2": ["Response 2"]
            }
        )
-       
+
        result = tester.test_orchestration(
            task="Test task",
            expected_interactions=2
        )
-       
+
        assert result.success
        assert len(result.interactions) == 2
 

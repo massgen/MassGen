@@ -174,13 +174,13 @@ Create your own tools:
            super().__init__(**kwargs)
            self.name = "CustomTool"
            self.description = "Description of what this tool does"
-       
+
        def execute(self, *args, **kwargs) -> Any:
            """Execute the tool's functionality"""
            # Your implementation here
            result = self._perform_operation(args, kwargs)
            return result
-       
+
        def validate_input(self, *args, **kwargs) -> bool:
            """Validate input before execution"""
            # Input validation logic
@@ -203,22 +203,22 @@ A weather information tool:
            self.description = "Get current weather information"
            self.api_key = api_key
            self.base_url = "https://api.weather.com/v1"
-       
+
        def execute(self, location: str) -> Dict:
            """Get weather for a location"""
            if not self.validate_input(location):
                raise ValueError("Invalid location")
-           
+
            response = requests.get(
                f"{self.base_url}/current",
                params={"location": location, "key": self.api_key}
            )
-           
+
            if response.status_code == 200:
                return response.json()
            else:
                raise Exception(f"Weather API error: {response.status_code}")
-       
+
        def validate_input(self, location: str) -> bool:
            """Validate location input"""
            return bool(location and isinstance(location, str))
@@ -284,16 +284,16 @@ Configure tool behavior:
    tool = WebSearch(
        # Authentication
        api_key="...",
-       
+
        # Behavior
        max_results=10,
        timeout=30,
-       
+
        # Filtering
        safe_search=True,
        language="en",
        region="us",
-       
+
        # Caching
        cache_results=True,
        cache_ttl=3600

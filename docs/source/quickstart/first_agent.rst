@@ -63,7 +63,7 @@ Execute a task with your multi-agent system:
    result = orchestrator.run(
        "Explain quantum computing in simple terms"
    )
-   
+
    print(result)
 
 Advanced Usage
@@ -74,14 +74,14 @@ Using specialized agents for specific tasks:
 .. code-block:: python
 
    from massgen import SpecializedAgent
-   
+
    # Create a code specialist
    code_agent = SpecializedAgent(
        name="Coder",
        specialization="code_generation",
        backend=backend
    )
-   
+
    # Create a research specialist
    research_agent = SpecializedAgent(
        name="Researcher",

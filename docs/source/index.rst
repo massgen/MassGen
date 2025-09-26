@@ -40,19 +40,19 @@ Key Features
    :gutter: 3
 
    .. grid-item-card:: 🤝 Cross-Model Synergy
-      
+
       Harness strengths from diverse frontier model-powered agents including Claude, Gemini, GPT, and Grok.
 
    .. grid-item-card:: ⚡ Parallel Processing
-      
+
       Multiple agents tackle problems simultaneously with intelligent orchestration.
 
    .. grid-item-card:: 🔄 Consensus Building
-      
+
       Natural convergence through collaborative refinement and real-time feedback.
 
    .. grid-item-card:: 📊 Live Visualization
-      
+
       See agents' working processes in real-time with rich terminal displays.
 
 Quick Links
@@ -62,25 +62,25 @@ Quick Links
    :gutter: 2
 
    .. grid-item::
-      
+
       **Getting Started**
-      
+
       * :doc:`quickstart/installation`
       * :doc:`quickstart/first_agent`
       * :doc:`quickstart/configuration`
 
    .. grid-item::
-      
+
       **User Guide**
-      
+
       * :doc:`user_guide/concepts`
       * :doc:`user_guide/backends`
       * :doc:`user_guide/tools`
 
    .. grid-item::
-      
+
       **Resources**
-      
+
       * :doc:`api/index`
       * :doc:`examples/index`
       * :doc:`development/contributing`

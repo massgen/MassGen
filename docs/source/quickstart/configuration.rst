@@ -12,16 +12,16 @@ The recommended way to configure API keys is through environment variables. Crea
 
    # OpenAI
    OPENAI_API_KEY=your-openai-api-key
-   
+
    # Anthropic Claude
    ANTHROPIC_API_KEY=your-anthropic-api-key
-   
+
    # Google Gemini
    GOOGLE_API_KEY=your-google-api-key
-   
+
    # xAI Grok
    XAI_API_KEY=your-xai-api-key
-   
+
    # Cerebras
    CEREBRAS_API_KEY=your-cerebras-api-key
 
@@ -38,18 +38,18 @@ Create a `config.yaml` file for more detailed configuration:
        model: claude-3-opus-20240229
        temperature: 0.7
        max_tokens: 4096
-     
+
      - name: GPT
        backend: openai
        model: gpt-4
        temperature: 0.8
        max_tokens: 4096
-     
+
      - name: Gemini
        backend: gemini
        model: gemini-pro
        temperature: 0.9
-   
+
    orchestrator:
      strategy: consensus
      max_rounds: 5
@@ -65,13 +65,13 @@ Load configuration in your code:
    from massgen import load_config
    import os
    from dotenv import load_dotenv
-   
+
    # Load environment variables
    load_dotenv()
-   
+
    # Load configuration file
    config = load_config("config.yaml")
-   
+
    # Create agents from configuration
    agents = config.create_agents()
 
@@ -97,7 +97,7 @@ Claude Backend
 .. code-block:: python
 
    from massgen.backend import ClaudeBackend
-   
+
    backend = ClaudeBackend(
        api_key=os.getenv("ANTHROPIC_API_KEY"),
        model="claude-3-opus-20240229",
@@ -110,7 +110,7 @@ Gemini Backend
 .. code-block:: python
 
    from massgen.backend import GeminiBackend
-   
+
    backend = GeminiBackend(
        api_key=os.getenv("GOOGLE_API_KEY"),
        model="gemini-pro",
@@ -129,10 +129,10 @@ Configure different orchestration strategies:
 
    # Sequential processing
    orchestrator = Orchestrator(agents=agents, strategy="sequential")
-   
+
    # Parallel processing
    orchestrator = Orchestrator(agents=agents, strategy="parallel")
-   
+
    # Consensus building
    orchestrator = Orchestrator(agents=agents, strategy="consensus")
 
@@ -144,7 +144,7 @@ Configure logging for debugging:
 .. code-block:: python
 
    import logging
-   
+
    logging.basicConfig(
        level=logging.INFO,
        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'

@@ -75,7 +75,7 @@ Example:
 ```rst
 .. toctree::
    :maxdepth: 2
-   
+
    your_new_page
 ```
 
@@ -106,14 +106,14 @@ API docs are auto-generated from docstrings:
 def my_function(param1: str, param2: int) -> bool:
     """
     Brief description of the function.
-    
+
     Args:
         param1: Description of param1
         param2: Description of param2
-        
+
     Returns:
         Description of return value
-        
+
     Example:
         >>> my_function("test", 42)
         True

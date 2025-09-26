@@ -12,7 +12,7 @@ Hierarchical Teams
 
    # Create team structure
    team_lead = Agent(name="TeamLead", backend=backend)
-   
+
    dev_team = Orchestrator(
        agents=[
            Agent(name="Backend", backend=backend),

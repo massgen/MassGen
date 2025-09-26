@@ -268,16 +268,16 @@ Implement your own backend:
        def __init__(self, **kwargs):
            super().__init__(**kwargs)
            self.client = self._initialize_client()
-       
+
        def _initialize_client(self):
            # Initialize your API client
            pass
-       
+
        def generate(self, prompt, **kwargs):
            # Implement generation logic
            response = self.client.complete(prompt, **kwargs)
            return response.text
-       
+
        def stream_generate(self, prompt, **kwargs):
            # Implement streaming if supported
            for chunk in self.client.stream(prompt, **kwargs):
@@ -295,7 +295,7 @@ Create adapters for existing APIs:
    class CustomAPIBackend(HTTPBackend):
        def __init__(self, api_url, **kwargs):
            super().__init__(base_url=api_url, **kwargs)
-       
+
        def prepare_request(self, prompt, **kwargs):
            return {
                "endpoint": "/generate",
@@ -304,7 +304,7 @@ Create adapters for existing APIs:
                    "parameters": kwargs
                }
            }
-       
+
        def parse_response(self, response):
            return response.json()["generated_text"]
 
@@ -333,7 +333,7 @@ Process multiple requests efficiently:
 .. code-block:: python
 
    backend = OpenAIBackend(model="gpt-4")
-   
+
    prompts = ["Prompt 1", "Prompt 2", "Prompt 3"]
    responses = backend.batch_generate(prompts, batch_size=10)
 
