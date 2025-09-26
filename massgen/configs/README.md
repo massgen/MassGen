@@ -226,17 +226,18 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.23 (September 2024) - Latest
+### v0.0.23 - Latest
 **New Features:** Backend Architecture Refactoring, Formatter Module
 - Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends
 - Extracted message and tool formatting logic into dedicated `massgen/formatter/` module
 - Streamlined chat_completions.py, claude.py, and response.py for better maintainability
 
-### v0.0.22 (December 2024)
+### v0.0.22
 **New Features:** Workspace Copy Tools via MCP, Configuration Organization
 - All configs now organized by provider & use case (basic/, providers/, tools/, teams/)
+- Use same configs as v0.0.21 for compatibility, but now with improved performance
 
-### v0.0.21 (September 2024)
+### v0.0.21
 **New Features:** Advanced Filesystem Permissions, Grok MCP Integration
 - `massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml` - Grok with MCP tools
 - `massgen/configs/tools/filesystem/fs_permissions_test.yaml` - Permission-controlled file sharing
