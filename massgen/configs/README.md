@@ -237,17 +237,17 @@ Most configurations use environment variables for API keys:
 - All configs now organized by provider & use case (basic/, providers/, tools/, teams/)
 - Use same configs as v0.0.21 for compatibility, but now with improved performance
 
+**Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/case_studies/v0.0.21-v0.0.22-filesystem-permissions.md)
+```bash
+# Multi-agent collaboration with granular filesystem permissions
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+```
+
 ### v0.0.21
 **New Features:** Advanced Filesystem Permissions, Grok MCP Integration
 - `massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml` - Grok with MCP tools
 - `massgen/configs/tools/filesystem/fs_permissions_test.yaml` - Permission-controlled file sharing
 - `massgen/configs/tools/filesystem/claude_code_context_sharing.yaml` - Agent workspace sharing
-
-**Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/case_studies/v0.0.21-filesystem-permissions.md)
-```bash
-# Multi-agent collaboration with granular filesystem permissions
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
-```
 
 ### v0.0.20
 **New Features:** Claude MCP Support with Recursive Execution
