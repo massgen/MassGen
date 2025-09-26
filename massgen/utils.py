@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from enum import Enum
 
 
@@ -30,6 +31,7 @@ MODEL_MAPPINGS = {
         "gpt-5",
         "gpt-5-mini",
         "gpt-5-nano",
+        "gpt-5-codex",
         # GPT-4.1 variants
         "gpt-4.1",
         "gpt-4.1-mini",

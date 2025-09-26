@@ -51,10 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.23 Features](#-latest-features-v0023)
-- [Workspace Copy Tools](#-latest-features-v0022)
-- [Configuration Organization](#-latest-features-v0022)
-- [Enhanced File Operations](#-latest-features-v0022)
+- [v0.0.24 Features](#-latest-features-v0024)
 </details>
 
 <details open>
@@ -99,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.23](#recent-achievements-v0023)
-  - [v0.0.3 - v0.0.22](#previous-achievements-v003-v0022)
+  - [v0.0.24](#recent-achievements-v0024)
+  - [v0.0.3 - v0.0.23](#previous-achievements-v003---v0023)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.24 Roadmap](#v0024-roadmap)
+- [v0.0.25 Roadmap](#v0025-roadmap)
 </details>
 
 <details open>
@@ -132,13 +129,23 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.23)
+## 🆕 Latest Features (v0.0.24)
 
-**What's New in v0.0.23:**
-- **Backend Architecture Refactoring** - Major consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends
-- **Formatter Module** - Extracted message and tool formatting logic into dedicated `massgen/formatter/` module
-- **Massive Code Deduplication** - Streamlined chat_completions.py, claude.py, and response.py for better maintainability
-- **Bug Fixes** - Fixed coordination table escape handling on macOS and FastMCP integration
+**What's New in v0.0.24:**
+- **vLLM Backend Support** - Complete integration with vLLM for high-performance local model serving with OpenAI-compatible API
+- **POE Provider Support** - Extended ChatCompletions backend to support POE (Platform for Open Exploration) for accessing multiple AI models
+- **GPT-5-Codex Model Recognition** - Added gpt-5-codex to model registry for code generation tasks
+- **Backend Utility Modules** - Major refactoring with new api_params_handler, formatter, and token_manager modules (1,400+ lines of new utility code)
+- **Bug Fixes** - Fixed streaming chunk processing and Gemini backend session management
+
+**Try v0.0.24 Features Now:**
+```bash
+# Try vLLM backend with local models (requires vLLM server running)
+# First start vLLM server: python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/two_qwen_vllm.yaml \
+  "What is machine learning?"
+```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
 
@@ -230,6 +237,7 @@ cp .env.example .env
  - [Grok](https://docs.x.ai/docs/overview)
  - [Kimi/Moonshot](https://platform.moonshot.ai/)
  - [OpenAI](https://platform.openai.com/api-keys)
+ - [POE](https://poe.com/)
  - [Z AI](https://docs.z.ai/guides/overview/quick-start)
 
 ### 3. 🧩 Supported Models and Tools
@@ -246,17 +254,21 @@ The system currently supports multiple model providers with advanced capabilitie
 - **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
 - **Grok**: Grok-4, Grok-3, Grok-3-mini...
 - **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano)...
-- **Together AI**, **Fireworks AI**, **Groq**, **Kimi/Moonshot**, **Nebius AI Studio**, **OpenRouter**: LLaMA, Mistral, Qwen...
+- **Together AI**, **Fireworks AI**, **Groq**, **Kimi/Moonshot**, **Nebius AI Studio**, **OpenRouter**, **POE**: LLaMA, Mistral, Qwen...
 - **Z AI**: GLM-4.5
 
-**Local Model Support (NEW in v0.0.7):**
-- **LM Studio**: Run open-weight models locally with automatic server management
+**Local Model Support:**
+- **vLLM** (NEW in v0.0.24): High-performance local model serving with OpenAI-compatible API
+  - Support for vLLM-specific parameters (top_k, repetition_penalty, guided_json)
+  - Optimized for large-scale model inference
+  - Configuration examples: `three_agents_vllm.yaml`, `two_qwen_vllm.yaml`
+- **LM Studio** (v0.0.7+): Run open-weight models locally with automatic server management
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
   - Zero-cost usage reporting
   - Support for LLaMA, Mistral, Qwen and other open-weight models
 
-More providers and local inference engines (vllm, sglang) are welcome to be added.
+More providers and local inference engines (sglang) are welcome to be added.
 
 #### Tools
 
@@ -822,30 +834,35 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.23)
+### Recent Achievements (v0.0.24)
 
-**🎉 Released: September 24, 2025**
+**🎉 Released: September 26, 2025**
 
-Version 0.0.23 introduces **Backend Architecture Refactoring** and **Formatter Module**, establishing cleaner, more maintainable codebase:
+Version 0.0.24 introduces **vLLM Backend Support** and **Backend Utility Modules**, enabling high-performance local model inference and improved code organization:
 
-#### Backend Architecture Refactoring
-- **Major Code Consolidation**: New `base_with_mcp.py` base class consolidating common MCP functionality (488 lines)
-- **Massive Line Reduction**: Reduced ~1,932 lines across core backend files through deduplication
-- **Standardized MCP Integration**: Unified MCP client initialization and error handling across all backends
-- **Improved Maintainability**: Extracted shared MCP logic from individual backends into unified base class
+#### vLLM Backend Support
+- **Local Model Serving**: Run powerful AI models locally with vLLM for cost-effective, private inference
+- **Easy Setup**: Ready-to-use configurations (`three_agents_vllm.yaml`, `two_qwen_vllm.yaml`)
+- **Advanced Controls**: Fine-tune model behavior with top_k sampling, repetition penalties, and thinking modes
+- **High Performance**: Optimized for serving large language models at scale
 
-#### Formatter Module
-- **Dedicated Formatting Logic**: New `massgen/formatter/` module with specialized formatters
-- **Message Formatting**: `message_formatter.py` handles message formatting across backends
-- **Tool Formatting**: `tool_formatter.py` and `mcp_tool_formatter.py` manage tool call formatting
-- **Better Code Organization**: Separated formatting concerns from core backend logic
+#### Code Organization Improvements
+- **Cleaner Backend Code**: Reorganized backend utilities into focused modules for easier maintenance
+- **Better Error Handling**: Improved API parameter validation and processing across all backends
+- **Unified Token Management**: Consistent token counting and cost tracking across different model providers
+- **Streamlined File Operations**: Moved filesystem tools to dedicated backend utilities
 
-#### Bug Fixes and Improvements
-- **Coordination Table**: Fixed escape key handling on macOS with updated display components
-- **FastMCP Integration**: Added fastmcp to dependencies for workspace copy MCP support
-- **Path Handling**: Improved relative path handling for better portability
+#### New Provider & Model Support
+- **POE Integration**: Access multiple AI models through POE platform with single API key
+- **GPT-5-Codex Support**: Enhanced code generation capabilities with latest OpenAI model
+- **Stability Improvements**: Fixed streaming issues and memory leaks for better reliability
 
-### Recent Achievements (v0.0.23)
+#### Enhanced Documentation
+- **vLLM Setup Guide**: Step-by-step instructions for running local models with vLLM
+- **Advanced Filesystem Case Study**: Showing how agents can work together with controlled file access and workspace sharing
+
+
+### Previous Achievements (v0.0.3 - v0.0.23)
 
 ✅ **Backend Architecture Refactoring (v0.0.23)**: Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends, extracted formatter module for better code organization, and improved maintainability through unified MCP integration
 
@@ -907,25 +924,25 @@ Version 0.0.23 introduces **Backend Architecture Refactoring** and **Formatter M
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.24 Roadmap
+### v0.0.25 Roadmap
 
-Version 0.0.24 builds upon the solid backend refactoring of v0.0.23 by focusing on local model support, orchestrator improvements, and enhanced agent communication. Key priorities include:
+Version 0.0.25 builds upon the vLLM backend support and utility modules refactoring of v0.0.24 by focusing on orchestrator improvements and agent communication fixes. Key priorities include:
 
 #### Required Features
-- **VLLM Local Model Support**: Add support for VLLM backends with local models for better performance and cost efficiency
 - **Agent System Prompt Fixes**: Fix the problem where the final agent expects human feedback through system prompt changes
+- **Refactor Orchestrator**: Streamline orchestrator code for better maintainability and performance
 
 #### Optional Features
-- **Refactor Orchestrator**: Streamline orchestrator code for better maintainability and performance
 - **MCP Marketplace Integration**: Integrate MCP Marketplace support for expanded tool ecosystem
+- **Refactor Send/Receive Messaging**: Extract messaging system to use stream chunks class for multimodal support
 
 Key technical approach:
-- **Local Model Infrastructure**: Enable high-performance local model inference through VLLM with OpenAI-compatible API
-- **Autonomous Agent Behavior**: Ensure final agents complete tasks without expecting human feedback
-- **Code Maintainability**: Streamline orchestrator code for improved performance and maintainability
-- **Tool Ecosystem**: Expand capabilities through MCP Marketplace discovery and installation
+- **Autonomous Agent Behavior**: Ensure final agents complete tasks without expecting human feedback through system prompt improvements
+- **Orchestrator Refactoring**: Extract coordination logic into separate modules for better maintainability
+- **Marketplace Integration**: Enable tool discovery and installation from MCP Marketplace
+- **Messaging Architecture**: Foundation for future multimodal support through unified stream chunks
 
-For detailed milestones and technical specifications, see the [full v0.0.24 roadmap](ROADMAP_v0.0.24.md).
+For detailed milestones and technical specifications, see the [full v0.0.25 roadmap](ROADMAP_v0.0.25.md).
 
 ---
 
