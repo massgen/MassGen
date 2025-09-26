@@ -52,9 +52,6 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🆕 Latest Features</h3></summary>
 
 - [v0.0.24 Features](#-latest-features-v0024)
-- [Workspace Copy Tools](#-latest-features-v0022)
-- [Configuration Organization](#-latest-features-v0022)
-- [Enhanced File Operations](#-latest-features-v0022)
 </details>
 
 <details open>
