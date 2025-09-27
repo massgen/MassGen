@@ -268,6 +268,8 @@ class PathPermissionManager:
             # Can't determine path - allow it (likely workspace or other non-context path)
             return (True, None)
 
+        # Resolve relative paths against workspace
+        file_path = self._resolve_path_against_workspace(file_path)
         path = Path(file_path).resolve()
         permission = self.get_permission(path)
         logger.debug(f"[PathPermissionManager] Validating write tool '{tool_name}' for path: {path} with permission: {permission}")
@@ -282,6 +284,36 @@ class PathPermissionManager:
             return (True, None)
         else:
             return (False, f"No write permission for '{path}' (read-only context path)")
+
+    def _resolve_path_against_workspace(self, path_str: str) -> str:
+        """
+        Resolve a path string against the workspace directory if it's relative.
+
+        When MCP servers run with cwd set to workspace, they resolve relative paths
+        against the workspace. This function does the same for validation purposes.
+
+        Args:
+            path_str: Path string that may be relative or absolute
+
+        Returns:
+            Absolute path string (resolved against workspace if relative)
+        """
+        if not path_str:
+            return path_str
+
+        path = Path(path_str)
+        if path.is_absolute():
+            return path_str
+
+        # Relative path - resolve against workspace
+        mcp_paths = self.get_mcp_filesystem_paths()
+        if mcp_paths:
+            workspace_path = Path(mcp_paths[0])  # First path is always workspace
+            resolved = workspace_path / path_str
+            logger.debug(f"[PathPermissionManager] Resolved relative path '{path_str}' to '{resolved}'")
+            return str(resolved)
+
+        return path_str
 
     def _validate_copy_files_batch(self, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate copy_files_batch by checking all destination paths after globbing."""
@@ -298,6 +330,9 @@ class PathPermissionManager:
 
             if not source_base_path:
                 return (False, "copy_files_batch requires source_base_path")
+
+            # Resolve relative destination path against workspace
+            destination_base_path = self._resolve_path_against_workspace(destination_base_path)
 
             # Get all file pairs (this also validates path restrictions)
             file_pairs = get_copy_file_pairs(self.get_mcp_filesystem_paths(), source_base_path, destination_base_path, include_patterns, exclude_patterns)

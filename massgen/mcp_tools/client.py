@@ -462,9 +462,10 @@ class MCPClient:
 
         try:
             available_tools = await self.session.list_tools()
+            tools_list = available_tools.tools if available_tools and hasattr(available_tools, "tools") and available_tools.tools else []
 
             # Filter tools based on include/exclude lists
-            for tool in available_tools.tools:
+            for tool in tools_list:
                 if self.exclude_tools and tool.name in self.exclude_tools:
                     continue
                 if self.allowed_tools is None or tool.name in self.allowed_tools:
@@ -476,7 +477,8 @@ class MCPClient:
         # List resources (optional)
         try:
             available_resources = await self.session.list_resources()
-            for resource in available_resources.resources:
+            resources_list = available_resources.resources if available_resources and hasattr(available_resources, "resources") and available_resources.resources else []
+            for resource in resources_list:
                 # Validate resource before storing
                 if not hasattr(resource, "uri") or not resource.uri:
                     logger.warning(f"Invalid resource without URI from server {self.name}")
@@ -509,7 +511,8 @@ class MCPClient:
 
         try:
             available_prompts = await self.session.list_prompts()
-            for prompt in available_prompts.prompts:
+            prompts_list = available_prompts.prompts if available_prompts and hasattr(available_prompts, "prompts") and available_prompts.prompts else []
+            for prompt in prompts_list:
                 # Validate prompt before storing
                 if not hasattr(prompt, "name") or not prompt.name:
                     logger.warning(f"Invalid prompt without name from server {self.name}")
