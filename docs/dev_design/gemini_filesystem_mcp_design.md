@@ -118,18 +118,18 @@ graph TB
     F --> G[Workspace Manager]
     G --> H[Snapshot Creation]
     G --> I[Workspace Sharing]
-    
+
     subgraph "New Components"
         B
         F
         J[FilesystemToolDetector]
     end
-    
+
     subgraph "Enhanced Components"
         C
         G
     end
-    
+
     subgraph "Existing Components"
         D
         E
@@ -156,7 +156,7 @@ sequenceDiagram
     GeminiBackend->>MCPClient: Setup filesystem MCP server
     MCPClient->>FilesystemServer: Connect and discover tools
     GeminiBackend->>Orchestrator: Register filesystem tool callbacks
-    
+
     User->>GeminiBackend: Execute task
     GeminiBackend->>MCPClient: Call filesystem tool
     MCPClient->>FilesystemServer: Execute file operation
@@ -226,11 +226,11 @@ agents:
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"
-      
+
       # IDENTICAL to Claude Code: These two lines enable filesystem access
       cwd: "gemini_workspace_shared"
       permission_mode: "bypassPermissions"  # or "acceptEdits", "strict"
-      
+
       # OPTIONAL: MCP servers work exactly like in Claude Code
       mcp_servers:
         weather:
@@ -241,7 +241,7 @@ agents:
     system_message: |
       You are an AI assistant with filesystem access.
       You have the same tools as Claude Code: Read, Write, Edit, MultiEdit, Bash, Grep, Glob, LS.
-      
+
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
@@ -260,10 +260,10 @@ agents:
 
 # Claude Code version (EXISTING) - identical structure
 agent:
-  id: "claude_code_agent"  
+  id: "claude_code_agent"
   backend:
     type: "claude_code"
-    cwd: "shared_workspace" 
+    cwd: "shared_workspace"
     permission_mode: "bypassPermissions"
 ```
 
@@ -300,23 +300,23 @@ import shutil
 
 class MCPFilesystemConverter:
     """Converts cwd/permission_mode config to MCP server configuration."""
-    
+
     def __init__(self):
         self.filesystem_server_name = "filesystem"
-    
+
     def should_add_filesystem_server(self, config: Dict[str, Any]) -> bool:
         """Check if config has cwd/permission_mode requiring filesystem MCP server."""
         return bool(config.get("cwd")) or bool(config.get("permission_mode"))
-    
+
     def setup_workspace_directory(self, cwd: str) -> str:
         """Setup workspace directory like Claude Code does."""
         if not cwd:
             return cwd
-            
+
         cwd_path = Path(cwd)
         if not cwd_path.is_absolute():
             cwd_path = cwd_path.resolve()
-        
+
         # Clear existing files if directory exists (like Claude Code)
         if cwd_path.exists() and cwd_path.is_dir():
             for item in cwd_path.iterdir():
@@ -324,17 +324,17 @@ class MCPFilesystemConverter:
                     item.unlink()
                 elif item.is_dir():
                     shutil.rmtree(item)
-        
+
         # Create directory if it doesn't exist
         cwd_path.mkdir(parents=True, exist_ok=True)
-        
+
         return str(cwd_path)
-    
+
     def generate_filesystem_mcp_server(self, cwd: str, permission_mode: str) -> Dict[str, Any]:
         """Generate filesystem MCP server configuration."""
         # Setup workspace directory first
         workspace_path = self.setup_workspace_directory(cwd)
-        
+
         # Generate MCP server config that existing MCP client can understand
         return {
             "name": self.filesystem_server_name,
@@ -350,22 +350,22 @@ class MCPFilesystemConverter:
             "_cwd": workspace_path,
             "_permission_mode": permission_mode
         }
-    
+
     def inject_filesystem_server(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Inject filesystem MCP server into existing mcp_servers config."""
         if not self.should_add_filesystem_server(config):
             return config
-        
+
         # Extract cwd and permission_mode
         cwd = config.get("cwd")
         permission_mode = config.get("permission_mode", "strict")
-        
+
         # Generate filesystem MCP server
         filesystem_server = self.generate_filesystem_mcp_server(cwd, permission_mode)
-        
+
         # Get existing mcp_servers (could be list or dict format)
         existing_servers = config.get("mcp_servers", [])
-        
+
         # Convert to list format if needed
         if isinstance(existing_servers, dict):
             server_list = []
@@ -373,23 +373,23 @@ class MCPFilesystemConverter:
                 server_config["name"] = name
                 server_list.append(server_config)
             existing_servers = server_list
-        
+
         # Check if filesystem server already exists
         has_filesystem = any(
-            server.get("name") == self.filesystem_server_name 
+            server.get("name") == self.filesystem_server_name
             for server in existing_servers
         )
-        
+
         if not has_filesystem:
             # Add filesystem server to the beginning
             existing_servers.insert(0, filesystem_server)
-        
+
         # Update config
         updated_config = config.copy()
         updated_config["mcp_servers"] = existing_servers
-        
+
         return updated_config
-    
+
     @classmethod
     def convert_config(cls, config: Dict[str, Any]) -> Dict[str, Any]:
         """Main conversion method - convert cwd/permission_mode to MCP server."""
@@ -408,7 +408,7 @@ class GeminiBackend:
     def __init__(self, config: dict, orchestrator_callback=None):
         # CONVERT config before existing MCP processing
         config = MCPFilesystemConverter.convert_config(config)
-        
+
         # Existing MCP initialization continues unchanged
         # The filesystem MCP server is now in mcp_servers list
         # Current MCP client discovers and registers filesystem tools automatically
@@ -430,17 +430,17 @@ from massgen.mcp_tools.filesystem_detector import FilesystemToolDetector
 class GeminiBackend:
     def __init__(self, config: dict, orchestrator_callback=None):
         # Existing initialization...
-        
+
         # NEW: Filesystem MCP configuration
         self.filesystem_config = FilesystemMCPConfig.from_dict(config)
         self.filesystem_detector = FilesystemToolDetector()
-        
+
         # Register orchestrator callback for workspace triggers
         if orchestrator_callback and self.filesystem_config.has_filesystem_access():
             self.filesystem_detector.register_callback(
                 self._on_filesystem_operation
             )
-    
+
     def _on_filesystem_operation(self, tool_name: str, args: dict):
         """Handle detected filesystem operation."""
         # Notify orchestrator for workspace snapshot/sharing
@@ -451,15 +451,15 @@ class GeminiBackend:
                 'workspace': self.filesystem_config.cwd,
                 'operation_args': args
             })
-    
+
     def execute_tool(self, tool_name: str, args: dict):
         """Execute MCP tool with filesystem detection."""
         # Existing tool execution...
         result = super().execute_tool(tool_name, args)
-        
+
         # NEW: Notify filesystem detector
         self.filesystem_detector.notify_filesystem_operation(tool_name, args)
-        
+
         return result
 ```
 
@@ -472,29 +472,29 @@ class Orchestrator:
     def __init__(self):
         # Existing initialization...
         self.workspace_triggers = set()
-    
+
     def register_agent(self, agent):
         """Register agent with filesystem operation callbacks."""
         # Existing registration...
-        
+
         # NEW: Register filesystem operation callback
         if hasattr(agent, 'filesystem_detector'):
             agent.filesystem_detector.register_callback(
                 self._handle_filesystem_operation
             )
-    
+
     def _handle_filesystem_operation(self, tool_name: str, args: dict):
         """Handle filesystem operation from any agent."""
         # Extract agent and workspace info
         agent_id = args.get('agent_id')
         workspace = args.get('workspace')
-        
+
         # Trigger workspace snapshot (existing logic)
         self.trigger_workspace_snapshot(agent_id, workspace)
-        
+
         # NEW: Enable workspace sharing for other agents
         self.update_shared_workspace_access(workspace)
-    
+
     def update_shared_workspace_access(self, workspace: str):
         """Update workspace access for collaborative agents."""
         # Implementation to share workspace across agents
@@ -513,18 +513,18 @@ class Orchestrator:
 
 class FilesystemSecurityManager:
     """Manages filesystem security based on permission mode."""
-    
+
     def __init__(self, permission_mode: str, base_workspace: str):
         self.permission_mode = permission_mode
         self.base_workspace = Path(base_workspace).resolve()
-    
+
     def validate_path_access(self, requested_path: str, operation: str) -> bool:
         """Validate if path access is allowed based on permission mode."""
         if self.permission_mode == "bypassPermissions":
             return True
-            
+
         requested_path = Path(requested_path).resolve()
-        
+
         if self.permission_mode == "strict":
             # Only allow access within workspace
             try:
@@ -532,7 +532,7 @@ class FilesystemSecurityManager:
                 return True
             except ValueError:
                 return False
-                
+
         elif self.permission_mode == "moderate":
             # Allow workspace + some system paths
             allowed_roots = [
@@ -541,12 +541,12 @@ class FilesystemSecurityManager:
                 Path("/tmp") if os.name != 'nt' else Path(os.getenv("TEMP", ""))
             ]
             return any(
-                self._is_path_under_root(requested_path, root) 
+                self._is_path_under_root(requested_path, root)
                 for root in allowed_roots
             )
-        
+
         return False
-    
+
     def _is_path_under_root(self, path: Path, root: Path) -> bool:
         """Check if path is under root directory."""
         try:
@@ -589,11 +589,11 @@ class TestFilesystemMCPConfig:
         )
         assert config.cwd == "test_workspace"
         assert config.permission_mode == "strict"
-    
+
     def test_invalid_permission_mode(self):
         with pytest.raises(ValueError, match="Invalid permission_mode"):
             FilesystemMCPConfig(permission_mode="invalid")
-    
+
     def test_from_dict_parsing(self):
         config_dict = {
             "cwd": "workspace",
@@ -627,19 +627,19 @@ class TestGeminiFilesystemIntegration:
             "permission_mode": "strict",
             "mcp_servers": [{
                 "name": "filesystem",
-                "command": "python", 
+                "command": "python",
                 "args": ["-m", "test_filesystem_server"]
             }]
         }
-    
+
     def test_filesystem_config_initialization(self, filesystem_config):
         backend = GeminiBackend(filesystem_config)
         assert backend.filesystem_config.has_filesystem_access()
         assert backend.filesystem_config.cwd == "test_workspace"
-    
+
     def test_filesystem_operation_detection(self, filesystem_config):
         backend = GeminiBackend(filesystem_config)
-        
+
         # Mock filesystem operation
         detected = backend.filesystem_detector.is_filesystem_operation(
             "mcp__filesystem__read_file"
@@ -660,14 +660,14 @@ def test_gemini_claude_workspace_sharing():
         "cwd": "shared_workspace",
         "mcp_servers": [{"name": "filesystem", ...}]
     }
-    
+
     # Setup Claude Code agent with same workspace
     claude_config = {
-        "type": "claude_code", 
+        "type": "claude_code",
         "cwd": "shared_workspace",
         "permission_mode": "bypassPermissions"
     }
-    
+
     # Test file creation by Gemini, reading by Claude Code
     # Test workspace snapshot creation
     # Test cross-agent file access
@@ -707,7 +707,7 @@ agents:
 
 # Step 3: Add filesystem MCP server (full filesystem access)
 agents:
-  - id: "gemini_weather" 
+  - id: "gemini_weather"
     backend:
       type: "gemini"
       cwd: "gemini_workspace"
