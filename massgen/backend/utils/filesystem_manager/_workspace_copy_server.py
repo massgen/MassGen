@@ -220,25 +220,26 @@ async def create_server() -> fastmcp.FastMCP:
     # Add allowed paths from arguments
     mcp.allowed_paths = [Path(p).resolve() for p in args.allowed_paths]
 
-    @mcp.tool()
-    def get_cwd() -> Dict[str, Any]:
-        """
-        Get the current working directory of the workspace copy server.
+    # Below is for debugging - can be uncommented if needed
+    # @mcp.tool()
+    # def get_cwd() -> Dict[str, Any]:
+    #     """
+    #     Get the current working directory of the workspace copy server.
 
-        Useful for testing and verifying that relative paths resolve correctly.
+    #     Useful for testing and verifying that relative paths resolve correctly.
 
-        Returns:
-            Dictionary with current working directory information
-        """
-        cwd = Path.cwd()
-        return {
-            "success": True,
-            "operation": "get_cwd",
-            "cwd": str(cwd),
-            "absolute_path": str(cwd.resolve()),
-            "allowed_paths": [str(p) for p in mcp.allowed_paths],
-            "allowed_paths_count": len(mcp.allowed_paths),
-        }
+    #     Returns:
+    #         Dictionary with current working directory information
+    #     """
+    #     cwd = Path.cwd()
+    #     return {
+    #         "success": True,
+    #         "operation": "get_cwd",
+    #         "cwd": str(cwd),
+    #         "absolute_path": str(cwd.resolve()),
+    #         "allowed_paths": [str(p) for p in mcp.allowed_paths],
+    #         "allowed_paths_count": len(mcp.allowed_paths),
+    #     }
 
     @mcp.tool()
     def copy_file(source_path: str, destination_path: str, overwrite: bool = False) -> Dict[str, Any]:
