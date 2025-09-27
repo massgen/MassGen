@@ -188,18 +188,25 @@ class FilesystemManager:
         context_paths = self.path_permission_manager.get_context_paths()
         ",".join([cp["path"] for cp in context_paths])
 
+        # Get absolute path to the workspace copy server script
+        import massgen.backend.utils.filesystem_manager._workspace_copy_server as wc_module
+
+        script_path = Path(wc_module.__file__).resolve()
+
+        # Pass allowed paths via environment variable to avoid fastmcp argument parsing issues
+        paths = self.path_permission_manager.get_mcp_filesystem_paths()
+        env = {
+            "FASTMCP_SHOW_CLI_BANNER": "false",
+        }
+
         config = {
             "name": "workspace_copy",
             "type": "stdio",
             "command": "fastmcp",
-            "args": ["run", "massgen/backend/utils/filesystem_manager/_workspace_copy_server.py"],
-            "env": {
-                "FASTMCP_SHOW_CLI_BANNER": "false",
-            },
+            "args": ["run", f"{script_path}:create_server"] + ["--", "--allowed-paths"] + paths,
+            "env": env,
+            "cwd": str(self.cwd),
         }
-
-        # Add all managed paths from path permission manager
-        config["args"].extend(self.path_permission_manager.get_mcp_filesystem_paths())
 
         return config
 

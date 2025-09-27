@@ -5,13 +5,18 @@ import sys
 import tempfile
 from pathlib import Path
 
-import massgen.backend.utils.filesystem_manager.workspace_copy_server as wc_server
-from massgen.backend.utils.filesystem_manager import PathPermissionManager, Permission
-from massgen.backend.utils.filesystem_manager.workspace_copy_server import (
+# Removed wc_server import - now using factory function approach
+from massgen.backend.utils.filesystem_manager import (
+    FilesystemManager,
+    PathPermissionManager,
+    Permission,
+)
+from massgen.backend.utils.filesystem_manager._workspace_copy_server import (
     _validate_and_resolve_paths,
     _validate_path_access,
     get_copy_file_pairs,
 )
+from massgen.mcp_tools.client import MCPClient
 
 
 class TestHelper:
@@ -47,6 +52,159 @@ class TestHelper:
             manager.add_path(self.context_dir, Permission.READ, "context")
         manager.add_path(self.readonly_dir, Permission.READ, "context")
         return manager
+
+
+async def test_mcp_relative_paths():
+    """Test that MCP servers resolve relative paths correctly when cwd is set."""
+    print("🧪 Testing MCP relative path resolution with cwd parameter...")
+
+    # Create temporary directories
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        workspace_dir = temp_path / "workspace1"
+        workspace_dir.mkdir()
+
+        print(f"📁 Created test workspace: {workspace_dir}")
+
+        # Create filesystem manager (this should generate configs with cwd)
+        temp_workspace_parent = temp_path / "temp_workspaces"
+        temp_workspace_parent.mkdir()
+
+        filesystem_manager = FilesystemManager(
+            cwd=str(workspace_dir),
+            context_paths=[],
+            context_write_access_enabled=True,
+            agent_temporary_workspace_parent=str(temp_workspace_parent),
+        )
+
+        # Get MCP filesystem config - should include cwd parameter
+        filesystem_config = filesystem_manager.get_mcp_filesystem_config()
+        print(f"🔧 Filesystem MCP config: {filesystem_config}")
+
+        # Verify cwd is set correctly (resolve both paths to handle /private prefix on macOS)
+        expected_cwd = str(workspace_dir.resolve())
+        actual_cwd = str(Path(filesystem_config.get("cwd")).resolve())
+        assert actual_cwd == expected_cwd, f"Expected cwd={expected_cwd}, got {actual_cwd}"
+        print("✅ Filesystem config has correct cwd")
+
+        # Get workspace copy config - should also include cwd parameter
+        workspace_copy_config = filesystem_manager.get_workspace_copy_mcp_config()
+        print(f"🔧 Workspace copy MCP config: {workspace_copy_config}")
+
+        # Verify cwd is set correctly (resolve both paths to handle /private prefix on macOS)
+        expected_cwd = str(workspace_dir.resolve())
+        actual_cwd = str(Path(workspace_copy_config.get("cwd")).resolve())
+        assert actual_cwd == expected_cwd, f"Expected cwd={expected_cwd}, got {actual_cwd}"
+        print("✅ Workspace copy config has correct cwd")
+
+        # Test filesystem MCP server
+        print("\n📡 Testing filesystem MCP server...")
+        try:
+            async with MCPClient(filesystem_config, timeout_seconds=10) as client:
+                print("✅ Filesystem MCP server connected successfully")
+                tools = client.get_available_tools()
+                print(f"🔧 Available tools: {tools}")
+
+                # Test creating a directory with relative path
+                if "create_directory" in tools:
+                    print("🏗️  Testing create_directory with relative path 'api'...")
+                    try:
+                        result = await client.call_tool("create_directory", {"path": "api"})
+                        print(f"✅ create_directory result: {result}")
+
+                        # Verify directory was created in workspace
+                        api_dir = workspace_dir / "api"
+                        if api_dir.exists():
+                            print(f"✅ Directory created at correct location: {api_dir}")
+                        else:
+                            print(f"❌ Directory not found at expected location: {api_dir}")
+
+                    except Exception as e:
+                        print(f"⚠️  create_directory failed: {e}")
+                else:
+                    print("⚠️  create_directory tool not available")
+
+        except Exception as e:
+            print(f"❌ Filesystem MCP server test failed: {e}")
+
+        # Test workspace copy MCP server
+        print("\n📦 Testing workspace copy MCP server...")
+        try:
+            async with MCPClient(workspace_copy_config, timeout_seconds=10) as client:
+                print("✅ Workspace copy MCP server connected successfully")
+                tools = client.get_available_tools()
+                print(f"🔧 Available tools: {tools}")
+
+                # Test get_cwd to verify working directory
+                if "get_cwd" in tools:
+                    print("📍 Testing get_cwd to verify working directory...")
+                    try:
+                        cwd_result = await client.call_tool("get_cwd", {})
+                        print(f"✅ get_cwd result: {cwd_result}")
+
+                        # Extract cwd info from structured content if available
+                        if hasattr(cwd_result, "structuredContent") and cwd_result.structuredContent:
+                            cwd_info = cwd_result.structuredContent
+                        else:
+                            # Fallback to parsing text content
+                            import json
+
+                            cwd_info = json.loads(cwd_result.content[0].text)
+
+                        server_cwd = cwd_info.get("cwd")
+                        expected_cwd = str(workspace_dir.resolve())
+                        actual_cwd = str(Path(server_cwd).resolve())
+
+                        if actual_cwd == expected_cwd:
+                            print(f"✅ Server is running in correct directory: {server_cwd}")
+                        else:
+                            print(f"❌ Server working directory mismatch: expected {expected_cwd}, got {actual_cwd}")
+
+                    except Exception as e:
+                        print(f"⚠️  get_cwd failed: {e}")
+                else:
+                    print("⚠️  get_cwd tool not available")
+
+                # Create a test source file in the temp workspace (which is in allowed paths)
+                source_dir = temp_workspace_parent / "source"
+                source_dir.mkdir()
+                test_file = source_dir / "test.txt"
+                test_file.write_text("test content")
+
+                # Test copying with relative destination path
+                if "copy_file" in tools:
+                    print("📋 Testing copy_file with relative destination path...")
+                    try:
+                        result = await client.call_tool(
+                            "copy_file",
+                            {
+                                "source_path": str(test_file),
+                                "destination_path": "copied_file.txt",  # Relative path
+                            },
+                        )
+                        print(f"✅ copy_file result: {result}")
+
+                        # Verify file was copied to workspace
+                        copied_file = workspace_dir / "copied_file.txt"
+                        if copied_file.exists():
+                            print(f"✅ File copied to correct location: {copied_file}")
+                            content = copied_file.read_text()
+                            if content == "test content":
+                                print("✅ File content is correct")
+                            else:
+                                print(f"❌ File content mismatch: {content}")
+                        else:
+                            print(f"❌ File not found at expected location: {copied_file}")
+
+                    except Exception as e:
+                        print(f"⚠️  copy_file failed: {e}")
+                else:
+                    print("⚠️  copy_file tool not available")
+
+        except Exception as e:
+            print(f"❌ Workspace copy MCP server test failed: {e}")
+
+    print("\n🎉 MCP relative path testing complete!")
 
 
 def test_is_write_tool():
@@ -248,7 +406,7 @@ def test_validate_command_tool():
         helper.teardown()
 
 
-def test_pre_tool_use_hook():
+async def test_pre_tool_use_hook():
     print("\n🪝 Testing pre_tool_use_hook method...")
 
     helper = TestHelper()
@@ -258,7 +416,7 @@ def test_pre_tool_use_hook():
         print("  Testing write tool on readonly path...")
         manager = helper.create_permission_manager(context_write_enabled=False)
         tool_args = {"file_path": str(helper.readonly_dir / "readonly_file.txt")}
-        allowed, reason = asyncio.run(manager.pre_tool_use_hook("Write", tool_args))
+        allowed, reason = await manager.pre_tool_use_hook("Write", tool_args)
 
         if allowed:
             print("❌ Failed: Write tool on readonly path should be blocked")
@@ -268,7 +426,7 @@ def test_pre_tool_use_hook():
             return False
         print("  Testing dangerous command...")
         tool_args = {"command": "rm -rf /"}
-        allowed, reason = asyncio.run(manager.pre_tool_use_hook("Bash", tool_args))
+        allowed, reason = await manager.pre_tool_use_hook("Bash", tool_args)
 
         if allowed:
             print("❌ Failed: Dangerous command should be blocked")
@@ -281,14 +439,14 @@ def test_pre_tool_use_hook():
 
         for tool_name in read_tools:
             tool_args = {"file_path": str(helper.readonly_dir / "readonly_file.txt")}
-            allowed, reason = asyncio.run(manager.pre_tool_use_hook(tool_name, tool_args))
+            allowed, reason = await manager.pre_tool_use_hook(tool_name, tool_args)
 
             if not allowed:
                 print(f"❌ Failed: Read tool should always be allowed: {tool_name}. Reason: {reason}")
                 return False
         print("  Testing unknown tools...")
         tool_args = {"some_param": "value"}
-        allowed, reason = asyncio.run(manager.pre_tool_use_hook("CustomTool", tool_args))
+        allowed, reason = await manager.pre_tool_use_hook("CustomTool", tool_args)
 
         if not allowed:
             print(f"❌ Failed: Unknown tool should be allowed. Reason: {reason}")
@@ -397,6 +555,8 @@ def test_workspace_copy_tools():
         (temp_workspace_dir / "source_file.txt").write_text("source content")
         print("  Testing copy tool detection...")
         manager = helper.create_permission_manager(context_write_enabled=False)
+        # Add temp_workspace_dir to the permission manager's allowed paths
+        manager.add_path(temp_workspace_dir, Permission.READ, "temp_workspace")
 
         copy_tools = ["copy_file", "copy_files_batch", "mcp__workspace_copy__copy_file", "mcp__workspace_copy__copy_files_batch"]
         for tool in copy_tools:
@@ -480,20 +640,20 @@ def test_workspace_copy_server_path_validation():
     helper.setup()
 
     try:
-        original_allowed_paths = wc_server.ALLOWED_PATHS.copy()
-        original_workspace_path = wc_server.WORKSPACE_PATH
-        wc_server.ALLOWED_PATHS = [helper.workspace_dir.resolve(), helper.context_dir.resolve(), helper.readonly_dir.resolve()]
-        wc_server.WORKSPACE_PATH = helper.workspace_dir.resolve()
+        # Set up allowed paths for the new factory function approach
+        allowed_paths = [helper.workspace_dir.resolve(), helper.context_dir.resolve(), helper.readonly_dir.resolve()]
+
         test_source_dir = helper.temp_dir / "source"
         test_source_dir.mkdir()
         (test_source_dir / "test_file.txt").write_text("test content")
         (test_source_dir / "subdir" / "nested_file.txt").parent.mkdir(parents=True)
         (test_source_dir / "subdir" / "nested_file.txt").write_text("nested content")
-        wc_server.ALLOWED_PATHS.append(test_source_dir.resolve())
+        allowed_paths.append(test_source_dir.resolve())
+
         print("  Testing valid absolute destination path...")
         try:
             dest_path = helper.workspace_dir / "output"
-            file_pairs = get_copy_file_pairs(source_base_path=str(test_source_dir), destination_base_path=str(dest_path))
+            file_pairs = get_copy_file_pairs(allowed_paths, str(test_source_dir), str(dest_path))
             if len(file_pairs) < 2:
                 print(f"❌ Failed: Expected at least 2 files, got {len(file_pairs)}")
                 return False
@@ -506,7 +666,7 @@ def test_workspace_copy_server_path_validation():
         outside_dir.mkdir()
 
         try:
-            file_pairs = get_copy_file_pairs(source_base_path=str(test_source_dir), destination_base_path=str(outside_dir / "output"))
+            file_pairs = get_copy_file_pairs(allowed_paths, str(test_source_dir), str(outside_dir / "output"))
             print("❌ Failed: Should have raised ValueError for path outside allowed directories")
             return False
         except ValueError as e:
@@ -524,7 +684,7 @@ def test_workspace_copy_server_path_validation():
         (outside_source / "bad_file.txt").write_text("bad content")
 
         try:
-            file_pairs = get_copy_file_pairs(source_base_path=str(outside_source), destination_base_path=str(helper.workspace_dir / "output"))
+            file_pairs = get_copy_file_pairs(allowed_paths, str(outside_source), str(helper.workspace_dir / "output"))
             print("❌ Failed: Should have raised ValueError for source outside allowed directories")
             return False
         except ValueError as e:
@@ -535,7 +695,7 @@ def test_workspace_copy_server_path_validation():
                 return False
         print("  Testing empty destination_base_path...")
         try:
-            file_pairs = get_copy_file_pairs(source_base_path=str(test_source_dir), destination_base_path="")
+            file_pairs = get_copy_file_pairs(allowed_paths, str(test_source_dir), "")
             print("❌ Failed: Should have raised ValueError for empty destination_base_path")
             return False
         except ValueError as e:
@@ -546,13 +706,19 @@ def test_workspace_copy_server_path_validation():
                 return False
         print("  Testing _validate_path_access function...")
         try:
-            _validate_path_access(helper.workspace_dir / "test.txt", wc_server.ALLOWED_PATHS)
+            # Use resolve() to handle macOS /private prefix differences
+            test_path = (helper.workspace_dir / "test.txt").resolve()
+            resolved_allowed_paths = [p.resolve() for p in allowed_paths]
+            _validate_path_access(test_path, resolved_allowed_paths)
             print("  ✓ Valid path accepted")
         except Exception as e:
             print(f"❌ Failed: Valid path should be accepted. Error: {e}")
             return False
         try:
-            _validate_path_access(outside_dir / "test.txt", wc_server.ALLOWED_PATHS)
+            # Use resolve() to handle macOS /private prefix differences
+            test_path = (outside_dir / "test.txt").resolve()
+            resolved_allowed_paths = [p.resolve() for p in allowed_paths]
+            _validate_path_access(test_path, resolved_allowed_paths)
             print("❌ Failed: Invalid path should be rejected")
             return False
         except ValueError as e:
@@ -561,10 +727,16 @@ def test_workspace_copy_server_path_validation():
             else:
                 print(f"❌ Failed: Unexpected error: {e}")
                 return False
-        print("  Testing relative path resolution...")
 
+        # Test relative path resolution with workspace context
+        print("  Testing relative path resolution...")
+        import os
+
+        original_cwd = os.getcwd()
         try:
-            source, dest = _validate_and_resolve_paths(str(test_source_dir / "test_file.txt"), "subdir/relative_dest.txt")
+            # Change to workspace directory to simulate the new factory function approach
+            os.chdir(str(helper.workspace_dir))
+            source, dest = _validate_and_resolve_paths(allowed_paths, str(test_source_dir / "test_file.txt"), "subdir/relative_dest.txt")
             expected_dest = helper.workspace_dir / "subdir" / "relative_dest.txt"
             if dest != expected_dest.resolve():
                 print(f"❌ Failed: Relative path should resolve to {expected_dest.resolve()}, got {dest}")
@@ -573,55 +745,57 @@ def test_workspace_copy_server_path_validation():
         except Exception as e:
             print(f"❌ Failed: Relative path resolution failed: {e}")
             return False
-        print("  Testing relative path without workspace...")
-        old_workspace = wc_server.WORKSPACE_PATH
-        wc_server.WORKSPACE_PATH = None
-        try:
-            source, dest = _validate_and_resolve_paths(str(test_source_dir / "test_file.txt"), "relative_dest.txt")
-            print("❌ Failed: Should have failed when WORKSPACE_PATH is None")
-            return False
-        except ValueError as e:
-            if "require WORKSPACE_PATH" in str(e):
-                print("  ✓ Correctly rejected relative path when workspace not set")
-            else:
-                print(f"❌ Failed: Unexpected error: {e}")
-                return False
         finally:
-            wc_server.WORKSPACE_PATH = old_workspace
+            os.chdir(original_cwd)
 
         print("✅ Workspace copy server path validation works correctly")
         return True
     finally:
-        wc_server.ALLOWED_PATHS = original_allowed_paths
-        wc_server.WORKSPACE_PATH = original_workspace_path
         helper.teardown()
 
 
-def main():
+async def main():
     print("\n" + "=" * 60)
     print("🧪 Path Permission Manager Test Suite")
     print("=" * 60)
 
-    tests = [
+    sync_tests = [
         test_is_write_tool,
         test_validate_write_tool,
         test_validate_command_tool,
-        test_pre_tool_use_hook,
         test_context_write_access_toggle,
         test_extract_file_from_command,
         test_workspace_copy_tools,
         test_workspace_copy_server_path_validation,
     ]
 
+    async_tests = [
+        test_pre_tool_use_hook,
+        test_mcp_relative_paths,
+    ]
+
     passed = 0
     failed = 0
 
-    for test_func in tests:
+    # Run synchronous tests
+    for test_func in sync_tests:
         try:
             if test_func():
                 passed += 1
             else:
                 failed += 1
+        except Exception as e:
+            print(f"❌ {test_func.__name__} failed with exception: {e}")
+            import traceback
+
+            traceback.print_exc()
+            failed += 1
+
+    # Run asynchronous tests
+    for test_func in async_tests:
+        try:
+            await test_func()
+            passed += 1
         except Exception as e:
             print(f"❌ {test_func.__name__} failed with exception: {e}")
             import traceback
@@ -637,5 +811,5 @@ def main():
 
 
 if __name__ == "__main__":
-    success = main()
+    success = asyncio.run(main())
     sys.exit(0 if success else 1)

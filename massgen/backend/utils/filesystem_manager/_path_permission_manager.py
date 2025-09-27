@@ -300,7 +300,7 @@ class PathPermissionManager:
                 return (False, "copy_files_batch requires source_base_path")
 
             # Get all file pairs (this also validates path restrictions)
-            file_pairs = get_copy_file_pairs(source_base_path, destination_base_path, include_patterns, exclude_patterns)
+            file_pairs = get_copy_file_pairs(self.get_mcp_filesystem_paths(), source_base_path, destination_base_path, include_patterns, exclude_patterns)
 
             # Check permissions for each destination path
             blocked_paths = []
