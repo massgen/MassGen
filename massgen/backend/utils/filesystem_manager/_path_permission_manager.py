@@ -16,7 +16,7 @@ class ManagedPath:
     path: Path
     permission: Permission
     path_type: str  # "workspace", "temp_workspace", "context", etc.
-    original_permission: Optional[Permission] = None  # Original YAML permission for context paths
+    will_be_writable: bool = False  # True if this path will become writable for final agent
 
     def contains(self, check_path: Path) -> bool:
         """Check if this managed path contains the given path."""
@@ -84,12 +84,18 @@ class PathPermissionManager:
         Get context paths in configuration format for system prompts.
 
         Returns:
-            List of context path dictionaries with path and permission
+            List of context path dictionaries with path, permission, and will_be_writable flag
         """
         context_paths = []
         for mp in self.managed_paths:
             if mp.path_type == "context":
-                context_paths.append({"path": str(mp.path), "permission": mp.permission.value})
+                context_paths.append(
+                    {
+                        "path": str(mp.path),
+                        "permission": mp.permission.value,
+                        "will_be_writable": mp.will_be_writable,
+                    },
+                )
         return context_paths
 
     def set_context_write_access_enabled(self, enabled: bool) -> None:
@@ -109,14 +115,14 @@ class PathPermissionManager:
 
         # Recalculate permissions for existing context paths
         for mp in self.managed_paths:
-            if mp.path_type == "context" and mp.original_permission:
+            if mp.path_type == "context" and mp.will_be_writable:
                 # Update permission based on new context_write_access_enabled setting
                 if enabled:
-                    mp.permission = mp.original_permission
-                    logger.debug(f"[PathPermissionManager] Restored original permission for {mp.path}: {mp.permission.value}")
+                    mp.permission = Permission.WRITE
+                    logger.debug(f"[PathPermissionManager] Enabled write access for {mp.path}")
                 else:
                     mp.permission = Permission.READ
-                    logger.debug(f"[PathPermissionManager] Forced read-only for {mp.path}")
+                    logger.debug(f"[PathPermissionManager] Keeping read-only for {mp.path}")
 
         logger.info(f"[PathPermissionManager] Updated context path permissions based on context_write_access_enabled={enabled}, now is {self.managed_paths=}")
 
@@ -149,21 +155,24 @@ class PathPermissionManager:
                 logger.warning(f"[PathPermissionManager] Invalid permission '{permission_str}', using 'read'")
                 yaml_permission = Permission.READ
 
-            # For context paths: only final agent (context_write_access_enabled=True) gets original permissions
-            # All coordination agents get read-only access regardless of YAML
-            if self.context_write_access_enabled:
-                actual_permission = yaml_permission
-                logger.debug(f"[PathPermissionManager] Final agent: context path {path} gets {actual_permission.value} permission")
-            else:
-                actual_permission = Permission.READ
-                if yaml_permission == Permission.WRITE:
-                    logger.debug(f"[PathPermissionManager] Coordination agent: forcing context path {path} to read-only (YAML had write)")
+            # Determine if this path will become writable for final agent
+            will_be_writable = yaml_permission == Permission.WRITE
 
-            # Create managed path with original permission stored for context paths
-            managed_path = ManagedPath(path=path.resolve(), permission=actual_permission, path_type="context", original_permission=yaml_permission)
+            # For context paths: only final agent (context_write_access_enabled=True) gets write permissions
+            # All coordination agents get read-only access regardless of YAML
+            if self.context_write_access_enabled and will_be_writable:
+                actual_permission = Permission.WRITE
+                logger.debug(f"[PathPermissionManager] Final agent: context path {path} gets write permission")
+            else:
+                actual_permission = Permission.READ if will_be_writable else yaml_permission
+                if will_be_writable:
+                    logger.debug(f"[PathPermissionManager] Coordination agent: context path {path} read-only (will be writable later)")
+
+            # Create managed path with will_be_writable flag
+            managed_path = ManagedPath(path=path.resolve(), permission=actual_permission, path_type="context", will_be_writable=will_be_writable)
             self.managed_paths.append(managed_path)
             self._permission_cache.clear()
-            logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, original: {yaml_permission.value})")
+            logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, will_be_writable: {will_be_writable})")
 
     def get_permission(self, path: Path) -> Optional[Permission]:
         """
@@ -188,7 +197,7 @@ class PathPermissionManager:
                 logger.info(
                     f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} "
                     f"(from {managed_path.path}, type: {managed_path.path_type}, "
-                    f"original: {managed_path.original_permission})",
+                    f"will_be_writable: {managed_path.will_be_writable})",
                 )
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission

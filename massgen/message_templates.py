@@ -411,91 +411,72 @@ Based on the coordination process above, present your final answer:"""
         return messages
 
     def filesystem_system_message(self, main_workspace: Optional[str] = None, temp_workspace: Optional[str] = None, context_paths: Optional[List[Dict[str, str]]] = None) -> str:
-        """Generate filesystem access instructions for agents with filesystem support.
-
-        Args:
-            main_workspace: Path to agent's main workspace
-            temp_workspace: Path to temporary workspace for context sharing
-            context_paths: List of context paths with their permissions
-        """
+        """Generate filesystem access instructions for agents with filesystem support."""
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
 
-        # Build workspace information
-        workspace_info = []
+        parts = ["## Filesystem Access\n"]
+
+        # Explain workspace behavior
+        parts.append(
+            "Your working directory is set to your workspace, so all relative paths in your file operations "
+            "will be resolved from there. This ensures each agent works in isolation while having access to shared references.\n",
+        )
+
         if main_workspace:
-            workspace_info.append(f"1. **Your Main Workspace**: `{main_workspace}`")
-            workspace_info.append(" - IMPORTANT: ALL your own work (like writing files and creating outputs) MUST be done in your working directory.")
-            workspace_info.append(" - DO NOT look in your working directory for agent information - it's exclusively for creating YOUR OWN new work.")
-            workspace_info.append(" - Use this for creating your own files and outputs if providing a new answer")
-            workspace_info.append(
-                " - When providing a new answer, ensure you save any relevant files or outputs in your main workspace."
-                + " Then, give a summary of your work in the answer content. Do NOT repeat the full file contents in your answer.",
-            )
-            workspace_info.append(
-                " - Do NOT copy any files from the temporary workspace to your main workspace to use them. The only thing that should go in your main workspace is YOUR OWN work for your new answer.",
-            )
+            parts.append(f"**Your Workspace**: `{main_workspace}` - Write actual files here using file tools. All your file operations will be relative to this directory.")
 
         if temp_workspace:
-            workspace_info.append(f"2. **Context Workspace**: `{temp_workspace}`")
-            workspace_info.append(" - Context: You have access to a reference temporary workspace that contains work from yourself and other agents for REFERENCE ONLY.")
-            workspace_info.append(" - CRITICAL: To understand your own or other agents' information, context, and work, ONLY check the temporary workspace.")
-            workspace_info.append(" - You may READ documents or EXECUTE code from the temporary workspace to understand other agents' work.")
-            workspace_info.append(
-                " - When you READ or EXECUTE content from the temporary workspace, save any resulting outputs (analysis results, execution outputs, etc.) to the temporary workspace as well.",
-            )
-            workspace_info.append(
-                " - You do NOT need to copy any files from the temporary workspace to your main workspace to use them. You can read and execute them directly from the temporary workspace.",
-            )
-            workspace_info.append(" - For voting, you can review all agents' work here and use this context to make an informed voting decision.")
-            workspace_info.append(" - Files organized by anonymous agent IDs (agent1/, agent2/, etc.)")
-            workspace_info.append(" - IMPORTANT: Each agent works in their own separate workspace")
-            workspace_info.append(" - File paths in answers have been normalized to show where you can access their work")
-            workspace_info.append(" - All agents' work is equally valid regardless of which workspace directory they used")
-            workspace_info.append(" - Focus on evaluating the content and quality of their work, not the specific paths")
+            parts.append(f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)")
 
-        # Add context paths if available
         if context_paths:
-            workspace_info.append("3. **Additional Context Paths**: Additional paths with specific permissions")
-            workspace_info.append(
-                " - IMPORTANT: You may have different permissions on these paths than other agents, so always think about your permissions instead of assuming they are the same as others.",
-            )
+            has_target = any(p.get("will_be_writable", False) for p in context_paths)
+            has_readonly_context = any(not p.get("will_be_writable", False) and p.get("permission") == "read" for p in context_paths)
+
+            if has_target:
+                parts.append(
+                    "\n**Important Context**: If the user asks about improving, fixing, debugging, or understanding existing "
+                    "code/project (e.g., 'Why is this code not working?', 'Fix this bug', 'Add feature X'), they are referring "
+                    "to the Target Path below. Your changes/analysis must be based on that codebase and final deliverables must end up there.\n",
+                )
+            elif has_readonly_context:
+                parts.append(
+                    "\n**Important Context**: If the user asks about debugging or understanding existing code/project "
+                    "(e.g., 'Why is this code not working?', 'Explain this bug'), they are referring to (one of) the Context Path(s) "
+                    "below. Provide analysis/explanation based on that codebase - you cannot modify it directly.\n",
+                )
+
             for path_config in context_paths:
                 path = path_config.get("path", "")
                 permission = path_config.get("permission", "read")
+                will_be_writable = path_config.get("will_be_writable", False)
                 if path:
-                    if permission == "read":
-                        workspace_info.append(f" - `{path}` (read-only)")
-                        workspace_info.append("   - You can read files from this location but cannot modify them")
-                        workspace_info.append(
-                            "   - If you want to add or modify files here, place them in your main workspace instead and"
-                            + " someone with write access can move them later. Please also note in your answer where your new"
-                            + " files are located and which need to be moved where.",
+                    if permission == "read" and will_be_writable:
+                        parts.append(
+                            f"**Target Path**: `{path}` (read-only now, write access later) - This is where your changes must be delivered. "
+                            f"Work in your workspace first, then the final presenter will place or update files here using the FULL ABSOLUTE PATH.",
+                        )
+                    elif permission == "write":
+                        parts.append(
+                            f"**Target Path**: `{path}` (write access) - This is where your changes must be delivered. Use the FULL ABSOLUTE PATH when writing to this location (not relative paths).",
                         )
                     else:
-                        workspace_info.append(f" - `{path}` (read/write)")
-                        workspace_info.append(f"   - **Permission Change Notice**: You now have full {permission} access to this location")
-                        workspace_info.append("   - You are the only agent with write access to this production location")
-                        workspace_info.append("   - Other agents tested changes in isolated environments - their work needs to be deployed here")
-                        workspace_info.append("   - Use the workspace copy tools to move your final work to this writable context path, with your adjustments as needed")
+                        parts.append(f"**Context Path**: `{path}` (read-only) - Use FULL ABSOLUTE PATH when reading.")
 
-        workspace_section = "\n".join(workspace_info) if workspace_info else "- Check your available directories using filesystem tools"
+        # Add requirement for path explanations in answers
+        parts.append(
+            "\n**New Answer**: When calling `new_answer`, you MUST actually create files in your workspace using file write tools - "
+            "do NOT just describe what files you would create. Then, list 1) your full cwd and 2) the file paths you created, "
+            "but do NOT paste full file contents in your answer.\n",
+        )
 
-        return f"""## Filesystem Access
+        # Add voting guidance
+        parts.append(
+            "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
+            "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
+        )
 
-You have access to filesystem operations through MCP tools allowing you to read and write files.
-
-### Your Accessible Directories:
-
-{workspace_section}
-
-### Best Practices:
-
-- Always save your own work in your main workspace
-- Use absolute paths when possible for clarity
-- When referencing others' work, read from context directories first
-- Create meaningful file names and directory structure
-"""
+        return "\n".join(parts)
 
 
 # ### IMPORTANT Evaluation Note:

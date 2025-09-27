@@ -536,15 +536,8 @@ Work directly with your existing projects! User Context Paths allow you to share
 **Quick Start Commands:**
 
 ```bash
-# Code analysis and security audit
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/fs_permissions_test.yaml \
-  "Analyze all Python files in this project and create a comprehensive security audit report"
-
-# Project modernization
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
-  "Review this legacy codebase and create a modernization plan with updated dependencies"
+# Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 **Configuration:**
