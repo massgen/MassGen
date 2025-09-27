@@ -443,12 +443,14 @@ class PathPermissionManager:
 
     def get_mcp_filesystem_paths(self) -> List[str]:
         """
-        Get all managed paths for MCP filesystem server configuration.
+        Get all managed paths for MCP filesystem server configuration. Workspace path will be first.
 
         Returns:
             List of path strings to include in MCP filesystem server args
         """
-        return [str(managed_path.path) for managed_path in self.managed_paths]
+        workspace_paths = [str(mp.path) for mp in self.managed_paths if mp.path_type == "workspace"]
+        out = workspace_paths + [str(managed_path.path) for managed_path in self.managed_paths if managed_path.path_type != "workspace"]
+        return out
 
     def get_permission_summary(self) -> str:
         """Get a human-readable summary of permissions."""

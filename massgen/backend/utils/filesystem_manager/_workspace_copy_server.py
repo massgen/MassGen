@@ -13,7 +13,6 @@ Tools provided:
 
 import argparse
 import fnmatch
-import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -310,12 +309,11 @@ if __name__ == "__main__":
     # Set global allowed paths
     ALLOWED_PATHS = [Path(path).resolve() for path in args.paths]
 
-    # Get workspace path from environment variable
-    workspace_env = os.getenv("WORKSPACE_PATH")
-    if workspace_env:
-        WORKSPACE_PATH = Path(workspace_env).resolve()
-        print(f"Workspace copy server: Using workspace path {WORKSPACE_PATH}")
+    # Use first allowed path as workspace (workspace paths are first in the list)
+    if ALLOWED_PATHS:
+        WORKSPACE_PATH = ALLOWED_PATHS[0]
+        print(f"Workspace copy server: Using first allowed path as workspace: {WORKSPACE_PATH}")
     else:
-        print("Workspace copy server: No WORKSPACE_PATH set - relative paths will not work")
+        print("Workspace copy server: No allowed paths provided - relative paths will not work")
 
     mcp.run()
