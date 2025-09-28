@@ -410,12 +410,19 @@ Based on the coordination process above, present your final answer:"""
         messages.append({"role": "user", "content": self.enforcement_message()})
         return messages
 
-    def filesystem_system_message(self, main_workspace: Optional[str] = None, temp_workspace: Optional[str] = None, context_paths: Optional[List[Dict[str, str]]] = None) -> str:
+    def filesystem_system_message(
+        self,
+        main_workspace: Optional[str] = None,
+        temp_workspace: Optional[str] = None,
+        context_paths: Optional[List[Dict[str, str]]] = None,
+        previous_turns: Optional[List[Dict[str, Any]]] = None,
+        workspace_prepopulated: bool = False,
+    ) -> str:
         """Generate filesystem access instructions for agents with filesystem support."""
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
 
-        parts = ["## Filesystem Access\n"]
+        parts = ["## Filesystem Access"]
 
         # Explain workspace behavior
         parts.append(
@@ -424,7 +431,15 @@ Based on the coordination process above, present your final answer:"""
         )
 
         if main_workspace:
-            parts.append(f"**Your Workspace**: `{main_workspace}` - Write actual files here using file tools. All your file operations will be relative to this directory.")
+            workspace_note = f"**Your Workspace**: `{main_workspace}` - Write actual files here using file tools. All your file operations will be relative to this directory."
+            if workspace_prepopulated:
+                # Workspace is pre-populated with writable copy of most recent turn
+                workspace_note += (
+                    " **Note**: Your workspace already contains a writable copy of the previous turn's results - "
+                    "you can modify or build upon these files. The original unmodified version is also available as "
+                    "a read-only context path if you need to reference what was originally there."
+                )
+            parts.append(workspace_note)
 
         if temp_workspace:
             parts.append(f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)")
@@ -435,15 +450,16 @@ Based on the coordination process above, present your final answer:"""
 
             if has_target:
                 parts.append(
-                    "\n**Important Context**: If the user asks about improving, fixing, debugging, or understanding existing "
+                    "\n**Important Context**: If the user asks about improving, fixing, debugging, or understanding an existing "
                     "code/project (e.g., 'Why is this code not working?', 'Fix this bug', 'Add feature X'), they are referring "
-                    "to the Target Path below. Your changes/analysis must be based on that codebase and final deliverables must end up there.\n",
+                    "to the Target Path below. First READ the existing files from that path to understand what's there, then "
+                    "make your changes based on that codebase. Final deliverables must end up there.\n",
                 )
             elif has_readonly_context:
                 parts.append(
-                    "\n**Important Context**: If the user asks about debugging or understanding existing code/project "
+                    "\n**Important Context**: If the user asks about debugging or understanding an existing code/project "
                     "(e.g., 'Why is this code not working?', 'Explain this bug'), they are referring to (one of) the Context Path(s) "
-                    "below. Provide analysis/explanation based on that codebase - you cannot modify it directly.\n",
+                    "below. Read then provide analysis/explanation based on that codebase - you cannot modify it directly.\n",
                 )
 
             for path_config in context_paths:
@@ -453,15 +469,25 @@ Based on the coordination process above, present your final answer:"""
                 if path:
                     if permission == "read" and will_be_writable:
                         parts.append(
-                            f"**Target Path**: `{path}` (read-only now, write access later) - This is where your changes must be delivered. "
-                            f"Work in your workspace first, then the final presenter will place or update files here using the FULL ABSOLUTE PATH.",
+                            f"**Target Path**: `{path}` (read-only now, write access later) - This is where your changes will be delivered. "
+                            f"Work in your workspace first, then the final presenter will place or update files DIRECTLY into `{path}` using the FULL ABSOLUTE PATH.",
                         )
                     elif permission == "write":
                         parts.append(
-                            f"**Target Path**: `{path}` (write access) - This is where your changes must be delivered. Use the FULL ABSOLUTE PATH when writing to this location (not relative paths).",
+                            f"**Target Path**: `{path}` (write access) - This is where your changes must be delivered. "
+                            f"Work in your workspace, then copy/write files DIRECTLY into `{path}` using FULL ABSOLUTE PATH (not relative paths). "
+                            f"Files must go directly into the target path itself (e.g., `{path}/file.txt`), NOT into a `.massgen/` subdirectory within it.",
                         )
                     else:
                         parts.append(f"**Context Path**: `{path}` (read-only) - Use FULL ABSOLUTE PATH when reading.")
+
+        # Add note connecting conversation history (in user message) to context paths (in system message)
+        if previous_turns:
+            parts.append(
+                "\n**Note**: This is a multi-turn conversation. Each User/Assistant exchange in the conversation "
+                "history represents one turn. The workspace from each turn is available as a read-only context path "
+                "listed above (e.g., turn 1's workspace is at the path ending in `/turn_1/workspace`).",
+            )
 
         # Add requirement for path explanations in answers
         parts.append(

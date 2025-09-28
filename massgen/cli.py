@@ -46,19 +46,21 @@ from .orchestrator import Orchestrator
 from .utils import get_backend_type_from_model
 
 
-# Load environment variables from .env file
+# Load environment variables from .env files
 def load_env_file():
-    """Load environment variables from .env file if it exists."""
-    env_file = Path(".env")
-    if env_file.exists():
-        with open(env_file, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, value = line.split("=", 1)
-                    # Remove quotes if present
-                    value = value.strip("\"'")
-                    os.environ[key] = value
+    """Load environment variables from .env files.
+
+    Search order (later files override earlier ones):
+    1. MassGen package .env (development fallback)
+    2. User home ~/.massgen/.env (global user config)
+    3. Current directory .env (project-specific, highest priority)
+    """
+    from dotenv import load_dotenv
+
+    # Load in priority order (later overrides earlier)
+    load_dotenv(Path(__file__).parent / ".env")  # Package fallback
+    load_dotenv(Path.home() / ".massgen" / ".env")  # User global
+    load_dotenv()  # Current directory (highest priority)
 
 
 # Load .env file at module import
@@ -85,17 +87,38 @@ class ConfigurationError(Exception):
 
 
 def load_config_file(config_path: str) -> Dict[str, Any]:
-    """Load configuration from YAML or JSON file."""
+    """Load configuration from YAML or JSON file.
+
+    Search order:
+    1. Exact path as provided (absolute or relative to CWD)
+    2. If just a filename, search in package's configs/ directory
+    3. If a relative path, also try within package's configs/ directory
+    """
     path = Path(config_path)
 
-    # If file doesn't exist in current path, try massgen/configs/ directory
-    if not path.exists():
-        # Try in massgen/configs/ directory
-        configs_path = Path(__file__).parent / "configs" / path.name
-        if configs_path.exists():
-            path = configs_path
+    # Try the path as-is first (handles absolute paths and relative to CWD)
+    if path.exists():
+        pass  # Use this path
+    elif path.is_absolute():
+        # Absolute path that doesn't exist
+        raise ConfigurationError(f"Configuration file not found: {config_path}")
+    else:
+        # Relative path or just filename - search in package configs
+        package_configs_dir = Path(__file__).parent / "configs"
+
+        # Try 1: Just the filename in package configs root
+        candidate1 = package_configs_dir / path.name
+        # Try 2: The full relative path within package configs
+        candidate2 = package_configs_dir / path
+
+        if candidate1.exists():
+            path = candidate1
+        elif candidate2.exists():
+            path = candidate2
         else:
-            raise ConfigurationError(f"Configuration file not found: {config_path} " f"(also checked {configs_path})")
+            raise ConfigurationError(
+                f"Configuration file not found: {config_path}\n" f"Searched in:\n" f"  - {Path.cwd() / config_path}\n" f"  - {candidate1}\n" f"  - {candidate2}",
+            )
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -266,8 +289,16 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
                 # Merge orchestrator context_paths with agent-specific ones
                 agent_context_paths = backend_config.get("context_paths", [])
                 orchestrator_context_paths = orchestrator_config["context_paths"]
-                # Orchestrator paths take precedence, then agent-specific paths
-                backend_config["context_paths"] = orchestrator_context_paths + agent_context_paths
+
+                # Deduplicate paths - orchestrator paths take precedence
+                merged_paths = orchestrator_context_paths.copy()
+                orchestrator_paths_set = {path.get("path") for path in orchestrator_context_paths}
+
+                for agent_path in agent_context_paths:
+                    if agent_path.get("path") not in orchestrator_paths_set:
+                        merged_paths.append(agent_path)
+
+                backend_config["context_paths"] = merged_paths
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}
@@ -337,14 +368,238 @@ def create_simple_config(
         "ui": {"display_type": "rich_terminal", "logging_enabled": True},
     }
 
-    # Add orchestrator config with snapshot/temp dirs for Claude Code
+    # Add orchestrator config with .massgen/ structure for Claude Code
     if backend_type == "claude_code":
         config["orchestrator"] = {
-            "snapshot_storage": "snapshots",
-            "agent_temporary_workspace": "temp_workspaces",
+            "snapshot_storage": ".massgen/snapshots",
+            "agent_temporary_workspace": ".massgen/temp_workspaces",
+            "session_storage": ".massgen/sessions",
         }
 
     return config
+
+
+def validate_context_paths(config: Dict[str, Any]) -> None:
+    """Validate that all context paths in the config are valid directories.
+
+    Context paths must be directories due to MCP filesystem server limitations.
+    Raises ConfigurationError with clear message if any paths don't exist or aren't directories.
+    """
+    orchestrator_cfg = config.get("orchestrator", {})
+    context_paths = orchestrator_cfg.get("context_paths", [])
+
+    missing_paths = []
+    file_paths = []
+
+    for context_path_config in context_paths:
+        if isinstance(context_path_config, dict):
+            path = context_path_config.get("path")
+        else:
+            # Handle string format for backwards compatibility
+            path = context_path_config
+
+        if path:
+            path_obj = Path(path)
+            if not path_obj.exists():
+                missing_paths.append(path)
+            elif path_obj.is_file():
+                file_paths.append(path)
+
+    errors = []
+    if missing_paths:
+        errors.append("Context paths not found:")
+        for path in missing_paths:
+            errors.append(f"  - {path}")
+
+    if file_paths:
+        errors.append("Context paths must be directories, not files:")
+        for path in file_paths:
+            errors.append(f"  - {path}")
+        errors.append("Hint: Use the parent directory instead")
+        errors.append("Note: File-level context paths may be supported in future versions")
+
+    if errors:
+        errors.append("\nPlease update your configuration with valid directory paths.")
+        raise ConfigurationError("\n".join(errors))
+
+
+def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
+    """Relocate filesystem paths (orchestrator paths and agent workspaces) to be under .massgen/ directory.
+
+    Modifies the config in-place to ensure all MassGen state is organized
+    under .massgen/ for clean project structure.
+    """
+    massgen_dir = Path(".massgen")
+
+    # Relocate orchestrator paths
+    orchestrator_cfg = config.get("orchestrator", {})
+    if orchestrator_cfg:
+        path_fields = [
+            "snapshot_storage",
+            "agent_temporary_workspace",
+            "session_storage",
+        ]
+
+        for field in path_fields:
+            if field in orchestrator_cfg:
+                user_path = orchestrator_cfg[field]
+                # If user provided an absolute path or already starts with .massgen/, keep as-is
+                if Path(user_path).is_absolute() or user_path.startswith(".massgen/"):
+                    continue
+                # Otherwise, relocate under .massgen/
+                orchestrator_cfg[field] = str(massgen_dir / user_path)
+
+    # Relocate agent workspaces (cwd fields)
+    agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
+    for agent_data in agent_entries:
+        backend_config = agent_data.get("backend", {})
+        if "cwd" in backend_config:
+            user_cwd = backend_config["cwd"]
+            # If user provided an absolute path or already starts with .massgen/, keep as-is
+            if Path(user_cwd).is_absolute() or user_cwd.startswith(".massgen/"):
+                continue
+            # Otherwise, relocate under .massgen/workspaces/
+            backend_config["cwd"] = str(massgen_dir / "workspaces" / user_cwd)
+
+
+def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> List[Dict[str, Any]]:
+    """
+    Load previous turns from session storage.
+
+    Returns:
+        List of previous turn metadata dicts
+    """
+    import json
+    from pathlib import Path
+
+    session_id = session_info.get("session_id")
+    if not session_id:
+        return []
+
+    session_dir = Path(session_storage) / session_id
+    if not session_dir.exists():
+        return []
+
+    previous_turns = []
+    turn_num = 1
+
+    while True:
+        turn_dir = session_dir / f"turn_{turn_num}"
+        if not turn_dir.exists():
+            break
+
+        metadata_file = turn_dir / "metadata.json"
+        if metadata_file.exists():
+            metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
+            # Use absolute path for workspace
+            workspace_path = (turn_dir / "workspace").resolve()
+            previous_turns.append(
+                {
+                    "turn": turn_num,
+                    "path": str(workspace_path),
+                    "task": metadata.get("task", ""),
+                    "winning_agent": metadata.get("winning_agent", ""),
+                },
+            )
+
+        turn_num += 1
+
+    return previous_turns
+
+
+async def handle_session_persistence(
+    orchestrator,
+    question: str,
+    session_info: Dict[str, Any],
+    session_storage: str,
+) -> tuple[Optional[str], int, Optional[str]]:
+    """
+    Handle session persistence after orchestrator completes.
+
+    Returns:
+        tuple: (session_id, updated_turn_number, normalized_answer)
+    """
+    import json
+    import shutil
+    from datetime import datetime
+    from pathlib import Path
+
+    # Get final result from orchestrator
+    final_result = orchestrator.get_final_result()
+    if not final_result:
+        # No filesystem work to persist
+        return (session_info.get("session_id"), session_info.get("current_turn", 0), None)
+
+    # Initialize or reuse session ID
+    session_id = session_info.get("session_id")
+    if not session_id:
+        session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    # Increment turn
+    current_turn = session_info.get("current_turn", 0) + 1
+
+    # Create turn directory
+    session_dir = Path(session_storage) / session_id
+    turn_dir = session_dir / f"turn_{current_turn}"
+    turn_dir.mkdir(parents=True, exist_ok=True)
+
+    # Normalize answer paths
+    final_answer = final_result["final_answer"]
+    workspace_path = final_result.get("workspace_path")
+    turn_workspace_path = (turn_dir / "workspace").resolve()  # Make absolute
+
+    if workspace_path:
+        # Replace workspace paths in answer with absolute path
+        normalized_answer = final_answer.replace(workspace_path, str(turn_workspace_path))
+    else:
+        normalized_answer = final_answer
+
+    # Save normalized answer
+    answer_file = turn_dir / "answer.txt"
+    answer_file.write_text(normalized_answer, encoding="utf-8")
+
+    # Save metadata
+    metadata = {
+        "turn": current_turn,
+        "timestamp": datetime.now().isoformat(),
+        "winning_agent": final_result["winning_agent_id"],
+        "task": question,
+        "session_id": session_id,
+    }
+    metadata_file = turn_dir / "metadata.json"
+    metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+    # Create/update session summary for easy viewing
+    session_summary_file = session_dir / "SESSION_SUMMARY.txt"
+    summary_lines = []
+
+    if session_summary_file.exists():
+        summary_lines = session_summary_file.read_text(encoding="utf-8").splitlines()
+    else:
+        summary_lines.append("=" * 80)
+        summary_lines.append(f"Multi-Turn Session: {session_id}")
+        summary_lines.append("=" * 80)
+        summary_lines.append("")
+
+    # Add turn separator and info
+    summary_lines.append("")
+    summary_lines.append("=" * 80)
+    summary_lines.append(f"TURN {current_turn}")
+    summary_lines.append("=" * 80)
+    summary_lines.append(f"Timestamp: {metadata['timestamp']}")
+    summary_lines.append(f"Winning Agent: {metadata['winning_agent']}")
+    summary_lines.append(f"Task: {question}")
+    summary_lines.append(f"Workspace: {turn_workspace_path}")
+    summary_lines.append(f"Answer: See {(turn_dir / 'answer.txt').resolve()}")
+    summary_lines.append("")
+
+    session_summary_file.write_text("\n".join(summary_lines), encoding="utf-8")
+
+    # Copy workspace if it exists
+    if workspace_path and Path(workspace_path).exists():
+        shutil.copytree(workspace_path, turn_workspace_path, dirs_exist_ok=True)
+
+    return (session_id, current_turn, normalized_answer)
 
 
 async def run_question_with_history(
@@ -352,9 +607,14 @@ async def run_question_with_history(
     agents: Dict[str, SingleAgent],
     ui_config: Dict[str, Any],
     history: List[Dict[str, Any]],
+    session_info: Dict[str, Any],
     **kwargs,
-) -> str:
-    """Run MassGen with a question and conversation history."""
+) -> tuple[str, Optional[str], int]:
+    """Run MassGen with a question and conversation history.
+
+    Returns:
+        tuple: (response_text, session_id, turn_number)
+    """
     # Build messages including history
     messages = history.copy()
     messages.append({"role": "user", "content": question})
@@ -384,10 +644,11 @@ async def run_question_with_history(
                 continue
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}", flush=True)
-                return ""
+                return ("", session_info.get("session_id"), session_info.get("current_turn", 0))
 
         print("\n" + "=" * 60, flush=True)
-        return response_content
+        # Single agent mode doesn't use session storage
+        return (response_content, session_info.get("session_id"), session_info.get("current_turn", 0))
 
     else:
         # Multi-agent mode with history
@@ -400,12 +661,17 @@ async def run_question_with_history(
         # Get context sharing parameters from kwargs (if present in config)
         snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
         agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
+        session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")  # Default to "sessions"
+
+        # Load previous turns from session storage for multi-turn conversations
+        previous_turns = load_previous_turns(session_info, session_storage)
 
         orchestrator = Orchestrator(
             agents=agents,
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace,
+            previous_turns=previous_turns,
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -434,7 +700,16 @@ async def run_question_with_history(
             # Standard coordination for new conversations
             response_content = await ui.coordinate(orchestrator, question)
 
-        return response_content
+        # Handle session persistence if applicable
+        session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
+            orchestrator,
+            question,
+            session_info,
+            session_storage,
+        )
+
+        # Return normalized response so conversation history has correct paths
+        return (normalized_response or response_content, session_id_to_use, updated_turn)
 
 
 async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs) -> str:
@@ -501,6 +776,70 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         return final_response
 
 
+def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: Dict[str, Any]) -> bool:
+    """Prompt user to add context paths in interactive mode.
+
+    Returns True if config was modified, False otherwise.
+    """
+    # Check if filesystem is enabled (at least one agent has cwd)
+    agent_entries = [original_config["agent"]] if "agent" in original_config else original_config.get("agents", [])
+    has_filesystem = any("cwd" in agent.get("backend", {}) for agent in agent_entries)
+
+    if not has_filesystem:
+        return False
+
+    # Show current context paths
+    existing_paths = orchestrator_cfg.get("context_paths", [])
+    cwd = Path.cwd()
+
+    print(f"\n📂 {BRIGHT_YELLOW}Context Paths:{RESET}", flush=True)
+    if existing_paths:
+        for path_config in existing_paths:
+            path = path_config.get("path") if isinstance(path_config, dict) else path_config
+            permission = path_config.get("permission", "read") if isinstance(path_config, dict) else "read"
+            print(f"   • {path} ({permission})", flush=True)
+    else:
+        print(f"   {BRIGHT_YELLOW}No context paths configured{RESET}", flush=True)
+
+    # Check if CWD is already in context paths
+    cwd_str = str(cwd)
+    cwd_already_added = any((path_config.get("path") if isinstance(path_config, dict) else path_config) == cwd_str for path_config in existing_paths)
+
+    if not cwd_already_added:
+        print("\n❓ Add current directory as context path?", flush=True)
+        print(f"   {cwd}", flush=True)
+        try:
+            response = input("   [Y]es (default) / [N]o / [C]ustom path: ").strip().lower()
+
+            if response in ["y", "yes", ""]:
+                # Add CWD with write permission
+                if "context_paths" not in orchestrator_cfg:
+                    orchestrator_cfg["context_paths"] = []
+                orchestrator_cfg["context_paths"].append({"path": cwd_str, "permission": "write"})
+                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                return True
+            elif response in ["c", "custom"]:
+                custom_path = input("   Enter path: ").strip()
+                if custom_path:
+                    abs_path = str(Path(custom_path).resolve())
+                    if Path(abs_path).exists():
+                        permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
+                        if permission not in ["read", "write"]:
+                            permission = "write"
+                        if "context_paths" not in orchestrator_cfg:
+                            orchestrator_cfg["context_paths"] = []
+                        orchestrator_cfg["context_paths"].append({"path": abs_path, "permission": permission})
+                        print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
+                        return True
+                    else:
+                        print(f"   {BRIGHT_RED}✗ Path does not exist: {abs_path}{RESET}", flush=True)
+        except (KeyboardInterrupt, EOFError):
+            print()  # New line after Ctrl+C
+            return False
+
+    return False
+
+
 def print_help_messages():
     print(
         "\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.",
@@ -510,7 +849,7 @@ def print_help_messages():
     print("=" * 60, flush=True)
 
 
-async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs):
+async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], original_config: Dict[str, Any] = None, orchestrator_cfg: Dict[str, Any] = None, **kwargs):
     """Run MassGen in interactive mode with conversation history."""
     print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
     print("=" * 60, flush=True)
@@ -530,14 +869,66 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
     print(f"   Mode: {mode}", flush=True)
     print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
 
+    # Prompt for context paths if filesystem is enabled
+    if original_config and orchestrator_cfg:
+        config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
+        if config_modified:
+            # Recreate agents with updated context paths
+            agents = create_agents_from_config(original_config, orchestrator_cfg)
+            print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
+
     print_help_messages()
 
     # Maintain conversation history
     conversation_history = []
 
+    # Session management for multi-turn filesystem support
+    session_id = None
+    current_turn = 0
+    session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")
+
     try:
         while True:
             try:
+                # Recreate agents with previous turn as read-only context path.
+                # This provides agents with BOTH:
+                # 1. Read-only context path (original turn n-1 results) - for reference/comparison
+                # 2. Writable workspace (copy of turn n-1 results, pre-populated by orchestrator) - for modification
+                # This allows agents to compare "what I changed" vs "what was originally there".
+                # TODO: We may want to avoid full recreation if possible in the future, conditioned on being able to easily reset MCPs.
+                if current_turn > 0 and original_config and orchestrator_cfg:
+                    from pathlib import Path
+
+                    from .logger_config import logger
+
+                    # Get the most recent turn path (the one just completed)
+                    session_dir = Path(session_storage) / session_id
+                    latest_turn_dir = session_dir / f"turn_{current_turn}"
+                    latest_turn_workspace = latest_turn_dir / "workspace"
+
+                    if latest_turn_workspace.exists():
+                        logger.info(f"[CLI] Recreating agents with turn {current_turn} workspace as read-only context path")
+
+                        # Clean up existing agents' backends
+                        for agent_id, agent in agents.items():
+                            if hasattr(agent.backend, "__aexit__"):
+                                await agent.backend.__aexit__(None, None, None)
+
+                        # Inject previous turn path as read-only context
+                        modified_config = original_config.copy()
+                        agent_entries = [modified_config["agent"]] if "agent" in modified_config else modified_config.get("agents", [])
+
+                        for agent_data in agent_entries:
+                            backend_config = agent_data.get("backend", {})
+                            if "cwd" in backend_config:  # Only inject if agent has filesystem support
+                                existing_context_paths = backend_config.get("context_paths", [])
+                                new_turn_config = {"path": str(latest_turn_workspace.resolve()), "permission": "read"}
+                                backend_config["context_paths"] = existing_context_paths + [new_turn_config]
+
+                        # Recreate agents from modified config
+                        agents = create_agents_from_config(modified_config, orchestrator_cfg)
+                        logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
+
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
 
                 # Handle slash commands
@@ -613,7 +1004,41 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
 
                 print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}", flush=True)
 
-                response = await run_question_with_history(question, agents, ui_config, conversation_history, **kwargs)
+                # Increment turn counter BEFORE processing so logs go to correct turn_N directory
+                next_turn = current_turn + 1
+
+                # Initialize session ID on first turn
+                if session_id is None:
+                    from datetime import datetime
+
+                    session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+                # Reconfigure logging for the turn we're about to process
+                from .logger_config import _DEBUG_MODE
+                from .logger_config import logger as reconfig_logger
+                from .logger_config import setup_logging
+
+                setup_logging(debug=_DEBUG_MODE, turn=next_turn)
+                reconfig_logger.info(f"Starting turn {next_turn}")
+
+                # Pass session state for multi-turn filesystem support
+                session_info = {
+                    "session_id": session_id,
+                    "current_turn": current_turn,  # Pass CURRENT turn (for looking up previous turns)
+                    "session_storage": session_storage,
+                }
+                response, updated_session_id, updated_turn = await run_question_with_history(
+                    question,
+                    agents,
+                    ui_config,
+                    conversation_history,
+                    session_info,
+                    **kwargs,
+                )
+
+                # Update session state after completion
+                session_id = updated_session_id
+                current_turn = updated_turn
 
                 if response:
                     # Add to conversation history
@@ -783,6 +1208,12 @@ Environment Variables:
                 logger.debug(f"Created simple config with backend: {backend}, model: {model}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
 
+        # Validate that all context paths exist before proceeding
+        validate_context_paths(config)
+
+        # Relocate all filesystem paths to .massgen/ directory
+        relocate_filesystem_paths(config)
+
         # Apply command-line overrides
         ui_config = config.get("ui", {})
         if args.no_display:
@@ -871,7 +1302,7 @@ Environment Variables:
             #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
             #     print(f"{response}", flush=True)
         else:
-            await run_interactive_mode(agents, ui_config, **kwargs)
+            await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, **kwargs)
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)
@@ -883,5 +1314,10 @@ Environment Variables:
         sys.exit(1)
 
 
-if __name__ == "__main__":
+def cli_main():
+    """Synchronous wrapper for CLI entry point."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    cli_main()

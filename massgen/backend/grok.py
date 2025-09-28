@@ -35,7 +35,7 @@ class GrokBackend(ChatCompletionsBackend):
         self.api_key = api_key or os.getenv("XAI_API_KEY")
         self.base_url = "https://api.x.ai/v1"
 
-    def _create_openai_client(self, **kwargs) -> AsyncOpenAI:
+    def _create_client(self, **kwargs) -> AsyncOpenAI:
         """Create OpenAI client configured for xAI's Grok API."""
         import openai
 

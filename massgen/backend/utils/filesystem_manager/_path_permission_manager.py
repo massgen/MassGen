@@ -40,6 +40,21 @@ class PathPermissionManager:
     - Path access control
     """
 
+    DEFAULT_EXCLUDED_PATTERNS = [
+        ".massgen",
+        ".env",
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".DS_Store",
+        "massgen_logs",
+    ]
+
     def __init__(self, context_write_access_enabled: bool = False):
         """
         Initialize path permission manager.
@@ -68,8 +83,13 @@ class PathPermissionManager:
             path_type: Type of path ("workspace", "temp_workspace", "context", etc.)
         """
         if not path.exists():
-            logger.warning(f"[PathPermissionManager] Path does not exist: {path}")
-            return
+            # For context paths, warn since user should provide existing paths
+            # For workspace/temp paths, just debug since they'll be created by orchestrator
+            if path_type == "context":
+                logger.warning(f"[PathPermissionManager] Context path does not exist: {path}")
+                return
+            else:
+                logger.debug(f"[PathPermissionManager] Path will be created later: {path} ({path_type})")
 
         managed_path = ManagedPath(path=path.resolve(), permission=permission, path_type=path_type)
 
@@ -174,6 +194,52 @@ class PathPermissionManager:
             self._permission_cache.clear()
             logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, will_be_writable: {will_be_writable})")
 
+    def add_previous_turn_paths(self, turn_paths: List[Dict[str, Any]]) -> None:
+        """
+        Add previous turn workspace paths for read access.
+        These are tracked separately from regular context paths.
+
+        Args:
+            turn_paths: List of turn path configurations
+                Format: [{"path": "/path/to/turn_1/workspace", "permission": "read"}, ...]
+        """
+        for config in turn_paths:
+            path_str = config.get("path", "")
+            if not path_str:
+                continue
+
+            path = Path(path_str).resolve()
+            # Previous turn paths are always read-only
+            managed_path = ManagedPath(path=path, permission=Permission.READ, path_type="previous_turn", will_be_writable=False)
+            self.managed_paths.append(managed_path)
+            self._permission_cache.clear()
+            logger.info(f"[PathPermissionManager] Added previous turn path: {path} (read-only)")
+
+    def _is_excluded_path(self, path: Path) -> bool:
+        """
+        Check if a path matches any default excluded patterns.
+
+        System files like .massgen/, .env, .git/ are always excluded from write access,
+        EXCEPT when they are within a managed workspace path (which has explicit permissions).
+
+        Args:
+            path: Path to check
+
+        Returns:
+            True if path should be excluded from write access
+        """
+        # First check if this path is inside a workspace - workspaces override exclusions
+        for managed_path in self.managed_paths:
+            if managed_path.path_type == "workspace" and managed_path.contains(path):
+                return False
+
+        # Now check if path contains any excluded patterns
+        parts = path.parts
+        for part in parts:
+            if part in self.DEFAULT_EXCLUDED_PATTERNS:
+                return True
+        return False
+
     def get_permission(self, path: Path) -> Optional[Permission]:
         """
         Get permission level for a path.
@@ -191,8 +257,17 @@ class PathPermissionManager:
             logger.debug(f"[PathPermissionManager] Permission cache hit for {resolved_path}: {self._permission_cache[resolved_path].value}")
             return self._permission_cache[resolved_path]
 
-        # Find containing managed path
-        for managed_path in self.managed_paths:
+        # Check if this is an excluded path (always read-only)
+        if self._is_excluded_path(resolved_path):
+            logger.info(f"[PathPermissionManager] Path {resolved_path} matches excluded pattern, forcing read-only")
+            self._permission_cache[resolved_path] = Permission.READ
+            return Permission.READ
+
+        # Find containing managed path - prioritize more specific (deeper) paths first
+        # Sort by path depth (number of parts) in descending order so deeper paths are checked first
+        sorted_paths = sorted(self.managed_paths, key=lambda mp: len(mp.path.parts), reverse=True)
+
+        for managed_path in sorted_paths:
             if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
                 logger.info(
                     f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} "
