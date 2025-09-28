@@ -633,6 +633,143 @@ def test_workspace_copy_tools():
         helper.teardown()
 
 
+def test_default_exclusions():
+    print("\n🚫 Testing default system file exclusions...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        manager = helper.create_permission_manager(context_write_enabled=True)
+
+        # Add context path with write permission
+        project_dir = helper.temp_dir / "project"
+        project_dir.mkdir()
+        manager.add_path(project_dir, Permission.WRITE, "context")
+
+        print("  Testing excluded patterns are blocked...")
+        excluded_files = [
+            project_dir / ".env",
+            project_dir / ".git" / "config",
+            project_dir / "node_modules" / "package" / "index.js",
+            project_dir / "__pycache__" / "module.pyc",
+            project_dir / ".venv" / "lib" / "python.py",
+            project_dir / ".massgen" / "sessions" / "session.json",
+            project_dir / "massgen_logs" / "app.log",
+        ]
+
+        for excluded_file in excluded_files:
+            excluded_file.parent.mkdir(parents=True, exist_ok=True)
+            excluded_file.write_text("content")
+
+            permission = manager.get_permission(excluded_file)
+            if permission != Permission.READ:
+                print(f"❌ Failed: {excluded_file} should be READ, got {permission}")
+                return False
+
+        print("  Testing normal files are writable...")
+        normal_files = [
+            project_dir / "src" / "main.py",
+            project_dir / "README.md",
+            project_dir / "config.yaml",
+        ]
+
+        for normal_file in normal_files:
+            normal_file.parent.mkdir(parents=True, exist_ok=True)
+            normal_file.write_text("content")
+
+            permission = manager.get_permission(normal_file)
+            if permission != Permission.WRITE:
+                print(f"❌ Failed: {normal_file} should be WRITE, got {permission}")
+                return False
+
+        print("  Testing workspace overrides exclusions...")
+        workspace_dir = helper.temp_dir / "project" / ".massgen" / "workspaces" / "workspace1"
+        workspace_dir.mkdir(parents=True)
+        manager.add_path(workspace_dir, Permission.WRITE, "workspace")
+
+        workspace_file = workspace_dir / "index.html"
+        workspace_file.write_text("content")
+
+        permission = manager.get_permission(workspace_file)
+        if permission != Permission.WRITE:
+            print(f"❌ Failed: Workspace file should be WRITE even under .massgen/, got {permission}")
+            return False
+
+        print("✅ Default system file exclusions work correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+def test_path_priority_resolution():
+    print("\n🎯 Testing path priority resolution (depth-first)...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        manager = PathPermissionManager(context_write_access_enabled=True)
+
+        # Add a broad parent context path (read-only)
+        project_dir = helper.temp_dir / "project"
+        project_dir.mkdir()
+        manager.add_path(project_dir, Permission.READ, "context")
+
+        # Add a deeper workspace path (writable)
+        workspace_dir = project_dir / ".massgen" / "workspaces" / "workspace1"
+        workspace_dir.mkdir(parents=True)
+        manager.add_path(workspace_dir, Permission.WRITE, "workspace")
+
+        print("  Testing workspace file uses deeper path permission...")
+        workspace_file = workspace_dir / "index.html"
+        workspace_file.write_text("content")
+
+        permission = manager.get_permission(workspace_file)
+        if permission != Permission.WRITE:
+            print(f"❌ Failed: Workspace file should use workspace WRITE permission, got {permission}")
+            return False
+
+        print("  Testing project file uses parent path permission...")
+        project_file = project_dir / "README.md"
+        project_file.write_text("content")
+
+        permission = manager.get_permission(project_file)
+        if permission != Permission.READ:
+            print(f"❌ Failed: Project file should use context READ permission, got {permission}")
+            return False
+
+        print("  Testing multiple nested paths...")
+        # Add another level
+        nested_dir = project_dir / "src" / "components"
+        nested_dir.mkdir(parents=True)
+        manager.add_path(nested_dir, Permission.WRITE, "context")
+
+        nested_file = nested_dir / "Button.jsx"
+        nested_file.write_text("content")
+
+        permission = manager.get_permission(nested_file)
+        if permission != Permission.WRITE:
+            print(f"❌ Failed: Nested file should use deepest matching path, got {permission}")
+            return False
+
+        # File in src/ but not in components/
+        src_file = project_dir / "src" / "index.js"
+        src_file.write_text("content")
+
+        permission = manager.get_permission(src_file)
+        if permission != Permission.READ:
+            print(f"❌ Failed: src/ file should use parent context READ permission, got {permission}")
+            return False
+
+        print("✅ Path priority resolution works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
 def test_workspace_copy_server_path_validation():
     print("\n🏗️  Testing workspace copy server path validation...")
 

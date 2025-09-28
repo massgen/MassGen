@@ -48,7 +48,27 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
 
     # Initialize base session dir once per session
     if _LOG_BASE_SESSION_DIR is None:
-        log_base_dir = Path("massgen_logs")
+        # Check if we're running from within the MassGen development directory
+        # by looking for pyproject.toml with massgen package
+        cwd = Path.cwd()
+        is_massgen_dev = False
+
+        # Check if pyproject.toml exists and contains massgen package definition
+        pyproject_file = cwd / "pyproject.toml"
+        if pyproject_file.exists():
+            try:
+                content = pyproject_file.read_text()
+                if 'name = "massgen"' in content:
+                    is_massgen_dev = True
+            except Exception:
+                pass
+
+        # Use massgen_logs/ for dev, .massgen/logs/ for external usage
+        if is_massgen_dev:
+            log_base_dir = Path("massgen_logs")
+        else:
+            log_base_dir = Path(".massgen") / "massgen_logs"
+
         log_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Create timestamped session directory

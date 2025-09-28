@@ -46,19 +46,21 @@ from .orchestrator import Orchestrator
 from .utils import get_backend_type_from_model
 
 
-# Load environment variables from .env file
+# Load environment variables from .env files
 def load_env_file():
-    """Load environment variables from .env file if it exists."""
-    env_file = Path(".env")
-    if env_file.exists():
-        with open(env_file, "r") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, value = line.split("=", 1)
-                    # Remove quotes if present
-                    value = value.strip("\"'")
-                    os.environ[key] = value
+    """Load environment variables from .env files.
+
+    Search order (later files override earlier ones):
+    1. MassGen package .env (development fallback)
+    2. User home ~/.massgen/.env (global user config)
+    3. Current directory .env (project-specific, highest priority)
+    """
+    from dotenv import load_dotenv
+
+    # Load in priority order (later overrides earlier)
+    load_dotenv(Path(__file__).parent / ".env")  # Package fallback
+    load_dotenv(Path.home() / ".massgen" / ".env")  # User global
+    load_dotenv()  # Current directory (highest priority)
 
 
 # Load .env file at module import
@@ -85,17 +87,38 @@ class ConfigurationError(Exception):
 
 
 def load_config_file(config_path: str) -> Dict[str, Any]:
-    """Load configuration from YAML or JSON file."""
+    """Load configuration from YAML or JSON file.
+
+    Search order:
+    1. Exact path as provided (absolute or relative to CWD)
+    2. If just a filename, search in package's configs/ directory
+    3. If a relative path, also try within package's configs/ directory
+    """
     path = Path(config_path)
 
-    # If file doesn't exist in current path, try massgen/configs/ directory
-    if not path.exists():
-        # Try in massgen/configs/ directory
-        configs_path = Path(__file__).parent / "configs" / path.name
-        if configs_path.exists():
-            path = configs_path
+    # Try the path as-is first (handles absolute paths and relative to CWD)
+    if path.exists():
+        pass  # Use this path
+    elif path.is_absolute():
+        # Absolute path that doesn't exist
+        raise ConfigurationError(f"Configuration file not found: {config_path}")
+    else:
+        # Relative path or just filename - search in package configs
+        package_configs_dir = Path(__file__).parent / "configs"
+
+        # Try 1: Just the filename in package configs root
+        candidate1 = package_configs_dir / path.name
+        # Try 2: The full relative path within package configs
+        candidate2 = package_configs_dir / path
+
+        if candidate1.exists():
+            path = candidate1
+        elif candidate2.exists():
+            path = candidate2
         else:
-            raise ConfigurationError(f"Configuration file not found: {config_path} " f"(also checked {configs_path})")
+            raise ConfigurationError(
+                f"Configuration file not found: {config_path}\n" f"Searched in:\n" f"  - {Path.cwd() / config_path}\n" f"  - {candidate1}\n" f"  - {candidate2}",
+            )
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -266,8 +289,16 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
                 # Merge orchestrator context_paths with agent-specific ones
                 agent_context_paths = backend_config.get("context_paths", [])
                 orchestrator_context_paths = orchestrator_config["context_paths"]
-                # Orchestrator paths take precedence, then agent-specific paths
-                backend_config["context_paths"] = orchestrator_context_paths + agent_context_paths
+
+                # Deduplicate paths - orchestrator paths take precedence
+                merged_paths = orchestrator_context_paths.copy()
+                orchestrator_paths_set = {path.get("path") for path in orchestrator_context_paths}
+
+                for agent_path in agent_context_paths:
+                    if agent_path.get("path") not in orchestrator_paths_set:
+                        merged_paths.append(agent_path)
+
+                backend_config["context_paths"] = merged_paths
 
         backend = create_backend(backend_type, **backend_config)
         backend_params = {k: v for k, v in backend_config.items() if k != "type"}
@@ -337,14 +368,98 @@ def create_simple_config(
         "ui": {"display_type": "rich_terminal", "logging_enabled": True},
     }
 
-    # Add orchestrator config with snapshot/temp dirs for Claude Code
+    # Add orchestrator config with .massgen/ structure for Claude Code
     if backend_type == "claude_code":
         config["orchestrator"] = {
-            "snapshot_storage": "snapshots",
-            "agent_temporary_workspace": "temp_workspaces",
+            "snapshot_storage": ".massgen/snapshots",
+            "agent_temporary_workspace": ".massgen/temp_workspaces",
+            "session_storage": ".massgen/sessions",
         }
 
     return config
+
+
+def validate_context_paths(config: Dict[str, Any]) -> None:
+    """Validate that all context paths in the config are valid directories.
+
+    Context paths must be directories due to MCP filesystem server limitations.
+    Raises ConfigurationError with clear message if any paths don't exist or aren't directories.
+    """
+    orchestrator_cfg = config.get("orchestrator", {})
+    context_paths = orchestrator_cfg.get("context_paths", [])
+
+    missing_paths = []
+    file_paths = []
+
+    for context_path_config in context_paths:
+        if isinstance(context_path_config, dict):
+            path = context_path_config.get("path")
+        else:
+            # Handle string format for backwards compatibility
+            path = context_path_config
+
+        if path:
+            path_obj = Path(path)
+            if not path_obj.exists():
+                missing_paths.append(path)
+            elif path_obj.is_file():
+                file_paths.append(path)
+
+    errors = []
+    if missing_paths:
+        errors.append("Context paths not found:")
+        for path in missing_paths:
+            errors.append(f"  - {path}")
+
+    if file_paths:
+        errors.append("Context paths must be directories, not files:")
+        for path in file_paths:
+            errors.append(f"  - {path}")
+        errors.append("Hint: Use the parent directory instead")
+        errors.append("Note: File-level context paths may be supported in future versions")
+
+    if errors:
+        errors.append("\nPlease update your configuration with valid directory paths.")
+        raise ConfigurationError("\n".join(errors))
+
+
+def relocate_filesystem_paths(config: Dict[str, Any]) -> None:
+    """Relocate filesystem paths (orchestrator paths and agent workspaces) to be under .massgen/ directory.
+
+    Modifies the config in-place to ensure all MassGen state is organized
+    under .massgen/ for clean project structure.
+    """
+    massgen_dir = Path(".massgen")
+
+    # Relocate orchestrator paths
+    orchestrator_cfg = config.get("orchestrator", {})
+    if orchestrator_cfg:
+        path_fields = [
+            "snapshot_storage",
+            "agent_temporary_workspace",
+            "session_storage",
+        ]
+
+        for field in path_fields:
+            if field in orchestrator_cfg:
+                user_path = orchestrator_cfg[field]
+                # If user provided an absolute path or already starts with .massgen/, keep as-is
+                if Path(user_path).is_absolute() or user_path.startswith(".massgen/"):
+                    continue
+                # Otherwise, relocate under .massgen/
+                orchestrator_cfg[field] = str(massgen_dir / user_path)
+
+    # Relocate agent workspaces (cwd fields)
+    agent_entries = [config["agent"]] if "agent" in config else config.get("agents", [])
+    for agent_data in agent_entries:
+        backend_config = agent_data.get("backend", {})
+        if "cwd" in backend_config:
+            user_cwd = backend_config["cwd"]
+            # If user provided an absolute path or already starts with .massgen/, keep as-is
+            if Path(user_cwd).is_absolute() or user_cwd.startswith(".massgen/"):
+                continue
+            # Otherwise, relocate under .massgen/workspaces/
+            backend_config["cwd"] = str(massgen_dir / "workspaces" / user_cwd)
 
 
 def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> List[Dict[str, Any]]:
@@ -661,6 +776,70 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         return final_response
 
 
+def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: Dict[str, Any]) -> bool:
+    """Prompt user to add context paths in interactive mode.
+
+    Returns True if config was modified, False otherwise.
+    """
+    # Check if filesystem is enabled (at least one agent has cwd)
+    agent_entries = [original_config["agent"]] if "agent" in original_config else original_config.get("agents", [])
+    has_filesystem = any("cwd" in agent.get("backend", {}) for agent in agent_entries)
+
+    if not has_filesystem:
+        return False
+
+    # Show current context paths
+    existing_paths = orchestrator_cfg.get("context_paths", [])
+    cwd = Path.cwd()
+
+    print(f"\n📂 {BRIGHT_YELLOW}Context Paths:{RESET}", flush=True)
+    if existing_paths:
+        for path_config in existing_paths:
+            path = path_config.get("path") if isinstance(path_config, dict) else path_config
+            permission = path_config.get("permission", "read") if isinstance(path_config, dict) else "read"
+            print(f"   • {path} ({permission})", flush=True)
+    else:
+        print(f"   {BRIGHT_YELLOW}No context paths configured{RESET}", flush=True)
+
+    # Check if CWD is already in context paths
+    cwd_str = str(cwd)
+    cwd_already_added = any((path_config.get("path") if isinstance(path_config, dict) else path_config) == cwd_str for path_config in existing_paths)
+
+    if not cwd_already_added:
+        print("\n❓ Add current directory as context path?", flush=True)
+        print(f"   {cwd}", flush=True)
+        try:
+            response = input("   [Y]es (default) / [N]o / [C]ustom path: ").strip().lower()
+
+            if response in ["y", "yes", ""]:
+                # Add CWD with write permission
+                if "context_paths" not in orchestrator_cfg:
+                    orchestrator_cfg["context_paths"] = []
+                orchestrator_cfg["context_paths"].append({"path": cwd_str, "permission": "write"})
+                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                return True
+            elif response in ["c", "custom"]:
+                custom_path = input("   Enter path: ").strip()
+                if custom_path:
+                    abs_path = str(Path(custom_path).resolve())
+                    if Path(abs_path).exists():
+                        permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
+                        if permission not in ["read", "write"]:
+                            permission = "write"
+                        if "context_paths" not in orchestrator_cfg:
+                            orchestrator_cfg["context_paths"] = []
+                        orchestrator_cfg["context_paths"].append({"path": abs_path, "permission": permission})
+                        print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
+                        return True
+                    else:
+                        print(f"   {BRIGHT_RED}✗ Path does not exist: {abs_path}{RESET}", flush=True)
+        except (KeyboardInterrupt, EOFError):
+            print()  # New line after Ctrl+C
+            return False
+
+    return False
+
+
 def print_help_messages():
     print(
         "\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.",
@@ -689,6 +868,14 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
         mode = "Multi-Agent Coordination"
     print(f"   Mode: {mode}", flush=True)
     print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
+
+    # Prompt for context paths if filesystem is enabled
+    if original_config and orchestrator_cfg:
+        config_modified = prompt_for_context_paths(original_config, orchestrator_cfg)
+        if config_modified:
+            # Recreate agents with updated context paths
+            agents = create_agents_from_config(original_config, orchestrator_cfg)
+            print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
 
     print_help_messages()
 
@@ -1020,6 +1207,12 @@ Environment Variables:
             if args.debug:
                 logger.debug(f"Created simple config with backend: {backend}, model: {model}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
+
+        # Validate that all context paths exist before proceeding
+        validate_context_paths(config)
+
+        # Relocate all filesystem paths to .massgen/ directory
+        relocate_filesystem_paths(config)
 
         # Apply command-line overrides
         ui_config = config.get("ui", {})

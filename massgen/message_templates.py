@@ -450,15 +450,16 @@ Based on the coordination process above, present your final answer:"""
 
             if has_target:
                 parts.append(
-                    "\n**Important Context**: If the user asks about improving, fixing, debugging, or understanding existing "
+                    "\n**Important Context**: If the user asks about improving, fixing, debugging, or understanding an existing "
                     "code/project (e.g., 'Why is this code not working?', 'Fix this bug', 'Add feature X'), they are referring "
-                    "to the Target Path below. Your changes/analysis must be based on that codebase and final deliverables must end up there.\n",
+                    "to the Target Path below. First READ the existing files from that path to understand what's there, then "
+                    "make your changes based on that codebase. Final deliverables must end up there.\n",
                 )
             elif has_readonly_context:
                 parts.append(
-                    "\n**Important Context**: If the user asks about debugging or understanding existing code/project "
+                    "\n**Important Context**: If the user asks about debugging or understanding an existing code/project "
                     "(e.g., 'Why is this code not working?', 'Explain this bug'), they are referring to (one of) the Context Path(s) "
-                    "below. Provide analysis/explanation based on that codebase - you cannot modify it directly.\n",
+                    "below. Read then provide analysis/explanation based on that codebase - you cannot modify it directly.\n",
                 )
 
             for path_config in context_paths:
@@ -468,12 +469,14 @@ Based on the coordination process above, present your final answer:"""
                 if path:
                     if permission == "read" and will_be_writable:
                         parts.append(
-                            f"**Target Path**: `{path}` (read-only now, write access later) - This is where your changes must be delivered. "
-                            f"Work in your workspace first, then the final presenter will place or update files here using the FULL ABSOLUTE PATH.",
+                            f"**Target Path**: `{path}` (read-only now, write access later) - This is where your changes will be delivered. "
+                            f"Work in your workspace first, then the final presenter will place or update files DIRECTLY into `{path}` using the FULL ABSOLUTE PATH.",
                         )
                     elif permission == "write":
                         parts.append(
-                            f"**Target Path**: `{path}` (write access) - This is where your changes must be delivered. Use the FULL ABSOLUTE PATH when writing to this location (not relative paths).",
+                            f"**Target Path**: `{path}` (write access) - This is where your changes must be delivered. "
+                            f"Work in your workspace, then copy/write files DIRECTLY into `{path}` using FULL ABSOLUTE PATH (not relative paths). "
+                            f"Files must go directly into the target path itself (e.g., `{path}/file.txt`), NOT into a `.massgen/` subdirectory within it.",
                         )
                     else:
                         parts.append(f"**Context Path**: `{path}` (read-only) - Use FULL ABSOLUTE PATH when reading.")
