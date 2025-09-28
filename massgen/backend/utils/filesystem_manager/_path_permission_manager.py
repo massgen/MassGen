@@ -83,8 +83,13 @@ class PathPermissionManager:
             path_type: Type of path ("workspace", "temp_workspace", "context", etc.)
         """
         if not path.exists():
-            logger.warning(f"[PathPermissionManager] Path does not exist: {path}")
-            return
+            # For context paths, warn since user should provide existing paths
+            # For workspace/temp paths, just debug since they'll be created by orchestrator
+            if path_type == "context":
+                logger.warning(f"[PathPermissionManager] Context path does not exist: {path}")
+                return
+            else:
+                logger.debug(f"[PathPermissionManager] Path will be created later: {path} ({path_type})")
 
         managed_path = ManagedPath(path=path.resolve(), permission=permission, path_type=path_type)
 
