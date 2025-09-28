@@ -1848,18 +1848,16 @@ class Orchestrator(ChatAgent):
             # Check if workspace was pre-populated
             workspace_prepopulated = len(previous_turns_context) > 0
 
-            base_system_message += "\n\n" + self.message_templates.filesystem_system_message(
-                main_workspace=main_workspace,
-                temp_workspace=temp_workspace,
-                context_paths=context_paths,
-                previous_turns=turns_to_show,
-                workspace_prepopulated=workspace_prepopulated,
-            )
-            # Add special note that we must not just cite answers from the temp workspace but instead create a synthesized final answer
-            base_system_message += (
-                "\n\nNote: When presenting the final answer, it is not sufficient to just read from existing temporary "
-                "workspace files. Instead, you must write to your main workspace so that everything needed for the final "
-                "answer is contained in your main workspace. This ensures the final answer is complete and self-contained."
+            base_system_message = (
+                self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace,
+                    context_paths=context_paths,
+                    previous_turns=turns_to_show,
+                    workspace_prepopulated=workspace_prepopulated,
+                )
+                + "\n\n## Instructions\n"
+                + base_system_message
             )
 
         # Create conversation with system and user messages

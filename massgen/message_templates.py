@@ -422,7 +422,7 @@ Based on the coordination process above, present your final answer:"""
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
 
-        parts = ["## Filesystem Access\n"]
+        parts = ["## Filesystem Access"]
 
         # Explain workspace behavior
         parts.append(
