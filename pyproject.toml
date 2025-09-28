@@ -69,7 +69,7 @@ all = [
 ]
 
 [project.scripts]
-massgen = "massgen.cli:main"
+massgen = "massgen.cli:cli_main"
 
 [project.urls]
 Homepage = "https://github.com/Leezekun/MassGen"

@@ -347,14 +347,159 @@ def create_simple_config(
     return config
 
 
+def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> List[Dict[str, Any]]:
+    """
+    Load previous turns from session storage.
+
+    Returns:
+        List of previous turn metadata dicts
+    """
+    import json
+    from pathlib import Path
+
+    session_id = session_info.get("session_id")
+    if not session_id:
+        return []
+
+    session_dir = Path(session_storage) / session_id
+    if not session_dir.exists():
+        return []
+
+    previous_turns = []
+    turn_num = 1
+
+    while True:
+        turn_dir = session_dir / f"turn_{turn_num}"
+        if not turn_dir.exists():
+            break
+
+        metadata_file = turn_dir / "metadata.json"
+        if metadata_file.exists():
+            metadata = json.loads(metadata_file.read_text(encoding="utf-8"))
+            # Use absolute path for workspace
+            workspace_path = (turn_dir / "workspace").resolve()
+            previous_turns.append(
+                {
+                    "turn": turn_num,
+                    "path": str(workspace_path),
+                    "task": metadata.get("task", ""),
+                    "winning_agent": metadata.get("winning_agent", ""),
+                },
+            )
+
+        turn_num += 1
+
+    return previous_turns
+
+
+async def handle_session_persistence(
+    orchestrator,
+    question: str,
+    session_info: Dict[str, Any],
+    session_storage: str,
+) -> tuple[Optional[str], int, Optional[str]]:
+    """
+    Handle session persistence after orchestrator completes.
+
+    Returns:
+        tuple: (session_id, updated_turn_number, normalized_answer)
+    """
+    import json
+    import shutil
+    from datetime import datetime
+    from pathlib import Path
+
+    # Get final result from orchestrator
+    final_result = orchestrator.get_final_result()
+    if not final_result:
+        # No filesystem work to persist
+        return (session_info.get("session_id"), session_info.get("current_turn", 0), None)
+
+    # Initialize or reuse session ID
+    session_id = session_info.get("session_id")
+    if not session_id:
+        session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    # Increment turn
+    current_turn = session_info.get("current_turn", 0) + 1
+
+    # Create turn directory
+    session_dir = Path(session_storage) / session_id
+    turn_dir = session_dir / f"turn_{current_turn}"
+    turn_dir.mkdir(parents=True, exist_ok=True)
+
+    # Normalize answer paths
+    final_answer = final_result["final_answer"]
+    workspace_path = final_result.get("workspace_path")
+    turn_workspace_path = (turn_dir / "workspace").resolve()  # Make absolute
+
+    if workspace_path:
+        # Replace workspace paths in answer with absolute path
+        normalized_answer = final_answer.replace(workspace_path, str(turn_workspace_path))
+    else:
+        normalized_answer = final_answer
+
+    # Save normalized answer
+    answer_file = turn_dir / "answer.txt"
+    answer_file.write_text(normalized_answer, encoding="utf-8")
+
+    # Save metadata
+    metadata = {
+        "turn": current_turn,
+        "timestamp": datetime.now().isoformat(),
+        "winning_agent": final_result["winning_agent_id"],
+        "task": question,
+        "session_id": session_id,
+    }
+    metadata_file = turn_dir / "metadata.json"
+    metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+    # Create/update session summary for easy viewing
+    session_summary_file = session_dir / "SESSION_SUMMARY.txt"
+    summary_lines = []
+
+    if session_summary_file.exists():
+        summary_lines = session_summary_file.read_text(encoding="utf-8").splitlines()
+    else:
+        summary_lines.append("=" * 80)
+        summary_lines.append(f"Multi-Turn Session: {session_id}")
+        summary_lines.append("=" * 80)
+        summary_lines.append("")
+
+    # Add turn separator and info
+    summary_lines.append("")
+    summary_lines.append("=" * 80)
+    summary_lines.append(f"TURN {current_turn}")
+    summary_lines.append("=" * 80)
+    summary_lines.append(f"Timestamp: {metadata['timestamp']}")
+    summary_lines.append(f"Winning Agent: {metadata['winning_agent']}")
+    summary_lines.append(f"Task: {question}")
+    summary_lines.append(f"Workspace: {turn_workspace_path}")
+    summary_lines.append(f"Answer: See {(turn_dir / 'answer.txt').resolve()}")
+    summary_lines.append("")
+
+    session_summary_file.write_text("\n".join(summary_lines), encoding="utf-8")
+
+    # Copy workspace if it exists
+    if workspace_path and Path(workspace_path).exists():
+        shutil.copytree(workspace_path, turn_workspace_path, dirs_exist_ok=True)
+
+    return (session_id, current_turn, normalized_answer)
+
+
 async def run_question_with_history(
     question: str,
     agents: Dict[str, SingleAgent],
     ui_config: Dict[str, Any],
     history: List[Dict[str, Any]],
+    session_info: Dict[str, Any],
     **kwargs,
-) -> str:
-    """Run MassGen with a question and conversation history."""
+) -> tuple[str, Optional[str], int]:
+    """Run MassGen with a question and conversation history.
+
+    Returns:
+        tuple: (response_text, session_id, turn_number)
+    """
     # Build messages including history
     messages = history.copy()
     messages.append({"role": "user", "content": question})
@@ -384,10 +529,11 @@ async def run_question_with_history(
                 continue
             elif chunk.type == "error":
                 print(f"\n❌ Error: {chunk.error}", flush=True)
-                return ""
+                return ("", session_info.get("session_id"), session_info.get("current_turn", 0))
 
         print("\n" + "=" * 60, flush=True)
-        return response_content
+        # Single agent mode doesn't use session storage
+        return (response_content, session_info.get("session_id"), session_info.get("current_turn", 0))
 
     else:
         # Multi-agent mode with history
@@ -400,12 +546,17 @@ async def run_question_with_history(
         # Get context sharing parameters from kwargs (if present in config)
         snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
         agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
+        session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")  # Default to "sessions"
+
+        # Load previous turns from session storage for multi-turn conversations
+        previous_turns = load_previous_turns(session_info, session_storage)
 
         orchestrator = Orchestrator(
             agents=agents,
             config=orchestrator_config,
             snapshot_storage=snapshot_storage,
             agent_temporary_workspace=agent_temporary_workspace,
+            previous_turns=previous_turns,
         )
         # Create a fresh UI instance for each question to ensure clean state
         ui = CoordinationUI(
@@ -434,7 +585,16 @@ async def run_question_with_history(
             # Standard coordination for new conversations
             response_content = await ui.coordinate(orchestrator, question)
 
-        return response_content
+        # Handle session persistence if applicable
+        session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
+            orchestrator,
+            question,
+            session_info,
+            session_storage,
+        )
+
+        # Return normalized response so conversation history has correct paths
+        return (normalized_response or response_content, session_id_to_use, updated_turn)
 
 
 async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs) -> str:
@@ -510,7 +670,7 @@ def print_help_messages():
     print("=" * 60, flush=True)
 
 
-async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs):
+async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], original_config: Dict[str, Any] = None, orchestrator_cfg: Dict[str, Any] = None, **kwargs):
     """Run MassGen in interactive mode with conversation history."""
     print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
     print("=" * 60, flush=True)
@@ -535,9 +695,53 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
     # Maintain conversation history
     conversation_history = []
 
+    # Session management for multi-turn filesystem support
+    session_id = None
+    current_turn = 0
+    session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")
+
     try:
         while True:
             try:
+                # Recreate agents with previous turn as read-only context path.
+                # This provides agents with BOTH:
+                # 1. Read-only context path (original turn n-1 results) - for reference/comparison
+                # 2. Writable workspace (copy of turn n-1 results, pre-populated by orchestrator) - for modification
+                # This allows agents to compare "what I changed" vs "what was originally there".
+                # TODO: We may want to avoid full recreation if possible in the future, conditioned on being able to easily reset MCPs.
+                if current_turn > 0 and original_config and orchestrator_cfg:
+                    from pathlib import Path
+
+                    from .logger_config import logger
+
+                    # Get the most recent turn path (the one just completed)
+                    session_dir = Path(session_storage) / session_id
+                    latest_turn_dir = session_dir / f"turn_{current_turn}"
+                    latest_turn_workspace = latest_turn_dir / "workspace"
+
+                    if latest_turn_workspace.exists():
+                        logger.info(f"[CLI] Recreating agents with turn {current_turn} workspace as read-only context path")
+
+                        # Clean up existing agents' backends
+                        for agent_id, agent in agents.items():
+                            if hasattr(agent.backend, "__aexit__"):
+                                await agent.backend.__aexit__(None, None, None)
+
+                        # Inject previous turn path as read-only context
+                        modified_config = original_config.copy()
+                        agent_entries = [modified_config["agent"]] if "agent" in modified_config else modified_config.get("agents", [])
+
+                        for agent_data in agent_entries:
+                            backend_config = agent_data.get("backend", {})
+                            if "cwd" in backend_config:  # Only inject if agent has filesystem support
+                                existing_context_paths = backend_config.get("context_paths", [])
+                                new_turn_config = {"path": str(latest_turn_workspace.resolve()), "permission": "read"}
+                                backend_config["context_paths"] = existing_context_paths + [new_turn_config]
+
+                        # Recreate agents from modified config
+                        agents = create_agents_from_config(modified_config, orchestrator_cfg)
+                        logger.info(f"[CLI] Successfully recreated {len(agents)} agents with turn {current_turn} path as read-only context")
+
                 question = input(f"\n{BRIGHT_BLUE}👤 User:{RESET} ").strip()
 
                 # Handle slash commands
@@ -613,7 +817,35 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
 
                 print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}", flush=True)
 
-                response = await run_question_with_history(question, agents, ui_config, conversation_history, **kwargs)
+                # Pass session state for multi-turn filesystem support
+                session_info = {
+                    "session_id": session_id,
+                    "current_turn": current_turn,
+                    "session_storage": session_storage,
+                }
+                response, updated_session_id, updated_turn = await run_question_with_history(
+                    question,
+                    agents,
+                    ui_config,
+                    conversation_history,
+                    session_info,
+                    **kwargs,
+                )
+
+                # Update session state and reconfigure logging if turn changed
+                if updated_session_id != session_id or updated_turn != current_turn:
+                    session_id = updated_session_id
+                    current_turn = updated_turn
+                    # Reconfigure logging for new turn (use global debug mode from logger_config)
+                    from .logger_config import _DEBUG_MODE
+                    from .logger_config import logger as reconfig_logger
+                    from .logger_config import setup_logging
+
+                    setup_logging(debug=_DEBUG_MODE, turn=current_turn)
+                    reconfig_logger.info(f"Logging reconfigured for turn {current_turn}")
+                else:
+                    session_id = updated_session_id
+                    current_turn = updated_turn
 
                 if response:
                     # Add to conversation history
@@ -871,7 +1103,7 @@ Environment Variables:
             #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
             #     print(f"{response}", flush=True)
         else:
-            await run_interactive_mode(agents, ui_config, **kwargs)
+            await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, **kwargs)
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)
@@ -883,5 +1115,10 @@ Environment Variables:
         sys.exit(1)
 
 
-if __name__ == "__main__":
+def cli_main():
+    """Synchronous wrapper for CLI entry point."""
     asyncio.run(main())
+
+
+if __name__ == "__main__":
+    cli_main()

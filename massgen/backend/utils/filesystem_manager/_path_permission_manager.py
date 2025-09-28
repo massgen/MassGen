@@ -174,6 +174,27 @@ class PathPermissionManager:
             self._permission_cache.clear()
             logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, will_be_writable: {will_be_writable})")
 
+    def add_previous_turn_paths(self, turn_paths: List[Dict[str, Any]]) -> None:
+        """
+        Add previous turn workspace paths for read access.
+        These are tracked separately from regular context paths.
+
+        Args:
+            turn_paths: List of turn path configurations
+                Format: [{"path": "/path/to/turn_1/workspace", "permission": "read"}, ...]
+        """
+        for config in turn_paths:
+            path_str = config.get("path", "")
+            if not path_str:
+                continue
+
+            path = Path(path_str).resolve()
+            # Previous turn paths are always read-only
+            managed_path = ManagedPath(path=path, permission=Permission.READ, path_type="previous_turn", will_be_writable=False)
+            self.managed_paths.append(managed_path)
+            self._permission_cache.clear()
+            logger.info(f"[PathPermissionManager] Added previous turn path: {path} (read-only)")
+
     def get_permission(self, path: Path) -> Optional[Permission]:
         """
         Get permission level for a path.

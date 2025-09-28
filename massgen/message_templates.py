@@ -410,7 +410,14 @@ Based on the coordination process above, present your final answer:"""
         messages.append({"role": "user", "content": self.enforcement_message()})
         return messages
 
-    def filesystem_system_message(self, main_workspace: Optional[str] = None, temp_workspace: Optional[str] = None, context_paths: Optional[List[Dict[str, str]]] = None) -> str:
+    def filesystem_system_message(
+        self,
+        main_workspace: Optional[str] = None,
+        temp_workspace: Optional[str] = None,
+        context_paths: Optional[List[Dict[str, str]]] = None,
+        previous_turns: Optional[List[Dict[str, Any]]] = None,
+        workspace_prepopulated: bool = False,
+    ) -> str:
         """Generate filesystem access instructions for agents with filesystem support."""
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -424,7 +431,15 @@ Based on the coordination process above, present your final answer:"""
         )
 
         if main_workspace:
-            parts.append(f"**Your Workspace**: `{main_workspace}` - Write actual files here using file tools. All your file operations will be relative to this directory.")
+            workspace_note = f"**Your Workspace**: `{main_workspace}` - Write actual files here using file tools. All your file operations will be relative to this directory."
+            if workspace_prepopulated:
+                # Workspace is pre-populated with writable copy of most recent turn
+                workspace_note += (
+                    " **Note**: Your workspace already contains a writable copy of the previous turn's results - "
+                    "you can modify or build upon these files. The original unmodified version is also available as "
+                    "a read-only context path if you need to reference what was originally there."
+                )
+            parts.append(workspace_note)
 
         if temp_workspace:
             parts.append(f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)")
@@ -462,6 +477,14 @@ Based on the coordination process above, present your final answer:"""
                         )
                     else:
                         parts.append(f"**Context Path**: `{path}` (read-only) - Use FULL ABSOLUTE PATH when reading.")
+
+        # Add note connecting conversation history (in user message) to context paths (in system message)
+        if previous_turns:
+            parts.append(
+                "\n**Note**: This is a multi-turn conversation. Each User/Assistant exchange in the conversation "
+                "history represents one turn. The workspace from each turn is available as a read-only context path "
+                "listed above (e.g., turn 1's workspace is at the path ending in `/turn_1/workspace`).",
+            )
 
         # Add requirement for path explanations in answers
         parts.append(
