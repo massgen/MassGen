@@ -817,10 +817,27 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
 
                 print(f"\n🔄 {BRIGHT_YELLOW}Processing...{RESET}", flush=True)
 
+                # Increment turn counter BEFORE processing so logs go to correct turn_N directory
+                next_turn = current_turn + 1
+
+                # Initialize session ID on first turn
+                if session_id is None:
+                    from datetime import datetime
+
+                    session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+                # Reconfigure logging for the turn we're about to process
+                from .logger_config import _DEBUG_MODE
+                from .logger_config import logger as reconfig_logger
+                from .logger_config import setup_logging
+
+                setup_logging(debug=_DEBUG_MODE, turn=next_turn)
+                reconfig_logger.info(f"Starting turn {next_turn}")
+
                 # Pass session state for multi-turn filesystem support
                 session_info = {
                     "session_id": session_id,
-                    "current_turn": current_turn,
+                    "current_turn": current_turn,  # Pass CURRENT turn (for looking up previous turns)
                     "session_storage": session_storage,
                 }
                 response, updated_session_id, updated_turn = await run_question_with_history(
@@ -832,20 +849,9 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                     **kwargs,
                 )
 
-                # Update session state and reconfigure logging if turn changed
-                if updated_session_id != session_id or updated_turn != current_turn:
-                    session_id = updated_session_id
-                    current_turn = updated_turn
-                    # Reconfigure logging for new turn (use global debug mode from logger_config)
-                    from .logger_config import _DEBUG_MODE
-                    from .logger_config import logger as reconfig_logger
-                    from .logger_config import setup_logging
-
-                    setup_logging(debug=_DEBUG_MODE, turn=current_turn)
-                    reconfig_logger.info(f"Logging reconfigured for turn {current_turn}")
-                else:
-                    session_id = updated_session_id
-                    current_turn = updated_turn
+                # Update session state after completion
+                session_id = updated_session_id
+                current_turn = updated_turn
 
                 if response:
                     # Add to conversation history
