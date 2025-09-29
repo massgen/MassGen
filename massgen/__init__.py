@@ -51,11 +51,11 @@ from .agent_config import AgentConfig
 from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
+from .backend.inference import InferenceBackend
 from .backend.lmstudio import LMStudioBackend
 
 # Import main classes for convenience
 from .backend.response import ResponseBackend
-from .backend.vllm import VLLMBackend
 from .chat_agent import (
     ChatAgent,
     ConfigurableAgent,
@@ -78,7 +78,7 @@ __all__ = [
     "GeminiBackend",
     "GrokBackend",
     "LMStudioBackend",
-    "VLLMBackend",
+    "InferenceBackend",
     # Agents
     "ChatAgent",
     "SingleAgent",
