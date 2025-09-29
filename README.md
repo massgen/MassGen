@@ -322,7 +322,7 @@ The system currently supports multiple model providers with advanced capabilitie
   - Auto-detection between vLLM (port 8000) and SGLang (port 30000) servers
   - Support for both vLLM and SGLang-specific parameters (top_k, repetition_penalty, separate_reasoning)
   - Mixed server deployments with configuration example: `two_qwen_vllm_sglang.yaml`
-  - Optimized parameter handling and streaming for both inference engines
+
 - **LM Studio** (v0.0.7+): Run open-weight models locally with automatic server management
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
