@@ -37,9 +37,9 @@ from .backend.claude import ClaudeBackend
 from .backend.claude_code import ClaudeCodeBackend
 from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
+from .backend.inference import InferenceBackend
 from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
-from .backend.vllm import VLLMBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .frontend.coordination_ui import CoordinationUI
 from .orchestrator import Orchestrator
@@ -115,6 +115,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     Supported backend types:
     - openai: OpenAI API (requires OPENAI_API_KEY)
     - grok: xAI Grok (requires XAI_API_KEY)
+    - sglang: SGLang inference server (local)
     - claude: Anthropic Claude (requires ANTHROPIC_API_KEY)
     - gemini: Google Gemini (requires GOOGLE_API_KEY or GEMINI_API_KEY)
     - chatcompletion: OpenAI-compatible providers (auto-detects API key based on base_url)
@@ -213,7 +214,11 @@ def create_backend(backend_type: str, **kwargs) -> Any:
 
     elif backend_type == "vllm":
         # vLLM local server (OpenAI-compatible). Defaults handled by backend.
-        return VLLMBackend(**kwargs)
+        return InferenceBackend(backend_type="vllm", **kwargs)
+
+    elif backend_type == "sglang":
+        # SGLang local server (OpenAI-compatible). Defaults handled by backend.
+        return InferenceBackend(backend_type="sglang", **kwargs)
 
     elif backend_type == "claude_code":
         # ClaudeCodeBackend using claude-code-sdk-python
@@ -289,6 +294,8 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
             agent_config = AgentConfig.create_lmstudio_config(**backend_params)
         elif backend_type_lower == "vllm":
             agent_config = AgentConfig.create_vllm_config(**backend_params)
+        elif backend_type_lower == "sglang":
+            agent_config = AgentConfig.create_sglang_config(**backend_params)
         else:
             agent_config = AgentConfig(backend_params=backend_config)
 
@@ -696,6 +703,8 @@ Environment Variables:
             "claude_code",
             "zai",
             "lmstudio",
+            "vllm",
+            "sglang",
         ],
         help="Backend type for quick setup",
     )
