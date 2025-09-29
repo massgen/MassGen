@@ -1,0 +1,20 @@
+# MassGen Two Agent Configuration both calling the same vLLM model for testing
+# In one terminal window, in an environment with vLLM installed, run:
+#   python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000 --gpu-memory-utilization 0.8 --enable-auto-tool-choice --tool-call-parser hermes
+# In another terminal window, run:
+#   uv run python -m massgen.cli --config massgen/configs/basic/multi/two_qwen_vllm.yaml "What is machine learning?"
+agents:
+  - id: "qwen1"
+    backend:
+      type: "vllm"
+      model: "Qwen/Qwen3-0.6B"
+      base_url: "http://localhost:8000/v1"
+  - id: "qwen2"
+    backend:
+      type: "vllm"
+      model: "Qwen/Qwen3-0.6B"
+      base_url: "http://localhost:8000/v1"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

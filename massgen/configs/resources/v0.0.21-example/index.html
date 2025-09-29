@@ -1,124 +1,81 @@
-<!doctype html>
-<html lang="en" data-theme="auto">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MassGen Blog – Enhanced</title>
-  <link rel="stylesheet" href="styles.css" />
-  <meta name="color-scheme" content="light dark" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Blog</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <a class="skip-link" href="#content">Skip to content</a>
+    <header>
+        <h1>My Simple Blog</h1>
+        <p class="tagline">Thoughts, ideas, and stories</p>
+    </header>
 
-  <header class="site-header" role="banner">
-    <div class="container header-inner">
-      <h1 class="logo">MassGen</h1>
-      <div class="header-actions">
-        <button id="themeToggle" class="icon-btn" aria-label="Toggle dark or light theme" title="Toggle theme">
-          <svg class="icon sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.8 1.42-1.42zM1 13h3v-2H1v2zm10 10h2v-3h-2v3zm9-10v-2h-3v2h3zm-3.64 6.36l1.8 1.79 1.41-1.41-1.79-1.8-1.42 1.42zM12 6a6 6 0 100 12 6 6 0 000-12zm0-5h-2v3h2V1zm7.66 4.05l-1.41-1.41-1.8 1.79 1.42 1.42 1.79-1.8zM5 23l1.41 1.41 1.8-1.79-1.42-1.42L5 23z"/></svg>
-          <svg class="icon moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/></svg>
-        </button>
-      </div>
-    </div>
-  </header>
+    <main>
+        <article class="blog-post">
+            <h2>Getting Started with Web Development</h2>
+            <div class="post-meta">
+                <time datetime="2024-01-15">January 15, 2024</time>
+            </div>
+            <div class="post-content">
+                <p>Web development has become one of the most sought-after skills in today's digital age. Whether you're looking to build personal projects or start a career in tech, understanding the fundamentals of HTML, CSS, and JavaScript is essential.</p>
+                <p>In this journey, you'll discover how these three technologies work together to create the interactive websites we use every day. HTML provides the structure, CSS adds the style, and JavaScript brings everything to life with interactivity.</p>
+                <p>The best part? You can start learning right now with just a text editor and a web browser. No expensive tools or software required!</p>
+            </div>
+        </article>
 
-  <main id="content" class="container">
-    <section class="controls" aria-label="Blog controls">
-      <div class="search-wrap">
-        <input id="searchInput" type="search" placeholder="Search articles..." aria-label="Search articles" />
-      </div>
-      <div class="topics" role="tablist" aria-label="Filter by topic">
-        <button class="chip is-active" data-topic="all" role="tab" aria-selected="true">All</button>
-        <button class="chip" data-topic="Web" role="tab">Web</button>
-        <button class="chip" data-topic="Design" role="tab">Design</button>
-        <button class="chip" data-topic="JavaScript" role="tab">JavaScript</button>
-        <button class="chip" data-topic="CSS" role="tab">CSS</button>
-        <button class="chip" data-topic="Career" role="tab">Career</button>
-      </div>
-      <div id="resultsMeta" class="results-meta" aria-live="polite"></div>
-    </section>
+        <article class="blog-post">
+            <h2>The Art of Minimalist Design</h2>
+            <div class="post-meta">
+                <time datetime="2024-01-10">January 10, 2024</time>
+            </div>
+            <div class="post-content">
+                <p>Less is often more when it comes to web design. Minimalist design isn't just about removing elements; it's about being intentional with every choice you make.</p>
+                <p>By focusing on essential elements and removing unnecessary clutter, we create experiences that are both beautiful and functional. White space becomes your friend, typography takes center stage, and every color choice has purpose.</p>
+                <p>This approach not only creates visually appealing websites but also improves user experience, loading times, and accessibility.</p>
+            </div>
+        </article>
 
-    <section id="posts" class="posts" aria-label="Articles">
-      <!-- Example cards; these can be replaced with your real content. -->
-      <article class="card" data-topic="Web">
-        <h2 class="card-title">Building Accessible Components</h2>
-        <p class="card-body">Learn practical patterns for creating accessible, keyboard-friendly UI components with ARIA best practices and progressive enhancement.</p>
-        <div class="card-meta">
-          <span class="reading-time" data-body-ref> </span>
-          <span class="topic">Web</span>
-        </div>
-        <div class="card-actions">
-          <button class="react" data-type="clap" aria-label="Clap">👏 <span class="count">0</span></button>
-          <button class="react" data-type="heart" aria-label="Love">❤️ <span class="count">0</span></button>
-          <button class="share" aria-label="Share this article">Share</button>
-        </div>
-      </article>
+        <article class="blog-post">
+            <h2>Understanding CSS Grid Layout</h2>
+            <div class="post-meta">
+                <time datetime="2024-01-05">January 5, 2024</time>
+            </div>
+            <div class="post-content">
+                <p>CSS Grid has revolutionized the way we create layouts on the web. Gone are the days of complex float-based layouts and hacky positioning tricks.</p>
+                <p>With CSS Grid, you can create two-dimensional layouts that are both flexible and maintainable. Define your grid template, place your items, and let the browser handle the rest.</p>
+                <p>Whether you're building a simple blog layout or a complex dashboard, CSS Grid provides the tools you need to create responsive, professional layouts with clean, readable code.</p>
+            </div>
+        </article>
 
-      <article class="card" data-topic="JavaScript">
-        <h2 class="card-title">State Management Without Frameworks</h2>
-        <p class="card-body">A tiny, framework-agnostic approach to state management using vanilla JavaScript and the observer pattern. Includes simple examples and pitfalls to avoid.</p>
-        <div class="card-meta">
-          <span class="reading-time" data-body-ref> </span>
-          <span class="topic">JavaScript</span>
-        </div>
-        <div class="card-actions">
-          <button class="react" data-type="clap" aria-label="Clap">👏 <span class="count">0</span></button>
-          <button class="react" data-type="heart" aria-label="Love">❤️ <span class="count">0</span></button>
-          <button class="share" aria-label="Share this article">Share</button>
-        </div>
-      </article>
+        <article class="blog-post">
+            <h2>JavaScript Best Practices in 2024</h2>
+            <div class="post-meta">
+                <time datetime="2023-12-28">December 28, 2023</time>
+            </div>
+            <div class="post-content">
+                <p>JavaScript continues to evolve, and staying up-to-date with best practices is crucial for writing maintainable, efficient code.</p>
+                <p>Modern JavaScript emphasizes clarity and expressiveness. Use const and let instead of var, embrace arrow functions where appropriate, and leverage destructuring to make your code more readable.</p>
+                <p>Don't forget about async/await for handling asynchronous operations, and always consider performance implications when working with large datasets or complex DOM manipulations.</p>
+            </div>
+        </article>
 
-      <article class="card" data-topic="CSS">
-        <h2 class="card-title">Design Tokens with CSS Variables</h2>
-        <p class="card-body">Use custom properties to build a scalable design system with themes, spacing, and color modes that are easy to maintain and extend.</p>
-        <div class="card-meta">
-          <span class="reading-time" data-body-ref> </span>
-          <span class="topic">CSS</span>
-        </div>
-        <div class="card-actions">
-          <button class="react" data-type="clap" aria-label="Clap">👏 <span class="count">0</span></button>
-          <button class="react" data-type="heart" aria-label="Love">❤️ <span class="count">0</span></button>
-          <button class="share" aria-label="Share this article">Share</button>
-        </div>
-      </article>
+        <article class="blog-post">
+            <h2>Building Your First Portfolio Website</h2>
+            <div class="post-meta">
+                <time datetime="2023-12-20">December 20, 2023</time>
+            </div>
+            <div class="post-content">
+                <p>A portfolio website is your digital business card. It's often the first impression potential clients or employers will have of your work, so making it count is essential.</p>
+                <p>Start with a clear structure: an about section, showcase of your best projects, and easy ways to contact you. Remember, quality over quantity - it's better to showcase three amazing projects than ten mediocre ones.</p>
+                <p>Keep the design clean and professional, ensure it's responsive across all devices, and don't forget to optimize for search engines. Your portfolio should load quickly and be accessible to all users.</p>
+            </div>
+        </article>
+    </main>
 
-      <article class="card" data-topic="Career">
-        <h2 class="card-title">Writing Technical Case Studies</h2>
-        <p class="card-body">How to craft compelling case studies that communicate impact, process, and outcomes effectively for engineering and design audiences.</p>
-        <div class="card-meta">
-          <span class="reading-time" data-body-ref> </span>
-          <span class="topic">Career</span>
-        </div>
-        <div class="card-actions">
-          <button class="react" data-type="clap" aria-label="Clap">👏 <span class="count">0</span></button>
-          <button class="react" data-type="heart" aria-label="Love">❤️ <span class="count">0</span></button>
-          <button class="share" aria-label="Share this article">Share</button>
-        </div>
-      </article>
-
-      <article class="card" data-topic="Design">
-        <h2 class="card-title">Micro-interactions that Delight</h2>
-        <p class="card-body">Small, purposeful animations can make interfaces feel alive. We explore patterns, timing, and accessibility considerations.</p>
-        <div class="card-meta">
-          <span class="reading-time" data-body-ref> </span>
-          <span class="topic">Design</span>
-        </div>
-        <div class="card-actions">
-          <button class="react" data-type="clap" aria-label="Clap">👏 <span class="count">0</span></button>
-          <button class="react" data-type="heart" aria-label="Love">❤️ <span class="count">0</span></button>
-          <button class="share" aria-label="Share this article">Share</button>
-        </div>
-      </article>
-
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      <p>© 2025 MassGen. Built with vanilla HTML, CSS, and JS.</p>
-    </div>
-  </footer>
-
-  <script src="script.js" defer></script>
+    <footer>
+        <p>&copy; 2024 Simple Blog. All rights reserved.</p>
+    </footer>
 </body>
 </html>
