@@ -14,7 +14,7 @@ from massgen.backend.utils.filesystem_manager import (
     PathPermissionManager,
     Permission,
 )
-from massgen.backend.utils.filesystem_manager._workspace_copy_server import (
+from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
     _validate_and_resolve_paths,
     _validate_path_access,
     get_copy_file_pairs,
@@ -90,15 +90,15 @@ async def test_mcp_relative_paths():
         assert actual_cwd == expected_cwd, f"Expected cwd={expected_cwd}, got {actual_cwd}"
         print("✅ Filesystem config has correct cwd")
 
-        # Get workspace copy config - should also include cwd parameter
-        workspace_copy_config = filesystem_manager.get_workspace_copy_mcp_config()
-        print(f"🔧 Workspace copy MCP config: {workspace_copy_config}")
+        # Get workspace tools config - should also include cwd parameter
+        workspace_tools_config = filesystem_manager.get_workspace_tools_mcp_config()
+        print(f"🔧 Workspace tools MCP config: {workspace_tools_config}")
 
         # Verify cwd is set correctly (resolve both paths to handle /private prefix on macOS)
         expected_cwd = str(workspace_dir.resolve())
-        actual_cwd = str(Path(workspace_copy_config.get("cwd")).resolve())
+        actual_cwd = str(Path(workspace_tools_config.get("cwd")).resolve())
         assert actual_cwd == expected_cwd, f"Expected cwd={expected_cwd}, got {actual_cwd}"
-        print("✅ Workspace copy config has correct cwd")
+        print("✅ Workspace tools config has correct cwd")
 
         # Test filesystem MCP server
         print("\n📡 Testing filesystem MCP server...")
@@ -130,11 +130,11 @@ async def test_mcp_relative_paths():
         except Exception as e:
             print(f"❌ Filesystem MCP server test failed: {e}")
 
-        # Test workspace copy MCP server
-        print("\n📦 Testing workspace copy MCP server...")
+        # Test workspace tools MCP server
+        print("\n📦 Testing workspace tools MCP server...")
         try:
-            async with MCPClient(workspace_copy_config, timeout_seconds=10) as client:
-                print("✅ Workspace copy MCP server connected successfully")
+            async with MCPClient(workspace_tools_config, timeout_seconds=10) as client:
+                print("✅ Workspace tools MCP server connected successfully")
                 tools = client.get_available_tools()
                 print(f"🔧 Available tools: {tools}")
 
@@ -544,8 +544,8 @@ def test_extract_file_from_command():
         helper.teardown()
 
 
-def test_workspace_copy_tools():
-    print("\n📦 Testing workspace copy tool validation...")
+def test_workspace_tools():
+    print("\n📦 Testing workspace tools validation...")
 
     helper = TestHelper()
     helper.setup()
@@ -559,7 +559,7 @@ def test_workspace_copy_tools():
         # Add temp_workspace_dir to the permission manager's allowed paths
         manager.add_path(temp_workspace_dir, Permission.READ, "temp_workspace")
 
-        copy_tools = ["copy_file", "copy_files_batch", "mcp__workspace_copy__copy_file", "mcp__workspace_copy__copy_files_batch"]
+        copy_tools = ["copy_file", "copy_files_batch", "mcp__workspace_tools__copy_file", "mcp__workspace_tools__copy_files_batch"]
         for tool in copy_tools:
             if not manager._is_write_tool(tool):
                 print(f"❌ Failed: {tool} should be detected as write tool")
@@ -771,8 +771,8 @@ def test_path_priority_resolution():
         helper.teardown()
 
 
-def test_workspace_copy_server_path_validation():
-    print("\n🏗️  Testing workspace copy server path validation...")
+def test_workspace_tools_server_path_validation():
+    print("\n🏗️  Testing workspace tools server path validation...")
 
     helper = TestHelper()
     helper.setup()
@@ -1009,7 +1009,7 @@ def test_delete_operations():
         tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
         allowed, reason = manager._validate_write_tool("delete_files_batch", tool_args)
         # Note: This should succeed because workspace is writable
-        # The actual deletion logic is in workspace_copy_server
+        # The actual deletion logic is in workspace_tools_server
 
         print("✅ Deletion operation permissions work correctly")
         return True
@@ -1025,7 +1025,7 @@ def test_permission_path_root_protection():
     helper.setup()
 
     try:
-        from massgen.backend.utils.filesystem_manager._workspace_copy_server import (
+        from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
             _is_permission_path_root,
         )
 
@@ -1057,7 +1057,7 @@ def test_permission_path_root_protection():
             return False
 
         print("  Testing system files still protected within workspace...")
-        from massgen.backend.utils.filesystem_manager._workspace_copy_server import (
+        from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
             _is_critical_path,
         )
 
@@ -1294,7 +1294,7 @@ async def test_delete_file_real_workspace_scenario():
         print(f"  User project: {user_project}")
 
         # Import the helper functions directly to test logic
-        from massgen.backend.utils.filesystem_manager._workspace_copy_server import (
+        from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
             _is_critical_path,
             _is_permission_path_root,
         )
@@ -1405,8 +1405,8 @@ async def main():
         test_validate_command_tool,
         test_context_write_access_toggle,
         test_extract_file_from_command,
-        test_workspace_copy_tools,
-        test_workspace_copy_server_path_validation,
+        test_workspace_tools,
+        test_workspace_tools_server_path_validation,
         test_file_context_paths,
         test_delete_operations,
         test_permission_path_root_protection,

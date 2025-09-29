@@ -810,7 +810,7 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
         print("\n❓ Add current directory as context path?", flush=True)
         print(f"   {cwd}", flush=True)
         try:
-            response = input("   [Y]es (default) / [N]o / [C]ustom path: ").strip().lower()
+            response = input("   [Y]es (default) / [P]rotected / [N]o / [C]ustom path: ").strip().lower()
 
             if response in ["y", "yes", ""]:
                 # Add CWD with write permission
@@ -818,6 +818,29 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                     orchestrator_cfg["context_paths"] = []
                 orchestrator_cfg["context_paths"].append({"path": cwd_str, "permission": "write"})
                 print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                return True
+            elif response in ["p", "protected"]:
+                # Add CWD with write permission and protected paths
+                protected_paths = []
+                print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                while True:
+                    protected_input = input("     → ").strip()
+                    if not protected_input:
+                        break
+                    protected_paths.append(protected_input)
+
+                if "context_paths" not in orchestrator_cfg:
+                    orchestrator_cfg["context_paths"] = []
+
+                context_config = {"path": cwd_str, "permission": "write"}
+                if protected_paths:
+                    context_config["protected_paths"] = protected_paths
+
+                orchestrator_cfg["context_paths"].append(context_config)
+                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                if protected_paths:
+                    for protected in protected_paths:
+                        print(f"     🔒 {protected}", flush=True)
                 return True
             elif response in ["c", "custom"]:
                 custom_path = input("   Enter path: ").strip()
@@ -839,8 +862,6 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                                     if not protected_input:
                                         break
                                     protected_paths.append(protected_input)
-                                if protected_paths:
-                                    print(f"   {BRIGHT_GREEN}✓ Will protect {len(protected_paths)} path(s){RESET}", flush=True)
 
                         if "context_paths" not in orchestrator_cfg:
                             orchestrator_cfg["context_paths"] = []
@@ -851,6 +872,9 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
 
                         orchestrator_cfg["context_paths"].append(context_config)
                         print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
+                        if protected_paths:
+                            for protected in protected_paths:
+                                print(f"     🔒 {protected}", flush=True)
                         return True
                     else:
                         print(f"   {BRIGHT_RED}✗ Path does not exist: {abs_path}{RESET}", flush=True)

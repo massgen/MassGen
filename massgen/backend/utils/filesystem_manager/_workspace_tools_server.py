@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Workspace Copy MCP Server for MassGen - Phase 1 Implementation
+Workspace Tools MCP Server for MassGen
 
-This MCP server provides tools for copying files from temporary workspaces and context paths
-to the agent's own workspace. It implements copy-on-write behavior for multi-agent collaboration.
+This MCP server provides workspace management tools for agents including file operations,
+deletion, and comparison capabilities. It implements copy-on-write behavior for multi-agent
+collaboration and provides safe file manipulation within allowed paths.
 
 Tools provided:
 - copy_file: Copy a single file or directory from any accessible path to workspace

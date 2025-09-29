@@ -44,7 +44,7 @@ With copy-heavy workflows, users need to:
 
 ### 1. File Deletion Tools
 
-#### New Tools in `_workspace_copy_server.py`
+#### New Tools in `_workspace_tools_server.py`
 
 **Tool: `delete_file`**
 ```python
@@ -226,7 +226,7 @@ context_paths:
 
 ### 3. Diff Tools
 
-#### New Tools in `_workspace_copy_server.py`
+#### New Tools in `_workspace_tools_server.py`
 
 **Tool: `compare_directories`**
 ```python
@@ -576,12 +576,12 @@ context_paths:
 ## Implementation Checklist
 
 ### Core Features
-- [x] Add `delete_file` tool to `_workspace_copy_server.py`
-- [x] Add `delete_files_batch` tool to `_workspace_copy_server.py`
+- [x] Add `delete_file` tool to `_workspace_tools_server.py`
+- [x] Add `delete_files_batch` tool to `_workspace_tools_server.py`
 - [x] Add `_is_critical_path()` helper to protect system files
 - [x] Add `_is_permission_path_root()` to prevent deleting workspace roots
-- [x] Add `compare_directories` tool to `_workspace_copy_server.py`
-- [x] Add `compare_files` tool to `_workspace_copy_server.py`
+- [x] Add `compare_directories` tool to `_workspace_tools_server.py`
+- [x] Add `compare_files` tool to `_workspace_tools_server.py`
 - [x] Add `_is_text_file()` helper for diff operations
 
 ### Permission System
@@ -596,6 +596,8 @@ context_paths:
 
 ### User Experience
 - [x] Update system prompt with workspace cleanup guidance in `message_templates.py`
+- [x] Clarify deletion permissions in system prompt (cannot delete read-only files)
+- [x] Add comparison tools guidance to system prompt (compare_directories, compare_files)
 - [x] Add protected paths prompt to interactive mode in `cli.py`
 - [x] Users can specify protected paths when adding custom context paths interactively
 
@@ -635,7 +637,7 @@ context_paths:
 - [Issue #254](https://github.com/Leezekun/MassGen/issues/254) - File Deletion, Context Path Files, and Protected Paths
 
 ### Modified Files
-- `massgen/backend/utils/filesystem_manager/_workspace_copy_server.py` - Deletion & diff tools
+- `massgen/backend/utils/filesystem_manager/_workspace_tools_server.py` - Deletion & diff tools
 - `massgen/backend/utils/filesystem_manager/_path_permission_manager.py` - Protected paths & file context paths
 - `massgen/message_templates.py` - Workspace cleanup guidance
 - `massgen/tests/test_path_permission_manager.py` - Test coverage (14 tests)

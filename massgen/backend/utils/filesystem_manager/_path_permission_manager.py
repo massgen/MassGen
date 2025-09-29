@@ -533,8 +533,8 @@ class PathPermissionManager:
         """Validate copy_files_batch by checking all destination paths after globbing."""
         try:
             logger.debug(f"[PathPermissionManager] copy_files_batch validation - context_write_access_enabled: {self.context_write_access_enabled}")
-            # Import the helper function from workspace copy server
-            from ._workspace_copy_server import get_copy_file_pairs
+            # Import the helper function from workspace tools server
+            from ._workspace_tools_server import get_copy_file_pairs
 
             # Get all the file pairs that would be copied
             source_base_path = tool_args.get("source_base_path")
