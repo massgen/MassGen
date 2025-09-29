@@ -396,10 +396,10 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 ```bash
 # Weather service with GPT-5
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
+  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
   "What's the weather forecast for New York this week?"
 
-# Multi-tool MCP with Gemini - Search + Weather + Filesystem
+# Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
   "Find the best restaurants in Paris and save the recommendations to a file"
