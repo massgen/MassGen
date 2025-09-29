@@ -20,6 +20,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import massgen.backend.utils.filesystem_manager._workspace_copy_server as wc_module
+
 from ....logger_config import get_log_session_dir, logger
 from ....mcp_tools.client import HookType
 from ._base import Permission
@@ -189,8 +191,6 @@ class FilesystemManager:
         ",".join([cp["path"] for cp in context_paths])
 
         # Get absolute path to the workspace copy server script
-        import massgen.backend.utils.filesystem_manager._workspace_copy_server as wc_module
-
         script_path = Path(wc_module.__file__).resolve()
 
         # Pass allowed paths via environment variable to avoid fastmcp argument parsing issues

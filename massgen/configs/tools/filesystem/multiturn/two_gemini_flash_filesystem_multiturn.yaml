@@ -1,13 +1,12 @@
-# uv run python -m massgen.cli --config massgen/configs/tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml
+# uv tool run massgen --config tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml
 agents:
-  - id: "gemini"
+  - id: "gemini_a"
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"
       cwd: "workspace1"  # Working directory for file operations
-      # enable_web_search: true
 
-  - id: "gemini2"
+  - id: "gemini_b"
     backend:
       type: "gemini"
       model: "gemini-2.5-flash"
@@ -16,7 +15,7 @@ agents:
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots
     agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
-    session_storage: "sessions"  # Optional, defaults to "sessions". Used for multi-turn conversations to store previous rounds.
+    session_storage: "sessions"  # Used for multi-turn conversations to store previous rounds.
 
 ui:
   display_type: "rich_terminal"

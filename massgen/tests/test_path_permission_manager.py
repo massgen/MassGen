@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import json
+import os
 import shutil
 import sys
 import tempfile
+import traceback
 from pathlib import Path
 
 # Removed wc_server import - now using factory function approach
@@ -147,8 +150,6 @@ async def test_mcp_relative_paths():
                             cwd_info = cwd_result.structuredContent
                         else:
                             # Fallback to parsing text content
-                            import json
-
                             cwd_info = json.loads(cwd_result.content[0].text)
 
                         server_cwd = cwd_info.get("cwd")
@@ -867,8 +868,6 @@ def test_workspace_copy_server_path_validation():
 
         # Test relative path resolution with workspace context
         print("  Testing relative path resolution...")
-        import os
-
         original_cwd = os.getcwd()
         try:
             # Change to workspace directory to simulate the new factory function approach
@@ -923,8 +922,6 @@ async def main():
                 failed += 1
         except Exception as e:
             print(f"❌ {test_func.__name__} failed with exception: {e}")
-            import traceback
-
             traceback.print_exc()
             failed += 1
 
@@ -935,8 +932,6 @@ async def main():
             passed += 1
         except Exception as e:
             print(f"❌ {test_func.__name__} failed with exception: {e}")
-            import traceback
-
             traceback.print_exc()
             failed += 1
 
