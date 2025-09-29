@@ -3,8 +3,7 @@ agents:
   - id: "claude_code_playwright_automation"
     backend:
       type: "claude_code"
-      cwd: "claude_code_workspace_playwright_automation"
-      # permission_mode: "bypassPermissions"
+      cwd: "workspace1"
       # Playwright MCP server with advanced configuration
       mcp_servers:
         playwright:
@@ -17,50 +16,33 @@ agents:
             "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
             # "--save-trace"       # Save Playwright traces for debugging
           ]
-      allowed_tools:
-        - "Read"
-        - "Write"
-        # - "Edit"
-        # - "MultiEdit"
-        - "Bash"
-        - "LS"
-        - "WebSearch"
-        - "WebFetch"
-        - "Task"
-        # MCP Playwright tools auto-discovered
-        - "mcp__playwright"
 
-    # append_system_prompt: |
-    #   include the html content in your answer
-    #   You are a browser automation specialist with advanced Playwright capabilities.
-      
-    #   Your role:
-    #   - Perform complex web automation tasks
-    #   - Handle browser interactions, form filling, and data extraction
-    #   - Take screenshots and generate PDFs
-    #   - Use vision capabilities for coordinate-based interactions
-    #   - Execute sophisticated browser workflows
-      
-    #   Focus on automation, testing, and web scraping tasks.
-
-  - id: "gpt-5-nano_analysis"
+  - id: "gpt-5-mini_analysis"
     backend:
       type: "openai"
-      model: "gpt-5-nano"
-      enable_web_search: true
-      enable_code_interpreter: true
-    # system_message: |
-    #   You are an analysis and planning specialist working alongside a browser automation agent.
-      
-    #   Your role:
-    #   - Analyze automation requirements and break them down into steps
-    #   - Review and validate automation results
-    #   - Provide strategic guidance for complex web workflows
-    #   - Suggest improvements and optimizations
-      
-    #   Work collaboratively with the Playwright automation agent to achieve complex tasks.
+      model: "gpt-5-mini"
+      cwd: "workspace2"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "low"
+        summary: "auto"
+      mcp_servers:
+        playwright:
+          type: "stdio"
+          command: "npx"
+          args: [
+            "@playwright/mcp@latest",
+            "--browser=chrome",  # Use Chrome browser
+            "--caps=vision,pdf", # Enable vision and PDF capabilities
+            "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
+            # "--save-trace"       # Save Playwright traces for debugging
+          ]
 
 ui:
   display_type: "rich_terminal"
   logging_enabled: true
 
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces

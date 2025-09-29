@@ -48,6 +48,11 @@ class CoordinationUI:
         # Flush output configuration (matches rich_terminal_display)
         self._flush_char_delay = 0.03  # 30ms between characters
 
+        # Initialize answer buffer state
+        self._answer_buffer = ""
+        self._answer_timeout_task = None
+        self._final_answer_shown = False
+
     def _process_reasoning_summary(self, chunk_type: str, summary_delta: str, source: str) -> str:
         """Process reasoning summary content using display's shared logic."""
         if self.display and hasattr(self.display, "process_reasoning_content"):

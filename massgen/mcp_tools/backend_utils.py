@@ -973,8 +973,18 @@ class MCPSetupManager:
         if not servers:
             return []
 
+        # Support both list and dict formats
         if isinstance(servers, dict):
-            servers = [servers]
+            if "type" in servers:
+                servers = [servers]
+            else:
+                converted = []
+                for name, server_config in servers.items():
+                    if isinstance(server_config, dict):
+                        server = server_config.copy()
+                        server["name"] = name
+                        converted.append(server)
+                servers = converted
 
         if not isinstance(servers, list):
             log_mcp_activity(
