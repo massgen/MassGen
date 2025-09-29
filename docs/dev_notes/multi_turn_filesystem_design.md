@@ -1,5 +1,92 @@
 # Multi-Turn Filesystem Support – Design Documentation
 
+## Quick Start: Running Multi-Turn MassGen
+
+### 1. Install MassGen Globally
+
+```bash
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install MassGen as a global tool
+uv tool install -e .
+```
+
+### 2. Run Multi-Turn in Any Directory
+
+```bash
+# Create and navigate to your project directory
+mkdir testing
+cd testing
+
+# Run MassGen with multi-turn filesystem support
+uv tool run massgen --config tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml
+
+# You'll be prompted to add the current directory as a context path
+📂 Context Paths:
+   No context paths configured
+
+❓ Add current directory as context path?
+   /Users/user/testing
+   [Y]es (default) / [N]o / [C]ustom path: [Enter]
+
+✓ Added /Users/user/testing (write)
+
+# Now you can have multi-turn conversations
+User: "Create a simple Express.js API with authentication"
+Assistant: [Creates API files in /Users/user/testing/]
+
+User: "Add user profile management to the API"
+Assistant: [Builds upon the existing API, referencing previous work]
+
+User: "Add password reset functionality"
+Assistant: [Further extends the API based on all previous turns]
+```
+
+### 3. What You Get
+
+**File Structure:**
+```
+testing/
+├── .massgen/                          # All MassGen state
+│   ├── sessions/session_20250928_143022/
+│   │   ├── SESSION_SUMMARY.txt        # Human-readable conversation summary
+│   │   ├── turn_1/
+│   │   │   ├── workspace/             # Final output from turn 1
+│   │   │   ├── answer.txt             # Agent's response with corrected paths
+│   │   │   └── metadata.json          # Turn metadata (timestamp, winning agent)
+│   │   ├── turn_2/
+│   │   │   └── ...                    # Same structure for turn 2
+│   │   └── turn_3/
+│   │       └── ...                    # Same structure for turn 3
+│   ├── workspaces/                    # Agent working areas during execution
+│   │   ├── workspace1/                # Agent 1's workspace
+│   │   ├── workspace2/                # Agent 2's workspace
+│   │   └── workspace3/                # Agent 3's workspace
+│   ├── snapshots/                     # Latest snapshots for context sharing
+│   │   ├── agent_a/                   # Latest work from agent A
+│   │   ├── agent_b/                   # Latest work from agent B
+│   │   └── agent_c/                   # Latest work from agent C
+│   ├── temp_workspaces/               # Temporary workspace for agent coordination
+│   │   ├── agent1/                    # Previous turn results for reference
+│   │   ├── agent2/                    # (Anonymous IDs for context sharing)
+│   │   └── agent3/
+│   └── massgen_logs/log_20250928_143022/  # Debug logs
+│       ├── turn_1/massgen_debug.log
+│       ├── turn_2/massgen_debug.log
+│       └── turn_3/massgen_debug.log
+└── ...
+```
+
+**Key Benefits:**
+- ✅ **Persistent Context**: Agents remember and build upon previous work
+- ✅ **Clean Organization**: All MassGen state in `.massgen/` directory
+- ✅ **Directory-Based**: Run from any directory, files delivered to that location
+- ✅ **Multi-Backend**: Use different AI models (Grok, GPT-5, Claude Code) together
+
+---
+
 ## Overview
 
 This document describes the architecture and design decisions for MassGen's multi-turn conversation support with filesystem persistence. This feature enables agents to maintain state across multiple conversation turns, building upon previous work incrementally.
