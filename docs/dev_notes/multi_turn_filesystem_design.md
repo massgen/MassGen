@@ -480,6 +480,11 @@ CLI updates: current_turn = 2
 
 ## Future Improvements
 
+### 0. Increase the amount of turns that can be reliably done and implement a summary mechanic.
+Currently, after some number of turns, MassGen may fail to reliably copy in the new files to the write context path when it is provided.
+We need to address this challenge, possibly changing the amount of context we display and/or how we display it.
+We also want to implement a summarization function similar to `/compact` in Claude Code.
+
 ### 1. Optimized Agent Recreation
 Instead of full recreation, support dynamic MCP reconfiguration:
 ```python
