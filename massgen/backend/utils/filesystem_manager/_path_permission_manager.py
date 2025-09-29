@@ -17,14 +17,45 @@ class ManagedPath:
     permission: Permission
     path_type: str  # "workspace", "temp_workspace", "context", etc.
     will_be_writable: bool = False  # True if this path will become writable for final agent
+    is_file: bool = False  # True if this is a file-specific context path (not directory)
+    protected_paths: List[Path] = None  # Paths within this context that are immune from modification/deletion
+
+    def __post_init__(self):
+        """Initialize protected_paths as empty list if None."""
+        if self.protected_paths is None:
+            self.protected_paths = []
 
     def contains(self, check_path: Path) -> bool:
         """Check if this managed path contains the given path."""
+        # If this is a file-specific path, only match the exact file
+        if self.is_file:
+            return check_path.resolve() == self.path.resolve()
+
+        # Directory path: check if path is within directory
         try:
             check_path.resolve().relative_to(self.path.resolve())
             return True
         except ValueError:
             return False
+
+    def is_protected(self, check_path: Path) -> bool:
+        """Check if a path is in the protected paths list (immune from modification/deletion)."""
+        if not self.protected_paths:
+            return False
+
+        resolved_check = check_path.resolve()
+        for protected in self.protected_paths:
+            resolved_protected = protected.resolve()
+            # Check exact match or if check_path is within protected directory
+            if resolved_check == resolved_protected:
+                return True
+            try:
+                resolved_check.relative_to(resolved_protected)
+                return True
+            except ValueError:
+                continue
+
+        return False
 
 
 class PathPermissionManager:
@@ -153,21 +184,79 @@ class PathPermissionManager:
         """
         Add context paths from configuration.
 
+        Now supports both files and directories as context paths, with optional protected paths.
+
         Args:
             context_paths: List of context path configurations
-                Format: [{"path": "C:/project/src", "permission": "write"}, ...]
+                Format: [
+                    {
+                        "path": "C:/project/src",
+                        "permission": "write",
+                        "protected_paths": ["tests/do-not-touch/", "config.yaml"]  # Optional
+                    },
+                    {"path": "C:/project/logo.png", "permission": "read"}
+                ]
 
         Note: During coordination, all context paths are read-only regardless of YAML settings.
               Only the final agent with context_write_access_enabled=True can write to paths marked as "write".
+              Protected paths are ALWAYS read-only and immune from deletion, even if parent has write permission.
         """
         for config in context_paths:
             path_str = config.get("path", "")
             permission_str = config.get("permission", "read")
+            protected_paths_config = config.get("protected_paths", [])
 
             if not path_str:
                 continue
 
             path = Path(path_str)
+
+            # Check if path exists and whether it's a file or directory
+            if not path.exists():
+                logger.warning(f"[PathPermissionManager] Context path does not exist: {path}")
+                continue
+
+            is_file = path.is_file()
+
+            # Parse protected paths - they can be relative to the context path or absolute
+            protected_paths = []
+            for protected_str in protected_paths_config:
+                protected_path = Path(protected_str)
+                # If relative, resolve relative to the context path
+                if not protected_path.is_absolute():
+                    if is_file:
+                        # For file contexts, resolve relative to parent directory
+                        protected_path = (path.parent / protected_str).resolve()
+                    else:
+                        # For directory contexts, resolve relative to the directory
+                        protected_path = (path / protected_str).resolve()
+                else:
+                    protected_path = protected_path.resolve()
+
+                # Validate that protected path is actually within the context path
+                try:
+                    if is_file:
+                        # For file context, protected paths should be in same directory or subdirs
+                        protected_path.relative_to(path.parent.resolve())
+                    else:
+                        # For directory context, protected paths should be within the directory
+                        protected_path.relative_to(path.resolve())
+                    protected_paths.append(protected_path)
+                    logger.info(f"[PathPermissionManager] Added protected path: {protected_path}")
+                except ValueError:
+                    logger.warning(f"[PathPermissionManager] Protected path {protected_path} is not within context path {path}, skipping")
+
+            # For file context paths, we need to add the parent directory to MCP allowed paths
+            # but track only the specific file for permission purposes
+            if is_file:
+                logger.info(f"[PathPermissionManager] Detected file context path: {path}")
+                # Add parent directory to allowed paths (needed for MCP filesystem access)
+                parent_dir = path.parent
+                if not any(mp.path == parent_dir.resolve() and mp.path_type == "file_context_parent" for mp in self.managed_paths):
+                    # Add parent as a special type - not directly accessible, just for MCP
+                    parent_managed = ManagedPath(path=parent_dir.resolve(), permission=Permission.READ, path_type="file_context_parent", will_be_writable=False, is_file=False)
+                    self.managed_paths.append(parent_managed)
+                    logger.debug(f"[PathPermissionManager] Added parent directory for file context: {parent_dir}")
 
             try:
                 yaml_permission = Permission(permission_str.lower())
@@ -188,11 +277,21 @@ class PathPermissionManager:
                 if will_be_writable:
                     logger.debug(f"[PathPermissionManager] Coordination agent: context path {path} read-only (will be writable later)")
 
-            # Create managed path with will_be_writable flag
-            managed_path = ManagedPath(path=path.resolve(), permission=actual_permission, path_type="context", will_be_writable=will_be_writable)
+            # Create managed path with will_be_writable, is_file, and protected_paths
+            managed_path = ManagedPath(
+                path=path.resolve(),
+                permission=actual_permission,
+                path_type="context",
+                will_be_writable=will_be_writable,
+                is_file=is_file,
+                protected_paths=protected_paths,
+            )
             self.managed_paths.append(managed_path)
             self._permission_cache.clear()
-            logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, will_be_writable: {will_be_writable})")
+
+            path_type_str = "file" if is_file else "directory"
+            protected_count = len(protected_paths)
+            logger.info(f"[PathPermissionManager] Added context {path_type_str}: {path} ({actual_permission.value}, will_be_writable: {will_be_writable}, protected_paths: {protected_count})")
 
     def add_previous_turn_paths(self, turn_paths: List[Dict[str, Any]]) -> None:
         """
@@ -244,6 +343,8 @@ class PathPermissionManager:
         """
         Get permission level for a path.
 
+        Now handles file-specific context paths correctly.
+
         Args:
             path: Path to check
 
@@ -263,11 +364,37 @@ class PathPermissionManager:
             self._permission_cache[resolved_path] = Permission.READ
             return Permission.READ
 
-        # Find containing managed path - prioritize more specific (deeper) paths first
-        # Sort by path depth (number of parts) in descending order so deeper paths are checked first
-        sorted_paths = sorted(self.managed_paths, key=lambda mp: len(mp.path.parts), reverse=True)
+        # Check if this path is protected (always read-only, takes precedence over context permissions)
+        for managed_path in self.managed_paths:
+            if managed_path.contains(resolved_path) and managed_path.is_protected(resolved_path):
+                logger.info(f"[PathPermissionManager] Path {resolved_path} is protected, forcing read-only")
+                self._permission_cache[resolved_path] = Permission.READ
+                return Permission.READ
 
-        for managed_path in sorted_paths:
+        # Find containing managed path with priority system:
+        # 1. File-specific paths (is_file=True) get highest priority - exact match only
+        # 2. Deeper directory paths get higher priority than shallow ones
+        # 3. file_context_parent type is lowest priority (used only for MCP access, not direct access)
+
+        # Separate file-specific and directory paths
+        file_paths = [mp for mp in self.managed_paths if mp.is_file]
+        dir_paths = [mp for mp in self.managed_paths if not mp.is_file and mp.path_type != "file_context_parent"]
+        # parent_paths are not used in permission checks - they're only for MCP allowed paths
+
+        # Check file-specific paths first (highest priority, exact match only)
+        for managed_path in file_paths:
+            if managed_path.contains(resolved_path):  # contains() handles exact match for files
+                logger.info(
+                    f"[PathPermissionManager] Found file-specific permission for {resolved_path}: {managed_path.permission.value} "
+                    f"(from {managed_path.path}, type: {managed_path.path_type}, "
+                    f"will_be_writable: {managed_path.will_be_writable})",
+                )
+                self._permission_cache[resolved_path] = managed_path.permission
+                return managed_path.permission
+
+        # Check directory paths (sorted by depth, deeper = higher priority)
+        sorted_dir_paths = sorted(dir_paths, key=lambda mp: len(mp.path.parts), reverse=True)
+        for managed_path in sorted_dir_paths:
             if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
                 logger.info(
                     f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} "
@@ -276,6 +403,9 @@ class PathPermissionManager:
                 )
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission
+
+        # Don't check parent_paths - they're only for MCP allowed paths, not for granting access
+        # If we reach here, the path is either in a file_context_parent (denied) or not in any context path
 
         logger.debug(f"[PathPermissionManager] No permission found for {resolved_path} in managed paths: {[(str(mp.path), mp.permission.value, mp.path_type) for mp in self.managed_paths]}")
         return None

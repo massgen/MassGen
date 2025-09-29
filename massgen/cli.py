@@ -827,9 +827,29 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                         permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
                         if permission not in ["read", "write"]:
                             permission = "write"
+
+                        # Ask about protected paths if write permission
+                        protected_paths = []
+                        if permission == "write":
+                            add_protected = input("   Add protected paths (files/dirs immune from modification)? [y/N]: ").strip().lower()
+                            if add_protected in ["y", "yes"]:
+                                print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                                while True:
+                                    protected_input = input("     → ").strip()
+                                    if not protected_input:
+                                        break
+                                    protected_paths.append(protected_input)
+                                if protected_paths:
+                                    print(f"   {BRIGHT_GREEN}✓ Will protect {len(protected_paths)} path(s){RESET}", flush=True)
+
                         if "context_paths" not in orchestrator_cfg:
                             orchestrator_cfg["context_paths"] = []
-                        orchestrator_cfg["context_paths"].append({"path": abs_path, "permission": permission})
+
+                        context_config = {"path": abs_path, "permission": permission}
+                        if protected_paths:
+                            context_config["protected_paths"] = protected_paths
+
+                        orchestrator_cfg["context_paths"].append(context_config)
                         print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
                         return True
                     else:

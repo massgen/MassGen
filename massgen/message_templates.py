@@ -496,6 +496,14 @@ Based on the coordination process above, present your final answer:"""
             "but do NOT paste full file contents in your answer.\n",
         )
 
+        # Add workspace cleanup guidance
+        parts.append(
+            "**Workspace Cleanup**: Before submitting your answer with `new_answer`, use `delete_file` or "
+            "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
+            "This ensures only the relevant final files remain for evaluation. For example, if you created "
+            "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
+        )
+
         # Add voting guidance
         parts.append(
             "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
