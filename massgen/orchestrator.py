@@ -1384,15 +1384,8 @@ class Orchestrator(ChatAgent):
                             error_msg = getattr(chunk, "error", str(chunk.content)) if hasattr(chunk, "error") else str(chunk.content)
                             yield ("content", f"❌ Error: {error_msg}\n")
                 except GeneratorExit:
-                    # Handle case when generator is closed (e.g., user quits inspection)
                     logger.info(f"[Orchestrator] Agent {agent_id} stream closed by GeneratorExit")
-                    # Properly close the chat_stream async generator
-                    if hasattr(chat_stream, "aclose"):
-                        try:
-                            await chat_stream.aclose()
-                        except Exception as e:
-                            logger.warning(f"[Orchestrator] Error closing chat_stream for {agent_id}: {e}")
-                    raise  # Re-raise to propagate the GeneratorExit
+                    raise  # Re-raise to propagate the GeneratorExit naturally
                 finally:
                     # Ensure chat_stream is closed even on normal completion
                     if hasattr(chat_stream, "aclose"):
@@ -1628,14 +1621,6 @@ class Orchestrator(ChatAgent):
         try:
             return await stream.__anext__()
         except StopAsyncIteration:
-            return ("done", None)
-        except GeneratorExit:
-            # Handle generator being closed (e.g., user quits inspection)
-            # Close the stream properly to prevent "async generator ignored GeneratorExit"
-            try:
-                await stream.aclose()
-            except Exception:
-                pass  # Ignore cleanup errors
             return ("done", None)
         except Exception as e:
             return ("error", str(e))
