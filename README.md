@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.24 Features](#-latest-features-v0024)
+- [v0.0.25 Features](#-latest-features-v0025)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.24](#recent-achievements-v0024)
-  - [v0.0.3 - v0.0.23](#previous-achievements-v003---v0023)
+  - [v0.0.25](#recent-achievements-v0025)
+  - [v0.0.3 - v0.0.24](#previous-achievements-v003---v0024)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.25 Roadmap](#v0025-roadmap)
+- [v0.0.26 Roadmap](#v0026-roadmap)
 </details>
 
 <details open>
@@ -129,26 +129,86 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.24)
+## 🆕 Latest Features (v0.0.25)
 
-**What's New in v0.0.24:**
-- **vLLM Backend Support** - Complete integration with vLLM for high-performance local model serving with OpenAI-compatible API
-- **POE Provider Support** - Extended ChatCompletions backend to support POE (Platform for Open Exploration) for accessing multiple AI models
-- **GPT-5-Codex Model Recognition** - Added gpt-5-codex to model registry for code generation tasks
-- **Backend Utility Modules** - Major refactoring with new api_params_handler, formatter, and token_manager modules (1,400+ lines of new utility code)
-- **Bug Fixes** - Fixed streaming chunk processing and Gemini backend session management
+### Quick Start: Running Multi-Turn MassGen
 
-**Try v0.0.24 Features Now:**
+#### 1. Install MassGen Globally
+
 ```bash
-# Try vLLM backend with local models (requires vLLM server running)
-# First start vLLM server: python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/two_qwen_vllm.yaml \
-  "What is machine learning?"
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install MassGen as a global tool
+uv tool install -e .
 ```
 
-→ [See all release examples](massgen/configs/README.md#release-history--examples)
+#### 2. Run Multi-Turn in Any Directory
 
+```bash
+# Create and navigate to your project directory
+mkdir testing
+cd testing
+
+# Run MassGen with multi-turn filesystem support
+uv tool run massgen --config tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml
+
+# You'll be prompted to add the current directory as a context path
+📂 Context Paths:
+   No context paths configured
+
+❓ Add current directory as context path?
+   /Users/user/testing
+   [Y]es (default) / [N]o / [C]ustom path: [Enter]
+
+✓ Added /Users/user/testing (write)
+
+# Now you can have multi-turn conversations
+User: "Create a simple Express.js API with authentication"
+Assistant: [Creates API files in /Users/user/testing/]
+
+User: "Add user profile management to the API"
+Assistant: [Builds upon the existing API, referencing previous work]
+
+User: "Add password reset functionality"
+Assistant: [Further extends the API based on all previous turns]
+```
+
+### 3. What You Get
+
+**File Structure:**
+```
+testing/
+├── .massgen/                          # All MassGen state
+│   ├── sessions/session_20250928_143022/
+│   │   ├── SESSION_SUMMARY.txt        # Human-readable conversation summary
+│   │   ├── turn_1/
+│   │   │   ├── workspace/             # Final output from turn 1
+│   │   │   ├── answer.txt             # Agent's response with corrected paths
+│   │   │   └── metadata.json          # Turn metadata (timestamp, winning agent)
+│   │   ├── turn_2/
+│   │   │   └── ...                    # Same structure for turn 2
+│   │   └── turn_3/
+│   │       └── ...                    # Same structure for turn 3
+│   ├── workspaces/                    # Agent working areas during execution
+│   │   ├── workspace1/                # Agent 1's workspace
+│   │   ├── workspace2/                # Agent 2's workspace
+│   │   └── workspace3/                # Agent 3's workspace
+│   ├── snapshots/                     # Latest snapshots for context sharing
+│   │   ├── agent_a/                   # Latest work from agent A
+│   │   ├── agent_b/                   # Latest work from agent B
+│   │   └── agent_c/                   # Latest work from agent C
+│   ├── temp_workspaces/               # Temporary workspace for agent coordination
+│   │   ├── agent1/                    # Previous turn results for reference
+│   │   ├── agent2/                    # (Anonymous IDs for context sharing)
+│   │   └── agent3/
+│   └── massgen_logs/log_20250928_143022/  # Debug logs
+│       ├── turn_1/massgen_debug.log
+│       ├── turn_2/massgen_debug.log
+│       └── turn_3/massgen_debug.log
+└── ...
+```
 ---
 
 
@@ -258,10 +318,11 @@ The system currently supports multiple model providers with advanced capabilitie
 - **Z AI**: GLM-4.5
 
 **Local Model Support:**
-- **vLLM** (NEW in v0.0.24): High-performance local model serving with OpenAI-compatible API
-  - Support for vLLM-specific parameters (top_k, repetition_penalty, guided_json)
-  - Optimized for large-scale model inference
-  - Configuration examples: `three_agents_vllm.yaml`, `two_qwen_vllm.yaml`
+- **vLLM & SGLang** (ENHANCED in v0.0.25): Unified inference backend supporting both vLLM and SGLang servers
+  - Auto-detection between vLLM (port 8000) and SGLang (port 30000) servers
+  - Support for both vLLM and SGLang-specific parameters (top_k, repetition_penalty, separate_reasoning)
+  - Mixed server deployments with configuration example: `two_qwen_vllm_sglang.yaml`
+
 - **LM Studio** (v0.0.7+): Run open-weight models locally with automatic server management
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
@@ -459,6 +520,7 @@ agents:
 
 MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
 
+
 **Filesystem Configuration Parameters:**
 
 | Parameter | Type | Required | Description |
@@ -519,6 +581,19 @@ orchestrator:
 - **Temporary Workspaces**: Agents can access previous coordination results
 
 → [View more filesystem examples](massgen/configs/tools/filesystem/)
+
+> ⚠️ **IMPORTANT SAFETY WARNING**
+>
+> MassGen agents can **autonomously read, write, modify, and delete files** within their permitted directories.
+>
+> **Before running MassGen with filesystem access:**
+> - Only grant access to directories you're comfortable with agents modifying
+> - Use the permission system to restrict write access where needed
+> - Consider testing in an isolated directory or virtual environment first
+> - Back up important files before granting write access
+> - Review the `context_paths` configuration carefully
+>
+> The agents will execute file operations without additional confirmation once permissions are granted.
 
 #### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
@@ -869,35 +944,37 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.24)
+### Recent Achievements (v0.0.25)
 
-**🎉 Released: September 26, 2025**
+**🎉 Released: September 29, 2025**
 
-Version 0.0.24 introduces **vLLM Backend Support** and **Backend Utility Modules**, enabling high-performance local model inference and improved code organization:
+Version 0.0.25 introduces **Multi-Turn Filesystem Support** and **SGLang Backend Integration**, enabling persistent conversation context and unified inference backend capabilities:
 
-#### vLLM Backend Support
-- **Local Model Serving**: Run powerful AI models locally with vLLM for cost-effective, private inference
-- **Easy Setup**: Ready-to-use configurations (`three_agents_vllm.yaml`, `two_qwen_vllm.yaml`)
-- **Advanced Controls**: Fine-tune model behavior with top_k sampling, repetition penalties, and thinking modes
-- **High Performance**: Optimized for serving large language models at scale
+#### Multi-Turn Filesystem Support
+- **Persistent Context**: Maintain file context and modifications across conversation turns with automatic session management
+- **Smart Workspace Management**: Automatic `.massgen` directory structure for organized project state
+- **Session Persistence**: Workspace snapshots and restoration between turns for seamless continuity
+- **Easy Setup**: Ready-to-use multi-turn configurations for various agent combinations
 
-#### Code Organization Improvements
-- **Cleaner Backend Code**: Reorganized backend utilities into focused modules for easier maintenance
-- **Better Error Handling**: Improved API parameter validation and processing across all backends
-- **Unified Token Management**: Consistent token counting and cost tracking across different model providers
-- **Streamlined File Operations**: Moved filesystem tools to dedicated backend utilities
+#### SGLang Backend Integration
+- **Unified Inference**: Single backend supporting both vLLM and SGLang servers with auto-detection
+- **Advanced Features**: SGLang-specific parameters like `separate_reasoning` for guided generation
+- **Dual Server Support**: Configure mixed deployments with vLLM (port 8000) and SGLang (port 30000)
 
-#### New Provider & Model Support
-- **POE Integration**: Access multiple AI models through POE platform with single API key
-- **GPT-5-Codex Support**: Enhanced code generation capabilities with latest OpenAI model
-- **Stability Improvements**: Fixed streaming issues and memory leaks for better reliability
+#### Enhanced Path Permission System
+- **Smart Exclusions**: Default patterns for `.git`, `node_modules`, `.venv`, and other common directories
+- **Better Validation**: Improved path handling with `will_be_writable` flag for permission state tracking
 
-#### Enhanced Documentation
-- **vLLM Setup Guide**: Step-by-step instructions for running local models with vLLM
-- **Advanced Filesystem Case Study**: Showing how agents can work together with controlled file access and workspace sharing
+#### System Prompt & Backend Improvements
+- **Multi-Turn Guidance**: Enhanced system prompts with better conversation context awareness
+- **Backend Fixes**: Resolved Gemini MCP connection errors and Grok backend issues
+- **Import Fixes**: Corrected configuration and import problems across backends
+- **Code Quality**: Fixed code generation prompts for consistency
 
 
-### Previous Achievements (v0.0.3 - v0.0.23)
+### Previous Achievements (v0.0.3 - v0.0.24)
+
+✅ **vLLM Backend Support (v0.0.24)**: Complete integration with vLLM for high-performance local model serving, POE provider support, GPT-5-Codex model recognition, backend utility modules refactoring, and comprehensive bug fixes including streaming chunk processing
 
 ✅ **Backend Architecture Refactoring (v0.0.23)**: Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends, extracted formatter module for better code organization, and improved maintainability through unified MCP integration
 
@@ -959,25 +1036,25 @@ Version 0.0.24 introduces **vLLM Backend Support** and **Backend Utility Modules
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.25 Roadmap
+### v0.0.26 Roadmap
 
-Version 0.0.25 builds upon the vLLM backend support and utility modules refactoring of v0.0.24 by focusing on orchestrator improvements and agent communication fixes. Key priorities include:
+Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integration of v0.0.25 by focusing on multimodal capabilities, additional backend integrations, and finishing core refactoring work. Key enhancements include:
 
 #### Required Features
-- **Agent System Prompt Fixes**: Fix the problem where the final agent expects human feedback through system prompt changes
-- **Refactor Orchestrator**: Streamline orchestrator code for better maintainability and performance
+- **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
+- **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
 
 #### Optional Features
-- **MCP Marketplace Integration**: Integrate MCP Marketplace support for expanded tool ecosystem
-- **Refactor Send/Receive Messaging**: Extract messaging system to use stream chunks class for multimodal support
+- **Additional Agent Backends from Other Frameworks**Integration with AG2, LangChain, and other agent frameworks
+- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring tasks
 
 Key technical approach:
-- **Autonomous Agent Behavior**: Ensure final agents complete tasks without expecting human feedback through system prompt improvements
-- **Orchestrator Refactoring**: Extract coordination logic into separate modules for better maintainability
-- **Marketplace Integration**: Enable tool discovery and installation from MCP Marketplace
-- **Messaging Architecture**: Foundation for future multimodal support through unified stream chunks
+- **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
+- **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
+- **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
+- **Specialized Coding**: Enhanced programming capabilities with code analysis and execution environment integration
 
-For detailed milestones and technical specifications, see the [full v0.0.25 roadmap](ROADMAP_v0.0.25.md).
+For detailed milestones and technical specifications, see the [full v0.0.26 roadmap](ROADMAP_v0.0.26.md).
 
 ---
 
