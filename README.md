@@ -396,10 +396,10 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 ```bash
 # Weather service with GPT-5
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
+  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
   "What's the weather forecast for New York this week?"
 
-# Multi-tool MCP with Gemini - Search + Weather + Filesystem
+# Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
   "Find the best restaurants in Paris and save the recommendations to a file"
@@ -522,29 +522,26 @@ orchestrator:
 
 #### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
-Work directly with your existing projects! User Context Paths allow you to share specific directories and files with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
+Work directly with your existing projects! User Context Paths allow you to share specific directories with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
+
+MassGen automatically organizes all its working files under a `.massgen/` directory in your project root, keeping your project clean and making it easy to exclude MassGen's temporary files from version control.
 
 **Project Integration Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `context_paths` | list | **Yes** (for project integration) | Shared directories/files for all agents |
-| └─ `path` | string | Yes | Absolute path to your project directory or file |
+| `context_paths` | list | **Yes** (for project integration) | Shared directories for all agents |
+| └─ `path` | string | Yes | Absolute path to your project directory (**must be directory, not file**) |
 | └─ `permission` | string | Yes | Access level: `"read"` or `"write"` |
+
+**⚠️ Important:** Context paths must point to **directories**, not individual files. MassGen validates all paths during startup and will show clear error messages for missing paths or file paths.
 
 
 **Quick Start Commands:**
 
 ```bash
-# Code analysis and security audit
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/fs_permissions_test.yaml \
-  "Analyze all Python files in this project and create a comprehensive security audit report"
-
-# Project modernization
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
-  "Review this legacy codebase and create a modernization plan with updated dependencies"
+# Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 **Configuration:**
@@ -599,12 +596,50 @@ orchestrator:
 - **Data Processing**: Agents access shared datasets and generate analysis reports
 - **Project Migration**: Agents examine existing projects and create modernized versions
 
+**Clean Project Organization:**
+```
+your-project/
+├── .massgen/                          # All MassGen state
+│   ├── sessions/                      # Multi-turn conversation history (if using interactively)
+│   │   └── session_20240101_143022/
+│   │       ├── turn_1/                # Results from turn 1
+│   │       ├── turn_2/                # Results from turn 2
+│   │       └── SESSION_SUMMARY.txt    # Human-readable summary
+│   ├── workspaces/                    # Agent working directories
+│   │   ├── agent1/                    # Individual agent workspaces
+│   │   └── agent2/
+│   ├── snapshots/                     # Workspace snapshots for coordination
+│   └── temp_workspaces/               # Previous turn results for context
+├── massgen/
+└── ...
+```
+
+**Benefits:**
+- ✅ **Clean Projects** - All MassGen files contained in one directory
+- ✅ **Easy Gitignore** - Just add `.massgen/` to `.gitignore`
+- ✅ **Portable** - Move or delete `.massgen/` without affecting your project
+- ✅ **Multi-Turn Sessions** - Conversation history preserved across sessions
+
+**Configuration Auto-Organization:**
+```yaml
+orchestrator:
+  # User specifies simple names - MassGen organizes under .massgen/
+  snapshot_storage: "snapshots"         # → .massgen/snapshots/
+  session_storage: "sessions"           # → .massgen/sessions/
+  agent_temporary_workspace: "temp"     # → .massgen/temp/
+
+agents:
+  - backend:
+      cwd: "workspace1"                 # → .massgen/workspaces/workspace1/
+```
+
 → [Learn more about project integration](massgen/mcp_tools/permissions_and_context_files.md)
 
 **Security Considerations:**
 - **Agent ID Safety**: Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
 - **File Access Control**: Restrict file access using MCP server configurations when needed
-- **Path Validation**: All paths are resolved to absolute paths to prevent directory traversal attacks
+- **Path Validation**: All context paths are validated to ensure they exist and are directories (not files)
+- **Directory-Only Context Paths**: Context paths must point to directories, not individual files
 
 ---
 

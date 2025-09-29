@@ -16,7 +16,7 @@ class ManagedPath:
     path: Path
     permission: Permission
     path_type: str  # "workspace", "temp_workspace", "context", etc.
-    original_permission: Optional[Permission] = None  # Original YAML permission for context paths
+    will_be_writable: bool = False  # True if this path will become writable for final agent
 
     def contains(self, check_path: Path) -> bool:
         """Check if this managed path contains the given path."""
@@ -39,6 +39,21 @@ class PathPermissionManager:
     - Tool call validation (PreToolUse hook)
     - Path access control
     """
+
+    DEFAULT_EXCLUDED_PATTERNS = [
+        ".massgen",
+        ".env",
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".DS_Store",
+        "massgen_logs",
+    ]
 
     def __init__(self, context_write_access_enabled: bool = False):
         """
@@ -68,8 +83,13 @@ class PathPermissionManager:
             path_type: Type of path ("workspace", "temp_workspace", "context", etc.)
         """
         if not path.exists():
-            logger.warning(f"[PathPermissionManager] Path does not exist: {path}")
-            return
+            # For context paths, warn since user should provide existing paths
+            # For workspace/temp paths, just debug since they'll be created by orchestrator
+            if path_type == "context":
+                logger.warning(f"[PathPermissionManager] Context path does not exist: {path}")
+                return
+            else:
+                logger.debug(f"[PathPermissionManager] Path will be created later: {path} ({path_type})")
 
         managed_path = ManagedPath(path=path.resolve(), permission=permission, path_type=path_type)
 
@@ -84,12 +104,18 @@ class PathPermissionManager:
         Get context paths in configuration format for system prompts.
 
         Returns:
-            List of context path dictionaries with path and permission
+            List of context path dictionaries with path, permission, and will_be_writable flag
         """
         context_paths = []
         for mp in self.managed_paths:
             if mp.path_type == "context":
-                context_paths.append({"path": str(mp.path), "permission": mp.permission.value})
+                context_paths.append(
+                    {
+                        "path": str(mp.path),
+                        "permission": mp.permission.value,
+                        "will_be_writable": mp.will_be_writable,
+                    },
+                )
         return context_paths
 
     def set_context_write_access_enabled(self, enabled: bool) -> None:
@@ -109,14 +135,14 @@ class PathPermissionManager:
 
         # Recalculate permissions for existing context paths
         for mp in self.managed_paths:
-            if mp.path_type == "context" and mp.original_permission:
+            if mp.path_type == "context" and mp.will_be_writable:
                 # Update permission based on new context_write_access_enabled setting
                 if enabled:
-                    mp.permission = mp.original_permission
-                    logger.debug(f"[PathPermissionManager] Restored original permission for {mp.path}: {mp.permission.value}")
+                    mp.permission = Permission.WRITE
+                    logger.debug(f"[PathPermissionManager] Enabled write access for {mp.path}")
                 else:
                     mp.permission = Permission.READ
-                    logger.debug(f"[PathPermissionManager] Forced read-only for {mp.path}")
+                    logger.debug(f"[PathPermissionManager] Keeping read-only for {mp.path}")
 
         logger.info(f"[PathPermissionManager] Updated context path permissions based on context_write_access_enabled={enabled}, now is {self.managed_paths=}")
 
@@ -149,21 +175,70 @@ class PathPermissionManager:
                 logger.warning(f"[PathPermissionManager] Invalid permission '{permission_str}', using 'read'")
                 yaml_permission = Permission.READ
 
-            # For context paths: only final agent (context_write_access_enabled=True) gets original permissions
-            # All coordination agents get read-only access regardless of YAML
-            if self.context_write_access_enabled:
-                actual_permission = yaml_permission
-                logger.debug(f"[PathPermissionManager] Final agent: context path {path} gets {actual_permission.value} permission")
-            else:
-                actual_permission = Permission.READ
-                if yaml_permission == Permission.WRITE:
-                    logger.debug(f"[PathPermissionManager] Coordination agent: forcing context path {path} to read-only (YAML had write)")
+            # Determine if this path will become writable for final agent
+            will_be_writable = yaml_permission == Permission.WRITE
 
-            # Create managed path with original permission stored for context paths
-            managed_path = ManagedPath(path=path.resolve(), permission=actual_permission, path_type="context", original_permission=yaml_permission)
+            # For context paths: only final agent (context_write_access_enabled=True) gets write permissions
+            # All coordination agents get read-only access regardless of YAML
+            if self.context_write_access_enabled and will_be_writable:
+                actual_permission = Permission.WRITE
+                logger.debug(f"[PathPermissionManager] Final agent: context path {path} gets write permission")
+            else:
+                actual_permission = Permission.READ if will_be_writable else yaml_permission
+                if will_be_writable:
+                    logger.debug(f"[PathPermissionManager] Coordination agent: context path {path} read-only (will be writable later)")
+
+            # Create managed path with will_be_writable flag
+            managed_path = ManagedPath(path=path.resolve(), permission=actual_permission, path_type="context", will_be_writable=will_be_writable)
             self.managed_paths.append(managed_path)
             self._permission_cache.clear()
-            logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, original: {yaml_permission.value})")
+            logger.info(f"[PathPermissionManager] Added context path: {path} ({actual_permission.value}, will_be_writable: {will_be_writable})")
+
+    def add_previous_turn_paths(self, turn_paths: List[Dict[str, Any]]) -> None:
+        """
+        Add previous turn workspace paths for read access.
+        These are tracked separately from regular context paths.
+
+        Args:
+            turn_paths: List of turn path configurations
+                Format: [{"path": "/path/to/turn_1/workspace", "permission": "read"}, ...]
+        """
+        for config in turn_paths:
+            path_str = config.get("path", "")
+            if not path_str:
+                continue
+
+            path = Path(path_str).resolve()
+            # Previous turn paths are always read-only
+            managed_path = ManagedPath(path=path, permission=Permission.READ, path_type="previous_turn", will_be_writable=False)
+            self.managed_paths.append(managed_path)
+            self._permission_cache.clear()
+            logger.info(f"[PathPermissionManager] Added previous turn path: {path} (read-only)")
+
+    def _is_excluded_path(self, path: Path) -> bool:
+        """
+        Check if a path matches any default excluded patterns.
+
+        System files like .massgen/, .env, .git/ are always excluded from write access,
+        EXCEPT when they are within a managed workspace path (which has explicit permissions).
+
+        Args:
+            path: Path to check
+
+        Returns:
+            True if path should be excluded from write access
+        """
+        # First check if this path is inside a workspace - workspaces override exclusions
+        for managed_path in self.managed_paths:
+            if managed_path.path_type == "workspace" and managed_path.contains(path):
+                return False
+
+        # Now check if path contains any excluded patterns
+        parts = path.parts
+        for part in parts:
+            if part in self.DEFAULT_EXCLUDED_PATTERNS:
+                return True
+        return False
 
     def get_permission(self, path: Path) -> Optional[Permission]:
         """
@@ -182,13 +257,22 @@ class PathPermissionManager:
             logger.debug(f"[PathPermissionManager] Permission cache hit for {resolved_path}: {self._permission_cache[resolved_path].value}")
             return self._permission_cache[resolved_path]
 
-        # Find containing managed path
-        for managed_path in self.managed_paths:
+        # Check if this is an excluded path (always read-only)
+        if self._is_excluded_path(resolved_path):
+            logger.info(f"[PathPermissionManager] Path {resolved_path} matches excluded pattern, forcing read-only")
+            self._permission_cache[resolved_path] = Permission.READ
+            return Permission.READ
+
+        # Find containing managed path - prioritize more specific (deeper) paths first
+        # Sort by path depth (number of parts) in descending order so deeper paths are checked first
+        sorted_paths = sorted(self.managed_paths, key=lambda mp: len(mp.path.parts), reverse=True)
+
+        for managed_path in sorted_paths:
             if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
                 logger.info(
                     f"[PathPermissionManager] Found permission for {resolved_path}: {managed_path.permission.value} "
                     f"(from {managed_path.path}, type: {managed_path.path_type}, "
-                    f"original: {managed_path.original_permission})",
+                    f"will_be_writable: {managed_path.will_be_writable})",
                 )
                 self._permission_cache[resolved_path] = managed_path.permission
                 return managed_path.permission
@@ -268,6 +352,8 @@ class PathPermissionManager:
             # Can't determine path - allow it (likely workspace or other non-context path)
             return (True, None)
 
+        # Resolve relative paths against workspace
+        file_path = self._resolve_path_against_workspace(file_path)
         path = Path(file_path).resolve()
         permission = self.get_permission(path)
         logger.debug(f"[PathPermissionManager] Validating write tool '{tool_name}' for path: {path} with permission: {permission}")
@@ -282,6 +368,36 @@ class PathPermissionManager:
             return (True, None)
         else:
             return (False, f"No write permission for '{path}' (read-only context path)")
+
+    def _resolve_path_against_workspace(self, path_str: str) -> str:
+        """
+        Resolve a path string against the workspace directory if it's relative.
+
+        When MCP servers run with cwd set to workspace, they resolve relative paths
+        against the workspace. This function does the same for validation purposes.
+
+        Args:
+            path_str: Path string that may be relative or absolute
+
+        Returns:
+            Absolute path string (resolved against workspace if relative)
+        """
+        if not path_str:
+            return path_str
+
+        path = Path(path_str)
+        if path.is_absolute():
+            return path_str
+
+        # Relative path - resolve against workspace
+        mcp_paths = self.get_mcp_filesystem_paths()
+        if mcp_paths:
+            workspace_path = Path(mcp_paths[0])  # First path is always workspace
+            resolved = workspace_path / path_str
+            logger.debug(f"[PathPermissionManager] Resolved relative path '{path_str}' to '{resolved}'")
+            return str(resolved)
+
+        return path_str
 
     def _validate_copy_files_batch(self, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate copy_files_batch by checking all destination paths after globbing."""
@@ -299,8 +415,11 @@ class PathPermissionManager:
             if not source_base_path:
                 return (False, "copy_files_batch requires source_base_path")
 
+            # Resolve relative destination path against workspace
+            destination_base_path = self._resolve_path_against_workspace(destination_base_path)
+
             # Get all file pairs (this also validates path restrictions)
-            file_pairs = get_copy_file_pairs(source_base_path, destination_base_path, include_patterns, exclude_patterns)
+            file_pairs = get_copy_file_pairs(self.get_mcp_filesystem_paths(), source_base_path, destination_base_path, include_patterns, exclude_patterns)
 
             # Check permissions for each destination path
             blocked_paths = []
