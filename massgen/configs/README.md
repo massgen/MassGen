@@ -226,7 +226,15 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.24 - Latest
+### v0.0.25 - Latest
+**New Features:** Multi-Turn Filesystem Support, SGLang Backend Integration
+- `massgen/configs/tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml` - Multi-turn with Gemini agents
+- `massgen/configs/tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml` - Three-agent multi-turn
+- `massgen/configs/basic/multi/two_qwen_vllm_sglang.yaml` - Mixed vLLM and SGLang deployment
+- Automatic `.massgen` directory management for persistent conversation context
+- Enhanced path permissions with `will_be_writable` flag and smart exclusion patterns
+
+### v0.0.24
 **New Features:** vLLM Backend Support, Backend Utility Modules
 - `massgen/configs/basic/multi/three_agents_vllm.yaml` - vLLM with Cerebras and ZAI backends
 - `massgen/configs/basic/multi/two_qwen_vllm.yaml` - Dual vLLM agents for testing

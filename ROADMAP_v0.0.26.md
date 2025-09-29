@@ -1,174 +1,175 @@
-# MassGen v0.0.25 Roadmap
+# MassGen v0.0.26 Roadmap
 
 ## Overview
 
-Version 0.0.25 builds upon the backend utilities refactoring and vLLM support of v0.0.24 by focusing on orchestrator improvements, agent communication fixes, and enhanced messaging architecture. Key enhancements include:
+Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integration of v0.0.25 by focusing on multimodal capabilities, additional backend integrations, and finishing core refactoring work. Key enhancements include:
 
-- **Agent System Prompt Fixes** (Required): 🔧 Fix the problem where the final agent expects human feedback through system prompt changes
-- **Refactor Orchestrator** (Required): 🏗️ Streamline orchestrator code for better maintainability and performance
-- **MCP Marketplace Integration** (Optional): 🛍️ Integrate MCP Marketplace support for expanded tool ecosystem
-- **Refactor Send/Receive Messaging** (Optional): 📨 Extract messaging to use stream chunks class for multimodal support
+- **Multimodal Support** (Required): 🖼️ Complete implementation of image, audio, and video processing capabilities
+- **Finish Refactoring Various Aspects of MassGen** (Required): 🏗️ Complete orchestrator and messaging system refactoring for better maintainability
+- **Additional Agent Backends from Other Frameworks** (Optional): 🔗 Integration with AG2, LangChain, and other agent frameworks
+- **Coding Agent** (Optional): 👨‍💻 Specialized agent for code generation, debugging, and refactoring tasks
 
 ## Key Technical Priorities
 
-1. **Agent System Prompt Fixes** (REQUIRED): Resolve final agent human feedback expectations
-2. **Refactor Orchestrator** (REQUIRED): Streamline orchestrator code for better maintainability
-3. **MCP Marketplace Integration** (OPTIONAL): Expand tool ecosystem through marketplace
-4. **Refactor Send/Receive Messaging** (OPTIONAL): Extract messaging system from backend for multimodal support
+1. **Multimodal Support** (REQUIRED): Complete image, audio, and video processing capabilities
+2. **Finish Refactoring Various Aspects of MassGen** (REQUIRED): Complete orchestrator and messaging system refactoring
+3. **Additional Agent Backends from Other Frameworks** (OPTIONAL): Integration with AG2, LangChain, and other frameworks
+4. **Coding Agent** (OPTIONAL): Specialized coding agent implementation
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Agent System Prompt Fixes (REQUIRED)
+### 🎯 Milestone 1: Multimodal Support (REQUIRED)
 
-**Goal**: Fix the problem where the final agent expects human feedback through system prompt changes
+**Goal**: Complete implementation of image, audio, and video processing capabilities
 
-#### 1.1 System Prompt Analysis (REQUIRED)
-- [ ] Identify root cause of human feedback expectation in final agents
-- [ ] Analyze current system prompt templates and coordination messages
-- [ ] Review final agent selection and presentation logic
-- [ ] Document current behavior and expected behavior changes
+#### 1.1 Multimodal Message Architecture (REQUIRED)
+- [ ] Design unified message format supporting text, images, audio, and video
+- [ ] Implement stream chunks class for different media types
+- [ ] Create serialization/deserialization for multimodal content
+- [ ] Add support for media file streaming and chunking
+- [ ] Design media metadata and content type handling
 
-#### 1.2 Prompt Template Updates (REQUIRED)
-- [ ] Modify system prompts to eliminate human feedback expectations
-- [ ] Update coordination instructions for final agent behavior
-- [ ] Implement autonomous decision-making prompts for final agents
-- [ ] Add clear task completion instructions
-- [ ] Test prompt changes across different agent configurations
+#### 1.2 Backend Multimodal Integration (REQUIRED)
+- [ ] Extend existing backends (Claude, Gemini, OpenAI) with multimodal support
+- [ ] Implement vision model support for image processing
+- [ ] Add audio processing capabilities where supported
+- [ ] Create multimodal tool integration framework
+- [ ] Test multimodal capabilities across all backends
 
-#### 1.3 Validation and Testing (REQUIRED)
-- [ ] Create test scenarios to validate autonomous final agent behavior
-- [ ] Implement automated testing for prompt effectiveness
-- [ ] Validate changes across all supported backends
-- [ ] Document new prompt templates and usage guidelines
-- [ ] Create migration guide for existing configurations
+#### 1.3 Frontend and UI Multimodal Support (REQUIRED)
+- [ ] Update CLI to handle multimodal inputs and outputs
+- [ ] Implement media file upload and processing
+- [ ] Add media preview and display capabilities
+- [ ] Create multimodal conversation history management
+- [ ] Add configuration options for media processing settings
 
 
-### 🎯 Milestone 2: Refactor Orchestrator (REQUIRED)
+### 🎯 Milestone 2: Finish Refactoring Various Aspects of MassGen (REQUIRED)
 
-**Goal**: Streamline orchestrator code for better maintainability and performance
+**Goal**: Complete orchestrator and messaging system refactoring for better maintainability and multimodal support
 
-#### 2.1 Code Organization (REQUIRED)
-- [ ] Analyze current orchestrator code structure and identify improvement areas
+#### 2.1 Orchestrator Refactoring (REQUIRED)
 - [ ] Extract coordination logic into separate modules
 - [ ] Simplify agent communication flow and state management
 - [ ] Remove duplicated code and consolidate utility functions
 - [ ] Improve error handling and recovery mechanisms
-
-#### 2.2 Performance Improvements (REQUIRED)
-- [ ] Optimize agent coordination and message passing
-- [ ] Implement efficient state tracking and updates
-- [ ] Add caching for frequently accessed data
-- [ ] Improve memory usage for long-running sessions
-- [ ] Optimize snapshot and workspace management
-
-#### 2.3 Testing and Documentation (REQUIRED)
 - [ ] Add comprehensive unit tests for orchestrator components
-- [ ] Create integration tests for multi-agent scenarios
-- [ ] Update orchestrator documentation and architecture diagrams
-- [ ] Add performance benchmarks and profiling tools
-- [ ] Create migration guide for any breaking changes
 
-
-### 🎯 Milestone 3: MCP Marketplace Integration (OPTIONAL)
-
-**Goal**: Integrate MCP Marketplace support for expanded tool ecosystem
-
-#### 3.1 Marketplace Discovery (OPTIONAL)
-- [ ] Research MCP Marketplace API and integration requirements
-- [ ] Design marketplace tool discovery and installation system
-- [ ] Implement marketplace browsing and search capabilities
-- [ ] Add tool rating and review integration
-- [ ] Create automated tool dependency management
-
-#### 3.2 Tool Installation and Management (OPTIONAL)
-- [ ] Implement automatic MCP tool installation from marketplace
-- [ ] Add tool version management and updates
-- [ ] Create tool configuration and setup automation
-- [ ] Implement security validation for marketplace tools
-- [ ] Add tool usage tracking and analytics
-
-#### 3.3 User Experience Enhancements (OPTIONAL)
-- [ ] Create CLI commands for marketplace operations
-- [ ] Add configuration templates for popular marketplace tools
-- [ ] Implement tool recommendation system
-- [ ] Create documentation for marketplace integration
-- [ ] Add examples and tutorials for marketplace usage
-
-
-### 🎯 Milestone 4: Refactor Send/Receive Messaging (OPTIONAL)
-
-**Goal**: Extract messaging system to use stream chunks class for multimodal support
-
-#### 4.1 Message Architecture Design (OPTIONAL)
-- [ ] Design unified stream chunks class for all message types
-- [ ] Define interfaces for text, image, audio, and video chunks
-- [ ] Create abstraction layer separating messaging from backends
-- [ ] Plan migration path for existing message handlers
-- [ ] Document new messaging architecture
-
-#### 4.2 Implementation (OPTIONAL)
+#### 2.2 Messaging System Refactoring (REQUIRED)
 - [ ] Extract messaging logic from backend implementations
-- [ ] Implement base stream chunks class with multimodal support
-- [ ] Create adapters for each backend type
-- [ ] Add serialization/deserialization for multimodal content
-- [ ] Implement streaming capabilities for large media files
+- [ ] Implement unified stream chunks class for all message types
+- [ ] Create abstraction layer separating messaging from backends
+- [ ] Add support for multimodal message routing and processing
+- [ ] Implement efficient message serialization and caching
 
-#### 4.3 Integration and Testing (OPTIONAL)
-- [ ] Create CLI commands for marketplace operations
-- [ ] Add configuration templates for popular marketplace tools
-- [ ] Implement tool recommendation system
-- [ ] Create documentation for marketplace integration
-- [ ] Add examples and tutorials for marketplace usage
+#### 2.3 Performance and Testing (REQUIRED)
+- [ ] Optimize agent coordination and message passing performance
+- [ ] Add comprehensive integration tests for refactored components
+- [ ] Create performance benchmarks and profiling tools
+- [ ] Update architecture documentation and diagrams
+- [ ] Ensure backward compatibility with existing configurations
+
+
+### 🎯 Milestone 3: Additional Agent Backends from Other Frameworks (OPTIONAL)
+
+**Goal**: Integration with AG2, LangChain, and other agent frameworks
+
+#### 3.1 Framework Analysis and Design (OPTIONAL)
+- [ ] Research AG2, LangChain, CrewAI, and AutoGen integration patterns
+- [ ] Design unified adapter interface for external frameworks
+- [ ] Analyze compatibility requirements and limitations
+- [ ] Plan migration path for framework-specific features
+- [ ] Document integration architecture and patterns
+
+#### 3.2 Framework Adapters Implementation (OPTIONAL)
+- [ ] Implement AG2 agent adapter with conversation support
+- [ ] Create LangChain agent wrapper with tool integration
+- [ ] Add CrewAI multi-agent coordination adapter
+- [ ] Implement AutoGen conversation flow integration
+- [ ] Add framework-specific configuration management
+
+#### 3.3 Integration and Testing (OPTIONAL)
+- [ ] Create mixed-framework multi-agent configurations
+- [ ] Add comprehensive testing for framework adapters
+- [ ] Implement framework-specific tool and capability mapping
+- [ ] Create documentation and examples for each framework
+- [ ] Add performance benchmarking for framework adapters
+
+
+### 🎯 Milestone 4: Coding Agent (OPTIONAL)
+
+**Goal**: Specialized agent for code generation, debugging, and refactoring tasks
+
+#### 4.1 Coding Agent Architecture (OPTIONAL)
+- [ ] Design specialized coding agent with enhanced programming capabilities
+- [ ] Implement code analysis and understanding tools
+- [ ] Add support for multiple programming languages and frameworks
+- [ ] Create code execution and testing environment integration
+- [ ] Design code review and quality assessment capabilities
+
+#### 4.2 Advanced Coding Features (OPTIONAL)
+- [ ] Implement intelligent code completion and generation
+- [ ] Add automated debugging and error resolution
+- [ ] Create code refactoring and optimization suggestions
+- [ ] Implement documentation generation capabilities
+- [ ] Add integration with popular IDEs and development tools
+
+#### 4.3 Integration and Validation (OPTIONAL)
+- [ ] Integrate coding agent with existing multi-agent workflows
+- [ ] Add comprehensive testing for code generation accuracy
+- [ ] Create coding-specific configuration templates and examples
+- [ ] Implement code quality metrics and validation
+- [ ] Add documentation and tutorials for coding agent usage
 
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
 
-- [ ] Fixed final agent behavior without human feedback expectations
-- [ ] Autonomous final agent decision-making and task completion
-- [ ] Streamlined orchestrator with improved maintainability
-- [ ] Performance improvements from orchestrator refactoring
-- [ ] Backward compatibility with all existing v0.0.24 configurations
+- [ ] Complete multimodal support for images, audio, and video
+- [ ] Unified messaging system with stream chunks class
+- [ ] Refactored orchestrator with improved maintainability and performance
+- [ ] Backward compatibility with all existing v0.0.25 configurations
+- [ ] Multimodal conversation history and context management
 
 ### Functional Requirements (OPTIONAL)
-- [ ] Basic MCP Marketplace integration for tool discovery and installation
-- [ ] Unified messaging system with stream chunks class
-- [ ] Multimodal support foundation in messaging layer
+- [ ] Integration with at least two external agent frameworks (AG2, LangChain)
+- [ ] Functional coding agent with code generation and debugging capabilities
+- [ ] Framework adapter system for external agent integration
 
 ### Performance Requirements (REQUIRED)
-- [ ] No performance degradation from orchestrator refactoring
-- [ ] Improved memory efficiency in long-running sessions
-- [ ] Faster agent coordination and state management
-- [ ] Reliable final agent completion without hanging
+- [ ] No performance degradation from orchestrator and messaging refactoring
+- [ ] Efficient multimodal content processing and streaming
+- [ ] Improved memory efficiency in long-running multimodal sessions
+- [ ] Optimized message passing for multimodal content
 
 ### Quality Requirements (REQUIRED)
-- [ ] Comprehensive test coverage for refactored orchestrator
-- [ ] Documentation for new orchestrator architecture
-- [ ] Integration tests for system prompt fixes
-- [ ] Unit tests for all extracted orchestrator modules
-- [ ] Migration guide for any breaking changes
+- [ ] Comprehensive test coverage for multimodal capabilities
+- [ ] Documentation for refactored orchestrator and messaging architecture
+- [ ] Integration tests for multimodal workflows
+- [ ] Unit tests for all refactored components
+- [ ] Migration guide for multimodal configuration changes
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **File System**: Advanced OS-level file operations and disk I/O
-- **Memory Management**: Efficient memory allocation and garbage collection
-- **Streaming I/O**: Support for chunked and streaming file operations
-- **Platform APIs**: OS-specific file system capabilities
+- **Media Processing Libraries**: PIL/Pillow, FFmpeg, audio processing libraries
+- **Streaming I/O**: Support for chunked streaming of large media files
+- **Memory Management**: Efficient handling of large multimodal content
+- **External Frameworks**: AG2, LangChain, CrewAI, AutoGen SDKs and APIs
 
 ### Risks & Mitigations
-1. **Memory Exhaustion**: *Mitigation*: Streaming operations, memory monitoring, size limits
-2. **File Corruption**: *Mitigation*: Atomic operations, checksums, automatic backups
-3. **Performance Degradation**: *Mitigation*: Lazy loading, efficient algorithms, progress tracking
-4. **Platform Compatibility**: *Mitigation*: Cross-platform testing, abstraction layers
-5. **Data Loss**: *Mitigation*: Transaction-like operations, rollback mechanisms
+1. **Large Media File Handling**: *Mitigation*: Streaming operations, chunking, size limits
+2. **Multimodal Processing Performance**: *Mitigation*: Efficient algorithms, lazy loading, caching
+3. **Framework Compatibility**: *Mitigation*: Abstraction layers, comprehensive testing
+4. **Memory Usage with Media Content**: *Mitigation*: Memory monitoring, garbage collection
+5. **Breaking Changes from Refactoring**: *Mitigation*: Backward compatibility, migration guides
 
-## Post-v0.0.25 Considerations
+## Post-v0.0.26 Considerations
 
-### Future Enhancements (v0.0.26+)
-- **Advanced Multimodal Support**: Full implementation of image, audio, and video in messaging
-- **Pre-commit Hooks and Unit Tests**: Ensure comprehensive testing coverage and code quality for all components
-- **Advanced vLLM Features**: Extended vLLM capabilities like tensor parallelism and advanced batching
+### Future Enhancements (v0.0.27+)
+- **Web UI**: Modern web interface for MassGen with real-time agent coordination visualization
+- **Irreversible Actions Management**: Safety mechanisms when agents work in parallel to prevent conflicts
+- **Address Minority Voting Problem**: Improved consensus mechanisms for multi-agent decision making
 - **Enterprise MCP Marketplace**: Advanced marketplace features for organizations
 
 ### Long-term Vision
@@ -181,27 +182,27 @@ Version 0.0.25 builds upon the backend utilities refactoring and vLLM support of
 
 | Week | Focus | Key Deliverables | Status |
 |------|-------|------------------|--------|
-| 1 | System Prompt Fixes | Autonomous final agent behavior | ⏳ **PENDING** |
-| 2 | Orchestrator Refactoring | Streamlined orchestrator architecture | ⏳ **PENDING** |
-| 3 | Optional Features | MCP Marketplace and messaging refactor | ⏳ **PENDING** |
-| 4 | Release Preparation | Final testing and v0.0.25 release | ⏳ **PENDING** |
+| 1-2 | Multimodal Support | Complete image, audio, video processing | ⏳ **PENDING** |
+| 3 | Refactoring Completion | Orchestrator and messaging system refactor | ⏳ **PENDING** |
+| 4 | Optional Features | Framework integrations and coding agent | ⏳ **PENDING** |
+| 5 | Release Preparation | Final testing and v0.0.26 release | ⏳ **PENDING** |
 
 ## Getting Started
 
 ### For Contributors
 
-1. Investigate and fix final agent human feedback expectations in system prompts
-2. Refactor orchestrator for improved maintainability and performance
-3. Consider MCP Marketplace integration for expanded tool ecosystem
-4. Design unified messaging system with stream chunks class for future multimodal support
-5. Create comprehensive tests for refactored components
+1. Implement complete multimodal support for images, audio, and video processing
+2. Finish refactoring orchestrator and messaging systems for better maintainability
+3. Consider integrating additional agent frameworks (AG2, LangChain)
+4. Develop specialized coding agent capabilities
+5. Create comprehensive tests for all new multimodal and refactored components
 
 ### For Users
-- v0.0.25 will provide autonomous final agent behavior without human feedback expectations
-- Improved orchestrator performance and reliability
-- All v0.0.24 configurations will continue to work unchanged
-- Foundation for future multimodal capabilities through messaging refactor
+- v0.0.26 will provide full multimodal capabilities across all supported backends
+- Improved system architecture through completed refactoring work
+- All v0.0.25 configurations will continue to work unchanged
+- Optional integration with external agent frameworks for expanded capabilities
 
 ---
 
-*This roadmap represents our commitment to improving code quality, system reliability, and orchestrator performance, establishing a solid foundation for future MassGen multimodal and marketplace enhancements.*
+*This roadmap represents our commitment to delivering complete multimodal capabilities and finishing core architectural improvements, establishing MassGen as a comprehensive platform for multimodal multi-agent collaboration.*
