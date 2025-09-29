@@ -5,6 +5,61 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.25] - 2025-09-29
+
+### Added
+- **Multi-Turn Filesystem Support**: Complete implementation for persistent filesystem context across conversation turns
+  - Automatic session management when `session_storage` is configured (no flag needed)
+  - Persistent workspace management across conversation turns with `.massgen` directory
+  - Workspace snapshot preservation and restoration between turns
+  - Support for maintaining file context and modifications throughout multi-turn sessions
+  - New configuration examples: `two_gemini_flash_filesystem_multiturn.yaml`, `grok4_gpt5_gemini_filesystem_multiturn.yaml`, `grok4_gpt5_claude_code_filesystem_multiturn.yaml`
+  - Design documentation in `multi_turn_filesystem_design.md`
+
+- **SGLang Backend Integration**: Added SGLang support to inference backend alongside existing vLLM
+  - New SGLang server support with default port 30000 and `SGLANG_API_KEY` environment variable
+  - SGLang-specific parameters support (e.g., `separate_reasoning` for guided generation)
+  - Auto-detection between vLLM and SGLang servers based on configuration
+  - New configuration `two_qwen_vllm_sglang.yaml` for mixed server deployments
+  - Unified `InferenceBackend` class replacing separate `vllm.py` implementation
+  - Updated documentation renamed from `vllm_implementation.md` to `inference_backend.md`
+
+- **Enhanced Path Permission System**: New exclusion patterns and validation improvements
+  - Added `DEFAULT_EXCLUDED_PATTERNS` for common directories (.git, node_modules, .venv, etc.)
+  - New `will_be_writable` flag for better permission state tracking
+  - Improved path validation with different handling for context vs workspace paths
+  - Enhanced test coverage in `test_path_permission_manager.py`
+
+### Changed
+- **CLI Enhancements**: Major improvements to command-line interface
+  - Enhanced logging with configurable log levels and file output
+  - Improved error handling and user feedback
+
+- **System Prompt Improvements**: Refined agent system prompts for better performance
+  - Clearer instructions for file context handling
+  - Better guidance for multi-turn conversations
+  - Improved prompt templates for filesystem operations
+
+- **Documentation Updates**: Comprehensive documentation improvements
+  - Updated README with clearer installation instructions
+
+### Fixed
+- **Filesystem Manager**: Resolved workspace and permission issues
+  - Fixed warnings for non-existent temporary workspaces
+  - Better cleanup of old workspaces
+  - Fixed relative path issues in workspace copy operations
+
+- **Configuration Issues**: Multiple configuration fixes
+  - Fixed multi-agent configuration templates
+  - Fixed code generation prompts for consistency
+
+### Technical Details
+- **Commits**: 30+ commits including multi-turn filesystem, SGLang integration, and bug fixes
+- **Files Modified**: 33 files with 3,188 insertions and 642 deletions
+- **Major Features**: Multi-turn filesystem support, unified vLLM/SGLang backend, enhanced permissions
+- **New Backend**: SGLang integration alongside existing vLLM support
+- **Contributors**: @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.24] - 2025-09-26
 
 ### Added

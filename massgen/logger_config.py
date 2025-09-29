@@ -29,33 +29,80 @@ logger.remove()
 # Global debug flag
 _DEBUG_MODE = False
 
-# Global log session directory
+# Global log session directory and turn tracking
 _LOG_SESSION_DIR = None
+_LOG_BASE_SESSION_DIR = None  # Base session dir (without turn subdirectory)
+_CURRENT_TURN = None
 
 
-def get_log_session_dir() -> Path:
-    """Get the current log session directory."""
-    global _LOG_SESSION_DIR
-    if _LOG_SESSION_DIR is None:
-        # Create main logs directory
-        log_base_dir = Path("massgen_logs")
+def get_log_session_dir(turn: Optional[int] = None) -> Path:
+    """Get the current log session directory.
+
+    Args:
+        turn: Optional turn number for multi-turn conversations
+
+    Returns:
+        Path to the log directory
+    """
+    global _LOG_SESSION_DIR, _LOG_BASE_SESSION_DIR, _CURRENT_TURN
+
+    # Initialize base session dir once per session
+    if _LOG_BASE_SESSION_DIR is None:
+        # Check if we're running from within the MassGen development directory
+        # by looking for pyproject.toml with massgen package
+        cwd = Path.cwd()
+        is_massgen_dev = False
+
+        # Check if pyproject.toml exists and contains massgen package definition
+        pyproject_file = cwd / "pyproject.toml"
+        if pyproject_file.exists():
+            try:
+                content = pyproject_file.read_text()
+                if 'name = "massgen"' in content:
+                    is_massgen_dev = True
+            except Exception:
+                pass
+
+        # Use massgen_logs/ for dev, .massgen/logs/ for external usage
+        if is_massgen_dev:
+            log_base_dir = Path("massgen_logs")
+        else:
+            log_base_dir = Path(".massgen") / "massgen_logs"
+
         log_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Create timestamped session directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        _LOG_SESSION_DIR = log_base_dir / f"log_{timestamp}"
+        _LOG_BASE_SESSION_DIR = log_base_dir / f"log_{timestamp}"
+        _LOG_BASE_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+
+    # If turn changed, update the directory
+    if turn is not None and turn != _CURRENT_TURN:
+        _CURRENT_TURN = turn
+        _LOG_SESSION_DIR = None  # Force recreation
+
+    if _LOG_SESSION_DIR is None:
+        # Create directory structure based on turn
+        if _CURRENT_TURN and _CURRENT_TURN > 0:
+            # Multi-turn conversation: organize by turn within session
+            _LOG_SESSION_DIR = _LOG_BASE_SESSION_DIR / f"turn_{_CURRENT_TURN}"
+        else:
+            # First execution or single execution: use base session dir
+            _LOG_SESSION_DIR = _LOG_BASE_SESSION_DIR
+
         _LOG_SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
     return _LOG_SESSION_DIR
 
 
-def setup_logging(debug: bool = False, log_file: Optional[str] = None):
+def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Optional[int] = None):
     """
     Configure MassGen logging system using loguru.
 
     Args:
         debug: Enable debug mode with verbose logging
         log_file: Optional path to log file for persistent logging
+        turn: Optional turn number for multi-turn conversations
     """
     global _DEBUG_MODE
     _DEBUG_MODE = debug
@@ -99,7 +146,7 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
 
         # Also log to file in debug mode
         if not log_file:
-            log_session_dir = get_log_session_dir()
+            log_session_dir = get_log_session_dir(turn=turn)
             log_file = log_session_dir / "massgen_debug.log"
 
         logger.add(
@@ -129,7 +176,7 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
 
         # Always create log file in non-debug mode to capture INFO messages
         if not log_file:
-            log_session_dir = get_log_session_dir()
+            log_session_dir = get_log_session_dir(turn=turn)
             log_file = log_session_dir / "massgen.log"
 
         # Use the same format as console with color codes

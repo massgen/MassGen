@@ -1,0 +1,28 @@
+# MassGen Two Agent Configuration both calling the same model but different inference server for testing
+# In one terminal window, in an environment with vLLM installed, run:
+#   python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-4B --gpu-memory-utilization 0.8 --enable-auto-tool-choice --tool-call-parser hermes
+# In another terminal window, in an environment with SGLang installed, run:
+#   python -m sglang.launch_server --model-path Qwen/Qwen3-4B --tool-call-parser qwen25
+# In another terminal window, run:
+#   uv run python -m massgen.cli --config massgen/configs/basic/multi/two_qwen_vllm_sglang.yaml "what is machine learning?"
+agents:
+  - id: "qwen1"
+    backend:
+      type: "vllm"
+      model: "Qwen/Qwen3-4B"
+      base_url: "http://localhost:8000/v1"
+      chat_template_kwargs:
+        enable_thinking: True
+      top_k: 50
+  - id: "qwen2"
+    backend:
+      type: "sglang"
+      model: "Qwen/Qwen3-4B"
+      base_url: "http://localhost:30000/v1"
+      extra_body:
+        chat_template_kwargs:
+          enable_thinking: True
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

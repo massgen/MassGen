@@ -20,6 +20,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import massgen.backend.utils.filesystem_manager._workspace_copy_server as wc_module
+
 from ....logger_config import get_log_session_dir, logger
 from ....mcp_tools.client import HookType
 from ._base import Permission
@@ -169,6 +171,7 @@ class FilesystemManager:
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
             ],
+            "cwd": str(self.cwd),  # Set working directory for filesystem server (important for relative paths)
         }
 
         # Add all managed paths from path permission manager
@@ -187,19 +190,23 @@ class FilesystemManager:
         context_paths = self.path_permission_manager.get_context_paths()
         ",".join([cp["path"] for cp in context_paths])
 
+        # Get absolute path to the workspace copy server script
+        script_path = Path(wc_module.__file__).resolve()
+
+        # Pass allowed paths via environment variable to avoid fastmcp argument parsing issues
+        paths = self.path_permission_manager.get_mcp_filesystem_paths()
+        env = {
+            "FASTMCP_SHOW_CLI_BANNER": "false",
+        }
+
         config = {
             "name": "workspace_copy",
             "type": "stdio",
             "command": "fastmcp",
-            "args": ["run", "massgen/backend/utils/filesystem_manager/_workspace_copy_server.py"],
-            "env": {
-                "FASTMCP_SHOW_CLI_BANNER": "false",
-                "WORKSPACE_PATH": str(self.cwd),  # Pass workspace path via environment
-            },
+            "args": ["run", f"{script_path}:create_server"] + ["--", "--allowed-paths"] + paths,
+            "env": env,
+            "cwd": str(self.cwd),
         }
-
-        # Add all managed paths from path permission manager
-        config["args"].extend(self.path_permission_manager.get_mcp_filesystem_paths())
 
         return config
 
@@ -215,7 +222,25 @@ class FilesystemManager:
         """
         # Get existing mcp_servers configuration
         mcp_servers = backend_config.get("mcp_servers", [])
-        existing_names = [server.get("name") for server in mcp_servers]
+
+        # Handle both list format and Claude Code dict format
+        if isinstance(mcp_servers, dict):
+            # Claude Code format: {"playwright": {...}, "filesystem": {...}}
+            existing_names = list(mcp_servers.keys())
+            # Convert to list format for append operations
+            converted_servers = []
+            for name, server_config in mcp_servers.items():
+                if isinstance(server_config, dict):
+                    server = server_config.copy()
+                    server["name"] = name
+                    converted_servers.append(server)
+            mcp_servers = converted_servers
+        elif isinstance(mcp_servers, list):
+            # List format: [{"name": "playwright", ...}, ...]
+            existing_names = [server.get("name") for server in mcp_servers if isinstance(server, dict)]
+        else:
+            existing_names = []
+            mcp_servers = []
 
         try:
             # Add filesystem server if missing

@@ -7,7 +7,7 @@ from ._path_permission_manager import (
     PathPermissionManager,
     PathPermissionManagerHook,
 )
-from ._workspace_copy_server import copy_file, copy_files_batch, get_copy_file_pairs
+from ._workspace_copy_server import get_copy_file_pairs
 
 __all__ = [
     "FilesystemManager",
@@ -15,7 +15,5 @@ __all__ = [
     "PathPermissionManager",
     "PathPermissionManagerHook",
     "Permission",
-    "copy_file",
-    "copy_files_batch",
     "get_copy_file_pairs",
 ]

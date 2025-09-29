@@ -4,6 +4,8 @@ MCP client implementation for connecting to MCP servers. This module provides en
 functionality to connect with MCP servers and integrate external tools and resources into the MassGen workflow.
 """
 import asyncio
+import os
+import re
 from datetime import timedelta
 from enum import Enum
 from types import TracebackType
@@ -257,9 +259,6 @@ class MCPClient:
                 env = get_default_environment()
 
             # Perform environment variable substitution
-            import os
-            import re
-
             for key, value in env.items():
                 if isinstance(value, str) and "${" in value:
                     # Simple environment variable substitution for patterns like ${VAR_NAME}
@@ -272,12 +271,16 @@ class MCPClient:
 
                     env[key] = re.sub(r"\$\{([A-Z_][A-Z0-9_]*)\}", replace_env_var, value)
 
+            # Extract cwd if provided in config
+            cwd = self.config.get("cwd")
+
             server_params = StdioServerParameters(
                 command=full_command[0],
                 args=full_command[1:] if len(full_command) > 1 else [],
                 env=env,
+                cwd=cwd,
             )
-            logger.debug(f"Created StdioServerParameters for {self.name}: {server_params.command} {server_params.args}")
+            logger.debug(f"Created StdioServerParameters for {self.name}: {server_params.command} {server_params.args} (cwd={cwd})")
             return stdio_client(server_params)
 
         elif transport_type == "streamable-http":
@@ -458,9 +461,10 @@ class MCPClient:
 
         try:
             available_tools = await self.session.list_tools()
+            tools_list = available_tools.tools if available_tools and hasattr(available_tools, "tools") and available_tools.tools else []
 
             # Filter tools based on include/exclude lists
-            for tool in available_tools.tools:
+            for tool in tools_list:
                 if self.exclude_tools and tool.name in self.exclude_tools:
                     continue
                 if self.allowed_tools is None or tool.name in self.allowed_tools:
@@ -472,7 +476,8 @@ class MCPClient:
         # List resources (optional)
         try:
             available_resources = await self.session.list_resources()
-            for resource in available_resources.resources:
+            resources_list = available_resources.resources if available_resources and hasattr(available_resources, "resources") and available_resources.resources else []
+            for resource in resources_list:
                 # Validate resource before storing
                 if not hasattr(resource, "uri") or not resource.uri:
                     logger.warning(f"Invalid resource without URI from server {self.name}")
@@ -505,7 +510,8 @@ class MCPClient:
 
         try:
             available_prompts = await self.session.list_prompts()
-            for prompt in available_prompts.prompts:
+            prompts_list = available_prompts.prompts if available_prompts and hasattr(available_prompts, "prompts") and available_prompts.prompts else []
+            for prompt in prompts_list:
                 # Validate prompt before storing
                 if not hasattr(prompt, "name") or not prompt.name:
                     logger.warning(f"Invalid prompt without name from server {self.name}")
