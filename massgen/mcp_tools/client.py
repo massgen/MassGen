@@ -4,6 +4,8 @@ MCP client implementation for connecting to MCP servers. This module provides en
 functionality to connect with MCP servers and integrate external tools and resources into the MassGen workflow.
 """
 import asyncio
+import os
+import re
 from datetime import timedelta
 from enum import Enum
 from types import TracebackType
@@ -257,9 +259,6 @@ class MCPClient:
                 env = get_default_environment()
 
             # Perform environment variable substitution
-            import os
-            import re
-
             for key, value in env.items():
                 if isinstance(value, str) and "${" in value:
                     # Simple environment variable substitution for patterns like ${VAR_NAME}

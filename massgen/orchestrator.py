@@ -17,9 +17,11 @@ TODOs:
 """
 
 import asyncio
+import json
 import os
 import shutil
 import time
+import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -780,9 +782,6 @@ class Orchestrator(ChatAgent):
         Returns:
             The timestamp used for this snapshot
         """
-        import json
-        import time
-
         logger.info(f"[Orchestrator._save_agent_snapshot] Called for agent_id={agent_id}, has_answer={bool(answer_content)}, has_vote={bool(vote_data)}, is_final={is_final}")
 
         agent = self.agents.get(agent_id)
@@ -871,8 +870,6 @@ class Orchestrator(ChatAgent):
                     logger.info(f"[Orchestrator._save_agent_snapshot] Saved comprehensive vote to {vote_file}")
 
             except Exception as e:
-                import traceback
-
                 logger.error(f"[Orchestrator._save_agent_snapshot] Failed to save vote for {agent_id}: {e}")
                 logger.error(f"[Orchestrator._save_agent_snapshot] Traceback: {traceback.format_exc()}")
 
@@ -1927,8 +1924,6 @@ class Orchestrator(ChatAgent):
                     log_stream_chunk("orchestrator", chunk.type, chunk.content, selected_agent_id)
                     yield reasoning_chunk
                 elif chunk.type == "backend_status":
-                    import json
-
                     status_json = json.loads(chunk.content)
                     cwd = status_json["cwd"]
                     session_id = status_json["session_id"]

@@ -24,11 +24,14 @@ import argparse
 import asyncio
 import json
 import os
+import shutil
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
+from dotenv import load_dotenv
 
 from .agent_config import AgentConfig, TimeoutConfig
 from .backend.azure_openai import AzureOpenAIBackend
@@ -42,6 +45,7 @@ from .backend.response import ResponseBackend
 from .backend.vllm import VLLMBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .frontend.coordination_ui import CoordinationUI
+from .logger_config import _DEBUG_MODE, logger, setup_logging
 from .orchestrator import Orchestrator
 from .utils import get_backend_type_from_model
 
@@ -55,8 +59,6 @@ def load_env_file():
     2. User home ~/.massgen/.env (global user config)
     3. Current directory .env (project-specific, highest priority)
     """
-    from dotenv import load_dotenv
-
     # Load in priority order (later overrides earlier)
     load_dotenv(Path(__file__).parent / ".env")  # Package fallback
     load_dotenv(Path.home() / ".massgen" / ".env")  # User global
@@ -469,9 +471,6 @@ def load_previous_turns(session_info: Dict[str, Any], session_storage: str) -> L
     Returns:
         List of previous turn metadata dicts
     """
-    import json
-    from pathlib import Path
-
     session_id = session_info.get("session_id")
     if not session_id:
         return []
@@ -519,11 +518,6 @@ async def handle_session_persistence(
     Returns:
         tuple: (session_id, updated_turn_number, normalized_answer)
     """
-    import json
-    import shutil
-    from datetime import datetime
-    from pathlib import Path
-
     # Get final result from orchestrator
     final_result = orchestrator.get_final_result()
     if not final_result:
@@ -897,10 +891,6 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                 # This allows agents to compare "what I changed" vs "what was originally there".
                 # TODO: We may want to avoid full recreation if possible in the future, conditioned on being able to easily reset MCPs.
                 if current_turn > 0 and original_config and orchestrator_cfg:
-                    from pathlib import Path
-
-                    from .logger_config import logger
-
                     # Get the most recent turn path (the one just completed)
                     session_dir = Path(session_storage) / session_id
                     latest_turn_dir = session_dir / f"turn_{current_turn}"
@@ -1009,17 +999,11 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
 
                 # Initialize session ID on first turn
                 if session_id is None:
-                    from datetime import datetime
-
                     session_id = f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
                 # Reconfigure logging for the turn we're about to process
-                from .logger_config import _DEBUG_MODE
-                from .logger_config import logger as reconfig_logger
-                from .logger_config import setup_logging
-
                 setup_logging(debug=_DEBUG_MODE, turn=next_turn)
-                reconfig_logger.info(f"Starting turn {next_turn}")
+                logger.info(f"Starting turn {next_turn}")
 
                 # Pass session state for multi-turn filesystem support
                 session_info = {
@@ -1168,8 +1152,6 @@ Environment Variables:
     args = parser.parse_args()
 
     # Always setup logging (will save INFO to file, console output depends on debug flag)
-    from .logger_config import logger, setup_logging
-
     setup_logging(debug=args.debug)
 
     if args.debug:
@@ -1237,8 +1219,6 @@ Environment Variables:
 
         # Create agents
         if args.debug:
-            from .logger_config import logger
-
             logger.debug("Creating agents from config...")
         # Extract orchestrator config for agent setup
         orchestrator_cfg = config.get("orchestrator", {})
@@ -1281,8 +1261,6 @@ Environment Variables:
             raise ConfigurationError("No agents configured")
 
         if args.debug:
-            from .logger_config import logger
-
             logger.debug(f"Created {len(agents)} agent(s): {list(agents.keys())}")
 
         # Create timeout config from settings and put it in kwargs
