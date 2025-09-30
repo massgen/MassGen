@@ -20,10 +20,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from . import _workspace_tools_server as wc_module
-
 from ..logger_config import get_log_session_dir, logger
 from ..mcp_tools.client import HookType
+from . import _workspace_tools_server as wc_module
 from ._base import Permission
 from ._path_permission_manager import PathPermissionManager
 

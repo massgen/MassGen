@@ -1057,9 +1057,7 @@ def test_permission_path_root_protection():
             return False
 
         print("  Testing system files still protected within workspace...")
-        from massgen.filesystem_manager._workspace_tools_server import (
-            _is_critical_path,
-        )
+        from massgen.filesystem_manager._workspace_tools_server import _is_critical_path
 
         system_dir = helper.workspace_dir / ".massgen"
         system_dir.mkdir()
