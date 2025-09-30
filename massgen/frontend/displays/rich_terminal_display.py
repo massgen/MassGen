@@ -1334,6 +1334,8 @@ class RichTerminalDisplay(TerminalDisplay):
             self._open_agent_in_default_text_editor(agent_id)
         elif key == "s":
             self._open_system_status_in_default_text_editor()
+        elif key == "f":
+            self._open_final_presentation_in_default_text_editor()
         elif key == "q":
             # Quit the application - restore terminal and stop
             self._stop_input_thread = True
@@ -1409,6 +1411,45 @@ class RichTerminalDisplay(TerminalDisplay):
         except (subprocess.CalledProcessError, FileNotFoundError):
             # Fallback to external app method
             self._open_system_status_in_external_app()
+
+    def _open_final_presentation_in_default_text_editor(self) -> None:
+        """Open final presentation file in default text editor."""
+        # Check if we have an active final presentation file or stored one
+        final_presentation_file = None
+
+        # Priority 1: Use active streaming file if available
+        if hasattr(self, "_final_presentation_file_path") and self._final_presentation_file_path:
+            final_presentation_file = self._final_presentation_file_path
+        # Priority 2: Look for stored presentation agent's file
+        elif hasattr(self, "_stored_presentation_agent") and self._stored_presentation_agent:
+            agent_name = self._stored_presentation_agent
+            final_presentation_file = self.output_dir / f"{agent_name}_final_presentation.txt"
+        else:
+            return
+
+        if not final_presentation_file.exists():
+            return
+
+        try:
+            # Use system default application to open text files
+            if sys.platform == "darwin":  # macOS
+                subprocess.run(
+                    ["open", str(final_presentation_file)],
+                    check=False,
+                )
+            elif sys.platform.startswith("linux"):  # Linux
+                subprocess.run(
+                    ["xdg-open", str(final_presentation_file)],
+                    check=False,
+                )
+            elif sys.platform == "win32":  # Windows
+                subprocess.run(
+                    ["start", str(final_presentation_file)],
+                    check=False,
+                    shell=True,
+                )
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
 
     def _open_system_status_in_vscode_new_window(self) -> None:
         """Open system status file in a new VS Code window."""
@@ -1689,7 +1730,8 @@ class RichTerminalDisplay(TerminalDisplay):
                     elif choice == "r":
                         self.display_coordination_table()
                     elif choice == "f" and self._stored_final_presentation:
-                        self._redisplay_final_presentation()
+                        # Open the full presentation file in text editor for scrolling
+                        self._open_final_presentation_in_default_text_editor()
                     elif choice == "q":
                         break
                     else:
@@ -1933,7 +1975,7 @@ class RichTerminalDisplay(TerminalDisplay):
         content_text = Text()
 
         if not self._final_presentation_content:
-            content_text.append("Loading final presentation...", style=self.colors["text"])
+            content_text.append("No activity yet...", style=self.colors["text"])
         else:
             # Split content into lines and format each
             lines = self._final_presentation_content.split("\n")
@@ -1956,6 +1998,7 @@ class RichTerminalDisplay(TerminalDisplay):
         if self._final_presentation_vote_results and self._final_presentation_vote_results.get("vote_counts"):
             vote_count = self._final_presentation_vote_results["vote_counts"].get(self._final_presentation_agent, 0)
             title += f" (Selected with {vote_count} votes)"
+        title += " [Press f]"
 
         # Create panel without fixed height so bottom border is always visible
         return Panel(
@@ -2268,6 +2311,12 @@ class RichTerminalDisplay(TerminalDisplay):
             emoji = self._get_status_emoji(status, status)
             status_parts.append(f"{emoji} {status.title()}: {count}")
 
+        # Add final presentation status if active
+        if self._final_presentation_active:
+            status_parts.append("🎤 Final Presentation: Active")
+        elif hasattr(self, "_stored_final_presentation") and self._stored_final_presentation:
+            status_parts.append("🎤 Final Presentation: Complete")
+
         footer_content.append(
             " | ".join(status_parts),
             style=self.colors["text"],
@@ -2310,8 +2359,14 @@ class RichTerminalDisplay(TerminalDisplay):
                     "🎮 Live Mode Hotkeys: Press 1-",
                     style=self.colors["primary"],
                 )
+                hotkeys = f"{len(self.agent_ids)} to open agent files in editor, 's' for system status"
+
+                # Add 'f' key if final presentation is available
+                if hasattr(self, "_stored_final_presentation") and self._stored_final_presentation:
+                    hotkeys += ", 'f' for final presentation"
+
                 footer_content.append(
-                    f"{len(self.agent_ids)} to open agent files in editor, 's' for system status",
+                    hotkeys,
                     style=self.colors["text"],
                 )
                 footer_content.append(
@@ -2509,7 +2564,26 @@ class RichTerminalDisplay(TerminalDisplay):
             with open(self.system_status_file, "w", encoding="utf-8") as f:
                 f.write("=== SYSTEM STATUS LOG ===\n\n")
 
+                # Agent Status Summary
+                f.write("📊 Agent Status:\n")
+                status_counts = {}
+                for status in self.agent_status.values():
+                    status_counts[status] = status_counts.get(status, 0) + 1
+
+                for status, count in status_counts.items():
+                    emoji = self._get_status_emoji(status, status)
+                    f.write(f"  {emoji} {status.title()}: {count}\n")
+
+                # Final Presentation Status
+                if self._final_presentation_active:
+                    f.write("  🎤 Final Presentation: Active\n")
+                elif hasattr(self, "_stored_final_presentation") and self._stored_final_presentation:
+                    f.write("  🎤 Final Presentation: Complete\n")
+
+                f.write("\n")
+
                 # Show all orchestrator events in chronological order by time
+                f.write("📋 Orchestrator Events:\n")
                 if self.orchestrator_events:
                     for event in self.orchestrator_events:
                         f.write(f"  • {event}\n")
@@ -2854,6 +2928,7 @@ class RichTerminalDisplay(TerminalDisplay):
         self._final_presentation_content = ""
         self._final_presentation_agent = selected_agent
         self._final_presentation_vote_results = vote_results
+        self._final_presentation_file_path = None  # Will be set after file is initialized
 
         # Keep live display running for streaming
         was_live = self.live is not None and self.live.is_started
@@ -2863,9 +2938,12 @@ class RichTerminalDisplay(TerminalDisplay):
                 console=self.console,
                 refresh_per_second=self.refresh_rate,
                 vertical_overflow="ellipsis",
-                transient=True,  # Clear when stopped
+                transient=False,  # Keep visible after stopped
             )
             self.live.start()
+
+        # Update footer cache to show "Final Presentation: Active"
+        self._update_footer_cache()
 
         # Initial update to show the streaming panel
         self._update_final_presentation_panel()
@@ -2877,6 +2955,7 @@ class RichTerminalDisplay(TerminalDisplay):
         presentation_file_path = self._initialize_final_presentation_file(
             selected_agent,
         )
+        self._final_presentation_file_path = presentation_file_path  # Store for 'f' key access
 
         try:
             # Stream presentation content into the live panel
@@ -2966,15 +3045,11 @@ class RichTerminalDisplay(TerminalDisplay):
             self._stored_presentation_agent = selected_agent
             self._stored_vote_results = vote_results
 
+            # Update footer cache to show 'f' key
+            self._update_footer_cache()
+
         # Finalize the file
         self._finalize_final_presentation_file(presentation_file_path)
-
-        # Add completion message to the streaming content
-        completion_msg = f"\n✅ Presentation completed by {selected_agent}\n"
-        if chunk_count > 0:
-            completion_msg += f"\n📊 Presentation processed {chunk_count} chunks\n"
-
-        self._final_presentation_content += completion_msg
 
         # Stop the live display (transient=True will clear it)
         if self.live and self.live.is_started:
@@ -2984,15 +3059,22 @@ class RichTerminalDisplay(TerminalDisplay):
         # Deactivate the presentation panel
         self._final_presentation_active = False
 
-        # Print the final presentation as a permanent static panel (full width)
-        final_panel = Panel(
-            self._format_multiline_content(self._final_presentation_content),
-            title=f"[{self.colors['success']}]🎤 Final Presentation from {selected_agent} (Selected with {vote_results.get('vote_counts', {}).get(selected_agent, 0)} votes)[/{self.colors['success']}]",
-            border_style=self.colors["success"],
-            box=DOUBLE,
-            expand=True,  # Full width
+        # Print a summary box with completion stats
+        stats_text = Text()
+        stats_text.append("✅ Presentation completed by ", style="bold green")
+        stats_text.append(selected_agent, style=f"bold {self.colors['success']}")
+        if chunk_count > 0:
+            stats_text.append(f" | 📊 {chunk_count} chunks processed", style="dim")
+
+        summary_panel = Panel(
+            stats_text,
+            border_style="green",
+            box=ROUNDED,
+            expand=True,
         )
-        self.console.print(final_panel)
+        self.console.print()
+        self.console.print(summary_panel)
+        self.console.print()
 
         return presentation_content
 
@@ -3492,6 +3574,10 @@ class RichTerminalDisplay(TerminalDisplay):
             if file_path and file_path.exists():
                 with open(file_path, "a", encoding="utf-8") as f:
                     f.write(content)
+                    f.flush()  # Explicitly flush to disk so text editors see updates immediately
+                    import os
+
+                    os.fsync(f.fileno())  # Force OS to write to disk
         except Exception:
             # Handle file write errors gracefully
             pass
