@@ -21,7 +21,7 @@ new_website/
 Agents cannot clean up old files, leading to confusion about which files are current.
 
 ### Problem 2: Context Paths as Files
-Users can only provide directories as context paths. To share a single file like `image.png`, users must:
+Users can only provide directories as context paths. To share a single file like `config.yaml`, users must:
 1. Provide the parent directory as context path
 2. Give access to all files in that directory (security/privacy concern)
 3. Risk agents accessing unintended files
@@ -407,8 +407,8 @@ def test_compare_files():
    - Verify workspace clean
 
 2. **File Context Path Scenario**:
-   - User provides single image.png as context
-   - Agent reads image.png (allowed)
+   - User provides single config.yaml as context
+   - Agent reads config.yaml (allowed)
    - Agent tries to read sibling.txt (blocked)
    - Agent tries to list parent directory (blocked)
 
