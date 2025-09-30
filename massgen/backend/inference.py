@@ -16,7 +16,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Set
 
 from .base import StreamChunk
 from .chat_completions import ChatCompletionsBackend
-from .utils.api_params_handler._chat_completions_api_params_handler import (
+from ..api_params_handler._chat_completions_api_params_handler import (
     ChatCompletionsAPIParamsHandler,
 )
 

@@ -14,8 +14,8 @@ from openai import AsyncOpenAI
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
-from .utils.api_params_handler import ResponseAPIParamsHandler
-from .utils.formatter import ResponseFormatter
+from ..api_params_handler import ResponseAPIParamsHandler
+from ..formatter import ResponseFormatter
 
 
 class ResponseBackend(MCPBackend):

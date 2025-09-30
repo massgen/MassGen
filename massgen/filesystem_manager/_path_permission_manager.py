@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from ....logger_config import logger
-from ....mcp_tools.hooks import HookResult
+from ..logger_config import logger
+from ..mcp_tools.hooks import HookResult
 from ._base import Permission
 
 

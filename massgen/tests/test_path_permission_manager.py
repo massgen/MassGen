@@ -9,12 +9,12 @@ import traceback
 from pathlib import Path
 
 # Removed wc_server import - now using factory function approach
-from massgen.backend.utils.filesystem_manager import (
+from massgen.filesystem_manager import (
     FilesystemManager,
     PathPermissionManager,
     Permission,
 )
-from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
+from massgen.filesystem_manager._workspace_tools_server import (
     _validate_and_resolve_paths,
     _validate_path_access,
     get_copy_file_pairs,
@@ -1025,7 +1025,7 @@ def test_permission_path_root_protection():
     helper.setup()
 
     try:
-        from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
+        from massgen.filesystem_manager._workspace_tools_server import (
             _is_permission_path_root,
         )
 
@@ -1057,7 +1057,7 @@ def test_permission_path_root_protection():
             return False
 
         print("  Testing system files still protected within workspace...")
-        from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
+        from massgen.filesystem_manager._workspace_tools_server import (
             _is_critical_path,
         )
 
@@ -1294,7 +1294,7 @@ async def test_delete_file_real_workspace_scenario():
         print(f"  User project: {user_project}")
 
         # Import the helper functions directly to test logic
-        from massgen.backend.utils.filesystem_manager._workspace_tools_server import (
+        from massgen.filesystem_manager._workspace_tools_server import (
             _is_critical_path,
             _is_permission_path_root,
         )

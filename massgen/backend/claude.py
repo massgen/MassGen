@@ -31,8 +31,8 @@ from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..mcp_tools.backend_utils import MCPErrorHandler
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
-from .utils.api_params_handler import ClaudeAPIParamsHandler
-from .utils.formatter import ClaudeFormatter
+from ..api_params_handler import ClaudeAPIParamsHandler
+from ..formatter import ClaudeFormatter
 
 
 class ClaudeBackend(MCPBackend):
