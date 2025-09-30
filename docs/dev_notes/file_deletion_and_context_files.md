@@ -6,9 +6,8 @@ This document describes the implementation of file/directory deletion capabiliti
 ### Additional Improvements
 During implementation, we also addressed:
 1. **CLI Enhancement**: Added interactive prompt for protected paths when users add custom context paths in multiturn dialogue mode
-2. **Critical Bug Fix**: Fixed async generator cleanup in orchestrator that caused "async generator ignored GeneratorExit" errors when users quit inspection interface
-3. **MCP Server Compatibility Fix**: Fixed MCP filesystem server crash when file paths were passed as arguments (only directories are supported)
-4. **Sibling File Isolation**: Implemented comprehensive access control to prevent agents from accessing sibling files when a specific file is added as a context path
+2. **MCP Server Compatibility Fix**: Fixed MCP filesystem server crash when file paths were passed as arguments (only directories are supported)
+3. **Sibling File Isolation**: Implemented comprehensive access control to prevent agents from accessing sibling files when a specific file is added as a context path
 
 ## Motivation
 
@@ -454,85 +453,7 @@ if permission == "write":
 
 This provides a user-friendly way to specify protected paths without manually editing YAML configuration files.
 
-### Bug Fix: Async Generator Cleanup
-
-**Problem**: When users quit the inspection interface during multi-agent coordination, async generators were not properly closed, causing:
-```
-Task exception was never retrieved
-future: <Task-1555 finished name='Task-1555' exception=RuntimeError('async generator ignored GeneratorExit')>
-RuntimeError: async generator ignored GeneratorExit
-```
-
-**Root Cause**: Two issues were causing this error:
-
-1. The `chat_stream` async generator in `_stream_agent_execution()` was not handling `GeneratorExit` exceptions when the generator is closed before completion (e.g., user quits inspection).
-
-2. The `_get_next_chunk()` method was not handling `GeneratorExit` exceptions. When a task calls `stream.__anext__()` and the generator is closed, it raises `GeneratorExit` (a `BaseException`, not `Exception`), which was not being caught by the `except Exception` clause.
-
-**Solution 1** (`massgen/orchestrator.py` lines 1287-1402) - Handle GeneratorExit in `_stream_agent_execution()`:
-
-```python
-try:
-    async for chunk in chat_stream:
-        # Process chunks...
-        if chunk.type == "content":
-            yield ("content", chunk.content)
-        elif chunk.type == "tool_calls":
-            # Handle tool calls...
-except GeneratorExit:
-    # Handle case when generator is closed (e.g., user quits inspection)
-    logger.info(f"[Orchestrator] Agent {agent_id} stream closed by GeneratorExit")
-    # Properly close the chat_stream async generator
-    if hasattr(chat_stream, 'aclose'):
-        try:
-            await chat_stream.aclose()
-        except Exception as e:
-            logger.warning(f"[Orchestrator] Error closing chat_stream for {agent_id}: {e}")
-    raise  # Re-raise to propagate the GeneratorExit
-finally:
-    # Ensure chat_stream is closed even on normal completion
-    if hasattr(chat_stream, 'aclose'):
-        try:
-            await chat_stream.aclose()
-        except Exception as e:
-            logger.debug(f"[Orchestrator] Error in finally block closing chat_stream for {agent_id}: {e}")
-```
-
-**Solution 2** (`massgen/orchestrator.py` lines 1626-1641) - Handle GeneratorExit in `_get_next_chunk()`:
-
-```python
-async def _get_next_chunk(self, stream: AsyncGenerator[tuple, None]) -> tuple:
-    """Get the next chunk from an agent stream."""
-    try:
-        return await stream.__anext__()
-    except StopAsyncIteration:
-        return ("done", None)
-    except GeneratorExit:
-        # Handle generator being closed (e.g., user quits inspection)
-        # Close the stream properly to prevent "async generator ignored GeneratorExit"
-        try:
-            await stream.aclose()
-        except Exception:
-            pass  # Ignore cleanup errors
-        return ("done", None)
-    except Exception as e:
-        return ("error", str(e))
-```
-
-**Why This Works**:
-- `GeneratorExit` inherits from `BaseException`, not `Exception`, so it bypasses `except Exception` clauses
-- When a task is waiting on `stream.__anext__()` and the generator is closed externally, `GeneratorExit` is raised
-- By explicitly catching `GeneratorExit`, we can properly close the stream with `aclose()` before returning
-- This prevents the "async generator ignored GeneratorExit" error from being logged as an unhandled exception
-
-**Impact**:
-- ✅ Eliminates "Task exception was never retrieved" warnings
-- ✅ Properly cleans up resources when inspection is quit
-- ✅ Prevents resource leaks in long-running sessions
-- ✅ Maintains stability during multi-turn conversations
-- ✅ Handles generator closure at all levels of the async generator chain
-
-### Bug Fix 3: MCP Filesystem Server Crash with File Paths
+### Bug Fix: MCP Filesystem Server Crash with File Paths
 
 **Problem**: When file context paths were added (e.g., `/project/index.html`), the MCP filesystem server would crash with:
 ```
@@ -766,10 +687,6 @@ context_paths:
 - [x] All 14 tests passing
 
 ### Bug Fixes
-- [x] Fix async generator cleanup in `orchestrator.py` (_stream_agent_execution)
-- [x] Add proper `try/except/finally` block for `chat_stream` async generator
-- [x] Handle `GeneratorExit` exception when user quits inspection
-- [x] Properly close async generators with `aclose()` to prevent "Task exception was never retrieved" errors
 - [x] **Fix MCP filesystem server crash** when file paths passed as arguments
 - [x] **Filter file paths from `get_mcp_filesystem_paths()`** to only return directories
 
@@ -813,9 +730,8 @@ context_paths:
 - `massgen/backend/utils/filesystem_manager/_workspace_tools_server.py` - Deletion & diff tools
 - `massgen/backend/utils/filesystem_manager/_path_permission_manager.py` - Protected paths, file context paths, sibling file isolation, MCP server fix
 - `massgen/message_templates.py` - Workspace cleanup guidance
-- `massgen/tests/test_path_permission_manager.py` - Test coverage (14 tests)
+- `massgen/tests/test_path_permission_manager.py` - Test coverage (17 tests, enhanced file context path tests)
 - `massgen/cli.py` - Interactive protected paths prompt, file/directory support, improved error handling
-- `massgen/orchestrator.py` - Async generator cleanup bug fix
 - `massgen/backend/docs/permissions_and_context_files.md` - Updated with file context path documentation
 - `docs/dev_notes/file_deletion_and_context_files.md` - Added MCP fix and sibling isolation sections
 
@@ -824,9 +740,9 @@ context_paths:
 - Python `pathlib`, `shutil`, `filecmp`, `difflib` documentation
 
 ### Test Coverage
-- 14 tests total, all passing
+- 17 tests total, all passing
 - `test_delete_operations()` - Deletion permission validation
 - `test_permission_path_root_protection()` - Workspace root protection
 - `test_protected_paths()` - Protected paths enforcement
-- `test_file_context_paths()` - File-based context paths
+- `test_file_context_paths()` - File-based context paths with comprehensive sibling file isolation tests
 - `test_compare_tools()` - Diff tools validation

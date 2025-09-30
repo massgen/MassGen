@@ -1284,115 +1284,104 @@ class Orchestrator(ChatAgent):
 
                 logger.info(f"[Orchestrator] Agent {agent_id} starting to stream chat response...")
 
-                try:
-                    async for chunk in chat_stream:
-                        if chunk.type == "content":
-                            response_text += chunk.content
-                            # Stream agent content directly - source field handles attribution
-                            yield ("content", chunk.content)
-                            # Log received content
-                            backend_name = None
-                            if hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
-                                backend_name = agent.backend.get_provider_name()
-                            log_orchestrator_agent_message(
-                                agent_id,
-                                "RECV",
-                                {"content": chunk.content},
-                                backend_name=backend_name,
-                            )
-                        elif chunk.type in [
-                            "reasoning",
-                            "reasoning_done",
-                            "reasoning_summary",
-                            "reasoning_summary_done",
-                        ]:
-                            # Stream reasoning content as tuple format
-                            reasoning_chunk = StreamChunk(
-                                type=chunk.type,
-                                content=chunk.content,
-                                source=agent_id,
-                                reasoning_delta=getattr(chunk, "reasoning_delta", None),
-                                reasoning_text=getattr(chunk, "reasoning_text", None),
-                                reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
-                                reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
-                                item_id=getattr(chunk, "item_id", None),
-                                content_index=getattr(chunk, "content_index", None),
-                                summary_index=getattr(chunk, "summary_index", None),
-                            )
-                            yield ("reasoning", reasoning_chunk)
-                        elif chunk.type == "backend_status":
-                            pass
-                        elif chunk.type == "mcp_status":
-                            # Forward MCP status messages with proper formatting
-                            mcp_content = f"🔧 MCP: {chunk.content}"
-                            yield ("content", mcp_content)
-                        elif chunk.type == "debug":
-                            # Forward debug chunks
-                            yield ("debug", chunk.content)
-                        elif chunk.type == "tool_calls":
-                            # Use the correct tool_calls field
-                            chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
-                            tool_calls.extend(chunk_tool_calls)
-                            # Stream tool calls to show agent actions
-                            # Get backend name for logging
-                            backend_name = None
-                            if hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
-                                backend_name = agent.backend.get_provider_name()
+                async for chunk in chat_stream:
+                    if chunk.type == "content":
+                        response_text += chunk.content
+                        # Stream agent content directly - source field handles attribution
+                        yield ("content", chunk.content)
+                        # Log received content
+                        backend_name = None
+                        if hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
+                            backend_name = agent.backend.get_provider_name()
+                        log_orchestrator_agent_message(
+                            agent_id,
+                            "RECV",
+                            {"content": chunk.content},
+                            backend_name=backend_name,
+                        )
+                    elif chunk.type in [
+                        "reasoning",
+                        "reasoning_done",
+                        "reasoning_summary",
+                        "reasoning_summary_done",
+                    ]:
+                        # Stream reasoning content as tuple format
+                        reasoning_chunk = StreamChunk(
+                            type=chunk.type,
+                            content=chunk.content,
+                            source=agent_id,
+                            reasoning_delta=getattr(chunk, "reasoning_delta", None),
+                            reasoning_text=getattr(chunk, "reasoning_text", None),
+                            reasoning_summary_delta=getattr(chunk, "reasoning_summary_delta", None),
+                            reasoning_summary_text=getattr(chunk, "reasoning_summary_text", None),
+                            item_id=getattr(chunk, "item_id", None),
+                            content_index=getattr(chunk, "content_index", None),
+                            summary_index=getattr(chunk, "summary_index", None),
+                        )
+                        yield ("reasoning", reasoning_chunk)
+                    elif chunk.type == "backend_status":
+                        pass
+                    elif chunk.type == "mcp_status":
+                        # Forward MCP status messages with proper formatting
+                        mcp_content = f"🔧 MCP: {chunk.content}"
+                        yield ("content", mcp_content)
+                    elif chunk.type == "debug":
+                        # Forward debug chunks
+                        yield ("debug", chunk.content)
+                    elif chunk.type == "tool_calls":
+                        # Use the correct tool_calls field
+                        chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
+                        tool_calls.extend(chunk_tool_calls)
+                        # Stream tool calls to show agent actions
+                        # Get backend name for logging
+                        backend_name = None
+                        if hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
+                            backend_name = agent.backend.get_provider_name()
 
-                            for tool_call in chunk_tool_calls:
-                                tool_name = agent.backend.extract_tool_name(tool_call)
-                                tool_args = agent.backend.extract_tool_arguments(tool_call)
+                        for tool_call in chunk_tool_calls:
+                            tool_name = agent.backend.extract_tool_name(tool_call)
+                            tool_args = agent.backend.extract_tool_arguments(tool_call)
 
-                                if tool_name == "new_answer":
-                                    content = tool_args.get("content", "")
-                                    yield ("content", f'💡 Providing answer: "{content}"')
-                                    log_tool_call(
-                                        agent_id,
-                                        "new_answer",
-                                        {"content": content},
-                                        None,
-                                        backend_name,
-                                    )  # Full content for debug logging
-                                elif tool_name == "vote":
-                                    agent_voted_for = tool_args.get("agent_id", "")
-                                    reason = tool_args.get("reason", "")
-                                    log_tool_call(
-                                        agent_id,
-                                        "vote",
-                                        {"agent_id": agent_voted_for, "reason": reason},
-                                        None,
-                                        backend_name,
-                                    )  # Full reason for debug logging
+                            if tool_name == "new_answer":
+                                content = tool_args.get("content", "")
+                                yield ("content", f'💡 Providing answer: "{content}"')
+                                log_tool_call(
+                                    agent_id,
+                                    "new_answer",
+                                    {"content": content},
+                                    None,
+                                    backend_name,
+                                )  # Full content for debug logging
+                            elif tool_name == "vote":
+                                agent_voted_for = tool_args.get("agent_id", "")
+                                reason = tool_args.get("reason", "")
+                                log_tool_call(
+                                    agent_id,
+                                    "vote",
+                                    {"agent_id": agent_voted_for, "reason": reason},
+                                    None,
+                                    backend_name,
+                                )  # Full reason for debug logging
 
-                                    # Convert anonymous agent ID to real agent ID for display
-                                    real_agent_id = agent_voted_for
-                                    if answers:  # Only do mapping if answers exist
-                                        agent_mapping = {}
-                                        for i, real_id in enumerate(sorted(answers.keys()), 1):
-                                            agent_mapping[f"agent{i}"] = real_id
-                                        real_agent_id = agent_mapping.get(agent_voted_for, agent_voted_for)
+                                # Convert anonymous agent ID to real agent ID for display
+                                real_agent_id = agent_voted_for
+                                if answers:  # Only do mapping if answers exist
+                                    agent_mapping = {}
+                                    for i, real_id in enumerate(sorted(answers.keys()), 1):
+                                        agent_mapping[f"agent{i}"] = real_id
+                                    real_agent_id = agent_mapping.get(agent_voted_for, agent_voted_for)
 
-                                    yield (
-                                        "content",
-                                        f"🗳️ Voting for [{real_agent_id}] (options: {', '.join(sorted(answers.keys()))}) : {reason}",
-                                    )
-                                else:
-                                    yield ("content", f"🔧 Using {tool_name}")
-                                    log_tool_call(agent_id, tool_name, tool_args, None, backend_name)
-                        elif chunk.type == "error":
-                            # Stream error information to user interface
-                            error_msg = getattr(chunk, "error", str(chunk.content)) if hasattr(chunk, "error") else str(chunk.content)
-                            yield ("content", f"❌ Error: {error_msg}\n")
-                except GeneratorExit:
-                    logger.info(f"[Orchestrator] Agent {agent_id} stream closed by GeneratorExit")
-                    raise  # Re-raise to propagate the GeneratorExit naturally
-                finally:
-                    # Ensure chat_stream is closed even on normal completion
-                    if hasattr(chat_stream, "aclose"):
-                        try:
-                            await chat_stream.aclose()
-                        except Exception as e:
-                            logger.debug(f"[Orchestrator] Error in finally block closing chat_stream for {agent_id}: {e}")
+                                yield (
+                                    "content",
+                                    f"🗳️ Voting for [{real_agent_id}] (options: {', '.join(sorted(answers.keys()))}) : {reason}",
+                                )
+                            else:
+                                yield ("content", f"🔧 Using {tool_name}")
+                                log_tool_call(agent_id, tool_name, tool_args, None, backend_name)
+                    elif chunk.type == "error":
+                        # Stream error information to user interface
+                        error_msg = getattr(chunk, "error", str(chunk.content)) if hasattr(chunk, "error") else str(chunk.content)
+                        yield ("content", f"❌ Error: {error_msg}\n")
 
                 # Check for multiple vote calls before processing
                 vote_calls = [tc for tc in tool_calls if agent.backend.extract_tool_name(tc) == "vote"]
