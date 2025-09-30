@@ -1937,9 +1937,13 @@ class RichTerminalDisplay(TerminalDisplay):
         else:
             # Split content into lines and format each
             lines = self._final_presentation_content.split("\n")
-            # Show last N lines to fit in available height
-            max_lines = max(0, self.agent_panel_height * 2 - 3)  # Double height for presentation
-            display_lines = lines[-max_lines:] if len(lines) > max_lines else lines
+
+            # Calculate available lines based on terminal height minus header/footer
+            # Header: 5, Footer: 8, some buffer: 5 = 18 total reserved
+            available_height = max(10, self.terminal_size.height - 18)
+
+            # Show last N lines to fit in available space (auto-scroll to bottom)
+            display_lines = lines[-available_height:] if len(lines) > available_height else lines
 
             for line in display_lines:
                 if line.strip():
