@@ -1066,9 +1066,8 @@ class RichTerminalDisplay(TerminalDisplay):
             # Create final presentation panel
             presentation_panel = self._create_final_presentation_panel()
 
-            # Arrange layout with ONLY presentation panel (hide agent columns for full width)
+            # Arrange layout with ONLY presentation panel (hide header and agent columns for full width)
             layout.split_column(
-                Layout(header, name="header", size=5),
                 Layout(presentation_panel, name="presentation"),
                 Layout(footer, name="footer", size=8),
             )
@@ -1730,8 +1729,8 @@ class RichTerminalDisplay(TerminalDisplay):
                     elif choice == "r":
                         self.display_coordination_table()
                     elif choice == "f" and self._stored_final_presentation:
-                        # Open the full presentation file in text editor for scrolling
-                        self._open_final_presentation_in_default_text_editor()
+                        # Display the final presentation in the terminal
+                        self._redisplay_final_presentation()
                     elif choice == "q":
                         break
                     else:
@@ -3058,6 +3057,9 @@ class RichTerminalDisplay(TerminalDisplay):
 
         # Deactivate the presentation panel
         self._final_presentation_active = False
+
+        # Update footer cache to reflect completion
+        self._update_footer_cache()
 
         # Print a summary box with completion stats
         stats_text = Text()
