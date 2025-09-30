@@ -437,8 +437,9 @@ class PathPermissionManager:
         if tool_name in command_tools:
             return self._validate_command_tool(tool_name, tool_args)
 
-        # All other tools are allowed
-        return (True, None)
+        # For all other tools (including Read, Grep, Glob, list_directory, etc.),
+        # validate access to file context paths to prevent sibling file access
+        return self._validate_file_context_access(tool_name, tool_args)
 
     def _is_write_tool(self, tool_name: str) -> bool:
         """
@@ -470,6 +471,38 @@ class PathPermissionManager:
 
         return False
 
+    def _validate_file_context_access(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """
+        Validate access for file context paths (prevents sibling file access).
+
+        When a specific file is added as a context path, only that file should be accessible,
+        not other files in the same directory. This method checks all tool calls to enforce this.
+        """
+        # Extract file path from arguments
+        file_path = self._extract_file_path(tool_args)
+        if not file_path:
+            # Can't determine path - allow it (tool may not access files)
+            return (True, None)
+
+        # Resolve relative paths against workspace
+        file_path = self._resolve_path_against_workspace(file_path)
+        path = Path(file_path).resolve()
+        permission = self.get_permission(path)
+        logger.debug(f"[PathPermissionManager] Validating file context access for '{tool_name}' on path: {path} with permission: {permission}")
+
+        # If permission is None, check if in file_context_parent directory
+        if permission is None:
+            parent_paths = [mp for mp in self.managed_paths if mp.path_type == "file_context_parent"]
+            for parent_mp in parent_paths:
+                if parent_mp.contains(path):
+                    # Path is in a file context parent dir, but not the specific file
+                    return (False, f"Access denied: '{path}' is not an explicitly allowed file in this directory")
+            # Not in any managed paths - allow (likely workspace or other valid path)
+            return (True, None)
+
+        # Has explicit permission - allow
+        return (True, None)
+
     def _validate_write_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """Validate write tool access."""
         # Special handling for copy_files_batch - validate all destination paths after globbing
@@ -489,8 +522,17 @@ class PathPermissionManager:
         logger.debug(f"[PathPermissionManager] Validating write tool '{tool_name}' for path: {path} with permission: {permission}")
 
         # No permission means not in context paths (workspace paths are always allowed)
-        # We note that the filesystem MCP server will block access to paths not in its config, and we explicitly mark as read-only any paths that need to be read-only, so all else is fine.
+        # IMPORTANT: Check if this path is in a file_context_parent directory
+        # If so, access should be denied (only the specific file has access, not siblings)
         if permission is None:
+            # Check if path is within a file_context_parent directory
+            parent_paths = [mp for mp in self.managed_paths if mp.path_type == "file_context_parent"]
+            for parent_mp in parent_paths:
+                if parent_mp.contains(path):
+                    # Path is in a file context parent dir, but not the specific file
+                    # Deny access to prevent sibling file access
+                    return (False, f"Access denied: '{path}' is not an explicitly allowed file in this directory")
+            # Not in any managed paths - allow (likely workspace or other valid path)
             return (True, None)
 
         # Check write permission (permission is already set correctly based on context_write_access_enabled)
@@ -694,11 +736,17 @@ class PathPermissionManager:
         """
         Get all managed paths for MCP filesystem server configuration. Workspace path will be first.
 
+        Only returns directories, as MCP filesystem server cannot accept file paths as arguments.
+        For file context paths, the parent directory is already added with path_type="file_context_parent".
+
         Returns:
-            List of path strings to include in MCP filesystem server args
+            List of directory path strings to include in MCP filesystem server args
         """
+        # Only include directories - exclude file-type managed paths (is_file=True)
+        # The parent directory for file contexts is already added separately
         workspace_paths = [str(mp.path) for mp in self.managed_paths if mp.path_type == "workspace"]
-        out = workspace_paths + [str(managed_path.path) for managed_path in self.managed_paths if managed_path.path_type != "workspace"]
+        other_paths = [str(mp.path) for mp in self.managed_paths if mp.path_type != "workspace" and not mp.is_file]
+        out = workspace_paths + other_paths
         return out
 
     def get_permission_summary(self) -> str:

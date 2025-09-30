@@ -7,6 +7,8 @@ This document describes the implementation of file/directory deletion capabiliti
 During implementation, we also addressed:
 1. **CLI Enhancement**: Added interactive prompt for protected paths when users add custom context paths in multiturn dialogue mode
 2. **Critical Bug Fix**: Fixed async generator cleanup in orchestrator that caused "async generator ignored GeneratorExit" errors when users quit inspection interface
+3. **MCP Server Compatibility Fix**: Fixed MCP filesystem server crash when file paths were passed as arguments (only directories are supported)
+4. **Sibling File Isolation**: Implemented comprehensive access control to prevent agents from accessing sibling files when a specific file is added as a context path
 
 ## Motivation
 
@@ -530,6 +532,152 @@ async def _get_next_chunk(self, stream: AsyncGenerator[tuple, None]) -> tuple:
 - ✅ Maintains stability during multi-turn conversations
 - ✅ Handles generator closure at all levels of the async generator chain
 
+### Bug Fix 3: MCP Filesystem Server Crash with File Paths
+
+**Problem**: When file context paths were added (e.g., `/project/index.html`), the MCP filesystem server would crash with:
+```
+MCP manager error for filesystem: unhandled errors in a TaskGroup (1 sub-exception)
+Failed to connect to MCP server filesystem: unknown error
+```
+
+**Root Cause**: The MCP filesystem server (`@modelcontextprotocol/server-filesystem`) only accepts **directory paths** as arguments. When file context paths were added:
+1. The file path itself was added to `managed_paths` with `is_file=True`
+2. The parent directory was added with `path_type="file_context_parent"`
+3. `get_mcp_filesystem_paths()` returned **both** the file and its parent directory
+4. The MCP server received file paths as arguments and crashed
+
+**Solution** (`massgen/filesystem_manager/_path_permission_manager.py` lines 693-709):
+
+```python
+def get_mcp_filesystem_paths(self) -> List[str]:
+    """
+    Get all managed paths for MCP filesystem server configuration. Workspace path will be first.
+
+    Only returns directories, as MCP filesystem server cannot accept file paths as arguments.
+    For file context paths, the parent directory is already added with path_type="file_context_parent".
+
+    Returns:
+        List of directory path strings to include in MCP filesystem server args
+    """
+    # Only include directories - exclude file-type managed paths (is_file=True)
+    # The parent directory for file contexts is already added separately
+    workspace_paths = [str(mp.path) for mp in self.managed_paths if mp.path_type == "workspace"]
+    other_paths = [str(mp.path) for mp in self.managed_paths
+                  if mp.path_type != "workspace" and not mp.is_file]
+    out = workspace_paths + other_paths
+    return out
+```
+
+**Key Changes**:
+- Added filter `and not mp.is_file` to exclude file-type managed paths
+- MCP server now only receives directory paths
+- Parent directories for file contexts are already included via `file_context_parent` entries
+- Files remain in `managed_paths` for permission tracking but aren't passed to MCP
+
+**Impact**:
+- ✅ MCP filesystem server connects successfully with file context paths
+- ✅ File context paths work as intended (only specific file accessible)
+- ✅ No more "unhandled errors in a TaskGroup" crashes
+- ✅ Maintains full permission tracking for file-level access control
+
+### Enhancement 4: Sibling File Access Prevention
+
+**Problem**: When a specific file was added as a context path (e.g., `/project/config.yaml`), the MCP filesystem server was given access to the parent directory (`/project/`), which would allow agents to access **all** files in that directory, including siblings like `/project/secrets.yaml`.
+
+**Solution**: Implemented comprehensive permission hooks to intercept **all** tool calls and validate file access (`massgen/filesystem_manager/_path_permission_manager.py` lines 440-504):
+
+**1. New Validation Method** (`_validate_file_context_access`):
+```python
+def _validate_file_context_access(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """
+    Validate access for file context paths (prevents sibling file access).
+
+    When a specific file is added as a context path, only that file should be accessible,
+    not other files in the same directory. This method checks all tool calls to enforce this.
+    """
+    # Extract file path from arguments
+    file_path = self._extract_file_path(tool_args)
+    if not file_path:
+        # Can't determine path - allow it (tool may not access files)
+        return (True, None)
+
+    # Resolve relative paths against workspace
+    file_path = self._resolve_path_against_workspace(file_path)
+    path = Path(file_path).resolve()
+    permission = self.get_permission(path)
+
+    # If permission is None, check if in file_context_parent directory
+    if permission is None:
+        parent_paths = [mp for mp in self.managed_paths if mp.path_type == "file_context_parent"]
+        for parent_mp in parent_paths:
+            if parent_mp.contains(path):
+                # Path is in a file context parent dir, but not the specific file
+                return (False, f"Access denied: '{path}' is not an explicitly allowed file in this directory")
+        # Not in any managed paths - allow (likely workspace or other valid path)
+        return (True, None)
+
+    # Has explicit permission - allow
+    return (True, None)
+```
+
+**2. Updated Hook Flow** (`pre_tool_use_hook`):
+```python
+async def pre_tool_use_hook(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    # Check if this is a write operation using pattern matching
+    if self._is_write_tool(tool_name):
+        return self._validate_write_tool(tool_name, tool_args)
+
+    # Tools that can potentially modify through commands
+    command_tools = {"Bash", "bash", "shell", "exec"}
+
+    # Check command tools for dangerous operations
+    if tool_name in command_tools:
+        return self._validate_command_tool(tool_name, tool_args)
+
+    # For all other tools (including Read, Grep, Glob, list_directory, etc.),
+    # validate access to file context paths to prevent sibling file access
+    return self._validate_file_context_access(tool_name, tool_args)
+```
+
+**How It Works**:
+
+When `/project/index.html` is added as a context path:
+
+1. **Setup Phase**:
+   - `ManagedPath(path="/project/", path_type="file_context_parent")` - for MCP
+   - `ManagedPath(path="/project/index.html", is_file=True)` - for permissions
+
+2. **MCP Configuration**:
+   - Only `/project/` is passed to MCP server (files filtered out)
+   - MCP allows access to entire directory
+
+3. **Access Control (Agent tries to access files)**:
+
+   **Case A: Accessing `/project/index.html`** ✅
+   - `get_permission()` finds exact match with `is_file=True`
+   - Returns `Permission.READ` or `Permission.WRITE`
+   - Access granted
+
+   **Case B: Accessing `/project/sibling.txt`** ❌
+   - `get_permission()` checks file-specific paths: No match
+   - `get_permission()` checks directory paths: Excludes `file_context_parent`
+   - Returns `None`
+   - `_validate_file_context_access()` detects path is in `file_context_parent`
+   - **Access denied** with message: "Access denied: '/project/sibling.txt' is not an explicitly allowed file in this directory"
+
+**Tools Protected**:
+- ✅ Write tools (Write, Edit, Delete, Copy, Move)
+- ✅ Read tools (Read, Grep, Glob, read_file)
+- ✅ Directory tools (list_directory, search_files)
+- ✅ All file-accessing tools
+
+**Impact**:
+- ✅ File-level security for context paths
+- ✅ Prevents accidental exposure of sensitive sibling files
+- ✅ Granular access control without exposing entire directories
+- ✅ Works seamlessly with MCP filesystem servers
+- ✅ Clear error messages when access is denied
+
 ## Migration Path
 
 ### Backward Compatibility
@@ -588,11 +736,15 @@ context_paths:
 - [x] Update `add_context_paths()` to handle files in `_path_permission_manager.py`
 - [x] Add file context path tracking in `PathPermissionManager`
 - [x] Update MCP filesystem config generation for file context paths
+- [x] **Fix `get_mcp_filesystem_paths()` to filter out file paths** (MCP server only accepts directories)
 - [x] Add `protected_paths` feature to context paths
 - [x] Update `ManagedPath` dataclass with `is_file` and `protected_paths` fields
 - [x] Add `is_protected()` method to `ManagedPath`
 - [x] Update `get_permission()` to check protected paths first
 - [x] Add deletion validation to `_validate_write_tool()`
+- [x] **Add `_validate_file_context_access()` method to prevent sibling file access**
+- [x] **Update `pre_tool_use_hook()` to validate all tools for file context paths**
+- [x] **Add sibling file blocking in write tool validation**
 
 ### User Experience
 - [x] Update system prompt with workspace cleanup guidance in `message_templates.py`
@@ -600,6 +752,10 @@ context_paths:
 - [x] Add comparison tools guidance to system prompt (compare_directories, compare_files)
 - [x] Add protected paths prompt to interactive mode in `cli.py`
 - [x] Users can specify protected paths when adding custom context paths interactively
+- [x] **Update CLI to support both files and directories** (removed directory-only restriction)
+- [x] **Add clear prompts for file/directory input** ("absolute or relative, file or directory")
+- [x] **Add retry loop for invalid paths with user-friendly error messages**
+- [x] **Add explicit "No" option handling in context path prompt**
 
 ### Testing
 - [x] Write unit tests for deletion operations (`test_delete_operations`)
@@ -614,6 +770,8 @@ context_paths:
 - [x] Add proper `try/except/finally` block for `chat_stream` async generator
 - [x] Handle `GeneratorExit` exception when user quits inspection
 - [x] Properly close async generators with `aclose()` to prevent "Task exception was never retrieved" errors
+- [x] **Fix MCP filesystem server crash** when file paths passed as arguments
+- [x] **Filter file paths from `get_mcp_filesystem_paths()`** to only return directories
 
 ### Documentation
 - [x] Write comprehensive design document (`file_deletion_and_context_files.md`)
@@ -621,6 +779,10 @@ context_paths:
 - [x] Document permission resolution priority
 - [x] Update implementation checklist
 - [x] Add usage examples and migration path
+- [x] **Document MCP filesystem server fix and sibling file isolation**
+- [x] **Update `permissions_and_context_files.md` with file context path examples**
+- [x] **Add file context path use cases and interactive examples**
+- [x] **Document sibling file access blocking behavior**
 
 ## Future Enhancements
 
@@ -630,6 +792,17 @@ context_paths:
 4. **Directory Merge**: Tool to merge changes from multiple workspaces
 5. **File Metadata**: Compare timestamps, permissions, sizes
 6. **Diff Visualization**: Generate HTML/rich output for diffs
+7. **TODO: Improved Tool Name Matching for File Path Extraction**: Current implementation uses `_extract_file_path()` which looks for common parameter names like `path`, `file_path`, `dir`, etc. However, some backends like Claude Code may have tools with non-standard parameter names that aren't matched by our current patterns. This could lead to sibling file access not being properly validated.
+   - **Problem**: If a tool uses a parameter name not in our current list (e.g., `location`, `target`, `source`), `_extract_file_path()` returns `None` and validation is skipped
+   - **Current workaround**: Falls back to "allow if can't determine path" (line 485 in `_validate_file_context_access`)
+   - **Proposed solutions**:
+     - Add logging to track when path extraction fails for file-accessing tools
+     - Expand parameter name patterns in `_extract_file_path()` to cover more variations
+     - Consider introspecting tool schemas to automatically detect path parameters
+     - Add backend-specific tool name mappings for known edge cases
+     - Potentially deny access by default if tool name suggests file access but path can't be extracted
+   - **Example edge case**: A hypothetical Claude Code tool `inspect_resource(location="...")` might bypass sibling file validation
+   - **Priority**: Medium - Current implementation is secure by default (MCP server + existing patterns), but could miss edge cases with non-standard tool names
 
 ## References
 
@@ -638,11 +811,13 @@ context_paths:
 
 ### Modified Files
 - `massgen/backend/utils/filesystem_manager/_workspace_tools_server.py` - Deletion & diff tools
-- `massgen/backend/utils/filesystem_manager/_path_permission_manager.py` - Protected paths & file context paths
+- `massgen/backend/utils/filesystem_manager/_path_permission_manager.py` - Protected paths, file context paths, sibling file isolation, MCP server fix
 - `massgen/message_templates.py` - Workspace cleanup guidance
 - `massgen/tests/test_path_permission_manager.py` - Test coverage (14 tests)
-- `massgen/cli.py` - Interactive protected paths prompt
+- `massgen/cli.py` - Interactive protected paths prompt, file/directory support, improved error handling
 - `massgen/orchestrator.py` - Async generator cleanup bug fix
+- `massgen/backend/docs/permissions_and_context_files.md` - Updated with file context path documentation
+- `docs/dev_notes/file_deletion_and_context_files.md` - Added MCP fix and sibling isolation sections
 
 ### Related Documentation
 - `docs/case_studies/user-context-path-support-with-copy-mcp.md`

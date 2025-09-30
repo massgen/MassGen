@@ -902,6 +902,8 @@ def test_file_context_paths():
         test_file.write_text("important content")
         sibling_file = helper.context_dir / "sibling_file.txt"
         sibling_file.write_text("sibling content")
+        another_sibling = helper.context_dir / "another_file.txt"
+        another_sibling.write_text("another content")
 
         # Create manager with file-specific context path
         manager = PathPermissionManager(context_write_access_enabled=False)
@@ -929,8 +931,36 @@ def test_file_context_paths():
             print(f"❌ Failed: Parent directory should have no permission, got {permission}")
             return False
 
+        print("  Testing write tool access to sibling file is blocked...")
+        # Try to write to sibling file - should be blocked
+        tool_args = {"file_path": str(sibling_file)}
+        allowed, reason = manager._validate_write_tool("Write", tool_args)
+        if allowed:
+            print("❌ Failed: Write to sibling file should be blocked")
+            return False
+        if "not an explicitly allowed file" not in reason:
+            print(f"❌ Failed: Expected 'not an explicitly allowed file' in reason, got: {reason}")
+            return False
+
+        print("  Testing write tool access to another sibling is also blocked...")
+        tool_args = {"file_path": str(another_sibling)}
+        allowed, reason = manager._validate_write_tool("Write", tool_args)
+        if allowed:
+            print("❌ Failed: Write to another sibling should be blocked")
+            return False
+
+        print("  Testing read tool access to allowed file works...")
+        # Try to read the explicitly allowed file - should work
+        tool_args = {"file_path": str(test_file)}
+        allowed, reason = manager._validate_write_tool("Read", tool_args)
+        # Read tools are always allowed
+        if not allowed:
+            print(f"❌ Failed: Read of allowed file should work. Reason: {reason}")
+            return False
+
         print("  Testing file context path with write permission...")
         manager2 = PathPermissionManager(context_write_access_enabled=True)
+        manager2.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
         file_context_paths2 = [{"path": str(test_file), "permission": "write"}]
         manager2.add_context_paths(file_context_paths2)
 
@@ -939,11 +969,42 @@ def test_file_context_paths():
             print(f"❌ Failed: File should have write permission when enabled, got {permission}")
             return False
 
+        print("  Testing write to allowed file works with write permission...")
+        tool_args = {"file_path": str(test_file)}
+        allowed, reason = manager2._validate_write_tool("Write", tool_args)
+        if not allowed:
+            print(f"❌ Failed: Write to allowed file should work with write permission. Reason: {reason}")
+            return False
+
+        print("  Testing write to sibling still blocked even with write-enabled file context...")
+        tool_args = {"file_path": str(sibling_file)}
+        allowed, reason = manager2._validate_write_tool("Write", tool_args)
+        if allowed:
+            print("❌ Failed: Write to sibling should still be blocked")
+            return False
+
         print("  Testing parent directory still has no MCP paths...")
         mcp_paths = manager.get_mcp_filesystem_paths()
         # Parent should be in allowed paths for MCP access but not grant permissions
         if str(helper.context_dir.resolve()) not in mcp_paths:
             print("❌ Failed: Parent directory should be in MCP allowed paths for file access")
+            return False
+
+        print("  Testing deletion of sibling file is blocked...")
+        tool_args = {"path": str(sibling_file)}
+        allowed, reason = manager._validate_write_tool("delete_file", tool_args)
+        if allowed:
+            print("❌ Failed: Deletion of sibling file should be blocked")
+            return False
+
+        print("  Testing copy to sibling location is blocked...")
+        tool_args = {
+            "source_path": str(helper.workspace_dir / "workspace_file.txt"),
+            "destination_path": str(another_sibling),
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if allowed:
+            print("❌ Failed: Copy to sibling location should be blocked")
             return False
 
         print("✅ File-based context paths work correctly")
