@@ -1,42 +1,73 @@
-# MassGen v0.0.26 Roadmap
+# MassGen v0.0.27 Roadmap
 
 ## Overview
 
-Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integration of v0.0.25 by focusing on multimodal capabilities, additional backend integrations, and finishing core refactoring work. Key enhancements include:
+Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing on coding agent capabilities, multimodal support, and finishing core refactoring work. Key enhancements include:
 
+- **Coding Agent** (Required): 👨‍💻 Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
 - **Multimodal Support** (Required): 🖼️ Complete implementation of image, audio, and video processing capabilities
 - **Finish Refactoring Various Aspects of MassGen** (Required): 🏗️ Complete orchestrator and messaging system refactoring for better maintainability
 - **Additional Agent Backends from Other Frameworks** (Optional): 🔗 Integration with AG2, LangChain, and other agent frameworks
-- **Coding Agent** (Optional): 👨‍💻 Specialized agent for code generation, debugging, and refactoring tasks
 
 ## Key Technical Priorities
 
-1. **Multimodal Support** (REQUIRED): Complete image, audio, and video processing capabilities
-2. **Finish Refactoring Various Aspects of MassGen** (REQUIRED): Complete orchestrator and messaging system refactoring
-3. **Additional Agent Backends from Other Frameworks** (OPTIONAL): Integration with AG2, LangChain, and other frameworks
-4. **Coding Agent** (OPTIONAL): Specialized coding agent implementation
+1. **Coding Agent** (REQUIRED): Enhanced system prompts, multi-turn sessions, workspace visibility, and consolidated directory structure
+2. **Multimodal Support** (REQUIRED): Complete image, audio, and video processing capabilities
+3. **Finish Refactoring Various Aspects of MassGen** (REQUIRED): Complete orchestrator and messaging system refactoring
+4. **Additional Agent Backends from Other Frameworks** (OPTIONAL): Integration with AG2, LangChain, and other frameworks
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Multimodal Support (REQUIRED)
+### 🎯 Milestone 1: Coding Agent (REQUIRED)
+
+**Goal**: Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
+
+#### 1.1 Enhanced System Prompts for Coding (REQUIRED)
+- [ ] Design enhanced system prompts encouraging more iterations (Issue #224)
+- [ ] Implement coding-specific voting prompts focused on code quality
+- [ ] Add iteration encouragement messaging for coding tasks
+- [ ] Create prompts emphasizing independent exploration over convergence
+- [ ] Test prompt effectiveness on coding task diversity
+
+#### 1.2 Enhanced Multi-turn Conversation Support (REQUIRED)
+- [ ] Create `CodingSessionManager` for specialized coding conversation history management
+- [ ] Enhance turn-based context preparation with code-specific context
+- [ ] Implement path normalization for multi-turn references
+- [ ] Design interactive multi-turn CLI commands for coding tasks (Issue #231)
+
+
+#### 1.3 Workspace Logging & Visibility (REQUIRED)
+- [ ] Implement `WorkspaceDiffLogger` for iteration comparison
+- [ ] Add automatic workspace diff generation between iterations
+- [ ] Create cross-agent workspace comparison logging
+- [ ] Add similarity scoring to detect convergence vs diversity
+- [ ] Integrate diff logging with orchestrator workflow
+
+#### 1.4 Enhanced `.massgen/` Directory Management (REQUIRED)
+- [ ] Implement `MassGenProjectManager` for advanced directory management
+- [ ] Add automatic `.gitignore` creation for `.massgen/`
+- [ ] Create cleanup utilities for old session data
+
+
+### 🎯 Milestone 2: Multimodal Support (REQUIRED)
 
 **Goal**: Complete implementation of image, audio, and video processing capabilities
 
-#### 1.1 Multimodal Message Architecture (REQUIRED)
+#### 2.1 Multimodal Message Architecture (REQUIRED)
 - [ ] Design unified message format supporting text, images, audio, and video
 - [ ] Implement stream chunks class for different media types
 - [ ] Create serialization/deserialization for multimodal content
 - [ ] Add support for media file streaming and chunking
 - [ ] Design media metadata and content type handling
 
-#### 1.2 Backend Multimodal Integration (REQUIRED)
+#### 2.2 Backend Multimodal Integration (REQUIRED)
 - [ ] Extend existing backends (Claude, Gemini, OpenAI) with multimodal support
 - [ ] Implement vision model support for image processing
 - [ ] Add audio processing capabilities where supported
 - [ ] Create multimodal tool integration framework
 - [ ] Test multimodal capabilities across all backends
 
-#### 1.3 Frontend and UI Multimodal Support (REQUIRED)
+#### 2.3 Frontend and UI Multimodal Support (REQUIRED)
 - [ ] Update CLI to handle multimodal inputs and outputs
 - [ ] Implement media file upload and processing
 - [ ] Add media preview and display capabilities
@@ -44,25 +75,25 @@ Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integrat
 - [ ] Add configuration options for media processing settings
 
 
-### 🎯 Milestone 2: Finish Refactoring Various Aspects of MassGen (REQUIRED)
+### 🎯 Milestone 3: Finish Refactoring Various Aspects of MassGen (REQUIRED)
 
 **Goal**: Complete orchestrator and messaging system refactoring for better maintainability and multimodal support
 
-#### 2.1 Orchestrator Refactoring (REQUIRED)
+#### 3.1 Orchestrator Refactoring (REQUIRED)
 - [ ] Extract coordination logic into separate modules
 - [ ] Simplify agent communication flow and state management
 - [ ] Remove duplicated code and consolidate utility functions
 - [ ] Improve error handling and recovery mechanisms
 - [ ] Add comprehensive unit tests for orchestrator components
 
-#### 2.2 Messaging System Refactoring (REQUIRED)
+#### 3.2 Messaging System Refactoring (REQUIRED)
 - [ ] Extract messaging logic from backend implementations
 - [ ] Implement unified stream chunks class for all message types
 - [ ] Create abstraction layer separating messaging from backends
 - [ ] Add support for multimodal message routing and processing
 - [ ] Implement efficient message serialization and caching
 
-#### 2.3 Performance and Testing (REQUIRED)
+#### 3.3 Performance and Testing (REQUIRED)
 - [ ] Optimize agent coordination and message passing performance
 - [ ] Add comprehensive integration tests for refactored components
 - [ ] Create performance benchmarks and profiling tools
@@ -70,71 +101,52 @@ Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integrat
 - [ ] Ensure backward compatibility with existing configurations
 
 
-### 🎯 Milestone 3: Additional Agent Backends from Other Frameworks (OPTIONAL)
+### 🎯 Milestone 4: Additional Agent Backends from Other Frameworks (OPTIONAL)
 
 **Goal**: Integration with AG2, LangChain, and other agent frameworks
 
-#### 3.1 Framework Analysis and Design (OPTIONAL)
+#### 4.1 Framework Analysis and Design (OPTIONAL)
 - [ ] Research AG2, LangChain, CrewAI, and AutoGen integration patterns
 - [ ] Design unified adapter interface for external frameworks
 - [ ] Analyze compatibility requirements and limitations
 - [ ] Plan migration path for framework-specific features
 - [ ] Document integration architecture and patterns
 
-#### 3.2 Framework Adapters Implementation (OPTIONAL)
+#### 4.2 Framework Adapters Implementation (OPTIONAL)
 - [ ] Implement AG2 agent adapter with conversation support
 - [ ] Create LangChain agent wrapper with tool integration
 - [ ] Add CrewAI multi-agent coordination adapter
 - [ ] Implement AutoGen conversation flow integration
 - [ ] Add framework-specific configuration management
 
-#### 3.3 Integration and Testing (OPTIONAL)
+#### 4.3 Integration and Testing (OPTIONAL)
 - [ ] Create mixed-framework multi-agent configurations
 - [ ] Add comprehensive testing for framework adapters
 - [ ] Implement framework-specific tool and capability mapping
 - [ ] Create documentation and examples for each framework
 - [ ] Add performance benchmarking for framework adapters
 
-
-### 🎯 Milestone 4: Coding Agent (OPTIONAL)
-
-**Goal**: Specialized agent for code generation, debugging, and refactoring tasks
-
-#### 4.1 Coding Agent Architecture (OPTIONAL)
-- [ ] Design specialized coding agent with enhanced programming capabilities
-- [ ] Implement code analysis and understanding tools
-- [ ] Add support for multiple programming languages and frameworks
-- [ ] Create code execution and testing environment integration
-- [ ] Design code review and quality assessment capabilities
-
-#### 4.2 Advanced Coding Features (OPTIONAL)
-- [ ] Implement intelligent code completion and generation
-- [ ] Add automated debugging and error resolution
-- [ ] Create code refactoring and optimization suggestions
-- [ ] Implement documentation generation capabilities
-- [ ] Add integration with popular IDEs and development tools
-
-#### 4.3 Integration and Validation (OPTIONAL)
-- [ ] Integrate coding agent with existing multi-agent workflows
-- [ ] Add comprehensive testing for code generation accuracy
-- [ ] Create coding-specific configuration templates and examples
-- [ ] Implement code quality metrics and validation
-- [ ] Add documentation and tutorials for coding agent usage
-
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
 
-- [ ] Complete multimodal support for images, audio, and video
-- [ ] Unified messaging system with stream chunks class
-- [ ] Refactored orchestrator with improved maintainability and performance
-- [ ] Backward compatibility with all existing v0.0.25 configurations
-- [ ] Multimodal conversation history and context management
+**Coding Agent:**
+- [ ] Enhanced system prompts encouraging more iterations
+- [ ] Specialized `CodingSessionManager` for coding workflows
+- [ ] Workspace diff logging with similarity scoring
+- [ ] Advanced `.massgen/` directory management utilities
+
+**Multimodal & Infrastructure:**
+- [ ] Complete multimodal support (images, audio, video)
+- [ ] Refactored orchestrator and messaging system
+- [ ] Backward compatibility with v0.0.26 configurations
 
 ### Functional Requirements (OPTIONAL)
 - [ ] Integration with at least two external agent frameworks (AG2, LangChain)
-- [ ] Functional coding agent with code generation and debugging capabilities
 - [ ] Framework adapter system for external agent integration
+- [ ] Docker-based overlay workspaces for advanced isolation (Future)
+- [ ] Drop-in CLI usage with auto-detection (Future)
+- [ ] Large-scale task decomposition (Future)
 
 ### Performance Requirements (REQUIRED)
 - [ ] No performance degradation from orchestrator and messaging refactoring
