@@ -215,3 +215,5 @@ snapshots*/
 temp_workspaces*/
 workspace*/
 sessions/
+.claude/
+CLAUDE.md

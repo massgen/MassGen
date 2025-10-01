@@ -810,7 +810,7 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
         print("\n❓ Add current directory as context path?", flush=True)
         print(f"   {cwd}", flush=True)
         try:
-            response = input("   [Y]es (default) / [N]o / [C]ustom path: ").strip().lower()
+            response = input("   [Y]es (default) / [P]rotected / [N]o / [C]ustom path: ").strip().lower()
 
             if response in ["y", "yes", ""]:
                 # Add CWD with write permission
@@ -819,21 +819,86 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                 orchestrator_cfg["context_paths"].append({"path": cwd_str, "permission": "write"})
                 print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
                 return True
+            elif response in ["p", "protected"]:
+                # Add CWD with write permission and protected paths
+                protected_paths = []
+                print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                while True:
+                    protected_input = input("     → ").strip()
+                    if not protected_input:
+                        break
+                    protected_paths.append(protected_input)
+
+                if "context_paths" not in orchestrator_cfg:
+                    orchestrator_cfg["context_paths"] = []
+
+                context_config = {"path": cwd_str, "permission": "write"}
+                if protected_paths:
+                    context_config["protected_paths"] = protected_paths
+
+                orchestrator_cfg["context_paths"].append(context_config)
+                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                if protected_paths:
+                    for protected in protected_paths:
+                        print(f"     🔒 {protected}", flush=True)
+                return True
+            elif response in ["n", "no"]:
+                # User explicitly declined
+                return False
             elif response in ["c", "custom"]:
-                custom_path = input("   Enter path: ").strip()
-                if custom_path:
+                # Loop until valid path or user cancels
+                while True:
+                    custom_path = input("   Enter path (absolute or relative, file or directory): ").strip()
+                    if not custom_path:
+                        print(f"   {BRIGHT_YELLOW}⚠ Cancelled{RESET}", flush=True)
+                        return False
+
+                    # Resolve to absolute path
                     abs_path = str(Path(custom_path).resolve())
-                    if Path(abs_path).exists():
-                        permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
-                        if permission not in ["read", "write"]:
-                            permission = "write"
-                        if "context_paths" not in orchestrator_cfg:
-                            orchestrator_cfg["context_paths"] = []
-                        orchestrator_cfg["context_paths"].append({"path": abs_path, "permission": permission})
-                        print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
-                        return True
-                    else:
+
+                    # Check if path exists
+                    if not Path(abs_path).exists():
                         print(f"   {BRIGHT_RED}✗ Path does not exist: {abs_path}{RESET}", flush=True)
+                        retry = input("   Try again? [Y/n]: ").strip().lower()
+                        if retry in ["n", "no"]:
+                            return False
+                        continue
+
+                    # Valid path (file or directory), ask for permission
+                    permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
+                    if permission not in ["read", "write"]:
+                        permission = "write"
+
+                    # Ask about protected paths if write permission
+                    protected_paths = []
+                    if permission == "write":
+                        add_protected = input("   Add protected paths (files/dirs immune from modification)? [y/N]: ").strip().lower()
+                        if add_protected in ["y", "yes"]:
+                            print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                            while True:
+                                protected_input = input("     → ").strip()
+                                if not protected_input:
+                                    break
+                                protected_paths.append(protected_input)
+
+                    if "context_paths" not in orchestrator_cfg:
+                        orchestrator_cfg["context_paths"] = []
+
+                    context_config = {"path": abs_path, "permission": permission}
+                    if protected_paths:
+                        context_config["protected_paths"] = protected_paths
+
+                    orchestrator_cfg["context_paths"].append(context_config)
+                    print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
+                    if protected_paths:
+                        for protected in protected_paths:
+                            print(f"     🔒 {protected}", flush=True)
+                    return True
+            else:
+                # Invalid response - clarify options
+                print(f"   {BRIGHT_RED}✗ Invalid option: '{response}'{RESET}", flush=True)
+                print(f"   {BRIGHT_YELLOW}Please choose: y/yes, p/protected, n/no, or c/custom{RESET}", flush=True)
+                return False
         except (KeyboardInterrupt, EOFError):
             print()  # New line after Ctrl+C
             return False

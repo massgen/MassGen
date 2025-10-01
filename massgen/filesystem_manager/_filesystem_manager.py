@@ -20,10 +20,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import massgen.backend.utils.filesystem_manager._workspace_copy_server as wc_module
-
-from ....logger_config import get_log_session_dir, logger
-from ....mcp_tools.client import HookType
+from ..logger_config import get_log_session_dir, logger
+from ..mcp_tools.client import HookType
+from . import _workspace_tools_server as wc_module
 from ._base import Permission
 from ._path_permission_manager import PathPermissionManager
 
@@ -179,18 +178,18 @@ class FilesystemManager:
 
         return config
 
-    def get_workspace_copy_mcp_config(self) -> Dict[str, Any]:
+    def get_workspace_tools_mcp_config(self) -> Dict[str, Any]:
         """
-        Generate workspace copy MCP server configuration.
+        Generate workspace tools MCP server configuration.
 
         Returns:
-            Dictionary with MCP server configuration for workspace copying
+            Dictionary with MCP server configuration for workspace tools (copy, delete, compare)
         """
         # Get context paths using the existing method
         context_paths = self.path_permission_manager.get_context_paths()
         ",".join([cp["path"] for cp in context_paths])
 
-        # Get absolute path to the workspace copy server script
+        # Get absolute path to the workspace tools server script
         script_path = Path(wc_module.__file__).resolve()
 
         # Pass allowed paths via environment variable to avoid fastmcp argument parsing issues
@@ -200,7 +199,7 @@ class FilesystemManager:
         }
 
         config = {
-            "name": "workspace_copy",
+            "name": "workspace_tools",
             "type": "stdio",
             "command": "fastmcp",
             "args": ["run", f"{script_path}:create_server"] + ["--", "--allowed-paths"] + paths,
@@ -212,7 +211,7 @@ class FilesystemManager:
 
     def inject_filesystem_mcp(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Inject filesystem and workspace copy MCP servers into backend configuration.
+        Inject filesystem and workspace tools MCP servers into backend configuration.
 
         Args:
             backend_config: Original backend configuration
@@ -249,11 +248,11 @@ class FilesystemManager:
             else:
                 logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom filesystem MCP server already present")
 
-            # Add workspace copy server if missing
-            if "workspace_copy" not in existing_names:
-                mcp_servers.append(self.get_workspace_copy_mcp_config())
+            # Add workspace tools server if missing
+            if "workspace_tools" not in existing_names:
+                mcp_servers.append(self.get_workspace_tools_mcp_config())
             else:
-                logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom workspace_copy MCP server already present")
+                logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom workspace_tools MCP server already present")
 
         except Exception as e:
             logger.warning(f"[FilesystemManager.inject_filesystem_mcp] Error checking existing MCP servers: {e}")
