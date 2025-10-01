@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.25 Features](#-latest-features-v0025)
+- [v0.0.26 Features](#-latest-features-v0026)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.25](#recent-achievements-v0025)
-  - [v0.0.3 - v0.0.24](#previous-achievements-v003---v0024)
+  - [v0.0.26](#recent-achievements-v0026)
+  - [v0.0.3 - v0.0.25](#previous-achievements-v003---v0025)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.26 Roadmap](#v0026-roadmap)
+- [v0.0.27 Roadmap](#v0027-roadmap)
 </details>
 
 <details open>
@@ -129,88 +129,29 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.25)
+## 🆕 Latest Features (v0.0.26)
 
-### Quick Start: Running Multi-Turn MassGen
+**What's New in v0.0.26:**
+- **File Deletion and Workspace Management** - New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison
+- **Protected Paths Feature** - Protect specific files within write-permitted directories, allowing agents to read but not modify designated reference files
+- **File-Based Context Paths** - Grant access to individual files instead of entire directories for more precise permission control
 
-#### 1. Install MassGen Globally
-
+**Try v0.0.26 Features Now:**
 ```bash
-# Clone the repository
-git clone https://github.com/Leezekun/MassGen.git
-cd MassGen
+# Protected paths - keep reference files safe while allowing modifications
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
+  "Review the HTML and CSS files, then improve the styling"
 
-# Install MassGen as a global tool
-uv tool install -e .
+# File-based context paths - grant access to specific files
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml \
+  "Analyze the CSS file and make modern improvements"
 ```
 
-#### 2. Run Multi-Turn in Any Directory
+→ [See all release examples](massgen/configs/README.md#release-history--examples)
 
-```bash
-# Create and navigate to your project directory
-mkdir testing
-cd testing
-
-# Run MassGen with multi-turn filesystem support
-uv tool run massgen --config tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml
-
-# You'll be prompted to add the current directory as a context path
-📂 Context Paths:
-   No context paths configured
-
-❓ Add current directory as context path?
-   /Users/user/testing
-   [Y]es (default) / [N]o / [C]ustom path: [Enter]
-
-✓ Added /Users/user/testing (write)
-
-# Now you can have multi-turn conversations
-User: "Create a simple Express.js API with authentication"
-Assistant: [Creates API files in /Users/user/testing/]
-
-User: "Add user profile management to the API"
-Assistant: [Builds upon the existing API, referencing previous work]
-
-User: "Add password reset functionality"
-Assistant: [Further extends the API based on all previous turns]
-```
-
-### 3. What You Get
-
-**File Structure:**
-```
-testing/
-├── .massgen/                          # All MassGen state
-│   ├── sessions/session_20250928_143022/
-│   │   ├── SESSION_SUMMARY.txt        # Human-readable conversation summary
-│   │   ├── turn_1/
-│   │   │   ├── workspace/             # Final output from turn 1
-│   │   │   ├── answer.txt             # Agent's response with corrected paths
-│   │   │   └── metadata.json          # Turn metadata (timestamp, winning agent)
-│   │   ├── turn_2/
-│   │   │   └── ...                    # Same structure for turn 2
-│   │   └── turn_3/
-│   │       └── ...                    # Same structure for turn 3
-│   ├── workspaces/                    # Agent working areas during execution
-│   │   ├── workspace1/                # Agent 1's workspace
-│   │   ├── workspace2/                # Agent 2's workspace
-│   │   └── workspace3/                # Agent 3's workspace
-│   ├── snapshots/                     # Latest snapshots for context sharing
-│   │   ├── agent_a/                   # Latest work from agent A
-│   │   ├── agent_b/                   # Latest work from agent B
-│   │   └── agent_c/                   # Latest work from agent C
-│   ├── temp_workspaces/               # Temporary workspace for agent coordination
-│   │   ├── agent1/                    # Previous turn results for reference
-│   │   ├── agent2/                    # (Anonymous IDs for context sharing)
-│   │   └── agent3/
-│   └── massgen_logs/log_20250928_143022/  # Debug logs
-│       ├── turn_1/massgen_debug.log
-│       ├── turn_2/massgen_debug.log
-│       └── turn_3/massgen_debug.log
-└── ...
-```
 ---
-
 
 ## 🏗️ System Design
 
@@ -944,35 +885,42 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.25)
+### Recent Achievements (v0.0.26)
 
-**🎉 Released: September 29, 2025**
+**🎉 Released: October 1, 2025**
 
-Version 0.0.25 introduces **Multi-Turn Filesystem Support** and **SGLang Backend Integration**, enabling persistent conversation context and unified inference backend capabilities:
+Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protected Paths**, and **File-Based Context Paths**, enabling more precise control over agent file access:
 
-#### Multi-Turn Filesystem Support
-- **Persistent Context**: Maintain file context and modifications across conversation turns with automatic session management
-- **Smart Workspace Management**: Automatic `.massgen` directory structure for organized project state
-- **Session Persistence**: Workspace snapshots and restoration between turns for seamless continuity
-- **Easy Setup**: Ready-to-use multi-turn configurations for various agent combinations
+#### File Deletion and Workspace Management
+- **New MCP Tools**: `delete_file`, `delete_files_batch` for workspace cleanup
+- **Comparison Tools**: `compare_directories`, `compare_files` for file diffing
+- **Consolidated Tools**: Unified `_workspace_tools_server.py` replacing previous implementations
 
-#### SGLang Backend Integration
-- **Unified Inference**: Single backend supporting both vLLM and SGLang servers with auto-detection
-- **Advanced Features**: SGLang-specific parameters like `separate_reasoning` for guided generation
-- **Dual Server Support**: Configure mixed deployments with vLLM (port 8000) and SGLang (port 30000)
+#### Protected Paths Feature
+- **Selective Protection**: Protect specific files within write-permitted directories
+- **Read-Only References**: Agents can read but not modify protected files
+- **Fine-Grained Control**: Shield important files while allowing changes to others
 
-#### Enhanced Path Permission System
-- **Smart Exclusions**: Default patterns for `.git`, `node_modules`, `.venv`, and other common directories
-- **Better Validation**: Improved path handling with `will_be_writable` flag for permission state tracking
+#### File-Based Context Paths
+- **Individual File Access**: Context paths can now be individual files, not just directories
+- **Flexible Permissions**: Grant read/write access to specific files without directory-wide permissions
+- **Better Security**: More precise control over what agents can access
 
-#### System Prompt & Backend Improvements
-- **Multi-Turn Guidance**: Enhanced system prompts with better conversation context awareness
-- **Backend Fixes**: Resolved Gemini MCP connection errors and Grok backend issues
-- **Import Fixes**: Corrected configuration and import problems across backends
-- **Code Quality**: Fixed code generation prompts for consistency
+#### Code Organization
+- **Path Permission Manager**: Enhanced handling of edge cases and nested path scenarios
+- **CLI Improvements**: Interactive prompts for context path configuration
 
+#### Documentation, Configurations and Resources
+- **Design Documentation**: New `file_deletion_and_context_files.md` documenting file deletion and context file features
+- **Release Workflow**: Added `release_example_checklist.md` for standardized release process
+- **Configuration Examples**: `gemini_gpt5nano_protected_paths.yaml`, `gemini_gpt5nano_file_context_path.yaml`, `grok4_gpt5_gemini_filesystem.yaml`
+- **Example Resources**: Bob Dylan website and Beatles HTML examples in `v0.0.26-example/`
 
-### Previous Achievements (v0.0.3 - v0.0.24)
+### Previous Achievements (v0.0.3 - v0.0.25)
+
+✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
+
+✅ **SGLang Backend Integration (v0.0.25)**: Unified vLLM/SGLang backend with auto-detection, support for SGLang-specific parameters like `separate_reasoning`, and dual server support for mixed vLLM and SGLang deployments
 
 ✅ **vLLM Backend Support (v0.0.24)**: Complete integration with vLLM for high-performance local model serving, POE provider support, GPT-5-Codex model recognition, backend utility modules refactoring, and comprehensive bug fixes including streaming chunk processing
 
@@ -1036,25 +984,25 @@ Version 0.0.25 introduces **Multi-Turn Filesystem Support** and **SGLang Backend
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.26 Roadmap
+### v0.0.27 Roadmap
 
-Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integration of v0.0.25 by focusing on multimodal capabilities, additional backend integrations, and finishing core refactoring work. Key enhancements include:
+Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing on coding agent capabilities, multimodal support, and finishing core refactoring work. Key enhancements include:
 
 #### Required Features
+- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
 - **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
 - **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
 
 #### Optional Features
-- **Additional Agent Backends from Other Frameworks**Integration with AG2, LangChain, and other agent frameworks
-- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring tasks
+- **Additional Agent Backends from Other Frameworks**: Integration with AG2, LangChain, and other agent frameworks
 
 Key technical approach:
+- **Coding Agent**: Enhanced system prompts encouraging more iterations, multi-turn conversation support with `.massgen/sessions/`, workspace diff logging, and consolidated `.massgen/` directory structure
 - **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
 - **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
 - **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
-- **Specialized Coding**: Enhanced programming capabilities with code analysis and execution environment integration
 
-For detailed milestones and technical specifications, see the [full v0.0.26 roadmap](ROADMAP_v0.0.26.md).
+For detailed milestones and technical specifications, see the [full v0.0.27 roadmap](ROADMAP_v0.0.27.md).
 
 ---
 
