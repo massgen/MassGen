@@ -3,6 +3,62 @@
 ## Overview
 This document describes the implementation of file/directory deletion capabilities, file-based context paths, protected paths feature, and optional diff tools for MassGen's filesystem management system, addressing [Issue #254](https://github.com/Leezekun/MassGen/issues/254).
 
+## Quick Start Examples
+
+### Example 1: Protected Paths
+**Use Case**: Allow agents to modify files but prevent changes to specific reference files.
+
+**Config**: [`massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml`](../../massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml)
+
+**Command**:
+```bash
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml "Review the HTML and CSS files, then suggest improvements to the styling"
+```
+
+**Result**:
+- ✅ `massgen/configs/resources/v0.0.21-example/styles.css` → Can modify/delete
+- ❌ `massgen/configs/resources/v0.0.21-example/index.html` → Read-only (protected)
+
+---
+
+### Example 2: File Context Path (Single File Access)
+**Use Case**: Give agents access to a specific file without exposing the entire directory.
+
+**Config**: [`massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml`](../../massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml)
+
+**Command**:
+```bash
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml "Analyze the CSS file and suggest modern improvements"
+```
+
+**Result**:
+- ✅ `massgen/configs/resources/v0.0.21-example/styles.css` → Can read/write
+- ❌ `massgen/configs/resources/v0.0.21-example/index.html` → NOT accessible (sibling file blocked)
+
+---
+
+### Example 3: Workspace Cleanup with Deletion Tools
+**Use Case**: Agents can delete outdated files during iteration to keep workspace clean.
+
+**Config**: [`massgen/configs/tools/filesystem/gemini_gemini_workspace_cleanup.yaml`](../../massgen/configs/tools/filesystem/gemini_gemini_workspace_cleanup.yaml)
+
+**Command**:
+```bash
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gemini_workspace_cleanup.yaml "Please improve the website to reference Jimi Hendrix and combine the best from all the existing websites before cleaning up the final code such that there is only one website"
+```
+
+**What happens**:
+1. Agents analyze the messy directory (`v0.0.26-example`) with multiple HTML files (beatles.html, dylan.html, index.html, bob_dylan_website/)
+2. Agents combine the best elements from existing websites to create improved Jimi Hendrix website
+3. Agents use `delete_file` tool to remove old/redundant files
+4. Final workspace contains only one clean website
+
+**Available Deletion Tools**:
+- `delete_file(path, recursive=False)` - Delete single file/directory
+- `delete_files_batch(base_path, include_patterns, exclude_patterns)` - Delete multiple files matching patterns
+
+---
+
 ### Additional Improvements
 During implementation, we also addressed:
 1. **CLI Enhancement**: Added interactive prompt for protected paths when users add custom context paths in multiturn dialogue mode
