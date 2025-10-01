@@ -86,9 +86,11 @@ orchestrator:
 
 **Orchestrator Level:**
 - `context_paths`: List of user-specified paths with permissions applied to all agents
-  - `path`: Absolute path to directory (must be a directory, not a file)
+  - `path`: Absolute path to **file or directory** (both are supported)
   - `permission`: "read" or "write" - determines final agent access (context agents always read-only)
+  - `protected_paths`: Optional list of paths within a context path that are immune from modification/deletion
   - **Default permission**: "write" when added interactively
+  - **File context paths**: When a file is specified, only that file is accessible (sibling files are blocked)
 - `snapshot_storage`: Directory for storing agent workspace snapshots
   - Automatically relocated to `.massgen/snapshots/`
 - `agent_temporary_workspace`: Parent directory for temporary workspaces
@@ -109,14 +111,16 @@ When running MassGen in **interactive mode** with filesystem support enabled (at
 
 ❓ Add current directory as context path?
    /home/user/project
-   [Y]es (default) / [N]o / [C]ustom path:
+   [Y]es (default) / [P]rotected / [N]o / [C]ustom path:
 ```
 
 **Features:**
 - **Default behavior**: Pressing Enter adds current directory with **write** permission
-- **Custom paths**: Enter 'c' to specify a different directory
+- **Protected paths**: Enter 'p' to add current directory with protected paths (files/dirs immune from modification)
+- **Custom paths**: Enter 'c' to specify a different file or directory (supports both absolute and relative paths)
 - **Auto-detection**: Only shows when filesystem is enabled (agents have `cwd` configured)
 - **Smart defaults**: Default permission is "write" for both current directory and custom paths
+- **File support**: Can add individual files as context paths - only that file is accessible, siblings are blocked
 
 **Example interaction:**
 ```bash
@@ -826,6 +830,37 @@ orchestrator:
       permission: "write"   # Deliver new code here
 ```
 
+#### File Context Paths (Individual Files)
+```yaml
+orchestrator:
+  context_paths:
+    - path: "/path/to/config.yaml"
+      permission: "read"    # Only this file is accessible
+    - path: "/path/to/logo.png"
+      permission: "read"    # Share specific assets without exposing directory
+```
+
+**How it works:**
+- Agent can read `/path/to/config.yaml` ✅
+- Agent **cannot** read `/path/to/other_file.txt` ❌ (sibling files blocked)
+- Agent **cannot** list `/path/to/` directory ❌
+- Only the explicitly specified file is accessible
+
+**Use cases:**
+- Share specific configuration files without exposing secrets
+- Provide reference images/assets without directory access
+- Grant access to individual data files for analysis
+
+**Interactive example:**
+```bash
+❓ Add current directory as context path?
+   /home/user/project
+   [Y]es (default) / [P]rotected / [N]o / [C]ustom path: c
+   Enter path (absolute or relative, file or directory): ./config.yaml
+   Permission [read/write] (default: write): read
+✓ Added /home/user/project/config.yaml (read)
+```
+
 #### System File Protection
 Even with write permission, these paths are automatically protected:
 - `/path/to/my-project/.env` → Always read-only
@@ -871,16 +906,27 @@ Error: Context paths not found:
 mkdir /path/that/does/not/exist
 ```
 
-#### File vs Directory Context
+#### Sibling File Access Blocked (File Context Paths)
 ```bash
-# Error: Context path points to file
-Error: Context paths must be directories, not files:
-  - /path/to/file.txt
-Hint: Use the parent directory instead
+# Scenario: Added /project/config.yaml as file context path
+# Agent tries to access sibling file
+Tool: read_file
+Path: /project/secrets.yaml
+Result: ❌ Access denied: '/project/secrets.yaml' is not an explicitly allowed file in this directory
 
-# Solution: Use parent directory
-# Instead of: /path/to/file.txt
-# Use: /path/to/
+# Solution: This is working as intended!
+# Only the explicitly added file is accessible
+# To allow access to other files, add them as separate context paths:
+context_paths:
+  - path: "/project/config.yaml"
+    permission: "read"
+  - path: "/project/secrets.yaml"  # Add explicitly if needed
+    permission: "read"
+
+# Or add the entire directory instead:
+context_paths:
+  - path: "/project"
+    permission: "read"
 ```
 
 #### Delivery Confusion
@@ -906,4 +952,12 @@ Files delivered:
 
 MassGen's permissions system provides secure, granular access control for multi-agent workflows while maintaining simplicity for backend implementers. The system automatically handles the complexity of permission validation while allowing backends to focus on their core functionality.
 
-For new backends, simply extend `LLMBackend`, declare your filesystem support level, and the base class handles the rest. The system scales from simple file access to complex multi-project workflows with cross-drive support.
+**Key Features:**
+- ✅ **File and directory context paths**: Share individual files or entire directories
+- ✅ **Sibling file isolation**: File context paths prevent access to other files in the same directory
+- ✅ **Protected paths**: Mark specific files/directories as immune from modification
+- ✅ **Interactive configuration**: Add context paths without editing YAML files
+- ✅ **Automatic path validation**: Prevents common misconfigurations
+- ✅ **MCP integration**: Works seamlessly with MCP filesystem servers
+
+For new backends, simply extend `LLMBackend`, declare your filesystem support level, and the base class handles the rest. The system scales from simple file access to complex multi-project workflows with cross-drive support and granular file-level permissions.

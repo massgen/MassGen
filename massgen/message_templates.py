@@ -496,6 +496,23 @@ Based on the coordination process above, present your final answer:"""
             "but do NOT paste full file contents in your answer.\n",
         )
 
+        # Add workspace cleanup guidance
+        parts.append(
+            "**Workspace Cleanup**: Before submitting your answer with `new_answer`, use `delete_file` or "
+            "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
+            "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
+            "This ensures only the relevant final files remain for evaluation. For example, if you created "
+            "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
+        )
+
+        # Add diff tools guidance
+        parts.append(
+            "**Comparison Tools**: Use `compare_directories` to see differences between two directories (e.g., comparing "
+            "your workspace to another agent's workspace or a previous version), or `compare_files` to see line-by-line diffs "
+            "between two files. These read-only tools help you understand what changed, build upon existing work effectively, "
+            "or verify solutions before voting.\n",
+        )
+
         # Add voting guidance
         parts.append(
             "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "

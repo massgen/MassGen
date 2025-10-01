@@ -7,7 +7,7 @@ from ._path_permission_manager import (
     PathPermissionManager,
     PathPermissionManagerHook,
 )
-from ._workspace_copy_server import get_copy_file_pairs
+from ._workspace_tools_server import get_copy_file_pairs
 
 __all__ = [
     "FilesystemManager",
