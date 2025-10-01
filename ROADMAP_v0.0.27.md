@@ -29,12 +29,12 @@ Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing 
 - [ ] Create prompts emphasizing independent exploration over convergence
 - [ ] Test prompt effectiveness on coding task diversity
 
-#### 1.2 Multi-turn Conversation Support (REQUIRED)
-- [ ] Implement session persistence architecture with `.massgen/sessions/`
-- [ ] Create `CodingSessionManager` for conversation history management
-- [ ] Add turn-based context preparation and restoration
+#### 1.2 Enhanced Multi-turn Conversation Support (REQUIRED)
+- [ ] Create `CodingSessionManager` for specialized coding conversation history management
+- [ ] Enhance turn-based context preparation with code-specific context
 - [ ] Implement path normalization for multi-turn references
-- [ ] Design interactive multi-turn CLI commands (Issue #231)
+- [ ] Design interactive multi-turn CLI commands for coding tasks (Issue #231)
+
 
 #### 1.3 Workspace Logging & Visibility (REQUIRED)
 - [ ] Implement `WorkspaceDiffLogger` for iteration comparison
@@ -43,12 +43,10 @@ Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing 
 - [ ] Add similarity scoring to detect convergence vs diversity
 - [ ] Integrate diff logging with orchestrator workflow
 
-#### 1.4 Consolidated `.massgen/` Directory Structure (REQUIRED)
-- [ ] Design unified `.massgen/` directory organization
-- [ ] Implement `MassGenProjectManager` for directory management
+#### 1.4 Enhanced `.massgen/` Directory Management (REQUIRED)
+- [ ] Implement `MassGenProjectManager` for advanced directory management
 - [ ] Add automatic `.gitignore` creation for `.massgen/`
-- [ ] Create migration path from current structure
-- [ ] Update all workspace operations to use `.massgen/` paths
+- [ ] Create cleanup utilities for old session data
 
 
 ### 🎯 Milestone 2: Multimodal Support (REQUIRED)
@@ -134,9 +132,9 @@ Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing 
 
 **Coding Agent:**
 - [ ] Enhanced system prompts encouraging more iterations
-- [ ] Multi-turn conversation support with `.massgen/sessions/`
+- [ ] Specialized `CodingSessionManager` for coding workflows
 - [ ] Workspace diff logging with similarity scoring
-- [ ] Consolidated `.massgen/` directory structure
+- [ ] Advanced `.massgen/` directory management utilities
 
 **Multimodal & Infrastructure:**
 - [ ] Complete multimodal support (images, audio, video)
