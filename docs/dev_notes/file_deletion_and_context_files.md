@@ -125,9 +125,11 @@ context_paths:
 **New Behavior** (backward compatible):
 ```yaml
 context_paths:
-  - path: "/path/to/directory"      # Still works
+  - path: "/path/to/directory"      # Still works (Unix/macOS)
     permission: "read"
-  - path: "/path/to/file.png"       # NEW: Single file support
+  - path: "C:\\Users\\Project\\data"  # Windows paths also supported
+    permission: "read"
+  - path: "/path/to/config.yaml"    # NEW: Single file support
     permission: "read"
   - path: "/path/to/testing"        # NEW: Protected paths support
     permission: "write"
@@ -136,6 +138,8 @@ context_paths:
       - "config.yaml"                # Single file protection
       - "golden_tests/"              # Entire directory protection
 ```
+
+**Note**: All paths are handled using Python's `pathlib.Path`, which automatically normalizes paths for the current operating system. Both forward slashes (`/`) and backslashes (`\`) work on all platforms.
 
 #### Implementation in `_path_permission_manager.py`
 
@@ -210,7 +214,7 @@ class ManagedPath:
 3. File-specific context paths → Specified permission (READ or WRITE)
 4. Directory context paths → Specified permission (READ or WRITE)
 
-**Example Behavior**:
+**Example Behavior (Unix/macOS)**:
 ```yaml
 context_paths:
   - path: "/project/testing"
@@ -224,6 +228,21 @@ context_paths:
 - `/project/testing/golden_tests/test1.json` → READ (protected, cannot modify)
 - `/project/testing/expected_output.txt` → READ (protected, cannot modify)
 - `/project/testing/golden_tests/subdir/file.txt` → READ (within protected dir)
+
+**Example Behavior (Windows)**:
+```yaml
+context_paths:
+  - path: "C:\\Projects\\testing"
+    permission: "write"
+    protected_paths:
+      - "golden_tests\\"
+      - "expected_output.txt"
+```
+
+- `C:\Projects\testing\new_test.py` → WRITE (can create/modify/delete)
+- `C:\Projects\testing\golden_tests\test1.json` → READ (protected, cannot modify)
+- `C:\Projects\testing\expected_output.txt` → READ (protected, cannot modify)
+- `C:\Projects\testing\golden_tests\subdir\file.txt` → READ (within protected dir)
 
 ### 3. Diff Tools
 

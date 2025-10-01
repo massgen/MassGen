@@ -219,6 +219,8 @@ def _is_text_file(path: Path) -> bool:
 
     Uses simple heuristic: try to read as text and check for null bytes.
 
+    TODO: Handle multi-modal files once implemented.
+
     Args:
         path: Path to check
 
@@ -251,13 +253,20 @@ def _is_permission_path_root(path: Path, allowed_paths: List[Path]) -> bool:
     Returns:
         True if path is exactly a permission path root
 
-    Examples:
+    Examples (Unix/macOS):
         allowed_paths = [Path("/workspace1"), Path("/context")]
         _is_permission_path_root(Path("/workspace1"))              → True  (blocked)
         _is_permission_path_root(Path("/workspace1/file.txt"))    → False (allowed)
         _is_permission_path_root(Path("/workspace1/subdir"))      → False (allowed)
         _is_permission_path_root(Path("/context"))                → True  (blocked)
-        _is_permission_path_root(Path("/context/image.png"))      → False (allowed)
+        _is_permission_path_root(Path("/context/config.yaml"))    → False (allowed)
+
+    Examples (Windows):
+        allowed_paths = [Path("C:\\workspace1"), Path("D:\\context")]
+        _is_permission_path_root(Path("C:\\workspace1"))           → True  (blocked)
+        _is_permission_path_root(Path("C:\\workspace1\\file.txt")) → False (allowed)
+        _is_permission_path_root(Path("D:\\context"))             → True  (blocked)
+        _is_permission_path_root(Path("D:\\context\\data.json"))  → False (allowed)
     """
     resolved_path = path.resolve()
     for allowed_path in allowed_paths:
