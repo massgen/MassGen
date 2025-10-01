@@ -593,6 +593,11 @@ class ChatCompletionsBackend(MCPBackend):
 
         return converted_messages
 
+    def get_supported_builtin_tools(self) -> List[str]:
+        """Get list of builtin tools supported by Chat Completions providers."""
+        # Most OpenAI-compatible providers support these tools
+        return ["web_search", "code_interpreter"]
+
     def get_provider_name(self) -> str:
         """Get the name of this provider."""
         # Check if provider name was explicitly set in config
@@ -604,9 +609,9 @@ class ChatCompletionsBackend(MCPBackend):
         # Try to infer from base_url
         base_url = self.config.get("base_url", "")
         if "openai.com" in base_url:
-            return "OpenAI"
+            return "openai"  # Use lowercase for consistency
         elif "cerebras.ai" in base_url:
-            return "Cerebras AI"
+            return "cerebras"
         elif "together.xyz" in base_url:
             return "Together AI"
         elif "fireworks.ai" in base_url:
@@ -629,12 +634,6 @@ class ChatCompletionsBackend(MCPBackend):
     def get_filesystem_support(self) -> FilesystemSupport:
         """Chat Completions supports filesystem through MCP servers."""
         return FilesystemSupport.MCP
-
-    def get_supported_builtin_tools(self) -> List[str]:
-        """Get list of builtin tools supported by this provider."""
-        # Chat Completions API doesn't typically support builtin tools like web_search
-        # But some providers might - this can be overridden in subclasses
-        return []
 
     def _create_client(self, **kwargs) -> AsyncOpenAI:
         """Create OpenAI client with consistent configuration."""

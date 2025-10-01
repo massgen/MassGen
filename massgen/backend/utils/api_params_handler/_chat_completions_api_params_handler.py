@@ -23,43 +23,13 @@ class ChatCompletionsAPIParamsHandler(APIParamsHandlerBase):
                 "enable_code_interpreter",
                 "allowed_tools",
                 "exclude_tools",
+                "custom_toolkits",  # Handled by backend initialization
             },
         )
 
-    def get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Get provider tools for Chat Completions format."""
-        provider_tools = []
-
-        if all_params.get("enable_web_search", False):
-            provider_tools.append(
-                {
-                    "type": "function",
-                    "function": {
-                        "name": "web_search",
-                        "description": "Search the web for current or factual information",
-                        "parameters": {
-                            "type": "object",
-                            "properties": {
-                                "query": {
-                                    "type": "string",
-                                    "description": "The search query to send to the web",
-                                },
-                            },
-                            "required": ["query"],
-                        },
-                    },
-                },
-            )
-
-        if all_params.get("enable_code_interpreter", False):
-            provider_tools.append(
-                {
-                    "type": "code_interpreter",
-                    "container": {"type": "auto"},
-                },
-            )
-
-        return provider_tools
+    def get_api_format(self) -> str:
+        """Get the API format for Chat Completions."""
+        return "chat_completions"
 
     def build_base_api_params(self, messages: List[Dict[str, Any]], all_params: Dict[str, Any]) -> Dict[str, Any]:
         """Build base API parameters for Chat Completions requests."""

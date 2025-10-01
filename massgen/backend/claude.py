@@ -662,7 +662,7 @@ class ClaudeBackend(MCPBackend):
 
     def get_provider_name(self) -> str:
         """Get the provider name."""
-        return "Claude"
+        return "claude"  # Use lowercase for consistency with registry
 
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by Claude."""

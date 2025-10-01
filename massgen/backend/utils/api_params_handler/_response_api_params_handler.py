@@ -22,25 +22,13 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
                 "enable_code_interpreter",
                 "allowed_tools",
                 "exclude_tools",
+                "custom_toolkits",  # Handled by backend initialization
             },
         )
 
-    def get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Get provider tools for Response API format."""
-        provider_tools = []
-
-        if all_params.get("enable_web_search", False):
-            provider_tools.append({"type": "web_search"})
-
-        if all_params.get("enable_code_interpreter", False):
-            provider_tools.append(
-                {
-                    "type": "code_interpreter",
-                    "container": {"type": "auto"},
-                },
-            )
-
-        return provider_tools
+    def get_api_format(self) -> str:
+        """Get the API format for Response API."""
+        return "response"
 
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
         """Convert MCP tools to OpenAI function format for Response API."""

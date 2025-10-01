@@ -9,6 +9,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Set
 
+from ....toolkits import toolkit_registry
+
 
 class APIParamsHandlerBase(ABC):
     """Abstract base class for API parameter handlers."""
@@ -45,8 +47,27 @@ class APIParamsHandlerBase(ABC):
         """Get backend-specific parameters to exclude from API calls."""
 
     @abstractmethod
+    def get_api_format(self) -> str:
+        """Get the API format for this handler (e.g., 'chat_completions', 'response', 'claude')."""
+
     def get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Get provider-specific tools based on parameters."""
+        """
+        Get provider-specific tools based on parameters using the toolkit registry.
+
+        Args:
+            all_params: All parameters including config and runtime params.
+
+        Returns:
+            List of tool definitions from enabled toolkits.
+        """
+        provider = self.backend.get_provider_name()
+
+        # Add API format to config for toolkit formatting
+        config = dict(all_params)
+        config["api_format"] = self.get_api_format()
+
+        # Get tools from registry
+        return toolkit_registry.get_provider_tools(provider, config)
 
     def get_base_excluded_params(self) -> Set[str]:
         """Get common parameters to exclude across all backends."""

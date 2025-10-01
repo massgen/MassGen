@@ -22,30 +22,44 @@ class ClaudeAPIParamsHandler(APIParamsHandlerBase):
                 "enable_code_execution",
                 "allowed_tools",
                 "exclude_tools",
+                "custom_toolkits",  # Handled by backend initialization
             },
         )
 
+    def get_api_format(self) -> str:
+        """Get the API format for Claude."""
+        return "claude"
+
     def get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """Get provider tools for Claude format (server-side tools)."""
-        provider_tools = []
+        """
+        Get provider tools for Claude format (server-side tools).
+        Note: Claude has special format for server-side tools.
+        """
+        # Use base implementation to get tools from registry
+        tools = super().get_provider_tools(all_params)
 
-        if all_params.get("enable_web_search", False):
-            provider_tools.append(
-                {
-                    "type": "web_search_20250305",
-                    "name": "web_search",
-                },
-            )
+        # Claude-specific transformations for server-side tools
+        claude_tools = []
+        for tool in tools:
+            # Check if it's a web_search tool
+            if tool.get("name") == "web_search" or (tool.get("function", {}).get("name") == "web_search"):
+                claude_tools.append(
+                    {
+                        "type": "web_search_20250305",
+                        "name": "web_search",
+                    },
+                )
+            # Check if it's a code execution tool
+            elif tool.get("name") == "code_execution" or tool.get("type") == "code_interpreter":
+                if all_params.get("enable_code_execution", False):
+                    claude_tools.append(
+                        {
+                            "type": "code_execution_20250522",
+                            "name": "code_execution",
+                        },
+                    )
 
-        if all_params.get("enable_code_execution", False):
-            provider_tools.append(
-                {
-                    "type": "code_execution_20250522",
-                    "name": "code_execution",
-                },
-            )
-
-        return provider_tools
+        return claude_tools
 
     async def build_api_params(
         self,
