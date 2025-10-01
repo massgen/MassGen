@@ -27,17 +27,11 @@ agents:
         summary: "auto"
       cwd: "workspace2"
 
-  # - id: "agent_b"
-  #   backend:
-  #     type: "gemini"
-  #     model: "gemini-2.5-pro"
-  #     cwd: "workspace2"
-
 orchestrator:
   snapshot_storage: "snapshots"
   agent_temporary_workspace: "temp_workspaces"
   context_paths:
-    - path: "/Users/ncrispin/GitHubProjects/MassGen/massgen/configs/resources/v0.0.26-example"
+    - path: "massgen/configs/resources/v0.0.26-example"
       permission: "write"
       # Agents can read the messy directory and delete redundant files
 
