@@ -7,26 +7,37 @@
 # Agents can clean this up by deleting redundant files.
 #
 # Run with:
-#   uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gemini_workspace_cleanup.yaml "Please improve the website to reference Jimi Hendrix and combine the best from all the existing websites before cleaning up the final code such that there is only one website"
+#   uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gemini_workspace_cleanup.yaml "Please improve the website to reference Jimi Hendrix then remove the other files and directories that aren't being used"
 
 agents:
   - id: "agent_a"
     backend:
       type: "gemini"
-      model: "gemini-2.5-flash"
-    filesystem:
+      model: "gemini-2.5-pro"
       cwd: "workspace1"
 
   - id: "agent_b"
     backend:
-      type: "gemini"
-      model: "gemini-2.5-flash"
-    filesystem:
+      type: "openai"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
       cwd: "workspace2"
 
-filesystem:
+  # - id: "agent_b"
+  #   backend:
+  #     type: "gemini"
+  #     model: "gemini-2.5-pro"
+  #     cwd: "workspace2"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
   context_paths:
-    - path: "massgen/configs/resources/v0.0.26-example"
+    - path: "/Users/ncrispin/GitHubProjects/MassGen/massgen/configs/resources/v0.0.26-example"
       permission: "write"
       # Agents can read the messy directory and delete redundant files
 

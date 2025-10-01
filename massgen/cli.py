@@ -389,16 +389,16 @@ def create_simple_config(
 
 
 def validate_context_paths(config: Dict[str, Any]) -> None:
-    """Validate that all context paths in the config are valid directories.
+    """Validate that all context paths in the config exist.
 
-    Context paths must be directories due to MCP filesystem server limitations.
-    Raises ConfigurationError with clear message if any paths don't exist or aren't directories.
+    Context paths can be either files or directories.
+    File-level context paths allow access to specific files without exposing sibling files.
+    Raises ConfigurationError with clear message if any paths don't exist.
     """
     orchestrator_cfg = config.get("orchestrator", {})
     context_paths = orchestrator_cfg.get("context_paths", [])
 
     missing_paths = []
-    file_paths = []
 
     for context_path_config in context_paths:
         if isinstance(context_path_config, dict):
@@ -411,24 +411,12 @@ def validate_context_paths(config: Dict[str, Any]) -> None:
             path_obj = Path(path)
             if not path_obj.exists():
                 missing_paths.append(path)
-            elif path_obj.is_file():
-                file_paths.append(path)
 
-    errors = []
     if missing_paths:
-        errors.append("Context paths not found:")
+        errors = ["Context paths not found:"]
         for path in missing_paths:
             errors.append(f"  - {path}")
-
-    if file_paths:
-        errors.append("Context paths must be directories, not files:")
-        for path in file_paths:
-            errors.append(f"  - {path}")
-        errors.append("Hint: Use the parent directory instead")
-        errors.append("Note: File-level context paths may be supported in future versions")
-
-    if errors:
-        errors.append("\nPlease update your configuration with valid directory paths.")
+        errors.append("\nPlease update your configuration with valid paths.")
         raise ConfigurationError("\n".join(errors))
 
 
