@@ -1,11 +1,13 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt5nano_image_generation.yaml "Transform the uploaded image into a Studio Ghibli art style and save it directly into a file in your workspace."
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt5nano_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf."
 agents:
-  - id: "gpt5nano_agent1"
+  - id: "gpt4o_agent1"
     backend:
       type: "openai"
       model: "gpt-4o"
+      text:
+        verbosity: "medium"
       # upload_files:
       #   - image_path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git19/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg" # Example image to be used by the agent
       cwd: "workspace1"  # Working directory for file operations
@@ -13,7 +15,7 @@ agents:
 
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots
-    agent_temporary_workspace: "workspaces"  # Directory for temporary agent workspaces
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
 
 ui:
   display_type: "simple"

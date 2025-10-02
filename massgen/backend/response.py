@@ -388,7 +388,6 @@ class ResponseBackend(MCPBackend):
         or legacy StreamChunk for backward compatibility.
         """
 
-        print(chunk)
         if not hasattr(chunk, "type"):
             # Return legacy StreamChunk for backward compatibility
             return StreamChunk(type="content", content="")

@@ -32,25 +32,23 @@ agents:
   #     model: "grok-code-fast-1"
   #     cwd: "workspace2"
 
-  - id: "gpt5nano_1"
+  - id: "gpt4o_1"
     backend:
       type: "openai"
-      model: "gpt-5"
+      model: "gpt-4o"
       text:
         verbosity: "medium"
-      reasoning:
-        effort: "low"  # Fast responses for debugging
       cwd: "workspace1"
+      enable_image_generation: true
 
-  - id: "gpt5nano_2"
+  - id: "gpt4o_2"
     backend:
       type: "openai"
-      model: "gpt-5"
+      model: "gpt-4o"
       text:
         verbosity: "medium"
-      reasoning:
-        effort: "low"  # Fast responses for debugging
       cwd: "workspace2"
+      enable_image_generation: true
 
   # - id: "code_analyzer"
   #   backend:
