@@ -54,6 +54,14 @@ Brief description of the changes in this PR
 # git commit -m "chore: apply pre-commit fixes"
 # git push origin <branch-name>
 ```
+## How to Test
+Add test method for this PR.
+### Test CLI Command
+Write down the test bash command. If there is pre-requests, please emphasize.
+```bash
+```
+### Expected Results
+Description/screenshots of expected results.
 
 ## Additional context
 Add any other context about the PR here.
