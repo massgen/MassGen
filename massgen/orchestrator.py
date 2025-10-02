@@ -1886,6 +1886,9 @@ class Orchestrator(ChatAgent):
             {"role": "user", "content": presentation_content},
         ]
 
+        import pdb
+        pdb.set_trace()
+
         # Store the final context in agent state for saving
         self.agent_states[selected_agent_id].last_context = {
             "messages": presentation_messages,

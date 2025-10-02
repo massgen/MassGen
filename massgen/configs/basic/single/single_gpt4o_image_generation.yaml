@@ -18,5 +18,5 @@ orchestrator:
     agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
 
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

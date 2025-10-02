@@ -326,7 +326,7 @@ class ResponseBackend(MCPBackend):
                 workspace_path = Path.cwd()
 
             # Create generated_images subdirectory path
-            images_dir = workspace_path / "generated_images"
+            images_dir = workspace_path 
 
             # Create directory if it doesn't exist
             images_dir.mkdir(parents=True, exist_ok=True)

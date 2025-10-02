@@ -253,6 +253,8 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         Args:
             original_system_message: The agent's original system message to preserve
         """
+        import pdb
+        pdb.set_trace()
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
 
@@ -269,8 +271,21 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         # Present your final coordinated answer in the most helpful and complete way possible."""
 
         presentation_instructions = """You have been selected as the winning presenter in a coordination process.
-Present the best possible coordinated answer by combining the strengths from all participants."""
+Present the best possible coordinated answer by combining the strengths from all participants.\n\n"""
+        # For image generation tasks
+        presentation_instructions += """
+        For image generation tasks:
 
+1. You MUST FIRST use the `mcp__workspace_tools__extract_multimodal_files` tool  
+   to read and analyze all image files created by other agents (from Shared References).  
+   This step is REQUIRED before generating any new images.
+
+2. After reviewing the existing images, use the `image_generation` tool  
+   to create the final images that best combine the strengths of all participants.
+
+⚠️ Do NOT use file-writing tools for image generation tasks.  
+All final images MUST be created directly using the `image_generation` tool.
+"""
         # Combine with original system message if provided
         if original_system_message:
             return f"""{original_system_message}
@@ -491,9 +506,11 @@ Based on the coordination process above, present your final answer:"""
 
         # Add requirement for path explanations in answers
         parts.append(
-            "\n**New Answer**: When calling `new_answer`, you MUST actually create files in your workspace using file write tools - "
+            "\n**New Answer**: When calling `new_answer` tool:" \
+            "- For non-image generation tasks, you MUST actually create files in your workspace using file write tools - "
             "do NOT just describe what files you would create. Then, list 1) your full cwd and 2) the file paths you created, "
-            "but do NOT paste full file contents in your answer.\n",
+            "but do NOT paste full file contents in your answer." \
+            "- For image generation tasks, do not use file write tools. Instead, the images are already generated directly with the image_generation tool. Then, providing new answer with 1) briefly describing the contents of the images and 2) listing your full cwd and the image paths you created.\n",
         )
 
         # Add workspace cleanup guidance
@@ -516,7 +533,8 @@ Based on the coordination process above, present your final answer:"""
         # Add voting guidance
         parts.append(
             "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
-            "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
+            "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims." \
+            "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__extract_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n" \
         )
 
         return "\n".join(parts)
