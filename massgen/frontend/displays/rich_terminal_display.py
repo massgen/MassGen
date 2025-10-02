@@ -1662,7 +1662,7 @@ class RichTerminalDisplay(TerminalDisplay):
 
                 options_text = Text()
                 options_text.append(
-                    "\nThis is a system inspection interface for diving into the multi-agent collaboration behind the "
+                    "This is a system inspection interface for diving into the multi-agent collaboration behind the "
                     "scenes in MassGen. It lets you examine each agent's original output and compare it to the final "
                     "MassGen answer in terms of quality. You can explore the detailed communication, collaboration, "
                     "voting, and decision-making process.\n",
@@ -1979,9 +1979,9 @@ class RichTerminalDisplay(TerminalDisplay):
             # Split content into lines and format each
             lines = self._final_presentation_content.split("\n")
 
-            # Calculate available lines based on terminal height minus header/footer
-            # Header: 5, Footer: 8, some buffer: 5 = 18 total reserved
-            available_height = max(10, self.terminal_size.height - 18)
+            # Calculate available lines based on terminal height minus footer (no header during presentation)
+            # Footer: 8, some buffer: 5, separator: 3 = 16 total reserved
+            available_height = max(10, self.terminal_size.height - 16)
 
             # Show last N lines to fit in available space (auto-scroll to bottom)
             display_lines = lines[-available_height:] if len(lines) > available_height else lines
@@ -2929,6 +2929,9 @@ class RichTerminalDisplay(TerminalDisplay):
         self._final_presentation_vote_results = vote_results
         self._final_presentation_file_path = None  # Will be set after file is initialized
 
+        # Add visual separator before starting live display to prevent content from being hidden
+        self.console.print("\n" + "─" * 80 + "\n")
+
         # Keep live display running for streaming
         was_live = self.live is not None and self.live.is_started
         if not was_live:
@@ -2985,6 +2988,13 @@ class RichTerminalDisplay(TerminalDisplay):
                     # Accumulate content and update live display
                     self._final_presentation_content += processed_content
                     presentation_content += processed_content
+
+                    # Add content to recent events (truncate to avoid flooding)
+                    if processed_content.strip():
+                        truncated_content = processed_content.strip()[:150]
+                        if len(processed_content.strip()) > 150:
+                            truncated_content += "..."
+                        self.add_orchestrator_event(f"🎤 {selected_agent}: {truncated_content}")
 
                     # Save chunk to file as it arrives
                     self._append_to_final_presentation_file(
@@ -3074,9 +3084,7 @@ class RichTerminalDisplay(TerminalDisplay):
             box=ROUNDED,
             expand=True,
         )
-        self.console.print()
         self.console.print(summary_panel)
-        self.console.print()
 
         return presentation_content
 
