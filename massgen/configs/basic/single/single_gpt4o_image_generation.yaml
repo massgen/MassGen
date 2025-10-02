@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt5nano_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf."
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
 agents:
   - id: "gpt4o_agent1"
     backend:

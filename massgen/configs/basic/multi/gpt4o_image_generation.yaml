@@ -1,5 +1,6 @@
 # Example configuration demonstrating context_paths filesystem access control
 # This config shows how agents can access user-specified files with permission control
+# uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
 
 agents:
   - id: "gpt4o_1"
