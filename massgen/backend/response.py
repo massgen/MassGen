@@ -387,6 +387,8 @@ class ResponseBackend(MCPBackend):
         Returns TextStreamChunk for text/reasoning/tool content,
         or legacy StreamChunk for backward compatibility.
         """
+
+        print(chunk)
         if not hasattr(chunk, "type"):
             # Return legacy StreamChunk for backward compatibility
             return StreamChunk(type="content", content="")
