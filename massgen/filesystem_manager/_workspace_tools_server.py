@@ -820,7 +820,7 @@ async def create_server() -> fastmcp.FastMCP:
         Read multimodal files (images, etc.) and return as base64 data with MIME type.
 
         This tool is specifically designed for reading image files and other multimodal content,
-        converting them to base64 format suitable for AI model processing. Large images are 
+        converting them to base64 format suitable for AI model processing. Large images are
         automatically compressed to avoid exceeding model context limits.
 
         Args:
@@ -854,14 +854,15 @@ async def create_server() -> fastmcp.FastMCP:
             - Large files are automatically compressed to fit within limits
         """
         try:
-            from PIL import Image
             import io
-            
+
+            from PIL import Image
+
             # Apply understanding mode if enabled
             if understanding_mode:
                 max_size_mb = min(max_size_mb, 0.15)  # Max 150KB for understanding mode
                 compress_quality = min(compress_quality, 50)  # Lower quality for understanding
-            
+
             # Resolve path
             if Path(path).is_absolute():
                 file_path = Path(path).resolve()
@@ -877,14 +878,14 @@ async def create_server() -> fastmcp.FastMCP:
                 return {
                     "success": False,
                     "operation": "read_multimodal_files",
-                    "error": f"File does not exist: {file_path}"
+                    "error": f"File does not exist: {file_path}",
                 }
 
             if not file_path.is_file():
                 return {
                     "success": False,
                     "operation": "read_multimodal_files",
-                    "error": f"Path is not a file: {file_path}"
+                    "error": f"Path is not a file: {file_path}",
                 }
 
             # Get MIME type
@@ -897,18 +898,18 @@ async def create_server() -> fastmcp.FastMCP:
             try:
                 with open(file_path, "rb") as f:
                     file_content = f.read()
-                
+
                 original_size = len(file_content)
                 max_size_bytes = max_size_mb * 1024 * 1024
                 compressed = False
-                
+
                 # Check if it's an image that needs compression
                 if mime_type and mime_type.startswith("image/") and mime_type != "image/svg+xml":
                     if original_size > max_size_bytes:
                         try:
                             # Open image with PIL
                             img = Image.open(io.BytesIO(file_content))
-                            
+
                             # Convert RGBA to RGB if needed for JPEG
                             if img.mode in ("RGBA", "LA", "P"):
                                 background = Image.new("RGB", img.size, (255, 255, 255))
@@ -916,22 +917,22 @@ async def create_server() -> fastmcp.FastMCP:
                                     img = img.convert("RGBA")
                                 background.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
                                 img = background
-                            
+
                             # Start with original dimensions
                             current_img = img.copy()
-                            
+
                             # Try different compression levels and sizes
                             for scale in [1.0, 0.8, 0.6, 0.4, 0.2]:
                                 if scale < 1.0:
                                     new_size = (int(img.width * scale), int(img.height * scale))
                                     current_img = img.resize(new_size, Image.Resampling.LANCZOS)
-                                
+
                                 # Save to bytes with compression
                                 output = io.BytesIO()
                                 # Use actual compress_quality value (may be reduced by understanding_mode)
                                 current_img.save(output, format="JPEG", quality=compress_quality, optimize=True)
                                 compressed_content = output.getvalue()
-                                
+
                                 if len(compressed_content) <= max_size_bytes:
                                     file_content = compressed_content
                                     mime_type = "image/jpeg"
@@ -946,28 +947,28 @@ async def create_server() -> fastmcp.FastMCP:
                                 file_content = output.getvalue()
                                 mime_type = "image/jpeg"
                                 compressed = True
-                                
+
                         except Exception as e:
                             # If compression fails, continue with original
                             print(f"Warning: Failed to compress image: {e}")
-                
+
                 # Get final file size
                 file_size = len(file_content)
-                
+
                 # Final check - if still too large, return error
                 if file_size > 5 * 1024 * 1024:  # 5MB absolute limit
                     return {
                         "success": False,
                         "operation": "read_multimodal_files",
-                        "error": f"File too large even after compression: {file_size / (1024*1024):.2f}MB. Maximum allowed: 5MB"
+                        "error": f"File too large even after compression: {file_size / (1024*1024):.2f}MB. Maximum allowed: 5MB",
                     }
-                
+
                 # Encode to base64
                 base64_content = base64.b64encode(file_content).decode("utf-8")
-                
+
                 # Create data URI
                 data_uri = f"data:{mime_type};base64,{base64_content}"
-                
+
                 return {
                     "success": True,
                     "operation": "read_multimodal_files",
@@ -976,27 +977,27 @@ async def create_server() -> fastmcp.FastMCP:
                     "size": file_size,
                     "original_size": original_size,
                     "compressed": compressed,
-                    "path": str(file_path)
+                    "path": str(file_path),
                 }
-                
+
             except Exception as e:
                 return {
                     "success": False,
                     "operation": "read_multimodal_files",
-                    "error": f"Failed to read file: {e}"
+                    "error": f"Failed to read file: {e}",
                 }
 
         except ImportError:
             return {
                 "success": False,
                 "operation": "read_multimodal_files",
-                "error": "PIL (Pillow) is required for image compression. Install with: pip install Pillow"
+                "error": "PIL (Pillow) is required for image compression. Install with: pip install Pillow",
             }
         except Exception as e:
             return {
                 "success": False,
                 "operation": "read_multimodal_files",
-                "error": str(e)
+                "error": str(e),
             }
 
     print("🚀 Workspace Copy MCP Server started and ready")
