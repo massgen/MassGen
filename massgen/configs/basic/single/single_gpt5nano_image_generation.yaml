@@ -5,14 +5,11 @@ agents:
   - id: "gpt5nano_agent1"
     backend:
       type: "openai"
-      model: "gpt-5"
+      model: "gpt-4o"
       # upload_files:
       #   - image_path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git19/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg" # Example image to be used by the agent
       cwd: "workspace1"  # Working directory for file operations
       enable_image_generation: true
-    system_message: |
-      You are an expert in image generation and transformation.
-      Please call the image generation tool to create or modify images based on user requests.
 
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots

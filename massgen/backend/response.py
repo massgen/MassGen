@@ -805,7 +805,8 @@ class ResponseBackend(MCPBackend):
 
     def get_filesystem_support(self) -> FilesystemSupport:
         """OpenAI supports filesystem through MCP servers."""
-        return FilesystemSupport.MCP
+        # return FilesystemSupport.MCP
+        return FilesystemSupport.NATIVE
 
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by OpenAI."""
