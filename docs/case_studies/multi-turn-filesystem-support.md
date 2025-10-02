@@ -250,7 +250,7 @@ The v0.0.25 multi-turn filesystem support successfully achieved all success crit
 
 **Context Preservation Mechanisms:**
 - **Answer History**: Previous turn answers included in agent context
-- **Workspace Access**: Read access to previous turn workspaces via `temp_workspaces/`
+- **Workspace Access**: Read access to previous turn workspaces through context paths
 - **Session Metadata**: Complete conversation history available for reference
 - **Anonymous Context**: Previous work accessible without exposing agent identities
 
