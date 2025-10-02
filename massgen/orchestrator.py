@@ -1188,12 +1188,20 @@ class Orchestrator(ChatAgent):
                 # Check if workspace was pre-populated (has any previous turns)
                 workspace_prepopulated = len(previous_turns_context) > 0
 
+                # Check if image generation is enabled for this agent
+                enable_image_generation = False
+                if hasattr(agent, "config") and agent.config:
+                    enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
+                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+                    enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
+
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
                     temp_workspace=temp_workspace,
                     context_paths=context_paths,
                     previous_turns=turns_to_show,
                     workspace_prepopulated=workspace_prepopulated,
+                    enable_image_generation=enable_image_generation,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1838,8 +1846,15 @@ class Orchestrator(ChatAgent):
         # Get agent's configurable system message using the standard interface
         agent_system_message = agent.get_configurable_system_message()
 
+        # Check if image generation is enabled for this agent
+        enable_image_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
+
         # Build system message with workspace context if available
-        base_system_message = self.message_templates.final_presentation_system_message(agent_system_message)
+        base_system_message = self.message_templates.final_presentation_system_message(agent_system_message, enable_image_generation)
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
         for aid, state in self.agent_states.items():
@@ -1872,6 +1887,7 @@ class Orchestrator(ChatAgent):
                     context_paths=context_paths,
                     previous_turns=turns_to_show,
                     workspace_prepopulated=workspace_prepopulated,
+                    enable_image_generation=enable_image_generation,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message
