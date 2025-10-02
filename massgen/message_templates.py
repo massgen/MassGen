@@ -253,9 +253,6 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         Args:
             original_system_message: The agent's original system message to preserve
         """
-        import pdb
-
-        pdb.set_trace()
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
 
