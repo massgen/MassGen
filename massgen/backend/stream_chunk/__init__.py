@@ -18,6 +18,7 @@ Data Classes:
 """
 
 from .base import BaseStreamChunk, ChunkType
+from .multimodal import MediaEncoding, MediaMetadata, MediaType, MultimodalStreamChunk
 from .text import TextStreamChunk
 
 __all__ = [
@@ -26,6 +27,11 @@ __all__ = [
     "ChunkType",
     # Text chunks
     "TextStreamChunk",
+    # Multimodal classes
+    "MediaType",
+    "MediaEncoding",
+    "MediaMetadata",
+    "MultimodalStreamChunk",
 ]
 
 __version__ = "1.0.0"
