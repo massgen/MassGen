@@ -7,12 +7,24 @@ Inherits from LLMBackend and adds MCP-specific features.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
+import mimetypes
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 from ..logger_config import log_backend_activity, logger
 from .base import LLMBackend, StreamChunk
+
+
+class UploadFileError(Exception):
+    """Raised when an upload specified in configuration fails to process."""
+
+
+class UnsupportedUploadSourceError(UploadFileError):
+    """Raised when a provided upload source cannot be processed (e.g., URL without fetch support)."""
+
 
 # MCP integration imports
 try:
@@ -100,6 +112,10 @@ class MCPBackend(LLMBackend):
         # Initialize backend name and agent ID for MCP operations
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
+
+    def supports_upload_files(self) -> bool:
+        """Return True if the backend supports `upload_files` preprocessing."""
+        return False
 
     @abstractmethod
     async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
@@ -265,6 +281,105 @@ class MCPBackend(LLMBackend):
             return f"Error: {result['error']}", result
         return str(result), result
 
+    async def _process_upload_files(
+        self,
+        messages: List[Dict[str, Any]],
+        all_params: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Process upload_files config entries and attach to messages.
+
+        Supports two forms:
+        - {"image_path": "..."}: loads file, encodes to base64, injects image entry
+        - {"url": "..."}: injects image entry referencing remote URL
+
+        Returns updated messages list with additional content items.
+        """
+
+        upload_entries = all_params.get("upload_files")
+        if not upload_entries:
+            return messages
+
+        if not self.supports_upload_files():
+            logger.debug(
+                "upload_files provided but backend %s does not support file uploads; ignoring",
+                self.get_provider_name(),
+            )
+            all_params.pop("upload_files", None)
+            return messages
+
+        processed_messages = list(messages)
+        extra_content: List[Dict[str, Any]] = []
+
+        for entry in upload_entries:
+            if not isinstance(entry, dict):
+                logger.warning("upload_files entry is not a dict: %s", entry)
+                raise UploadFileError("Each upload_files entry must be a mapping")
+
+            path_value = entry.get("image_path")
+            url_value = entry.get("url")
+
+            if path_value:
+                resolved = Path(path_value).expanduser()
+                if not resolved.is_absolute():
+                    cwd = self.config.get("cwd")
+                    if cwd:
+                        resolved = Path(cwd).joinpath(resolved)
+                    else:
+                        resolved = resolved.resolve()
+
+                if not resolved.exists():
+                    raise UploadFileError(f"File not found: {resolved}")
+
+                mime_type, _ = mimetypes.guess_type(resolved.as_posix())
+                if not mime_type:
+                    mime_type = "application/octet-stream"
+
+                try:
+                    data = resolved.read_bytes()
+                except OSError as exc:
+                    raise UploadFileError(f"Failed to read file {resolved}: {exc}") from exc
+
+                encoded = base64.b64encode(data).decode("utf-8")
+                extra_content.append(
+                    {
+                        "type": "image",
+                        "base64": encoded,
+                        "mime_type": mime_type,
+                        "source_path": str(resolved),
+                    },
+                )
+                continue
+
+            if url_value:
+                extra_content.append({"type": "image", "url": url_value})
+                continue
+
+            raise UploadFileError(
+                "upload_files entry must specify either 'image_path' or 'url'",
+            )
+
+        if not extra_content:
+            return processed_messages
+
+        if processed_messages:
+            last_message = processed_messages[-1].copy()
+            last_content = list(last_message.get("content", []))
+            last_content.extend(extra_content)
+            last_message["content"] = last_content
+            processed_messages[-1] = last_message
+        else:
+            processed_messages.append(
+                {
+                    "role": "user",
+                    "content": extra_content,
+                },
+            )
+
+        # Prevent downstream handlers from seeing upload_files
+        all_params.pop("upload_files", None)
+
+        return processed_messages
+
     async def stream_with_tools(
         self,
         messages: List[Dict[str, Any]],
@@ -368,7 +483,8 @@ class MCPBackend(LLMBackend):
         """Simple passthrough streaming without MCP processing."""
         agent_id = kwargs.get("agent_id", None)
         all_params = {**self.config, **kwargs}
-        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
+        processed_messages = await self._process_upload_files(messages, all_params)
+        api_params = await self.api_params_handler.build_api_params(processed_messages, tools, all_params)
 
         # Remove any MCP tools from the tools list
         if "tools" in api_params:

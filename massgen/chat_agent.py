@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .backend.base import LLMBackend, StreamChunk
+from .backend.stream_chunk import ChunkType
 
 
 class ChatAgent(ABC):
@@ -147,6 +148,24 @@ class SingleAgent(ChatAgent):
         if self.system_message:
             self.conversation_history.append({"role": "system", "content": self.system_message})
 
+    @staticmethod
+    def _get_chunk_type_value(chunk) -> str:
+        """
+        Extract chunk type as string, handling both legacy and typed chunks.
+
+        Args:
+            chunk: StreamChunk, TextStreamChunk, or MultimodalStreamChunk
+
+        Returns:
+            String representation of chunk type (e.g., "content", "tool_calls")
+        """
+        chunk_type = chunk.type
+
+        if isinstance(chunk_type, ChunkType):
+            return chunk_type.value
+
+        return str(chunk_type)
+
     async def _process_stream(self, backend_stream, tools: List[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Common streaming logic for processing backend responses."""
         assistant_response = ""
@@ -155,18 +174,19 @@ class SingleAgent(ChatAgent):
 
         try:
             async for chunk in backend_stream:
-                if chunk.type == "content":
+                chunk_type = self._get_chunk_type_value(chunk)
+                if chunk_type == "content":
                     assistant_response += chunk.content
                     yield chunk
-                elif chunk.type == "tool_calls":
+                elif chunk_type == "tool_calls":
                     chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                     tool_calls.extend(chunk_tool_calls)
                     yield chunk
-                elif chunk.type == "complete_message":
+                elif chunk_type == "complete_message":
                     # Backend provided the complete message structure
                     complete_message = chunk.complete_message
                     # Don't yield this - it's for internal use
-                elif chunk.type == "complete_response":
+                elif chunk_type == "complete_response":
                     # Backend provided the raw Responses API response
                     if chunk.response:
                         complete_message = chunk.response
@@ -183,7 +203,7 @@ class SingleAgent(ChatAgent):
                             if response_tool_calls:
                                 yield StreamChunk(type="tool_calls", tool_calls=response_tool_calls)
                     # Complete response is for internal use - don't yield it
-                elif chunk.type == "done":
+                elif chunk_type == "done":
                     # Add complete response to history
                     if complete_message:
                         # For Responses API: complete_message is the response object with 'output' array
