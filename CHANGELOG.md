@@ -5,6 +5,129 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.26] - 2025-10-01
+
+### Added
+- **File Deletion and Workspace Management**: New MCP tools for workspace file operations
+  - New workspace deletion tools: `delete_file`, `delete_files_batch` for managing workspace files
+  - New comparison tools: `compare_directories`, `compare_files` for file diffing
+  - Consolidated `_workspace_tools_server.py` replacing previous `_workspace_copy_server.py`
+  - Improved workspace cleanup mechanisms for multi-turn sessions
+  - Proper permission checks for all file operations
+
+- **File-Based Context Paths**: Support for single file access without exposing entire directories
+  - Context paths can now be individual files, not just directories
+  - Better control over agent access to specific reference files
+  - Enhanced path validation distinguishing between file and directory contexts
+
+- **Protected Paths Feature**: Prevent agents from modifying specific reference files
+  - Protected paths within write-permitted context paths
+  - Agents can read but not modify protected files
+
+
+### Changed
+- **Code Refactoring**: Improved module structure and import paths
+  - Moved utility modules from `backend/utils/` to top-level `massgen/` directory
+  - Relocated `api_params_handler`, `formatter`, and `filesystem_manager` modules
+  - Simplified import paths and improved code discoverability
+  - Better separation of concerns between backend-specific and shared utilities
+
+- **Path Permission Manager**: Major enhancements to permission system
+  - Enhanced `will_be_writable` logic for better permission state tracking
+  - Improved path validation distinguishing between context paths and workspace paths
+  - Comprehensive test coverage in `test_path_permission_manager.py`
+  - Better handling of edge cases and nested path scenarios
+
+### Fixed
+- **Path Permission Edge Cases**: Resolved various permission checking issues
+  - Fixed file context path validation logic
+  - Corrected protected path matching behavior
+  - Improved handling of nested paths and symbolic links
+  - Better error handling for non-existent paths
+
+### Documentations, Configurations and Resources
+
+- **Example Resources**: Added v0.0.26 example resources for testing new features
+  - Bob Dylan themed website with multiple pages and styles
+  - Additional HTML, CSS, and JavaScript examples
+  - Resources organized under `massgen/configs/resources/v0.0.26-example/`
+
+- **Design Documentation**: Added comprehensive design documentation
+  - New `file_deletion_and_context_files.md` documenting file deletion and context file features
+  - Updated `permissions_and_context_files.md` with v0.0.26 features
+  - Added detailed examples for protected paths and file context paths
+
+- **Release Workflow Documentation**: Added comprehensive release example checklist
+  - Step-by-step guide for release preparation in `docs/workflows/release_example_checklist.md`
+  - Best practices for testing new features
+
+- **Configuration Examples**: New configuration examples for v0.0.26 features
+  - `gemini_gpt5nano_protected_paths.yaml`: Protected paths example
+  - `gemini_gpt5nano_file_context_path.yaml`: File-based context paths example
+  - `gemini_gemini_workspace_cleanup.yaml`: Workspace cleanup example
+
+### Technical Details
+- **Commits**: 20+ commits including file deletion tools, protected paths, and refactoring
+- **Files Modified**: 46 files with 4,343 insertions and 836 deletions
+- **Major Features**: File deletion tools, protected paths, file-based context paths, enhanced CLI prompts
+- **New Tools**: `delete_file`, `delete_files_batch`, `compare_directories`, `compare_files` MCP tools
+- **Contributors**: @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.0.25] - 2025-09-29
+
+### Added
+- **Multi-Turn Filesystem Support**: Complete implementation for persistent filesystem context across conversation turns
+  - Automatic session management when `session_storage` is configured (no flag needed)
+  - Persistent workspace management across conversation turns with `.massgen` directory
+  - Workspace snapshot preservation and restoration between turns
+  - Support for maintaining file context and modifications throughout multi-turn sessions
+  - New configuration examples: `two_gemini_flash_filesystem_multiturn.yaml`, `grok4_gpt5_gemini_filesystem_multiturn.yaml`, `grok4_gpt5_claude_code_filesystem_multiturn.yaml`
+  - Design documentation in `multi_turn_filesystem_design.md`
+
+- **SGLang Backend Integration**: Added SGLang support to inference backend alongside existing vLLM
+  - New SGLang server support with default port 30000 and `SGLANG_API_KEY` environment variable
+  - SGLang-specific parameters support (e.g., `separate_reasoning` for guided generation)
+  - Auto-detection between vLLM and SGLang servers based on configuration
+  - New configuration `two_qwen_vllm_sglang.yaml` for mixed server deployments
+  - Unified `InferenceBackend` class replacing separate `vllm.py` implementation
+  - Updated documentation renamed from `vllm_implementation.md` to `inference_backend.md`
+
+- **Enhanced Path Permission System**: New exclusion patterns and validation improvements
+  - Added `DEFAULT_EXCLUDED_PATTERNS` for common directories (.git, node_modules, .venv, etc.)
+  - New `will_be_writable` flag for better permission state tracking
+  - Improved path validation with different handling for context vs workspace paths
+  - Enhanced test coverage in `test_path_permission_manager.py`
+
+### Changed
+- **CLI Enhancements**: Major improvements to command-line interface
+  - Enhanced logging with configurable log levels and file output
+  - Improved error handling and user feedback
+
+- **System Prompt Improvements**: Refined agent system prompts for better performance
+  - Clearer instructions for file context handling
+  - Better guidance for multi-turn conversations
+  - Improved prompt templates for filesystem operations
+
+- **Documentation Updates**: Comprehensive documentation improvements
+  - Updated README with clearer installation instructions
+
+### Fixed
+- **Filesystem Manager**: Resolved workspace and permission issues
+  - Fixed warnings for non-existent temporary workspaces
+  - Better cleanup of old workspaces
+  - Fixed relative path issues in workspace copy operations
+
+- **Configuration Issues**: Multiple configuration fixes
+  - Fixed multi-agent configuration templates
+  - Fixed code generation prompts for consistency
+
+### Technical Details
+- **Commits**: 30+ commits including multi-turn filesystem, SGLang integration, and bug fixes
+- **Files Modified**: 33 files with 3,188 insertions and 642 deletions
+- **Major Features**: Multi-turn filesystem support, unified vLLM/SGLang backend, enhanced permissions
+- **New Backend**: SGLang integration alongside existing vLLM support
+- **Contributors**: @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.24] - 2025-09-26
 
 ### Added

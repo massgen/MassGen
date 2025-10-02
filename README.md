@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.24 Features](#-latest-features-v0024)
+- [v0.0.26 Features](#-latest-features-v0026)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.24](#recent-achievements-v0024)
-  - [v0.0.3 - v0.0.23](#previous-achievements-v003---v0023)
+  - [v0.0.26](#recent-achievements-v0026)
+  - [v0.0.3 - v0.0.25](#previous-achievements-v003---v0025)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.25 Roadmap](#v0025-roadmap)
+- [v0.0.27 Roadmap](#v0027-roadmap)
 </details>
 
 <details open>
@@ -129,28 +129,29 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.24)
+## 🆕 Latest Features (v0.0.26)
 
-**What's New in v0.0.24:**
-- **vLLM Backend Support** - Complete integration with vLLM for high-performance local model serving with OpenAI-compatible API
-- **POE Provider Support** - Extended ChatCompletions backend to support POE (Platform for Open Exploration) for accessing multiple AI models
-- **GPT-5-Codex Model Recognition** - Added gpt-5-codex to model registry for code generation tasks
-- **Backend Utility Modules** - Major refactoring with new api_params_handler, formatter, and token_manager modules (1,400+ lines of new utility code)
-- **Bug Fixes** - Fixed streaming chunk processing and Gemini backend session management
+**What's New in v0.0.26:**
+- **File Deletion and Workspace Management** - New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison
+- **Protected Paths Feature** - Protect specific files within write-permitted directories, allowing agents to read but not modify designated reference files
+- **File-Based Context Paths** - Grant access to individual files instead of entire directories for more precise permission control
 
-**Try v0.0.24 Features Now:**
+**Try v0.0.26 Features Now:**
 ```bash
-# Try vLLM backend with local models (requires vLLM server running)
-# First start vLLM server: python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000
+# Protected paths - keep reference files safe while allowing modifications
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/two_qwen_vllm.yaml \
-  "What is machine learning?"
+  --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
+  "Review the HTML and CSS files, then improve the styling"
+
+# File-based context paths - grant access to specific files
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml \
+  "Analyze the CSS file and make modern improvements"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
 
 ---
-
 
 ## 🏗️ System Design
 
@@ -258,10 +259,11 @@ The system currently supports multiple model providers with advanced capabilitie
 - **Z AI**: GLM-4.5
 
 **Local Model Support:**
-- **vLLM** (NEW in v0.0.24): High-performance local model serving with OpenAI-compatible API
-  - Support for vLLM-specific parameters (top_k, repetition_penalty, guided_json)
-  - Optimized for large-scale model inference
-  - Configuration examples: `three_agents_vllm.yaml`, `two_qwen_vllm.yaml`
+- **vLLM & SGLang** (ENHANCED in v0.0.25): Unified inference backend supporting both vLLM and SGLang servers
+  - Auto-detection between vLLM (port 8000) and SGLang (port 30000) servers
+  - Support for both vLLM and SGLang-specific parameters (top_k, repetition_penalty, separate_reasoning)
+  - Mixed server deployments with configuration example: `two_qwen_vllm_sglang.yaml`
+
 - **LM Studio** (v0.0.7+): Run open-weight models locally with automatic server management
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
@@ -396,10 +398,10 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 ```bash
 # Weather service with GPT-5
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
-  "What's the weather forecast for San Francisco this week?"
+  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+  "What's the weather forecast for New York this week?"
 
-# Multi-tool MCP with Gemini - Search + Weather + Filesystem
+# Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
   "Find the best restaurants in Paris and save the recommendations to a file"
@@ -458,6 +460,7 @@ agents:
 #### **4. File System Operations & Workspace Management**
 
 MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
+
 
 **Filesystem Configuration Parameters:**
 
@@ -520,31 +523,41 @@ orchestrator:
 
 → [View more filesystem examples](massgen/configs/tools/filesystem/)
 
+> ⚠️ **IMPORTANT SAFETY WARNING**
+>
+> MassGen agents can **autonomously read, write, modify, and delete files** within their permitted directories.
+>
+> **Before running MassGen with filesystem access:**
+> - Only grant access to directories you're comfortable with agents modifying
+> - Use the permission system to restrict write access where needed
+> - Consider testing in an isolated directory or virtual environment first
+> - Back up important files before granting write access
+> - Review the `context_paths` configuration carefully
+>
+> The agents will execute file operations without additional confirmation once permissions are granted.
+
 #### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
-Work directly with your existing projects! User Context Paths allow you to share specific directories and files with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
+Work directly with your existing projects! User Context Paths allow you to share specific directories with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
+
+MassGen automatically organizes all its working files under a `.massgen/` directory in your project root, keeping your project clean and making it easy to exclude MassGen's temporary files from version control.
 
 **Project Integration Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `context_paths` | list | **Yes** (for project integration) | Shared directories/files for all agents |
-| └─ `path` | string | Yes | Absolute path to your project directory or file |
+| `context_paths` | list | **Yes** (for project integration) | Shared directories for all agents |
+| └─ `path` | string | Yes | Absolute path to your project directory (**must be directory, not file**) |
 | └─ `permission` | string | Yes | Access level: `"read"` or `"write"` |
+
+**⚠️ Important:** Context paths must point to **directories**, not individual files. MassGen validates all paths during startup and will show clear error messages for missing paths or file paths.
 
 
 **Quick Start Commands:**
 
 ```bash
-# Code analysis and security audit
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/fs_permissions_test.yaml \
-  "Analyze all Python files in this project and create a comprehensive security audit report"
-
-# Project modernization
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
-  "Review this legacy codebase and create a modernization plan with updated dependencies"
+# Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 **Configuration:**
@@ -599,12 +612,50 @@ orchestrator:
 - **Data Processing**: Agents access shared datasets and generate analysis reports
 - **Project Migration**: Agents examine existing projects and create modernized versions
 
+**Clean Project Organization:**
+```
+your-project/
+├── .massgen/                          # All MassGen state
+│   ├── sessions/                      # Multi-turn conversation history (if using interactively)
+│   │   └── session_20240101_143022/
+│   │       ├── turn_1/                # Results from turn 1
+│   │       ├── turn_2/                # Results from turn 2
+│   │       └── SESSION_SUMMARY.txt    # Human-readable summary
+│   ├── workspaces/                    # Agent working directories
+│   │   ├── agent1/                    # Individual agent workspaces
+│   │   └── agent2/
+│   ├── snapshots/                     # Workspace snapshots for coordination
+│   └── temp_workspaces/               # Previous turn results for context
+├── massgen/
+└── ...
+```
+
+**Benefits:**
+- ✅ **Clean Projects** - All MassGen files contained in one directory
+- ✅ **Easy Gitignore** - Just add `.massgen/` to `.gitignore`
+- ✅ **Portable** - Move or delete `.massgen/` without affecting your project
+- ✅ **Multi-Turn Sessions** - Conversation history preserved across sessions
+
+**Configuration Auto-Organization:**
+```yaml
+orchestrator:
+  # User specifies simple names - MassGen organizes under .massgen/
+  snapshot_storage: "snapshots"         # → .massgen/snapshots/
+  session_storage: "sessions"           # → .massgen/sessions/
+  agent_temporary_workspace: "temp"     # → .massgen/temp/
+
+agents:
+  - backend:
+      cwd: "workspace1"                 # → .massgen/workspaces/workspace1/
+```
+
 → [Learn more about project integration](massgen/mcp_tools/permissions_and_context_files.md)
 
 **Security Considerations:**
 - **Agent ID Safety**: Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
 - **File Access Control**: Restrict file access using MCP server configurations when needed
-- **Path Validation**: All paths are resolved to absolute paths to prevent directory traversal attacks
+- **Path Validation**: All context paths are validated to ensure they exist and are directories (not files)
+- **Directory-Only Context Paths**: Context paths must point to directories, not individual files
 
 ---
 
@@ -636,11 +687,16 @@ uv run python -m massgen.cli \
 
 **Claude Code (Development Tools)**
 ```bash
-# Professional development environment
+# Professional development environment with auto-configured workspace
 uv run python -m massgen.cli \
   --backend claude_code \
   --model sonnet \
   "Create a Flask web app with authentication"
+
+# Default workspace directories created automatically:
+# - workspace1/              (working directory)
+# - snapshots/              (workspace snapshots)
+# - temp_workspaces/        (temporary agent workspaces)
 ```
 
 **Local Models (LM Studio - v0.0.7+)**
@@ -687,6 +743,7 @@ uv run python -m massgen.cli \
 **Web Automation:** (still in test)
 ```bash
 # Browser automation with screenshots and reporting
+# Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
   "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
@@ -828,35 +885,44 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.24)
+### Recent Achievements (v0.0.26)
 
-**🎉 Released: September 26, 2025**
+**🎉 Released: October 1, 2025**
 
-Version 0.0.24 introduces **vLLM Backend Support** and **Backend Utility Modules**, enabling high-performance local model inference and improved code organization:
+Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protected Paths**, and **File-Based Context Paths**, enabling more precise control over agent file access:
 
-#### vLLM Backend Support
-- **Local Model Serving**: Run powerful AI models locally with vLLM for cost-effective, private inference
-- **Easy Setup**: Ready-to-use configurations (`three_agents_vllm.yaml`, `two_qwen_vllm.yaml`)
-- **Advanced Controls**: Fine-tune model behavior with top_k sampling, repetition penalties, and thinking modes
-- **High Performance**: Optimized for serving large language models at scale
+#### File Deletion and Workspace Management
+- **New MCP Tools**: `delete_file`, `delete_files_batch` for workspace cleanup
+- **Comparison Tools**: `compare_directories`, `compare_files` for file diffing
+- **Consolidated Tools**: Unified `_workspace_tools_server.py` replacing previous implementations
 
-#### Code Organization Improvements
-- **Cleaner Backend Code**: Reorganized backend utilities into focused modules for easier maintenance
-- **Better Error Handling**: Improved API parameter validation and processing across all backends
-- **Unified Token Management**: Consistent token counting and cost tracking across different model providers
-- **Streamlined File Operations**: Moved filesystem tools to dedicated backend utilities
+#### Protected Paths Feature
+- **Selective Protection**: Protect specific files within write-permitted directories
+- **Read-Only References**: Agents can read but not modify protected files
+- **Fine-Grained Control**: Shield important files while allowing changes to others
 
-#### New Provider & Model Support
-- **POE Integration**: Access multiple AI models through POE platform with single API key
-- **GPT-5-Codex Support**: Enhanced code generation capabilities with latest OpenAI model
-- **Stability Improvements**: Fixed streaming issues and memory leaks for better reliability
+#### File-Based Context Paths
+- **Individual File Access**: Context paths can now be individual files, not just directories
+- **Flexible Permissions**: Grant read/write access to specific files without directory-wide permissions
+- **Better Security**: More precise control over what agents can access
 
-#### Enhanced Documentation
-- **vLLM Setup Guide**: Step-by-step instructions for running local models with vLLM
-- **Advanced Filesystem Case Study**: Showing how agents can work together with controlled file access and workspace sharing
+#### Code Organization
+- **Path Permission Manager**: Enhanced handling of edge cases and nested path scenarios
+- **CLI Improvements**: Interactive prompts for context path configuration
 
+#### Documentation, Configurations and Resources
+- **Design Documentation**: New `file_deletion_and_context_files.md` documenting file deletion and context file features
+- **Release Workflow**: Added `release_example_checklist.md` for standardized release process
+- **Configuration Examples**: `gemini_gpt5nano_protected_paths.yaml`, `gemini_gpt5nano_file_context_path.yaml`, `grok4_gpt5_gemini_filesystem.yaml`
+- **Example Resources**: Bob Dylan website and Beatles HTML examples in `v0.0.26-example/`
 
-### Previous Achievements (v0.0.3 - v0.0.23)
+### Previous Achievements (v0.0.3 - v0.0.25)
+
+✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
+
+✅ **SGLang Backend Integration (v0.0.25)**: Unified vLLM/SGLang backend with auto-detection, support for SGLang-specific parameters like `separate_reasoning`, and dual server support for mixed vLLM and SGLang deployments
+
+✅ **vLLM Backend Support (v0.0.24)**: Complete integration with vLLM for high-performance local model serving, POE provider support, GPT-5-Codex model recognition, backend utility modules refactoring, and comprehensive bug fixes including streaming chunk processing
 
 ✅ **Backend Architecture Refactoring (v0.0.23)**: Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends, extracted formatter module for better code organization, and improved maintainability through unified MCP integration
 
@@ -918,25 +984,25 @@ Version 0.0.24 introduces **vLLM Backend Support** and **Backend Utility Modules
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.25 Roadmap
+### v0.0.27 Roadmap
 
-Version 0.0.25 builds upon the vLLM backend support and utility modules refactoring of v0.0.24 by focusing on orchestrator improvements and agent communication fixes. Key priorities include:
+Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing on coding agent capabilities, multimodal support, and finishing core refactoring work. Key enhancements include:
 
 #### Required Features
-- **Agent System Prompt Fixes**: Fix the problem where the final agent expects human feedback through system prompt changes
-- **Refactor Orchestrator**: Streamline orchestrator code for better maintainability and performance
+- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
+- **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
+- **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
 
 #### Optional Features
-- **MCP Marketplace Integration**: Integrate MCP Marketplace support for expanded tool ecosystem
-- **Refactor Send/Receive Messaging**: Extract messaging system to use stream chunks class for multimodal support
+- **Additional Agent Backends from Other Frameworks**: Integration with AG2, LangChain, and other agent frameworks
 
 Key technical approach:
-- **Autonomous Agent Behavior**: Ensure final agents complete tasks without expecting human feedback through system prompt improvements
-- **Orchestrator Refactoring**: Extract coordination logic into separate modules for better maintainability
-- **Marketplace Integration**: Enable tool discovery and installation from MCP Marketplace
-- **Messaging Architecture**: Foundation for future multimodal support through unified stream chunks
+- **Coding Agent**: Enhanced system prompts encouraging more iterations, multi-turn conversation support with `.massgen/sessions/`, workspace diff logging, and consolidated `.massgen/` directory structure
+- **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
+- **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
+- **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
 
-For detailed milestones and technical specifications, see the [full v0.0.25 roadmap](ROADMAP_v0.0.25.md).
+For detailed milestones and technical specifications, see the [full v0.0.27 roadmap](ROADMAP_v0.0.27.md).
 
 ---
 

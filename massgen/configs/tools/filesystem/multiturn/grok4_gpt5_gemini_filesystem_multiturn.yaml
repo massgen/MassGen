@@ -1,0 +1,33 @@
+# uv tool run massgen --config tools/filesystem/multiturn/grok4_gpt5_gemini_filesystem_multiturn.yaml
+agents:
+  - id: "agent_a"
+    backend:
+      type: "grok"
+      model: "grok-4-fast-reasoning"  # "grok-code-fast-1"
+      cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      cwd: "workspace2"
+
+  - id: "agent_c"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace3"
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+    session_storage: "sessions"  # Used for multi-turn conversations to store previous rounds.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

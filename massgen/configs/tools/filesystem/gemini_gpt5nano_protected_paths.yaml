@@ -1,0 +1,45 @@
+# Example Configuration: Protected Paths
+#
+# Use Case: Allow agents to modify files but prevent changes to specific reference files
+#
+# This config demonstrates the protected_paths feature which makes specific files/directories
+# within a writable context path immune from modification or deletion.
+#
+# Run with:
+#   uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml "Review the HTML and CSS files, then improve the styling"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      cwd: "workspace2"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "massgen/configs/resources/v0.0.21-example"
+      permission: "write"
+      protected_paths:
+        - "index.html"  # This file is read-only (protected)
+        # styles.css remains writable - agents can modify it
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Result:
+# ✅ massgen/configs/resources/v0.0.21-example/styles.css → Can modify/delete
+# ❌ massgen/configs/resources/v0.0.21-example/index.html → Read-only (protected)

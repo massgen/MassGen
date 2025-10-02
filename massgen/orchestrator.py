@@ -17,9 +17,11 @@ TODOs:
 """
 
 import asyncio
+import json
 import os
 import shutil
 import time
+import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -112,6 +114,7 @@ class Orchestrator(ChatAgent):
         config: Optional[AgentConfig] = None,
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
+        previous_turns: Optional[List[Dict[str, Any]]] = None,
     ):
         """
         Initialize MassGen orchestrator.
@@ -123,6 +126,7 @@ class Orchestrator(ChatAgent):
             config: Optional AgentConfig for customizing orchestrator behavior
             snapshot_storage: Optional path to store agent workspace snapshots
             agent_temporary_workspace: Optional path for agent temporary workspaces
+            previous_turns: List of previous turn metadata for multi-turn conversations (loaded by CLI)
         """
         super().__init__(session_id)
         self.orchestrator_id = orchestrator_id
@@ -157,6 +161,9 @@ class Orchestrator(ChatAgent):
         # Context sharing for agents with filesystem support
         self._snapshot_storage: Optional[str] = snapshot_storage
         self._agent_temporary_workspace: Optional[str] = agent_temporary_workspace
+
+        # Multi-turn session tracking (loaded by CLI, not managed by orchestrator)
+        self._previous_turns: List[Dict[str, Any]] = previous_turns or []
 
         # Coordination tracking - always enabled for analysis/debugging
         self.coordination_tracker = CoordinationTracker()
@@ -244,6 +251,10 @@ class Orchestrator(ChatAgent):
             # Reinitialize session with user prompt now that we have it
             self.coordination_tracker.initialize_session(list(self.agents.keys()), self.current_task)
             self.workflow_phase = "coordinating"
+
+            # Clear agent workspaces for new turn (if this is a multi-turn conversation with history)
+            if conversation_context and conversation_context.get("conversation_history"):
+                self._clear_agent_workspaces()
 
             async for chunk in self._coordinate_agents_with_timeout(conversation_context):
                 yield chunk
@@ -790,9 +801,6 @@ class Orchestrator(ChatAgent):
         Returns:
             The timestamp used for this snapshot
         """
-        import json
-        import time
-
         logger.info(f"[Orchestrator._save_agent_snapshot] Called for agent_id={agent_id}, has_answer={bool(answer_content)}, has_vote={bool(vote_data)}, is_final={is_final}")
 
         agent = self.agents.get(agent_id)
@@ -858,7 +866,7 @@ class Orchestrator(ChatAgent):
                         "timestamp": timestamp,
                         "unix_timestamp": time.time(),
                         "iteration": self.coordination_tracker.current_iteration if self.coordination_tracker else None,
-                        "round": self.coordination_tracker.max_round if self.coordination_tracker else None,
+                        "coordination_round": self.coordination_tracker.max_round if self.coordination_tracker else None,
                         "available_options": list(current_answers.keys()),
                         "available_options_anon": [
                             next(
@@ -881,8 +889,6 @@ class Orchestrator(ChatAgent):
                     logger.info(f"[Orchestrator._save_agent_snapshot] Saved comprehensive vote to {vote_file}")
 
             except Exception as e:
-                import traceback
-
                 logger.error(f"[Orchestrator._save_agent_snapshot] Failed to save vote for {agent_id}: {e}")
                 logger.error(f"[Orchestrator._save_agent_snapshot] Traceback: {traceback.format_exc()}")
 
@@ -1169,7 +1175,26 @@ class Orchestrator(ChatAgent):
                 # Get context paths if available
                 context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
 
-                filesystem_system_message = self.message_templates.filesystem_system_message(main_workspace=main_workspace, temp_workspace=temp_workspace, context_paths=context_paths)
+                # Add previous turns as read-only context paths (only n-2 and earlier)
+                previous_turns_context = self._get_previous_turns_context_paths()
+
+                # Filter to only show turn n-2 and earlier (agents start with n-1 in their workspace)
+                # Get current turn from previous_turns list
+                current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
+                turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
+
+                # Previous turn paths already registered in orchestrator constructor
+
+                # Check if workspace was pre-populated (has any previous turns)
+                workspace_prepopulated = len(previous_turns_context) > 0
+
+                filesystem_system_message = self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace,
+                    context_paths=context_paths,
+                    previous_turns=turns_to_show,
+                    workspace_prepopulated=workspace_prepopulated,
+                )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
             # Normalize workspace paths in agent answers for better comparison from this agent's perspective
@@ -1830,12 +1855,26 @@ class Orchestrator(ChatAgent):
             # Get context paths if available
             context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths() if agent.backend.filesystem_manager.path_permission_manager else []
 
-            base_system_message += "\n\n" + self.message_templates.filesystem_system_message(main_workspace=main_workspace, temp_workspace=temp_workspace, context_paths=context_paths)
-            # Add special note that we must not just cite answers from the temp workspace but instead create a synthesized final answer
-            base_system_message += (
-                "\n\nNote: When presenting the final answer, it is not sufficient to just read from existing temporary "
-                "workspace files. Instead, you must write to your main workspace so that everything needed for the final "
-                "answer is contained in your main workspace. This ensures the final answer is complete and self-contained."
+            # Add previous turns as read-only context paths (only n-2 and earlier)
+            previous_turns_context = self._get_previous_turns_context_paths()
+
+            # Filter to only show turn n-2 and earlier
+            current_turn_num = len(previous_turns_context) + 1 if previous_turns_context else 1
+            turns_to_show = [t for t in previous_turns_context if t["turn"] < current_turn_num - 1]
+
+            # Check if workspace was pre-populated
+            workspace_prepopulated = len(previous_turns_context) > 0
+
+            base_system_message = (
+                self.message_templates.filesystem_system_message(
+                    main_workspace=main_workspace,
+                    temp_workspace=temp_workspace,
+                    context_paths=context_paths,
+                    previous_turns=turns_to_show,
+                    workspace_prepopulated=workspace_prepopulated,
+                )
+                + "\n\n## Instructions\n"
+                + base_system_message
             )
 
         # Create conversation with system and user messages
@@ -2121,6 +2160,27 @@ class Orchestrator(ChatAgent):
         if agent_id in self.agent_states:
             del self.agent_states[agent_id]
 
+    def get_final_result(self) -> Optional[Dict[str, Any]]:
+        """
+        Get final result for session persistence.
+
+        Returns:
+            Dict with final_answer, winning_agent_id, and workspace_path, or None if not available
+        """
+        if not self._selected_agent or not self._final_presentation_content:
+            return None
+
+        winning_agent = self.agents.get(self._selected_agent)
+        workspace_path = None
+        if winning_agent and winning_agent.backend.filesystem_manager:
+            workspace_path = str(winning_agent.backend.filesystem_manager.get_current_workspace())
+
+        return {
+            "final_answer": self._final_presentation_content,
+            "winning_agent_id": self._selected_agent,
+            "workspace_path": workspace_path,
+        }
+
     def get_status(self) -> Dict[str, Any]:
         """Get current orchestrator status."""
         # Calculate vote results
@@ -2175,6 +2235,53 @@ class Orchestrator(ChatAgent):
             elif "append_system_prompt" in backend_params:
                 return backend_params["append_system_prompt"]
         return None
+
+    def _clear_agent_workspaces(self) -> None:
+        """
+        Clear all agent workspaces and pre-populate with previous turn's results.
+
+        This creates a WRITABLE copy of turn n-1 in each agent's workspace.
+        Note: CLI separately provides turn n-1 as a READ-ONLY context path, allowing
+        agents to both modify files (in workspace) and reference originals (via context path).
+        """
+        # Get previous turn (n-1) workspace for pre-population
+        previous_turn_workspace = None
+        if self._previous_turns:
+            # Get the most recent turn (last in list)
+            latest_turn = self._previous_turns[-1]
+            previous_turn_workspace = Path(latest_turn["path"])
+
+        for agent_id, agent in self.agents.items():
+            if agent.backend.filesystem_manager:
+                workspace_path = agent.backend.filesystem_manager.get_current_workspace()
+                if workspace_path and Path(workspace_path).exists():
+                    # Clear workspace contents but keep the directory
+                    for item in Path(workspace_path).iterdir():
+                        if item.is_file():
+                            item.unlink()
+                        elif item.is_dir():
+                            shutil.rmtree(item)
+                    logger.info(f"[Orchestrator] Cleared workspace for {agent_id}: {workspace_path}")
+
+                    # Pre-populate with previous turn's results if available (creates writable copy)
+                    if previous_turn_workspace and previous_turn_workspace.exists():
+                        logger.info(f"[Orchestrator] Pre-populating {agent_id} workspace with writable copy of turn n-1 from {previous_turn_workspace}")
+                        for item in previous_turn_workspace.iterdir():
+                            dest = Path(workspace_path) / item.name
+                            if item.is_file():
+                                shutil.copy2(item, dest)
+                            elif item.is_dir():
+                                shutil.copytree(item, dest, dirs_exist_ok=True)
+                        logger.info(f"[Orchestrator] Pre-populated {agent_id} workspace with writable copy of turn n-1")
+
+    def _get_previous_turns_context_paths(self) -> List[Dict[str, Any]]:
+        """
+        Get previous turns as context paths for current turn's agents.
+
+        Returns:
+            List of previous turn information with path, turn number, and task
+        """
+        return self._previous_turns
 
     async def reset(self) -> None:
         """Reset orchestrator state for new task."""

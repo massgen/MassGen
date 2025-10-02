@@ -24,13 +24,13 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 # Third-party imports
 from openai import AsyncOpenAI
 
+from ..api_params_handler import ChatCompletionsAPIParamsHandler
+from ..formatter import ChatCompletionsFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 
 # Local imports
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
-from .utils.api_params_handler import ChatCompletionsAPIParamsHandler
-from .utils.formatter import ChatCompletionsFormatter
 
 
 class ChatCompletionsBackend(MCPBackend):
