@@ -1,0 +1,97 @@
+# Multi-Agent Multimodal Demo Configuration
+# Demonstrates Workflow 2: Agents sharing multimodal content with text summarization
+# Perfect for testing new_answer with images/files
+
+agents:
+  - id: "visual-analyst"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      multimodal:
+        enabled: true
+      reasoning:
+        effort: "high"
+      enable_web_search: true
+    system_message: |
+      You are a visual analysis expert. When you see images or documents:
+      1. Provide detailed visual analysis
+      2. Extract all text and data
+      3. Identify patterns and insights
+      4. Create comprehensive reports with your findings
+
+      When providing new_answer with images, include both detailed analysis
+      and the original media for other agents to review.
+
+  - id: "content-reviewer"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      multimodal:
+        enabled: true
+      reasoning:
+        effort: "medium"
+    system_message: |
+      You are a content reviewer who validates and enhances visual analyses.
+
+      When you receive multimodal answers from other agents:
+      1. Review the text summary provided
+      2. Check if media references are mentioned
+      3. Provide feedback on the analysis quality
+      4. Vote or provide an improved answer
+
+      Note: You will receive summarized text and media references, not full media data.
+
+  - id: "report-generator"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      multimodal:
+        enabled: true
+      text:
+        verbosity: "high"
+    system_message: |
+      You are a report generator who creates final comprehensive reports.
+
+      When reviewing multimodal content:
+      1. Synthesize information from all agents
+      2. Reference media items by their descriptions
+      3. Create a well-structured final report
+      4. Indicate which visual evidence supports each conclusion
+
+      Focus on creating clear, actionable reports that reference the visual evidence.
+
+# Orchestrator configuration for multimodal workflow testing
+orchestrator:
+  # Enable detailed coordination tracking
+  enable_detailed_tracking: true
+
+  # Settings for multimodal answer processing
+  multimodal_handling:
+    summarize_text: true  # Summarize text portion of multimodal answers
+    preserve_media: true  # Keep media references intact
+    max_summary_length: 500  # Characters for text summary
+
+# UI Configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+  show_media_info: true
+  show_vote_details: true
+
+# Test Instructions
+# -----------------
+# Test Workflow 1 (Media forwarding):
+#   Send an image with: "Analyze this image"
+#   Expected: Image is forwarded through agents to frontend
+#
+# Test Workflow 2 (new_answer with media):
+#   Send: "Create a visual analysis report of [image]"
+#   Expected:
+#   - First agent provides new_answer with image
+#   - Other agents receive text summary + media reference
+#   - Agents can vote or provide improved answers
+#
+# Console should show:
+#   [🖼️ Image: image_name] for images
+#   [📄 File: file_name] for files
+#   URL or path information if available

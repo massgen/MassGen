@@ -48,6 +48,77 @@ class StreamChunk:
     summary_index: Optional[int] = None  # Reasoning summary index
 
 
+@dataclass
+class MultimodalStreamChunk(StreamChunk):
+    """Extended StreamChunk for multimodal content support."""
+
+    # Multimodal-specific fields
+    media_items: Optional[List[Dict[str, Any]]] = None  # List of media items (images, files, etc.)
+    text_content: Optional[str] = None  # Separated pure text content
+    has_media: bool = False  # Quick flag to check if contains media
+
+    def __post_init__(self):
+        """Post-initialization to ensure compatibility."""
+        # If we have media items but no content, generate text representation
+        if self.media_items and not self.content:
+            self.content = self._generate_text_representation()
+            self.has_media = True
+        elif self.media_items:
+            self.has_media = True
+
+    def _generate_text_representation(self) -> str:
+        """Generate text representation of media for console display."""
+        if not self.media_items:
+            return ""
+
+        representations = []
+        for item in self.media_items:
+            media_type = item.get("type", "unknown")
+            if media_type == "image":
+                name = item.get("name", item.get("description", "image"))
+                representations.append(f"[🖼️ Image: {name}]")
+            elif media_type == "file":
+                name = item.get("name", "file")
+                representations.append(f"[📄 File: {name}]")
+            elif media_type == "document":
+                name = item.get("name", "document")
+                representations.append(f"[📃 Document: {name}]")
+            elif media_type == "audio":
+                name = item.get("name", "audio")
+                representations.append(f"[🎵 Audio: {name}]")
+            elif media_type == "video":
+                name = item.get("name", "video")
+                representations.append(f"[🎬 Video: {name}]")
+            else:
+                representations.append(f"[📎 {media_type}: {item.get('name', media_type)}]")
+
+        return "\n".join(representations)
+
+    def is_multimodal(self) -> bool:
+        """Check if this chunk contains multimodal content."""
+        return self.has_media or bool(self.media_items)
+
+    def to_standard_chunk(self) -> StreamChunk:
+        """Convert to standard StreamChunk for backward compatibility."""
+        return StreamChunk(
+            type=self.type,
+            content=self.content,
+            tool_calls=self.tool_calls,
+            complete_message=self.complete_message,
+            response=self.response,
+            error=self.error,
+            source=self.source,
+            status=self.status,
+            reasoning_delta=self.reasoning_delta,
+            reasoning_text=self.reasoning_text,
+            reasoning_summary_delta=self.reasoning_summary_delta,
+            reasoning_summary_text=self.reasoning_summary_text,
+            item_id=self.item_id,
+            content_index=self.content_index,
+            summary_index=self.summary_index,
+        )
+
+
 class LLMBackend(ABC):
     """Abstract base class for LLM providers."""
 

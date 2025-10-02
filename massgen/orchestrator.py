@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .agent_config import AgentConfig
-from .backend.base import StreamChunk
+from .backend.base import MultimodalStreamChunk, StreamChunk
 from .chat_agent import ChatAgent
 from .coordination_tracker import CoordinationTracker
 from .logger_config import get_log_session_dir  # Import to get log directory
@@ -484,7 +484,19 @@ class Orchestrator(ChatAgent):
                 try:
                     chunk_type, chunk_data = await task
 
-                    if chunk_type == "content":
+                    if chunk_type == "multimodal":
+                        # Handle multimodal chunks - forward them properly
+                        if isinstance(chunk_data, MultimodalStreamChunk):
+                            # Add source info if not present
+                            if not chunk_data.source:
+                                chunk_data.source = agent_id
+                            log_stream_chunk("orchestrator", "multimodal", f"Media items: {len(chunk_data.media_items or [])}", agent_id)
+                            yield chunk_data
+                        else:
+                            # Shouldn't happen, but handle gracefully
+                            yield StreamChunk(type="content", content=str(chunk_data), source=agent_id)
+
+                    elif chunk_type == "content":
                         # Stream agent content in real-time with source info
                         log_stream_chunk("orchestrator", "content", chunk_data, agent_id)
                         yield StreamChunk(type="content", content=chunk_data, source=agent_id)
@@ -520,6 +532,34 @@ class Orchestrator(ChatAgent):
                             agent = self.agents.get(agent_id)
                             # Get the context that was sent to this agent
                             agent_context = self.get_last_context(agent_id)
+
+                            # Check if answer contains multimodal content (Workflow 2)
+                            text_content, media_items = self._extract_multimodal_content(result_data)
+
+                            # Process multimodal answer if media present
+                            if media_items:
+                                # Create text summary for other agents
+                                text_summary = self._create_text_summary(text_content)
+
+                                # Build multimodal context for other agents
+                                multimodal_context = self._build_multimodal_context(text_summary, media_items)
+
+                                # Store both original and processed versions
+                                self.agent_states[agent_id].answer = {
+                                    "original": result_data,
+                                    "text": text_content,
+                                    "summary": text_summary,
+                                    "media_items": media_items,
+                                    "context_for_others": multimodal_context,
+                                }
+
+                                # Use multimodal context for other agents
+                                processed_answer = multimodal_context
+                            else:
+                                # Regular text answer
+                                self.agent_states[agent_id].answer = result_data
+                                processed_answer = result_data
+
                             # Save snapshot (of workspace and answer) when agent provides new answer
                             answer_timestamp = await self._save_agent_snapshot(
                                 agent_id,
@@ -530,7 +570,8 @@ class Orchestrator(ChatAgent):
                                 agent.backend.filesystem_manager.log_current_state("after providing answer")
                             # Always record answers, even from restarting agents (orchestrator accepts them)
 
-                            answered_agents[agent_id] = result_data
+                            # Store the answer that will be sent to other agents
+                            answered_agents[agent_id] = processed_answer
                             # Pass timestamp to coordination_tracker for mapping
                             self.coordination_tracker.add_agent_answer(
                                 agent_id,
@@ -980,6 +1021,84 @@ class Orchestrator(ChatAgent):
 
         return normalized_answers
 
+    def _extract_multimodal_content(self, content: Any) -> tuple[str, List[Dict[str, Any]]]:
+        """Extract text and media items from answer content."""
+        # Handle dict format with media_items
+        if isinstance(content, dict):
+            if "media_items" in content:
+                text = content.get("text", content.get("summary", ""))
+                media_items = content.get("media_items", [])
+                return text, media_items
+            elif "content" in content:
+                # Recursively handle nested content
+                return self._extract_multimodal_content(content["content"])
+
+        # Handle list format (mixed text and media)
+        if isinstance(content, list):
+            text_parts = []
+            media_items = []
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        text_parts.append(item.get("text", ""))
+                    elif item.get("type") in ["image", "file", "document", "audio", "video"]:
+                        media_items.append(item)
+            return " ".join(text_parts), media_items
+
+        # Plain string content
+        return str(content), []
+
+    def _create_text_summary(self, text: str, max_length: int = 500) -> str:
+        """Create a summary of text content for other agents."""
+        if not text:
+            return ""
+
+        # Simple truncation for now - can be enhanced with actual summarization
+        if len(text) <= max_length:
+            return text
+
+        # Truncate and add ellipsis
+        return text[:max_length] + "... [truncated]"
+
+    def _build_multimodal_context(self, text_summary: str, media_items: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Build context with summarized text and media references."""
+        context = {
+            "type": "multimodal_answer",
+            "content": [
+                {"type": "text", "text": text_summary},
+            ],
+        }
+
+        # Add media references (not full data to avoid context bloat)
+        for item in media_items:
+            media_type = item.get("type", "unknown")
+            if media_type == "image":
+                context["content"].append(
+                    {
+                        "type": "image_reference",
+                        "description": f"[Image: {item.get('name', 'unnamed')}]",
+                        "original": item,  # Keep original for agents that need it
+                    },
+                )
+            elif media_type == "file":
+                context["content"].append(
+                    {
+                        "type": "file_reference",
+                        "description": f"[File: {item.get('name', 'unnamed')}]",
+                        "original": item,
+                    },
+                )
+            elif media_type == "document":
+                context["content"].append(
+                    {
+                        "type": "document_reference",
+                        "description": f"[Document: {item.get('name', 'unnamed')}]",
+                        "original": item,
+                    },
+                )
+
+        return context
+
     def _normalize_workspace_paths_for_comparison(self, content: str, replacement_path: str = "/workspace") -> str:
         """
         Normalize all workspace paths in content to a canonical form for equality comparison.
@@ -1285,7 +1404,29 @@ class Orchestrator(ChatAgent):
                 logger.info(f"[Orchestrator] Agent {agent_id} starting to stream chat response...")
 
                 async for chunk in chat_stream:
-                    if chunk.type == "content":
+                    # Handle MultimodalStreamChunk
+                    if isinstance(chunk, MultimodalStreamChunk) and chunk.is_multimodal():
+                        # Workflow 1: Forward multimodal content to frontend
+                        response_text += chunk.content or ""
+
+                        # Send multimodal chunk for proper handling
+                        yield ("multimodal", chunk)
+
+                        # Also send text representation for console display
+                        if chunk.content:
+                            yield ("content", chunk.content)
+
+                        # Log multimodal content
+                        backend_name = None
+                        if hasattr(agent, "backend") and hasattr(agent.backend, "get_provider_name"):
+                            backend_name = agent.backend.get_provider_name()
+                        log_orchestrator_agent_message(
+                            agent_id,
+                            "RECV",
+                            {"content": chunk.content, "has_media": True, "media_count": len(chunk.media_items or [])},
+                            backend_name=backend_name,
+                        )
+                    elif chunk.type == "content":
                         response_text += chunk.content
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
@@ -1634,15 +1775,37 @@ class Orchestrator(ChatAgent):
                 )
 
         if self._selected_agent and self._selected_agent in self.agent_states and self.agent_states[self._selected_agent].answer:
-            final_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
+            raw_answer = self.agent_states[self._selected_agent].answer  # NOTE: This is the raw answer from the winning agent, not the actual final answer.
+
+            # Check if answer is multimodal
+            if isinstance(raw_answer, dict) and "media_items" in raw_answer:
+                # Extract original answer for presentation
+                final_answer = raw_answer.get("original", raw_answer.get("text", ""))
+                media_items = raw_answer.get("media_items", [])
+
+                # Present multimodal answer
+                if media_items:
+                    # Create MultimodalStreamChunk for the final answer
+                    yield MultimodalStreamChunk(
+                        type="content",
+                        content=raw_answer.get("text", ""),  # Text part
+                        media_items=media_items,
+                        has_media=True,
+                        source="orchestrator",
+                    )
+                else:
+                    # Just text
+                    yield StreamChunk(type="content", content=final_answer)
+            else:
+                # Regular text answer
+                final_answer = raw_answer
+                yield StreamChunk(type="content", content=final_answer)
 
             # Add to conversation history
             self.add_to_history("assistant", final_answer)
 
             log_stream_chunk("orchestrator", "content", f"🏆 Selected Agent: {self._selected_agent}\n")
-            yield StreamChunk(type="content", content=f"🏆 Selected Agent: {self._selected_agent}\n")
-            log_stream_chunk("orchestrator", "content", final_answer)
-            yield StreamChunk(type="content", content=final_answer)
+            log_stream_chunk("orchestrator", "content", str(final_answer))
             log_stream_chunk(
                 "orchestrator",
                 "content",

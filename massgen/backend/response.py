@@ -12,7 +12,7 @@ import openai
 from openai import AsyncOpenAI
 
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
-from .base import FilesystemSupport, StreamChunk
+from .base import FilesystemSupport, MultimodalStreamChunk, StreamChunk
 from .base_with_mcp import MCPBackend
 from .utils.api_params_handler import ResponseAPIParamsHandler
 from .utils.formatter import ResponseFormatter
@@ -27,6 +27,95 @@ class ResponseBackend(MCPBackend):
         self.formatter = ResponseFormatter()
         self.api_params_handler = ResponseAPIParamsHandler(self)
 
+    def _detect_multimodal_content(self, messages: List[Dict[str, Any]]) -> bool:
+        """Detect if messages contain multimodal content."""
+        for msg in messages:
+            content = msg.get("content", "")
+            if isinstance(content, list):
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") in ["image", "image_url", "file", "document", "audio", "video"]:
+                        return True
+        return False
+
+    def _extract_media_from_message(self, message: Dict[str, Any]) -> tuple[str, List[Dict[str, Any]]]:
+        """Extract text and media items from a message."""
+        content = message.get("content", "")
+        if isinstance(content, str):
+            return content, []
+
+        text_parts = []
+        media_items = []
+
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict):
+                    if item.get("type") == "text":
+                        text_parts.append(item.get("text", ""))
+                    elif item.get("type") in ["image", "image_url", "file", "document", "audio", "video"]:
+                        media_items.append(self._normalize_media_item(item))
+
+        return " ".join(text_parts), media_items
+
+    def _normalize_media_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize media item format."""
+        media_type = item.get("type", "unknown")
+
+        # Handle image_url as image type
+        if media_type == "image_url":
+            media_type = "image"
+            url_data = item.get("image_url", {})
+            return {
+                "type": "image",
+                "url": url_data.get("url") if isinstance(url_data, dict) else item.get("url"),
+                "name": item.get("name", "image"),
+                "detail": url_data.get("detail", "auto") if isinstance(url_data, dict) else "auto",
+            }
+
+        # Standard media item
+        return {
+            "type": media_type,
+            "name": item.get("name", media_type),
+            "url": item.get("url"),
+            "data": item.get("data"),
+            "path": item.get("path"),
+            "mime_type": item.get("mime_type"),
+            "size": item.get("size"),
+        }
+
+    def _extract_image_info(self, item) -> Dict[str, Any]:
+        """Extract image information from response item."""
+        info = {
+            "type": "image",
+            "name": getattr(item, "name", "generated_image"),
+        }
+
+        if hasattr(item, "url"):
+            info["url"] = item.url
+        if hasattr(item, "data"):
+            info["data"] = item.data
+        if hasattr(item, "format"):
+            info["mime_type"] = f"image/{item.format}"
+
+        return info
+
+    def _extract_file_info(self, item) -> Dict[str, Any]:
+        """Extract file information from response item."""
+        info = {
+            "type": "file",
+            "name": getattr(item, "name", "file"),
+        }
+
+        if hasattr(item, "path"):
+            info["path"] = item.path
+        if hasattr(item, "url"):
+            info["url"] = item.url
+        if hasattr(item, "mime_type"):
+            info["mime_type"] = item.mime_type
+        if hasattr(item, "size"):
+            info["size"] = item.size
+
+        return info
+
     async def stream_with_tools(
         self,
         messages: List[Dict[str, Any]],
@@ -34,7 +123,15 @@ class ResponseBackend(MCPBackend):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Stream response using OpenAI Response API with unified MCP/non-MCP processing."""
+        # Detect if input contains multimodal content
+        has_multimodal = self._detect_multimodal_content(messages)
+
+        # Log if multimodal content detected
+        if has_multimodal:
+            logger.info("Multimodal content detected in input messages")
+
         async for chunk in super().stream_with_tools(messages, tools, **kwargs):
+            # Pass through all chunks, including MultimodalStreamChunk
             yield chunk
 
     async def _stream_with_mcp_tools(
@@ -316,6 +413,34 @@ class ResponseBackend(MCPBackend):
             return StreamChunk(type="content", content="")
 
         chunk_type = chunk.type
+
+        # Handle multimodal content (images, files, etc.)
+        if chunk_type == "response.output_item.added" and hasattr(chunk, "item"):
+            item = chunk.item
+            if item:
+                item_type = getattr(item, "type", None)
+
+                # Handle image content
+                if item_type == "image":
+                    image_info = self._extract_image_info(item)
+                    log_stream_chunk("backend.response", "multimodal", f"Image: {image_info.get('name')}", agent_id)
+                    return MultimodalStreamChunk(
+                        type="content",
+                        content=f"[🖼️ Image: {image_info.get('name', 'generated')}]",
+                        media_items=[image_info],
+                        has_media=True,
+                    )
+
+                # Handle file content
+                elif item_type == "file":
+                    file_info = self._extract_file_info(item)
+                    log_stream_chunk("backend.response", "multimodal", f"File: {file_info.get('name')}", agent_id)
+                    return MultimodalStreamChunk(
+                        type="content",
+                        content=f"[📄 File: {file_info.get('name', 'file')}]",
+                        media_items=[file_info],
+                        has_media=True,
+                    )
 
         # Handle different chunk types
         if chunk_type == "response.output_text.delta" and hasattr(chunk, "delta"):

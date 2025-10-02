@@ -9,6 +9,7 @@ import asyncio
 import time
 from typing import Any, Dict, List, Optional
 
+from ..backend.base import MultimodalStreamChunk
 from .displays.base_display import BaseDisplay
 from .displays.rich_terminal_display import RichTerminalDisplay, is_rich_available
 from .displays.simple_display import SimpleDisplay
@@ -190,6 +191,34 @@ class CoordinationUI:
             final_answer = ""
 
             async for chunk in orchestrator.chat_simple(question):
+                # Handle MultimodalStreamChunk
+                if isinstance(chunk, MultimodalStreamChunk) and chunk.is_multimodal():
+                    source = getattr(chunk, "source", None)
+                    content = getattr(chunk, "content", "") or ""
+                    media_items = getattr(chunk, "media_items", [])
+
+                    # Display text content
+                    if content:
+                        full_response += content
+                        await self._process_content(source, content)
+
+                    # Display media information
+                    for item in media_items:
+                        media_type = item.get("type", "unknown")
+                        media_name = item.get("name", media_type)
+                        media_display = f"\n📎 [{media_type.upper()}]: {media_name}\n"
+
+                        # Add URL or path info if available
+                        if item.get("url"):
+                            media_display += f"   URL: {item['url'][:80]}...\n" if len(item["url"]) > 80 else f"   URL: {item['url']}\n"
+                        elif item.get("path"):
+                            media_display += f"   Path: {item['path']}\n"
+
+                        await self._process_content(source, media_display)
+
+                    continue
+
+                # Regular chunk processing
                 content = getattr(chunk, "content", "") or ""
                 source = getattr(chunk, "source", None)
                 chunk_type = getattr(chunk, "type", "")

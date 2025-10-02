@@ -1,0 +1,59 @@
+# GPT-5-nano Multimodal Test Configuration
+# Minimal configuration for testing multimodal StreamChunk implementation
+# Use this to test image/file handling workflows
+
+agents:
+  - id: "gpt5nano-vision"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+
+      # Enable multimodal processing
+      multimodal:
+        enabled: true
+
+      # Enable tools for comprehensive testing
+      enable_web_search: true
+      enable_code_interpreter: true
+
+      # Standard text settings
+      text:
+        verbosity: "high"  # High verbosity to see all details
+
+      # Enable reasoning to test complex multimodal analysis
+      reasoning:
+        effort: "high"
+
+    system_message: |
+      You are a multimodal AI assistant specialized in analyzing visual content.
+
+      When you receive an image or file:
+      1. Acknowledge receipt of the media
+      2. Describe what you see or the file contents
+      3. Provide any relevant analysis or insights
+      4. Answer any questions about the content
+
+      Always clearly indicate when you are processing multimodal content.
+
+# UI settings optimized for testing
+ui:
+  display_type: "rich_terminal"  # Rich display for better media info visibility
+  logging_enabled: true
+  debug_mode: false
+
+# Test-specific settings
+test_settings:
+  # Example test scenarios:
+  # 1. Send an image with: "What's in this image?"
+  # 2. Send a document with: "Summarize this document"
+  # 3. Send multiple images: "Compare these images"
+
+  # Sample image URLs for testing (if needed)
+  sample_images:
+    - "https://example.com/test-image.jpg"
+    - "https://example.com/diagram.png"
+
+  # Local file paths for testing
+  test_files:
+    - "/path/to/test/image.png"
+    - "/path/to/test/document.pdf"

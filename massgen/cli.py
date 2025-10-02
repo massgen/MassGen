@@ -636,6 +636,31 @@ async def run_question_with_history(
         response_content = ""
 
         async for chunk in agent.chat(messages):
+            # Handle MultimodalStreamChunk
+            from massgen.backend.base import MultimodalStreamChunk
+
+            if isinstance(chunk, MultimodalStreamChunk) and chunk.is_multimodal():
+                # Display text content
+                if chunk.content:
+                    response_content += chunk.content
+                    print(chunk.content, end="", flush=True)
+
+                # Display media items
+                if chunk.media_items:
+                    for item in chunk.media_items:
+                        media_type = item.get("type", "unknown")
+                        media_name = item.get("name", media_type)
+                        print(f"\n[📎 {media_type.upper()}: {media_name}]", flush=True)
+
+                        # Show URL or path if available
+                        if item.get("url"):
+                            url = item["url"]
+                            print(f"  URL: {url[:80]}..." if len(url) > 80 else f"  URL: {url}", flush=True)
+                        elif item.get("path"):
+                            print(f"  Path: {item['path']}", flush=True)
+                continue
+
+            # Regular chunk processing
             if chunk.type == "content" and chunk.content:
                 response_content += chunk.content
                 print(chunk.content, end="", flush=True)
@@ -731,6 +756,31 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         response_content = ""
 
         async for chunk in agent.chat(messages):
+            # Handle MultimodalStreamChunk
+            from massgen.backend.base import MultimodalStreamChunk
+
+            if isinstance(chunk, MultimodalStreamChunk) and chunk.is_multimodal():
+                # Display text content
+                if chunk.content:
+                    response_content += chunk.content
+                    print(chunk.content, end="", flush=True)
+
+                # Display media items
+                if chunk.media_items:
+                    for item in chunk.media_items:
+                        media_type = item.get("type", "unknown")
+                        media_name = item.get("name", media_type)
+                        print(f"\n[📎 {media_type.upper()}: {media_name}]", flush=True)
+
+                        # Show URL or path if available
+                        if item.get("url"):
+                            url = item["url"]
+                            print(f"  URL: {url[:80]}..." if len(url) > 80 else f"  URL: {url}", flush=True)
+                        elif item.get("path"):
+                            print(f"  Path: {item['path']}", flush=True)
+                continue
+
+            # Regular chunk processing
             if chunk.type == "content" and chunk.content:
                 response_content += chunk.content
                 print(chunk.content, end="", flush=True)
