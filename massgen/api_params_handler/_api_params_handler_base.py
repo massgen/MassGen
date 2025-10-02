@@ -51,6 +51,7 @@ class APIParamsHandlerBase(ABC):
     def get_base_excluded_params(self) -> Set[str]:
         """Get common parameters to exclude across all backends."""
         return {
+            "upload_files",
             # Filesystem manager parameters (handled by base class)
             "cwd",
             "agent_temporary_workspace",

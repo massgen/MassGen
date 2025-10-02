@@ -20,6 +20,7 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
             {
                 "enable_web_search",
                 "enable_code_interpreter",
+                "enable_image_generation",
                 "allowed_tools",
                 "exclude_tools",
             },
@@ -39,6 +40,9 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
                     "container": {"type": "auto"},
                 },
             )
+
+        if all_params.get("enable_image_generation", False):
+            provider_tools.append({"type": "image_generation"})
 
         return provider_tools
 
