@@ -29,7 +29,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .agent_config import AgentConfig
 from .backend.base import StreamChunk
-from .backend.stream_chunk import ChunkType
 from .chat_agent import ChatAgent
 from .coordination_tracker import CoordinationTracker
 from .logger_config import get_log_session_dir  # Import to get log directory
@@ -42,6 +41,7 @@ from .logger_config import (
     log_tool_call,
 )
 from .message_templates import MessageTemplates
+from .stream_chunk import ChunkType
 from .utils import ActionType, AgentStatus
 
 

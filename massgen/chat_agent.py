@@ -14,7 +14,7 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .backend.base import LLMBackend, StreamChunk
-from .backend.stream_chunk import ChunkType
+from .stream_chunk import ChunkType
 
 
 class ChatAgent(ABC):
