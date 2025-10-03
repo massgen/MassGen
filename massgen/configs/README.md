@@ -226,13 +226,53 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.26 - Latest
+### v0.0.27 - Latest
+**New Features:** Multimodal Support (Image Processing), File Upload and File Search, Claude Sonnet 4.5
+- `massgen/configs/basic/multi/gpt4o_image_generation.yaml` - Multi-agent image generation
+- `massgen/configs/basic/multi/gpt5nano_image_understanding.yaml` - Multi-agent image understanding
+- `massgen/configs/basic/single/single_gpt4o_image_generation.yaml` - Single agent image generation
+- `massgen/configs/basic/single/single_gpt5nano_image_understanding.yaml` - Single agent image understanding
+- `massgen/configs/basic/single/single_gpt5nano_file_search.yaml` - File search for document Q&A
+- New `stream_chunk` module for multimodal content architecture
+- Enhanced `read_multimodal_files` MCP tool for image processing
+
+**Try it:**
+```bash
+# Image generation with single agent
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
+  "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+
+# Image understanding with multiple agents
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
+  "Please summarize the content in this image."
+
+# File search for document Q&A
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
+  "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
+```
+
+### v0.0.26
 **New Features:** File Deletion, Protected Paths, File-Based Context Paths
 - `massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml` - Protected paths configuration
 - `massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml` - File-based context paths
 - `massgen/configs/tools/filesystem/grok4_gpt5_gemini_filesystem.yaml` - Multi-agent filesystem collaboration
 - New MCP tools: `delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`
 
+**Try it:**
+```bash
+# Protected paths - keep reference files safe
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
+  "Review the HTML and CSS files, then improve the styling"
+
+# File-based context paths - grant access to specific files
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml \
+  "Analyze the CSS file and make modern improvements"
+```
 
 ### v0.0.25
 **New Features:** Multi-Turn Filesystem Support, SGLang Backend Integration
@@ -242,12 +282,33 @@ Most configurations use environment variables for API keys:
 - Automatic `.massgen` directory management for persistent conversation context
 - Enhanced path permissions with `will_be_writable` flag and smart exclusion patterns
 
+**Case Study:** [Multi-Turn Filesystem Support](../../docs/case_studies/multi-turn-filesystem-support.md)
+```bash
+# Turn 1 - Initial creation
+Turn 1: Make a website about Bob Dylan
+# Creates workspace and saves state to .massgen/sessions/
+
+# Turn 2 - Enhancement based on Turn 1
+Turn 2: Can you (1) remove the image placeholder? we will not use image directly. (2) generally improve the appearance so it is more engaging, (3) make it longer and add an interactive element
+# Note: Unlike pre-v0.0.25, Turn 2 automatically loads Turn 1's workspace state
+# Agents can directly access and modify files from the previous turn
+```
+
 ### v0.0.24
 **New Features:** vLLM Backend Support, Backend Utility Modules
 - `massgen/configs/basic/multi/three_agents_vllm.yaml` - vLLM with Cerebras and ZAI backends
 - `massgen/configs/basic/multi/two_qwen_vllm.yaml` - Dual vLLM agents for testing
 - POE provider support for accessing multiple AI models through single platform
 - GPT-5-Codex model recognition for enhanced code generation capabilities
+
+**Try it:**
+```bash
+# Try vLLM backend with local models (requires vLLM server running)
+# First start vLLM server: python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/two_qwen_vllm.yaml \
+  "What is machine learning?"
+```
 
 ### v0.0.23
 **New Features:** Backend Architecture Refactoring, Formatter Module
@@ -272,15 +333,40 @@ uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_
 - `massgen/configs/tools/filesystem/fs_permissions_test.yaml` - Permission-controlled file sharing
 - `massgen/configs/tools/filesystem/claude_code_context_sharing.yaml` - Agent workspace sharing
 
+**Try it:**
+```bash
+# Grok with MCP tools
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml \
+  "What's the weather in Tokyo?"
+```
+
 ### v0.0.20
 **New Features:** Claude MCP Support with Recursive Execution
 - `massgen/configs/tools/mcp/claude_mcp_example.yaml` - Claude with MCP tools
 - `massgen/configs/tools/mcp/claude_mcp_test.yaml` - Testing Claude MCP capabilities
 
+**Try it:**
+```bash
+# Claude with MCP tools
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/claude_mcp_example.yaml \
+  "What's the current weather?"
+```
+
 ### v0.0.17
 **New Features:** OpenAI MCP Integration
-- `massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml` - GPT-5 with MCP tools
+- `massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml` - GPT-5 with MCP tools
 - `massgen/configs/tools/mcp/gpt5mini_claude_code_discord_mcp_example.yaml` - Multi-agent MCP
+
+**Try it:**
+```bash
+# Claude with MCP tools
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+  "whats the weather of Tokyo?"
+```
+
 
 ### v0.0.16
 **New Features:** Unified Filesystem Support with MCP Integration
