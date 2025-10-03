@@ -56,6 +56,8 @@ MODEL_MAPPINGS = {
         "o4-mini-high",
     ],
     "claude": [
+        # Claude 4.5 variants
+        "claude-sonnet-4-5-20250929",
         # Claude 4 variants
         "claude-opus-4-1-20250805",
         "claude-opus-4-20250514",
