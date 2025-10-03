@@ -118,6 +118,9 @@ class ResponseFormatter(FormatterBase):
                     },
                 )
 
+            elif item_type == "file_pending_upload":
+                converted_content.append(item)
+
             elif item_type in ["input_text", "input_image", "input_file"]:
                 # Already in Response API format
                 converted_content.append(item)

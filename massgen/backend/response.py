@@ -6,12 +6,16 @@ Supports image input (URL and base64) and image generation via tools.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple, Union
+from urllib.parse import urlparse
 
+import httpx
 import openai
 from openai import AsyncOpenAI
 
@@ -20,7 +24,7 @@ from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk
 from .base import FilesystemSupport, StreamChunk
-from .base_with_mcp import MCPBackend
+from .base_with_mcp import MCPBackend, UploadFileError
 
 
 class ResponseBackend(MCPBackend):
@@ -35,6 +39,10 @@ class ResponseBackend(MCPBackend):
         # Queue for pending image saves
         self._pending_image_saves = []
 
+        # File Search tracking for cleanup
+        self._vector_store_ids: List[str] = []
+        self._uploaded_file_ids: List[str] = []
+
     def supports_upload_files(self) -> bool:
         return True
 
@@ -44,8 +52,86 @@ class ResponseBackend(MCPBackend):
         tools: List[Dict[str, Any]],
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using OpenAI Response API with unified MCP/non-MCP processing."""
-        async for chunk in super().stream_with_tools(messages, tools, **kwargs):
+        """Stream response using OpenAI Response API with unified MCP/non-MCP processing.
+
+        Wraps parent implementation to ensure File Search cleanup happens after streaming completes.
+        """
+        try:
+            async for chunk in super().stream_with_tools(messages, tools, **kwargs):
+                yield chunk
+        finally:
+            # Cleanup File Search resources after stream completes
+            await self._cleanup_file_search_if_needed(**kwargs)
+
+    async def _cleanup_file_search_if_needed(self, **kwargs) -> None:
+        """Cleanup File Search resources if needed."""
+        if not (self._vector_store_ids or self._uploaded_file_ids):
+            return
+
+        agent_id = kwargs.get("agent_id")
+        logger.info("Cleaning up File Search resources...")
+
+        client = None
+        try:
+            # Create a client for cleanup
+            client = self._create_client(**kwargs)
+            await self._cleanup_file_search_resources(client, agent_id)
+        except Exception as cleanup_error:
+            logger.error(
+                f"Error during File Search cleanup: {cleanup_error}",
+                extra={"agent_id": agent_id},
+            )
+        finally:
+            # Close the client if it has an aclose method
+            if client and hasattr(client, "aclose"):
+                try:
+                    await client.aclose()
+                except Exception:
+                    pass
+
+    async def _stream_without_mcp_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        agent_id = kwargs.get("agent_id")
+        all_params = {**self.config, **kwargs}
+
+        processed_messages = await self._process_upload_files(messages, all_params)
+
+        if all_params.get("_has_file_search_files"):
+            logger.info("Processing File Search uploads...")
+            processed_messages, vector_store_id = await self._upload_files_and_create_vector_store(
+                processed_messages,
+                client,
+                agent_id,
+            )
+            if vector_store_id:
+                existing_ids = list(all_params.get("_file_search_vector_store_ids", []))
+                existing_ids.append(vector_store_id)
+                all_params["_file_search_vector_store_ids"] = existing_ids
+                logger.info(f"File Search enabled with vector store: {vector_store_id}")
+            all_params.pop("_has_file_search_files", None)
+
+        api_params = await self.api_params_handler.build_api_params(processed_messages, tools, all_params)
+
+        if "tools" in api_params:
+            non_mcp_tools = []
+            for tool in api_params.get("tools", []):
+                if tool.get("type") == "function":
+                    name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
+                    if name and name in self._mcp_function_names:
+                        continue
+                elif tool.get("type") == "mcp":
+                    continue
+                non_mcp_tools.append(tool)
+            api_params["tools"] = non_mcp_tools
+
+        stream = await client.responses.create(**api_params)
+
+        async for chunk in self._process_stream(stream, all_params, agent_id):
             yield chunk
 
     async def _stream_with_mcp_tools(
@@ -56,12 +142,27 @@ class ResponseBackend(MCPBackend):
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
         """Recursively stream MCP responses, executing function calls as needed."""
+        agent_id = kwargs.get("agent_id")
 
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
+
+        if all_params.get("_has_file_search_files"):
+            logger.info("Processing File Search uploads...")
+            current_messages, vector_store_id = await self._upload_files_and_create_vector_store(
+                current_messages,
+                client,
+                agent_id,
+            )
+            if vector_store_id:
+                existing_ids = list(all_params.get("_file_search_vector_store_ids", []))
+                existing_ids.append(vector_store_id)
+                all_params["_file_search_vector_store_ids"] = existing_ids
+                logger.info(f"File Search enabled with vector store: {vector_store_id}")
+            all_params.pop("_has_file_search_files", None)
+
         api_params = await self.api_params_handler.build_api_params(current_messages, tools, all_params)
 
-        agent_id = kwargs["agent_id"]
         # Start streaming
         stream = await client.responses.create(**api_params)
 
@@ -301,6 +402,219 @@ class ResponseBackend(MCPBackend):
             yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
             return
 
+    async def _upload_files_and_create_vector_store(
+        self,
+        messages: List[Dict[str, Any]],
+        client: AsyncOpenAI,
+        agent_id: Optional[str] = None,
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """Upload file_pending_upload items and create a vector store."""
+
+        try:
+            pending_files: List[Dict[str, Any]] = []
+            file_locations: List[Tuple[int, int]] = []
+
+            for message_index, message in enumerate(messages):
+                content = message.get("content")
+                if not isinstance(content, list):
+                    continue
+
+                for item_index, item in enumerate(content):
+                    if isinstance(item, dict) and item.get("type") == "file_pending_upload":
+                        pending_files.append(item)
+                        file_locations.append((message_index, item_index))
+
+            if not pending_files:
+                return messages, None
+
+            uploaded_file_ids: List[str] = []
+
+            http_client: Optional[httpx.AsyncClient] = None
+
+            try:
+                for pending in pending_files:
+                    source = pending.get("source")
+
+                    if source == "local":
+                        path_str = pending.get("path")
+                        if not path_str:
+                            logger.warning("Missing local path for file_pending_upload entry")
+                            continue
+
+                        file_path = Path(path_str)
+                        if not file_path.exists():
+                            raise UploadFileError(f"File not found for upload: {file_path}")
+
+                        try:
+                            with file_path.open("rb") as file_handle:
+                                uploaded_file = await client.files.create(
+                                    purpose="assistants",
+                                    file=file_handle,
+                                )
+                        except Exception as exc:
+                            raise UploadFileError(f"Failed to upload file {file_path}: {exc}") from exc
+
+                    elif source == "url":
+                        file_url = pending.get("url")
+                        if not file_url:
+                            logger.warning("Missing URL for file_pending_upload entry")
+                            continue
+
+                        parsed = urlparse(file_url)
+                        if parsed.scheme not in {"http", "https"}:
+                            raise UploadFileError(f"Unsupported URL scheme for file upload: {file_url}")
+
+                        if http_client is None:
+                            http_client = httpx.AsyncClient()
+
+                        try:
+                            response = await http_client.get(file_url, timeout=30.0)
+                            response.raise_for_status()
+                        except httpx.HTTPError as exc:
+                            raise UploadFileError(f"Failed to download file from URL {file_url}: {exc}") from exc
+
+                        filename = Path(parsed.path).name or "remote_file"
+                        file_bytes = BytesIO(response.content)
+
+                        try:
+                            uploaded_file = await client.files.create(
+                                purpose="assistants",
+                                file=(filename, file_bytes),
+                            )
+                        except Exception as exc:
+                            raise UploadFileError(f"Failed to upload file from URL {file_url}: {exc}") from exc
+
+                    else:
+                        raise UploadFileError(f"Unknown file_pending_upload source: {source}")
+
+                    file_id = getattr(uploaded_file, "id", None)
+                    if not file_id:
+                        raise UploadFileError("Uploaded file response missing ID")
+
+                    uploaded_file_ids.append(file_id)
+                    self._uploaded_file_ids.append(file_id)
+                    logger.info(f"Uploaded file for File Search (file_id={file_id})")
+
+            finally:
+                if http_client is not None:
+                    await http_client.aclose()
+
+            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            vector_store_name = f"massgen_file_search_{agent_id or 'default'}_{timestamp}"
+
+            try:
+                vector_store = await client.vector_stores.create(name=vector_store_name)
+            except Exception as exc:
+                raise UploadFileError(f"Failed to create vector store: {exc}") from exc
+
+            vector_store_id = getattr(vector_store, "id", None)
+            if not vector_store_id:
+                raise UploadFileError("Vector store response missing ID")
+
+            self._vector_store_ids.append(vector_store_id)
+            logger.info(
+                "Created vector store for File Search",
+                extra={
+                    "vector_store_id": vector_store_id,
+                    "file_count": len(uploaded_file_ids),
+                },
+            )
+
+            for file_id in uploaded_file_ids:
+                try:
+                    vs_file = await client.vector_stores.files.create_and_poll(
+                        vector_store_id=vector_store_id,
+                        file_id=file_id,
+                    )
+                    logger.info(
+                        "File indexed and attached to vector store",
+                        extra={
+                            "vector_store_id": vector_store_id,
+                            "file_id": file_id,
+                            "status": getattr(vs_file, "status", None),
+                        },
+                    )
+                except Exception as exc:
+                    raise UploadFileError(
+                        f"Failed to attach and index file {file_id} to vector store {vector_store_id}: {exc}",
+                    ) from exc
+
+            if uploaded_file_ids:
+                logger.info(
+                    "All files indexed for File Search; waiting 2s for vector store to stabilize",
+                    extra={
+                        "vector_store_id": vector_store_id,
+                        "file_count": len(uploaded_file_ids),
+                    },
+                )
+                await asyncio.sleep(2)
+
+            updated_messages = []
+            for message in messages:
+                cloned = dict(message)
+                if isinstance(message.get("content"), list):
+                    cloned["content"] = [dict(item) if isinstance(item, dict) else item for item in message["content"]]
+                updated_messages.append(cloned)
+            for message_index, item_index in reversed(file_locations):
+                content_list = updated_messages[message_index].get("content")
+                if isinstance(content_list, list):
+                    content_list.pop(item_index)
+                    if not content_list:
+                        content_list.append(
+                            {
+                                "type": "text",
+                                "text": "[Files uploaded for search integration]",
+                            },
+                        )
+
+            return updated_messages, vector_store_id
+
+        except Exception as error:
+            logger.warning(f"File Search upload failed: {error}. Continuing without file search.")
+            return messages, None
+
+    async def _cleanup_file_search_resources(
+        self,
+        client: AsyncOpenAI,
+        agent_id: Optional[str] = None,
+    ) -> None:
+        """Clean up File Search vector stores and uploaded files."""
+
+        for vector_store_id in list(self._vector_store_ids):
+            try:
+                await client.vector_stores.delete(vector_store_id)
+                logger.info(
+                    "Deleted File Search vector store",
+                    extra={
+                        "vector_store_id": vector_store_id,
+                        "agent_id": agent_id,
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to delete vector store {vector_store_id}: {exc}",
+                    extra={"agent_id": agent_id},
+                )
+
+        for file_id in list(self._uploaded_file_ids):
+            try:
+                await client.files.delete(file_id)
+                logger.debug(
+                    "Deleted File Search uploaded file",
+                    extra={
+                        "file_id": file_id,
+                        "agent_id": agent_id,
+                    },
+                )
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to delete file {file_id}: {exc}",
+                    extra={"agent_id": agent_id},
+                )
+
+        self._vector_store_ids.clear()
+        self._uploaded_file_ids.clear()
+
     def _save_image_sync(
         self,
         image_data: str,
@@ -455,6 +769,89 @@ class ResponseBackend(MCPBackend):
             )
 
         # Provider tool events
+        elif chunk_type == "response.file_search_call.in_progress":
+            item_id = getattr(chunk, "item_id", None)
+            output_index = getattr(chunk, "output_index", None)
+            log_stream_chunk("backend.response", "file_search", "Starting file search", agent_id)
+            return TextStreamChunk(
+                type=ChunkType.CONTENT,
+                content="\n📁 [File Search] Starting search...",
+                item_id=item_id,
+                content_index=output_index,
+                source="response_api",
+            )
+        elif chunk_type == "response.file_search_call.searching":
+            item_id = getattr(chunk, "item_id", None)
+            output_index = getattr(chunk, "output_index", None)
+            queries = getattr(chunk, "queries", None)
+            query_text = ""
+            if queries:
+                try:
+                    if isinstance(queries, (list, tuple)):
+                        query_text = ", ".join(str(q) for q in queries if q)
+                    else:
+                        query_text = str(queries)
+                except Exception:
+                    query_text = ""
+            message = "\n📁 [File Search] Searching..."
+            if query_text:
+                message += f" Query: {query_text}"
+            log_stream_chunk(
+                "backend.response",
+                "file_search",
+                f"Searching files{f' for {query_text}' if query_text else ''}",
+                agent_id,
+            )
+            return TextStreamChunk(
+                type=ChunkType.CONTENT,
+                content=message,
+                item_id=item_id,
+                content_index=output_index,
+                source="response_api",
+            )
+        elif chunk_type == "response.file_search_call.completed":
+            item_id = getattr(chunk, "item_id", None)
+            output_index = getattr(chunk, "output_index", None)
+            results = getattr(chunk, "results", None)
+            if results is None:
+                results = getattr(chunk, "search_results", None)
+            queries = getattr(chunk, "queries", None)
+            query_text = ""
+            if queries:
+                try:
+                    if isinstance(queries, (list, tuple)):
+                        query_text = ", ".join(str(q) for q in queries if q)
+                    else:
+                        query_text = str(queries)
+                except Exception:
+                    query_text = ""
+            if results is not None:
+                try:
+                    result_count = len(results)
+                except Exception:
+                    result_count = None
+            else:
+                result_count = None
+            message_parts = ["\n✅ [File Search] Completed"]
+            if query_text:
+                message_parts.append(f"Query: {query_text}")
+            if result_count is not None:
+                message_parts.append(f"Results: {result_count}")
+            message = " ".join(message_parts)
+            log_stream_chunk(
+                "backend.response",
+                "file_search",
+                f"Completed file search{f' for {query_text}' if query_text else ''}{f' with {result_count} results' if result_count is not None else ''}",
+                agent_id,
+            )
+            return TextStreamChunk(
+                type=ChunkType.CONTENT,
+                content=message,
+                item_id=item_id,
+                content_index=output_index,
+                source="response_api",
+            )
+
         elif chunk_type == "response.web_search_call.in_progress":
             log_stream_chunk("backend.response", "web_search", "Starting search", agent_id)
             return TextStreamChunk(

@@ -62,6 +62,32 @@ except ImportError as e:
     MCPTimeoutError = ImportError
     MCPServerError = ImportError
 
+# Supported file types for OpenAI File Search
+FILE_SEARCH_SUPPORTED_EXTENSIONS = {
+    ".c",
+    ".cpp",
+    ".cs",
+    ".css",
+    ".doc",
+    ".docx",
+    ".html",
+    ".java",
+    ".js",
+    ".json",
+    ".md",
+    ".pdf",
+    ".php",
+    ".pptx",
+    ".py",
+    ".rb",
+    ".sh",
+    ".tex",
+    ".ts",
+    ".txt",
+}
+
+FILE_SEARCH_MAX_FILE_SIZE = 512 * 1024 * 1024  # 512 MB
+
 
 class MCPBackend(LLMBackend):
     """Base backend class with MCP (Model Context Protocol) support."""
@@ -288,9 +314,10 @@ class MCPBackend(LLMBackend):
     ) -> List[Dict[str, Any]]:
         """Process upload_files config entries and attach to messages.
 
-        Supports two forms:
+        Supports three forms:
         - {"image_path": "..."}: loads file, encodes to base64, injects image entry
         - {"url": "..."}: injects image entry referencing remote URL
+        - {"file_path": "..."}: document file for File Search (local path or URL)
 
         Returns updated messages list with additional content items.
         """
@@ -309,12 +336,24 @@ class MCPBackend(LLMBackend):
 
         processed_messages = list(messages)
         extra_content: List[Dict[str, Any]] = []
+        has_file_search_files = False
 
         for entry in upload_entries:
             if not isinstance(entry, dict):
                 logger.warning("upload_files entry is not a dict: %s", entry)
                 raise UploadFileError("Each upload_files entry must be a mapping")
 
+            # Check for file_path (File Search documents/code)
+            file_path_value = entry.get("file_path")
+            if file_path_value:
+                # Process file_path entry for File Search
+                file_content = self._process_file_path_entry(file_path_value, all_params)
+                if file_content:
+                    extra_content.append(file_content)
+                    has_file_search_files = True
+                continue
+
+            # Check for image_path (existing image handling)
             path_value = entry.get("image_path")
             url_value = entry.get("url")
 
@@ -355,11 +394,15 @@ class MCPBackend(LLMBackend):
                 continue
 
             raise UploadFileError(
-                "upload_files entry must specify either 'image_path' or 'url'",
+                "upload_files entry must specify either 'image_path', 'url', or 'file_path'",
             )
 
         if not extra_content:
             return processed_messages
+
+        # Track if file search files are present for API params handler
+        if has_file_search_files:
+            all_params["_has_file_search_files"] = True
 
         if processed_messages:
             last_message = processed_messages[-1].copy()
@@ -379,6 +422,59 @@ class MCPBackend(LLMBackend):
         all_params.pop("upload_files", None)
 
         return processed_messages
+
+    def _process_file_path_entry(
+        self,
+        file_path_value: str,
+        all_params: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        # Check if it's a URL
+        if file_path_value.startswith(("http://", "https://")):
+            logger.info(f"Queued file URL for File Search upload: {file_path_value}")
+            return {
+                "type": "file_pending_upload",
+                "url": file_path_value,
+                "source": "url",
+            }
+
+        # Local file path
+        resolved = Path(file_path_value).expanduser()
+        if not resolved.is_absolute():
+            cwd = all_params.get("cwd") or self.config.get("cwd")
+            if cwd:
+                resolved = Path(cwd).joinpath(resolved)
+            else:
+                resolved = resolved.resolve()
+
+        if not resolved.exists():
+            raise UploadFileError(f"File not found: {resolved}")
+
+        # Validate file extension
+        file_ext = resolved.suffix.lower()
+        if file_ext not in FILE_SEARCH_SUPPORTED_EXTENSIONS:
+            raise UploadFileError(
+                f"File type {file_ext} not supported by File Search. " f"Supported types: {', '.join(sorted(FILE_SEARCH_SUPPORTED_EXTENSIONS))}",
+            )
+
+        # Validate file size
+        file_size = resolved.stat().st_size
+        if file_size > FILE_SEARCH_MAX_FILE_SIZE:
+            raise UploadFileError(
+                f"File size {file_size / (1024*1024):.2f} MB exceeds " f"File Search limit of {FILE_SEARCH_MAX_FILE_SIZE / (1024*1024):.0f} MB",
+            )
+
+        # Determine MIME type
+        mime_type, _ = mimetypes.guess_type(resolved.as_posix())
+        if not mime_type:
+            mime_type = "application/octet-stream"
+
+        logger.info(f"Queued local file for File Search upload: {resolved}")
+        return {
+            "type": "file_pending_upload",
+            "path": str(resolved),
+            "mime_type": mime_type,
+            "source": "local",
+        }
 
     async def stream_with_tools(
         self,
