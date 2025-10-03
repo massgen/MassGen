@@ -112,8 +112,8 @@ class MCPBackend(LLMBackend):
         self._mcp_tools_circuit_breaker = None
         self._circuit_breakers_enabled = MCPCircuitBreaker is not None
 
-        # Initialize circuit breaker if available
-        if self._circuit_breakers_enabled:
+        # Initialize circuit breaker if available and MCP servers are configured
+        if self._circuit_breakers_enabled and self.mcp_servers:
             # Use shared utility to build circuit breaker configuration
             mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools") if MCPConfigHelper else None
 
@@ -124,7 +124,11 @@ class MCPBackend(LLMBackend):
                 logger.warning("MCP tools circuit breaker config not available, disabling circuit breaker functionality")
                 self._circuit_breakers_enabled = False
         else:
-            logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
+            if not self.mcp_servers:
+                # No MCP servers configured - skip circuit breaker initialization silently
+                self._circuit_breakers_enabled = False
+            else:
+                logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
 
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
         self._mcp_functions: Dict[str, Function] = {}
