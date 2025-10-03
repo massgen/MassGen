@@ -7,10 +7,9 @@ frameworks and systems into MassGen's orchestration system.
 """
 from typing import Dict, Type
 
-from .base import AgentAdapter
-
 # Import framework-specific adapters
 from .ag2_adapter import AG2Adapter
+from .base import AgentAdapter
 
 # Adapter registry maps framework names to adapter classes
 adapter_registry: Dict[str, Type[AgentAdapter]] = {

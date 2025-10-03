@@ -145,7 +145,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - gemini: Google Gemini (requires GOOGLE_API_KEY or GEMINI_API_KEY)
     - chatcompletion: OpenAI-compatible providers (auto-detects API key based on base_url)
     - ag2/autogen: AG2 (AutoGen) framework agents
-    
+
     For chatcompletion backend, the following providers are auto-detected:
     - Cerebras AI (cerebras.ai) -> CEREBRAS_API_KEY
     - Together AI (together.ai/together.xyz) -> TOGETHER_API_KEY
@@ -154,17 +154,18 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
     - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
     - POE (poe.com) -> POE_API_KEY
-    
+
     External agent frameworks are supported via the adapter registry.
     """
     backend_type = backend_type.lower()
-    
+
     # Check if this is a framework/adapter type
     from massgen.adapters import adapter_registry
-    
+
     if backend_type in adapter_registry:
         # Use ExternalAgentBackend for all registered adapter types
         from massgen.backend.external import ExternalAgentBackend
+
         return ExternalAgentBackend(adapter_type=backend_type, **kwargs)
 
     if backend_type == "openai":
