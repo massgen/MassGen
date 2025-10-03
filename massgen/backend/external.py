@@ -108,7 +108,7 @@ class ExternalAgentBackend(LLMBackend):
         # Most external frameworks are stateful
         if hasattr(self.adapter, "is_stateful"):
             return self.adapter.is_stateful()
-        return True
+        return False
 
     def clear_history(self) -> None:
         """Clear conversation history."""
