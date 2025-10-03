@@ -13,6 +13,13 @@ from massgen.logger_config import log_backend_activity, logger
 from .base import AgentAdapter, StreamChunk
 
 
+def _setup_api_keys() -> None:
+    """Set up API keys for AG2 compatibility."""
+    # Copy GEMINI_API_KEY to GOOGLE_GEMINI_API_KEY if it exists
+    if "GEMINI_API_KEY" in os.environ and "GOOGLE_GEMINI_API_KEY" not in os.environ:
+        os.environ["GOOGLE_GEMINI_API_KEY"] = os.environ["GEMINI_API_KEY"]
+
+
 def _setup_agent_from_config(config: Dict[str, Any]) -> ConversableAgent:
     """Set up a ConversableAgent from configuration."""
     cfg = config.copy()
@@ -92,6 +99,9 @@ class AG2Adapter(AgentAdapter):
         """
         super().__init__(**kwargs)
 
+        # Set up API keys for AG2 compatibility
+        _setup_api_keys()
+
         # Extract agent_config or group_config from kwargs
         self.agent_config = kwargs.get("agent_config")
         self.group_config = kwargs.get("group_config")
@@ -152,6 +162,7 @@ class AG2Adapter(AgentAdapter):
         Since AG2 doesn't support streaming, we simulate it.
         """
         try:
+            self._register_tools(tools)
             # Get agent_id for logging
             agent_id = kwargs.get("agent_id", "ag2_agent")
 
@@ -224,7 +235,7 @@ class AG2Adapter(AgentAdapter):
 
         if not self.is_group_chat:
             for tool in tools:
-                self.agent.update_tool_signature(tool)
+                self.agent.update_tool_signature(tool_sig=tool, is_remove=False)
 
         else:
             raise NotImplementedError("Tool registration for GroupChat not yet implemented")

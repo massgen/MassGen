@@ -151,8 +151,8 @@ class AgentAdapter(ABC):
 
         Override if your framework is stateless.
         """
-        return True
-
+        return False
+    
     def clear_history(self) -> None:
         """Clear conversation history."""
         self._conversation_history.clear()

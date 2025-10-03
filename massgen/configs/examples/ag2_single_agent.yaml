@@ -1,6 +1,6 @@
 # Example configuration for using AG2 with MassGen
 # Single AG2 agent example
-#  uv run python -m massgen.cli --config  massgen/configs/examples/ag2_single_agent.yaml "what is quantum computing?"
+# uv run python -m massgen.cli --config examples/ag2_single_agent.yaml "what is quantum computing?"
 agents:
   - id: "ag2_assistant"
     backend:
@@ -12,7 +12,6 @@ agents:
         llm_config:
           - api_type: "openai"
             model: "gpt-4o"
-            api_key: "${OPENAI_API_KEY}"
             temperature: 0.7
             cache_seed: 42
 
