@@ -1211,6 +1211,26 @@ Environment Variables:
         help="Maximum time for orchestrator coordination in seconds (default: 1800)",
     )
 
+    # Web UI options
+    web_group = parser.add_argument_group("web ui", "Web interface options")
+    web_group.add_argument(
+        "--web", 
+        action="store_true", 
+        help="Start web UI server instead of CLI mode"
+    )
+    web_group.add_argument(
+        "--host", 
+        type=str, 
+        default="127.0.0.1", 
+        help="Host for web server (default: 127.0.0.1)"
+    )
+    web_group.add_argument(
+        "--port", 
+        type=int, 
+        default=8000, 
+        help="Port for web server (default: 8000)"
+    )
+
     args = parser.parse_args()
 
     # Always setup logging (will save INFO to file, console output depends on debug flag)
@@ -1335,8 +1355,14 @@ Environment Variables:
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]
 
-        # Run mode based on whether question was provided
-        if args.question:
+        # Check if web UI mode is requested
+        if args.web:
+            from .frontend.web_server import run_web_server
+            print(f"\n🌐 {BRIGHT_CYAN}Starting MassGen Web UI{RESET}", flush=True)
+            print(f"Server will be available at: http://{args.host}:{args.port}", flush=True)
+            print("Press Ctrl+C to stop the server", flush=True)
+            await run_web_server(host=args.host, port=args.port)
+        elif args.question:
             await run_single_question(args.question, agents, ui_config, **kwargs)
             # if response:
             #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
