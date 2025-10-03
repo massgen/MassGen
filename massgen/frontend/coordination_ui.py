@@ -13,6 +13,7 @@ from .displays.base_display import BaseDisplay
 from .displays.rich_terminal_display import RichTerminalDisplay, is_rich_available
 from .displays.simple_display import SimpleDisplay
 from .displays.terminal_display import TerminalDisplay
+from .displays.web_display import WebDisplay
 
 
 class CoordinationUI:

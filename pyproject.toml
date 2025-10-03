@@ -44,6 +44,9 @@ dependencies = [
     "mcp>=1.12.0",
     "aiohttp>=3.8.0",
     "fastmcp>=2.12.3",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "websockets>=11.0.0",
 ]
 
 [project.optional-dependencies]
