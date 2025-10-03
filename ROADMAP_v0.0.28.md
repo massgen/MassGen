@@ -1,3 +1,4 @@
+
 # MassGen v0.0.28 Roadmap
 
 ## Overview
@@ -110,6 +111,7 @@ Version 0.0.28 focuses on integrating external agent frameworks, completing mult
 - [ ] Provide deployment documentation
 
 
+
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
@@ -174,6 +176,7 @@ Version 0.0.28 focuses on integrating external agent frameworks, completing mult
 - **Advanced Coding Agent**: Specialized prompts and workspace management for coding tasks
 - **Enterprise Features**: Advanced permissions, audit logs, team collaboration
 - **Marketplace**: Tool and agent template sharing platform
+
 
 ### Long-term Vision
 - **Enterprise File Management**: Advanced file operation capabilities for large organizations
