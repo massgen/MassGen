@@ -36,9 +36,9 @@ This document outlines the design for extending MassGen to support agents from m
 ├─────────────────────────────────────────────┤
 │         ConfigurableAgent Layer             │
 ├─────────────────────────────────────────────┤
-│      FrameworkAgentBackend (New)            │ (extends LLMBackend)
+│      ExternalAgentBackend (New)            │ (extends LLMBackend)
 ├─────────────────────────────────────────────┤
-│        Framework Adapters (New)             │
+│        Agent Adapters (New)             │
 ├─────────┬───────────┬───────────┬───────────┤
 │   AG2   │ LangChain │ Black Box │  Remote   │
 └─────────┴───────────┴───────────┴───────────┘
@@ -47,9 +47,9 @@ This document outlines the design for extending MassGen to support agents from m
 ### Core Backend Implementation
 
 ```python
-class FrameworkAgentBackend(LLMBackend):
+class ExternalAgentBackend(LLMBackend):
     """
-    Universal backend for external agent frameworks.
+    Universal backend for external agents.
     Extends LLMBackend to integrate with MassGen's existing infrastructure.
     """
 
@@ -58,8 +58,8 @@ class FrameworkAgentBackend(LLMBackend):
         self.framework = framework.lower()
         self.adapter = self._create_adapter(kwargs)
 
-    def _create_adapter(self, config: Dict[str, Any]) -> FrameworkAdapter:
-        """Factory method to create framework-specific adapters."""
+    def _create_adapter(self, config: Dict[str, Any]) -> AgentAdapter:
+        """Factory method to create agent-specific adapters."""
         from ..adapters import adapter_registry
 
         adapter_class = adapter_registry.get(self.framework)
@@ -98,10 +98,10 @@ class FrameworkAgentBackend(LLMBackend):
 ```python
 from abc import ABC, abstractmethod
 
-class FrameworkAdapter(ABC):
+class AgentAdapter(ABC):
     """
-    Base adapter for integrating external agent frameworks.
-    Each framework implements this interface.
+    Base adapter for integrating external agents.
+    Each agent type implements this interface.
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -136,11 +136,11 @@ class FrameworkAdapter(ABC):
         pass
 ```
 
-### Framework-Specific Adapters
+### Agent-Specific Adapters
 
 #### LangChain Adapter
 ```python
-class LangChainAdapter(FrameworkAdapter):
+class LangChainAdapter(AgentAdapter):
     """Adapter for LangChain agents and chains."""
 
     def _setup_adapter(self) -> None:
@@ -153,7 +153,7 @@ class LangChainAdapter(FrameworkAdapter):
 
 #### AutoGen/AG2 Adapter
 ```python
-class AG2Adapter(FrameworkAdapter):
+class AG2Adapter(AgentAdapter):
     """Adapter for AG2/AutoGen agents including GroupChat support."""
 
     def _setup_adapter(self) -> None:
@@ -172,7 +172,7 @@ class AG2Adapter(FrameworkAdapter):
 
 #### OpenAI Assistants Adapter
 ```python
-class OpenAIAssistantAdapter(FrameworkAdapter):
+class OpenAIAssistantAdapter(AgentAdapter):
     """Adapter for OpenAI Assistants API."""
 
     def _setup_adapter(self) -> None:
@@ -183,7 +183,7 @@ class OpenAIAssistantAdapter(FrameworkAdapter):
 
 #### SmolAgent Adapter
 ```python
-class SmolAgentAdapter(FrameworkAdapter):
+class SmolAgentAdapter(AgentAdapter):
     """Adapter for SmolAgent framework."""
 
     def _setup_adapter(self) -> None:
@@ -196,7 +196,7 @@ class SmolAgentAdapter(FrameworkAdapter):
 For agents running remotely (cloud services, microservices):
 
 ```python
-class RemoteAgentAdapter(FrameworkAdapter):
+class RemoteAgentAdapter(AgentAdapter):
     """Adapter for remote agents via HTTP/WebSocket/gRPC."""
 
     def _setup_adapter(self) -> None:
@@ -214,7 +214,7 @@ class RemoteAgentAdapter(FrameworkAdapter):
 MassGen supports integrating any pre-existing agent as a "black box" without requiring knowledge of its internal implementation:
 
 ```python
-class BlackBoxAdapter(FrameworkAdapter):
+class BlackBoxAdapter(AgentAdapter):
     """
     Universal adapter for black box agents.
     Supports multiple communication methods.
@@ -235,16 +235,16 @@ class BlackBoxAdapter(FrameworkAdapter):
 
 ### Making Framework Agents MassGen-Compatible
 
-Framework agents are integrated through the FrameworkAgentBackend and wrapped with ConfigurableAgent:
+Framework agents are integrated through the ExternalAgentBackend and wrapped with ConfigurableAgent:
 
 ```python
 # Example: Integrating an AG2 agent into MassGen orchestration
-from massgen.backend.framework import FrameworkAgentBackend
+from massgen.backend.framework import ExternalAgentBackend
 from massgen.chat_agent import ConfigurableAgent
 from massgen.agent_config import AgentConfig
 
 # Create framework backend
-ag2_backend = FrameworkAgentBackend(
+ag2_backend = ExternalAgentBackend(
     framework="ag2",
     agent_type="AssistantAgent",
     agent_config={
@@ -277,7 +277,7 @@ from massgen.orchestrator import Orchestrator
 orchestrator = Orchestrator(
     agents={
         "native_agent": native_massgen_agent,
-        "ag2_agent": ag2_agent,  # Using FrameworkAgentBackend
+        "ag2_agent": ag2_agent,  # Using ExternalAgentBackend
         "langchain_agent": langchain_agent,
         "blackbox_agent": blackbox_agent
     }
@@ -294,7 +294,7 @@ When frameworks like AG2 have their own multi-agent groups (e.g., GroupChat), th
 
 ```python
 # AG2 GroupChat with 3 agents internally
-ag2_research_team = FrameworkAgentBackend(
+ag2_research_team = ExternalAgentBackend(
     framework="ag2",
     group_config={
         "agents": [
@@ -506,9 +506,9 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     from massgen.adapters import adapter_registry
 
     if backend_type in adapter_registry:
-        # Use FrameworkAgentBackend for all registered adapter types
-        from massgen.backend.framework import FrameworkAgentBackend
-        return FrameworkAgentBackend(framework=backend_type, **kwargs)
+        # Use ExternalAgentBackend for all registered adapter types
+        from massgen.backend.framework import ExternalAgentBackend
+        return ExternalAgentBackend(framework=backend_type, **kwargs)
 
     # Existing backend types (openai, claude, gemini, etc.)
     elif backend_type == "openai":
@@ -532,10 +532,10 @@ This approach provides several benefits:
 from typing import Dict, List, Any, AsyncGenerator, Optional
 from .base import LLMBackend, StreamChunk, FilesystemSupport
 
-class FrameworkAgentBackend(LLMBackend):
+class ExternalAgentBackend(LLMBackend):
     """
-    Universal backend for external agent frameworks.
-    Delegates execution to framework-specific adapters.
+    Universal backend for external agents.
+    Delegates execution to agent-specific adapters.
     """
 
     EXCLUDED_API_PARAMS = LLMBackend.get_base_excluded_config_params().union({
@@ -551,8 +551,8 @@ class FrameworkAgentBackend(LLMBackend):
         self.framework = framework.lower()
         self.adapter = self._create_adapter(kwargs)
 
-    def _create_adapter(self, config: Dict[str, Any]) -> 'FrameworkAdapter':
-        """Factory method to create framework-specific adapters."""
+    def _create_adapter(self, config: Dict[str, Any]) -> 'AgentAdapter':
+        """Factory method to create agent-specific adapters."""
         from ..adapters import adapter_registry
 
         adapter_class = adapter_registry.get(self.framework)
@@ -609,10 +609,10 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, AsyncGenerator, Optional
 from ..backend.base import StreamChunk, FilesystemSupport
 
-class FrameworkAdapter(ABC):
+class AgentAdapter(ABC):
     """
-    Base adapter for integrating external agent frameworks.
-    Each framework implements this interface.
+    Base adapter for integrating external agents.
+    Each agent type implements this interface.
     """
 
     def __init__(self, config: Dict[str, Any]):
@@ -690,9 +690,9 @@ class FrameworkAdapter(ABC):
 from typing import List, Dict, Any, Optional, AsyncGenerator
 import asyncio
 from ..backend.base import StreamChunk
-from .base import FrameworkAdapter
+from .base import AgentAdapter
 
-class AG2Adapter(FrameworkAdapter):
+class AG2Adapter(AgentAdapter):
     """
     Adapter for AG2/AutoGen agents including GroupChat support.
     """
@@ -907,9 +907,9 @@ class AG2Adapter(FrameworkAdapter):
 from typing import List, Dict, Any, Optional, AsyncGenerator
 import asyncio
 from ..backend.base import StreamChunk
-from .base import FrameworkAdapter
+from .base import AgentAdapter
 
-class LangChainAdapter(FrameworkAdapter):
+class LangChainAdapter(AgentAdapter):
     """
     Adapter for LangChain agents and chains.
     """
@@ -1054,9 +1054,9 @@ class LangChainAdapter(FrameworkAdapter):
 # massgen/adapters/smolagent_adapter.py
 from typing import List, Dict, Any, AsyncGenerator
 from ..backend.base import StreamChunk
-from .base import FrameworkAdapter
+from .base import AgentAdapter
 
-class SmolAgentAdapter(FrameworkAdapter):
+class SmolAgentAdapter(AgentAdapter):
     """
     Adapter for HuggingFace SmolAgent framework agents.
     """
@@ -1149,7 +1149,7 @@ class BlackBoxAgentProtocol(Protocol):
         """Check if agent is responsive."""
         ...
 
-class BlackBoxAdapter(FrameworkAdapter):
+class BlackBoxAdapter(AgentAdapter):
     """
     Universal adapter for black box agents.
     Requires only a communication protocol, not framework knowledge.
@@ -1415,7 +1415,7 @@ from typing import List, Dict, Any, Optional, AsyncGenerator
 import json
 from urllib.parse import urljoin
 
-class RemoteAgentAdapter(FrameworkAdapter):
+class RemoteAgentAdapter(AgentAdapter):
     """Adapter for agents running as remote services."""
 
     def _setup_adapter(self) -> None:
@@ -1588,15 +1588,15 @@ class RemoteAgentAdapter(FrameworkAdapter):
 ```python
 # massgen/adapters/__init__.py
 from typing import Dict, Type
-from .base import FrameworkAdapter
+from .base import AgentAdapter
 from .ag2_adapter import AG2Adapter
 from .langchain_adapter import LangChainAdapter
 from .langgraph_adapter import LangGraphAdapter
 from .smolagent_adapter import SmolAgentAdapter
 from .blackbox_adapter import BlackBoxAdapter
 from .remote_adapter import RemoteAgentAdapter
-# Global adapter registry used by FrameworkAgentBackend
-adapter_registry: Dict[str, Type[FrameworkAdapter]] = {
+# Global adapter registry used by ExternalAgentBackend
+adapter_registry: Dict[str, Type[AgentAdapter]] = {
     # Framework-specific adapters
     "ag2": AG2Adapter,
     "autogen": AG2Adapter,  # AG2 is the new name for AutoGen
@@ -1613,7 +1613,7 @@ adapter_registry: Dict[str, Type[FrameworkAdapter]] = {
     "remote": RemoteAgentAdapter,
 }
 
-def register_adapter(name: str, adapter_class: Type[FrameworkAdapter]):
+def register_adapter(name: str, adapter_class: Type[AgentAdapter]):
     """Register a new adapter in the global registry."""
     adapter_registry[name] = adapter_class
 ```
@@ -1626,7 +1626,7 @@ def register_adapter(name: str, adapter_class: Type[FrameworkAdapter]):
 massgen/
 ├── adapters/                      # All framework adapter implementations
 │   ├── __init__.py               # Export main adapter classes
-│   ├── base.py                   # Base FrameworkAdapter class
+│   ├── base.py                   # Base AgentAdapter class
 │   ├── registry.py               # Adapter registry and registration functions
 │   ├── __init__.py               # Contains adapter_registry for all adapters
 │   │
@@ -1690,7 +1690,7 @@ massgen/
 **`massgen/adapters/base.py`**
 ```python
 # Contains:
-- FrameworkAdapter abstract base class
+- AgentAdapter abstract base class
 - StreamChunk simulation utilities
 - Common adapter base functionality
 ```
@@ -1701,12 +1701,12 @@ massgen/
 **`massgen/adapters/factory.py`**
 ```python
 # Contains:
-- FrameworkAdapterRegistry class
+- AgentAdapterRegistry class
 - load_framework_agent() function
 - Dynamic adapter registration
 ```
 
-#### 2. Framework-Specific Adapters
+#### 2. Agent-Specific Adapters
 
 **`massgen/adapters/frameworks/langchain_adapter.py`**
 ```python
@@ -1829,16 +1829,16 @@ def load_configuration(config_path: str) -> Dict:
 ```python
 # Export new adapter classes:
 from .adapters.factory import (
-    FrameworkAdapterRegistry,
+    AgentAdapterRegistry,
     load_framework_agent
 )
-from .adapters.base import FrameworkAdapter
+from .adapters.base import AgentAdapter
 
 __all__ = [
     # ... existing exports ...
-    "FrameworkAdapterRegistry",
+    "AgentAdapterRegistry",
     "load_framework_agent",
-    "FrameworkAdapter",
+    "AgentAdapter",
 ]
 ```
 
@@ -1885,7 +1885,7 @@ __all__ = [
 **`massgen/tests/adapters/test_base_adapter.py`**
 ```python
 # Tests for:
-- FrameworkAdapter abstract methods
+- AgentAdapter abstract methods
 - Message conversion pipeline
 - Tool merging logic
 - Streaming functionality
@@ -1915,10 +1915,10 @@ The main entry points for using framework agents:
 
 ```python
 # For users of the library:
-from massgen import load_framework_agent, FrameworkAdapterRegistry
+from massgen import load_framework_agent, AgentAdapterRegistry
 
 # For extending with custom frameworks:
-from massgen.adapters.base import FrameworkAdapter
+from massgen.adapters.base import AgentAdapter
 
 # For direct adapter usage:
 from massgen.adapters.frameworks import (
@@ -1931,8 +1931,8 @@ from massgen.adapters.remote import RemoteAgentAdapter
 ## Implementation Plan
 
 ### Phase 1: Core Infrastructure + AG2 (Week 1)
-1. Create `FrameworkAgentBackend` class extending `LLMBackend`
-2. Implement base `FrameworkAdapter` with streaming simulation
+1. Create `ExternalAgentBackend` class extending `LLMBackend`
+2. Implement base `AgentAdapter` with streaming simulation
 3. Add framework detection to CLI backend factory
 4. Implement AG2 adapter with single agent and GroupChat support
 5. Create message and tool converters
