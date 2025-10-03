@@ -1,188 +1,182 @@
-# MassGen v0.0.27 Roadmap
+
+# MassGen v0.0.28 Roadmap
 
 ## Overview
 
-Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing on coding agent capabilities, multimodal support, and finishing core refactoring work. Key enhancements include:
+Version 0.0.28 focuses on integrating external agent frameworks, completing multimodal support, and enhancing extensibility. Key priorities include:
 
-- **Coding Agent** (Required): 👨‍💻 Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
-- **Multimodal Support** (Required): 🖼️ Complete implementation of image, audio, and video processing capabilities
-- **Finish Refactoring Various Aspects of MassGen** (Required): 🏗️ Complete orchestrator and messaging system refactoring for better maintainability
-- **Additional Agent Backends from Other Frameworks** (Optional): 🔗 Integration with AG2, LangChain, and other agent frameworks
+- **AG2 Integration (AdaptAgent)** (Required): 🔗 Integrate AG2 agents into MassGen for multi-framework agent collaboration
+- **Complete Multimodal Support** (Required): 🎬 Extend audio and video processing capabilities beyond images
+- **Custom Tool Register System** (Optional): 🔧 Refactor tool registration for better extensibility and plugin support
+- **Web UI** (Optional): 🌐 Modern web interface for real-time agent coordination visualization
 
 ## Key Technical Priorities
 
-1. **Coding Agent** (REQUIRED): Enhanced system prompts, multi-turn sessions, workspace visibility, and consolidated directory structure
-2. **Multimodal Support** (REQUIRED): Complete image, audio, and video processing capabilities
-3. **Finish Refactoring Various Aspects of MassGen** (REQUIRED): Complete orchestrator and messaging system refactoring
-4. **Additional Agent Backends from Other Frameworks** (OPTIONAL): Integration with AG2, LangChain, and other frameworks
+1. **AG2 Integration** (REQUIRED): Enable AG2 agents to work within MassGen's multi-agent orchestration
+2. **Complete Multimodal Support** (REQUIRED): Add audio and video processing to existing image capabilities
+3. **Custom Tool Register System** (OPTIONAL): Refactor tool registration architecture for better plugin support
+4. **Web UI** (OPTIONAL): Build web interface for better user experience and visualization
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Coding Agent (REQUIRED)
+### 🎯 Milestone 1: AG2 Integration (AdaptAgent) (REQUIRED)
 
-**Goal**: Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
+**Goal**: Enable AG2 agents to participate in MassGen's multi-agent workflows
 
-#### 1.1 Enhanced System Prompts for Coding (REQUIRED)
-- [ ] Design enhanced system prompts encouraging more iterations (Issue #224)
-- [ ] Implement coding-specific voting prompts focused on code quality
-- [ ] Add iteration encouragement messaging for coding tasks
-- [ ] Create prompts emphasizing independent exploration over convergence
-- [ ] Test prompt effectiveness on coding task diversity
+#### 1.1 AG2 Adapter Implementation
+- [ ] Integrate AG2 adapter system from PR #283
+- [ ] Support AG2 agent configuration in YAML files
+- [ ] Enable AG2 agents to work with MassGen orchestrator
+- [ ] Handle AG2-specific conversation patterns and tool calling
 
-#### 1.2 Enhanced Multi-turn Conversation Support (REQUIRED)
-- [ ] Create `CodingSessionManager` for specialized coding conversation history management
-- [ ] Enhance turn-based context preparation with code-specific context
-- [ ] Implement path normalization for multi-turn references
-- [ ] Design interactive multi-turn CLI commands for coding tasks (Issue #231)
+#### 1.2 Multi-Framework Agent Coordination
+- [ ] Support mixed teams of MassGen native agents and AG2 agents
+- [ ] Ensure consistent message passing between frameworks
+- [ ] Handle framework-specific capabilities and limitations
+- [ ] Test coordination across different agent types
 
-
-#### 1.3 Workspace Logging & Visibility (REQUIRED)
-- [ ] Implement `WorkspaceDiffLogger` for iteration comparison
-- [ ] Add automatic workspace diff generation between iterations
-- [ ] Create cross-agent workspace comparison logging
-- [ ] Add similarity scoring to detect convergence vs diversity
-- [ ] Integrate diff logging with orchestrator workflow
-
-#### 1.4 Enhanced `.massgen/` Directory Management (REQUIRED)
-- [ ] Implement `MassGenProjectManager` for advanced directory management
-- [ ] Add automatic `.gitignore` creation for `.massgen/`
-- [ ] Create cleanup utilities for old session data
+#### 1.3 Documentation and Examples
+- [ ] Add AG2 integration guide
+- [ ] Create example configurations with AG2 agents
+- [ ] Document adapter architecture and extension points
+- [ ] Provide migration guide for AG2 users
 
 
-### 🎯 Milestone 2: Multimodal Support (REQUIRED)
+### 🎯 Milestone 2: Complete Multimodal Support (REQUIRED)
 
-**Goal**: Complete implementation of image, audio, and video processing capabilities
+**Goal**: Extend multimodal capabilities to audio and video processing
 
-#### 2.1 Multimodal Message Architecture (REQUIRED)
-- [ ] Design unified message format supporting text, images, audio, and video
-- [ ] Implement stream chunks class for different media types
-- [ ] Create serialization/deserialization for multimodal content
-- [ ] Add support for media file streaming and chunking
-- [ ] Design media metadata and content type handling
+#### 2.1 Audio Processing Support
+- [ ] Implement audio input handling (MP3, WAV, etc.)
+- [ ] Add audio transcription capabilities
+- [ ] Support audio generation where available
+- [ ] Integrate audio processing with backend APIs
 
-#### 2.2 Backend Multimodal Integration (REQUIRED)
-- [ ] Extend existing backends (Claude, Gemini, OpenAI) with multimodal support
-- [ ] Implement vision model support for image processing
-- [ ] Add audio processing capabilities where supported
-- [ ] Create multimodal tool integration framework
-- [ ] Test multimodal capabilities across all backends
+#### 2.2 Video Processing Support
+- [ ] Implement video input handling (MP4, WebM, etc.)
+- [ ] Add video understanding capabilities
+- [ ] Support video generation where available
+- [ ] Handle video streaming and chunking
 
-#### 2.3 Frontend and UI Multimodal Support (REQUIRED)
-- [ ] Update CLI to handle multimodal inputs and outputs
-- [ ] Implement media file upload and processing
-- [ ] Add media preview and display capabilities
-- [ ] Create multimodal conversation history management
-- [ ] Add configuration options for media processing settings
+#### 2.3 Backend Integration
+- [ ] Extend Response backend with audio/video support
+- [ ] Update other backends (Claude, Gemini) as APIs support
+- [ ] Enhance MCP workspace tools for audio/video files
+- [ ] Add configuration options for media processing
 
 
-### 🎯 Milestone 3: Finish Refactoring Various Aspects of MassGen (REQUIRED)
+### 🎯 Milestone 3: Custom Tool Register System (OPTIONAL)
 
-**Goal**: Complete orchestrator and messaging system refactoring for better maintainability and multimodal support
+**Goal**: Refactor tool registration for better extensibility and plugin architecture
 
-#### 3.1 Orchestrator Refactoring (REQUIRED)
-- [ ] Extract coordination logic into separate modules
-- [ ] Simplify agent communication flow and state management
-- [ ] Remove duplicated code and consolidate utility functions
-- [ ] Improve error handling and recovery mechanisms
-- [ ] Add comprehensive unit tests for orchestrator components
+#### 3.1 Tool Registry Architecture
+- [ ] Design unified tool registration system
+- [ ] Support dynamic tool discovery and loading
+- [ ] Enable plugin-based tool extensions
+- [ ] Create toolkit abstraction layer
 
-#### 3.2 Messaging System Refactoring (REQUIRED)
-- [ ] Extract messaging logic from backend implementations
-- [ ] Implement unified stream chunks class for all message types
-- [ ] Create abstraction layer separating messaging from backends
-- [ ] Add support for multimodal message routing and processing
-- [ ] Implement efficient message serialization and caching
+#### 3.2 Built-in Toolkits
+- [ ] Refactor existing tools into toolkit modules
+- [ ] Implement toolkit configuration and management
+- [ ] Support toolkit versioning and dependencies
+- [ ] Add toolkit testing framework
 
-#### 3.3 Performance and Testing (REQUIRED)
-- [ ] Optimize agent coordination and message passing performance
-- [ ] Add comprehensive integration tests for refactored components
-- [ ] Create performance benchmarks and profiling tools
-- [ ] Update architecture documentation and diagrams
-- [ ] Ensure backward compatibility with existing configurations
+#### 3.3 Developer Experience
+- [ ] Create toolkit development guide
+- [ ] Provide toolkit templates and examples
+- [ ] Add toolkit validation and debugging tools
+- [ ] Document toolkit API and best practices
 
 
-### 🎯 Milestone 4: Additional Agent Backends from Other Frameworks (OPTIONAL)
+### 🎯 Milestone 4: Web UI (OPTIONAL)
 
-**Goal**: Integration with AG2, LangChain, and other agent frameworks
+**Goal**: Build modern web interface for enhanced user experience
 
-#### 4.1 Framework Analysis and Design (OPTIONAL)
-- [ ] Research AG2, LangChain, CrewAI, and AutoGen integration patterns
-- [ ] Design unified adapter interface for external frameworks
-- [ ] Analyze compatibility requirements and limitations
-- [ ] Plan migration path for framework-specific features
-- [ ] Document integration architecture and patterns
+#### 4.1 Core Web Interface
+- [ ] Design web UI architecture and technology stack
+- [ ] Implement real-time agent coordination visualization
+- [ ] Add conversation management and history
+- [ ] Support multimodal content display
 
-#### 4.2 Framework Adapters Implementation (OPTIONAL)
-- [ ] Implement AG2 agent adapter with conversation support
-- [ ] Create LangChain agent wrapper with tool integration
-- [ ] Add CrewAI multi-agent coordination adapter
-- [ ] Implement AutoGen conversation flow integration
-- [ ] Add framework-specific configuration management
+#### 4.2 Interactive Features
+- [ ] Enable web-based agent configuration
+- [ ] Add interactive prompt input with multimodal upload
+- [ ] Implement workspace file browser and preview
+- [ ] Support session management and replay
 
-#### 4.3 Integration and Testing (OPTIONAL)
-- [ ] Create mixed-framework multi-agent configurations
-- [ ] Add comprehensive testing for framework adapters
-- [ ] Implement framework-specific tool and capability mapping
-- [ ] Create documentation and examples for each framework
-- [ ] Add performance benchmarking for framework adapters
+#### 4.3 Deployment and Integration
+- [ ] Create web server integration with MassGen CLI
+- [ ] Support both local and remote deployment
+- [ ] Add authentication and security features
+- [ ] Provide deployment documentation
+
+
 
 ## Success Criteria
 
 ### Functional Requirements (REQUIRED)
 
-**Coding Agent:**
-- [ ] Enhanced system prompts encouraging more iterations
-- [ ] Specialized `CodingSessionManager` for coding workflows
-- [ ] Workspace diff logging with similarity scoring
-- [ ] Advanced `.massgen/` directory management utilities
+**AG2 Integration:**
+- [ ] AG2 agents can be configured in YAML files
+- [ ] AG2 agents work seamlessly with MassGen orchestrator
+- [ ] Mixed teams of MassGen and AG2 agents collaborate effectively
+- [ ] Comprehensive documentation and examples
 
-**Multimodal & Infrastructure:**
-- [ ] Complete multimodal support (images, audio, video)
-- [ ] Refactored orchestrator and messaging system
-- [ ] Backward compatibility with v0.0.26 configurations
+**Complete Multimodal:**
+- [ ] Audio processing (transcription, generation)
+- [ ] Video processing (understanding, generation where supported)
+- [ ] Backend integration for audio/video capabilities
+- [ ] Enhanced workspace tools for all media types
 
 ### Functional Requirements (OPTIONAL)
-- [ ] Integration with at least two external agent frameworks (AG2, LangChain)
-- [ ] Framework adapter system for external agent integration
-- [ ] Docker-based overlay workspaces for advanced isolation (Future)
-- [ ] Drop-in CLI usage with auto-detection (Future)
-- [ ] Large-scale task decomposition (Future)
+
+**Tool Register System:**
+- [ ] Unified tool registration architecture
+- [ ] Plugin-based toolkit extensions
+- [ ] Developer-friendly toolkit API
+- [ ] Comprehensive toolkit documentation
+
+**Web UI:**
+- [ ] Modern web interface with real-time visualization
+- [ ] Multimodal content support in UI
+- [ ] Session management and replay features
+- [ ] Deployment-ready with documentation
 
 ### Performance Requirements (REQUIRED)
-- [ ] No performance degradation from orchestrator and messaging refactoring
-- [ ] Efficient multimodal content processing and streaming
-- [ ] Improved memory efficiency in long-running multimodal sessions
-- [ ] Optimized message passing for multimodal content
+- [ ] No performance degradation from AG2 adapter layer
+- [ ] Efficient audio/video processing and streaming
+- [ ] Tool registry with minimal lookup overhead
+- [ ] Web UI responsive with real-time updates
 
 ### Quality Requirements (REQUIRED)
-- [ ] Comprehensive test coverage for multimodal capabilities
-- [ ] Documentation for refactored orchestrator and messaging architecture
-- [ ] Integration tests for multimodal workflows
-- [ ] Unit tests for all refactored components
-- [ ] Migration guide for multimodal configuration changes
+- [ ] Integration tests for AG2 adapter
+- [ ] Test coverage for audio/video processing
+- [ ] Toolkit development and testing guide
+- [ ] Web UI end-to-end tests
+
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **Media Processing Libraries**: PIL/Pillow, FFmpeg, audio processing libraries
-- **Streaming I/O**: Support for chunked streaming of large media files
-- **Memory Management**: Efficient handling of large multimodal content
-- **External Frameworks**: AG2, LangChain, CrewAI, AutoGen SDKs and APIs
+- **AG2 Framework**: AG2 SDK and dependencies
+- **Media Processing**: FFmpeg for audio/video, speech-to-text APIs
+- **Web Technologies**: Web framework (FastAPI/Flask), frontend framework (React/Vue)
+- **Tool System**: Plugin architecture and dynamic loading support
 
 ### Risks & Mitigations
-1. **Large Media File Handling**: *Mitigation*: Streaming operations, chunking, size limits
-2. **Multimodal Processing Performance**: *Mitigation*: Efficient algorithms, lazy loading, caching
-3. **Framework Compatibility**: *Mitigation*: Abstraction layers, comprehensive testing
-4. **Memory Usage with Media Content**: *Mitigation*: Memory monitoring, garbage collection
-5. **Breaking Changes from Refactoring**: *Mitigation*: Backward compatibility, migration guides
+1. **AG2 API Compatibility**: *Mitigation*: Adapter abstraction layer, version pinning
+2. **Audio/Video API Availability**: *Mitigation*: Backend-specific feature flags, graceful degradation
+3. **Tool Registry Complexity**: *Mitigation*: Incremental refactoring, backward compatibility
+4. **Web UI Scope Creep**: *Mitigation*: MVP-first approach, phased rollout
 
-## Post-v0.0.26 Considerations
 
-### Future Enhancements (v0.0.27+)
-- **Web UI**: Modern web interface for MassGen with real-time agent coordination visualization
-- **Irreversible Actions Management**: Safety mechanisms when agents work in parallel to prevent conflicts
-- **Address Minority Voting Problem**: Improved consensus mechanisms for multi-agent decision making
-- **Enterprise MCP Marketplace**: Advanced marketplace features for organizations
+## Future Enhancements (Post-v0.0.28)
+
+- **Additional Framework Adapters**: LangChain, CrewAI suintegrations
+- **Advanced Coding Agent**: Specialized prompts and workspace management for coding tasks
+- **Enterprise Features**: Advanced permissions, audit logs, team collaboration
+- **Marketplace**: Tool and agent template sharing platform
+
 
 ### Long-term Vision
 - **Enterprise File Management**: Advanced file operation capabilities for large organizations
@@ -192,29 +186,34 @@ Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing 
 
 ## Timeline Summary
 
-| Week | Focus | Key Deliverables | Status |
-|------|-------|------------------|--------|
-| 1-2 | Multimodal Support | Complete image, audio, video processing | ⏳ **PENDING** |
-| 3 | Refactoring Completion | Orchestrator and messaging system refactor | ⏳ **PENDING** |
-| 4 | Optional Features | Framework integrations and coding agent | ⏳ **PENDING** |
-| 5 | Release Preparation | Final testing and v0.0.26 release | ⏳ **PENDING** |
+| Phase | Focus | Key Deliverables | Priority |
+|-------|-------|------------------|----------|
+| Phase 1 | AG2 Integration | AG2 adapter, mixed-team support | **REQUIRED** |
+| Phase 2 | Multimodal Completion | Audio/video processing | **REQUIRED** |
+| Phase 3 | Tool System | Custom tool registry (if time permits) | OPTIONAL |
+| Phase 4 | Web UI | Web interface (if time permits) | OPTIONAL |
+
 
 ## Getting Started
 
 ### For Contributors
 
-1. Implement complete multimodal support for images, audio, and video processing
-2. Finish refactoring orchestrator and messaging systems for better maintainability
-3. Consider integrating additional agent frameworks (AG2, LangChain)
-4. Develop specialized coding agent capabilities
-5. Create comprehensive tests for all new multimodal and refactored components
+**Required Work:**
+1. Integrate AG2 adapter from PR #283
+2. Implement audio and video processing capabilities
+3. Test and document AG2 integration thoroughly
+
+**Optional Work:**
+4. Refactor tool registration system (PR #270)
+5. Build web UI for enhanced user experience
 
 ### For Users
-- v0.0.26 will provide full multimodal capabilities across all supported backends
-- Improved system architecture through completed refactoring work
-- All v0.0.25 configurations will continue to work unchanged
-- Optional integration with external agent frameworks for expanded capabilities
+
+- v0.0.28 will enable AG2 agents in your multi-agent workflows
+- Complete multimodal support (images, audio, video)
+- All v0.0.27 configurations will remain compatible
+- Optional web interface for better visualization and interaction
 
 ---
 
-*This roadmap represents our commitment to delivering complete multimodal capabilities and finishing core architectural improvements, establishing MassGen as a comprehensive platform for multimodal multi-agent collaboration.*
+*This roadmap prioritizes framework integration and multimodal completion while keeping extensibility improvements as optional enhancements.*
