@@ -74,9 +74,9 @@ orchestrator:
     snapshot_storage: "snapshots"
     agent_temporary_workspace: "temp_workspaces"
     # Context paths applied to all agents - always read-only access during orchestration, write for final agent if specified
-    # context_paths:
-    #   - path: "massgen/configs/resources/v0.0.21-example"
-    #     permission: "write"
+    context_paths:
+      - path: "massgen/configs/resources/v0.0.21-example"
+        permission: "write"
       # - path: "testing_permissions"
       #   # permission: "read"
       #   permission: "write"
