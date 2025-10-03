@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.26 Features](#-latest-features-v0026)
+- [v0.0.27 Features](#-latest-features-v0027)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.26](#recent-achievements-v0026)
-  - [v0.0.3 - v0.0.25](#previous-achievements-v003---v0025)
+  - [v0.0.27](#recent-achievements-v0027)
+  - [v0.0.3 - v0.0.26](#previous-achievements-v003---v0026)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.27 Roadmap](#v0027-roadmap)
+- [v0.0.28 Roadmap](#v0028-roadmap)
 </details>
 
 <details open>
@@ -129,24 +129,38 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.26)
+## 🆕 Latest Features (v0.0.27)
 
-**What's New in v0.0.26:**
-- **File Deletion and Workspace Management** - New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison
-- **Protected Paths Feature** - Protect specific files within write-permitted directories, allowing agents to read but not modify designated reference files
-- **File-Based Context Paths** - Grant access to individual files instead of entire directories for more precise permission control
-
-**Try v0.0.26 Features Now:**
 ```bash
-# Protected paths - keep reference files safe while allowing modifications
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
-  "Review the HTML and CSS files, then improve the styling"
+uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+```
 
-# File-based context paths - grant access to specific files
+**Experience v0.0.27 Multimodal Features**:
+
+See the new multimodal support and image processing capabilities in action:
+
+[![MassGen v0.0.27 Multimodal Demo](https://img.youtube.com/vi/qm6Y5qSpsEg/0.jpg)](https://www.youtube.com/watch?v=qm6Y5qSpsEg)
+
+**What's New in v0.0.27:**
+- **Multimodal Support - Image Processing** - Image generation and understanding with new `stream_chunk` module
+- **Additional Features**: File upload/search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
+
+**Try v0.0.27 Features Now:**
+```bash
+# Image generation with Single agent
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml \
-  "Analyze the CSS file and make modern improvements"
+  --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
+  "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+
+# Image understanding with multiple agents
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
+  "Please summarize the content in this image."
+
+# File search for document Q&A
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
+  "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -885,38 +899,36 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.26)
+### Recent Achievements (v0.0.27)
 
-**🎉 Released: October 1, 2025**
+**🎉 Released: October 3, 2025**
 
-Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protected Paths**, and **File-Based Context Paths**, enabling more precise control over agent file access:
+Version 0.0.27 introduces **Multimodal Support** with image processing capabilities, enabling agents to generate, understand, and process images alongside text:
 
-#### File Deletion and Workspace Management
-- **New MCP Tools**: `delete_file`, `delete_files_batch` for workspace cleanup
-- **Comparison Tools**: `compare_directories`, `compare_files` for file diffing
-- **Consolidated Tools**: Unified `_workspace_tools_server.py` replacing previous implementations
+#### Multimodal Support - Image Processing
+- **StreamChunk Module**: New architecture with dedicated `stream_chunk` module for handling multimodal content
+- **Image Generation and Understanding**: Multi-agent image generation and analysis with OpenAI's APIs
+- **Enhanced Display**: Terminal UI for rendering images, backend support for multimodal capabilities
 
-#### Protected Paths Feature
-- **Selective Protection**: Protect specific files within write-permitted directories
-- **Read-Only References**: Agents can read but not modify protected files
-- **Fine-Grained Control**: Shield important files while allowing changes to others
+#### File Upload and File Search
+- **File Upload**: Support for uploading files to backends via `upload_files` parameter
+- **File Search**: Vector-based file search for document Q&A with automatic vector store cleanup
 
-#### File-Based Context Paths
-- **Individual File Access**: Context paths can now be individual files, not just directories
-- **Flexible Permissions**: Grant read/write access to specific files without directory-wide permissions
-- **Better Security**: More precise control over what agents can access
+#### Model and Tool Enhancements
+- **Claude Sonnet 4.5**: Added latest Claude model (`claude-sonnet-4-5-20250929`)
+- **Workspace Multimodal Tools**: New `read_multimodal_files` MCP tool for image processing
+- **API Parameters Handler**: New module for centralized parameter management
 
-#### Code Organization
-- **Path Permission Manager**: Enhanced handling of edge cases and nested path scenarios
-- **CLI Improvements**: Interactive prompts for context path configuration
+#### Documentation and Resources
+- **Case Study**: Multi-turn filesystem support documentation
+- **Configurations**: New configs for image generation, understanding, and file search
+- **Example Resources**: Sample multimodal content for testing
 
-#### Documentation, Configurations and Resources
-- **Design Documentation**: New `file_deletion_and_context_files.md` documenting file deletion and context file features
-- **Release Workflow**: Added `release_example_checklist.md` for standardized release process
-- **Configuration Examples**: `gemini_gpt5nano_protected_paths.yaml`, `gemini_gpt5nano_file_context_path.yaml`, `grok4_gpt5_gemini_filesystem.yaml`
-- **Example Resources**: Bob Dylan website and Beatles HTML examples in `v0.0.26-example/`
+### Previous Achievements (v0.0.3 - v0.0.26)
 
-### Previous Achievements (v0.0.3 - v0.0.25)
+✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
+
+✅ **Protected Paths and File-Based Context Paths (v0.0.26)**: Protect specific files within write-permitted directories, grant access to individual files instead of entire directories
 
 ✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
 
@@ -984,25 +996,25 @@ Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protec
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.27 Roadmap
+### v0.0.28 Roadmap
 
-Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing on coding agent capabilities, multimodal support, and finishing core refactoring work. Key enhancements include:
+Version 0.0.28 focuses on integrating external agent frameworks, completing multimodal support, and enhancing extensibility:
 
 #### Required Features
-- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
-- **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
-- **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
+- **AG2 Integration (AdaptAgent)**: Enable AG2 agents to participate in MassGen's multi-agent workflows with seamless orchestration
+- **Complete Multimodal Support**: Extend audio and video processing capabilities beyond the image support added in v0.0.27
 
 #### Optional Features
-- **Additional Agent Backends from Other Frameworks**: Integration with AG2, LangChain, and other agent frameworks
+- **Custom Tool Register System**: Refactor tool registration for better extensibility and plugin support
+- **Web UI**: Modern web interface for real-time agent coordination visualization
 
 Key technical approach:
-- **Coding Agent**: Enhanced system prompts encouraging more iterations, multi-turn conversation support with `.massgen/sessions/`, workspace diff logging, and consolidated `.massgen/` directory structure
-- **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
-- **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
-- **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
+- **AG2 Integration**: Adapter system enabling AG2 agents to work within MassGen orchestration with mixed-team support
+- **Audio/Video Processing**: Extend existing multimodal infrastructure with audio transcription, video understanding, and generation capabilities
+- **Tool Registry**: Plugin-based toolkit architecture for dynamic tool discovery and loading
+- **Web Interface**: Real-time visualization with multimodal content support and session management
 
-For detailed milestones and technical specifications, see the [full v0.0.27 roadmap](ROADMAP_v0.0.27.md).
+For detailed milestones and technical specifications, see the [full v0.0.28 roadmap](ROADMAP_v0.0.28.md).
 
 ---
 

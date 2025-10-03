@@ -5,6 +5,67 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.27] - 2025-10-03
+
+### Added
+- **Multimodal Support - Image Processing**: Foundation for multimodal content processing
+  - New `stream_chunk` module with base classes for multimodal content (`base.py`, `text.py`, `multimodal.py`)
+  - Support for image input and output in conversation messages
+  - Image generation and understanding capabilities for multi-agent workflows
+  - Multimodal content structure supporting images, audio, video, and documents (architecture ready)
+
+- **File Upload and File Search**: Extended backend capabilities for document operations
+  - File upload support integrated into Response backend via `_response_api_params_handler.py`
+  - File search functionality for enhanced context retrieval and Q&A
+  - Vector store management for file search operations
+  - Cleanup utilities for uploaded files and vector stores
+
+- **Workspace Tools Enhancements**: Extended MCP-based workspace management
+  - Added `read_multimodal_files` tool for reading images as base64 data with MIME type
+
+- **Claude Sonnet 4.5 Support**: Added latest Claude model to model mappings
+  - Support for Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`)
+  - Updated model registry in `utils.py`
+
+### Changed
+- **Message Architecture Refactoring**: Extracted and refactored messaging system for multimodal support
+  - Extracted `StreamChunk` classes into dedicated module (`massgen/stream_chunk/`)
+  - Enhanced message templates for image generation workflows
+  - Improved orchestrator and chat agent for multimodal message handling
+
+- **Backend Enhancements**: Extended backends for multimodal and file operations
+  - Enhanced `response.py` with image generation, understanding, and saving capabilities
+  - Improved `base_with_mcp.py` with image handling for MCP-based workflows
+  - New `api_params_handler` module for centralized parameter management including file uploads
+  - Better streaming and error handling for multimodal content
+
+- **Frontend Display Improvements**: Enhanced terminal UI for multimodal content
+  - Refactored `rich_terminal_display.py` for rendering images in terminal
+  - Improved message formatting and visual presentation
+
+### Documentations, Configurations and Resources
+
+- **New Configuration Files**: Added multimodal and enhanced filesystem examples
+  - `gpt4o_image_generation.yaml`: Multi-agent image generation setup
+  - `gpt5nano_image_understanding.yaml`: Multi-agent image understanding configuration
+  - `single_gpt4o_image_generation.yaml`: Single agent image generation
+  - `single_gpt5nano_image_understanding.yaml`: Single agent image understanding
+  - `single_gpt5nano_file_search.yaml`: Single agent file search example
+  - `grok4_gpt5_gemini_filesystem.yaml`: Enhanced filesystem configuration
+  - Updated `claude_code_gpt5nano.yaml` with improved filesystem settings
+
+- **Case Study Documentation**: New `multi-turn-filesystem-support.md` demonstrating v0.0.25 multi-turn capabilities with Bob Dylan website example
+
+- **Presentation Materials**: New `applied-ai-summit.html` presentation with updated build scripts and call-to-action slides
+
+- **Example Resources**: New `multimodality.jpg` for testing multimodal capabilities under `massgen/configs/resources/v0.0.27-example/`
+
+
+### Technical Details
+- **Major Features**: Image processing foundation, StreamChunk architecture, file upload/search, workspace multimodal tools
+- **New Module**: `massgen/stream_chunk/` with base, text, and multimodal classes
+- **Contributors**: @qidanrui @sonichi @praneeth999 @ncrispino @Henry-811 and the MassGen team
+
 ## [0.0.26] - 2025-10-01
 
 ### Added
