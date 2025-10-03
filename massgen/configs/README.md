@@ -226,7 +226,15 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.25 - Latest
+### v0.0.26 - Latest
+**New Features:** File Deletion, Protected Paths, File-Based Context Paths
+- `massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml` - Protected paths configuration
+- `massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml` - File-based context paths
+- `massgen/configs/tools/filesystem/grok4_gpt5_gemini_filesystem.yaml` - Multi-agent filesystem collaboration
+- New MCP tools: `delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`
+
+
+### v0.0.25
 **New Features:** Multi-Turn Filesystem Support, SGLang Backend Integration
 - `massgen/configs/tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml` - Multi-turn with Gemini agents
 - `massgen/configs/tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml` - Three-agent multi-turn
