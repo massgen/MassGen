@@ -20,8 +20,11 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
             {
                 "enable_web_search",
                 "enable_code_interpreter",
+                "enable_image_generation",
                 "allowed_tools",
                 "exclude_tools",
+                "_has_file_search_files",  # Internal flag for file search tracking
+                "_file_search_vector_store_ids",  # Internal vector store IDs from uploads
             },
         )
 
@@ -39,6 +42,9 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
                     "container": {"type": "auto"},
                 },
             )
+
+        if all_params.get("enable_image_generation", False):
+            provider_tools.append({"type": "image_generation"})
 
         return provider_tools
 
@@ -80,7 +86,7 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
                     api_params[key] = value
 
         # Combine all tools
-        combined_tools = []
+        combined_tools = api_params.setdefault("tools", [])
 
         # Add provider tools first
         provider_tools = self.get_provider_tools(all_params)
@@ -99,5 +105,31 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
 
         if combined_tools:
             api_params["tools"] = combined_tools
+        # File Search integration
+        vector_store_ids = all_params.get("_file_search_vector_store_ids")
+        if vector_store_ids:
+            # Ensure vector_store_ids is a list
+            if not isinstance(vector_store_ids, list):
+                vector_store_ids = [vector_store_ids]
+
+            # Check if file_search tool already exists
+            file_search_tool_index = None
+            for i, tool in enumerate(combined_tools):
+                if tool.get("type") == "file_search":
+                    file_search_tool_index = i
+                    break
+
+            # Add or update file_search tool with embedded vector_store_ids
+            if file_search_tool_index is not None:
+                # Update existing file_search tool
+                combined_tools[file_search_tool_index]["vector_store_ids"] = vector_store_ids
+            else:
+                # Add new file_search tool with vector_store_ids
+                combined_tools.append(
+                    {
+                        "type": "file_search",
+                        "vector_store_ids": vector_store_ids,
+                    },
+                )
 
         return api_params

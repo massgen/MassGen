@@ -14,12 +14,15 @@ Tools provided:
 - delete_files_batch: Delete multiple files with pattern matching
 - compare_directories: Compare two directories and show differences
 - compare_files: Compare two text files and show unified diff
+- read_multimodal_files: Read image files and return as base64 data with MIME type
 """
 
 import argparse
+import base64
 import difflib
 import filecmp
 import fnmatch
+import mimetypes
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -810,6 +813,192 @@ async def create_server() -> fastmcp.FastMCP:
 
         except Exception as e:
             return {"success": False, "operation": "compare_files", "error": str(e)}
+
+    @mcp.tool()
+    def extract_multimodal_files(path: str, max_size_mb: float = 0.25, compress_quality: int = 65, understanding_mode: bool = True) -> Dict[str, Any]:
+        """
+        Read multimodal files (images, etc.) and return as base64 data with MIME type.
+
+        This tool is specifically designed for reading image files and other multimodal content,
+        converting them to base64 format suitable for AI model processing. Large images are
+        automatically compressed to avoid exceeding model context limits.
+
+        Args:
+            path: Path to the multimodal file (absolute or relative to workspace)
+                  Supports common image formats: png, jpg, jpeg, gif, bmp, webp, svg
+            max_size_mb: Maximum file size in MB after compression (default: 0.25)
+                        Reduced default to prevent context window overflow
+            compress_quality: JPEG compression quality 1-100 (default: 65)
+                            Lower default for better context efficiency
+            understanding_mode: If True, uses more aggressive compression for AI understanding tasks
+                              (max 0.15MB, quality 50)
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "read_multimodal_files"
+            - data: Base64 encoded file content with data URI scheme
+            - mime_type: MIME type of the file
+            - size: File size in bytes (after compression if applied)
+            - original_size: Original file size in bytes
+            - compressed: Whether compression was applied
+            - path: Resolved file path
+
+        Examples:
+            read_multimodal_files("image.png")
+            → {"data": "data:image/png;base64,iVBORw0...", "mime_type": "image/png"}
+
+        Security:
+            - Read-only operation
+            - Path must be within allowed directories
+            - Large files are automatically compressed to fit within limits
+        """
+        try:
+            import io
+
+            from PIL import Image
+
+            # Apply understanding mode if enabled
+            if understanding_mode:
+                max_size_mb = min(max_size_mb, 0.15)  # Max 150KB for understanding mode
+                compress_quality = min(compress_quality, 50)  # Lower quality for understanding
+
+            # Resolve path
+            if Path(path).is_absolute():
+                file_path = Path(path).resolve()
+            else:
+                # Relative path - resolve relative to workspace
+                file_path = (Path.cwd() / path).resolve()
+
+            # Validate path access
+            _validate_path_access(file_path, mcp.allowed_paths)
+
+            # Check if file exists
+            if not file_path.exists():
+                return {
+                    "success": False,
+                    "operation": "read_multimodal_files",
+                    "error": f"File does not exist: {file_path}",
+                }
+
+            if not file_path.is_file():
+                return {
+                    "success": False,
+                    "operation": "read_multimodal_files",
+                    "error": f"Path is not a file: {file_path}",
+                }
+
+            # Get MIME type
+            mime_type, _ = mimetypes.guess_type(str(file_path))
+            if mime_type is None:
+                # Default MIME type for unknown files
+                mime_type = "application/octet-stream"
+
+            # Read file
+            try:
+                with open(file_path, "rb") as f:
+                    file_content = f.read()
+
+                original_size = len(file_content)
+                max_size_bytes = max_size_mb * 1024 * 1024
+                compressed = False
+
+                # Check if it's an image that needs compression
+                if mime_type and mime_type.startswith("image/") and mime_type != "image/svg+xml":
+                    if original_size > max_size_bytes:
+                        try:
+                            # Open image with PIL
+                            img = Image.open(io.BytesIO(file_content))
+
+                            # Convert RGBA to RGB if needed for JPEG
+                            if img.mode in ("RGBA", "LA", "P"):
+                                background = Image.new("RGB", img.size, (255, 255, 255))
+                                if img.mode == "P":
+                                    img = img.convert("RGBA")
+                                background.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+                                img = background
+
+                            # Start with original dimensions
+                            current_img = img.copy()
+
+                            # Try different compression levels and sizes
+                            for scale in [1.0, 0.8, 0.6, 0.4, 0.2]:
+                                if scale < 1.0:
+                                    new_size = (int(img.width * scale), int(img.height * scale))
+                                    current_img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+                                # Save to bytes with compression
+                                output = io.BytesIO()
+                                # Use actual compress_quality value (may be reduced by understanding_mode)
+                                current_img.save(output, format="JPEG", quality=compress_quality, optimize=True)
+                                compressed_content = output.getvalue()
+
+                                if len(compressed_content) <= max_size_bytes:
+                                    file_content = compressed_content
+                                    mime_type = "image/jpeg"
+                                    compressed = True
+                                    break
+                            else:
+                                # If still too large after maximum compression, use lowest quality
+                                output = io.BytesIO()
+                                # For understanding mode, go even lower; otherwise use 30
+                                final_quality = 20 if understanding_mode else 30
+                                current_img.save(output, format="JPEG", quality=final_quality, optimize=True)
+                                file_content = output.getvalue()
+                                mime_type = "image/jpeg"
+                                compressed = True
+
+                        except Exception as e:
+                            # If compression fails, continue with original
+                            print(f"Warning: Failed to compress image: {e}")
+
+                # Get final file size
+                file_size = len(file_content)
+
+                # Final check - if still too large, return error
+                if file_size > 5 * 1024 * 1024:  # 5MB absolute limit
+                    return {
+                        "success": False,
+                        "operation": "read_multimodal_files",
+                        "error": f"File too large even after compression: {file_size / (1024*1024):.2f}MB. Maximum allowed: 5MB",
+                    }
+
+                # Encode to base64
+                base64_content = base64.b64encode(file_content).decode("utf-8")
+
+                # Create data URI
+                data_uri = f"data:{mime_type};base64,{base64_content}"
+
+                return {
+                    "success": True,
+                    "operation": "read_multimodal_files",
+                    "data": data_uri,
+                    "mime_type": mime_type,
+                    "size": file_size,
+                    "original_size": original_size,
+                    "compressed": compressed,
+                    "path": str(file_path),
+                }
+
+            except Exception as e:
+                return {
+                    "success": False,
+                    "operation": "read_multimodal_files",
+                    "error": f"Failed to read file: {e}",
+                }
+
+        except ImportError:
+            return {
+                "success": False,
+                "operation": "read_multimodal_files",
+                "error": "PIL (Pillow) is required for image compression. Install with: pip install Pillow",
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "operation": "read_multimodal_files",
+                "error": str(e),
+            }
 
     print("🚀 Workspace Copy MCP Server started and ready")
     print(f"Allowed paths: {[str(p) for p in mcp.allowed_paths]}")
