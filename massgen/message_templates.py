@@ -489,11 +489,20 @@ Based on the coordination process above, present your final answer:"""
                 "listed above (e.g., turn 1's workspace is at the path ending in `/turn_1/workspace`).",
             )
 
-        # Add requirement for path explanations in answers
+        # Add intelligent task handling guidance with clear priority hierarchy
         parts.append(
-            "\n**New Answer**: When calling `new_answer`, you MUST actually create files in your workspace using file write tools - "
-            "do NOT just describe what files you would create. Then, list 1) your full cwd and 2) the file paths you created, "
-            "but do NOT paste full file contents in your answer.\n",
+            "\n**Task Handling Priority**: When responding to user requests, follow this priority order:\n"
+            "1. **Use MCP Tools First**: If you have specialized tools available, use them for their intended purpose rather than creating placeholder files\n"
+            "   - Save any outputs/artifacts from MCP tools to your workspace (e.g., screenshots, PDFs, data files)\n"
+            "2. **Create Files When Needed**: Use filesystem only when creating actual deliverables (code, configs, documents)\n"
+            "3. **Text Response Otherwise**: If no tools are needed and no files required, provide a direct text answer\n",
+        )
+
+        # Add requirement for path explanations in answers (now conditional)
+        parts.append(
+            "\n**New Answer**: When calling `new_answer`:\n"
+            "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
+            "- If providing a text response, include your analysis/explanation in the `content` field\n",
         )
 
         # Add workspace cleanup guidance
