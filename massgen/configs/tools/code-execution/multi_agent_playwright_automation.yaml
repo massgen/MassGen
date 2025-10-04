@@ -1,23 +1,24 @@
-# uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "browse https://github.com/Leezekun/MassGen and suggest improvement. Include screenshots and suggestions in a PDF."
+# uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a PDF."
 agents:
-  - id: "claude_code_playwright_automation"
-    backend:
-      type: "claude_code"
-      cwd: "workspace1"
-      # Playwright MCP server with advanced configuration
-      mcp_servers:
-        playwright:
-          type: "stdio"
-          command: "npx"
-          args: [
-            "@playwright/mcp@latest",
-            "--browser=chrome",  # Use Chrome browser
-            "--caps=vision,pdf", # Enable vision and PDF capabilities
-            "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
-            # "--save-trace"       # Save Playwright traces for debugging
-          ]
+  # - id: "agent_a"
+  #   backend:
+  #     type: "claude_code"
+  #     cwd: "workspace1"
+  #     # Playwright MCP server with advanced configuration
+  #     mcp_servers:
+  #       playwright:
+  #         type: "stdio"
+  #         command: "npx"
+  #         args: [
+  #           "@playwright/mcp@latest",
+  #           "--browser=chrome",  # Use Chrome browser
+  #           "--caps=vision,pdf", # Enable vision and PDF capabilities
+  #           "--user-data-dir=${cwd}/playwright-profile", # Persistent browser profile within workspace
+  #           "--output-dir=${cwd}", # Save screenshots/PDFs directly to workspace
+  #           # "--save-trace"       # Save Playwright traces for debugging
+  #         ]
 
-  - id: "gpt-5-mini_analysis"
+  - id: "agent_b"
     backend:
       type: "openai"
       model: "gpt-5-mini"
@@ -35,7 +36,9 @@ agents:
             "@playwright/mcp@latest",
             "--browser=chrome",  # Use Chrome browser
             "--caps=vision,pdf", # Enable vision and PDF capabilities
-            "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
+            "--output-dir=${cwd}", # Save screenshots/PDFs directly to workspace
+            "--user-data-dir=${cwd}/playwright-profile", # Persistent browser profile within workspace
+            # "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
             # "--save-trace"       # Save Playwright traces for debugging
           ]
 

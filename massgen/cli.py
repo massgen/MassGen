@@ -88,6 +88,30 @@ class ConfigurationError(Exception):
     """Configuration error for CLI."""
 
 
+def _substitute_variables(obj: Any, variables: Dict[str, str]) -> Any:
+    """Recursively substitute ${var} references in config with actual values.
+
+    Args:
+        obj: Config object (dict, list, str, or other)
+        variables: Dict of variable names to values
+
+    Returns:
+        Config object with variables substituted
+    """
+    if isinstance(obj, dict):
+        return {k: _substitute_variables(v, variables) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_substitute_variables(item, variables) for item in obj]
+    elif isinstance(obj, str):
+        # Replace ${var} with value
+        result = obj
+        for var_name, var_value in variables.items():
+            result = result.replace(f"${{{var_name}}}", var_value)
+        return result
+    else:
+        return obj
+
+
 def load_config_file(config_path: str) -> Dict[str, Any]:
     """Load configuration from YAML or JSON file.
 
@@ -95,6 +119,8 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
     1. Exact path as provided (absolute or relative to CWD)
     2. If just a filename, search in package's configs/ directory
     3. If a relative path, also try within package's configs/ directory
+
+    Supports variable substitution: ${cwd} in any string will be replaced with the agent's cwd value.
     """
     path = Path(config_path)
 
@@ -281,6 +307,11 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
+
+        # Substitute variables like ${cwd} in backend config
+        if "cwd" in backend_config:
+            variables = {"cwd": backend_config["cwd"]}
+            backend_config = _substitute_variables(backend_config, variables)
 
         # Infer backend type from model if not explicitly provided
         backend_type = backend_config.get("type") or (get_backend_type_from_model(backend_config["model"]) if "model" in backend_config else None)

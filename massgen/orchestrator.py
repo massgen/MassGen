@@ -896,6 +896,11 @@ class Orchestrator(ChatAgent):
         if agent.backend.filesystem_manager:
             logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} has filesystem_manager, calling save_snapshot with timestamp={timestamp if not is_final else None}")
             await agent.backend.filesystem_manager.save_snapshot(timestamp=timestamp if not is_final else None, is_final=is_final)
+
+            # Clear workspace after saving snapshot (but not for final snapshots)
+            if not is_final:
+                agent.backend.filesystem_manager.clear_workspace()
+                logger.info(f"[Orchestrator._save_agent_snapshot] Cleared workspace for {agent_id} after saving snapshot")
         else:
             logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager")
 

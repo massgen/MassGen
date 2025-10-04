@@ -452,7 +452,8 @@ Based on the coordination process above, present your final answer:"""
         # Explain workspace behavior
         parts.append(
             "Your working directory is set to your workspace, so all relative paths in your file operations "
-            "will be resolved from there. This ensures each agent works in isolation while having access to shared references.\n",
+            "will be resolved from there. This ensures each agent works in isolation while having access to shared references. "
+            "Only include in your workspace files that should be used in your answer.\n",
         )
 
         if main_workspace:
@@ -467,7 +468,10 @@ Based on the coordination process above, present your final answer:"""
             parts.append(workspace_note)
 
         if temp_workspace:
-            parts.append(f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)")
+            parts.append(
+                f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)\n"
+                f"   - To improve upon existing answers: Copy files from Shared Reference to your workspace using `copy_file` or `copy_directory` tools, then modify them\n",
+            )
 
         if context_paths:
             has_target = any(p.get("will_be_writable", False) for p in context_paths)
@@ -517,10 +521,13 @@ Based on the coordination process above, present your final answer:"""
         # Add intelligent task handling guidance with clear priority hierarchy
         parts.append(
             "\n**Task Handling Priority**: When responding to user requests, follow this priority order:\n"
-            "1. **Use MCP Tools First**: If you have specialized tools available, use them for their intended purpose rather than creating placeholder files\n"
-            "   - Save any outputs/artifacts from MCP tools to your workspace (e.g., screenshots, PDFs, data files)\n"
-            "2. **Create Files When Needed**: Use filesystem only when creating actual deliverables (code, configs, documents)\n"
-            "3. **Text Response Otherwise**: If no tools are needed and no files required, provide a direct text answer\n",
+            "1. **Use MCP Tools First**: If you have specialized MCP tools available, call them DIRECTLY to complete the task\n"
+            "   - Save any outputs/artifacts from MCP tools to your workspace\n"
+            "2. **Write Code If Needed**: If MCP tools cannot complete the task, write and execute code\n"
+            "3. **Create Other Files**: Create configs, documents, or other deliverables as needed\n"
+            "4. **Text Response Otherwise**: If no tools or files are needed, provide a direct text answer\n\n"
+            "**Important**: Do NOT ask the user for clarification or additional input. Make reasonable assumptions and proceed with sensible defaults. "
+            "You will not receive user feedback, so complete the task autonomously based on the original request.\n",
         )
 
         # Add requirement for path explanations in answers (conditional based on image generation)
@@ -557,19 +564,15 @@ Based on the coordination process above, present your final answer:"""
             "or verify solutions before voting.\n",
         )
 
-        # Add voting guidance
+        # Add evaluation guidance (for either voting or to determine whether new_answer is needed)
+        parts.append(
+            "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
+            "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
+        )
         if enable_image_generation:
             # Enabled for image generation tasks
             parts.append(
-                "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
-                "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims."
                 "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__extract_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n",
-            )
-        else:
-            # Not enabled for image generation tasks
-            parts.append(
-                "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
-                "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
             )
 
         return "\n".join(parts)
