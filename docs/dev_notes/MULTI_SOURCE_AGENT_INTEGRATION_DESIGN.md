@@ -154,10 +154,10 @@ class LangChainAdapter(AgentAdapter):
 #### AutoGen/AG2 Adapter
 ```python
 class AG2Adapter(AgentAdapter):
-    """Adapter for AG2/AutoGen agents including GroupChat support."""
+    """Adapter for AG2/AutoGen agents including pattern-based group chat support."""
 
     def _setup_adapter(self) -> None:
-        """Initialize AG2 agent or group chat."""
+        """Initialize AG2 agent or pattern-based group chat."""
         import autogen
 
         self.agent_type = self.config.get("agent_type", "AssistantAgent")
@@ -165,6 +165,8 @@ class AG2Adapter(AgentAdapter):
         self.group_config = self.config.get("group_config", None)
 
         if self.group_config:
+            # Use patterns instead of naive GroupChat
+            # Supports: AutoPattern, RoundRobinPattern, RandomPattern, DefaultPattern
             self._setup_group_chat()
         else:
             self._setup_single_agent()

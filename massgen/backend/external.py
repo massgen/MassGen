@@ -31,8 +31,6 @@ class ExternalAgentBackend(LLMBackend):
             api_key: Optional API key for frameworks that need it
             **kwargs: Framework-specific configuration
         """
-        super().__init__(api_key=api_key, **kwargs)
-
         self.adapter_type = adapter_type.lower()
 
         # Get adapter class from registry
@@ -46,8 +44,12 @@ class ExternalAgentBackend(LLMBackend):
         # Extract framework-specific config
         adapter_config = self._extract_adapter_config(kwargs)
 
-        # Initialize adapter
+        # Initialize adapter before calling super().__init__
+        # This is needed because base class may call get_filesystem_support()
         self.adapter = adapter_class(**adapter_config)
+
+        # Now initialize base class
+        super().__init__(api_key=api_key, **kwargs)
 
     def _extract_adapter_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Extract framework-specific configuration."""
@@ -58,7 +60,7 @@ class ExternalAgentBackend(LLMBackend):
         excluded_params.update(
             {
                 "",  # Already handled
-            }
+            },
         )
 
         # Return remaining config for framework

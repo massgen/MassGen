@@ -4,6 +4,7 @@ AG2 (AutoGen) adapter for MassGen.
 
 Supports both single agents and GroupChat configurations.
 """
+import os
 from typing import Any, AsyncGenerator, Dict, List
 
 from autogen import AssistantAgent, ConversableAgent, LLMConfig
@@ -79,10 +80,13 @@ class AG2Adapter(AgentAdapter):
 
     Supports:
     - Single AG2 agents (ConversableAgent, AssistantAgent)
-    - GroupChat with multiple AG2 agents (acts as single MassGen agent)
-    - Function/tool calling via llm_config
+    - Function/tool calling
     - Async execution with a_run and a_initiate_chat
     - No human-in-the-loop (autonomous operation)
+
+    Todos:
+    - Group chat support with patterns (e.g., AutoPattern,DefaultPattern, etc.)
+    - More tool support including mcp
     """
 
     def __init__(self, **kwargs):
@@ -144,10 +148,9 @@ class AG2Adapter(AgentAdapter):
             agents.append(agent)
 
         if not agents:
-            raise ValueError("No valid agents configured for GroupChat")
+            raise ValueError("No valid agents configured for group chat")
 
-        # Store the first agent as initiator for group chat
-        self.initiator = agents[0]
+        # Todo: set up group chat patterns
         self.is_group_chat = True
 
     async def execute_streaming(
@@ -187,6 +190,7 @@ class AG2Adapter(AgentAdapter):
                 )
 
                 # Extract content and tool_calls from AG2 response
+                # Massgen and AG2 use same format for tool calls
                 content = result.get("content", "") if isinstance(result, dict) else str(result)
                 tool_calls = result.get("tool_calls") if isinstance(result, dict) else None
 
@@ -229,7 +233,12 @@ class AG2Adapter(AgentAdapter):
             yield StreamChunk(type="error", error=f"AG2 execution error: {str(e)}")
 
     def _register_tools(self, tools: List[Dict[str, Any]]) -> None:
-        """Register tools with the agent."""
+        """
+        Register tools with the agent.
+
+        Massgen and AG2 both use openai function format for tools,
+        """
+
         if not tools:
             return
 
@@ -238,4 +247,5 @@ class AG2Adapter(AgentAdapter):
                 self.agent.update_tool_signature(tool_sig=tool, is_remove=False)
 
         else:
-            raise NotImplementedError("Tool registration for GroupChat not yet implemented")
+            # Todo:
+            raise NotImplementedError("Tool registration for group chat not yet implemented")
