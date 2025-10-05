@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MassGen Web UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Socket connection
+        const socket = io();
+
+        // Main App Component
+        function App() {
+            const [currentSession, setCurrentSession] = useState(null);
+            const [agents, setAgents] = useState([]);
+            const [coordinationEvents, setCoordinationEvents] = useState([]);
+            const [agentOutputs, setAgentOutputs] = useState({});
+            const [votingData, setVotingData] = useState(null);
+
+            useEffect(() => {
+                // Socket event listeners
+                socket.on('connected', (data) => {
+                    console.log('Connected to WebSocket:', data.message);
+                });
+
+                socket.on('coordination_event', (data) => {
+                    setCoordinationEvents(prev => [...prev, { ...data, timestamp: new Date() }]);
+                });
+
+                socket.on('agent_output', (data) => {
+                    setAgentOutputs(prev => ({
+                        ...prev,
+                        [data.agent_id]: [...(prev[data.agent_id] || []), data.output]
+                    }));
+                });
+
+                socket.on('voting_event', (data) => {
+                    setVotingData(data);
+                });
+
+                return () => {
+                    socket.off('connected');
+                    socket.off('coordination_event');
+                    socket.off('agent_output');
+                    socket.off('voting_event');
+                };
+            }, []);
+
+            const handleSessionCreated = (sessionData) => {
+                setCurrentSession(sessionData);
+                setAgents(sessionData.agents || []);
+                socket.emit('join_session', { session_id: sessionData.session_id });
+            };
+
+            const handleSessionStop = () => {
+                if (currentSession) {
+                    socket.emit('leave_session', { session_id: currentSession.session_id });
+                    fetch(`/api/stop-session/${currentSession.session_id}`, { method: 'POST' });
+                }
+                setCurrentSession(null);
+                setAgents([]);
+                setCoordinationEvents([]);
+                setAgentOutputs({});
+                setVotingData(null);
+            };
+
+            return (
+                <div className="container mx-auto px-4 py-8">
+                    <Header />
+                    {!currentSession ? (
+                        <SetupPanel onSessionCreated={handleSessionCreated} />
+                    ) : (
+                        <CoordinationInterface 
+                            session={currentSession}
+                            agents={agents}
+                            events={coordinationEvents}
+                            outputs={agentOutputs}
+                            votingData={votingData}
+                            onStop={handleSessionStop}
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        // Header Component
+        function Header() {
+            return (
+                <div className="mb-8">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">MassGen Web UI</h1>
+                            <p className="text-gray-600 mt-2">Multi-Agent Coordination Interface</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                            <span className="text-sm text-gray-600">Connected</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Setup Panel Component
+        function SetupPanel({ onSessionCreated }) {
+            const [config, setConfig] = useState(null);
+            const [question, setQuestion] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [showSamples, setShowSamples] = useState(false);
+
+            const handleFileUpload = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const formData = new FormData();
+                formData.append('config_file', file);
+
+                try {
+                    setLoading(true);
+                    const response = await fetch('/api/upload-config', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        setConfig(result.config);
+                    } else {
+                        alert('Error loading config: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Error uploading file: ' + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleSampleConfig = async (type) => {
+                try {
+                    const response = await fetch('/api/sample-configs');
+                    const samples = await response.json();
+                    setConfig(samples[type]);
+                    setShowSamples(false);
+                } catch (error) {
+                    alert('Error loading sample config: ' + error.message);
+                }
+            };
+
+            const handleStartSession = async () => {
+                if (!config || !question.trim()) {
+                    alert('Please provide both a configuration and a question');
+                    return;
+                }
+
+                try {
+                    setLoading(true);
+                    const response = await fetch('/api/create-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ config, question: question.trim() })
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        onSessionCreated(result);
+                        
+                        // Start coordination
+                        await fetch('/api/start-coordination', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ session_id: result.session_id })
+                        });
+                    } else {
+                        alert('Error creating session: ' + result.error);
+                    }
+                } catch (error) {
+                    alert('Error starting session: ' + error.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                    <h2 className="text-xl font-semibold mb-6">Setup Coordination Session</h2>
+                    
+                    {/* Configuration Upload */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Configuration File
+                        </label>
+                        <div className="flex items-center space-x-4">
+                            <input
+                                type="file"
+                                accept=".yaml,.yml,.json"
+                                onChange={handleFileUpload}
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            />
+                            <button
+                                onClick={() => setShowSamples(true)}
+                                className="px-4 py-2 text-sm text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50"
+                            >
+                                Use Sample
+                            </button>
+                        </div>
+                        
+                        {config && (
+                            <div className="mt-2 p-3 bg-green-50 rounded-md">
+                                <p className="text-sm text-green-700">
+                                    ✓ Configuration loaded: {config.agent ? '1 agent' : `${config.agents?.length || 0} agents`}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Question Input */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Question / Task
+                        </label>
+                        <textarea
+                            value={question}
+                            onChange={(e) => setQuestion(e.target.value)}
+                            placeholder="Enter your question or task for the agents..."
+                            className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    {/* Start Button */}
+                    <button
+                        onClick={handleStartSession}
+                        disabled={!config || !question.trim() || loading}
+                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {loading ? 'Starting...' : 'Start Coordination'}
+                    </button>
+
+                    {/* Sample Config Modal */}
+                    {showSamples && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                                <h3 className="text-lg font-semibold mb-4">Choose Sample Configuration</h3>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={() => handleSampleConfig('single_agent')}
+                                        className="w-full text-left p-3 border rounded-md hover:bg-gray-50"
+                                    >
+                                        <div className="font-medium">Single Agent</div>
+                                        <div className="text-sm text-gray-600">One OpenAI GPT-4o-mini agent</div>
+                                    </button>
+                                    <button
+                                        onClick={() => handleSampleConfig('multi_agent')}
+                                        className="w-full text-left p-3 border rounded-md hover:bg-gray-50"
+                                    >
+                                        <div className="font-medium">Multi-Agent</div>
+                                        <div className="text-sm text-gray-600">GPT-4o analyst + Claude-3.5 creative</div>
+                                    </button>
+                                </div>
+                                <button
+                                    onClick={() => setShowSamples(false)}
+                                    className="mt-4 w-full py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Coordination Interface Component
+        function CoordinationInterface({ session, agents, events, outputs, votingData, onStop }) {
+            return (
+                <div className="space-y-6">
+                    {/* Session Header */}
+                    <div className="bg-white rounded-lg shadow-lg p-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h2 className="text-lg font-semibold">Active Session</h2>
+                                <p className="text-sm text-gray-600">{session.question}</p>
+                            </div>
+                            <button
+                                onClick={onStop}
+                                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                            >
+                                Stop Session
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Agent Grid */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Agents</h3>
+                            <AgentGrid agents={agents} outputs={outputs} />
+                        </div>
+
+                        {/* Events Timeline */}
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold">Coordination Events</h3>
+                            <EventsTimeline events={events} />
+                        </div>
+                    </div>
+
+                    {/* Voting Panel */}
+                    {votingData && <VotingPanel votingData={votingData} />}
+                </div>
+            );
+        }
+
+        // Agent Grid Component
+        function AgentGrid({ agents, outputs }) {
+            return (
+                <div className="grid gap-4">
+                    {agents.map(agentId => (
+                        <div key={agentId} className="bg-white rounded-lg shadow p-4">
+                            <div className="flex items-center justify-between mb-3">
+                                <h4 className="font-medium">{agentId}</h4>
+                                <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
+                            </div>
+                            <div className="text-sm text-gray-600 max-h-32 overflow-y-auto">
+                                {outputs[agentId]?.slice(-3).map((output, idx) => (
+                                    <div key={idx} className="mb-1 p-2 bg-gray-50 rounded">
+                                        {JSON.stringify(output).substring(0, 100)}...
+                                    </div>
+                                )) || <p>No output yet...</p>}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        // Events Timeline Component
+        function EventsTimeline({ events }) {
+            return (
+                <div className="bg-white rounded-lg shadow p-4 max-h-96 overflow-y-auto">
+                    <div className="space-y-3">
+                        {events.map((event, idx) => (
+                            <div key={idx} className="border-l-4 border-blue-400 pl-4">
+                                <div className="text-sm text-gray-500">
+                                    {event.timestamp?.toLocaleTimeString()}
+                                </div>
+                                <div className="font-medium">{event.type}</div>
+                                <div className="text-sm text-gray-600">
+                                    {JSON.stringify(event, null, 2).substring(0, 200)}
+                                </div>
+                            </div>
+                        ))}
+                        {events.length === 0 && (
+                            <p className="text-gray-500 text-center py-4">No events yet...</p>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // Voting Panel Component
+        function VotingPanel({ votingData }) {
+            return (
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                    <h3 className="text-lg font-semibold mb-4">Agent Solutions Comparison</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {Object.entries(votingData.solutions || {}).map(([agentId, solution]) => (
+                            <div key={agentId} className="border rounded-lg p-4">
+                                <h4 className="font-medium mb-2">{agentId}</h4>
+                                <div className="text-sm text-gray-600 max-h-40 overflow-y-auto">
+                                    {solution.substring(0, 300)}...
+                                </div>
+                                <button className="mt-3 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                                    Vote for {agentId}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Render the app
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
