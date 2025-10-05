@@ -815,7 +815,7 @@ async def create_server() -> fastmcp.FastMCP:
             return {"success": False, "operation": "compare_files", "error": str(e)}
 
     @mcp.tool()
-    def extract_multimodal_files(path: str, max_size_mb: float = 0.25, compress_quality: int = 65, understanding_mode: bool = True) -> Dict[str, Any]:
+    def read_multimodal_files(path: str, max_size_mb: float = 0.25, compress_quality: int = 65, understanding_mode: bool = True) -> Dict[str, Any]:
         """
         Read multimodal files (images, etc.) and return as base64 data with MIME type.
 

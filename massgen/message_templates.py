@@ -276,7 +276,7 @@ Present the best possible coordinated answer by combining the strengths from all
         if enable_image_generation:
             presentation_instructions += """For image generation tasks:
 
-1. You MUST FIRST use the `mcp__workspace_tools__extract_multimodal_files` tool
+1. You MUST FIRST use the `mcp__workspace_tools__read_multimodal_files` tool
    to read and analyze all image files created by other agents (from Shared References).
    This step is REQUIRED before generating any new images.
 
@@ -470,7 +470,10 @@ Based on the coordination process above, present your final answer:"""
         if temp_workspace:
             parts.append(
                 f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)\n"
-                f"   - To improve upon existing answers: Copy files from Shared Reference to your workspace using `copy_file` or `copy_directory` tools, then modify them\n",
+                f"   - To improve upon existing answers: Copy files from Shared Reference to your workspace using `copy_file` or `copy_directory` tools, then modify them\n"
+                f"   - These correspond directly to the answers shown in the CURRENT ANSWERS section\n"
+                f"   - However, not all workspaces may have a matching answer (e.g., if an agent was in the middle of working but restarted before submitting an answer). "
+                "So, it is wise to check the actual files in the Shared Reference, not rely solely on the CURRENT ANSWERS section.\n",
             )
 
         if context_paths:
@@ -536,7 +539,8 @@ Based on the coordination process above, present your final answer:"""
             parts.append(
                 "\n**New Answer**: When calling `new_answer` tool:\n"
                 "- For non-image generation tasks: If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
-                "- For image generation tasks: Images are generated directly with the image_generation tool. Describe the contents briefly and list your cwd and image paths\n"
+                "- For image generation tasks: Images are auto-saved to your workspace as `ig_<uuid>.png`. Check the generation message or use list_directory to find the exact path.\n"
+                "- Do not generate an image unless you are explicitly asked to do so or that the previous agent's image is incorrect or not of sufficient quality.\n"
                 "- If providing a text response, include your analysis/explanation in the `content` field\n",
             )
         else:
@@ -569,11 +573,6 @@ Based on the coordination process above, present your final answer:"""
             "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
             "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
         )
-        if enable_image_generation:
-            # Enabled for image generation tasks
-            parts.append(
-                "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__extract_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n",
-            )
 
         return "\n".join(parts)
 

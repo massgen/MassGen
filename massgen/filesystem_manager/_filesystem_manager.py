@@ -43,6 +43,7 @@ class FilesystemManager:
         agent_temporary_workspace_parent: str = None,
         context_paths: List[Dict[str, Any]] = None,
         context_write_access_enabled: bool = False,
+        enforce_read_before_delete: bool = True,
     ):
         """
         Initialize FilesystemManager.
@@ -52,11 +53,15 @@ class FilesystemManager:
             agent_temporary_workspace_parent: Parent directory for temporary workspaces
             context_paths: List of context path configurations for access control
             context_write_access_enabled: Whether write access is enabled for context paths
+            enforce_read_before_delete: Whether to enforce read-before-delete policy for workspace files
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
 
         # Initialize path permission manager
-        self.path_permission_manager = PathPermissionManager(context_write_access_enabled=context_write_access_enabled)
+        self.path_permission_manager = PathPermissionManager(
+            context_write_access_enabled=context_write_access_enabled,
+            enforce_read_before_delete=enforce_read_before_delete,
+        )
 
         # Add context paths if provided
         if context_paths:
@@ -171,6 +176,9 @@ class FilesystemManager:
                 "@modelcontextprotocol/server-filesystem",
             ],
             "cwd": str(self.cwd),  # Set working directory for filesystem server (important for relative paths)
+            # Exclude read_media_file since we have our own implementation in workspace_tools
+            # Note: Tool names here are unprefixed (before server name is added)
+            "exclude_tools": ["read_media_file"],
         }
 
         # Add all managed paths from path permission manager
