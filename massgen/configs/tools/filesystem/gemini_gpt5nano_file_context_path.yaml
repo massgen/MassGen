@@ -1,0 +1,43 @@
+# Example Configuration: File Context Path
+#
+# Use Case: Give agents access to a specific file without exposing the entire directory
+#
+# This config demonstrates the file context path feature which allows you to provide
+# access to a single file, preventing agents from accessing sibling files in the same directory.
+#
+# Run with:
+#   uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml "Analyze the CSS file and make modern improvements"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace1"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      cwd: "workspace2"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  context_paths:
+    - path: "massgen/configs/resources/v0.0.21-example/styles.css"
+      permission: "write"
+      # Only styles.css is accessible - index.html in the same directory is NOT accessible
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Result:
+# ✅ massgen/configs/resources/v0.0.21-example/styles.css → Can read/write
+# ❌ massgen/configs/resources/v0.0.21-example/index.html → NOT accessible (sibling file blocked)

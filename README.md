@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.25 Features](#-latest-features-v0025)
+- [v0.0.27 Features](#-latest-features-v0027)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.25](#recent-achievements-v0025)
-  - [v0.0.3 - v0.0.24](#previous-achievements-v003---v0024)
+  - [v0.0.27](#recent-achievements-v0027)
+  - [v0.0.3 - v0.0.26](#previous-achievements-v003---v0026)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.26 Roadmap](#v0026-roadmap)
+- [v0.0.28 Roadmap](#v0028-roadmap)
 </details>
 
 <details open>
@@ -129,88 +129,43 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.25)
-
-### Quick Start: Running Multi-Turn MassGen
-
-#### 1. Install MassGen Globally
+## 🆕 Latest Features (v0.0.27)
 
 ```bash
-# Clone the repository
-git clone https://github.com/Leezekun/MassGen.git
-cd MassGen
-
-# Install MassGen as a global tool
-uv tool install -e .
+uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
 ```
 
-#### 2. Run Multi-Turn in Any Directory
+**Experience v0.0.27 Multimodal Features**:
 
+See the new multimodal support and image processing capabilities in action:
+
+[![MassGen v0.0.27 Multimodal Demo](https://img.youtube.com/vi/qm6Y5qSpsEg/0.jpg)](https://www.youtube.com/watch?v=qm6Y5qSpsEg)
+
+**What's New in v0.0.27:**
+- **Multimodal Support - Image Processing** - Image generation and understanding with new `stream_chunk` module
+- **Additional Features**: File upload/search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
+
+**Try v0.0.27 Features Now:**
 ```bash
-# Create and navigate to your project directory
-mkdir testing
-cd testing
+# Image generation with Single agent
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
+  "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
 
-# Run MassGen with multi-turn filesystem support
-uv tool run massgen --config tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml
+# Image understanding with multiple agents
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
+  "Please summarize the content in this image."
 
-# You'll be prompted to add the current directory as a context path
-📂 Context Paths:
-   No context paths configured
-
-❓ Add current directory as context path?
-   /Users/user/testing
-   [Y]es (default) / [N]o / [C]ustom path: [Enter]
-
-✓ Added /Users/user/testing (write)
-
-# Now you can have multi-turn conversations
-User: "Create a simple Express.js API with authentication"
-Assistant: [Creates API files in /Users/user/testing/]
-
-User: "Add user profile management to the API"
-Assistant: [Builds upon the existing API, referencing previous work]
-
-User: "Add password reset functionality"
-Assistant: [Further extends the API based on all previous turns]
+# File search for document Q&A
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
+  "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
 ```
 
-### 3. What You Get
+→ [See all release examples](massgen/configs/README.md#release-history--examples)
 
-**File Structure:**
-```
-testing/
-├── .massgen/                          # All MassGen state
-│   ├── sessions/session_20250928_143022/
-│   │   ├── SESSION_SUMMARY.txt        # Human-readable conversation summary
-│   │   ├── turn_1/
-│   │   │   ├── workspace/             # Final output from turn 1
-│   │   │   ├── answer.txt             # Agent's response with corrected paths
-│   │   │   └── metadata.json          # Turn metadata (timestamp, winning agent)
-│   │   ├── turn_2/
-│   │   │   └── ...                    # Same structure for turn 2
-│   │   └── turn_3/
-│   │       └── ...                    # Same structure for turn 3
-│   ├── workspaces/                    # Agent working areas during execution
-│   │   ├── workspace1/                # Agent 1's workspace
-│   │   ├── workspace2/                # Agent 2's workspace
-│   │   └── workspace3/                # Agent 3's workspace
-│   ├── snapshots/                     # Latest snapshots for context sharing
-│   │   ├── agent_a/                   # Latest work from agent A
-│   │   ├── agent_b/                   # Latest work from agent B
-│   │   └── agent_c/                   # Latest work from agent C
-│   ├── temp_workspaces/               # Temporary workspace for agent coordination
-│   │   ├── agent1/                    # Previous turn results for reference
-│   │   ├── agent2/                    # (Anonymous IDs for context sharing)
-│   │   └── agent3/
-│   └── massgen_logs/log_20250928_143022/  # Debug logs
-│       ├── turn_1/massgen_debug.log
-│       ├── turn_2/massgen_debug.log
-│       └── turn_3/massgen_debug.log
-└── ...
-```
 ---
-
 
 ## 🏗️ System Design
 
@@ -944,35 +899,40 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.25)
+### Recent Achievements (v0.0.27)
 
-**🎉 Released: September 29, 2025**
+**🎉 Released: October 3, 2025**
 
-Version 0.0.25 introduces **Multi-Turn Filesystem Support** and **SGLang Backend Integration**, enabling persistent conversation context and unified inference backend capabilities:
+Version 0.0.27 introduces **Multimodal Support** with image processing capabilities, enabling agents to generate, understand, and process images alongside text:
 
-#### Multi-Turn Filesystem Support
-- **Persistent Context**: Maintain file context and modifications across conversation turns with automatic session management
-- **Smart Workspace Management**: Automatic `.massgen` directory structure for organized project state
-- **Session Persistence**: Workspace snapshots and restoration between turns for seamless continuity
-- **Easy Setup**: Ready-to-use multi-turn configurations for various agent combinations
+#### Multimodal Support - Image Processing
+- **StreamChunk Module**: New architecture with dedicated `stream_chunk` module for handling multimodal content
+- **Image Generation and Understanding**: Multi-agent image generation and analysis with OpenAI's APIs
+- **Enhanced Display**: Terminal UI for rendering images, backend support for multimodal capabilities
 
-#### SGLang Backend Integration
-- **Unified Inference**: Single backend supporting both vLLM and SGLang servers with auto-detection
-- **Advanced Features**: SGLang-specific parameters like `separate_reasoning` for guided generation
-- **Dual Server Support**: Configure mixed deployments with vLLM (port 8000) and SGLang (port 30000)
+#### File Upload and File Search
+- **File Upload**: Support for uploading files to backends via `upload_files` parameter
+- **File Search**: Vector-based file search for document Q&A with automatic vector store cleanup
 
-#### Enhanced Path Permission System
-- **Smart Exclusions**: Default patterns for `.git`, `node_modules`, `.venv`, and other common directories
-- **Better Validation**: Improved path handling with `will_be_writable` flag for permission state tracking
+#### Model and Tool Enhancements
+- **Claude Sonnet 4.5**: Added latest Claude model (`claude-sonnet-4-5-20250929`)
+- **Workspace Multimodal Tools**: New `read_multimodal_files` MCP tool for image processing
+- **API Parameters Handler**: New module for centralized parameter management
 
-#### System Prompt & Backend Improvements
-- **Multi-Turn Guidance**: Enhanced system prompts with better conversation context awareness
-- **Backend Fixes**: Resolved Gemini MCP connection errors and Grok backend issues
-- **Import Fixes**: Corrected configuration and import problems across backends
-- **Code Quality**: Fixed code generation prompts for consistency
+#### Documentation and Resources
+- **Case Study**: Multi-turn filesystem support documentation
+- **Configurations**: New configs for image generation, understanding, and file search
+- **Example Resources**: Sample multimodal content for testing
 
+### Previous Achievements (v0.0.3 - v0.0.26)
 
-### Previous Achievements (v0.0.3 - v0.0.24)
+✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
+
+✅ **Protected Paths and File-Based Context Paths (v0.0.26)**: Protect specific files within write-permitted directories, grant access to individual files instead of entire directories
+
+✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
+
+✅ **SGLang Backend Integration (v0.0.25)**: Unified vLLM/SGLang backend with auto-detection, support for SGLang-specific parameters like `separate_reasoning`, and dual server support for mixed vLLM and SGLang deployments
 
 ✅ **vLLM Backend Support (v0.0.24)**: Complete integration with vLLM for high-performance local model serving, POE provider support, GPT-5-Codex model recognition, backend utility modules refactoring, and comprehensive bug fixes including streaming chunk processing
 
@@ -1036,25 +996,25 @@ Version 0.0.25 introduces **Multi-Turn Filesystem Support** and **SGLang Backend
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.26 Roadmap
+### v0.0.28 Roadmap
 
-Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integration of v0.0.25 by focusing on multimodal capabilities, additional backend integrations, and finishing core refactoring work. Key enhancements include:
+Version 0.0.28 focuses on integrating external agent frameworks, completing multimodal support, and enhancing extensibility:
 
 #### Required Features
-- **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
-- **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
+- **AG2 Integration (AdaptAgent)**: Enable AG2 agents to participate in MassGen's multi-agent workflows with seamless orchestration
+- **Complete Multimodal Support**: Extend audio and video processing capabilities beyond the image support added in v0.0.27
 
 #### Optional Features
-- **Additional Agent Backends from Other Frameworks**Integration with AG2, LangChain, and other agent frameworks
-- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring tasks
+- **Custom Tool Register System**: Refactor tool registration for better extensibility and plugin support
+- **Web UI**: Modern web interface for real-time agent coordination visualization
 
 Key technical approach:
-- **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
-- **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
-- **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
-- **Specialized Coding**: Enhanced programming capabilities with code analysis and execution environment integration
+- **AG2 Integration**: Adapter system enabling AG2 agents to work within MassGen orchestration with mixed-team support
+- **Audio/Video Processing**: Extend existing multimodal infrastructure with audio transcription, video understanding, and generation capabilities
+- **Tool Registry**: Plugin-based toolkit architecture for dynamic tool discovery and loading
+- **Web Interface**: Real-time visualization with multimodal content support and session management
 
-For detailed milestones and technical specifications, see the [full v0.0.26 roadmap](ROADMAP_v0.0.26.md).
+For detailed milestones and technical specifications, see the [full v0.0.28 roadmap](ROADMAP_v0.0.28.md).
 
 ---
 

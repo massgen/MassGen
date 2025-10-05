@@ -1,0 +1,17 @@
+# MassGen Multimodal GPT Configuration
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt5nano_image_understanding.yaml "Please summarize the content in this image."
+agent:
+  id: "response_agent"
+  # system_message: "You are a helpful AI assistant powered by Google Gemini."
+  backend:
+    type: "openai"
+    model: "gpt-5-nano"
+    upload_files:
+      - image_path: "massgen/configs/resources/v0.0.27-example/multimodality.jpg" #it will auto dected by backend
+    # enable_code_execution: true
+  system_message: "You are a helpful assistant"
+
+# Display configuration
+ui:
+  display_type: "simple"
+  logging_enabled: true
