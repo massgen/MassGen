@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.27 Features](#-latest-features-v0027)
+- [v0.0.28 Features](#-latest-features-v0028)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.27](#recent-achievements-v0027)
-  - [v0.0.3 - v0.0.26](#previous-achievements-v003---v0026)
+  - [v0.0.28](#recent-achievements-v0028)
+  - [v0.0.3 - v0.0.27](#previous-achievements-v003---v0027)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-  - Web Interface
-- [v0.0.28 Roadmap](#v0028-roadmap)
+- [v0.0.29 Roadmap](#v0029-roadmap)
 </details>
 
 <details open>
@@ -129,38 +129,54 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.27)
+## 🆕 Latest Features (v0.0.28)
 
+**Experience v0.0.28 AG2 Integration:**
+
+See the new AG2 framework integration in action:
+
+[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
+
+**What's New in v0.0.28:**
+- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
+- **Improved Stability** - Better handling when MCP servers are not configured
+
+**Try v0.0.28 Features Now:**
 ```bash
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+# Try AG2 integration with MassGen
+uv pip install -e ".[external]"
+uv run python -m massgen.cli --config massgen/configs/ag2/ag2_coder_case_study.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
 ```
 
-**Experience v0.0.27 Multimodal Features**:
+**Experience v0.0.28 AG2 Integration:**
 
-See the new multimodal support and image processing capabilities in action:
+See the new AG2 framework integration in action:
 
-[![MassGen v0.0.27 Multimodal Demo](https://img.youtube.com/vi/qm6Y5qSpsEg/0.jpg)](https://www.youtube.com/watch?v=qm6Y5qSpsEg)
+[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
 
-**What's New in v0.0.27:**
-- **Multimodal Support - Image Processing** - Image generation and understanding with new `stream_chunk` module
-- **Additional Features**: File upload/search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
+**What's New in v0.0.28:**
+- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
+- **Improved Stability** - Better handling when MCP servers are not configured
 
-**Try v0.0.27 Features Now:**
+**Try v0.0.28 Features Now:**
 ```bash
-# Image generation with Single agent
+# Basic AG2 single agent
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
-  "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+  --config massgen/configs/ag2/ag2_single_agent.yaml \
+  "what is quantum computing?"
 
-# Image understanding with multiple agents
+# AG2 single agent with code execution
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
-  "Please summarize the content in this image."
+  --config massgen/configs/ag2/ag2_coder.yaml \
+  "Create a factorial function and calculate the factorial of 8. Show the result?"
 
-# File search for document Q&A
+# Mixed team: AG2 agent + Gemini agent
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
-  "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
+  --config massgen/configs/ag2/ag2_gemini.yaml \
+  "what is quantum computing?"
+
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -926,32 +942,26 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.27)
+### Recent Achievements (v0.0.28)
 
-**🎉 Released: October 3, 2025**
+**🎉 Released: October 6, 2025**
 
-Version 0.0.27 introduces **Multimodal Support** with image processing capabilities, enabling agents to generate, understand, and process images alongside text:
+Version 0.0.28 introduces **AG2 Framework Integration**, enabling external agent frameworks to work within MassGen's multi-agent orchestration:
 
-#### Multimodal Support - Image Processing
-- **StreamChunk Module**: New architecture with dedicated `stream_chunk` module for handling multimodal content
-- **Image Generation and Understanding**: Multi-agent image generation and analysis with OpenAI's APIs
-- **Enhanced Display**: Terminal UI for rendering images, backend support for multimodal capabilities
+#### AG2 Framework Integration
+- **Adapter System**: Connect external agent frameworks through new `massgen/adapters/` module with base adapter architecture
+- **AG2 Agent Support**: Use AG2 ConversableAgent and AssistantAgent types with async execution in MassGen workflows
+- **Code Execution Environments**: Run code in multiple environments - LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+- **Ready-to-Use Configurations**: 4 example configs (`ag2_single_agent.yaml`, `ag2_coder.yaml`, `ag2_coder_case_study.yaml`, `ag2_gemini.yaml`)
 
-#### File Upload and File Search
-- **File Upload**: Support for uploading files to backends via `upload_files` parameter
-- **File Search**: Vector-based file search for document Q&A with automatic vector store cleanup
+#### Improvements
+- **MCP Circuit Breaker Fix**: Cleaner initialization when MCP servers are not configured, preventing unnecessary warnings
+- **Comprehensive Testing**: Full test coverage in `test_ag2_adapter.py`, `test_agent_adapter.py`, `test_external_agent_backend.py`
+- **Enhanced Documentation**: Updated `MULTI_SOURCE_AGENT_INTEGRATION_DESIGN.md` with AG2 adapter architecture details
 
-#### Model and Tool Enhancements
-- **Claude Sonnet 4.5**: Added latest Claude model (`claude-sonnet-4-5-20250929`)
-- **Workspace Multimodal Tools**: New `read_multimodal_files` MCP tool for image processing
-- **API Parameters Handler**: New module for centralized parameter management
+### Previous Achievements (v0.0.3 - v0.0.27)
 
-#### Documentation and Resources
-- **Case Study**: Multi-turn filesystem support documentation
-- **Configurations**: New configs for image generation, understanding, and file search
-- **Example Resources**: Sample multimodal content for testing
-
-### Previous Achievements (v0.0.3 - v0.0.26)
+✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
 
 ✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
 
@@ -1015,33 +1025,33 @@ Version 0.0.27 introduces **Multimodal Support** with image processing capabilit
 
 ### Key Future Enhancements
 
+-   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model Integration:** Adding support for more frontier models and local inference engines
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Enhanced Developer Experience:** Completing tool registration system and web interface for better visualization
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.28 Roadmap
+### v0.0.29 Roadmap
 
-Version 0.0.28 focuses on integrating external agent frameworks, completing multimodal support, and enhancing extensibility:
+Version 0.0.29 focuses on fixing multimodal capabilities and extending backend support:
 
 #### Required Features
-- **AG2 Integration (AdaptAgent)**: Enable AG2 agents to participate in MassGen's multi-agent workflows with seamless orchestration
-- **Complete Multimodal Support**: Extend audio and video processing capabilities beyond the image support added in v0.0.27
+- **Image Generation Path Fix**: Resolve file path hallucination issues preventing correct image generation (Issue #284)
+- **Claude Multimodal Support**: Enable image processing capabilities in Claude backend to match Gemini and Response backends
 
 #### Optional Features
-- **Custom Tool Register System**: Refactor tool registration for better extensibility and plugin support
-- **Web UI**: Modern web interface for real-time agent coordination visualization
+- **Custom Tool Register System**: Complete and polish existing tool registration implementation for production readiness
+- **Web UI**: Improve and integrate existing web interface implementation (Issue #276)
 
 Key technical approach:
-- **AG2 Integration**: Adapter system enabling AG2 agents to work within MassGen orchestration with mixed-team support
-- **Audio/Video Processing**: Extend existing multimodal infrastructure with audio transcription, video understanding, and generation capabilities
-- **Tool Registry**: Plugin-based toolkit architecture for dynamic tool discovery and loading
-- **Web Interface**: Real-time visualization with multimodal content support and session management
+- **Path Validation**: Comprehensive testing and clear error messages for image generation workflows
+- **Claude Backend Extension**: Image input handling, understanding, and multimodal message formatting
+- **Tool Registry Polish**: Complete integration with orchestrator and refine existing implementation
+- **Web UI Integration**: Production-ready deployment with enhanced features and documentation
 
-For detailed milestones and technical specifications, see the [full v0.0.28 roadmap](ROADMAP_v0.0.28.md).
+For detailed milestones and technical specifications, see the [full v0.0.29 roadmap](ROADMAP_v0.0.29.md).
 
 ---
 

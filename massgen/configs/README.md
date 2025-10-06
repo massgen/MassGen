@@ -226,7 +226,36 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.27 - Latest
+### v0.0.28 - Latest
+**New Features:** AG2 Framework Integration, External Agent Backend, Code Execution Support
+- `massgen/configs/ag2/ag2_single_agent.yaml` - Basic single AG2 agent setup
+- `massgen/configs/ag2/ag2_coder.yaml` - AG2 agent with code execution capabilities
+- `massgen/configs/ag2/ag2_coder_case_study.yaml` - Multi-agent setup with AG2 and Gemini
+- `massgen/configs/ag2/ag2_gemini.yaml` - AG2-Gemini hybrid configuration
+- New `massgen/adapters/` module for external framework integration
+- New `ExternalAgentBackend` class bridging MassGen with external frameworks
+- Multiple code executor types: LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+
+**Try it:**
+```bash
+# AG2 single agent with code execution
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_coder.yaml \
+  "Create a factorial function and calculate the factorial of 8. Show the result?"
+
+# Mixed team: AG2 agent + Gemini agent
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_gemini.yaml \
+  "what is quantum computing?"
+
+# AG2 case study: Compare AG2 and MassGen (requires external dependency)
+uv pip install -e ".[external]"
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+  "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
+```
+
+### v0.0.27
 **New Features:** Multimodal Support (Image Processing), File Upload and File Search, Claude Sonnet 4.5
 - `massgen/configs/basic/multi/gpt4o_image_generation.yaml` - Multi-agent image generation
 - `massgen/configs/basic/multi/gpt5nano_image_understanding.yaml` - Multi-agent image understanding

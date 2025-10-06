@@ -1,0 +1,34 @@
+# Example configuration for using AG2 with MassGen
+# Single AG2 agent example
+# uv run python -m massgen.cli --config ag2/ag2_coder.yaml "Create a factorial function and calculate the factorial of 8. Show the result?"
+agents:
+  - id: "ag2_coder"
+    backend:
+      type: ag2
+      agent_config:
+        type: assistant
+        name: "AG2_coder"
+        system_message: |
+          You are a helpful coding assistant. When asked to create and run code:
+          1. Write Python code in a markdown code block (```python ... ```)
+          2. The code will be automatically executed
+          3. Always print the results so they are visible
+
+          For factorial calculations:
+          - Define the factorial function
+          - Call it with the provided number
+          - Print the result clearly
+        llm_config:
+          api_type: "openai"
+          model: "gpt-5"
+        code_execution_config:
+            executor:
+              type: "LocalCommandLineCodeExecutor"
+              timeout: 60
+              work_dir: "./code_execution_workspace"
+
+
+# UI Configuration
+ui:
+  type: "rich_terminal"
+  logging_enabled: true
