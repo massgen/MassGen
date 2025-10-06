@@ -767,6 +767,19 @@ class ResponseBackend(LLMBackend):
             mcp_functions_executed = False
             updated_messages = current_messages.copy()
             
+            # Check if planning mode is enabled - block MCP tool execution during planning
+            if self.is_planning_mode_enabled():
+                logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution")
+                yield StreamChunk(
+                    type="mcp_status",
+                    status="planning_mode_blocked",
+                    content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
+                    source="planning_mode"
+                )
+                # Skip all MCP tool execution but still continue with workflow
+                yield StreamChunk(type="done")
+                return
+            
             for call in captured_function_calls:
                 function_name = call["name"]
                 if function_name in self.functions:
@@ -806,7 +819,7 @@ class ResponseBackend(LLMBackend):
                     yield StreamChunk(
                         type="mcp_status",
                         status="function_call",
-                        content=f"Arguments for Calling {function_name}: {call["arguments"]}",
+                        content=f"Arguments for Calling {function_name}: {call['arguments']}",
                         source=f"mcp_{function_name}"
                     )
                     

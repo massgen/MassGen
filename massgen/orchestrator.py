@@ -964,6 +964,19 @@ class Orchestrator(ChatAgent):
             else:
                 logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
             
+            # Check if planning mode is enabled for coordination phase
+            is_coordination_phase = self.workflow_phase == "coordinating"
+            planning_mode_enabled = (
+                self.config.coordination_config and 
+                self.config.coordination_config.enable_planning_mode and 
+                is_coordination_phase
+            )
+            
+            # Add planning mode instructions to system message if enabled
+            if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
+                planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
+                agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
+
             # Build conversation with context support
             if conversation_context and conversation_context.get(
                 "conversation_history"
@@ -1000,6 +1013,28 @@ class Orchestrator(ChatAgent):
             )
 
             # Clean startup without redundant messages
+            # Set planning mode on the agent's backend to control MCP tool execution
+            if hasattr(agent.backend, 'set_planning_mode'):
+                agent.backend.set_planning_mode(planning_mode_enabled)
+                if planning_mode_enabled:
+                    logger.info(f"[Orchestrator] Backend planning mode ENABLED for {agent_id} - MCP tools blocked")
+                    print("asjfbhgijsabgijbafsijbgijas")
+                else:
+                    logger.info(f"[Orchestrator] Backend planning mode DISABLED for {agent_id} - MCP tools allowed")
+
+            # Determine which tools to provide to the agent
+            if planning_mode_enabled:
+                # In planning mode during coordination, ONLY provide workflow tools (vote/new_answer)
+                agent_tools = self.workflow_tools
+                logger.info(f"[Orchestrator] Agent {agent_id} in planning mode - ONLY workflow tools available")
+            else:
+                # Normal mode or final presentation - provide all tools from agent backend
+                if hasattr(agent.backend, 'tools') and agent.backend.tools:
+                    agent_tools = agent.backend.tools
+                    logger.info(f"[Orchestrator] Agent {agent_id} has access to {len(agent_tools)} backend tools including MCP")
+                else:
+                    agent_tools = self.workflow_tools
+                    logger.info(f"[Orchestrator] Agent {agent_id} falling back to workflow tools only")
 
             # Build proper conversation messages with system + user messages
             max_attempts = 3
@@ -1022,13 +1057,13 @@ class Orchestrator(ChatAgent):
                     yield ("done", None)
                     return
 
-                # Stream agent response with workflow tools
+                # Stream agent response with appropriate tools
                 if attempt == 0:
                     # First attempt: orchestrator provides initial conversation
                     # But we need the agent to have this in its history for subsequent calls
                     # First attempt: provide complete conversation and reset agent's history
                     chat_stream = agent.chat(
-                        conversation_messages, self.workflow_tools, reset_chat=True
+                        conversation_messages, agent_tools, reset_chat=True
                     )
                 else:
                     # Subsequent attempts: send enforcement message (set by error handling)
@@ -1036,7 +1071,7 @@ class Orchestrator(ChatAgent):
                     if isinstance(enforcement_msg, list):
                         # Tool message array
                         chat_stream = agent.chat(
-                            enforcement_msg, self.workflow_tools, reset_chat=False
+                            enforcement_msg, agent_tools, reset_chat=False
                         )
                     else:
                         # Single user message
@@ -1045,7 +1080,7 @@ class Orchestrator(ChatAgent):
                             "content": enforcement_msg,
                         }
                         chat_stream = agent.chat(
-                            [enforcement_message], self.workflow_tools, reset_chat=False
+                            [enforcement_message], agent_tools, reset_chat=False
                         )
                 response_text = ""
                 tool_calls = []
