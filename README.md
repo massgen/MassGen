@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.26 Features](#-latest-features-v0026)
+- [v0.0.28 Features](#-latest-features-v0028)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.26](#recent-achievements-v0026)
-  - [v0.0.3 - v0.0.25](#previous-achievements-v003---v0025)
+  - [v0.0.28](#recent-achievements-v0028)
+  - [v0.0.3 - v0.0.27](#previous-achievements-v003---v0027)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-  - Web Interface
-- [v0.0.27 Roadmap](#v0027-roadmap)
+- [v0.0.29 Roadmap](#v0029-roadmap)
 </details>
 
 <details open>
@@ -129,24 +129,36 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.26)
+## 🆕 Latest Features (v0.0.28)
 
-**What's New in v0.0.26:**
-- **File Deletion and Workspace Management** - New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison
-- **Protected Paths Feature** - Protect specific files within write-permitted directories, allowing agents to read but not modify designated reference files
-- **File-Based Context Paths** - Grant access to individual files instead of entire directories for more precise permission control
+**Experience v0.0.28 AG2 Integration:**
 
-**Try v0.0.26 Features Now:**
+See the new AG2 framework integration in action:
+
+[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
+
+**What's New in v0.0.28:**
+- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
+- **Improved Stability** - Better handling when MCP servers are not configured
+
+**Try v0.0.28 Features Now:**
 ```bash
-# Protected paths - keep reference files safe while allowing modifications
+# Basic AG2 single agent
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
-  "Review the HTML and CSS files, then improve the styling"
+  --config massgen/configs/ag2/ag2_single_agent.yaml \
+  "what is quantum computing?"
 
-# File-based context paths - grant access to specific files
+# AG2 single agent with code execution
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml \
-  "Analyze the CSS file and make modern improvements"
+  --config massgen/configs/ag2/ag2_coder.yaml \
+  "Create a factorial function and calculate the factorial of 8. Show the result?"
+
+# Mixed team: AG2 agent + Gemini agent
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_gemini.yaml \
+  "what is quantum computing?"
+
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -885,36 +897,26 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.26)
+### Recent Achievements (v0.0.28)
 
-**🎉 Released: October 1, 2025**
+**🎉 Released: October 6, 2025**
 
-Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protected Paths**, and **File-Based Context Paths**, enabling more precise control over agent file access:
+Version 0.0.28 introduces **AG2 Framework Integration**, enabling external agent frameworks to work within MassGen's multi-agent orchestration:
 
-#### File Deletion and Workspace Management
-- **New MCP Tools**: `delete_file`, `delete_files_batch` for workspace cleanup
-- **Comparison Tools**: `compare_directories`, `compare_files` for file diffing
-- **Consolidated Tools**: Unified `_workspace_tools_server.py` replacing previous implementations
+#### AG2 Framework Integration
+- **Adapter System**: Connect external agent frameworks through new `massgen/adapters/` module with base adapter architecture
+- **AG2 Agent Support**: Use AG2 ConversableAgent and AssistantAgent types with async execution in MassGen workflows
+- **Code Execution Environments**: Run code in multiple environments - LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+- **Ready-to-Use Configurations**: 4 example configs (`ag2_single_agent.yaml`, `ag2_coder.yaml`, `ag2_coder_case_study.yaml`, `ag2_gemini.yaml`)
 
-#### Protected Paths Feature
-- **Selective Protection**: Protect specific files within write-permitted directories
-- **Read-Only References**: Agents can read but not modify protected files
-- **Fine-Grained Control**: Shield important files while allowing changes to others
+#### Improvements
+- **MCP Circuit Breaker Fix**: Cleaner initialization when MCP servers are not configured, preventing unnecessary warnings
+- **Comprehensive Testing**: Full test coverage in `test_ag2_adapter.py`, `test_agent_adapter.py`, `test_external_agent_backend.py`
+- **Enhanced Documentation**: Updated `MULTI_SOURCE_AGENT_INTEGRATION_DESIGN.md` with AG2 adapter architecture details
 
-#### File-Based Context Paths
-- **Individual File Access**: Context paths can now be individual files, not just directories
-- **Flexible Permissions**: Grant read/write access to specific files without directory-wide permissions
-- **Better Security**: More precise control over what agents can access
+### Previous Achievements (v0.0.3 - v0.0.27)
 
-#### Code Organization
-- **Path Permission Manager**: Enhanced handling of edge cases and nested path scenarios
-- **CLI Improvements**: Interactive prompts for context path configuration
-
-#### Documentation, Configurations and Resources
-- **Design Documentation**: New `file_deletion_and_context_files.md` documenting file deletion and context file features
-- **Release Workflow**: Added `release_example_checklist.md` for standardized release process
-- **Configuration Examples**: `gemini_gpt5nano_protected_paths.yaml`, `gemini_gpt5nano_file_context_path.yaml`, `grok4_gpt5_gemini_filesystem.yaml`
-- **Example Resources**: Bob Dylan website and Beatles HTML examples in `v0.0.26-example/`
+✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
 
 ### Previous Achievements (v0.0.3 - v0.0.25)
 
@@ -976,33 +978,33 @@ Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protec
 
 ### Key Future Enhancements
 
+-   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model Integration:** Adding support for more frontier models and local inference engines
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Enhanced Developer Experience:** Completing tool registration system and web interface for better visualization
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.27 Roadmap
+### v0.0.29 Roadmap
 
-Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing on coding agent capabilities, multimodal support, and finishing core refactoring work. Key enhancements include:
+Version 0.0.29 focuses on fixing multimodal capabilities and extending backend support:
 
 #### Required Features
-- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
-- **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
-- **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
+- **Image Generation Path Fix**: Resolve file path hallucination issues preventing correct image generation (Issue #284)
+- **Claude Multimodal Support**: Enable image processing capabilities in Claude backend to match Gemini and Response backends
 
 #### Optional Features
-- **Additional Agent Backends from Other Frameworks**: Integration with AG2, LangChain, and other agent frameworks
+- **Custom Tool Register System**: Complete and polish existing tool registration implementation for production readiness
+- **Web UI**: Improve and integrate existing web interface implementation (Issue #276)
 
 Key technical approach:
-- **Coding Agent**: Enhanced system prompts encouraging more iterations, multi-turn conversation support with `.massgen/sessions/`, workspace diff logging, and consolidated `.massgen/` directory structure
-- **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
-- **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
-- **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
+- **Path Validation**: Comprehensive testing and clear error messages for image generation workflows
+- **Claude Backend Extension**: Image input handling, understanding, and multimodal message formatting
+- **Tool Registry Polish**: Complete integration with orchestrator and refine existing implementation
+- **Web UI Integration**: Production-ready deployment with enhanced features and documentation
 
-For detailed milestones and technical specifications, see the [full v0.0.27 roadmap](ROADMAP_v0.0.27.md).
+For detailed milestones and technical specifications, see the [full v0.0.29 roadmap](ROADMAP_v0.0.29.md).
 
 ---
 
