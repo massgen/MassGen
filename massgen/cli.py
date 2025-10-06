@@ -144,6 +144,8 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - claude: Anthropic Claude (requires ANTHROPIC_API_KEY)
     - gemini: Google Gemini (requires GOOGLE_API_KEY or GEMINI_API_KEY)
     - chatcompletion: OpenAI-compatible providers (auto-detects API key based on base_url)
+
+    Supported backend with external dependencies:
     - ag2/autogen: AG2 (AutoGen) framework agents
 
     For chatcompletion backend, the following providers are auto-detected:
