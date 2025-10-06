@@ -1,7 +1,7 @@
 datasets==3.2.0
 openai==1.71.0
 xai-sdk==1.0.0
-anthropic==0.49.0
+anthropic>=0.61.0
 nest-asyncio==1.6.0
 wcwidth>=0.2.5
 google-genai>=1.27.0

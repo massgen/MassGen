@@ -63,6 +63,8 @@ except ImportError as e:
     MCPServerError = ImportError
 
 # Supported file types for OpenAI File Search
+# NOTE: These are the extensions supported by OpenAI's File Search API.
+# Claude Files API has different restrictions (only .pdf and .txt) - see claude.py for Claude-specific validation.
 FILE_SEARCH_SUPPORTED_EXTENSIONS = {
     ".c",
     ".cpp",
@@ -410,7 +412,22 @@ class MCPBackend(LLMBackend):
 
         if processed_messages:
             last_message = processed_messages[-1].copy()
-            last_content = list(last_message.get("content", []))
+            last_content = last_message.get("content", [])
+
+            if isinstance(last_content, str):
+                last_content = [{"type": "text", "text": last_content}]
+            elif isinstance(last_content, dict) and "type" in last_content:
+                last_content = [dict(last_content)]
+            elif isinstance(last_content, list):
+                if all(isinstance(item, str) for item in last_content):
+                    last_content = [{"type": "text", "text": item} for item in last_content]
+                elif all(isinstance(item, dict) and "type" in item and "text" in item for item in last_content):
+                    last_content = list(last_content)
+                else:
+                    last_content = []
+            else:
+                last_content = []
+
             last_content.extend(extra_content)
             last_message["content"] = last_content
             processed_messages[-1] = last_message
@@ -432,6 +449,12 @@ class MCPBackend(LLMBackend):
         file_path_value: str,
         all_params: Dict[str, Any],
     ) -> Optional[Dict[str, Any]]:
+        """Process file path entry and validate against provider-specific restrictions.
+
+        Note: This base implementation validates against OpenAI File Search extensions.
+        Backends like Claude may have additional restrictions (e.g., only .pdf and .txt)
+        and should perform provider-specific validation in their upload methods.
+        """
         # Check if it's a URL
         if file_path_value.startswith(("http://", "https://")):
             logger.info(f"Queued file URL for File Search upload: {file_path_value}")
@@ -453,7 +476,8 @@ class MCPBackend(LLMBackend):
         if not resolved.exists():
             raise UploadFileError(f"File not found: {resolved}")
 
-        # Validate file extension
+        # Validate file extension (OpenAI File Search extensions)
+        # Note: Backends like Claude may override with stricter validation
         file_ext = resolved.suffix.lower()
         if file_ext not in FILE_SEARCH_SUPPORTED_EXTENSIONS:
             raise UploadFileError(
