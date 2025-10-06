@@ -144,6 +144,24 @@ See the new AG2 framework integration in action:
 
 **Try v0.0.28 Features Now:**
 ```bash
+# Try AG2 integration with MassGen
+uv pip install -e ".[external]"
+uv run python -m massgen.cli --config massgen/configs/ag2/ag2_coder_case_study.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
+```
+
+**Experience v0.0.28 AG2 Integration:**
+
+See the new AG2 framework integration in action:
+
+[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
+
+**What's New in v0.0.28:**
+- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
+- **Improved Stability** - Better handling when MCP servers are not configured
+
+**Try v0.0.28 Features Now:**
+```bash
 # Basic AG2 single agent
 uv run python -m massgen.cli \
   --config massgen/configs/ag2/ag2_single_agent.yaml \
@@ -918,7 +936,9 @@ Version 0.0.28 introduces **AG2 Framework Integration**, enabling external agent
 
 ✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
 
-### Previous Achievements (v0.0.3 - v0.0.25)
+✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
+
+✅ **Protected Paths and File-Based Context Paths (v0.0.26)**: Protect specific files within write-permitted directories, grant access to individual files instead of entire directories
 
 ✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
 
