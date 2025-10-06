@@ -103,7 +103,7 @@ uv run python -m massgen.cli --config massgen/configs/tools/web-search/claude_st
 #### Code Execution
 For code interpretation and execution:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse and analyze websites"
+uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a html site."
 ```
 
 #### Filesystem Operations
