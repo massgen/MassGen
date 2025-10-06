@@ -223,6 +223,33 @@ pip install uv
 uv venv
 ```
 
+**Global Installation using `uv tool` (Recommended for multi-directory usage):**
+
+Install MassGen using `uv tool` for isolated, global access:
+
+```bash
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install MassGen as a global tool in editable mode
+uv tool install -e .
+
+# Now run from any directory
+cd ~/projects/website
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+
+cd ~/documents/research
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+```
+
+**Benefits of `uv tool` installation:**
+- ✅ Isolated Python environment (no conflicts with system Python)
+- ✅ Available globally from any directory
+- ✅ Editable mode (`-e .`) allows live development
+- ✅ Easy updates with `git pull` (editable mode)
+- ✅ Clean uninstall with `uv tool uninstall massgen`
+
 **Optional CLI Tools** (for enhanced capabilities):
 ```bash
 # Claude Code CLI - Advanced coding assistant

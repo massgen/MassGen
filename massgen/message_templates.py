@@ -247,12 +247,18 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         """Get standard tools for MassGen framework."""
         return [self.get_new_answer_tool(), self.get_vote_tool(valid_agent_ids)]
 
-    def final_presentation_system_message(self, original_system_message: Optional[str] = None, enable_image_generation: bool = False) -> str:
+    def final_presentation_system_message(
+        self,
+        original_system_message: Optional[str] = None,
+        enable_image_generation: bool = False,
+        has_irreversible_actions: bool = False,
+    ) -> str:
         """System message for final answer presentation by winning agent.
 
         Args:
             original_system_message: The agent's original system message to preserve
             enable_image_generation: Whether image generation is enabled for the agent
+            has_irreversible_actions: Whether agent has write access to context paths (requires actual file delivery)
         """
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
@@ -286,6 +292,17 @@ Present the best possible coordinated answer by combining the strengths from all
 ⚠️ Do NOT use file-writing tools for image generation tasks.
 All final images MUST be created directly using the `image_generation` tool.
 """
+
+        # Add irreversible actions reminder if needed
+        # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
+        if has_irreversible_actions:
+            presentation_instructions += (
+                """Reminder: File Delivery Required. You should first place your final answer in your workspace. """
+                """However, note your workspace is NOT the final destination. You MUST copy/write files to the Target Path using FULL ABSOLUTE PATHS. """
+                """Then, clean up this Target Path by deleting any outdated or unused files. """
+                """Note that no other agents were allowed to write to this path, so you are solely responsible for ensuring it contains the correct final files.\n"""
+            )
+
         # Combine with original system message if provided
         if original_system_message:
             return f"""{original_system_message}
@@ -507,7 +524,7 @@ Based on the coordination process above, present your final answer:"""
                     elif permission == "write":
                         parts.append(
                             f"**Target Path**: `{path}` (write access) - This is where your changes must be delivered. "
-                            f"Work in your workspace, then copy/write files DIRECTLY into `{path}` using FULL ABSOLUTE PATH (not relative paths). "
+                            f"First, ensure you place your answer in your workspace, then copy/write files DIRECTLY into `{path}` using FULL ABSOLUTE PATH (not relative paths). "
                             f"Files must go directly into the target path itself (e.g., `{path}/file.txt`), NOT into a `.massgen/` subdirectory within it.",
                         )
                     else:
@@ -540,7 +557,8 @@ Based on the coordination process above, present your final answer:"""
                 "\n**New Answer**: When calling `new_answer` tool:\n"
                 "- For non-image generation tasks: If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
                 "- For image generation tasks: Images are auto-saved to your workspace as `ig_<uuid>.png`. Check the generation message or use list_directory to find the exact path.\n"
-                "- Do not generate an image unless you are explicitly asked to do so or that the previous agent's image is incorrect or not of sufficient quality.\n"
+                "- Do not generate an image unless you are explicitly asked to do so or that the previous agent's image is incorrect or not of sufficient quality. "
+                "You always need to ensure you find the correct path to the existing images and call `mcp__workspace_tools__read_multimodal_files` to read and analyze them first.\n"
                 "- If providing a text response, include your analysis/explanation in the `content` field\n",
             )
         else:

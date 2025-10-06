@@ -949,6 +949,30 @@ class Orchestrator(ChatAgent):
         restart_pending = self.agent_states[agent_id].restart_pending
         return restart_pending
 
+    async def _save_partial_work_on_restart(self, agent_id: str) -> None:
+        """
+        Save partial work snapshot when agent is restarting due to new answers from others.
+        This ensures that any work done before the restart is preserved and shared with other agents.
+
+        Args:
+            agent_id: ID of the agent being restarted
+        """
+        agent = self.agents.get(agent_id)
+        if not agent or not agent.backend.filesystem_manager:
+            return
+
+        logger.info(f"[Orchestrator._save_partial_work_on_restart] Saving partial work for {agent_id} before restart")
+
+        # Save the partial work snapshot with context
+        await self._save_agent_snapshot(
+            agent_id,
+            answer_content=None,  # No complete answer yet
+            context_data=self.get_last_context(agent_id),
+            is_final=False,
+        )
+
+        agent.backend.filesystem_manager.log_current_state("after saving partial work on restart")
+
     def _normalize_workspace_paths_in_answers(self, answers: Dict[str, str], viewing_agent_id: Optional[str] = None) -> Dict[str, str]:
         """Normalize absolute workspace paths in agent answers to accessible temporary workspace paths.
 
@@ -1282,6 +1306,8 @@ class Orchestrator(ChatAgent):
 
                 if self._check_restart_pending(agent_id):
                     logger.info(f"[Orchestrator] Agent {agent_id} restarting due to restart_pending flag")
+                    # Save any partial work before restarting
+                    await self._save_partial_work_on_restart(agent_id)
                     # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
                     yield (
                         "content",
@@ -1421,6 +1447,7 @@ class Orchestrator(ChatAgent):
                 if len(vote_calls) > 1:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
+                            await self._save_partial_work_on_restart(agent_id)
                             yield (
                                 "content",
                                 f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1451,6 +1478,7 @@ class Orchestrator(ChatAgent):
                 if len(vote_calls) > 0 and len(new_answer_calls) > 0:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
+                            await self._save_partial_work_on_restart(agent_id)
                             yield (
                                 "content",
                                 f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1482,6 +1510,7 @@ class Orchestrator(ChatAgent):
                             logger.info(f"[Orchestrator] Agent {agent_id} voting from options: {list(answers.keys()) if answers else 'No answers available'}")
                             # Check if agent should restart - votes invalid during restart
                             if self._check_restart_pending(agent_id):
+                                await self._save_partial_work_on_restart(agent_id)
                                 yield (
                                     "content",
                                     f"🔄 [{agent_id}] Vote invalid - restarting due to new answers",
@@ -1495,6 +1524,7 @@ class Orchestrator(ChatAgent):
                                 # Invalid - can't vote when no answers exist
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
                                         yield (
                                             "content",
                                             f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1528,6 +1558,7 @@ class Orchestrator(ChatAgent):
                             if voted_agent not in answers:
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
                                         yield (
                                             "content",
                                             f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1579,6 +1610,7 @@ class Orchestrator(ChatAgent):
                                 if normalized_new_content.strip() == normalized_existing_content.strip():
                                     if attempt < max_attempts - 1:
                                         if self._check_restart_pending(agent_id):
+                                            await self._save_partial_work_on_restart(agent_id)
                                             yield (
                                                 "content",
                                                 f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1614,6 +1646,7 @@ class Orchestrator(ChatAgent):
                 # Case 3: Non-workflow response, need enforcement (only if no workflow tool was found)
                 if not workflow_tool_found:
                     if self._check_restart_pending(agent_id):
+                        await self._save_partial_work_on_restart(agent_id)
                         yield (
                             "content",
                             f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1858,8 +1891,19 @@ class Orchestrator(ChatAgent):
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
 
+        # Check if agent has write access to context paths (requires file delivery)
+        has_irreversible_actions = False
+        if agent.backend.filesystem_manager:
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths()
+            # Check if any context path has write permission
+            has_irreversible_actions = any(cp.get("permission") == "write" for cp in context_paths)
+
         # Build system message with workspace context if available
-        base_system_message = self.message_templates.final_presentation_system_message(agent_system_message, enable_image_generation)
+        base_system_message = self.message_templates.final_presentation_system_message(
+            agent_system_message,
+            enable_image_generation,
+            has_irreversible_actions,
+        )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
         for aid, state in self.agent_states.items():
