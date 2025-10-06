@@ -5,6 +5,51 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.28] - 2025-10-06
+
+### Added
+- **AG2 Framework Integration**: Complete adapter system for external agent frameworks
+  - New `massgen/adapters/` module with base adapter architecture (`base.py`, `ag2_adapter.py`)
+  - Support for AG2 ConversableAgent and AssistantAgent types
+  - Code execution capabilities with multiple executor types: LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+  - Function/tool calling support for AG2 agents
+  - Async execution with `a_generate_reply` for autonomous operation
+  - AG2 utilities module for agent setup and API key management (`adapters/utils/ag2_utils.py`)
+
+- **External Agent Backend**: New backend type for integrating external frameworks
+  - New `ExternalAgentBackend` class supporting adapter registry pattern
+  - Bridge between MassGen orchestration and external agent frameworks via adapters
+  - Framework-specific configuration extraction and validation
+  - Currently supports AG2 with extensible architecture for future frameworks
+
+- **AG2 Test Suite**: Comprehensive test coverage for AG2 integration
+  - `test_ag2_adapter.py`: AG2 adapter functionality tests
+  - `test_agent_adapter.py`: Base adapter interface tests
+  - `test_external_agent_backend.py`: External backend integration tests
+
+### Fixed
+- **MCP Circuit Breaker Logic**: Enhanced initialization for MCP servers
+  - Improved circuit breaker state management in `base_with_mcp.py`
+  - Better error handling during MCP server initialization
+
+### Documentations, Configurations and Resources
+
+- **AG2 Configuration Examples**: New YAML configurations demonstrating AG2 integration
+  - `ag2/ag2_single_agent.yaml`: Basic single AG2 agent setup
+  - `ag2/ag2_coder.yaml`: AG2 agent with code execution
+  - `ag2/ag2_coder_case_study.yaml`: Multi-agent setup with AG2 and Gemini
+  - `ag2/ag2_gemini.yaml`: AG2-Gemini hybrid configuration
+
+- **Design Documentation**: Enhanced multi-source agent integration design
+  - Updated `MULTI_SOURCE_AGENT_INTEGRATION_DESIGN.md` with AG2 adapter architecture
+
+### Technical Details
+- **Commits**: 12 commits including AG2 integration, testing, and configuration examples
+- **Files Modified**: 18 files with 1,423 insertions and 71 deletions
+- **Major Features**: AG2 framework integration, external agent backend, adapter architecture
+- **New Module**: `massgen/adapters/` with AG2 support
+- **Contributors**: @Eric-Shang @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.27] - 2025-10-03
 
 ### Added
