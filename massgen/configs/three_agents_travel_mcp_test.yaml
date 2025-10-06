@@ -3,7 +3,7 @@
 # Each agent has access to Airbnb search and Brave Search for comprehensive travel research
 #
 # Setup Requirements:
-# 1. Install MCP servers: 
+# 1. Install MCP servers:
 #    npm install -g @openbnb/mcp-server-airbnb
 #    npm install -g @modelcontextprotocol/server-brave-search
 # 2. Set environment variables in .env file:

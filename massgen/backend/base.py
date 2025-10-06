@@ -57,10 +57,10 @@ class LLMBackend(ABC):
 
         # Initialize utility classes
         self.token_usage = TokenUsage()
-        
+
         # Planning mode flag - when True, MCP tools should be blocked during coordination
         self._planning_mode_enabled: bool = False
-        
+
         self.token_calculator = TokenCostCalculator()
 
         # Filesystem manager integration
@@ -390,10 +390,10 @@ class LLMBackend(ABC):
     def set_planning_mode(self, enabled: bool) -> None:
         """
         Enable or disable planning mode for this backend.
-        
+
         When planning mode is enabled, MCP tools should be blocked to prevent
         execution during coordination phase.
-        
+
         Args:
             enabled: True to enable planning mode (block MCP tools), False to disable
         """
@@ -402,7 +402,7 @@ class LLMBackend(ABC):
     def is_planning_mode_enabled(self) -> bool:
         """
         Check if planning mode is currently enabled.
-        
+
         Returns:
             True if planning mode is enabled (MCP tools should be blocked)
         """

@@ -32,7 +32,7 @@ agents:
       - Discord server interaction via MCP integration
       - Message reading, sending, and management
       - Channel and server information access
-      
+
       IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
 
   - id: "openai_discord_agent"
@@ -53,10 +53,10 @@ agents:
         - mcp__discord__discord_edit_webhook_message
     system_message: |
       Available Discord Tools:
-      - Discord server interaction via MCP integration  
+      - Discord server interaction via MCP integration
       - Message reading, sending, and management
       - Channel and server information access
-      
+
       IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
 
   - id: "claude_discord_agent"
@@ -74,7 +74,7 @@ agents:
     system_message: |
       Available Discord Tools:
       - Discord server interaction via MCP integration
-      - Message reading, sending, and management  
+      - Message reading, sending, and management
       - Channel and server information access
 
       IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
@@ -85,6 +85,8 @@ ui:
 
 # Orchestrator Settings with Coordination Configuration
 orchestrator:
+  snapshot_storage: "massgen_logs/snapshots"  # Directory for workspace snapshots
+  agent_temporary_workspace: "massgen_logs/temp_workspaces"  # Directory for temporary agent workspaces
   coordination:
     enable_planning_mode: true
     planning_mode_instruction: |
@@ -95,7 +97,7 @@ orchestrator:
       3. Use only the 'vote' or 'new_answer' tools for coordination
       4. DO NOT execute any actual Discord commands or API calls
       5. Save tool execution for the final presentation phase when the winning agent will implement the plan
-      
+
       Focus on planning, analysis, and coordination rather than execution.
 
 # Legacy Coordination Settings (for reference - these are now under orchestrator.coordination)

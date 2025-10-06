@@ -32,7 +32,7 @@ agents:
       - Discord server interaction via MCP integration
       - Message reading, sending, and management
       - Channel and server information access
-      
+
   - id: "openai_discord_agent"
     backend:
       type: "openai"
@@ -51,10 +51,10 @@ agents:
         - mcp__discord__discord_edit_webhook_message
     system_message: |
       Available Discord Tools:
-      - Discord server interaction via MCP integration  
+      - Discord server interaction via MCP integration
       - Message reading, sending, and management
       - Channel and server information access
-      
+
   - id: "claude_discord_agent"
     backend:
       type: "claude_code"
@@ -70,7 +70,7 @@ agents:
     system_message: |
       Available Discord Tools:
       - Discord server interaction via MCP integration
-      - Message reading, sending, and management  
+      - Message reading, sending, and management
       - Channel and server information access
 
 ui:

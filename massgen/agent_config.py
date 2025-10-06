@@ -31,14 +31,16 @@ class CoordinationConfig:
     """Configuration for coordination behavior in MassGen.
 
     Args:
-        enable_planning_mode: If True, agents plan without executing actions during coordination. 
+        enable_planning_mode: If True, agents plan without executing actions during coordination.
                              Only the winning agent executes actions during final presentation.
                              If False, agents execute actions during coordination (default behavior).
         planning_mode_instruction: Custom instruction to add when planning mode is enabled.
     """
 
     enable_planning_mode: bool = False
-    planning_mode_instruction: str = "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools."
+    planning_mode_instruction: str = (
+        "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools."
+    )
 
 
 @dataclass
@@ -69,7 +71,7 @@ class AgentConfig:
 
     # Timeout and resource limits
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
-    
+
     # Coordination behavior
     coordination_config: CoordinationConfig = field(default_factory=CoordinationConfig)
 

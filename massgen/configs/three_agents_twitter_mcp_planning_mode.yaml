@@ -19,7 +19,7 @@ agents:
       model: "gemini-2.5-flash"
       mcp_servers:
         - name: "twitter_mcp"
-          type: "stdio" 
+          type: "stdio"
           command: "npx"
           args: ["@enescinar/twitter-mcp"]
           env:
@@ -34,7 +34,7 @@ agents:
       - Twitter content creation and posting via MCP integration
       - Tweet searching and analysis capabilities
       - User timeline and engagement monitoring
-      
+
       IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
 
   - id: "openai_twitter_agent"
@@ -44,7 +44,7 @@ agents:
       mcp_servers:
         - name: "twitter_mcp"
           type: "stdio"
-          command: "npx" 
+          command: "npx"
           args: ["@enescinar/twitter-mcp"]
           env:
             API_KEY: "${API_KEY}"
@@ -56,9 +56,9 @@ agents:
     system_message: |
       Available Twitter Tools:
       - Twitter content creation and posting via MCP integration
-      - Tweet searching and analysis capabilities  
+      - Tweet searching and analysis capabilities
       - User timeline and engagement monitoring
-      
+
       IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
 
   - id: "claude_twitter_agent"
@@ -90,6 +90,8 @@ ui:
 
 # Orchestrator Settings with Coordination Configuration
 orchestrator:
+  snapshot_storage: "massgen_logs/snapshots"  # Directory for workspace snapshots
+  agent_temporary_workspace: "massgen_logs/temp_workspaces"  # Directory for temporary agent workspaces
   coordination:
     enable_planning_mode: true
     planning_mode_instruction: |
@@ -100,7 +102,7 @@ orchestrator:
       3. Use only the 'vote' or 'new_answer' tools for coordination
       4. DO NOT execute any actual Twitter commands or API calls
       5. Save tool execution for the final presentation phase when the winning agent will implement the plan
-      
+
       Focus on planning, analysis, and coordination rather than execution.
 
 # Legacy Coordination Settings (for reference - these are now under orchestrator.coordination)

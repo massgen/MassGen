@@ -242,7 +242,7 @@ class ResponseBackend(MCPBackend):
             # Execute only MCP function calls
             mcp_functions_executed = False
             updated_messages = current_messages.copy()
-            
+
             # Check if planning mode is enabled - block MCP tool execution during planning
             if self.is_planning_mode_enabled():
                 logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution")
@@ -250,12 +250,12 @@ class ResponseBackend(MCPBackend):
                     type="mcp_status",
                     status="planning_mode_blocked",
                     content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
-                    source="planning_mode"
+                    source="planning_mode",
                 )
                 # Skip all MCP tool execution but still continue with workflow
                 yield StreamChunk(type="done")
                 return
-            
+
             # Ensure every captured function call gets a result to prevent hanging
             processed_call_ids = set()
 

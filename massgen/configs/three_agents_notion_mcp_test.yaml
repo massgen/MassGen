@@ -7,7 +7,7 @@
 # 2. Create Notion integrations and get tokens (see detailed setup in original config)
 # 3. Set environment variables in .env file:
 #    NOTION_TOKEN_ONE="your_first_notion_integration_token"
-#    NOTION_TOKEN_TWO="your_second_notion_integration_token"  
+#    NOTION_TOKEN_TWO="your_second_notion_integration_token"
 #    NOTION_TOKEN_THREE="your_third_notion_integration_token"
 #    OPENAI_API_KEY="your_openai_key"
 #    GOOGLE_API_KEY="your_gemini_key"

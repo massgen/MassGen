@@ -1213,15 +1213,11 @@ class Orchestrator(ChatAgent):
                 logger.info(f"[Orchestrator] Agent {agent_id} sees normalized answers: {normalized_answers}")
             else:
                 logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
-            
+
             # Check if planning mode is enabled for coordination phase
             is_coordination_phase = self.workflow_phase == "coordinating"
-            planning_mode_enabled = (
-                self.config.coordination_config and 
-                self.config.coordination_config.enable_planning_mode and 
-                is_coordination_phase
-            )
-            
+            planning_mode_enabled = self.config.coordination_config and self.config.coordination_config.enable_planning_mode and is_coordination_phase
+
             # Add planning mode instructions to system message if enabled
             if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
                 planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
@@ -1274,7 +1270,7 @@ class Orchestrator(ChatAgent):
 
             # Clean startup without redundant messages
             # Set planning mode on the agent's backend to control MCP tool execution
-            if hasattr(agent.backend, 'set_planning_mode'):
+            if hasattr(agent.backend, "set_planning_mode"):
                 agent.backend.set_planning_mode(planning_mode_enabled)
                 if planning_mode_enabled:
                     logger.info(f"[Orchestrator] Backend planning mode ENABLED for {agent_id} - MCP tools blocked")

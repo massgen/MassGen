@@ -19,30 +19,8 @@ agents:
       model: "gemini-2.5-flash"
       mcp_servers:
         - name: "twitter_mcp"
-          type: "stdio" 
-          command: "npx"
-          args: ["@enescinar/twitter-mcp"]
-          env:
-            API_KEY: "${API_KEY}"
-            API_SECRET_KEY: "${API_SECRET_KEY}"
-            ACCESS_TOKEN: "${ACCESS_TOKEN}"
-            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
-          security:
-            level: "high"
-    system_message: | 
-      Available Twitter Tools:
-      - mcp__twitter_mcp__post_tweet: Post a new tweet
-      - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics
-      - mcp__twitter_mcp__get_user_timeline: Get tweets from specific users
-      
-  - id: "gpt5_twitter_agent"
-    backend:
-      type: "openai"
-      model: "gpt-4o-mini"
-      mcp_servers:
-        - name: "twitter_mcp"
           type: "stdio"
-          command: "npx" 
+          command: "npx"
           args: ["@enescinar/twitter-mcp"]
           env:
             API_KEY: "${API_KEY}"
@@ -54,9 +32,31 @@ agents:
     system_message: |
       Available Twitter Tools:
       - mcp__twitter_mcp__post_tweet: Post a new tweet
-      - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics  
+      - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics
       - mcp__twitter_mcp__get_user_timeline: Get tweets from specific users
-      
+
+  - id: "gpt5_twitter_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      mcp_servers:
+        - name: "twitter_mcp"
+          type: "stdio"
+          command: "npx"
+          args: ["@enescinar/twitter-mcp"]
+          env:
+            API_KEY: "${API_KEY}"
+            API_SECRET_KEY: "${API_SECRET_KEY}"
+            ACCESS_TOKEN: "${ACCESS_TOKEN}"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+          security:
+            level: "high"
+    system_message: |
+      Available Twitter Tools:
+      - mcp__twitter_mcp__post_tweet: Post a new tweet
+      - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics
+      - mcp__twitter_mcp__get_user_timeline: Get tweets from specific users
+
   - id: "claude_twitter_agent"
     backend:
       type: "claude_code"
@@ -77,7 +77,7 @@ agents:
       - mcp__twitter_mcp__post_tweet: Post a new tweet
       - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics
       - mcp__twitter_mcp__get_user_timeline: Get tweets from specific users
-      
+
 ui:
   display_type: "rich_terminal"
   logging_enabled: true

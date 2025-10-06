@@ -216,7 +216,7 @@ class ChatCompletionsBackend(MCPBackend):
                     type="mcp_status",
                     status="planning_mode_blocked",
                     content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
-                    source="planning_mode"
+                    source="planning_mode",
                 )
                 # Skip all MCP tool execution but still continue with workflow
                 yield StreamChunk(type="done")

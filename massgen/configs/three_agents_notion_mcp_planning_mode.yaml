@@ -7,7 +7,7 @@
 # 2. Create Notion integrations and get tokens (see detailed setup in original config)
 # 3. Set environment variables in .env file:
 #    NOTION_TOKEN_ONE="your_first_notion_integration_token"
-#    NOTION_TOKEN_TWO="your_second_notion_integration_token"  
+#    NOTION_TOKEN_TWO="your_second_notion_integration_token"
 #    NOTION_TOKEN_THREE="your_third_notion_integration_token"
 #    OPENAI_API_KEY="your_openai_key"
 #    GOOGLE_API_KEY="your_gemini_key"
@@ -38,7 +38,7 @@ agents:
       - Page creation, reading, and updating capabilities
       - Database design and content management
       - Property configuration and relationship setup
-      
+
       IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
 
   - id: "openai_notion_agent"
@@ -62,7 +62,7 @@ agents:
       - Page creation, reading, and updating capabilities
       - Database design and content management
       - Property configuration and relationship setup
-      
+
       IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
 
   - id: "claude_notion_agent"
@@ -94,6 +94,8 @@ ui:
 
 # Orchestrator Settings with Coordination Configuration
 orchestrator:
+  snapshot_storage: "massgen_logs/snapshots"  # Directory for workspace snapshots
+  agent_temporary_workspace: "massgen_logs/temp_workspaces"  # Directory for temporary agent workspaces
   coordination:
     enable_planning_mode: true
     planning_mode_instruction: |
@@ -104,7 +106,7 @@ orchestrator:
       3. Use only the 'vote' or 'new_answer' tools for coordination
       4. DO NOT execute any actual Notion commands or API calls
       5. Save tool execution for the final presentation phase when the winning agent will implement the plan
-      
+
       Focus on planning, analysis, and coordination rather than execution.
 
 # Legacy Coordination Settings (for reference - these are now under orchestrator.coordination)
