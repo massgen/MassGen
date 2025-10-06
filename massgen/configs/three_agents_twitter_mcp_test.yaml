@@ -1,0 +1,90 @@
+# Three Agent Twitter MCP Test Configuration
+# This configuration uses 3 different backends (Gemini, OpenAI, Claude) with Twitter MCP capability
+# Each agent can post tweets, search Twitter, and manage Twitter interactions
+#
+# Setup Requirements:
+# 1. Install Twitter MCP server: npm install -g @enescinar/twitter-mcp
+# 2. Set environment variables in .env file:
+#    OPENAI_API_KEY="your_openai_key"
+#    GOOGLE_API_KEY="your_gemini_key"
+#    ANTHROPIC_API_KEY="your_claude_key"
+#
+# Example usage:
+# uv run python -m massgen.cli --config configs/three_agents_twitter_mcp_test.yaml "Draft and post a tweet about the latest AI developments, make it engaging and include relevant hashtags"
+
+agents:
+  - id: "gemini_twitter_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        - name: "twitter_mcp"
+          type: "stdio" 
+          command: "npx"
+          args: ["@enescinar/twitter-mcp"]
+          env:
+            API_KEY: "${API_KEY}"
+            API_SECRET_KEY: "${API_SECRET_KEY}"
+            ACCESS_TOKEN: "${ACCESS_TOKEN}"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+          security:
+            level: "high"
+    system_message: | 
+      Available Twitter Tools:
+      - mcp__twitter_mcp__post_tweet: Post a new tweet
+      - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics
+      - mcp__twitter_mcp__get_user_timeline: Get tweets from specific users
+      
+  - id: "gpt5_twitter_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      mcp_servers:
+        - name: "twitter_mcp"
+          type: "stdio"
+          command: "npx" 
+          args: ["@enescinar/twitter-mcp"]
+          env:
+            API_KEY: "${API_KEY}"
+            API_SECRET_KEY: "${API_SECRET_KEY}"
+            ACCESS_TOKEN: "${ACCESS_TOKEN}"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+          security:
+            level: "high"
+    system_message: |
+      Available Twitter Tools:
+      - mcp__twitter_mcp__post_tweet: Post a new tweet
+      - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics  
+      - mcp__twitter_mcp__get_user_timeline: Get tweets from specific users
+      
+  - id: "claude_twitter_agent"
+    backend:
+      type: "claude_code"
+      cwd: "claude_code_workspace_twitter_mcp"
+      permission_mode: "bypassPermissions"
+      mcp_servers:
+        twitter:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@enescinar/twitter-mcp"]
+          env:
+            API_KEY: "${API_KEY}"
+            API_SECRET_KEY: "${API_SECRET_KEY}"
+            ACCESS_TOKEN: "${ACCESS_TOKEN}"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+    system_message: |
+      Available Twitter Tools:
+      - mcp__twitter_mcp__post_tweet: Post a new tweet
+      - mcp__twitter_mcp__search_tweets: Search for tweets on specific topics
+      - mcp__twitter_mcp__get_user_timeline: Get tweets from specific users
+      
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Coordination Settings
+coordination:
+  voting_enabled: true
+  max_rounds: 3
+  consensus_threshold: 0.6
+  timeout_seconds: 300

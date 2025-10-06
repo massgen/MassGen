@@ -1,0 +1,115 @@
+# Three Agent Notion MCP Test Configuration with Planning Mode
+# This configuration demonstrates planning vs execution mode to prevent duplicate tool calls
+# during coordination while allowing full tool execution during final presentation
+#
+# Setup Requirements:
+# 1. Install Notion MCP server: npm install -g @notionhq/notion-mcp-server
+# 2. Create Notion integrations and get tokens (see detailed setup in original config)
+# 3. Set environment variables in .env file:
+#    NOTION_TOKEN_ONE="your_first_notion_integration_token"
+#    NOTION_TOKEN_TWO="your_second_notion_integration_token"  
+#    NOTION_TOKEN_THREE="your_third_notion_integration_token"
+#    OPENAI_API_KEY="your_openai_key"
+#    GOOGLE_API_KEY="your_gemini_key"
+#    ANTHROPIC_API_KEY="your_claude_key"
+#
+# Example usage:
+# uv run python -m massgen.cli --config configs/three_agents_notion_mcp_planning_mode.yaml "Create a comprehensive project management system in Notion with tasks, timelines, and progress tracking. Design the database structure, create initial pages, and set up automation workflows."
+
+agents:
+  - id: "gemini_notion_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        - name: "notionApi"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@notionhq/notion-mcp-server"]
+          env:
+            NOTION_TOKEN: "${NOTION_TOKEN_ONE}"
+          security:
+            level: "moderate"
+      exclude_tools:
+        - post_search  # Exclude problematic tools as noted in original config
+    system_message: |
+      Available Notion Tools:
+      - Notion workspace management via MCP integration
+      - Page creation, reading, and updating capabilities
+      - Database design and content management
+      - Property configuration and relationship setup
+      
+      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
+
+  - id: "openai_notion_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      mcp_servers:
+        - name: "notionApi"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@notionhq/notion-mcp-server"]
+          env:
+            NOTION_TOKEN: "${NOTION_TOKEN_TWO}"
+          security:
+            level: "moderate"
+      exclude_tools:
+        - post_search
+    system_message: |
+      Available Notion Tools:
+      - Notion workspace management via MCP integration
+      - Page creation, reading, and updating capabilities
+      - Database design and content management
+      - Property configuration and relationship setup
+      
+      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
+
+  - id: "claude_notion_agent"
+    backend:
+      type: "claude_code"
+      cwd: "claude_code_workspace_notion_mcp"
+      permission_mode: "bypassPermissions"
+      mcp_servers:
+        notionApi:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@notionhq/notion-mcp-server"]
+          env:
+            NOTION_TOKEN: "${NOTION_TOKEN_THREE}"
+      exclude_tools:
+        - post_search
+    system_message: |
+      Available Notion Tools:
+      - Notion workspace management via MCP integration
+      - Page creation, reading, and updating capabilities
+      - Database design and content management
+      - Property configuration and relationship setup
+
+      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Orchestrator Settings with Coordination Configuration
+orchestrator:
+  coordination:
+    enable_planning_mode: true
+    planning_mode_instruction: |
+      PLANNING MODE ACTIVE: You are currently in the coordination phase where agents discuss and plan their approach.
+      During this phase, you should:
+      1. Describe your intended actions and reasoning
+      2. Analyze other agents' proposals
+      3. Use only the 'vote' or 'new_answer' tools for coordination
+      4. DO NOT execute any actual Notion commands or API calls
+      5. Save tool execution for the final presentation phase when the winning agent will implement the plan
+      
+      Focus on planning, analysis, and coordination rather than execution.
+
+# Legacy Coordination Settings (for reference - these are now under orchestrator.coordination)
+coordination:
+  voting_enabled: true
+  max_rounds: 3
+  consensus_threshold: 0.6
+  timeout_seconds: 300

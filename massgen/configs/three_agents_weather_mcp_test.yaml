@@ -1,0 +1,72 @@
+# Three Agent Weather MCP Test Configuration
+# This configuration uses 3 different backends (Gemini, OpenAI, Claude) with Weather MCP capability
+# Each agent can get weather information, forecasts, and weather alerts
+#
+# Setup Requirements:
+# 1. Install Weather MCP server: npm install -g @fak111/weather-mcp
+# 2. Set environment variables in .env file:
+#    OPENAI_API_KEY="your_openai_key"
+#    GOOGLE_API_KEY="your_gemini_key"
+#    ANTHROPIC_API_KEY="your_claude_key"
+#
+# Example usage:
+# uv run python -m massgen.cli --config configs/three_agents_weather_mcp_test.yaml "What's the weather like in Tokyo, London, and New York today? Compare the conditions and give me travel recommendations."
+
+agents:
+  - id: "gemini_weather_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        - name: "weather"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@fak111/weather-mcp"]
+          security:
+            level: "moderate"
+    system_message: |
+      Available Weather Tools:
+      - Weather information via MCP integration
+      - Current conditions, forecasts, and alerts
+
+  - id: "openai_weather_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      mcp_servers:
+        - name: "weather"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@fak111/weather-mcp"]
+          security:
+            level: "moderate"
+    system_message: |
+      Available Weather Tools:
+      - Weather information via MCP integration
+      - Current conditions, forecasts, and alerts
+
+  - id: "claude_weather_agent"
+    backend:
+      type: "claude_code"
+      cwd: "claude_code_workspace_weather_mcp"
+      permission_mode: "bypassPermissions"
+      mcp_servers:
+        weather:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@fak111/weather-mcp"]
+    system_message: |
+      Available Weather Tools:
+      - Weather information via MCP integration
+      - Current conditions, forecasts, and alerts
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Coordination Settings
+coordination:
+  voting_enabled: true
+  max_rounds: 3
+  consensus_threshold: 0.6
+  timeout_seconds: 300

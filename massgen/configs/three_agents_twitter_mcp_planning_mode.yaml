@@ -1,0 +1,111 @@
+# Three Agent Twitter MCP Test Configuration with Planning Mode
+# This configuration demonstrates planning vs execution mode to prevent duplicate tool calls
+# during coordination while allowing full tool execution during final presentation
+#
+# Setup Requirements:
+# 1. Install Twitter MCP server: npm install -g @enescinar/twitter-mcp
+# 2. Set environment variables in .env file:
+#    OPENAI_API_KEY="your_openai_key"
+#    GOOGLE_API_KEY="your_gemini_key"
+#    ANTHROPIC_API_KEY="your_claude_key"
+#
+# Example usage:
+# uv run python -m massgen.cli --config configs/three_agents_twitter_mcp_planning_mode.yaml "Research the latest trends in AI development, draft an engaging tweet about it with relevant hashtags, and post it to Twitter"
+
+agents:
+  - id: "gemini_twitter_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        - name: "twitter_mcp"
+          type: "stdio" 
+          command: "npx"
+          args: ["@enescinar/twitter-mcp"]
+          env:
+            API_KEY: "${API_KEY}"
+            API_SECRET_KEY: "${API_SECRET_KEY}"
+            ACCESS_TOKEN: "${ACCESS_TOKEN}"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+          security:
+            level: "high"
+    system_message: |
+      Available Twitter Tools:
+      - Twitter content creation and posting via MCP integration
+      - Tweet searching and analysis capabilities
+      - User timeline and engagement monitoring
+      
+      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
+
+  - id: "openai_twitter_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      mcp_servers:
+        - name: "twitter_mcp"
+          type: "stdio"
+          command: "npx" 
+          args: ["@enescinar/twitter-mcp"]
+          env:
+            API_KEY: "${API_KEY}"
+            API_SECRET_KEY: "${API_SECRET_KEY}"
+            ACCESS_TOKEN: "${ACCESS_TOKEN}"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+          security:
+            level: "high"
+    system_message: |
+      Available Twitter Tools:
+      - Twitter content creation and posting via MCP integration
+      - Tweet searching and analysis capabilities  
+      - User timeline and engagement monitoring
+      
+      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
+
+  - id: "claude_twitter_agent"
+    backend:
+      type: "claude_code"
+      cwd: "claude_code_workspace_twitter_mcp"
+      permission_mode: "bypassPermissions"
+      mcp_servers:
+        twitter:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@enescinar/twitter-mcp"]
+          env:
+            API_KEY: "${API_KEY}"
+            API_SECRET_KEY: "${API_SECRET_KEY}"
+            ACCESS_TOKEN: "${ACCESS_TOKEN}"
+            ACCESS_TOKEN_SECRET: "${ACCESS_TOKEN_SECRET}"
+    system_message: |
+      Available Twitter Tools:
+      - Twitter content creation and posting via MCP integration
+      - Tweet searching and analysis capabilities
+      - User timeline and engagement monitoring
+
+      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Orchestrator Settings with Coordination Configuration
+orchestrator:
+  coordination:
+    enable_planning_mode: true
+    planning_mode_instruction: |
+      PLANNING MODE ACTIVE: You are currently in the coordination phase where agents discuss and plan their approach.
+      During this phase, you should:
+      1. Describe your intended actions and reasoning
+      2. Analyze other agents' proposals
+      3. Use only the 'vote' or 'new_answer' tools for coordination
+      4. DO NOT execute any actual Twitter commands or API calls
+      5. Save tool execution for the final presentation phase when the winning agent will implement the plan
+      
+      Focus on planning, analysis, and coordination rather than execution.
+
+# Legacy Coordination Settings (for reference - these are now under orchestrator.coordination)
+coordination:
+  voting_enabled: true
+  max_rounds: 3
+  consensus_threshold: 0.6
+  timeout_seconds: 300

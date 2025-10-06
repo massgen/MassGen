@@ -1,0 +1,104 @@
+# Three Agent Travel Research MCP Test Configuration
+# This configuration uses 3 different backends (Gemini, OpenAI, Claude) with Multi-MCP capability
+# Each agent has access to Airbnb search and Brave Search for comprehensive travel research
+#
+# Setup Requirements:
+# 1. Install MCP servers: 
+#    npm install -g @openbnb/mcp-server-airbnb
+#    npm install -g @modelcontextprotocol/server-brave-search
+# 2. Set environment variables in .env file:
+#    BRAVE_API_KEY="your_brave_search_api_key"
+#    OPENAI_API_KEY="your_openai_key"
+#    GOOGLE_API_KEY="your_gemini_key"
+#    ANTHROPIC_API_KEY="your_claude_key"
+#
+# Example usage:
+# uv run python -m massgen.cli --config configs/three_agents_travel_mcp_test.yaml "Plan a 5-day trip to Barcelona for a couple on a mid-range budget. Find the best neighborhoods, suggest 3 Airbnb options, and provide a complete travel guide with attractions and dining recommendations."
+
+agents:
+  - id: "gemini_travel_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        # Airbnb server for accommodations
+        - name: "airbnb_search"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@openbnb/mcp-server-airbnb", "--ignore-robots-txt"]
+          security:
+            level: "moderate"
+        # Brave Search API server
+        - name: "brave_search"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-brave-search"]
+          env:
+            BRAVE_API_KEY: "${BRAVE_API_KEY}"
+          security:
+            level: "moderate"
+    system_message: |
+      Available Tools:
+      - mcp__brave_web_search: Research destinations, attractions, and local insights
+      - mcp__airbnb_search: Find accommodations with filtering capabilities
+      - mcp__airbnb_search__airbnb_listing_details: Get detailed property information
+
+  - id: "openai_travel_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      mcp_servers:
+        # Airbnb server for accommodations
+        - name: "airbnb_search"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@openbnb/mcp-server-airbnb", "--ignore-robots-txt"]
+          security:
+            level: "moderate"
+        # Brave Search API server
+        - name: "brave_search"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-brave-search"]
+          env:
+            BRAVE_API_KEY: "${BRAVE_API_KEY}"
+          security:
+            level: "moderate"
+    system_message: |
+      Available Tools:
+      - mcp__brave_web_search: Research destinations, attractions, and local insights
+      - mcp__airbnb_search: Find accommodations with filtering capabilities
+      - mcp__airbnb_search__airbnb_listing_details: Get detailed property information
+
+  - id: "claude_travel_agent"
+    backend:
+      type: "claude_code"
+      cwd: "claude_code_workspace_travel_mcp"
+      permission_mode: "bypassPermissions"
+      mcp_servers:
+        airbnb_search:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@openbnb/mcp-server-airbnb", "--ignore-robots-txt"]
+        brave_search:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-brave-search"]
+          env:
+            BRAVE_API_KEY: "${BRAVE_API_KEY}"
+    system_message: |
+      Available Tools:
+      - mcp__brave_web_search: Research destinations, attractions, and local insights
+      - mcp__airbnb_search: Find accommodations with filtering capabilities
+      - mcp__airbnb_search__airbnb_listing_details: Get detailed property information
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Coordination Settings
+coordination:
+  voting_enabled: true
+  max_rounds: 3
+  consensus_threshold: 0.6
+  timeout_seconds: 300
