@@ -4,74 +4,12 @@ AG2 (AutoGen) adapter for MassGen.
 
 Supports both single agents and GroupChat configurations.
 """
-import os
 from typing import Any, AsyncGenerator, Dict, List
-
-from autogen import AssistantAgent, ConversableAgent, LLMConfig
 
 from massgen.logger_config import log_backend_activity, logger
 
 from .base import AgentAdapter, StreamChunk
-
-
-def _setup_api_keys() -> None:
-    """Set up API keys for AG2 compatibility."""
-    # Copy GEMINI_API_KEY to GOOGLE_GEMINI_API_KEY if it exists
-    if "GEMINI_API_KEY" in os.environ and "GOOGLE_GEMINI_API_KEY" not in os.environ:
-        os.environ["GOOGLE_GEMINI_API_KEY"] = os.environ["GEMINI_API_KEY"]
-
-
-def _setup_agent_from_config(config: Dict[str, Any]) -> ConversableAgent:
-    """Set up a ConversableAgent from configuration."""
-    cfg = config.copy()
-
-    # Extract agent type
-    agent_type = cfg.pop("type", "conversable")
-
-    # llm_config should already be in config, verified by _extract_llm_config
-    # But ensure it's there for safety
-    if "llm_config" not in cfg:
-        raise ValueError(
-            "Each AG2 agent configuration must include 'llm_config'. ",
-        )
-
-    if "name" not in cfg:
-        raise ValueError(
-            "Each AG2 agent configuration must include 'name'. ",
-        )
-
-    # Handle llm_config - can be dict or list
-    llm_config_data = cfg.pop("llm_config")
-    if isinstance(llm_config_data, list):
-        # YAML format: llm_config: [{...}]
-        llm_config = LLMConfig(config_list=llm_config_data)
-    elif isinstance(llm_config_data, dict):
-        # Direct dict format:
-        llm_config = LLMConfig(**llm_config_data)
-    else:
-        raise ValueError(f"llm_config must be a dict or list, got {type(llm_config_data)}")
-
-    # Create appropriate agent
-    if agent_type == "assistant":
-        agent = AssistantAgent(
-            name=cfg["name"],
-            system_message=cfg.get("system_message", "You are a helpful AI assistant."),
-            human_input_mode="NEVER",  # Autonomous operation
-            llm_config=llm_config,
-        )
-    elif agent_type == "conversable":
-        agent = ConversableAgent(
-            name=cfg["name"],
-            system_message=cfg.get("system_message", "You are a helpful AI assistant."),
-            human_input_mode="NEVER",  # Autonomous operation
-            llm_config=llm_config,
-        )
-    else:
-        raise ValueError(
-            f"Unsupported AG2 agent type: {agent_type}. " "Use 'assistant' or 'conversable' for ag2 agents.",
-        )
-
-    return agent
+from .utils.ag2_utils import setup_agent_from_config, setup_api_keys
 
 
 class AG2Adapter(AgentAdapter):
@@ -81,12 +19,17 @@ class AG2Adapter(AgentAdapter):
     Supports:
     - Single AG2 agents (ConversableAgent, AssistantAgent)
     - Function/tool calling
-    - Async execution with a_run and a_initiate_chat
+    - Code execution with multiple executor types:
+      * LocalCommandLineCodeExecutor (local shell)
+      * DockerCommandLineCodeExecutor (Docker containers)
+      * JupyterCodeExecutor (Jupyter kernels)
+      * YepCodeCodeExecutor (YepCode serverless)
+    - Async execution with a_generate_reply
     - No human-in-the-loop (autonomous operation)
 
     Todos:
-    - Group chat support with patterns (e.g., AutoPattern,DefaultPattern, etc.)
-    - More tool support including mcp
+    - Group chat support with patterns (e.g., AutoPattern, DefaultPattern, etc.)
+    - More tool support including MCP
     """
 
     def __init__(self, **kwargs):
@@ -104,7 +47,7 @@ class AG2Adapter(AgentAdapter):
         super().__init__(**kwargs)
 
         # Set up API keys for AG2 compatibility
-        _setup_api_keys()
+        setup_api_keys()
 
         # Extract agent_config or group_config from kwargs
         self.agent_config = kwargs.get("agent_config")
@@ -134,7 +77,7 @@ class AG2Adapter(AgentAdapter):
 
     def _setup_single_agent(self):
         """Set up a single AG2 agent."""
-        self.agent = _setup_agent_from_config(self.agent_config)
+        self.agent = setup_agent_from_config(self.agent_config)
 
         self.is_group_chat = False
 
@@ -144,7 +87,7 @@ class AG2Adapter(AgentAdapter):
 
         # Create agents from configuration
         for agent_cfg in self.group_config.get("agents", []):
-            agent = _setup_agent_from_config(agent_cfg)
+            agent = setup_agent_from_config(agent_cfg)
             agents.append(agent)
 
         if not agents:
@@ -244,7 +187,7 @@ class AG2Adapter(AgentAdapter):
 
         if not self.is_group_chat:
             for tool in tools:
-                self.agent.update_tool_signature(tool_sig=tool, is_remove=False)
+                self.agent.update_tool_signature(tool_sig=tool, is_remove=False, silent_override=True)
 
         else:
             # Todo:

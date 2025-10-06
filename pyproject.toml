@@ -67,7 +67,7 @@ docs = [
     "myst-parser>=1.0.0",
 ]
 external = [
-    "ag2>=0.9.9",
+    "ag2>=0.9.10",
 ]
 all = [
 ]
