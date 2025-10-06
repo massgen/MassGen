@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 MassGen Logging System
 
@@ -6,19 +7,17 @@ recording all agent state changes, orchestration events, and system activities
 to local files for detailed analysis.
 """
 
-import os
 import json
-import time
 import logging
+import os
 import threading
-from datetime import datetime
-from typing import Dict, Any, List, Optional, Union
-from pathlib import Path
-from dataclasses import dataclass, field, asdict
+import time
 from collections import Counter
-import textwrap
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from .types import LogEntry, AnswerRecord, VoteRecord
+from .types import AnswerRecord, LogEntry, VoteRecord
 
 
 class MassLogManager:
@@ -65,7 +64,7 @@ class MassLogManager:
         self.non_blocking = non_blocking
 
         if self.non_blocking:
-            print(f"⚠️  LOGGING: Non-blocking mode enabled - file logging disabled")
+            print("⚠️  LOGGING: Non-blocking mode enabled - file logging disabled")
 
         # Create main session directory
         self.session_dir = self.base_log_dir / self.session_id
@@ -73,9 +72,7 @@ class MassLogManager:
             try:
                 self.session_dir.mkdir(parents=True, exist_ok=True)
             except Exception as e:
-                print(
-                    f"Warning: Failed to create session directory, enabling non-blocking mode: {e}"
-                )
+                print(f"Warning: Failed to create session directory, enabling non-blocking mode: {e}")
                 self.non_blocking = True
 
         # Create subdirectories
@@ -89,9 +86,7 @@ class MassLogManager:
                 self.answers_dir.mkdir(exist_ok=True)
                 self.votes_dir.mkdir(exist_ok=True)
             except Exception as e:
-                print(
-                    f"Warning: Failed to create subdirectories, enabling non-blocking mode: {e}"
-                )
+                print(f"Warning: Failed to create subdirectories, enabling non-blocking mode: {e}")
                 self.non_blocking = True
 
         # File paths
@@ -146,11 +141,9 @@ class MassLogManager:
 
         try:
             with open(self.system_log_file, "w", encoding="utf-8") as f:
-                f.write(f"MassGen System Messages Log\n")
+                f.write("MassGen System Messages Log\n")
                 f.write(f"Session ID: {self.session_id}\n")
-                f.write(
-                    f"Session started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                )
+                f.write(f"Session started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 f.write("=" * 80 + "\n\n")
         except Exception as e:
             print(f"Warning: Failed to initialize system log: {e}")
@@ -161,17 +154,13 @@ class MassLogManager:
         if self.non_blocking:
             return
 
-        log_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        log_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
         # Ensure log directory exists before creating file handler
         try:
             self.session_dir.mkdir(parents=True, exist_ok=True)
         except Exception as e:
-            print(
-                f"Warning: Failed to create session directory {self.session_dir}, skipping file logging: {e}"
-            )
+            print(f"Warning: Failed to create session directory {self.session_dir}, skipping file logging: {e}")
             return
 
         # Create console log file handler
@@ -250,31 +239,21 @@ class MassLogManager:
                 f.write(f"📝 MASSGEN AGENT {agent_id} - ANSWER HISTORY\n")
                 f.write("=" * 80 + "\n")
                 f.write(f"🆔 Session: {self.session_id}\n")
-                f.write(
-                    f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                )
+                f.write(f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
                 if answer_records:
                     # Calculate some summary statistics
                     total_chars = sum(len(record.answer) for record in answer_records)
-                    avg_chars = (
-                        total_chars / len(answer_records) if answer_records else 0
-                    )
+                    avg_chars = total_chars / len(answer_records) if answer_records else 0
                     first_update = answer_records[0].timestamp if answer_records else 0
                     last_update = answer_records[-1].timestamp if answer_records else 0
-                    duration = (
-                        last_update - first_update if len(answer_records) > 1 else 0
-                    )
+                    duration = last_update - first_update if len(answer_records) > 1 else 0
 
                     f.write(f"📊 Total Updates: {len(answer_records)}\n")
                     f.write(f"📏 Total Characters: {total_chars:,}\n")
                     f.write(f"📈 Average Length: {avg_chars:.0f} chars\n")
                     if duration > 0:
-                        duration_str = (
-                            f"{duration/60:.1f} minutes"
-                            if duration > 60
-                            else f"{duration:.1f} seconds"
-                        )
+                        duration_str = f"{duration/60:.1f} minutes" if duration > 60 else f"{duration:.1f} seconds"
                         f.write(f"⏱️ Time Span: {duration_str}\n")
                 else:
                     f.write("❌ No answer records found for this agent.\n")
@@ -284,16 +263,8 @@ class MassLogManager:
                 if answer_records:
                     for i, record in enumerate(answer_records, 1):
                         # Calculate time elapsed since session start
-                        elapsed = record.timestamp - (
-                            answer_records[0].timestamp
-                            if answer_records
-                            else record.timestamp
-                        )
-                        elapsed_str = (
-                            f"[+{elapsed/60:.1f}m]"
-                            if elapsed > 60
-                            else f"[+{elapsed:.1f}s]"
-                        )
+                        elapsed = record.timestamp - (answer_records[0].timestamp if answer_records else record.timestamp)
+                        elapsed_str = f"[+{elapsed/60:.1f}m]" if elapsed > 60 else f"[+{elapsed:.1f}s]"
 
                         f.write(f"🔢 UPDATE #{i} {elapsed_str}\n")
                         f.write(self._format_answer_record(record, agent_id))
@@ -316,48 +287,30 @@ class MassLogManager:
                 f.write(f"🗳️ MASSGEN AGENT {agent_id} - VOTE HISTORY\n")
                 f.write("=" * 80 + "\n")
                 f.write(f"🆔 Session: {self.session_id}\n")
-                f.write(
-                    f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                )
+                f.write(f"📅 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
                 if vote_records:
                     # Calculate voting statistics
                     vote_targets = {}
                     total_reason_chars = 0
                     for vote in vote_records:
-                        vote_targets[vote.target_id] = (
-                            vote_targets.get(vote.target_id, 0) + 1
-                        )
+                        vote_targets[vote.target_id] = vote_targets.get(vote.target_id, 0) + 1
                         total_reason_chars += len(vote.reason) if vote.reason else 0
 
-                    most_voted_target = (
-                        max(vote_targets.items(), key=lambda x: x[1])
-                        if vote_targets
-                        else None
-                    )
-                    avg_reason_length = (
-                        total_reason_chars / len(vote_records) if vote_records else 0
-                    )
+                    most_voted_target = max(vote_targets.items(), key=lambda x: x[1]) if vote_targets else None
+                    avg_reason_length = total_reason_chars / len(vote_records) if vote_records else 0
 
                     first_vote = vote_records[0].timestamp if vote_records else 0
                     last_vote = vote_records[-1].timestamp if vote_records else 0
-                    voting_duration = (
-                        last_vote - first_vote if len(vote_records) > 1 else 0
-                    )
+                    voting_duration = last_vote - first_vote if len(vote_records) > 1 else 0
 
                     f.write(f"📊 Total Votes Cast: {len(vote_records)}\n")
                     f.write(f"🎯 Unique Targets: {len(vote_targets)}\n")
                     if most_voted_target:
-                        f.write(
-                            f"👑 Most Voted For: Agent {most_voted_target[0]} ({most_voted_target[1]} votes)\n"
-                        )
+                        f.write(f"👑 Most Voted For: Agent {most_voted_target[0]} ({most_voted_target[1]} votes)\n")
                     f.write(f"📝 Avg Reason Length: {avg_reason_length:.0f} chars\n")
                     if voting_duration > 0:
-                        duration_str = (
-                            f"{voting_duration/60:.1f} minutes"
-                            if voting_duration > 60
-                            else f"{voting_duration:.1f} seconds"
-                        )
+                        duration_str = f"{voting_duration/60:.1f} minutes" if voting_duration > 60 else f"{voting_duration:.1f} seconds"
                         f.write(f"⏱️ Voting Duration: {duration_str}\n")
                 else:
                     f.write("❌ No vote records found for this agent.\n")
@@ -367,16 +320,8 @@ class MassLogManager:
                 if vote_records:
                     for i, record in enumerate(vote_records, 1):
                         # Calculate time elapsed since first vote
-                        elapsed = record.timestamp - (
-                            vote_records[0].timestamp
-                            if vote_records
-                            else record.timestamp
-                        )
-                        elapsed_str = (
-                            f"[+{elapsed/60:.1f}m]"
-                            if elapsed > 60
-                            else f"[+{elapsed:.1f}s]"
-                        )
+                        elapsed = record.timestamp - (vote_records[0].timestamp if vote_records else record.timestamp)
+                        elapsed_str = f"[+{elapsed/60:.1f}m]" if elapsed > 60 else f"[+{elapsed:.1f}s]"
 
                         f.write(f"🗳️ VOTE #{i} {elapsed_str}\n")
                         f.write(self._format_vote_record(record, agent_id))
@@ -422,9 +367,7 @@ class MassLogManager:
             # Write to file immediately
             self._write_log_entry(entry)
 
-    def log_agent_answer_update(
-        self, agent_id: int, answer: str, phase: str = "unknown", orchestrator=None
-    ):
+    def log_agent_answer_update(self, agent_id: int, answer: str, phase: str = "unknown", orchestrator=None):
         """
         Log agent answer update with detailed information and immediately save to file.
 
@@ -446,9 +389,7 @@ class MassLogManager:
             agent_state = orchestrator.agent_states[agent_id]
             self._write_agent_answers(agent_id, agent_state.updated_answers)
 
-    def log_agent_status_change(
-        self, agent_id: int, old_status: str, new_status: str, phase: str = "unknown"
-    ):
+    def log_agent_status_change(self, agent_id: int, old_status: str, new_status: str, phase: str = "unknown"):
         """
         Log agent status change.
 
@@ -487,9 +428,7 @@ class MassLogManager:
             agent_states[agent_id] = {
                 "status": agent_state.status,
                 "curr_answer": agent_state.curr_answer,
-                "vote_target": (
-                    agent_state.curr_vote.target_id if agent_state.curr_vote else None
-                ),
+                "vote_target": (agent_state.curr_vote.target_id if agent_state.curr_vote else None),
                 "execution_time": agent_state.execution_time,
                 "update_count": len(agent_state.updated_answers),
                 "seen_updates_timestamps": agent_state.seen_updates_timestamps,
@@ -515,7 +454,7 @@ class MassLogManager:
                     "voter_id": vote.voter_id,
                     "target_id": vote.target_id,
                     "timestamp": vote.timestamp,
-                }
+                },
             )
 
         # Calculate voting status
@@ -526,9 +465,7 @@ class MassLogManager:
             "total_agents": len(orchestrator.agents),
             "consensus_reached": orchestrator.system_state.consensus_reached,
             "winning_agent_id": orchestrator.system_state.representative_agent_id,
-            "votes_needed_for_consensus": max(
-                1, int(len(orchestrator.agents) * orchestrator.consensus_threshold)
-            ),
+            "votes_needed_for_consensus": max(1, int(len(orchestrator.agents) * orchestrator.consensus_threshold)),
         }
 
         # Complete system state snapshot
@@ -538,11 +475,7 @@ class MassLogManager:
             "voting_records": vote_records,
             "voting_status": voting_status,
             "system_phase": phase,
-            "system_runtime": (
-                (time.time() - orchestrator.system_state.start_time)
-                if orchestrator.system_state.start_time
-                else 0
-            ),
+            "system_runtime": ((time.time() - orchestrator.system_state.start_time) if orchestrator.system_state.start_time else 0),
         }
 
         # Log the system snapshot
@@ -645,9 +578,7 @@ class MassLogManager:
         for agent_id in vote_distribution.keys():
             self._write_agent_display_log(agent_id, consensus_entry)
 
-    def log_phase_transition(
-        self, old_phase: str, new_phase: str, additional_data: Dict[str, Any] = None
-    ):
+    def log_phase_transition(self, old_phase: str, new_phase: str, additional_data: Dict[str, Any] = None):
         """
         Log system phase transitions.
 
@@ -686,11 +617,7 @@ class MassLogManager:
 
         data = {
             "notification_type": notification_type,
-            "content_preview": (
-                content_preview[:200] + "..."
-                if len(content_preview) > 200
-                else content_preview
-            ),
+            "content_preview": (content_preview[:200] + "..." if len(content_preview) > 200 else content_preview),
             "content_length": len(content_preview),
             "total_notifications_sent": self.event_counters["notifications_sent"],
         }
@@ -794,16 +721,12 @@ class MassLogManager:
                 with open(agent_log_file, "w", encoding="utf-8") as f:
                     f.write(f"MassGen Agent {agent_id} Display Log\n")
                     f.write(f"Session: {self.session_id}\n")
-                    f.write(
-                        f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                    )
+                    f.write(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                     f.write("=" * 80 + "\n\n")
 
             # Write event entry
             with open(agent_log_file, "a", encoding="utf-8") as f:
-                timestamp_str = self._format_timestamp(
-                    data.get("timestamp", time.time())
-                )
+                timestamp_str = self._format_timestamp(data.get("timestamp", time.time()))
                 f.write(f"[{timestamp_str}] {data.get('event', 'unknown_event')}\n")
 
                 # Write event details
@@ -842,9 +765,7 @@ class MassLogManager:
 
             for entry in self.log_entries:
                 # Count events
-                event_counts[entry.event_type] = (
-                    event_counts.get(entry.event_type, 0) + 1
-                )
+                event_counts[entry.event_type] = event_counts.get(entry.event_type, 0) + 1
 
                 # Count agent activities
                 if entry.agent_id is not None:
@@ -856,7 +777,7 @@ class MassLogManager:
                             "timestamp": entry.timestamp,
                             "event_type": entry.event_type,
                             "phase": entry.phase,
-                        }
+                        },
                     )
 
             return {
@@ -930,8 +851,7 @@ class MassLogManager:
                 "event_counters": self.event_counters.copy(),
                 "agent_event_counts": agent_event_counts,
                 "total_agents": len(self.agent_logs),
-                "session_duration": time.time()
-                - (self.log_entries[0].timestamp if self.log_entries else time.time()),
+                "session_duration": time.time() - (self.log_entries[0].timestamp if self.log_entries else time.time()),
             }
 
 
@@ -939,9 +859,7 @@ class MassLogManager:
 _log_manager: Optional[MassLogManager] = None
 
 
-def initialize_logging(
-    log_dir: str = "logs", session_id: Optional[str] = None, non_blocking: bool = False
-) -> MassLogManager:
+def initialize_logging(log_dir: str = "logs", session_id: Optional[str] = None, non_blocking: bool = False) -> MassLogManager:
     """Initialize the global logging system."""
     global _log_manager
 
@@ -952,9 +870,7 @@ def initialize_logging(
         "yes",
     )
     if env_non_blocking:
-        print(
-            "🔧 MassGen_NON_BLOCKING_LOGGING environment variable detected - enabling non-blocking mode"
-        )
+        print("🔧 MassGen_NON_BLOCKING_LOGGING environment variable detected - enabling non-blocking mode")
         non_blocking = True
 
     _log_manager = MassLogManager(log_dir, session_id, non_blocking)

@@ -1,0 +1,48 @@
+# uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "browse https://github.com/Leezekun/MassGen and suggest improvement. Include screenshots and suggestions in a PDF."
+agents:
+  - id: "claude_code_playwright_automation"
+    backend:
+      type: "claude_code"
+      cwd: "workspace1"
+      # Playwright MCP server with advanced configuration
+      mcp_servers:
+        playwright:
+          type: "stdio"
+          command: "npx"
+          args: [
+            "@playwright/mcp@latest",
+            "--browser=chrome",  # Use Chrome browser
+            "--caps=vision,pdf", # Enable vision and PDF capabilities
+            "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
+            # "--save-trace"       # Save Playwright traces for debugging
+          ]
+
+  - id: "gpt-5-mini_analysis"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace2"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "low"
+        summary: "auto"
+      mcp_servers:
+        playwright:
+          type: "stdio"
+          command: "npx"
+          args: [
+            "@playwright/mcp@latest",
+            "--browser=chrome",  # Use Chrome browser
+            "--caps=vision,pdf", # Enable vision and PDF capabilities
+            "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
+            # "--save-trace"       # Save Playwright traces for debugging
+          ]
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces

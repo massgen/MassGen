@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 MassGen (Multi-Agent Scaling System) - Programmatic Interface
 
@@ -22,28 +23,25 @@ Programmatic usage examples:
     result = system.run("Complex question here")
 """
 
-import sys
-import os
-import logging
-import time
 import json
-from typing import List, Dict, Any, Optional, Union
-from pathlib import Path
+import logging
+import os
+import sys
+import time
+from typing import Any, Dict, List
+
+from .agents import create_agent
+from .config import create_config_from_models
+from .logging import MassLogManager
+from .orchestrator import MassOrchestrator
+from .streaming_display import create_streaming_display
+from .types import MassConfig, TaskInput
 
 # Add current directory to path for imports
 sys.path.append(os.path.dirname(__file__))
 
-from .types import TaskInput, MassConfig, ModelConfig, AgentConfig
-from .config import create_config_from_models
-from .orchestrator import MassOrchestrator
-from .agents import create_agent
-from .streaming_display import create_streaming_display
-from .logging import MassLogManager
-
 # Initialize logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -85,15 +83,13 @@ def _run_single_agent_simple(question: str, config: MassConfig) -> Dict[str, Any
         messages = [
             {
                 "role": "system",
-                "content": f"You are an expert agent equipped with tools to solve complex tasks. Please provide a comprehensive answer to the user's question.",
+                "content": "You are an expert agent equipped with tools to solve complex tasks. Please provide a comprehensive answer to the user's question.",
             },
             {"role": "user", "content": question},
         ]
 
         # Get available tools from agent configuration
-        tools = (
-            agent_config.model_config.tools if agent_config.model_config.tools else []
-        )
+        tools = agent_config.model_config.tools if agent_config.model_config.tools else []
 
         # Call process_message directly
         result = agent.process_message(messages=messages, tools=tools)
@@ -111,9 +107,7 @@ def _run_single_agent_simple(question: str, config: MassConfig) -> Dict[str, Any
                 "total_agents": 1,
                 "failed_agents": 0,
                 "total_votes": 1,
-                "final_vote_distribution": {
-                    agent_config.agent_id: 1
-                },  # Single agent votes for itself
+                "final_vote_distribution": {agent_config.agent_id: 1},  # Single agent votes for itself
             },
             "model_used": agent_config.model_config.model,
             "citations": result.citations if hasattr(result, "citations") else [],
@@ -162,9 +156,7 @@ def _run_single_agent_simple(question: str, config: MassConfig) -> Dict[str, Any
             try:
                 result_file = log_manager.session_dir / "result.json"
                 with open(result_file, "w", encoding="utf-8") as f:
-                    json.dump(
-                        error_response, f, indent=2, ensure_ascii=False, default=str
-                    )
+                    json.dump(error_response, f, indent=2, ensure_ascii=False, default=str)
                 logger.info(f"💾 Single agent error result saved to {result_file}")
             except Exception as e:
                 logger.warning(f"⚠️ Failed to save result.json: {e}")
@@ -219,9 +211,7 @@ def run_mass_with_config(question: str, config: MassConfig) -> Dict[str, Any]:
             max_lines=config.streaming_display.max_lines,
             save_logs=config.streaming_display.save_logs,
             stream_callback=config.streaming_display.stream_callback,
-            answers_dir=(
-                str(log_manager.answers_dir) if not log_manager.non_blocking else None
-            ),
+            answers_dir=(str(log_manager.answers_dir) if not log_manager.non_blocking else None),
         )
 
     # Create orchestrator with full configuration
@@ -353,11 +343,7 @@ def run_mass_agents(
         orchestrator_config={
             "max_duration": max_duration,
             "consensus_threshold": consensus_threshold,
-            **{
-                k: v
-                for k, v in kwargs.items()
-                if k in ["max_debate_rounds", "status_check_interval"]
-            },
+            **{k: v for k, v in kwargs.items() if k in ["max_debate_rounds", "status_check_interval"]},
         },
         streaming_config={
             "display_enabled": streaming_display,

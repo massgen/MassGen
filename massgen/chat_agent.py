@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Common chat interface for MassGen agents.
 
@@ -10,9 +11,10 @@ or a coordinated multi-agent system.
 
 import uuid
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .backend.base import LLMBackend, StreamChunk
+from .stream_chunk import ChunkType
 
 
 class ChatAgent(ABC):
@@ -51,7 +53,6 @@ class ChatAgent(ABC):
         Yields:
             StreamChunk: Streaming response chunks
         """
-        pass
 
     async def chat_simple(self, user_message: str) -> AsyncGenerator[StreamChunk, None]:
         """
@@ -70,25 +71,22 @@ class ChatAgent(ABC):
     @abstractmethod
     def get_status(self) -> Dict[str, Any]:
         """Get current agent status and state."""
-        pass
 
     @abstractmethod
     async def reset(self) -> None:
         """Reset agent state for new conversation."""
-        pass
 
     @abstractmethod
     def get_configurable_system_message(self) -> Optional[str]:
         """
         Get the user-configurable part of the system message.
-        
+
         Returns the domain expertise, role definition, or custom instructions
         that were configured for this agent, without backend-specific details.
-        
+
         Returns:
             The configurable system message if available, None otherwise
         """
-        pass
 
     # Common conversation management
     def get_conversation_history(self) -> List[Dict[str, Any]]:
@@ -148,13 +146,27 @@ class SingleAgent(ChatAgent):
 
         # Add system message to history if provided
         if self.system_message:
-            self.conversation_history.append(
-                {"role": "system", "content": self.system_message}
-            )
+            self.conversation_history.append({"role": "system", "content": self.system_message})
 
-    async def _process_stream(
-        self, backend_stream, tools: List[Dict[str, Any]] = None
-    ) -> AsyncGenerator[StreamChunk, None]:
+    @staticmethod
+    def _get_chunk_type_value(chunk) -> str:
+        """
+        Extract chunk type as string, handling both legacy and typed chunks.
+
+        Args:
+            chunk: StreamChunk, TextStreamChunk, or MultimodalStreamChunk
+
+        Returns:
+            String representation of chunk type (e.g., "content", "tool_calls")
+        """
+        chunk_type = chunk.type
+
+        if isinstance(chunk_type, ChunkType):
+            return chunk_type.value
+
+        return str(chunk_type)
+
+    async def _process_stream(self, backend_stream, tools: List[Dict[str, Any]] = None) -> AsyncGenerator[StreamChunk, None]:
         """Common streaming logic for processing backend responses."""
         assistant_response = ""
         tool_calls = []
@@ -162,50 +174,41 @@ class SingleAgent(ChatAgent):
 
         try:
             async for chunk in backend_stream:
-                if chunk.type == "content":
+                chunk_type = self._get_chunk_type_value(chunk)
+                if chunk_type == "content":
                     assistant_response += chunk.content
                     yield chunk
-                elif chunk.type == "tool_calls":
+                elif chunk_type == "tool_calls":
                     chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                     tool_calls.extend(chunk_tool_calls)
                     yield chunk
-                elif chunk.type == "complete_message":
+                elif chunk_type == "complete_message":
                     # Backend provided the complete message structure
                     complete_message = chunk.complete_message
                     # Don't yield this - it's for internal use
-                elif chunk.type == "complete_response":
+                elif chunk_type == "complete_response":
                     # Backend provided the raw Responses API response
                     if chunk.response:
                         complete_message = chunk.response
 
                         # Extract and yield tool calls for orchestrator processing
-                        if (
-                            isinstance(chunk.response, dict)
-                            and "output" in chunk.response
-                        ):
+                        if isinstance(chunk.response, dict) and "output" in chunk.response:
                             response_tool_calls = []
                             for output_item in chunk.response["output"]:
                                 if output_item.get("type") == "function_call":
                                     response_tool_calls.append(output_item)
-                                    tool_calls.append(
-                                        output_item
-                                    )  # Also store for fallback
+                                    tool_calls.append(output_item)  # Also store for fallback
 
                             # Yield tool calls so orchestrator can process them
                             if response_tool_calls:
-                                yield StreamChunk(
-                                    type="tool_calls", tool_calls=response_tool_calls
-                                )
+                                yield StreamChunk(type="tool_calls", tool_calls=response_tool_calls)
                     # Complete response is for internal use - don't yield it
-                elif chunk.type == "done":
+                elif chunk_type == "done":
                     # Add complete response to history
                     if complete_message:
                         # For Responses API: complete_message is the response object with 'output' array
                         # Each item in output should be added to conversation history individually
-                        if (
-                            isinstance(complete_message, dict)
-                            and "output" in complete_message
-                        ):
+                        if isinstance(complete_message, dict) and "output" in complete_message:
                             self.conversation_history.extend(complete_message["output"])
                         else:
                             # Fallback if it's already in message format
@@ -239,9 +242,7 @@ class SingleAgent(ChatAgent):
         """Process messages through single backend with tool support."""
         if clear_history:
             # Clear history but keep system message if it exists
-            system_messages = [
-                msg for msg in self.conversation_history if msg.get("role") == "system"
-            ]
+            system_messages = [msg for msg in self.conversation_history if msg.get("role") == "system"]
             self.conversation_history = system_messages.copy()
             # Clear backend history while maintaining session
             if self.backend.is_stateful():
@@ -300,9 +301,7 @@ class SingleAgent(ChatAgent):
 
         # Re-add system message if it exists
         if self.system_message:
-            self.conversation_history.append(
-                {"role": "system", "content": self.system_message}
-            )
+            self.conversation_history.append({"role": "system", "content": self.system_message})
 
     def get_configurable_system_message(self) -> Optional[str]:
         """Get the user-configurable part of the system message."""
@@ -317,16 +316,11 @@ class SingleAgent(ChatAgent):
         self.system_message = system_message
 
         # Remove old system message if exists
-        if (
-            self.conversation_history
-            and self.conversation_history[0].get("role") == "system"
-        ):
+        if self.conversation_history and self.conversation_history[0].get("role") == "system":
             self.conversation_history.pop(0)
 
         # Add new system message at the beginning
-        self.conversation_history.insert(
-            0, {"role": "system", "content": system_message}
-        )
+        self.conversation_history.insert(0, {"role": "system", "content": system_message})
 
 
 class ConfigurableAgent(SingleAgent):
@@ -381,37 +375,33 @@ class ConfigurableAgent(SingleAgent):
                 "agent_type": "configurable",
                 "config": self.config.to_dict(),
                 "capabilities": {
-                    "web_search": self.config.backend_params.get(
-                        "enable_web_search", False
-                    ),
-                    "code_execution": self.config.backend_params.get(
-                        "enable_code_interpreter", False
-                    ),
+                    "web_search": self.config.backend_params.get("enable_web_search", False),
+                    "code_execution": self.config.backend_params.get("enable_code_interpreter", False),
                 },
-            }
+            },
         )
         return status
 
     def get_configurable_system_message(self) -> Optional[str]:
         """Get the user-configurable part of the system message for ConfigurableAgent."""
         # Try multiple sources in order of preference
-        
+
         # First check if backend has system prompt configuration
         if self.config and self.config.backend_params:
             backend_params = self.config.backend_params
-            
-            # For Claude Code: prefer system_prompt (complete override) 
+
+            # For Claude Code: prefer system_prompt (complete override)
             if "system_prompt" in backend_params:
                 return backend_params["system_prompt"]
-            
+
             # Then append_system_prompt (additive)
             if "append_system_prompt" in backend_params:
                 return backend_params["append_system_prompt"]
-        
+
         # Fall back to custom_system_instruction (deprecated but still supported)
         if self.config and self.config.custom_system_instruction:
             return self.config.custom_system_instruction
-            
+
         # Finally fall back to parent class implementation
         return super().get_configurable_system_message()
 
@@ -421,9 +411,7 @@ class ConfigurableAgent(SingleAgent):
 # =============================================================================
 
 
-def create_simple_agent(
-    backend: LLMBackend, system_message: str = None, agent_id: str = None
-) -> SingleAgent:
+def create_simple_agent(backend: LLMBackend, system_message: str = None, agent_id: str = None) -> SingleAgent:
     """Create a simple single agent."""
     # Use MassGen evaluation system message if no custom system message provided
     if system_message is None:
@@ -431,14 +419,10 @@ def create_simple_agent(
 
         templates = MessageTemplates()
         system_message = templates.evaluation_system_message()
-    return SingleAgent(
-        backend=backend, agent_id=agent_id, system_message=system_message
-    )
+    return SingleAgent(backend=backend, agent_id=agent_id, system_message=system_message)
 
 
-def create_expert_agent(
-    domain: str, backend: LLMBackend, model: str = "gpt-4o-mini"
-) -> ConfigurableAgent:
+def create_expert_agent(domain: str, backend: LLMBackend, model: str = "gpt-4o-mini") -> ConfigurableAgent:
     """Create an expert agent for a specific domain."""
     from .agent_config import AgentConfig
 
@@ -446,9 +430,7 @@ def create_expert_agent(
     return ConfigurableAgent(config=config, backend=backend)
 
 
-def create_research_agent(
-    backend: LLMBackend, model: str = "gpt-4o-mini"
-) -> ConfigurableAgent:
+def create_research_agent(backend: LLMBackend, model: str = "gpt-4o-mini") -> ConfigurableAgent:
     """Create a research agent with web search capabilities."""
     from .agent_config import AgentConfig
 
@@ -456,9 +438,7 @@ def create_research_agent(
     return ConfigurableAgent(config=config, backend=backend)
 
 
-def create_computational_agent(
-    backend: LLMBackend, model: str = "gpt-4o-mini"
-) -> ConfigurableAgent:
+def create_computational_agent(backend: LLMBackend, model: str = "gpt-4o-mini") -> ConfigurableAgent:
     """Create a computational agent with code execution."""
     from .agent_config import AgentConfig
 

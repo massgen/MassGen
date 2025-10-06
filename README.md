@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+" style="margin-right: 5px;">
+    <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+" style="margin-right: 5px;">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
@@ -42,10 +42,16 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>✨ Key Features</h3></summary>
 
 - [Cross-Model/Agent Synergy](#-key-features-1)
-- [Parallel Processing](#-key-features-1)  
+- [Parallel Processing](#-key-features-1)
 - [Intelligence Sharing](#-key-features-1)
 - [Consensus Building](#-key-features-1)
 - [Live Visualization](#-key-features-1)
+</details>
+
+<details open>
+<summary><h3>🆕 Latest Features</h3></summary>
+
+- [v0.0.27 Features](#-latest-features-v0027)
 </details>
 
 <details open>
@@ -67,10 +73,13 @@ This project started with the "threads of thought" and "iterative refinement" id
   - [Models](#models)
   - [Tools](#tools)
 - [🏃 Run MassGen](#4--run-massgen)
-  - [Quick Test with A Single Model](#quick-test-with-a-single-model)
-  - [Multiple Agents from Config](#multiple-agents-from-config)
   - [CLI Configuration Parameters](#cli-configuration-parameters)
-  - [Configuration File Format](#configuration-file-format)
+  - [1. Single Agent (Easiest Start)](#1-single-agent-easiest-start)
+  - [2. Multi-Agent Collaboration (Recommended)](#2-multi-agent-collaboration-recommended)
+  - [3. Model Context Protocol (MCP)](#3-model-context-protocol-mcp)
+  - [4. File System Operations](#4-file-system-operations--workspace-management)
+  - [5. Project Integration (NEW in v0.0.21)](#5-project-integration--user-context-paths-new-in-v0021)
+  - [Backend Configuration Reference](#backend-configuration-reference)
   - [Interactive Multi-Turn Mode](#interactive-multi-turn-mode)
 - [📊 View Results](#5--view-results)
   - [Real-time Display](#real-time-display)
@@ -78,27 +87,24 @@ This project started with the "threads of thought" and "iterative refinement" id
 </details>
 
 <details open>
-<summary><h3>💡 Examples</h3></summary>
+<summary><h3>💡 Case Studies & Examples</h3></summary>
 
-- [📚 Case Studies](#case-studies)
-- [❓ Question Answering](#1--question-answering)
-- [🧠 Creative Writing](#2--creative-writing)
-- [🔬 Research](#3-research)
+- [Case Studies](#-case-studies)
 </details>
 
 <details open>
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.17](#recent-achievements-v0017)
-  - [v0.0.3 - v0.0.16](#previous-achievements-v003-v0016)
+  - [v0.0.27](#recent-achievements-v0027)
+  - [v0.0.3 - v0.0.26](#previous-achievements-v003---v0026)
 - [Key Future Enhancements](#key-future-enhancements)
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
   - Web Interface
-- [v0.0.18 Roadmap](#v0018-roadmap)
+- [v0.0.28 Roadmap](#v0028-roadmap)
 </details>
 
 <details open>
@@ -120,6 +126,44 @@ This project started with the "threads of thought" and "iterative refinement" id
 | **👥 Intelligence Sharing** | Agents share and learn from each other's work |
 | **🔄 Consensus Building** | Natural convergence through collaborative refinement |
 | **📊 Live Visualization** | See agents' working processes in real-time |
+
+---
+
+## 🆕 Latest Features (v0.0.27)
+
+```bash
+uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+```
+
+**Experience v0.0.27 Multimodal Features**:
+
+See the new multimodal support and image processing capabilities in action:
+
+[![MassGen v0.0.27 Multimodal Demo](https://img.youtube.com/vi/qm6Y5qSpsEg/0.jpg)](https://www.youtube.com/watch?v=qm6Y5qSpsEg)
+
+**What's New in v0.0.27:**
+- **Multimodal Support - Image Processing** - Image generation and understanding with new `stream_chunk` module
+- **Additional Features**: File upload/search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
+
+**Try v0.0.27 Features Now:**
+```bash
+# Image generation with Single agent
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
+  "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+
+# Image understanding with multiple agents
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
+  "Please summarize the content in this image."
+
+# File search for document Q&A
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
+  "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
+```
+
+→ [See all release examples](massgen/configs/README.md#release-history--examples)
 
 ---
 
@@ -170,14 +214,13 @@ This collaborative approach ensures that the final output leverages collective i
 
 ### 1. 📥 Installation
 
-**Core Installation:**
+**Core Installation** (requires Python 3.11+):
 ```bash
 git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 
 pip install uv
 uv venv
-
 ```
 
 **Optional CLI Tools** (for enhanced capabilities):
@@ -207,7 +250,9 @@ cp .env.example .env
  - [Claude](https://docs.anthropic.com/en/api/overview)
  - [Gemini](https://ai.google.dev/gemini-api/docs)
  - [Grok](https://docs.x.ai/docs/overview)
+ - [Kimi/Moonshot](https://platform.moonshot.ai/)
  - [OpenAI](https://platform.openai.com/api-keys)
+ - [POE](https://poe.com/)
  - [Z AI](https://docs.z.ai/guides/overview/quick-start)
 
 ### 3. 🧩 Supported Models and Tools
@@ -224,17 +269,22 @@ The system currently supports multiple model providers with advanced capabilitie
 - **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
 - **Grok**: Grok-4, Grok-3, Grok-3-mini...
 - **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano)...
-- **Together AI**, **Fireworks AI**, **Groq**, **Nebius AI Studio**, **OpenRouter**: LLaMA, Mistral, Qwen...
+- **Together AI**, **Fireworks AI**, **Groq**, **Kimi/Moonshot**, **Nebius AI Studio**, **OpenRouter**, **POE**: LLaMA, Mistral, Qwen...
 - **Z AI**: GLM-4.5
 
-**Local Model Support (NEW in v0.0.7):**
-- **LM Studio**: Run open-weight models locally with automatic server management
+**Local Model Support:**
+- **vLLM & SGLang** (ENHANCED in v0.0.25): Unified inference backend supporting both vLLM and SGLang servers
+  - Auto-detection between vLLM (port 8000) and SGLang (port 30000) servers
+  - Support for both vLLM and SGLang-specific parameters (top_k, repetition_penalty, separate_reasoning)
+  - Mixed server deployments with configuration example: `two_qwen_vllm_sglang.yaml`
+
+- **LM Studio** (v0.0.7+): Run open-weight models locally with automatic server management
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
   - Zero-cost usage reporting
   - Support for LLaMA, Mistral, Qwen and other open-weight models
 
-More providers and local inference engines (vllm, sglang) are welcome to be added.
+More providers and local inference engines (sglang) are welcome to be added.
 
 #### Tools
 
@@ -245,123 +295,17 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 | Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
 |---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
 | **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API** | ✅ | ✅ | ❌ | ❌ | Web search, code interpreter |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
 | **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
 | **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ❌ | ❌ | Web search only |
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | Web search, **MCP integration** |
 | **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ❌ | ❌ | - |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
+
 
 ### 4. 🏃 Run MassGen
 
-#### Quick Test with A Single Model
-
-**API-based backends:**
-```bash
-uv run python -m massgen.cli --model claude-3-5-sonnet-latest "When is your knowledge up to"
-uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"
-uv run python -m massgen.cli --model grok-3-mini "When is your knowledge up to"
-uv run python -m massgen.cli --model gpt-5-nano "When is your knowledge up to"
-
-uv run python -m massgen.cli --backend chatcompletion --base-url https://api.cerebras.ai/v1 --model gpt-oss-120b "When is your knowledge up to"
-
-# Azure OpenAI (NEW in v0.0.10, requires environment variables)
-uv run python -m massgen.cli --backend azure_openai --model gpt-4.1 "When is your knowledge up to"
-```
-
-All the models with a default backend can be found [here](massgen/utils.py).
-
-#### 🆕 OpenAI with MCP Tools (NEW in v0.0.17)
-
-**Quick Examples - Try These Now:**
-```bash
-# Simple weather query using MCP-enabled OpenAI/GPT-5
-uv run python -m massgen.cli --config gpt5_mini_mcp_example.yaml "What's the weather in Tokyo?"
-
-# Test MCP server connection with OpenAI
-uv run python -m massgen.cli --config gpt5_mini_mcp_test.yaml "Test the MCP tools - show me what you can do"
-
-# Test MCP with streamable-http server
-# First start the HTTP test server:
-uv run python massgen/tests/test_http_mcp_server.py
-# Then try:
-uv run python -m massgen.cli --config gpt5_mini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
-
-# Multi-agent setup with OpenAI MCP and Claude Code
-uv run python -m massgen.cli --config gpt5mini_claude_code_discord_mcp_example.yaml "Work together to analyze the latest tech trends"
-```
-
-**What's happening:** OpenAI models (GPT-4, GPT-5 series) now have full MCP support with automatic tool discovery and execution, matching Gemini's capabilities for unified MCP integration.
-
-#### 🆕 Gemini with MCP Tools (NEW in v0.0.15)
-
-**Quick Examples - Try These Now:**
-```bash
-# Simple weather query using MCP-enabled Gemini
-uv run python -m massgen.cli --config gemini_mcp_example.yaml "What's the weather in Tokyo?"
-
-# Travel research with multiple MCP servers (Airbnb + Brave Search)
-# First, set BRAVE_API_KEY in your .env file, then:
-uv run python -m massgen.cli --config multimcp_gemini.yaml "Find safe neighborhoods in Paris and suggest Airbnb stays for 2 people next week"
-
-# Test MCP server connection
-# Test server: massgen/tests/mcp_test_server.py (the config below will run it automatically)
-uv run python -m massgen.cli --config gemini_mcp_test.yaml "Test the MCP tools - show me what you can do"
-
-# Test MCP with streamable-http server
-# First start the HTTP test server:
-uv run python massgen/tests/test_http_mcp_server.py
-# Then try:
-uv run python -m massgen.cli --config gemini_streamable_http_test.yaml "Test the MCP tools - show me what you can do"
-```
-
-**What's happening:** Gemini automatically discovers and uses tools from configured MCP servers (weather data, web search, Airbnb listings, etc.) without manual tool calling.
-
-**Local models (NEW in v0.0.7):**
-```bash
-# Use LM Studio with automatic model management
-uv run python -m massgen.cli --config lmstudio.yaml "Explain quantum computing"
-```
-
-**CLI-based backends**:
-```bash
-# Claude Code - Native Claude Code SDK with comprehensive dev tools
-uv run python -m massgen.cli --backend claude_code --model sonnet "Can I use claude-3-5-haiku for claude code?"
-uv run python -m massgen.cli --backend claude_code --model sonnet "Debug this Python script"
-```
-
-`--backend` is required for CLI-based backends. Note: `--model` parameter is required but ignored for Claude Code backend (uses Claude's latest model automatically).
-
-#### Multiple Agents from Config
-```bash
-# Use configuration file
-uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
-
-# Mixed API and CLI backends
-uv run python -m massgen.cli --config claude_code_flash2.5.yaml "find 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in markdown"
-uv run python -m massgen.cli --config claude_code_gpt5nano.yaml "find 5 papers which are related to multi-agent scaling system Massgen, download them and list their title in markdown"
-
-# Azure OpenAI configurations (NEW in v0.0.10)
-uv run python -m massgen.cli --config azure_openai_single.yaml "What is machine learning?"
-uv run python -m massgen.cli --config azure_openai_multi.yaml "Compare different approaches to renewable energy"
-
-# MCP-enabled configurations (NEW in v0.0.9)
-uv run python -m massgen.cli --config multi_agent_playwright_automation.yaml "Browse https://github.com/Leezekun/MassGen and generate reports with screenshots"
-uv run python -m massgen.cli --config claude_code_discord_mcp_example.yaml "Extract 3 latest discord messages"
-uv run python -m massgen.cli --config claude_code_twitter_mcp_example.yaml "Search for the 3 latest tweets from @massgen_ai"
-
-# Hybrid local and API-based models (NEW in v0.0.7)
-uv run python -m massgen.cli --config two_agents_opensource_lmstudio.yaml "Analyze this algorithm's complexity"
-uv run python -m massgen.cli --config gpt5nano_glm_qwen.yaml "Design a distributed system architecture"
-
-# Debug mode for troubleshooting (NEW in v0.0.13)
-uv run python -m massgen.cli --model claude-3-5-sonnet-latest --debug "What is machine learning?"
-uv run python -m massgen.cli --config three_agents_default.yaml --debug "Debug multi-agent coordination"
-```
-
-All available quick configuration files can be found [here](massgen/configs).
-
-See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/TWITTER_MCP_ENESCINAR_SETUP.md) | [Playwright MCP](massgen/configs/PLAYWRIGHT_MCP_SETUP.md) | 
+#### 🚀 Getting Started
 
 #### CLI Configuration Parameters
 
@@ -376,32 +320,58 @@ See MCP server setup guides: [Discord MCP](massgen/configs/DISCORD_MCP_SETUP.md)
 | `--debug`          | Enable debug mode with verbose logging (NEW in v0.0.13). Shows detailed orchestrator activities, agent messages, backend operations, and tool calls. Debug logs are saved to `agent_outputs/log_{time}/massgen_debug.log`. |
 | `"<your question>"`         | Optional single-question input; if omitted, MassGen enters interactive chat mode. |
 
-#### Configuration File Format
 
-MassGen supports YAML/JSON configuration files with the following structure (All available quick configuration files can be found [here](massgen/configs)):
+#### **1. Single Agent (Easiest Start)**
 
-**Single Agent Configuration:**
+**Quick Start Commands:**
+```bash
+# Quick test with any supported model - no configuration needed
+uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
+uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
+uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
+```
+
+**Configuration:**
 
 Use the `agent` field to define a single agent with its backend and settings:
 
 ```yaml
-agent: 
+agent:
   id: "<agent_name>"
   backend:
-    type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend 
+    type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" | "zai" | "lmstudio" #Type of backend
     model: "<model_name>" # Model name
     api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
   system_message: "..."    # System Message for Single Agent
 ```
 
-**Multi-Agent Configuration:**
+→ [See all single agent configs](massgen/configs/basic/single/)
+
+
+#### **2. Multi-Agent Collaboration (Recommended)**
+
+**Configuration:**
 
 Use the `agents` field to define multiple agents, each with its own backend and config:
+
+**Quick Start Commands:**
+
+```bash
+# Three powerful agents working together - Gemini, GPT-5, and Grok
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/three_agents_default.yaml \
+  "Analyze the pros and cons of renewable energy"
+```
+
+**This showcases MassGen's core strength:**
+- **Gemini 2.5 Flash** - Fast research with web search
+- **GPT-5 Nano** - Advanced reasoning with code execution
+- **Grok-3 Mini** - Real-time information and alternative perspectives
 
 ```yaml
 agents:  # Multiple agents (alternative to 'agent')
   - id: "<agent1 name>"
-    backend: 
+    backend:
       type: "azure_openai" | "chatcompletion" | "claude" | "claude_code" | "gemini" | "grok" | "openai" |  "zai" | "lmstudio" #Type of backend
       model: "<model_name>" # Model name
       api_key: "<optional_key>"  # API key for backend. Uses env vars by default.
@@ -414,276 +384,423 @@ agents:  # Multiple agents (alternative to 'agent')
     system_message: "..."
 ```
 
-**Backend Configuration:**
+→ [Explore more multi-agent setups](massgen/configs/basic/multi/)
 
-Detailed parameters for each agent's backend can be specified using the following configuration formats:
 
-#### Chatcompletion
+#### **3. Model context protocol (MCP)**
 
-```yaml
-backend:
-  type: "chatcompletion"
-  model: "gpt-oss-120b"  # Model name
-  base_url: "https://api.cerebras.ai/v1" # Base URL for API endpoint
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500                   # Maximum response length
+The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardises how applications expose tools and context to language models. From the official documentation:
+
+>MCP is an open protocol that standardizes how applications provide context to LLMs. Think of MCP like a USB-C port for AI applications. Just as USB-C provides a standardized way to connect your devices to various peripherals and accessories, MCP provides a standardized way to connect AI models to different data sources and tools.
+
+**MCP Configuration Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `mcp_servers` | dict | **Yes** (for MCP) | Container for MCP server definitions |
+| └─ `type` | string | Yes | Transport: `"stdio"` or `"streamable-http"` |
+| └─ `command` | string | stdio only | Command to run the MCP server |
+| └─ `args` | list | stdio only | Arguments for the command |
+| └─ `url` | string | http only | Server endpoint URL |
+| └─ `env` | dict | No | Environment variables to pass |
+| `allowed_tools` | list | No | Whitelist specific tools (if omitted, all tools available) |
+| `exclude_tools` | list | No | Blacklist dangerous/unwanted tools |
+
+
+**Quick Start Commands ([Check backend MCP support here](#tools)):**
+
+```bash
+# Weather service with GPT-5
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+  "What's the weather forecast for New York this week?"
+
+# Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+  "Find the best restaurants in Paris and save the recommendations to a file"
 ```
 
-#### Claude
+**Configuration:**
 
 ```yaml
-backend:
-  type: "claude"
-  model: "claude-sonnet-4-20250514"  # Model name
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500                   # Maximum response length
-  enable_web_search: true            # Web search capability
-  enable_code_execution: true        # Code execution capability
-```
+agents:
+  # Basic MCP Configuration:
+  backend:
+    type: "openai"              # Your backend choice
+    model: "gpt-5-mini"         # Your model choice
 
-#### Gemini (v0.0.15+ with MCP Support)
+    # Add MCP servers here
+    mcp_servers:
+      weather:                  # Server name (you choose this)
+        type: "stdio"           # Communication type
+        command: "npx"          # Command to run
+        args: ["-y", "@modelcontextprotocol/server-weather"]  # MCP server package
 
-```yaml
-backend:
-  type: "gemini"
-  model: "gemini-2.5-flash"          # Model name
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500                   # Maximum response length
-  enable_web_search: true            # Web search capability
-  enable_code_execution: true        # Code execution capability
-  
-  # MCP (Model Context Protocol) servers configuration (v0.0.15+)
-  mcp_servers:
-    # Weather server
-    weather:
-      type: "stdio"
-      command: "npx"
-      args: ["-y", "@fak111/weather-mcp"]
-    
-    # Brave Search API server (requires BRAVE_API_KEY in .env)
-    brave_search:
-      type: "stdio"
-      command: "npx"
-      args: ["-y", "@modelcontextprotocol/server-brave-search"]
-      env:
-        BRAVE_API_KEY: "${BRAVE_API_KEY}"
-    
-    # Airbnb search server
-    airbnb:
-      type: "stdio"
-      command: "npx"
-      args: ["-y", "@openbnb/mcp-server-airbnb", "--ignore-robots-txt"]
-    
-    # Example streamable-http MCP server
-    test_http_server:
-      type: "streamable-http"
-      url: "http://localhost:5173/sse"  # URL for streamable-http transport
-  
+  # That's it! The agent can now check weather.
+
+  # Multiple MCP Tools Example:
+  backend:
+    type: "gemini"
+    model: "gemini-2.5-flash"
+    mcp_servers:
+      # Web search
+      search:
+        type: "stdio"
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-brave-search"]
+        env:
+          BRAVE_API_KEY: "${BRAVE_API_KEY}"  # Set in .env file
+
+      # HTTP-based MCP server (streamable-http transport)
+      custodm_api:
+        type: "streamable-http"   # For HTTP/SSE servers
+        url: "http://localhost:8080/mcp/sse"  # Server endpoint
+
+
   # Tool configuration (MCP tools are auto-discovered)
   allowed_tools:                        # Optional: whitelist specific tools
     - "mcp__weather__get_current_weather"
-    - "mcp__brave_search__brave_web_search"
-    - "mcp__airbnb__airbnb_search"
-  
+    - "mcp__test_server__mcp_echo"
+    - "mcp__test_server__add_numbers"
+
   exclude_tools:                        # Optional: blacklist specific tools
-    - "mcp__airbnb__debug_mode"
+    - "mcp__test_server__current_time"
 ```
 
-#### Grok
+→ [View more MCP examples](massgen/configs/tools/mcp/)
+
+
+#### **4. File System Operations & Workspace Management**
+
+MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
+
+
+**Filesystem Configuration Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `cwd` | string | **Yes** (for file ops) | Working directory for file operations (agent-specific workspace) |
+| `snapshot_storage` | string | Yes | Directory for workspace snapshots |
+| `agent_temporary_workspace` | string | Yes | Parent directory for temporary workspaces |
+
+
+**Quick Start Commands:**
+
+```bash
+# File operations with Claude Code
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+  "Create a Python web scraper and save results to CSV"
+
+# Multi-agent file collaboration
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+  "Generate a comprehensive project report with charts and analysis"
+```
+
+**Configuration:**
 
 ```yaml
-backend:
-  type: "grok"
-  model: "grok-3-mini"               # Model name
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500                   # Maximum response length
-  enable_web_search: true            # Web search capability (uses default: mode="auto", return_citations=true)
-  # OR manually specify search parameters via extra_body (conflicts with enable_web_search):
-  # extra_body:
-  #   search_parameters:
-  #     mode: "auto"                 # Search strategy (see Grok API docs for valid values)
-  #     return_citations: true       # Include search result citations 
+# Basic Workspace Setup:
+agents:
+  - id: "file-agent"
+    backend:
+      type: "claude_code"          # Backend with file support
+      model: "claude-sonnet-4"     # Your model choice
+      cwd: "workspace"             # Isolated workspace for file operations
+
+# Multi-Agent Workspace Isolation:
+agents:
+  - id: "analyzer"
+    backend:
+      type: "claude_code"
+      cwd: "workspace1"            # Agent-specific workspace
+
+  - id: "reviewer"
+    backend:
+      type: "gemini"
+      cwd: "workspace2"            # Separate workspace
+
+orchestrator:
+  snapshot_storage: "snapshots"              # Shared snapshots directory
+  agent_temporary_workspace: "temp_workspaces" # Temporary workspace management
+```
+**Available File Operations:**
+- **Claude Code**: Built-in tools (Read, Write, Edit, MultiEdit, Bash, Grep, Glob, LS, TodoWrite)
+- **Other Backends**: Via [MCP Filesystem Server](https://github.com/modelcontextprotocol/servers/blob/main/src%2Ffilesystem%2FREADME.md)
+
+**Workspace Management:**
+- **Isolated Workspaces**: Each agent's `cwd` is fully isolated and writable
+- **Snapshot Storage**: Share workspace context between Claude Code agents
+- **Temporary Workspaces**: Agents can access previous coordination results
+
+→ [View more filesystem examples](massgen/configs/tools/filesystem/)
+
+> ⚠️ **IMPORTANT SAFETY WARNING**
+>
+> MassGen agents can **autonomously read, write, modify, and delete files** within their permitted directories.
+>
+> **Before running MassGen with filesystem access:**
+> - Only grant access to directories you're comfortable with agents modifying
+> - Use the permission system to restrict write access where needed
+> - Consider testing in an isolated directory or virtual environment first
+> - Back up important files before granting write access
+> - Review the `context_paths` configuration carefully
+>
+> The agents will execute file operations without additional confirmation once permissions are granted.
+
+#### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
+
+Work directly with your existing projects! User Context Paths allow you to share specific directories with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
+
+MassGen automatically organizes all its working files under a `.massgen/` directory in your project root, keeping your project clean and making it easy to exclude MassGen's temporary files from version control.
+
+**Project Integration Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `context_paths` | list | **Yes** (for project integration) | Shared directories for all agents |
+| └─ `path` | string | Yes | Absolute path to your project directory (**must be directory, not file**) |
+| └─ `permission` | string | Yes | Access level: `"read"` or `"write"` |
+
+**⚠️ Important:** Context paths must point to **directories**, not individual files. MassGen validates all paths during startup and will show clear error messages for missing paths or file paths.
+
+
+**Quick Start Commands:**
+
+```bash
+# Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
-#### Azure OpenAI
+**Configuration:**
 
 ```yaml
-backend:
-  type: "azure_openai"
-  model: "gpt-4.1"                     # Azure OpenAI deployment name
-  base_url: "https://your-resource.openai.azure.com/"  # Azure OpenAI endpoint
-  api_key: "<optional_key>"          # API key for backend. Uses AZURE_OPENAI_API_KEY env var by default.
-  api_version: "2024-02-15-preview" # Azure OpenAI API version
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2500                   # Maximum response length
-  enable_code_interpreter: true      # Code interpreter capability
+# Basic Project Integration:
+agents:
+  - id: "code-reviewer"
+    backend:
+      type: "claude_code"
+      cwd: "workspace"             # Agent's isolated work area
+
+orchestrator:
+  context_paths:
+    - path: "/home/user/my-project/src"
+      permission: "read"           # Agents can analyze your code
+    - path: "/home/user/my-project/docs"
+      permission: "write"          # Final agent can update docs
+
+# Advanced: Multi-Agent Project Collaboration
+agents:
+  - id: "analyzer"
+    backend:
+      type: "gemini"
+      cwd: "analysis_workspace"
+
+  - id: "implementer"
+    backend:
+      type: "claude_code"
+      cwd: "implementation_workspace"
+
+orchestrator:
+  context_paths:
+    - path: "/home/user/legacy-app/src"
+      permission: "read"           # Read existing codebase
+    - path: "/home/user/legacy-app/tests"
+      permission: "write"          # Write new tests
+    - path: "/home/user/modernized-app"
+      permission: "write"          # Create modernized version
 ```
 
-#### OpenAI (v0.0.17+ with MCP Support)
+**This showcases project integration:**
+- **Real Project Access** - Work with your actual codebases, not copies
+- **Secure Permissions** - Granular control over what agents can read/modify
+- **Multi-Agent Collaboration** - Multiple agents safely work on the same project
+- **Context Agents** (during coordination): Always READ-only access to protect your files
+- **Final Agent** (final execution): Gets the configured permission (READ or write)
 
-```yaml
-backend:
-  type: "openai"
-  model: "gpt-5-mini"                # Model name
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0, GPT-5 series models and GPT o-series models don't support this)
-  max_tokens: 2500                   # Maximum response length (GPT-5 series models and GPT o-series models don't support this)
-  text: 
-    verbosity: "medium"              # Response detail level (low/medium/high, only supported in GPT-5 series models)
-  reasoning:                         
-    effort: "medium"                 # Reasoning depth (low/medium/high, only supported in GPT-5 series models and GPT o-series models)
-    summary: "auto"                  # Automatic reasoning summaries (optional)
-  enable_web_search: true            # Web search capability - can be used with reasoning
-  enable_code_interpreter: true      # Code interpreter capability - can be used with reasoning
-  
-  # MCP (Model Context Protocol) servers configuration (v0.0.17+)
-  mcp_servers:
-    # Weather server
-    weather:
-      type: "stdio"
-      command: "npx"
-      args: ["-y", "@fak111/weather-mcp"]
-    
-    # Brave Search API server (requires BRAVE_API_KEY in .env)
-    brave_search:
-      type: "stdio"
-      command: "npx"
-      args: ["-y", "@modelcontextprotocol/server-brave-search"]
-      env:
-        BRAVE_API_KEY: "${BRAVE_API_KEY}"
-    
-    # Example streamable-http MCP server
-    test_http_server:
-      type: "streamable-http"
-      url: "http://localhost:5173/sse"  # URL for streamable-http transport
-  
-  # Tool configuration (MCP tools are auto-discovered)
-  allowed_tools:                        # Optional: whitelist specific tools
-    - "mcp__weather__get_current_weather"
-    - "mcp__brave_search__brave_web_search"
-  
-  exclude_tools:                        # Optional: blacklist specific tools
-    - "mcp__weather__debug_mode"
+**Use Cases:**
+- **Code Review**: Agents analyze your source code and suggest improvements
+- **Documentation**: Agents read project docs to understand context and generate updates
+- **Data Processing**: Agents access shared datasets and generate analysis reports
+- **Project Migration**: Agents examine existing projects and create modernized versions
+
+**Clean Project Organization:**
+```
+your-project/
+├── .massgen/                          # All MassGen state
+│   ├── sessions/                      # Multi-turn conversation history (if using interactively)
+│   │   └── session_20240101_143022/
+│   │       ├── turn_1/                # Results from turn 1
+│   │       ├── turn_2/                # Results from turn 2
+│   │       └── SESSION_SUMMARY.txt    # Human-readable summary
+│   ├── workspaces/                    # Agent working directories
+│   │   ├── agent1/                    # Individual agent workspaces
+│   │   └── agent2/
+│   ├── snapshots/                     # Workspace snapshots for coordination
+│   └── temp_workspaces/               # Previous turn results for context
+├── massgen/
+└── ...
 ```
 
-#### Claude Code
+**Benefits:**
+- ✅ **Clean Projects** - All MassGen files contained in one directory
+- ✅ **Easy Gitignore** - Just add `.massgen/` to `.gitignore`
+- ✅ **Portable** - Move or delete `.massgen/` without affecting your project
+- ✅ **Multi-Turn Sessions** - Conversation history preserved across sessions
 
-```yaml
-backend:
-  type: "claude_code"
-  cwd: "claude_code_workspace"  # Working directory for file operations
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  
-  # Claude Code specific options
-  system_prompt: "" # Custom system prompt to replace default
-  append_system_prompt: ""  # Custom system prompt to append
-  max_thinking_tokens: 4096                   # Maximum thinking tokens
-
-  # MCP (Model Context Protocol) servers configuration
-  mcp_servers:
-    # Discord integration server
-    discord:
-      type: "stdio"                    # Communication type: stdio (standard input/output)
-      command: "npx"                    # Command to execute: Node Package Execute
-      args: ["-y", "mcp-discord", "--config", "YOUR_DISCORD_TOKEN"]  # Arguments: -y (auto-confirm), mcp-discord package, config with Discord bot token
-    
-    # Playwright web automation server
-    playwright:
-      type: "stdio"                    # Communication type: stdio (standard input/output)
-      command: "npx"                    # Command to execute: Node Package Execute
-      args: [
-        "@playwright/mcp@latest",
-        "--browser=chrome",              # Use Chrome browser
-        "--caps=vision,pdf",             # Enable vision and PDF capabilities
-        "--user-data-dir=/tmp/playwright-profile", # Persistent browser profile
-        "--save-trace"                 # Save Playwright traces for debugging
-      ]
-  
-  # Tool configuration (Claude Code's native tools)
-  allowed_tools:
-    - "Read"           # Read files from filesystem
-    - "Write"          # Write files to filesystem  
-    - "Edit"           # Edit existing files
-    - "MultiEdit"      # Multiple edits in one operation
-    - "Bash"           # Execute shell commands
-    - "Grep"           # Search within files
-    - "Glob"           # Find files by pattern
-    - "LS"             # List directory contents
-    - "WebSearch"      # Search the web
-    - "WebFetch"       # Fetch web content
-    - "TodoWrite"      # Task management
-    - "NotebookEdit"   # Jupyter notebook editing
-    # MCP tools (if available), MCP tools will be auto-discovered from the server
-    - "mcp__discord__discord_login"
-    - "mcp__discord__discord_readmessages"
-    - "mcp__playwright"
-```
-
-#### ZAI
-
-```yaml
-backend:
-  type: "zai"
-  model: "glm-4.5"  # Model name
-  base_url: "https://api.z.ai/api/paas/v4/" # Base URL for API endpoint
-  api_key: "<optional_key>"          # API key for backend. Uses env vars by default.
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  top_p: 0.7                    # Nucleus sampling cutoff; keeps smallest set of tokens with cumulative probability ≥ top_p
-```
-
-#### LM Studio (NEW in v0.0.7)
-
-```yaml
-backend:
-  type: "lmstudio"
-  model: "qwen2.5-7b-instruct"       # Model to load in LM Studio
-  temperature: 0.7                   # Creativity vs consistency (0.0-1.0)
-  max_tokens: 2000                   # Maximum response length
-```
-
-**UI Configuration:**
-
-Configure how MassGen displays information and handles logging during execution:
-
-```yaml
-ui:
-  display_type: "rich_terminal" | "terminal" | "simple"  # Display format for agent interactions
-  logging_enabled: true | false                          # Enable/disable real-time logging 
-```
-
-- `display_type`: Controls the visual presentation of agent interactions
-  - `"rich_terminal"`: Full-featured display with multi-region layout, live status updates, and colored output
-  - `"terminal"`: Standard terminal display with basic formatting and sequential output
-  - `"simple"`: Plain text output without any formatting or special display features
-- `logging_enabled`: When `true`, saves detailed timestamp, agent outputs and system status
-
-**Time Control Configuration:**
-
-Configure timeout settings to control how long MassGen's orchestrator can run:
-
-```yaml
-timeout_settings:
-  orchestrator_timeout_seconds: 30   # Maximum time for orchestration
-```
-
-- `orchestrator_timeout_seconds`: Sets the maximum time allowed for the orchestration phase
-
-**Orchestrator Configuration:**
-
-Configure the orchestrator settings for managing agent workspace snapshots and temporary workspaces:
-
+**Configuration Auto-Organization:**
 ```yaml
 orchestrator:
-  snapshot_storage: "claude_code_snapshots"        # Directory to store workspace snapshots
-  agent_temporary_workspace: "claude_code_temp_workspaces"  # Directory for temporary agent workspaces
+  # User specifies simple names - MassGen organizes under .massgen/
+  snapshot_storage: "snapshots"         # → .massgen/snapshots/
+  session_storage: "sessions"           # → .massgen/sessions/
+  agent_temporary_workspace: "temp"     # → .massgen/temp/
+
+agents:
+  - backend:
+      cwd: "workspace1"                 # → .massgen/workspaces/workspace1/
 ```
 
-- `snapshot_storage`: Directory where MassGen saves workspace snapshots for Claude Code agents to share context
-- `agent_temporary_workspace`: Directory where temporary agent workspaces are created and managed during collaboration
+→ [Learn more about project integration](massgen/mcp_tools/permissions_and_context_files.md)
+
+**Security Considerations:**
+- **Agent ID Safety**: Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
+- **File Access Control**: Restrict file access using MCP server configurations when needed
+- **Path Validation**: All context paths are validated to ensure they exist and are directories (not files)
+- **Directory-Only Context Paths**: Context paths must point to directories, not individual files
+
+---
+
+#### Additional Examples by Provider
+
+**Claude (Recursive MCP Execution - v0.0.20+)**
+```bash
+# Claude with advanced tool chaining
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/claude_mcp_example.yaml \
+  "Research and compare weather in Beijing and Shanghai"
+```
+
+**OpenAI (GPT-5 Series with MCP - v0.0.17+)**
+```bash
+# GPT-5 with weather and external tools
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
+  "What's the weather of Tokyo"
+```
+
+**Gemini (Multi-Server MCP - v0.0.15+)**
+```bash
+# Gemini with multiple MCP services
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+  "Find accommodations in Paris with neighborhood analysis"    # (requires BRAVE_API_KEY in .env)
+```
+
+**Claude Code (Development Tools)**
+```bash
+# Professional development environment with auto-configured workspace
+uv run python -m massgen.cli \
+  --backend claude_code \
+  --model sonnet \
+  "Create a Flask web app with authentication"
+
+# Default workspace directories created automatically:
+# - workspace1/              (working directory)
+# - snapshots/              (workspace snapshots)
+# - temp_workspaces/        (temporary agent workspaces)
+```
+
+**Local Models (LM Studio - v0.0.7+)**
+```bash
+# Run open-source models locally
+uv run python -m massgen.cli \
+  --config massgen/configs/providers/local/lmstudio.yaml \
+  "Explain machine learning concepts"
+```
+
+→ [Browse by provider](massgen/configs/providers/) | [Browse by tools](massgen/configs/tools/) | [Browse teams](massgen/configs/teams/)
+
+#### Additional Use Case Examples
+
+**Question Answering & Research:**
+```bash
+# Complex research with multiple perspectives
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+  "What's best to do in Stockholm in October 2025"
+
+# Specific research requirements
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+  "Give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025"
+```
+
+**Creative Writing:**
+```bash
+# Story generation with multiple creative agents
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+  "Write a short story about a robot who discovers music"
+```
+
+**Development & Coding:**
+```bash
+# Full-stack development with file operations
+uv run python -m massgen.cli \
+  --config  massgen/configs/tools/filesystem/claude_code_single.yaml \
+  "Create a Flask web app with authentication"
+```
+
+**Web Automation:** (still in test)
+```bash
+# Browser automation with screenshots and reporting
+# Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
+  "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
+
+# Data extraction and analysis
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
+  "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
+```
+
+→ [**See detailed case studies**](docs/case_studies/README.md) with real session logs and outcomes
+
+#### Interactive Mode & Advanced Usage
+
+**Multi-Turn Conversations:**
+```bash
+# Start interactive chat (no initial question)
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/three_agents_default.yaml
+
+# Debug mode for troubleshooting
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/three_agents_default.yaml \
+  --debug "Your question"
+```
+
+## Configuration Files
+
+MassGen configurations are organized by features and use cases. See the [Configuration Guide](massgen/configs/README.md) for detailed organization and examples.
+
+**Quick navigation:**
+- **Basic setups**: [Single agent](massgen/configs/basic/single/) | [Multi-agent](massgen/configs/basic/multi/)
+- **Tool integrations**: [MCP servers](massgen/configs/tools/mcp/) | [Web search](massgen/configs/tools/web-search/) | [Filesystem](massgen/configs/tools/filesystem/)
+- **Provider examples**: [OpenAI](massgen/configs/providers/openai/) | [Claude](massgen/configs/providers/claude/) | [Gemini](massgen/configs/providers/gemini/)
+- **Specialized teams**: [Creative](massgen/configs/teams/creative/) | [Research](massgen/configs/teams/research/) | [Development](massgen/configs/teams/development/)
+
+See MCP server setup guides: [Discord MCP](massgen/configs/docs/DISCORD_MCP_SETUP.md) | [Twitter MCP](massgen/configs/docs/TWITTER_MCP_ENESCINAR_SETUP.md)
+
+#### Backend Configuration Reference
+
+For detailed configuration of all supported backends (OpenAI, Claude, Gemini, Grok, etc.), see:
+
+→ **[Backend Configuration Guide](massgen/configs/BACKEND_CONFIGURATION.md)**
 
 #### Interactive Multi-Turn Mode
 
@@ -694,12 +811,15 @@ MassGen supports an interactive mode where you can have ongoing conversations wi
 uv run python -m massgen.cli --model gpt-5-mini
 
 # Start interactive mode with configuration file
-uv run python -m massgen.cli --config three_agents_default.yaml
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/multi/three_agents_default.yaml
 ```
 
 **Interactive Mode Features:**
 - **Multi-turn conversations**: Multiple agents collaborate to chat with you in an ongoing conversation
-- **Real-time feedback**: Displays real-time agent and system status
+- **Real-time coordination tracking**: Live visualization of agent interactions, votes, and decision-making processes
+- **Interactive coordination table**: Press `r` to view complete history of agent coordination events and state transitions
+- **Real-time feedback**: Displays real-time agent and system status with enhanced coordination visualization
 - **Clear conversation history**: Type `/clear` to reset the conversation and start fresh
 - **Easy exit**: Type `/quit`, `/exit`, `/q`, or press `Ctrl+C` to stop
 
@@ -762,9 +882,7 @@ massgen_logs/
 ##### Important Note
 The final presentation continues to be stored in each Claude Code Agent's workspace as before. After generating the final presentation, the relevant files will be copied to the `final_workspace/` directory.
 
-## 💡 Examples
-
-Here are a few examples of how you can use MassGen for different tasks:
+## 💡 Case Studies
 
 ### Case Studies
 
@@ -772,59 +890,8 @@ To see how MassGen works in practice, check out these detailed case studies base
 
 - [**MassGen Case Studies**](docs/case_studies/README.md)
 
-<!-- Uncomment when we add coding agent support -->
-<!-- ### 1. 📝 Code Generation
-
-```bash
-uv run python cli.py --config examples/fast_config.yaml "Design a logo for MassGen (multi-agent scaling system for GenAI) GitHub README"
-``` -->
-
-### 1. ❓ Question Answering
-
-```bash
-# Ask a question about a complex topic
-uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "what's best to do in Stockholm in October 2025"
-
-uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
-```
-
-### 2. 🧠 Creative Writing
-
-```bash
-# Generate a short story
-uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "Write a short story about a robot who discovers music."
-```
-
-### 3. 🧠 Research
-```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
-```
-
-### 4. 💻 Development & Coding Tasks
-```bash
-# Single agent with comprehensive development tools
-uv run python -m massgen.cli --config massgen/configs/claude_code_single.yaml "Create a Flask web app with user authentication and database integration"
-
-# Multi-agent development team collaboration  
-uv run python -m massgen.cli --config massgen/configs/claude_code_flash2.5_gptoss.yaml "Debug and optimize this React application, then write comprehensive tests"
-
-# Quick coding task with claude_code backend
-uv run python -m massgen.cli --backend claude_code "Refactor this Python code to use async/await and add error handling"
-```
-
-### 5. 🌐 Web Automation & Browser Tasks
-```bash
-# Multi-agent web automation with Playwright MCP
-uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "browse https://github.com/Leezekun/MassGen and suggest improvement. Include screenshots and suggestions in a PDF."
-
-# Web scraping and analysis
-uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
-
-# E-commerce testing automation
-uv run python -m massgen.cli --config massgen/configs/multi_agent_playwright_automation.yaml "Test the checkout flow on an e-commerce site and generate a detailed test report"
-```
-
 ---
+
 
 ## 🗺️ Roadmap
 
@@ -832,22 +899,56 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.17)
+### Recent Achievements (v0.0.27)
 
-**🎉 Released: September 10, 2025**
+**🎉 Released: October 3, 2025**
 
-Version 0.0.17 extended MCP (Model Context Protocol) support to OpenAI backend, expanding the unified tool ecosystem:
+Version 0.0.27 introduces **Multimodal Support** with image processing capabilities, enabling agents to generate, understand, and process images alongside text:
 
-#### OpenAI MCP Integration
-- **Full MCP Support for OpenAI/GPT Models**: Complete MCP tool discovery and execution for GPT-4, GPT-5, and other OpenAI models
-- **Unified MCP Architecture**: Consistent MCP support across OpenAI, Gemini, and Claude Code backends
-- **Documentation for MCP Integration**: Added case studies and technical documentation for MCP integration
+#### Multimodal Support - Image Processing
+- **StreamChunk Module**: New architecture with dedicated `stream_chunk` module for handling multimodal content
+- **Image Generation and Understanding**: Multi-agent image generation and analysis with OpenAI's APIs
+- **Enhanced Display**: Terminal UI for rendering images, backend support for multimodal capabilities
 
-#### Key Capabilities
-- **Multi-Backend MCP**: Seamless MCP tool usage across different model providers
-- **Enhanced Debugging**: Improved error messages and debugging information for MCP operations
+#### File Upload and File Search
+- **File Upload**: Support for uploading files to backends via `upload_files` parameter
+- **File Search**: Vector-based file search for document Q&A with automatic vector store cleanup
 
-### Previous Achievements (v0.0.3-v0.0.16)
+#### Model and Tool Enhancements
+- **Claude Sonnet 4.5**: Added latest Claude model (`claude-sonnet-4-5-20250929`)
+- **Workspace Multimodal Tools**: New `read_multimodal_files` MCP tool for image processing
+- **API Parameters Handler**: New module for centralized parameter management
+
+#### Documentation and Resources
+- **Case Study**: Multi-turn filesystem support documentation
+- **Configurations**: New configs for image generation, understanding, and file search
+- **Example Resources**: Sample multimodal content for testing
+
+### Previous Achievements (v0.0.3 - v0.0.26)
+
+✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
+
+✅ **Protected Paths and File-Based Context Paths (v0.0.26)**: Protect specific files within write-permitted directories, grant access to individual files instead of entire directories
+
+✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
+
+✅ **SGLang Backend Integration (v0.0.25)**: Unified vLLM/SGLang backend with auto-detection, support for SGLang-specific parameters like `separate_reasoning`, and dual server support for mixed vLLM and SGLang deployments
+
+✅ **vLLM Backend Support (v0.0.24)**: Complete integration with vLLM for high-performance local model serving, POE provider support, GPT-5-Codex model recognition, backend utility modules refactoring, and comprehensive bug fixes including streaming chunk processing
+
+✅ **Backend Architecture Refactoring (v0.0.23)**: Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends, extracted formatter module for better code organization, and improved maintainability through unified MCP integration
+
+✅ **Workspace Copy Tools via MCP (v0.0.22)**: Seamless file copying capabilities between workspaces, configuration organization with hierarchical structure, and enhanced file operations for large-scale collaboration
+
+✅ **Grok MCP Integration (v0.0.21)**: Unified backend architecture with full MCP server support, filesystem capabilities through MCP servers, and enhanced configuration files
+
+✅ **Claude Backend MCP Support (v0.0.20)**: Extended MCP integration to Claude backend, full MCP protocol and filesystem support, robust error handling, and comprehensive documentation
+
+✅ **Comprehensive Coordination Tracking (v0.0.19)**: Complete coordination tracking and visualization system with event-based tracking, interactive coordination table display, and advanced debugging capabilities for multi-agent collaboration patterns
+
+✅ **Comprehensive MCP Integration (v0.0.18)**: Extended MCP to all Chat Completions backends (Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter), cross-provider function calling compatibility, 9 new MCP configuration examples
+
+✅ **OpenAI MCP Integration (v0.0.17)**: Extended MCP (Model Context Protocol) support to OpenAI backend with full tool discovery and execution capabilities for GPT models, unified MCP architecture across multiple backends, and enhanced debugging
 
 ✅ **Unified Filesystem Support with MCP Integration (v0.0.16)**: Complete `FilesystemManager` class providing unified filesystem access for Gemini and Claude Code backends, with MCP-based operations for file manipulation and cross-agent collaboration
 
@@ -895,22 +996,25 @@ Version 0.0.17 extended MCP (Model Context Protocol) support to OpenAI backend, 
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.18 Roadmap
+### v0.0.28 Roadmap
 
-Version 0.0.18 focuses on **universal MCP support and system observability**, extending MCP to the ChatCompletions backend while improving debugging and monitoring capabilities. Key priorities include:
+Version 0.0.28 focuses on integrating external agent frameworks, completing multimodal support, and enhancing extensibility:
 
 #### Required Features
-- **Chat Completions MCP Support**: Extend MCP integration to all Chat Completions backends
-- **Step-by-Step Orchestration Logging**: Clear logging that shows each phase of agent collaboration (task distribution → parallel work → consensus building → final answer) with detailed architecture documentation
-- **Enhanced Debugging & UI**: Fix scroll issues and improve long output handling
-- **Organized MCP Logging**: Structure and improve readability of MCP-related logs
+- **AG2 Integration (AdaptAgent)**: Enable AG2 agents to participate in MassGen's multi-agent workflows with seamless orchestration
+- **Complete Multimodal Support**: Extend audio and video processing capabilities beyond the image support added in v0.0.27
+
+#### Optional Features
+- **Custom Tool Register System**: Refactor tool registration for better extensibility and plugin support
+- **Web UI**: Modern web interface for real-time agent coordination visualization
 
 Key technical approach:
-- **Generic Backend Integration**: Extend MCP framework to ChatCompletionsBackend base class
-- **Architecture Documentation**: Create comprehensive diagrams and documentation in `/docs/architecture/`
-- **Enhanced Observability**: Add pipeline stage indicators and performance metrics
+- **AG2 Integration**: Adapter system enabling AG2 agents to work within MassGen orchestration with mixed-team support
+- **Audio/Video Processing**: Extend existing multimodal infrastructure with audio transcription, video understanding, and generation capabilities
+- **Tool Registry**: Plugin-based toolkit architecture for dynamic tool discovery and loading
+- **Web Interface**: Real-time visualization with multimodal content support and session management
 
-For detailed milestones and technical specifications, see the [full v0.0.18 roadmap](ROADMAP_v0.0.18.md).
+For detailed milestones and technical specifications, see the [full v0.0.28 roadmap](ROADMAP_v0.0.28.md).
 
 ---
 
@@ -926,7 +1030,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ---
 
-<div align="center"> 
+<div align="center">
 
 **⭐ Star this repo if you find it useful! ⭐**
 

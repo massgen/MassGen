@@ -1,0 +1,27 @@
+# MassGen Configuration
+# Usage:
+# uv run python -m massgen.cli --config massgen/configs/tools/mcp/grok3_mini_mcp_test.yaml "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
+agents:
+  - id: "grok3_mini_mcp_test"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      mcp_servers:
+        - name: "test_server"
+          type: "stdio"
+          command: "python"
+          args: ["-u", "-m", "massgen.tests.mcp_test_server"]
+    system_message: |
+      You are testing the MCP integration with Grok.
+
+      MCP tools from the "test_server" will be available via sessions and auto-called by the system when needed.
+      Do not output function-call syntax. Simply perform the tasks and present clear, concise results.
+
+      Tasks to verify:
+      - Echo: return the text given in the question.
+      - Add numbers: return the sum of a and b.
+      - Current time: return the current timestamp.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

@@ -1,0 +1,33 @@
+# uv tool run massgen --config tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml
+agents:
+  - id: "agent_a"
+    backend:
+      type: "grok"
+      model: "grok-4-fast-reasoning"  # "grok-code-fast-1"
+      cwd: "workspace1"  # Working directory for file operations
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      cwd: "workspace2"  # this is for the desired version
+
+  - id: "agent_c"
+    backend:
+      type: "claude_code"
+      cwd: "workspace3"  # Working directory for file operations
+      model: "claude-sonnet-4-20250514"
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+    session_storage: "sessions"  # Used for multi-turn conversations to store previous rounds.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

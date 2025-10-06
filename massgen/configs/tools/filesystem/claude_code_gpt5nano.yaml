@@ -1,0 +1,31 @@
+agents:
+  - id: "claude_code"
+    backend:
+      type: "claude_code"
+      cwd: "workspace1"
+
+      allowed_tools:
+        - "Read"
+        - "Write"
+        - "Bash"
+        - "LS"
+        - "WebSearch"
+
+  - id: "gpt-5-nano"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      cwd: "workspace2"
+      enable_web_search: true
+      enable_code_interpreter: true
+
+orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

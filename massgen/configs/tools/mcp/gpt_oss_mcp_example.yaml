@@ -1,0 +1,25 @@
+# MassGen Configuration: Gemini with MCP Integration
+# Usage:
+#   uv run python -m massgen.cli --config massgen/configs/tools/mcp/gpt_oss_mcp_example.yaml "whats the weather of Tokyo"
+agents:
+  - id: "gpt-oss-mcp_weather" # Cerebras AI
+    backend:
+      type: "chatcompletion"
+      model: "gpt-oss-120b"
+      base_url: "https://api.cerebras.ai/v1"
+      mcp_servers:
+        - name: "weather"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@fak111/weather-mcp"]
+    system_message: |
+      You are an AI assistant with access to weather information through MCP (Model Context Protocol) integration.
+
+      Weather tools are available via MCP sessions and will be called automatically by the system when needed.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about weather conditions, forecasts, or alerts, include the location and time frame in your
+      response and provide concise, up-to-date information using the integrated tools.
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

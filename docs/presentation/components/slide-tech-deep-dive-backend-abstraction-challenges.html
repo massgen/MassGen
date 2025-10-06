@@ -2,44 +2,90 @@
         <div class="slide">
             <div class="icon">🔧</div>
             <h2>Tech Deep Dive: Backend Abstraction Challenges</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
-                <div>
-                    <ul style="font-size: 1.4em;">
-                        <li><strong>🎭 Unified Interface:</strong> Standardized ChatAgent protocol for 8+ different backends</li>
-                        <li><strong>🛠️ Tool Integration:</strong> Web search, code execution, MCP</li>
-                        <li><strong>⚙️ StreamChunk Normalization:</strong> Convert diverse response formats to common protocol</li>
-                        <li><strong>🔀 Backend-Specific Workarounds:</strong> Each provider has unique limitations</li>
-                    </ul>
-                </div>
-                <div>
-                    <div style="background: #f8f9fa; padding: 20px; border-radius: 15px;">
-                        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #2c3e50;">Backend Challenges:</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
-                            <div style="background: #fff3cd; padding: 10px; border-radius: 8px; text-align: center;">
-                                <div style="font-weight: bold; color: #f39c12;">Claude Code CLI</div>
-                                <div style="font-size: 0.8em; color: #666;">Context sharing across agents</div>
-                            </div>
-                            <div style="background: #ffebee; padding: 10px; border-radius: 8px; text-align: center;">
-                                <div style="font-weight: bold; color: #e74c3c;">Gemini API</div>
-                                <div style="font-size: 0.8em; color: #666;">Can't mix builtin + custom tools</div>
-                            </div>
-                            <div style="background: #e1f5fe; padding: 10px; border-radius: 8px; text-align: center;">
-                                <div style="font-weight: bold; color: #0288d1;">GPT-5</div>
-                                <div style="font-size: 0.8em; color: #666;">API change (reasoning, streaming etc.)</div>
-                            </div>
-                            <div style="background: #f3e5f5; padding: 10px; border-radius: 8px; text-align: center;">
-                                <div style="font-weight: bold; color: #7b1fa2;">Most Backends</div>
-                                <div style="font-size: 0.8em; color: #666;">Unable to autonomously collaborate</div>
-                            </div>
-                        </div>
-                        <div style="margin-top: 15px; background: #e8f5e8; padding: 10px; border-radius: 8px; text-align: center;">
-                            <div style="font-weight: bold; color: #27ae60;">🎯 Our Solution:</div>
-                            <div style="font-size: 0.9em; color: #2d5a3d;">Binary Decision Framework & Advanced Workspace Sharing</div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 15px; font-size: 1em; color: #7f8c8d; text-align: center;">
-                        <strong>Result:</strong> Unified interface with backend-specific optimizations
-                    </div>
-                </div>
+            <div style="text-align: center; margin: 20px 0;">
+                <svg viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" style="width: 100%; max-width: 1000px; height: auto;">
+                    <defs>
+                        <marker id="arrowhead2-slide9" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
+                            <polygon points="0 0, 12 5, 0 10" fill="#4a5568" />
+                        </marker>
+                        <filter id="shadow-slide9" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="4" dy="4" stdDeviation="6" flood-color="#00000025"/>
+                        </filter>
+                        <linearGradient id="abstractionGradient-slide9" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Background -->
+                    <rect width="1200" height="700" fill="#f8f9fa"/>
+
+                    <!-- Title -->
+                    <text x="600" y="50" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#2c3e50">
+                        🎭 Unified Interface Challenge
+                    </text>
+
+                    <!-- Backend Boxes - Better spaced horizontally -->
+                    <!-- Claude Code -->
+                    <rect x="80" y="110" width="220" height="120" rx="15" fill="#fff3cd" stroke="#f39c12" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="190" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#f39c12">Claude Code CLI</text>
+                    <text x="190" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">Context sharing</text>
+                    <text x="190" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">across agents</text>
+
+                    <!-- Gemini -->
+                    <rect x="340" y="110" width="220" height="120" rx="15" fill="#ffebee" stroke="#e74c3c" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="450" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#e74c3c">Gemini API</text>
+                    <text x="450" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">Can't mix builtin +</text>
+                    <text x="450" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">custom tools</text>
+
+                    <!-- GPT-5 -->
+                    <rect x="600" y="110" width="220" height="120" rx="15" fill="#e1f5fe" stroke="#0288d1" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="710" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#0288d1">GPT-5</text>
+                    <text x="710" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">API changes</text>
+                    <text x="710" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">(reasoning, streaming)</text>
+
+                    <!-- Most Backends -->
+                    <rect x="860" y="110" width="220" height="120" rx="15" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="970" y="145" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#7b1fa2">Most Backends</text>
+                    <text x="970" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">Unable to autonomously</text>
+                    <text x="970" y="195" text-anchor="middle" font-family="Arial, sans-serif" font-size="17" fill="#666">collaborate</text>
+
+                    <!-- Simplified arrows - cleaner convergence -->
+                    <line x1="190" y1="240" x2="450" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+                    <line x1="450" y1="240" x2="520" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+                    <line x1="710" y1="240" x2="680" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+                    <line x1="970" y1="240" x2="750" y2="320" stroke="#4a5568" stroke-width="4" marker-end="url(#arrowhead2-slide9)" opacity="0.8"/>
+
+                    <!-- Unified ChatAgent Protocol (Abstraction Layer) - More prominent -->
+                    <rect x="200" y="340" width="800" height="160" rx="25" fill="url(#abstractionGradient-slide9)" filter="url(#shadow-slide9)" stroke="#5a67d8" stroke-width="2"/>
+                    <text x="600" y="385" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white">
+                        🎯 Unified ChatAgent Protocol
+                    </text>
+
+                    <!-- Features inside protocol - Better spacing and typography -->
+                    <rect x="280" y="420" width="180" height="70" rx="12" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="2"/>
+                    <text x="370" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">⚙️ StreamChunk</text>
+                    <text x="370" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white">Normalization</text>
+
+                    <rect x="510" y="420" width="180" height="70" rx="12" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="2"/>
+                    <text x="600" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">🔀 Workarounds</text>
+                    <text x="600" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white">Backend-specific</text>
+
+                    <rect x="740" y="420" width="180" height="70" rx="12" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="2"/>
+                    <text x="830" y="450" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white">🛠️ Tool Integration</text>
+                    <text x="830" y="470" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="white">MCP, Web, Code</text>
+
+                    <!-- Arrow to result -->
+                    <line x1="600" y1="535" x2="600" y2="550" stroke="#4a5568" stroke-width="5" marker-end="url(#arrowhead2-slide9)"/>
+
+                    <!-- Separate Result: Binary Decision Framework - Better positioned -->
+                    <rect x="200" y="565" width="800" height="90" rx="20" fill="#fff3cd" stroke="#f39c12" stroke-width="3" filter="url(#shadow-slide9)"/>
+                    <text x="600" y="595" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="#f39c12">
+                        🧠 Binary Decision Framework
+                    </text>
+                    <text x="600" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="#b7950b">
+                        Intelligent agent coordination and workspace sharing
+                    </text>
+                </svg>
             </div>
         </div>

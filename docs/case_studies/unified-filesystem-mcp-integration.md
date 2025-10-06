@@ -34,7 +34,7 @@ MassGen v0.0.16 introduces unified filesystem support for Gemini agents through 
 
 <h1 id="planning-phase">📋 PLANNING PHASE</h1>
 
-<h2 id="evaluation-design">📝 Evaluation Design</h2> 
+<h2 id="evaluation-design">📝 Evaluation Design</h2>
 
 ### Prompt
 "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
@@ -67,7 +67,7 @@ ui:
 
 ### Baseline Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 ```
 
 <h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
@@ -107,7 +107,7 @@ The unified filesystem support would be considered successful if:
 MassGen v0.0.16 (September 8, 2025)
 
 ### New Configuration
-Configuration file: [`massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml`](../../massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml)
+Configuration file: [`massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml`](../../massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml)
 
 Key breakthrough - **identical filesystem configuration across backends**:
 ```yaml
@@ -131,7 +131,7 @@ orchestrator:
 
 ### Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
+uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
 ```
 
 <h2 id="agents">🤖 Agents</h2>
@@ -350,7 +350,7 @@ MassGen v0.0.16 represents a **fundamental breakthrough** in multi-agent system 
 - **MCP Integration**: Clean approach to filesystem operations via Model Context Protocol for Gemini agents
 - **Cross-Backend Workspace Sharing**: First-time collaboration between Gemini and Claude Code backends
 
-### 🤝 **Collaborative Excellence** 
+### 🤝 **Collaborative Excellence**
 - **Backend Parity**: Gemini agents now have equivalent filesystem capabilities to Claude Code agents
 - **Intelligent Coordination**: Agents can access, analyze, and build upon each other's work across backend boundaries
 - **Enhanced Quality**: Cross-backend collaboration produces superior results than single-backend workflows
@@ -372,7 +372,7 @@ The v0.0.16 unified filesystem support establishes the foundation for expanding 
 
 | Feature | Status | Implementation | Notes |
 |---------|---------|---------------|--------|
-| FilesystemManager Class | ✅ Complete | `massgen/mcp_tools/filesystem_manager.py` | Unified filesystem for Gemini & Claude Code |
+| FilesystemManager Class | ✅ Complete | `massgen/backend/utils/filesystem_manager/` | Unified filesystem for Gemini & Claude Code |
 | MCP Filesystem Integration | ✅ Complete | MCP server auto-configuration | Gemini agents gain filesystem access |
 | Unified Configuration Syntax | ✅ Complete | Identical `cwd` support for Gemini & Claude Code | Ready for future backend expansion |
 | Enhanced Logging & Orchestration | ✅ Complete | Timestamped versioning | Comprehensive workflow tracking |

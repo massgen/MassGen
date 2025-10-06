@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Centralized logging configuration for MassGen using loguru.
 
@@ -14,12 +15,12 @@ Color Scheme for Debug Logging:
 - Red: Coordination steps (🔄)
 """
 
-import sys
-import os
 import inspect
-from pathlib import Path
-from typing import Optional, Any
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
+
 from loguru import logger
 
 # Remove default logger to have full control
@@ -28,40 +29,87 @@ logger.remove()
 # Global debug flag
 _DEBUG_MODE = False
 
-# Global log session directory
+# Global log session directory and turn tracking
 _LOG_SESSION_DIR = None
+_LOG_BASE_SESSION_DIR = None  # Base session dir (without turn subdirectory)
+_CURRENT_TURN = None
 
 
-def get_log_session_dir() -> Path:
-    """Get the current log session directory."""
-    global _LOG_SESSION_DIR
-    if _LOG_SESSION_DIR is None:
-        # Create main logs directory
-        log_base_dir = Path("massgen_logs")
+def get_log_session_dir(turn: Optional[int] = None) -> Path:
+    """Get the current log session directory.
+
+    Args:
+        turn: Optional turn number for multi-turn conversations
+
+    Returns:
+        Path to the log directory
+    """
+    global _LOG_SESSION_DIR, _LOG_BASE_SESSION_DIR, _CURRENT_TURN
+
+    # Initialize base session dir once per session
+    if _LOG_BASE_SESSION_DIR is None:
+        # Check if we're running from within the MassGen development directory
+        # by looking for pyproject.toml with massgen package
+        cwd = Path.cwd()
+        is_massgen_dev = False
+
+        # Check if pyproject.toml exists and contains massgen package definition
+        pyproject_file = cwd / "pyproject.toml"
+        if pyproject_file.exists():
+            try:
+                content = pyproject_file.read_text()
+                if 'name = "massgen"' in content:
+                    is_massgen_dev = True
+            except Exception:
+                pass
+
+        # Use massgen_logs/ for dev, .massgen/logs/ for external usage
+        if is_massgen_dev:
+            log_base_dir = Path("massgen_logs")
+        else:
+            log_base_dir = Path(".massgen") / "massgen_logs"
+
         log_base_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create timestamped session directory
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        _LOG_SESSION_DIR = log_base_dir / f"log_{timestamp}"
+        _LOG_BASE_SESSION_DIR = log_base_dir / f"log_{timestamp}"
+        _LOG_BASE_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+
+    # If turn changed, update the directory
+    if turn is not None and turn != _CURRENT_TURN:
+        _CURRENT_TURN = turn
+        _LOG_SESSION_DIR = None  # Force recreation
+
+    if _LOG_SESSION_DIR is None:
+        # Create directory structure based on turn
+        if _CURRENT_TURN and _CURRENT_TURN > 0:
+            # Multi-turn conversation: organize by turn within session
+            _LOG_SESSION_DIR = _LOG_BASE_SESSION_DIR / f"turn_{_CURRENT_TURN}"
+        else:
+            # First execution or single execution: use base session dir
+            _LOG_SESSION_DIR = _LOG_BASE_SESSION_DIR
+
         _LOG_SESSION_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     return _LOG_SESSION_DIR
 
 
-def setup_logging(debug: bool = False, log_file: Optional[str] = None):
+def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Optional[int] = None):
     """
     Configure MassGen logging system using loguru.
-    
+
     Args:
         debug: Enable debug mode with verbose logging
         log_file: Optional path to log file for persistent logging
+        turn: Optional turn number for multi-turn conversations
     """
     global _DEBUG_MODE
     _DEBUG_MODE = debug
-    
+
     # Remove all existing handlers
     logger.remove()
-    
+
     if debug:
         # Debug mode: verbose console output with full details
         def custom_format(record):
@@ -77,26 +125,30 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
                 name_color = "red"
             else:
                 name_color = "white"
-            
+
             # Format the name to be more readable
             formatted_name = name if name else "{name}"
-            
-            return f"<green>{{time:HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | <{name_color}>{formatted_name}</{name_color}>:<{name_color}>{{function}}</{name_color}>:<{name_color}>{{line}}</{name_color}> - {{message}}\n{{exception}}"
-        
+
+            return (
+                f"<green>{{time:HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | "
+                f"<{name_color}>{formatted_name}</{name_color}>:<{name_color}>{{function}}</{name_color}>:"
+                f"<{name_color}>{{line}}</{name_color}> - {{message}}\n{{exception}}"
+            )
+
         logger.add(
             sys.stderr,
             format=custom_format,
             level="DEBUG",
             colorize=True,
             backtrace=True,
-            diagnose=True
+            diagnose=True,
         )
-        
+
         # Also log to file in debug mode
         if not log_file:
-            log_session_dir = get_log_session_dir()
+            log_session_dir = get_log_session_dir(turn=turn)
             log_file = log_session_dir / "massgen_debug.log"
-        
+
         logger.add(
             str(log_file),
             format=custom_format,
@@ -107,26 +159,26 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
             backtrace=True,
             diagnose=True,
             enqueue=True,  # Thread-safe logging
-            colorize=False  # Keep color codes in file
+            colorize=False,  # Keep color codes in file
         )
-        
+
         logger.info("Debug logging enabled - logging to console and file: {}", log_file)
     else:
         # Normal mode: only important messages to console, but all INFO+ to file
         console_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
-        
+
         logger.add(
             sys.stderr,
             format=console_format,
             level="WARNING",  # Only show WARNING and above on console in non-debug mode
-            colorize=True
+            colorize=True,
         )
-        
+
         # Always create log file in non-debug mode to capture INFO messages
         if not log_file:
-            log_session_dir = get_log_session_dir()
+            log_session_dir = get_log_session_dir(turn=turn)
             log_file = log_session_dir / "massgen.log"
-        
+
         # Use the same format as console with color codes
         logger.add(
             str(log_file),
@@ -136,19 +188,19 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None):
             retention="3 days",
             compression="zip",
             enqueue=True,
-            colorize=False  # Keep color codes in file
+            colorize=False,  # Keep color codes in file
         )
-        
+
         logger.info("Logging enabled - logging INFO+ to file: {}", log_file)
 
 
 def get_logger(name: str):
     """
     Get a logger instance with the given name.
-    
+
     Args:
         name: Logger name (typically __name__ of the module)
-    
+
     Returns:
         Configured logger instance
     """
@@ -158,7 +210,7 @@ def get_logger(name: str):
 def _get_caller_info():
     """
     Get the caller's line number and function name from the stack frame.
-    
+
     Returns:
         Tuple of (function_name, line_number where the logging function was called)
     """
@@ -167,7 +219,7 @@ def _get_caller_info():
     # - frame: _get_caller_info (this function)
     # - frame.f_back: log_orchestrator_agent_message or log_backend_agent_message
     # - frame.f_back.f_back: the actual caller (e.g., _stream_agent_execution)
-    
+
     if frame and frame.f_back and frame.f_back.f_back:
         caller_frame = frame.f_back.f_back
         function_name = caller_frame.f_code.co_name
@@ -180,7 +232,7 @@ def _get_caller_info():
 def log_orchestrator_activity(orchestrator_id: str, activity: str, details: dict = None):
     """
     Log orchestrator activities for debugging.
-    
+
     Args:
         orchestrator_id: ID of the orchestrator
         activity: Description of the activity
@@ -197,7 +249,7 @@ def log_orchestrator_activity(orchestrator_id: str, activity: str, details: dict
 def log_agent_message(agent_id: str, direction: str, message: dict, backend_name: str = None):
     """
     Log agent messages (sent/received) for debugging.
-    
+
     Args:
         agent_id: ID of the agent
         direction: "SEND" or "RECV"
@@ -211,21 +263,35 @@ def log_agent_message(agent_id: str, direction: str, message: dict, backend_name
     else:
         log_name = agent_id
         log = logger.bind(name=log_name)
-    
+
     if _DEBUG_MODE:
         if direction == "SEND":
             # Use blue color for sent messages
-            log.opt(colors=True).debug("<blue>📤 [{}] Sending message: {}</blue>", log_name, _format_message(message))
+            log.opt(colors=True).debug(
+                "<blue>📤 [{}] Sending message: {}</blue>",
+                log_name,
+                _format_message(message),
+            )
         elif direction == "RECV":
             # Use green color for received messages
-            log.opt(colors=True).debug("<green>📥 [{}] Received message: {}</green>", log_name, _format_message(message))
+            log.opt(colors=True).debug(
+                "<green>📥 [{}] Received message: {}</green>",
+                log_name,
+                _format_message(message),
+            )
         else:
-            log.opt(colors=True).debug("<cyan>📨 [{}] {}: {}</cyan>", log_name, direction, _format_message(message))
+            log.opt(colors=True).debug(
+                "<cyan>📨 [{}] {}: {}</cyan>",
+                log_name,
+                direction,
+                _format_message(message),
+            )
+
 
 def log_orchestrator_agent_message(agent_id: str, direction: str, message: dict, backend_name: str = None):
     """
     Log orchestrator-to-agent messages for debugging.
-    
+
     Args:
         agent_id: ID of the agent
         direction: "SEND" or "RECV"
@@ -234,7 +300,7 @@ def log_orchestrator_agent_message(agent_id: str, direction: str, message: dict,
     """
     # Get caller information
     func_name, line_num = _get_caller_info()
-    
+
     # Build a descriptive name with orchestrator prefix
     if backend_name:
         log_name = f"orchestrator→{agent_id}.{backend_name}:{func_name}:{line_num}"
@@ -242,22 +308,35 @@ def log_orchestrator_agent_message(agent_id: str, direction: str, message: dict,
     else:
         log_name = f"orchestrator→{agent_id}:{func_name}:{line_num}"
         log = logger.bind(name=log_name)
-    
+
     if _DEBUG_MODE:
         if direction == "SEND":
             # Use magenta color for orchestrator sent messages
-            log.opt(colors=True).debug("<magenta>🎯📤 [{}] Orchestrator sending to agent: {}</magenta>", log_name, _format_message(message))
+            log.opt(colors=True).debug(
+                "<magenta>🎯📤 [{}] Orchestrator sending to agent: {}</magenta>",
+                log_name,
+                _format_message(message),
+            )
         elif direction == "RECV":
             # Use magenta color for orchestrator received messages
-            log.opt(colors=True).debug("<magenta>🎯📥 [{}] Orchestrator received from agent: {}</magenta>", log_name, _format_message(message))
+            log.opt(colors=True).debug(
+                "<magenta>🎯📥 [{}] Orchestrator received from agent: {}</magenta>",
+                log_name,
+                _format_message(message),
+            )
         else:
-            log.opt(colors=True).debug("<magenta>🎯📨 [{}] {}: {}</magenta>", log_name, direction, _format_message(message))
+            log.opt(colors=True).debug(
+                "<magenta>🎯📨 [{}] {}: {}</magenta>",
+                log_name,
+                direction,
+                _format_message(message),
+            )
 
 
 def log_backend_agent_message(agent_id: str, direction: str, message: dict, backend_name: str = None):
     """
     Log backend-to-LLM messages for debugging.
-    
+
     Args:
         agent_id: ID of the agent
         direction: "SEND" or "RECV"
@@ -266,7 +345,7 @@ def log_backend_agent_message(agent_id: str, direction: str, message: dict, back
     """
     # Get caller information
     func_name, line_num = _get_caller_info()
-    
+
     # Build a descriptive name with backend prefix
     if backend_name:
         log_name = f"backend.{backend_name}→{agent_id}:{func_name}:{line_num}"
@@ -274,22 +353,35 @@ def log_backend_agent_message(agent_id: str, direction: str, message: dict, back
     else:
         log_name = f"backend→{agent_id}:{func_name}:{line_num}"
         log = logger.bind(name=log_name)
-    
+
     if _DEBUG_MODE:
         if direction == "SEND":
             # Use yellow color for backend sent messages
-            log.opt(colors=True).debug("<yellow>⚙️📤 [{}] Backend sending to LLM: {}</yellow>", log_name, _format_message(message))
+            log.opt(colors=True).debug(
+                "<yellow>⚙️📤 [{}] Backend sending to LLM: {}</yellow>",
+                log_name,
+                _format_message(message),
+            )
         elif direction == "RECV":
             # Use yellow color for backend received messages
-            log.opt(colors=True).debug("<yellow>⚙️📥 [{}] Backend received from LLM: {}</yellow>", log_name, _format_message(message))
+            log.opt(colors=True).debug(
+                "<yellow>⚙️📥 [{}] Backend received from LLM: {}</yellow>",
+                log_name,
+                _format_message(message),
+            )
         else:
-            log.opt(colors=True).debug("<yellow>⚙️📨 [{}] {}: {}</yellow>", log_name, direction, _format_message(message))
+            log.opt(colors=True).debug(
+                "<yellow>⚙️📨 [{}] {}: {}</yellow>",
+                log_name,
+                direction,
+                _format_message(message),
+            )
 
 
 def log_backend_activity(backend_name: str, activity: str, details: dict = None, agent_id: str = None):
     """
     Log backend activities for debugging.
-    
+
     Args:
         backend_name: Name of the backend (e.g., "openai", "claude")
         activity: Description of the activity
@@ -298,7 +390,7 @@ def log_backend_activity(backend_name: str, activity: str, details: dict = None,
     """
     # Get caller information
     func_name, line_num = _get_caller_info()
-    
+
     # Build a descriptive name with both agent ID and backend
     if agent_id:
         log_name = f"{agent_id}.{backend_name}"
@@ -306,7 +398,7 @@ def log_backend_activity(backend_name: str, activity: str, details: dict = None,
     else:
         log_name = backend_name
         log = logger.bind(name=f"backend.{backend_name}:{func_name}:{line_num}")
-    
+
     if _DEBUG_MODE:
         # Use yellow color for backend activities
         log.opt(colors=True).debug("<yellow>⚙️ [{}] {}: {}</yellow>", log_name, activity, details or {})
@@ -315,7 +407,7 @@ def log_backend_activity(backend_name: str, activity: str, details: dict = None,
 def log_mcp_activity(backend_name: str, message: str, details: dict = None, agent_id: str = None):
     """
     Log MCP (Model Context Protocol) activities at INFO level.
-    
+
     Args:
         backend_name: Name of the backend (e.g., "claude", "openai")
         message: Description of the MCP activity
@@ -323,7 +415,7 @@ def log_mcp_activity(backend_name: str, message: str, details: dict = None, agen
         agent_id: Optional ID of the agent using this backend
     """
     func_name, line_num = _get_caller_info()
-    
+
     if agent_id:
         log_name = f"{agent_id}.{backend_name}"
         log = logger.bind(name=f"{log_name}:{func_name}:{line_num}")
@@ -334,10 +426,16 @@ def log_mcp_activity(backend_name: str, message: str, details: dict = None, agen
     log.info("MCP: {} - {}", message, details or {})
 
 
-def log_tool_call(agent_id: str, tool_name: str, arguments: dict, result: Any = None, backend_name: str = None):
+def log_tool_call(
+    agent_id: str,
+    tool_name: str,
+    arguments: dict,
+    result: Any = None,
+    backend_name: str = None,
+):
     """
     Log tool calls made by agents.
-    
+
     Args:
         agent_id: ID of the agent making the tool call
         tool_name: Name of the tool being called
@@ -352,20 +450,30 @@ def log_tool_call(agent_id: str, tool_name: str, arguments: dict, result: Any = 
     else:
         log_name = agent_id
         log = logger.bind(name=f"{agent_id}.tools")
-    
+
     if _DEBUG_MODE:
         if result is not None:
             # Use light gray color for tool calls
-            log.opt(colors=True).debug("<light-black>🔧 [{}] Tool '{}' called with args: {} -> Result: {}</light-black>", 
-                     log_name, tool_name, arguments, result)
+            log.opt(colors=True).debug(
+                "<light-black>🔧 [{}] Tool '{}' called with args: {} -> Result: {}</light-black>",
+                log_name,
+                tool_name,
+                arguments,
+                result,
+            )
         else:
-            log.opt(colors=True).debug("<light-black>🔧 [{}] Calling tool '{}' with args: {}</light-black>", log_name, tool_name, arguments)
+            log.opt(colors=True).debug(
+                "<light-black>🔧 [{}] Calling tool '{}' with args: {}</light-black>",
+                log_name,
+                tool_name,
+                arguments,
+            )
 
 
 def log_coordination_step(step: str, details: dict = None):
     """
     Log coordination workflow steps.
-    
+
     Args:
         step: Description of the coordination step
         details: Additional details as dictionary
@@ -379,7 +487,7 @@ def log_coordination_step(step: str, details: dict = None):
 def log_stream_chunk(source: str, chunk_type: str, content: Any = None, agent_id: str = None):
     """
     Log stream chunks at INFO level (always logged to file).
-    
+
     Args:
         source: Source of the stream chunk (e.g., "orchestrator", "backend.claude_code")
         chunk_type: Type of the chunk (e.g., "content", "tool_call", "error")
@@ -391,7 +499,7 @@ def log_stream_chunk(source: str, chunk_type: str, content: Any = None, agent_id
     # Stack frames:
     # - frame: log_stream_chunk (this function)
     # - frame.f_back: the actual caller (e.g., _present_final_answer)
-    
+
     if frame and frame.f_back:
         caller_frame = frame.f_back
         function_name = caller_frame.f_code.co_name
@@ -399,15 +507,15 @@ def log_stream_chunk(source: str, chunk_type: str, content: Any = None, agent_id
     else:
         function_name = "unknown"
         line_number = 0
-    
+
     if agent_id:
         log_name = f"{source}.{agent_id}"
     else:
         log_name = source
-    
+
     # Create a custom logger that will show the source name instead of module path
     log = logger.bind(name=f"{log_name}:{function_name}:{line_number}")
-    
+
     # Always log stream chunks at INFO level (will go to file)
     # Format content based on type
     if content:
@@ -423,16 +531,16 @@ def log_stream_chunk(source: str, chunk_type: str, content: Any = None, agent_id
 def _format_message(message: dict) -> str:
     """
     Format message for logging without truncation.
-    
+
     Args:
         message: Message dictionary
-    
+
     Returns:
         Formatted message string
     """
     if not message:
         return "<empty>"
-    
+
     # Format based on message type
     if "role" in message and "content" in message:
         content = message.get("content", "")
@@ -441,7 +549,7 @@ def _format_message(message: dict) -> str:
             return f"[{message['role']}] {content}"
         else:
             return f"[{message['role']}] {str(content)}"
-    
+
     # For other message types, just stringify without truncation
     msg_str = str(message)
     return msg_str
@@ -461,5 +569,5 @@ __all__ = [
     "log_mcp_activity",
     "log_tool_call",
     "log_coordination_step",
-    "log_stream_chunk"
+    "log_stream_chunk",
 ]

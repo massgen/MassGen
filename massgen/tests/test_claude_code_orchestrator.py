@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Test ClaudeCodeBackend with MassGen Orchestrator.
 This test demonstrates a workflow with Claude Code backend.
 """
 
-from massgen.frontend.coordination_ui import CoordinationUI
-from massgen.orchestrator import Orchestrator
-from massgen.agent_config import AgentConfig
-from massgen.chat_agent import ConfigurableAgent
-from massgen.backend.claude_code import ClaudeCodeBackend
 import asyncio
 import os
 import sys
+
+from massgen.agent_config import AgentConfig
+from massgen.backend.claude_code import ClaudeCodeBackend
+from massgen.chat_agent import ConfigurableAgent
+from massgen.frontend.coordination_ui import CoordinationUI
+from massgen.orchestrator import Orchestrator
 
 sys.path.insert(0, "/workspaces/MassGen")
 
@@ -69,7 +71,7 @@ async def test_claude_code_with_orchestrator():
 
         # Display backend statistics
         token_usage = backend.get_token_usage()
-        print(f"\n📈 Backend Statistics:")
+        print("\n📈 Backend Statistics:")
         print(f"   Input tokens: {token_usage.input_tokens}")
         print(f"   Output tokens: {token_usage.output_tokens}")
         print(f"   Estimated cost: ${token_usage.estimated_cost:.4f}")
@@ -77,7 +79,7 @@ async def test_claude_code_with_orchestrator():
 
         # Display final response
         if final_response:
-            print(f"\n📄 Final Response:")
+            print("\n📄 Final Response:")
             print("-" * 40)
             print(final_response)
             print("-" * 40)
@@ -118,12 +120,8 @@ async def test_stateful_behavior():
     print(f"🔗 Initial session ID: {backend.get_current_session_id()}")
 
     # Test conversation continuity
-    messages1 = [
-        {"role": "user", "content": "My favorite color is blue. Please remember this."}
-    ]
-    messages2 = [
-        {"role": "user", "content": "What did I just tell you about my favorite color?"}
-    ]
+    messages1 = [{"role": "user", "content": "My favorite color is blue. Please remember this."}]
+    messages2 = [{"role": "user", "content": "What did I just tell you about my favorite color?"}]
 
     try:
         print("\n📝 Turn 1: Setting context...")

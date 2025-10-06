@@ -1,15 +1,7 @@
+# -*- coding: utf-8 -*-
 import inspect
 import json
 import random
-import subprocess
-import sys
-import time
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Any, Union, Optional, Dict, List
-import ast
-import operator
-import math
 
 # Model mappings and constants
 MODEL_MAPPINGS = {
@@ -114,9 +106,7 @@ def execute_function_calls(function_calls, tool_mapping):
             elif isinstance(function_call.get("arguments", {}), dict):
                 arguments = function_call.get("arguments", {})
             else:
-                raise ValueError(
-                    f"Unknown arguments type: {type(function_call.get('arguments', {}))}"
-                )
+                raise ValueError(f"Unknown arguments type: {type(function_call.get('arguments', {}))}")
             result = target_function(**arguments)
 
             # Format the output according to Responses API requirements
@@ -167,25 +157,17 @@ def function_to_json(func) -> dict:
     try:
         signature = inspect.signature(func)
     except ValueError as e:
-        raise ValueError(
-            f"Failed to get signature for function {func.__name__}: {str(e)}"
-        )
+        raise ValueError(f"Failed to get signature for function {func.__name__}: {str(e)}")
 
     parameters = {}
     for param in signature.parameters.values():
         try:
             param_type = type_map.get(param.annotation, "string")
         except KeyError as e:
-            raise KeyError(
-                f"Unknown type annotation {param.annotation} for parameter {param.name}: {str(e)}"
-            )
+            raise KeyError(f"Unknown type annotation {param.annotation} for parameter {param.name}: {str(e)}")
         parameters[param.name] = {"type": param_type}
 
-    required = [
-        param.name
-        for param in signature.parameters.values()
-        if param.default == inspect._empty
-    ]
+    required = [param.name for param in signature.parameters.values() if param.default == inspect._empty]
 
     return {
         "type": "function",

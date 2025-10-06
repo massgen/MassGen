@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
 """
 MCP-specific exceptions with enhanced error handling and context preservation.
 """
 
-from ..logger_config import logger
-from typing import Optional, Dict, Any, Union
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional, Union
+
+from ..logger_config import logger
 
 
 class MCPError(Exception):
@@ -20,7 +22,7 @@ class MCPError(Exception):
         message: str,
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
-        timestamp: Optional[datetime] = None
+        timestamp: Optional[datetime] = None,
     ):
         super().__init__(message)
         self.context = self._sanitize_context(context or {})
@@ -33,7 +35,7 @@ class MCPError(Exception):
         Sanitize context to remove sensitive information and ensure serializability.
         """
         sanitized = {}
-        sensitive_keys = {'password', 'token', 'secret', 'key', 'auth', 'credential'}
+        sensitive_keys = {"password", "token", "secret", "key", "auth", "credential"}
 
         for key, value in context.items():
             if any(sensitive in key.lower() for sensitive in sensitive_keys):
@@ -58,21 +60,21 @@ class MCPError(Exception):
         return " | ".join(parts)
 
     def to_dict(self) -> Dict[str, Any]:
-    
         return {
-            'error_type': self.__class__.__name__,
-            'message': self.original_message,
-            'error_code': self.error_code,
-            'context': self.context,
-            'timestamp': self.timestamp.isoformat()
+            "error_type": self.__class__.__name__,
+            "message": self.original_message,
+            "error_code": self.error_code,
+            "context": self.context,
+            "timestamp": self.timestamp.isoformat(),
         }
 
     def log_error(self) -> None:
         """Log the error with appropriate level and context."""
         logger.error(
             f"{self.__class__.__name__}: {self.original_message}",
-            extra={'mcp_error': self.to_dict()}
+            extra={"mcp_error": self.to_dict()},
         )
+
 
 class MCPConnectionError(MCPError):
     """
@@ -90,7 +92,7 @@ class MCPConnectionError(MCPError):
         port: Optional[int] = None,
         retry_count: Optional[int] = None,
         context: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None
+        error_code: Optional[str] = None,
     ):
         context = context or {}
 
@@ -131,7 +133,7 @@ class MCPServerError(MCPError):
         http_status: Optional[int] = None,
         response_data: Optional[Dict[str, Any]] = None,
         context: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None
+        error_code: Optional[str] = None,
     ):
         context = context or {}
 
@@ -169,7 +171,7 @@ class MCPValidationError(MCPError):
         expected_type: Optional[str] = None,
         validation_rule: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None
+        error_code: Optional[str] = None,
     ):
         context = context or {}
 
@@ -177,7 +179,6 @@ class MCPValidationError(MCPError):
         if field:
             context["field"] = field
         if value is not None:
-            
             try:
                 context["value"] = str(value)[:100]  # Limit length
             except Exception:
@@ -211,7 +212,7 @@ class MCPTimeoutError(MCPError):
         elapsed_seconds: Optional[float] = None,
         server_name: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None
+        error_code: Optional[str] = None,
     ):
         context = context or {}
 
@@ -249,7 +250,7 @@ class MCPAuthenticationError(MCPError):
         server_name: Optional[str] = None,
         permission_required: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None
+        error_code: Optional[str] = None,
     ):
         context = context or {}
 
@@ -286,7 +287,7 @@ class MCPConfigurationError(MCPError):
         config_section: Optional[str] = None,
         missing_keys: Optional[list] = None,
         context: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None
+        error_code: Optional[str] = None,
     ):
         context = context or {}
 
@@ -321,7 +322,7 @@ class MCPResourceError(MCPError):
         operation: Optional[str] = None,
         server_name: Optional[str] = None,
         context: Optional[Dict[str, Any]] = None,
-        error_code: Optional[str] = None
+        error_code: Optional[str] = None,
     ):
         context = context or {}
 
@@ -349,6 +350,7 @@ def handle_mcp_error(func):
     """
     Decorator to automatically catch and log MCP errors.
     """
+
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -359,7 +361,7 @@ def handle_mcp_error(func):
             # Convert unexpected exceptions to MCPError
             mcp_error = MCPError(
                 f"Unexpected error in {func.__name__}: {str(e)}",
-                context={"function": func.__name__, "original_error": type(e).__name__}
+                context={"function": func.__name__, "original_error": type(e).__name__},
             )
             mcp_error.log_error()
             raise mcp_error from e

@@ -1,18 +1,13 @@
+# -*- coding: utf-8 -*-
 import os
-import threading
-import time
-import json
-import copy
 
 from dotenv import load_dotenv
-
-load_dotenv()
-
 from openai import OpenAI
 
-# Import utility functions
-from massgen.v1.utils import function_to_json, execute_function_calls
 from massgen.v1.types import AgentResponse
+from massgen.v1.utils import function_to_json
+
+load_dotenv()
 
 
 def parse_completion(response, add_citations=True):
@@ -20,7 +15,10 @@ def parse_completion(response, add_citations=True):
 
     Mainly three types of output in the response:
     - reasoning (no summary provided): ResponseReasoningItem(id='rs_6876b0d566d08198ab9f992e1911bd0a02ec808107751c1f', summary=[], type='reasoning', status=None)
-    - web_search_call (actions: search, open_page, find_in_page): ResponseFunctionWebSearch(id='ws_6876b0e3b83081988d6cddd9770357c402ec808107751c1f', status='completed', type='web_search_call', action={'type': 'search', 'query': 'Economy of China Wikipedia GDP table'})
+    - web_search_call (actions: search, open_page, find_in_page):
+      ResponseFunctionWebSearch(id='ws_6876b0e3b83081988d6cddd9770357c402ec808107751c1f',
+                                status='completed', type='web_search_call',
+                                action={'type': 'search', 'query': 'Economy of China Wikipedia GDP table'})
     - message: response output (including text and citations, optional)
     - code_interpreter_call (code provided): code output
     - function_call: function call, arguments, and name provided
@@ -33,9 +31,7 @@ def parse_completion(response, add_citations=True):
 
     # Process the response output
     for r in response.output:
-        if (
-            r.type == "message"
-        ):  # Final response, including text and citations (optional)
+        if r.type == "message":  # Final response, including text and citations (optional)
             for c in r.content:
                 text += c.text
                 if add_citations and hasattr(c, "annotations") and c.annotations:
@@ -46,7 +42,7 @@ def parse_completion(response, add_citations=True):
                                 "title": annotation.title,
                                 "start_index": annotation.start_index,
                                 "end_index": annotation.end_index,
-                            }
+                            },
                         )
         elif r.type == "code_interpreter_call":
             code.append(r.code)
@@ -54,9 +50,7 @@ def parse_completion(response, add_citations=True):
             # detailed web search actions: search, open_page, find_in_page, etc
             pass
         elif r.type == "reasoning":
-            reasoning_items.append(
-                {"type": "reasoning", "id": r.id, "summary": r.summary}
-            )
+            reasoning_items.append({"type": "reasoning", "id": r.id, "summary": r.summary})
         elif r.type == "function_call":
             # tool output - include call_id for Responses API
             function_calls.append(
@@ -66,7 +60,7 @@ def parse_completion(response, add_citations=True):
                     "arguments": r.arguments,
                     "call_id": getattr(r, "call_id", None),
                     "id": getattr(r, "id", None),
-                }
+                },
             )
 
     # Add citations to text if available
@@ -74,9 +68,7 @@ def parse_completion(response, add_citations=True):
         try:
             new_text = text
             # Sort citations by end_index in descending order to avoid shifting issues when inserting
-            sorted_citations = sorted(
-                citations, key=lambda c: c["end_index"], reverse=True
-            )
+            sorted_citations = sorted(citations, key=lambda c: c["end_index"], reverse=True)
 
             for idx, citation in enumerate(sorted_citations):
                 end_index = citation["end_index"]
@@ -86,9 +78,7 @@ def parse_completion(response, add_citations=True):
         except Exception as e:
             print(f"[OAI] Error adding citations to text: {e}")
 
-    return AgentResponse(
-        text=text, code=code, citations=citations, function_calls=function_calls
-    )
+    return AgentResponse(text=text, code=code, citations=citations, function_calls=function_calls)
 
 
 def process_message(
@@ -150,9 +140,7 @@ def process_message(
             elif tool == "live_search":  # built-in tools
                 formatted_tools.append({"type": "web_search_preview"})
             elif tool == "code_execution":  # built-in tools
-                formatted_tools.append(
-                    {"type": "code_interpreter", "container": {"type": "auto"}}
-                )
+                formatted_tools.append({"type": "code_interpreter", "container": {"type": "auto"}})
             else:
                 raise ValueError(f"Invalid tool type: {type(tool)}")
 
@@ -165,10 +153,7 @@ def process_message(
             instructions = message["content"]
         else:
             # Clean the function calls' id to avoid the requirements of related reasoning items
-            if (
-                message.get("type", "") == "function_call"
-                and message.get("id", None) is not None
-            ):
+            if message.get("type", "") == "function_call" and message.get("id", None) is not None:
                 del message["id"]
             input_text.append(message)
 
@@ -193,9 +178,7 @@ def process_message(
 
             # CRITICAL: Include code interpreter outputs for streaming
             # Without this, code execution results (stdout/stderr) won't be available
-            if formatted_tools and any(
-                tool.get("type") == "code_interpreter" for tool in formatted_tools
-            ):
+            if formatted_tools and any(tool.get("type") == "code_interpreter" for tool in formatted_tools):
                 params["include"] = ["code_interpreter_call.outputs"]
 
             # Only add temperature and top_p for models that support them
@@ -231,9 +214,7 @@ def process_message(
 
     if completion is None:
         # If we failed all retries, return empty response instead of raising exception
-        print(
-            f"Failed to get completion after {max_retries} retries, returning empty response"
-        )
+        print(f"Failed to get completion after {max_retries} retries, returning empty response")
         return AgentResponse(text="", code=[], citations=[], function_calls=[])
 
     # Handle Responses API response (same for all models)
@@ -268,9 +249,7 @@ def process_message(
                 elif chunk.type == "response.function_call_output.delta":
                     # Function call streaming
                     try:
-                        stream_callback(
-                            f"\n🔧 {chunk.delta if hasattr(chunk, 'delta') else 'Function call'}\n"
-                        )
+                        stream_callback(f"\n🔧 {chunk.delta if hasattr(chunk, 'delta') else 'Function call'}\n")
                     except Exception as e:
                         print(f"Stream callback error: {e}")
                 elif chunk.type == "response.function_call_output.done":
@@ -305,14 +284,9 @@ def process_message(
                                 code_lines_shown += new_lines
 
                                 # Check if we just exceeded 3 lines with this chunk
-                                if (
-                                    code_lines_shown >= 3
-                                    and not truncation_message_sent
-                                ):
+                                if code_lines_shown >= 3 and not truncation_message_sent:
                                     # Send truncation message for display only (not logging)
-                                    stream_callback(
-                                        "\n[CODE_DISPLAY_ONLY]\n💻 ... (full code in log file)\n"
-                                    )
+                                    stream_callback("\n[CODE_DISPLAY_ONLY]\n💻 ... (full code in log file)\n")
                                     truncation_message_sent = True
                             else:
                                 # Beyond 3 lines - send with special prefix for logging only
@@ -329,9 +303,7 @@ def process_message(
                         stream_callback("\n💻 Code writing completed\n")
                     except Exception as e:
                         print(f"Stream callback error: {e}")
-                elif (
-                    chunk.type == "response.code_interpreter_call_execution.in_progress"
-                ):
+                elif chunk.type == "response.code_interpreter_call_execution.in_progress":
                     # Code execution started
                     try:
                         stream_callback("\n💻 Executing code...\n")
@@ -346,34 +318,22 @@ def process_message(
                 elif chunk.type == "response.output_item.added":
                     # New output item added
                     if hasattr(chunk, "item") and chunk.item:
-                        if (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "web_search_call"
-                        ):
+                        if hasattr(chunk.item, "type") and chunk.item.type == "web_search_call":
                             try:
                                 stream_callback("\n🔍 Starting web search...\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
-                        elif (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "reasoning"
-                        ):
+                        elif hasattr(chunk.item, "type") and chunk.item.type == "reasoning":
                             try:
                                 stream_callback("\n🧠 Reasoning in progress...\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
-                        elif (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "code_interpreter_call"
-                        ):
+                        elif hasattr(chunk.item, "type") and chunk.item.type == "code_interpreter_call":
                             try:
                                 stream_callback("\n💻 Code interpreter starting...\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
-                        elif (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "function_call"
-                        ):
+                        elif hasattr(chunk.item, "type") and chunk.item.type == "function_call":
                             # Function call started - create initial function call object
                             function_call_data = {
                                 "type": "function_call",
@@ -389,50 +349,32 @@ def process_message(
                             # Notify function call started
                             function_name = function_call_data.get("name", "unknown")
                             try:
-                                stream_callback(
-                                    f"\n🔧 Calling function '{function_name}'...\n"
-                                )
+                                stream_callback(f"\n🔧 Calling function '{function_name}'...\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
                 elif chunk.type == "response.output_item.done":
                     # Check if this is a completed web search with query or reasoning completion
                     if hasattr(chunk, "item") and chunk.item:
-                        if (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "web_search_call"
-                        ):
-                            if hasattr(chunk.item, "action") and hasattr(
-                                chunk.item.action, "query"
-                            ):
+                        if hasattr(chunk.item, "type") and chunk.item.type == "web_search_call":
+                            if hasattr(chunk.item, "action") and hasattr(chunk.item.action, "query"):
                                 search_query = chunk.item.action.query
                                 if search_query:
                                     try:
-                                        stream_callback(
-                                            f"\n🔍 Completed search for: {search_query}\n"
-                                        )
+                                        stream_callback(f"\n🔍 Completed search for: {search_query}\n")
                                     except Exception as e:
                                         print(f"Stream callback error: {e}")
-                        elif (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "reasoning"
-                        ):
+                        elif hasattr(chunk.item, "type") and chunk.item.type == "reasoning":
                             try:
                                 stream_callback("\n🧠 Reasoning completed\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
-                        elif (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "code_interpreter_call"
-                        ):
+                        elif hasattr(chunk.item, "type") and chunk.item.type == "code_interpreter_call":
                             # CRITICAL: Capture code execution outputs (stdout/stderr)
                             # This is the actual result of running the code
                             if hasattr(chunk.item, "outputs") and chunk.item.outputs:
                                 for output in chunk.item.outputs:
                                     # Check if it's a dict-like object with a 'type' key (most common)
-                                    if (
-                                        hasattr(output, "get")
-                                        and output.get("type") == "logs"
-                                    ):
+                                    if hasattr(output, "get") and output.get("type") == "logs":
                                         logs_content = output.get("logs")
                                         if logs_content:
                                             # Add execution result to text output
@@ -443,10 +385,7 @@ def process_message(
                                             except Exception as e:
                                                 print(f"Stream callback error: {e}")
                                     # Also check for attribute-based access (fallback)
-                                    elif (
-                                        hasattr(output, "type")
-                                        and output.type == "logs"
-                                    ):
+                                    elif hasattr(output, "type") and output.type == "logs":
                                         if hasattr(output, "logs") and output.logs:
                                             # Add execution result to text output
                                             execution_result = f"\n[Code Execution Output]\n{output.logs}\n"
@@ -459,10 +398,7 @@ def process_message(
                                 stream_callback("\n💻 Code interpreter completed\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
-                        elif (
-                            hasattr(chunk.item, "type")
-                            and chunk.item.type == "function_call"
-                        ):
+                        elif hasattr(chunk.item, "type") and chunk.item.type == "function_call":
                             # Function call completed - update the function call data if needed
                             if hasattr(chunk.item, "arguments"):
                                 # Find and update the corresponding function call
@@ -473,9 +409,7 @@ def process_message(
 
                             # Also update with accumulated arguments if available
                             if current_function_call and current_function_arguments:
-                                current_function_call[
-                                    "arguments"
-                                ] = current_function_arguments
+                                current_function_call["arguments"] = current_function_arguments
 
                             # Reset tracking
                             current_function_call = None
@@ -484,9 +418,7 @@ def process_message(
                             # Notify function call completed
                             function_name = getattr(chunk.item, "name", "unknown")
                             try:
-                                stream_callback(
-                                    f"\n🔧 Function '{function_name}' completed\n"
-                                )
+                                stream_callback(f"\n🔧 Function '{function_name}' completed\n")
                             except Exception as e:
                                 print(f"Stream callback error: {e}")
                 elif chunk.type == "response.web_search_call.in_progress":
@@ -510,9 +442,7 @@ def process_message(
                         citation_data = {
                             "url": getattr(chunk.annotation, "url", None),
                             "title": getattr(chunk.annotation, "title", None),
-                            "start_index": getattr(
-                                chunk.annotation, "start_index", None
-                            ),
+                            "start_index": getattr(chunk.annotation, "start_index", None),
                             "end_index": getattr(chunk.annotation, "end_index", None),
                         }
                         citations.append(citation_data)
@@ -556,9 +486,7 @@ def process_message(
                     except Exception as e:
                         print(f"Stream callback error: {e}")
 
-        result = AgentResponse(
-            text=text, code=code, citations=citations, function_calls=function_calls
-        )
+        result = AgentResponse(text=text, code=code, citations=citations, function_calls=function_calls)
     else:
         # Parse non-streaming response using existing parse_completion function
         result = parse_completion(completion, add_citations=True)
