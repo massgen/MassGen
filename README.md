@@ -138,11 +138,11 @@ See the new AG2 framework integration in action:
 [![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
 
 **What's New in v0.0.28:**
-- **AG2 Framework Integration (Optional)** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
 - **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
 - **Improved Stability** - Better handling when MCP servers are not configured
 
-**Try v0.0.28 AG2 Integration (Optional):**
+**Try v0.0.28 AG2 Integration:**
 ```bash
 # Install AG2 support (optional - only needed for AG2 configs)
 uv pip install -e ".[external]"

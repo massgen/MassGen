@@ -620,16 +620,14 @@ class ResponseBackend(MCPBackend):
         image_data: str,
         prompt: str = None,
         image_format: str = "png",
-        item_id: str = None,
     ) -> Optional[str]:
         """
         Save generated image directly to filesystem (synchronous version).
 
         Args:
             image_data: Base64 encoded image data
-            prompt: Generation prompt (fallback for naming if no ID)
+            prompt: Generation prompt (used for naming)
             image_format: Image format (default png)
-            item_id: OpenAI item ID (used for simple, predictable naming)
 
         Returns:
             Saved file path, or None if failed
@@ -647,20 +645,15 @@ class ResponseBackend(MCPBackend):
             # Create directory if it doesn't exist
             images_dir.mkdir(parents=True, exist_ok=True)
 
-            # Generate filename - use item ID if available for simple naming
-            if item_id:
-                # Use OpenAI item ID for simple, predictable naming
-                filename = f"{item_id}.{image_format}"
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            if prompt:
+                # Clean prompt for filename
+                clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
+                clean_prompt = clean_prompt.replace(" ", "_")
+                filename = f"{timestamp}_{clean_prompt}.{image_format}"
             else:
-                # Fallback to timestamp-based naming
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                if prompt:
-                    # Clean prompt for filename
-                    clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
-                    clean_prompt = clean_prompt.replace(" ", "_")
-                    filename = f"{timestamp}_{clean_prompt}.{image_format}"
-                else:
-                    filename = f"{timestamp}_generated.{image_format}"
+                filename = f"{timestamp}_generated.{image_format}"
 
             file_path = images_dir / filename
 
@@ -919,7 +912,6 @@ class ResponseBackend(MCPBackend):
                     # Handle image generation completion details
                     prompt = getattr(chunk.item, "revised_prompt", None)
                     image_data = getattr(chunk.item, "result", None)
-                    item_id = getattr(chunk.item, "id", None)
 
                     content_parts = []
                     if prompt:
@@ -932,7 +924,6 @@ class ResponseBackend(MCPBackend):
                             image_data,
                             prompt,
                             "png",
-                            item_id=item_id,
                         )
                         if saved_path:
                             content_parts.append(f"💾 [Image Saved] {saved_path}")
