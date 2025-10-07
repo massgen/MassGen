@@ -1257,6 +1257,7 @@ class Orchestrator(ChatAgent):
                     previous_turns=turns_to_show,
                     workspace_prepopulated=workspace_prepopulated,
                     enable_image_generation=enable_image_generation,
+                    agent_answers=answers,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1963,6 +1964,7 @@ class Orchestrator(ChatAgent):
                     previous_turns=turns_to_show,
                     workspace_prepopulated=workspace_prepopulated,
                     enable_image_generation=enable_image_generation,
+                    agent_answers=all_answers,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message

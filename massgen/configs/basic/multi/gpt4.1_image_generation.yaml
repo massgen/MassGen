@@ -6,7 +6,7 @@ agents:
   - id: "gpt4o_1"
     backend:
       type: "openai"
-      model: "gpt-4o"
+      model: "gpt-4.1"
       text:
         verbosity: "medium"
       cwd: "workspace1"
@@ -15,7 +15,7 @@ agents:
   - id: "gpt4o_2"
     backend:
       type: "openai"
-      model: "gpt-4o"
+      model: "gpt-4.1"
       text:
         verbosity: "medium"
       cwd: "workspace2"

@@ -448,6 +448,7 @@ Based on the coordination process above, present your final answer:"""
         previous_turns: Optional[List[Dict[str, Any]]] = None,
         workspace_prepopulated: bool = False,
         enable_image_generation: bool = False,
+        agent_answers: Optional[Dict[str, str]] = None,
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
@@ -458,6 +459,7 @@ Based on the coordination process above, present your final answer:"""
             previous_turns: List of previous turn metadata
             workspace_prepopulated: Whether workspace is pre-populated
             enable_image_generation: Whether image generation is enabled
+            agent_answers: Dict of agent answers (keys are agent IDs) to show workspace structure
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -483,13 +485,32 @@ Based on the coordination process above, present your final answer:"""
             parts.append(workspace_note)
 
         if temp_workspace:
-            parts.append(
-                f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)\n"
-                f"   - To improve upon existing answers: Copy files from Shared Reference to your workspace using `copy_file` or `copy_directory` tools, then modify them\n"
-                f"   - These correspond directly to the answers shown in the CURRENT ANSWERS section\n"
-                f"   - However, not all workspaces may have a matching answer (e.g., if an agent was in the middle of working but restarted before submitting an answer). "
-                "So, it is wise to check the actual files in the Shared Reference, not rely solely on the CURRENT ANSWERS section.\n",
+            # Build workspace tree structure
+            workspace_tree = f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)\n"
+
+            # Add agent subdirectories in tree format
+            # This was added bc weaker models would often try many incorrect paths.
+            # No point in requiring extra list dir calls if we can just show them the structure.
+            if agent_answers:
+                # Create anonymous mapping: agent1, agent2, etc.
+                agent_mapping = {}
+                for i, agent_id in enumerate(sorted(agent_answers.keys()), 1):
+                    agent_mapping[agent_id] = f"agent{i}"
+
+                workspace_tree += "   Available agent workspaces:\n"
+                agent_items = list(agent_mapping.items())
+                for idx, (agent_id, anon_id) in enumerate(agent_items):
+                    is_last = idx == len(agent_items) - 1
+                    prefix = "   └── " if is_last else "   ├── "
+                    workspace_tree += f"{prefix}{temp_workspace}/{anon_id}/\n"
+
+            workspace_tree += (
+                "   - To improve upon existing answers: Copy files from Shared Reference to your workspace using `copy_file` or `copy_directory` tools, then modify them\n"
+                "   - These correspond directly to the answers shown in the CURRENT ANSWERS section\n"
+                "   - However, not all workspaces may have a matching answer (e.g., if an agent was in the middle of working but restarted before submitting an answer). "
+                "So, it is wise to check the actual files in the Shared Reference, not rely solely on the CURRENT ANSWERS section.\n"
             )
+            parts.append(workspace_tree)
 
         if context_paths:
             has_target = any(p.get("will_be_writable", False) for p in context_paths)
@@ -567,13 +588,13 @@ Based on the coordination process above, present your final answer:"""
         )
 
         # Add workspace cleanup guidance
-        parts.append(
-            "**Workspace Cleanup**: Before submitting your answer with `new_answer`, use `delete_file` or "
-            "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
-            "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
-            "This ensures only the relevant final files remain for evaluation. For example, if you created "
-            "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
-        )
+        # parts.append(
+        #     "**Workspace Cleanup**: Before submitting your answer with `new_answer`, use `delete_file` or "
+        #     "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
+        #     "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
+        #     "This ensures only the relevant final files remain for evaluation. For example, if you created "
+        #     "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
+        # )
 
         # Add diff tools guidance
         parts.append(
