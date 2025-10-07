@@ -273,19 +273,16 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
 Present the best possible coordinated answer by combining the strengths from all participants.\n\n"""
 
         # Add image generation instructions only if enabled
-#         if enable_image_generation:
-#             presentation_instructions += """For image generation tasks:
-
-# 1. You MUST FIRST use the `mcp__workspace_tools__extract_multimodal_files` tool
-#    to read and analyze all image files created by other agents (from Shared References).
-#    This step is REQUIRED before generating any new images.
-
-# 2. After reviewing the existing images, use the `image_generation` tool
-#    to create the final images that best combine the strengths of all participants.
-
-# ⚠️ Do NOT use file-writing tools for image generation tasks.
-# All final images MUST be created directly using the `image_generation` tool.
+        # if enable_image_generation:
+#         presentation_instructions += """For image generation tasks:
+#         After reviewing the existing images, you must generate the final images that best combine the strengths of all images from all paticipants.
 # """
+        presentation_instructions += """For image generation tasks:
+- Extract image paths from the existing answer and resolve them in the shared reference.
+- Gather all agent-produced images (ignore non-existent files).
+- MUST call the generate-image tool with these input images to synthesize one final image combining their strengths.
+- MUST save the final outputand output the saved path.
+"""
         # Combine with original system message if provided
         if original_system_message:
             return f"""{original_system_message}

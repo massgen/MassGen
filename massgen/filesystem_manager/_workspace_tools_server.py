@@ -960,6 +960,7 @@ async def create_server() -> fastmcp.FastMCP:
             storage_dir.mkdir(parents=True, exist_ok=True)
             
             try:
+                # print("Content for OpenAI API:", str(content))
                 # Generate variations using gpt-4o API with all images at once
                 response = client.responses.create(
                     model=model,
@@ -1018,7 +1019,7 @@ async def create_server() -> fastmcp.FastMCP:
                     if text_outputs:
                         return {
                             "success": False,
-                            "operation": "generate_and_store_image_variation",
+                            "operation": "generate_and_store_image_with_input_images",
                             "error": f"No images generated. Response: {' '.join(text_outputs)}"
                         }
                 
@@ -1026,13 +1027,13 @@ async def create_server() -> fastmcp.FastMCP:
                 print(f"OpenAI API error: {api_error}")
                 return {
                     "success": False,
-                    "operation": "generate_and_store_image_variation",
+                    "operation": "generate_and_store_image_with_input_images",
                     "error": f"OpenAI API error: {str(api_error)}"
                 }
             
             return {
                 "success": True,
-                "operation": "generate_and_store_image_variation",
+                "operation": "generate_and_store_image_with_input_images",
                 "note": "If no input images were provided, you must use generate_and_store_image_no_input_images tool.",
                 "images": all_variations,
                 "model": model,
@@ -1044,7 +1045,7 @@ async def create_server() -> fastmcp.FastMCP:
             print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
-                "operation": "generate_and_store_image_variation",
+                "operation": "generate_and_store_image_with_input_images",
                 "error": f"Failed to generate variations: {str(e)}"
             }
 
