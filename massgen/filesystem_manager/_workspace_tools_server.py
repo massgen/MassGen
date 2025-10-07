@@ -14,7 +14,8 @@ Tools provided:
 - delete_files_batch: Delete multiple files with pattern matching
 - compare_directories: Compare two directories and show differences
 - compare_files: Compare two text files and show unified diff
-- read_multimodal_files: Read image files and return as base64 data with MIME type
+- extract_multimodal_files: Read image files and return as base64 data with MIME type
+- store_generated_image: Save generated image from base64 data to workspace
 """
 
 import argparse
@@ -23,11 +24,14 @@ import difflib
 import filecmp
 import fnmatch
 import mimetypes
+import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import fastmcp
+from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
 
 def get_copy_file_pairs(
@@ -998,6 +1002,179 @@ async def create_server() -> fastmcp.FastMCP:
                 "success": False,
                 "operation": "read_multimodal_files",
                 "error": str(e),
+            }
+
+    @mcp.tool()
+    async def generate_and_store_image(
+        prompt: str,
+        model: str = "gpt-image-1",
+        size: str = "auto",
+        quality: str = "medium",
+        n: int = 1,
+        storage_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate image using OpenAI's DALL-E API and save to filesystem.
+        
+        This tool generates images from text prompts using OpenAI's image generation API
+        and saves them to the workspace with automatic organization.
+        
+        Args:
+            prompt: Text description of the image to generate
+            model: Model to use for generation (default: "gpt-image-1")
+                   Options: "gpt-image-1"
+            size: Image size (default: "1024x1024")
+                  - For gpt-image-1: '1024x1024', '1024x1536', '1536x1024', and 'auto'
+            quality: Image quality for gpt-image-1 (default: "medium")
+                     Options: "low", "medium", "high"
+            n: Number of images to generate (default: 1)
+            storage_path: Directory path where to save the image (optional)
+                         - Relative path: Resolved relative to workspace (e.g., "images/generated")
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
+        
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "generate_and_store_image"
+            - images: List of generated images with file paths and metadata
+            - revised_prompt: The revised prompt used (for gpt-image-1)
+            
+        Examples:
+            generate_and_store_image("a cat in space", model="gpt-image-1")
+            → Generates and saves to: 20240115_143022_a_cat_in_space.png
+            
+            generate_and_store_image("sunset over mountains", storage_path="art/landscapes")
+            → Generates and saves to: art/landscapes/20240115_143022_sunset_over_mountains.png
+        
+        Security:
+            - Requires valid OpenAI API key (automatically detected from .env or environment)
+            - Files are saved to specified path within workspace
+            - Path must be within allowed directories
+        
+        Note:
+            API key is automatically detected in this order:
+            1. First checks .env file in current directory or parent directories
+            2. Then checks environment variables
+        """
+        from datetime import datetime
+        
+        try:
+            # Try to find and load .env file from multiple locations
+            # 1. Try loading from script directory
+            script_dir = Path(__file__).parent.parent.parent  # Go up to project root
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                # 2. Try loading from current directory and parent directories
+                load_dotenv()
+            
+            # Get API key from environment (load_dotenv will have loaded .env file)
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_image",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable."
+                }
+            
+            # Initialize OpenAI client
+            client = AsyncOpenAI(api_key=openai_api_key)
+            
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+            
+            # Validate storage directory is within allowed paths
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+            
+            # Create directory if it doesn't exist
+            storage_dir.mkdir(parents=True, exist_ok=True)
+            
+            try:
+                # Generate image using OpenAI API
+                response = await client.images.generate(
+                    model=model,
+                    prompt=prompt,
+                    size=size,
+                    quality=quality,
+                    n=n,
+                    # response_format="b64_json"  # do not support by gpt-image-1 
+                )
+                
+                saved_images = []
+                
+                # Process each generated image
+                for idx, image in enumerate(response.data):
+                    # Get base64 data
+                    image_data = image.b64_json
+                    
+                    # Generate filename with timestamp
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    
+                    # Clean prompt for filename
+                    clean_prompt = "".join(
+                        c for c in prompt[:30] 
+                        if c.isalnum() or c in (" ", "-", "_")
+                    ).strip()
+                    clean_prompt = clean_prompt.replace(" ", "_")
+                    
+                    # Add index if generating multiple images
+                    if n > 1:
+                        filename = f"{timestamp}_{clean_prompt}_{idx+1}.png"
+                    else:
+                        filename = f"{timestamp}_{clean_prompt}.png"
+                    
+                    # Full file path
+                    file_path = storage_dir / filename
+                    
+                    # Decode base64 and write to file
+                    image_bytes = base64.b64decode(image_data)
+                    file_path.write_bytes(image_bytes)
+                    file_size = len(image_bytes)
+                    
+                    saved_images.append({
+                        "file_path": str(file_path),
+                        "filename": filename,
+                        "size": file_size,
+                        "index": idx
+                    })
+                
+                result = {
+                    "success": True,
+                    "operation": "generate_and_store_image",
+                    "images": saved_images,
+                    "model": model,
+                    "size": size,
+                    "quality": quality,
+                    "prompt": prompt
+                }
+                
+                # Add revised prompt if available (dall-e-3 feature)
+                if hasattr(response.data[0], 'revised_prompt'):
+                    result["revised_prompt"] = response.data[0].revised_prompt
+                
+                return result
+                
+            except Exception as api_error:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_image",
+                    "error": f"OpenAI API error: {str(api_error)}"
+                }
+            
+        except Exception as e:
+            return {
+                "success": False,
+                "operation": "generate_and_store_image",
+                "error": f"Failed to generate or save image: {str(e)}"
             }
 
     print("🚀 Workspace Copy MCP Server started and ready")
