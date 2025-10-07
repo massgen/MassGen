@@ -138,45 +138,17 @@ See the new AG2 framework integration in action:
 [![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
 
 **What's New in v0.0.28:**
-- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **AG2 Framework Integration (Optional)** - Use AG2 agents alongside MassGen agents in collaborative workflows
 - **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
 - **Improved Stability** - Better handling when MCP servers are not configured
 
-**Try v0.0.28 Features Now:**
+**Try v0.0.28 AG2 Integration (Optional):**
 ```bash
-# Try AG2 integration with MassGen
+# Install AG2 support (optional - only needed for AG2 configs)
 uv pip install -e ".[external]"
+
+# Try AG2 integration example
 uv run python -m massgen.cli --config massgen/configs/ag2/ag2_coder_case_study.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
-```
-
-**Experience v0.0.28 AG2 Integration:**
-
-See the new AG2 framework integration in action:
-
-[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
-
-**What's New in v0.0.28:**
-- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
-- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
-- **Improved Stability** - Better handling when MCP servers are not configured
-
-**Try v0.0.28 Features Now:**
-```bash
-# Basic AG2 single agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_single_agent.yaml \
-  "what is quantum computing?"
-
-# AG2 single agent with code execution
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
-  "Create a factorial function and calculate the factorial of 8. Show the result?"
-
-# Mixed team: AG2 agent + Gemini agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_gemini.yaml \
-  "what is quantum computing?"
-
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -237,6 +209,9 @@ cd MassGen
 
 pip install uv
 uv venv
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
 ```
 
 **Global Installation using `uv tool` (Recommended for multi-directory usage):**
@@ -250,6 +225,9 @@ cd MassGen
 
 # Install MassGen as a global tool in editable mode
 uv tool install -e .
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
 
 # Now run from any directory
 cd ~/projects/website
@@ -265,6 +243,12 @@ uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.y
 - ✅ Editable mode (`-e .`) allows live development
 - ✅ Easy updates with `git pull` (editable mode)
 - ✅ Clean uninstall with `uv tool uninstall massgen`
+
+**Optional Dependencies:**
+```bash
+# AG2 Framework Integration (for external agent frameworks)
+uv pip install -e ".[external]"
+```
 
 **Optional CLI Tools** (for enhanced capabilities):
 ```bash

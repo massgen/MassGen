@@ -97,6 +97,10 @@ class FileOperationTracker:
 
         resolved_path = file_path.resolve()
 
+        # If file doesn't exist, allow deletion (nothing to delete)
+        if not resolved_path.exists():
+            return (True, None)
+
         # Check if file was read or created
         if self.was_read(resolved_path):
             return (True, None)
