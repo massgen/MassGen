@@ -274,9 +274,9 @@ Present the best possible coordinated answer by combining the strengths from all
 
         # Add image generation instructions only if enabled
         # if enable_image_generation:
-#         presentation_instructions += """For image generation tasks:
-#         After reviewing the existing images, you must generate the final images that best combine the strengths of all images from all paticipants.
-# """
+        #         presentation_instructions += """For image generation tasks:
+        #         After reviewing the existing images, you must generate the final images that best combine the strengths of all images from all paticipants.
+        # """
         presentation_instructions += """For image generation tasks:
 - Extract image paths from the existing answer and resolve them in the shared reference.
 - Gather all agent-produced images (ignore non-existent files).
@@ -526,9 +526,9 @@ Based on the coordination process above, present your final answer:"""
         # else:
         # Not enabled for image generation tasks
         parts.append(
-                "\n**New Answer**: When calling `new_answer`, you MUST actually create files in your workspace using file write tools - "
-                "do NOT just describe what files you would create. Then, list 1) your full cwd and 2) the file paths you created, "
-                "but do NOT paste full file contents in your answer.\n",
+            "\n**New Answer**: When calling `new_answer`, you MUST actually create files in your workspace using file write tools - "
+            "do NOT just describe what files you would create. Then, list 1) your full cwd and 2) the file paths you created, "
+            "but do NOT paste full file contents in your answer.\n",
         )
 
         # Add workspace cleanup guidance
@@ -559,8 +559,8 @@ Based on the coordination process above, present your final answer:"""
         # else:
         # Not enabled for image generation tasks
         parts.append(
-                "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
-                "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
+            "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
+            "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
         )
 
         return "\n".join(parts)

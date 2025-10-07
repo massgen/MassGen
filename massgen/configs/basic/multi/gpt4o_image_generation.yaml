@@ -10,7 +10,7 @@ agents:
       text:
         verbosity: "medium"
       cwd: "workspace1"
-      exclude_tools: ["mcp__workspace_tools__delete_file"] 
+      exclude_tools: ["mcp__workspace_tools__delete_file"]
 
   - id: "gpt4o_2"
     backend:
@@ -19,7 +19,7 @@ agents:
       text:
         verbosity: "medium"
       cwd: "workspace2"
-      exclude_tools: ["mcp__workspace_tools__delete_file"] 
+      exclude_tools: ["mcp__workspace_tools__delete_file"]
 
 orchestrator:
     snapshot_storage: "snapshots"

@@ -7,7 +7,6 @@ Supports image input (URL and base64) and image generation via tools.
 from __future__ import annotations
 
 import asyncio
-import base64
 import os
 from datetime import datetime, timezone
 from io import BytesIO
@@ -895,7 +894,7 @@ class ResponseBackend(MCPBackend):
                 content="\n✅ [Provider Tool: Code Interpreter] Execution completed",
                 source="response_api",
             )
-        
+
         # Image Generation events
         elif chunk_type == "response.image_generation_call.in_progress":
             log_stream_chunk("backend.response", "image_generation", "Starting image generation", agent_id)
@@ -1089,7 +1088,7 @@ class ResponseBackend(MCPBackend):
                             action = item.get("action", {})
                             prompt = action.get("prompt", "")
                             size = action.get("size", "1024x1024")
-                            
+
                             if prompt:
                                 content = f"\n🔧 Image Generation [{status.title()}]: {prompt} (Size: {size})"
                                 log_stream_chunk("backend.response", "image_generation_result", content, agent_id)

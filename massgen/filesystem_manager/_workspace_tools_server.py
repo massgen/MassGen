@@ -23,17 +23,14 @@ import base64
 import difflib
 import filecmp
 import fnmatch
-import mimetypes
 import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import fastmcp
-import requests
 from dotenv import load_dotenv
 from openai import OpenAI
-from PIL import Image
 
 
 def get_copy_file_pairs(
@@ -833,7 +830,7 @@ async def create_server() -> fastmcp.FastMCP:
 
         This tool generates image variations based on multiple base images using OpenAI's gpt-4o API
         and saves them to the workspace with automatic organization.
-        
+
         Args:
             base_image_paths: List of paths to base images (PNG/JPEG files, less than 4MB)
                         - Relative path: Resolved relative to workspace
@@ -845,7 +842,7 @@ async def create_server() -> fastmcp.FastMCP:
                          - Relative path: Resolved relative to workspace
                          - Absolute path: Must be within allowed directories
                          - None/empty: Saves to workspace root
-        
+
         Returns:
             Dictionary containing:
             - success: Whether operation succeeded
@@ -855,21 +852,21 @@ async def create_server() -> fastmcp.FastMCP:
             - model: Model used for generation
             - prompt: The prompt used
             - total_images: Total number of images generated
-            
+
         Examples:
             generate_and_store_image_with_input_images(["cat.png", "dog.png"], "Combine these animals")
             → Generates a variation combining both images
 
             generate_and_store_image_with_input_images(["art/logo.png", "art/icon.png"], "Create a unified design")
             → Generates variations based on both images
-        
+
         Security:
             - Requires valid OpenAI API key
             - Input images must be valid image files less than 4MB
             - Files are saved to specified path within workspace
         """
         from datetime import datetime
-        
+
         try:
             # Load environment variables
             script_dir = Path(__file__).parent.parent.parent
@@ -878,22 +875,22 @@ async def create_server() -> fastmcp.FastMCP:
                 load_dotenv(env_path)
             else:
                 load_dotenv()
-            
+
             openai_api_key = os.getenv("OPENAI_API_KEY")
-            
+
             if not openai_api_key:
                 return {
                     "success": False,
                     "operation": "generate_and_store_image_with_input_images",
-                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable."
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
                 }
-            
+
             # Initialize OpenAI client
             client = OpenAI(api_key=openai_api_key)
-            
+
             # Prepare content list with prompt and images
             content = [{"type": "input_text", "text": prompt}]
-            
+
             # Process and validate all input images
             validated_paths = []
             for image_path_str in base_image_paths:
@@ -902,50 +899,52 @@ async def create_server() -> fastmcp.FastMCP:
                     image_path = Path(image_path_str).resolve()
                 else:
                     image_path = (Path.cwd() / image_path_str).resolve()
-                
+
                 # Validate image path
                 _validate_path_access(image_path, mcp.allowed_paths)
-                
+
                 if not image_path.exists():
                     return {
                         "success": False,
                         "operation": "generate_and_store_image_with_input_images",
-                        "error": f"Image file does not exist: {image_path}"
+                        "error": f"Image file does not exist: {image_path}",
                     }
-                
+
                 # Allow both PNG and JPEG formats
-                if image_path.suffix.lower() not in ['.png', '.jpg', '.jpeg']:
+                if image_path.suffix.lower() not in [".png", ".jpg", ".jpeg"]:
                     return {
                         "success": False,
                         "operation": "generate_and_store_image_with_input_images",
-                        "error": f"Image must be PNG or JPEG format: {image_path}"
+                        "error": f"Image must be PNG or JPEG format: {image_path}",
                     }
-                
+
                 # Check file size (must be less than 4MB)
                 file_size = image_path.stat().st_size
                 if file_size > 4 * 1024 * 1024:
                     return {
                         "success": False,
                         "operation": "generate_and_store_image_with_input_images",
-                        "error": f"Image file too large (must be < 4MB): {image_path} is {file_size / (1024*1024):.2f}MB"
+                        "error": f"Image file too large (must be < 4MB): {image_path} is {file_size / (1024*1024):.2f}MB",
                     }
-                
+
                 validated_paths.append(image_path)
-                
+
                 # Read and encode image to base64
-                with open(image_path, 'rb') as f:
+                with open(image_path, "rb") as f:
                     image_data = f.read()
-                image_base64 = base64.b64encode(image_data).decode('utf-8')
-                
+                image_base64 = base64.b64encode(image_data).decode("utf-8")
+
                 # Determine MIME type
-                mime_type = "image/jpeg" if image_path.suffix.lower() in ['.jpg', '.jpeg'] else "image/png"
-                
+                mime_type = "image/jpeg" if image_path.suffix.lower() in [".jpg", ".jpeg"] else "image/png"
+
                 # Add image to content
-                content.append({
-                    "type": "input_image",
-                    "image_url": f"data:{mime_type};base64,{image_base64}"
-                })
-            
+                content.append(
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:{mime_type};base64,{image_base64}",
+                    }
+                )
+
             # Determine storage directory
             if storage_path:
                 if Path(storage_path).is_absolute():
@@ -954,83 +953,84 @@ async def create_server() -> fastmcp.FastMCP:
                     storage_dir = (Path.cwd() / storage_path).resolve()
             else:
                 storage_dir = Path.cwd()
-            
+
             # Validate storage directory
             _validate_path_access(storage_dir, mcp.allowed_paths)
             storage_dir.mkdir(parents=True, exist_ok=True)
-            
+
             try:
                 # print("Content for OpenAI API:", str(content))
                 # Generate variations using gpt-4o API with all images at once
                 response = client.responses.create(
                     model=model,
-                    input=[{
-                        "role": "user",
-                        "content": content
-                    }],
+                    input=[
+                        {
+                            "role": "user",
+                            "content": content,
+                        }
+                    ],
                     tools=[{"type": "image_generation"}],
                 )
-                
+
                 # Extract image generation calls from response
-                image_generation_calls = [
-                    output for output in response.output
-                    if output.type == "image_generation_call"
-                ]
-                
+                image_generation_calls = [output for output in response.output if output.type == "image_generation_call"]
+
                 all_variations = []
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                
+
                 # Process generated images
                 for idx, output in enumerate(image_generation_calls):
-                    if hasattr(output, 'result'):
+                    if hasattr(output, "result"):
                         image_base64 = output.result
                         image_bytes = base64.b64decode(image_base64)
-                        
+
                         # Generate filename
                         if len(image_generation_calls) > 1:
                             filename = f"variation_{idx+1}_{timestamp}.png"
                         else:
                             filename = f"variation_{timestamp}.png"
-                        
+
                         # Full file path
                         file_path = storage_dir / filename
-                        
+
                         # Save image
                         file_path.write_bytes(image_bytes)
-                        
+
                         # Print save information
                         print(f"[Image Variation] Saved variation {idx+1}/{n}:")
                         print(f"  - File: {file_path}")
                         print(f"  - Size: {len(image_bytes):,} bytes")
                         print(f"  - Model: {model}")
                         print(f"  - Source images: {len(validated_paths)} file(s)")
-                        
-                        all_variations.append({
-                            "source_images": [str(p) for p in validated_paths],
-                            "file_path": str(file_path),
-                            "filename": filename,
-                            "size": len(image_bytes),
-                            "index": idx
-                        })
-                
+
+                        all_variations.append(
+                            {
+                                "source_images": [str(p) for p in validated_paths],
+                                "file_path": str(file_path),
+                                "filename": filename,
+                                "size": len(image_bytes),
+                                "index": idx,
+                            }
+                        )
+
                 # If no images were generated, check for text response
                 if not all_variations:
-                    text_outputs = [output.content for output in response.output if hasattr(output, 'content')]
+                    text_outputs = [output.content for output in response.output if hasattr(output, "content")]
                     if text_outputs:
                         return {
                             "success": False,
                             "operation": "generate_and_store_image_with_input_images",
-                            "error": f"No images generated. Response: {' '.join(text_outputs)}"
+                            "error": f"No images generated. Response: {' '.join(text_outputs)}",
                         }
-                
+
             except Exception as api_error:
                 print(f"OpenAI API error: {api_error}")
                 return {
                     "success": False,
                     "operation": "generate_and_store_image_with_input_images",
-                    "error": f"OpenAI API error: {str(api_error)}"
+                    "error": f"OpenAI API error: {str(api_error)}",
                 }
-            
+
             return {
                 "success": True,
                 "operation": "generate_and_store_image_with_input_images",
@@ -1038,15 +1038,15 @@ async def create_server() -> fastmcp.FastMCP:
                 "images": all_variations,
                 "model": model,
                 "prompt": prompt,
-                "total_images": len(all_variations)
+                "total_images": len(all_variations),
             }
-            
+
         except Exception as e:
             print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
                 "operation": "generate_and_store_image_with_input_images",
-                "error": f"Failed to generate variations: {str(e)}"
+                "error": f"Failed to generate variations: {str(e)}",
             }
 
     @mcp.tool()
@@ -1070,7 +1070,7 @@ async def create_server() -> fastmcp.FastMCP:
                          - Relative path: Resolved relative to workspace (e.g., "images/generated")
                          - Absolute path: Must be within allowed directories
                          - None/empty: Saves to workspace root
-        
+
         Returns:
             Dictionary containing:
             - success: Whether operation succeeded
@@ -1088,19 +1088,19 @@ async def create_server() -> fastmcp.FastMCP:
 
             generate_and_store_image_no_input_images("sunset over mountains", storage_path="art/landscapes")
             → Generates and saves to: art/landscapes/20240115_143022_sunset_over_mountains.png
-        
+
         Security:
             - Requires valid OpenAI API key (automatically detected from .env or environment)
             - Files are saved to specified path within workspace
             - Path must be within allowed directories
-        
+
         Note:
             API key is automatically detected in this order:
             1. First checks .env file in current directory or parent directories
             2. Then checks environment variables
         """
         from datetime import datetime
-        
+
         try:
             # Try to find and load .env file from multiple locations
             # 1. Try loading from script directory
@@ -1111,7 +1111,7 @@ async def create_server() -> fastmcp.FastMCP:
             else:
                 # 2. Try loading from current directory and parent directories
                 load_dotenv()
-            
+
             # Get API key from environment (load_dotenv will have loaded .env file)
             openai_api_key = os.getenv("OPENAI_API_KEY")
 
@@ -1119,12 +1119,12 @@ async def create_server() -> fastmcp.FastMCP:
                 return {
                     "success": False,
                     "operation": "generate_and_store_image",
-                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable."
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
                 }
-            
+
             # Initialize OpenAI client
             client = OpenAI(api_key=openai_api_key)
-            
+
             # Determine storage directory
             if storage_path:
                 if Path(storage_path).is_absolute():
@@ -1133,13 +1133,13 @@ async def create_server() -> fastmcp.FastMCP:
                     storage_dir = (Path.cwd() / storage_path).resolve()
             else:
                 storage_dir = Path.cwd()
-            
+
             # Validate storage directory is within allowed paths
             _validate_path_access(storage_dir, mcp.allowed_paths)
-            
+
             # Create directory if it doesn't exist
             storage_dir.mkdir(parents=True, exist_ok=True)
-            
+
             try:
                 # Generate image using OpenAI API with gpt-4o non-streaming format
                 response = client.responses.create(
@@ -1147,58 +1147,53 @@ async def create_server() -> fastmcp.FastMCP:
                     input=prompt,
                     tools=[{"type": "image_generation"}],
                 )
-                
+
                 # Extract image data from response
-                image_data = [
-                    output.result
-                    for output in response.output
-                    if output.type == "image_generation_call"
-                ]
-                
+                image_data = [output.result for output in response.output if output.type == "image_generation_call"]
+
                 saved_images = []
-                
+
                 if image_data:
                     # Generate filename with timestamp
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    
+
                     # Clean prompt for filename
-                    clean_prompt = "".join(
-                        c for c in prompt[:30] 
-                        if c.isalnum() or c in (" ", "-", "_")
-                    ).strip()
+                    clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
                     clean_prompt = clean_prompt.replace(" ", "_")
-                    
+
                     for idx, image_base64 in enumerate(image_data):
                         # Decode base64 image data
                         image_bytes = base64.b64decode(image_base64)
-                        
+
                         # Add index if generating multiple images
                         if len(image_data) > 1:
                             filename = f"{timestamp}_{clean_prompt}_{idx+1}.png"
                         else:
                             filename = f"{timestamp}_{clean_prompt}.png"
-                        
+
                         # Full file path
                         file_path = storage_dir / filename
-                        
+
                         # Write image to file
                         file_path.write_bytes(image_bytes)
                         file_size = len(image_bytes)
-                        
+
                         # Print save information
                         print(f"[Image Generation] Saved image {idx+1}/{len(image_data)}:")
                         print(f"  - File: {file_path}")
                         print(f"  - Size: {file_size:,} bytes")
                         print(f"  - Prompt: {prompt[:50]}..." if len(prompt) > 50 else f"  - Prompt: {prompt}")
                         print(f"  - Model: {model}")
-                        
-                        saved_images.append({
-                            "file_path": str(file_path),
-                            "filename": filename,
-                            "size": file_size,
-                            "index": idx
-                        })
-                
+
+                        saved_images.append(
+                            {
+                                "file_path": str(file_path),
+                                "filename": filename,
+                                "size": file_size,
+                                "index": idx,
+                            }
+                        )
+
                 result = {
                     "success": True,
                     "operation": "generate_and_store_image_no_input_images",
@@ -1206,25 +1201,25 @@ async def create_server() -> fastmcp.FastMCP:
                     "images": saved_images,
                     "model": model,
                     "prompt": prompt,
-                    "total_images": len(saved_images)
+                    "total_images": len(saved_images),
                 }
-                
+
                 return result
-                
+
             except Exception as api_error:
                 print(f"OpenAI API error: {str(api_error)}")
                 return {
                     "success": False,
                     "operation": "generate_and_store_image_no_input_images",
-                    "error": f"OpenAI API error: {str(api_error)}"
+                    "error": f"OpenAI API error: {str(api_error)}",
                 }
-            
+
         except Exception as e:
             print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
                 "operation": "generate_and_store_image_no_input_images",
-                "error": f"Failed to generate or save image: {str(e)}"
+                "error": f"Failed to generate or save image: {str(e)}",
             }
 
     print("🚀 Workspace Copy MCP Server started and ready")
