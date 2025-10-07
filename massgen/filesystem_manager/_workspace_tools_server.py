@@ -14,7 +14,8 @@ Tools provided:
 - delete_files_batch: Delete multiple files with pattern matching
 - compare_directories: Compare two directories and show differences
 - compare_files: Compare two text files and show unified diff
-- read_multimodal_files: Read image files and return as base64 data with MIME type
+- generate_and_store_image_variation: Create variations of existing images using DALL-E 2
+- generate_and_store_image: Generate new images from text prompts using DALL-E
 """
 
 import argparse
@@ -22,12 +23,14 @@ import base64
 import difflib
 import filecmp
 import fnmatch
-import mimetypes
+import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import fastmcp
+from dotenv import load_dotenv
+from openai import OpenAI
 
 
 def get_copy_file_pairs(
@@ -815,189 +818,408 @@ async def create_server() -> fastmcp.FastMCP:
             return {"success": False, "operation": "compare_files", "error": str(e)}
 
     @mcp.tool()
-    def read_multimodal_files(path: str, max_size_mb: float = 0.25, compress_quality: int = 65, understanding_mode: bool = True) -> Dict[str, Any]:
+    def generate_and_store_image_with_input_images(
+        base_image_paths: List[str],
+        prompt: str = "Create a variation of the provided images",
+        model: str = "gpt-4o",
+        n: int = 1,
+        storage_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
-        Read multimodal files (images, etc.) and return as base64 data with MIME type.
+        Create variations based on multiple input images using OpenAI's gpt-4o API.
 
-        This tool is specifically designed for reading image files and other multimodal content,
-        converting them to base64 format suitable for AI model processing. Large images are
-        automatically compressed to avoid exceeding model context limits.
+        This tool generates image variations based on multiple base images using OpenAI's gpt-4o API
+        and saves them to the workspace with automatic organization.
 
         Args:
-            path: Path to the multimodal file (absolute or relative to workspace)
-                  Supports common image formats: png, jpg, jpeg, gif, bmp, webp, svg
-            max_size_mb: Maximum file size in MB after compression (default: 0.25)
-                        Reduced default to prevent context window overflow
-            compress_quality: JPEG compression quality 1-100 (default: 65)
-                            Lower default for better context efficiency
-            understanding_mode: If True, uses more aggressive compression for AI understanding tasks
-                              (max 0.15MB, quality 50)
+            base_image_paths: List of paths to base images (PNG/JPEG files, less than 4MB)
+                        - Relative path: Resolved relative to workspace
+                        - Absolute path: Must be within allowed directories
+            prompt: Text description for the variation (default: "Create a variation of the provided images")
+            model: Model to use (default: "gpt-4o")
+            n: Number of variations to generate (default: 1)
+            storage_path: Directory path where to save variations (optional)
+                         - Relative path: Resolved relative to workspace
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
 
         Returns:
             Dictionary containing:
             - success: Whether operation succeeded
-            - operation: "read_multimodal_files"
-            - data: Base64 encoded file content with data URI scheme
-            - mime_type: MIME type of the file
-            - size: File size in bytes (after compression if applied)
-            - original_size: Original file size in bytes
-            - compressed: Whether compression was applied
-            - path: Resolved file path
+            - operation: "generate_and_store_image_with_input_images"
+            - note: Note about usage
+            - images: List of generated images with file paths and metadata
+            - model: Model used for generation
+            - prompt: The prompt used
+            - total_images: Total number of images generated
 
         Examples:
-            read_multimodal_files("image.png")
-            → {"data": "data:image/png;base64,iVBORw0...", "mime_type": "image/png"}
+            generate_and_store_image_with_input_images(["cat.png", "dog.png"], "Combine these animals")
+            → Generates a variation combining both images
+
+            generate_and_store_image_with_input_images(["art/logo.png", "art/icon.png"], "Create a unified design")
+            → Generates variations based on both images
 
         Security:
-            - Read-only operation
-            - Path must be within allowed directories
-            - Large files are automatically compressed to fit within limits
+            - Requires valid OpenAI API key
+            - Input images must be valid image files less than 4MB
+            - Files are saved to specified path within workspace
         """
+        from datetime import datetime
+
         try:
-            import io
-
-            from PIL import Image
-
-            # Apply understanding mode if enabled
-            if understanding_mode:
-                max_size_mb = min(max_size_mb, 0.15)  # Max 150KB for understanding mode
-                compress_quality = min(compress_quality, 50)  # Lower quality for understanding
-
-            # Resolve path
-            if Path(path).is_absolute():
-                file_path = Path(path).resolve()
+            # Load environment variables
+            script_dir = Path(__file__).parent.parent.parent
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
             else:
-                # Relative path - resolve relative to workspace
-                file_path = (Path.cwd() / path).resolve()
+                load_dotenv()
 
-            # Validate path access
-            _validate_path_access(file_path, mcp.allowed_paths)
+            openai_api_key = os.getenv("OPENAI_API_KEY")
 
-            # Check if file exists
-            if not file_path.exists():
+            if not openai_api_key:
                 return {
                     "success": False,
-                    "operation": "read_multimodal_files",
-                    "error": f"File does not exist: {file_path}",
+                    "operation": "generate_and_store_image_with_input_images",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
                 }
 
-            if not file_path.is_file():
-                return {
-                    "success": False,
-                    "operation": "read_multimodal_files",
-                    "error": f"Path is not a file: {file_path}",
-                }
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
 
-            # Get MIME type
-            mime_type, _ = mimetypes.guess_type(str(file_path))
-            if mime_type is None:
-                # Default MIME type for unknown files
-                mime_type = "application/octet-stream"
+            # Prepare content list with prompt and images
+            content = [{"type": "input_text", "text": prompt}]
 
-            # Read file
-            try:
-                with open(file_path, "rb") as f:
-                    file_content = f.read()
+            # Process and validate all input images
+            validated_paths = []
+            for image_path_str in base_image_paths:
+                # Resolve image path
+                if Path(image_path_str).is_absolute():
+                    image_path = Path(image_path_str).resolve()
+                else:
+                    image_path = (Path.cwd() / image_path_str).resolve()
 
-                original_size = len(file_content)
-                max_size_bytes = max_size_mb * 1024 * 1024
-                compressed = False
+                # Validate image path
+                _validate_path_access(image_path, mcp.allowed_paths)
 
-                # Check if it's an image that needs compression
-                if mime_type and mime_type.startswith("image/") and mime_type != "image/svg+xml":
-                    if original_size > max_size_bytes:
-                        try:
-                            # Open image with PIL
-                            img = Image.open(io.BytesIO(file_content))
-
-                            # Convert RGBA to RGB if needed for JPEG
-                            if img.mode in ("RGBA", "LA", "P"):
-                                background = Image.new("RGB", img.size, (255, 255, 255))
-                                if img.mode == "P":
-                                    img = img.convert("RGBA")
-                                background.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
-                                img = background
-
-                            # Start with original dimensions
-                            current_img = img.copy()
-
-                            # Try different compression levels and sizes
-                            for scale in [1.0, 0.8, 0.6, 0.4, 0.2]:
-                                if scale < 1.0:
-                                    new_size = (int(img.width * scale), int(img.height * scale))
-                                    current_img = img.resize(new_size, Image.Resampling.LANCZOS)
-
-                                # Save to bytes with compression
-                                output = io.BytesIO()
-                                # Use actual compress_quality value (may be reduced by understanding_mode)
-                                current_img.save(output, format="JPEG", quality=compress_quality, optimize=True)
-                                compressed_content = output.getvalue()
-
-                                if len(compressed_content) <= max_size_bytes:
-                                    file_content = compressed_content
-                                    mime_type = "image/jpeg"
-                                    compressed = True
-                                    break
-                            else:
-                                # If still too large after maximum compression, use lowest quality
-                                output = io.BytesIO()
-                                # For understanding mode, go even lower; otherwise use 30
-                                final_quality = 20 if understanding_mode else 30
-                                current_img.save(output, format="JPEG", quality=final_quality, optimize=True)
-                                file_content = output.getvalue()
-                                mime_type = "image/jpeg"
-                                compressed = True
-
-                        except Exception as e:
-                            # If compression fails, continue with original
-                            print(f"Warning: Failed to compress image: {e}")
-
-                # Get final file size
-                file_size = len(file_content)
-
-                # Final check - if still too large, return error
-                if file_size > 5 * 1024 * 1024:  # 5MB absolute limit
+                if not image_path.exists():
                     return {
                         "success": False,
-                        "operation": "read_multimodal_files",
-                        "error": f"File too large even after compression: {file_size / (1024*1024):.2f}MB. Maximum allowed: 5MB",
+                        "operation": "generate_and_store_image_with_input_images",
+                        "error": f"Image file does not exist: {image_path}",
                     }
 
-                # Encode to base64
-                base64_content = base64.b64encode(file_content).decode("utf-8")
+                # Allow both PNG and JPEG formats
+                if image_path.suffix.lower() not in [".png", ".jpg", ".jpeg"]:
+                    return {
+                        "success": False,
+                        "operation": "generate_and_store_image_with_input_images",
+                        "error": f"Image must be PNG or JPEG format: {image_path}",
+                    }
 
-                # Create data URI
-                data_uri = f"data:{mime_type};base64,{base64_content}"
+                # Check file size (must be less than 4MB)
+                file_size = image_path.stat().st_size
+                if file_size > 4 * 1024 * 1024:
+                    return {
+                        "success": False,
+                        "operation": "generate_and_store_image_with_input_images",
+                        "error": f"Image file too large (must be < 4MB): {image_path} is {file_size / (1024*1024):.2f}MB",
+                    }
 
-                return {
-                    "success": True,
-                    "operation": "read_multimodal_files",
-                    "data": data_uri,
-                    "mime_type": mime_type,
-                    "size": file_size,
-                    "original_size": original_size,
-                    "compressed": compressed,
-                    "path": str(file_path),
-                }
+                validated_paths.append(image_path)
 
-            except Exception as e:
+                # Read and encode image to base64
+                with open(image_path, "rb") as f:
+                    image_data = f.read()
+                image_base64 = base64.b64encode(image_data).decode("utf-8")
+
+                # Determine MIME type
+                mime_type = "image/jpeg" if image_path.suffix.lower() in [".jpg", ".jpeg"] else "image/png"
+
+                # Add image to content
+                content.append(
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:{mime_type};base64,{image_base64}",
+                    },
+                )
+
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+
+            # Validate storage directory
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                # print("Content for OpenAI API:", str(content))
+                # Generate variations using gpt-4o API with all images at once
+                response = client.responses.create(
+                    model=model,
+                    input=[
+                        {
+                            "role": "user",
+                            "content": content,
+                        },
+                    ],
+                    tools=[{"type": "image_generation"}],
+                )
+
+                # Extract image generation calls from response
+                image_generation_calls = [output for output in response.output if output.type == "image_generation_call"]
+
+                all_variations = []
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                # Process generated images
+                for idx, output in enumerate(image_generation_calls):
+                    if hasattr(output, "result"):
+                        image_base64 = output.result
+                        image_bytes = base64.b64decode(image_base64)
+
+                        # Generate filename
+                        if len(image_generation_calls) > 1:
+                            filename = f"variation_{idx+1}_{timestamp}.png"
+                        else:
+                            filename = f"variation_{timestamp}.png"
+
+                        # Full file path
+                        file_path = storage_dir / filename
+
+                        # Save image
+                        file_path.write_bytes(image_bytes)
+
+                        # Print save information
+                        print(f"[Image Variation] Saved variation {idx+1}/{n}:")
+                        print(f"  - File: {file_path}")
+                        print(f"  - Size: {len(image_bytes):,} bytes")
+                        print(f"  - Model: {model}")
+                        print(f"  - Source images: {len(validated_paths)} file(s)")
+
+                        all_variations.append(
+                            {
+                                "source_images": [str(p) for p in validated_paths],
+                                "file_path": str(file_path),
+                                "filename": filename,
+                                "size": len(image_bytes),
+                                "index": idx,
+                            },
+                        )
+
+                # If no images were generated, check for text response
+                if not all_variations:
+                    text_outputs = [output.content for output in response.output if hasattr(output, "content")]
+                    if text_outputs:
+                        return {
+                            "success": False,
+                            "operation": "generate_and_store_image_with_input_images",
+                            "error": f"No images generated. Response: {' '.join(text_outputs)}",
+                        }
+
+            except Exception as api_error:
+                print(f"OpenAI API error: {api_error}")
                 return {
                     "success": False,
-                    "operation": "read_multimodal_files",
-                    "error": f"Failed to read file: {e}",
+                    "operation": "generate_and_store_image_with_input_images",
+                    "error": f"OpenAI API error: {str(api_error)}",
                 }
 
-        except ImportError:
             return {
-                "success": False,
-                "operation": "read_multimodal_files",
-                "error": "PIL (Pillow) is required for image compression. Install with: pip install Pillow",
+                "success": True,
+                "operation": "generate_and_store_image_with_input_images",
+                "note": "If no input images were provided, you must use generate_and_store_image_no_input_images tool.",
+                "images": all_variations,
+                "model": model,
+                "prompt": prompt,
+                "total_images": len(all_variations),
             }
+
         except Exception as e:
+            print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
-                "operation": "read_multimodal_files",
-                "error": str(e),
+                "operation": "generate_and_store_image_with_input_images",
+                "error": f"Failed to generate variations: {str(e)}",
+            }
+
+    @mcp.tool()
+    def generate_and_store_image_no_input_images(
+        prompt: str,
+        model: str = "gpt-4o",
+        storage_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate image using OpenAI's response with gpt-4o **WITHOUT ANY INPUT IMAGES** and store it in the workspace.
+
+        This tool Generate image using OpenAI's response with gpt-4o **WITHOUT ANY INPUT IMAGES** and store it in the workspace.
+
+        Args:
+            prompt: Text description of the image to generate
+            model: Model to use for generation (default: "gpt-4o")
+                   Options: "gpt-4o"
+            n: Number of images to generate (default: 1)
+               - gpt-4o: only 1
+            storage_path: Directory path where to save the image (optional)
+                         - Relative path: Resolved relative to workspace (e.g., "images/generated")
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "generate_and_store_image_no_input_images"
+            - note: Note about operation
+            - images: List of generated images with file paths and metadata
+            - model: Model used for generation
+            - prompt: The prompt used for generation
+            - total_images: Total number of images generated and saved
+            - images: List of generated images with file paths and metadata
+
+        Examples:
+            generate_and_store_image_no_input_images("a cat in space")
+            → Generates and saves to: 20240115_143022_a_cat_in_space.png
+
+            generate_and_store_image_no_input_images("sunset over mountains", storage_path="art/landscapes")
+            → Generates and saves to: art/landscapes/20240115_143022_sunset_over_mountains.png
+
+        Security:
+            - Requires valid OpenAI API key (automatically detected from .env or environment)
+            - Files are saved to specified path within workspace
+            - Path must be within allowed directories
+
+        Note:
+            API key is automatically detected in this order:
+            1. First checks .env file in current directory or parent directories
+            2. Then checks environment variables
+        """
+        from datetime import datetime
+
+        try:
+            # Try to find and load .env file from multiple locations
+            # 1. Try loading from script directory
+            script_dir = Path(__file__).parent.parent.parent  # Go up to project root
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                # 2. Try loading from current directory and parent directories
+                load_dotenv()
+
+            # Get API key from environment (load_dotenv will have loaded .env file)
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_image",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
+                }
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
+
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+
+            # Validate storage directory is within allowed paths
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+
+            # Create directory if it doesn't exist
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                # Generate image using OpenAI API with gpt-4o non-streaming format
+                response = client.responses.create(
+                    model=model,
+                    input=prompt,
+                    tools=[{"type": "image_generation"}],
+                )
+
+                # Extract image data from response
+                image_data = [output.result for output in response.output if output.type == "image_generation_call"]
+
+                saved_images = []
+
+                if image_data:
+                    # Generate filename with timestamp
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                    # Clean prompt for filename
+                    clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
+                    clean_prompt = clean_prompt.replace(" ", "_")
+
+                    for idx, image_base64 in enumerate(image_data):
+                        # Decode base64 image data
+                        image_bytes = base64.b64decode(image_base64)
+
+                        # Add index if generating multiple images
+                        if len(image_data) > 1:
+                            filename = f"{timestamp}_{clean_prompt}_{idx+1}.png"
+                        else:
+                            filename = f"{timestamp}_{clean_prompt}.png"
+
+                        # Full file path
+                        file_path = storage_dir / filename
+
+                        # Write image to file
+                        file_path.write_bytes(image_bytes)
+                        file_size = len(image_bytes)
+
+                        # Print save information
+                        print(f"[Image Generation] Saved image {idx+1}/{len(image_data)}:")
+                        print(f"  - File: {file_path}")
+                        print(f"  - Size: {file_size:,} bytes")
+                        print(f"  - Prompt: {prompt[:50]}..." if len(prompt) > 50 else f"  - Prompt: {prompt}")
+                        print(f"  - Model: {model}")
+
+                        saved_images.append(
+                            {
+                                "file_path": str(file_path),
+                                "filename": filename,
+                                "size": file_size,
+                                "index": idx,
+                            },
+                        )
+
+                result = {
+                    "success": True,
+                    "operation": "generate_and_store_image_no_input_images",
+                    "note": "New images are generated and saved to the specified path.",
+                    "images": saved_images,
+                    "model": model,
+                    "prompt": prompt,
+                    "total_images": len(saved_images),
+                }
+
+                return result
+
+            except Exception as api_error:
+                print(f"OpenAI API error: {str(api_error)}")
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_image_no_input_images",
+                    "error": f"OpenAI API error: {str(api_error)}",
+                }
+
+        except Exception as e:
+            print(f"Error generating or saving image: {str(e)}")
+            return {
+                "success": False,
+                "operation": "generate_and_store_image_no_input_images",
+                "error": f"Failed to generate or save image: {str(e)}",
             }
 
     print("🚀 Workspace Copy MCP Server started and ready")
