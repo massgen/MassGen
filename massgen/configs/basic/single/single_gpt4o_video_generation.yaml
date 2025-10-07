@@ -1,6 +1,9 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml "Generate a 2 seconds video of 'A stylish woman walks down a Tokyo street filled with warm glowing neon signs and animated billboards. She wears a black leather jacket, a red dress, boots, and carries a purse. Rain slick road reflects lights. Camera tracks from wide to medium shot. Cinematic, moody, urban night.'"
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
+
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml "Generate a 4 seconds video for 'Cherry blossom petals falling in the spring breeze, sunlight filtering through the pink petals creating a soft halo, slow motion capture, aesthetically beautiful and romantic, depth of field effect.'"
+
 agents:
   - id: "gpt4o_agent1"
     backend:
