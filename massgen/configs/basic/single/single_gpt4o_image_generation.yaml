@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf."
 agents:
   - id: "gpt4o_agent1"
     backend:
@@ -11,11 +11,12 @@ agents:
       # upload_files:
       #   - image_path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git19/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg" # Example image to be used by the agent
       cwd: "workspace1"  # Working directory for file operations
+      exclude_tools: ["mcp__workspace_tools__delete_file"]  # No tools are disallowed
 
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots
     agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
 
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true
