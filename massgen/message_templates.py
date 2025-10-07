@@ -257,7 +257,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
 
         Args:
             original_system_message: The agent's original system message to preserve
-            enable_image_generation: Whether image generation is enabled (kept for backward compatibility)
+            enable_image_generation: Whether image generation is enabled
             has_irreversible_actions: Whether agent has write access to context paths (requires actual file delivery)
         """
         if "final_presentation_system_message" in self._template_overrides:
@@ -282,7 +282,7 @@ Present the best possible coordinated answer by combining the strengths from all
         if enable_image_generation:
             presentation_instructions += """For image generation tasks:
 
-1. You MUST FIRST use the `mcp__workspace_tools__extract_multimodal_files` tool
+1. You MUST FIRST use the `mcp__workspace_tools__read_multimodal_files` tool
    to read and analyze all image files created by other agents (from Shared References).
    This step is REQUIRED before generating any new images.
 
@@ -460,7 +460,7 @@ Based on the coordination process above, present your final answer:"""
             context_paths: List of context paths with permissions
             previous_turns: List of previous turn metadata
             workspace_prepopulated: Whether workspace is pre-populated
-            enable_image_generation: Whether image generation is enabled (kept for backward compatibility)
+            enable_image_generation: Whether image generation is enabled
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -592,7 +592,7 @@ Based on the coordination process above, present your final answer:"""
             parts.append(
                 "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
                 "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims."
-                "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__extract_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n",
+                "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__read_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n",
             )
         else:
             # Not enabled for image generation tasks
