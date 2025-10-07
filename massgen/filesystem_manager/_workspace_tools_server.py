@@ -26,7 +26,6 @@ import filecmp
 import fnmatch
 import os
 import shutil
-import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -944,7 +943,7 @@ async def create_server() -> fastmcp.FastMCP:
                     {
                         "type": "input_image",
                         "image_url": f"data:{mime_type};base64,{image_base64}",
-                    }
+                    },
                 )
 
             # Determine storage directory
@@ -969,7 +968,7 @@ async def create_server() -> fastmcp.FastMCP:
                         {
                             "role": "user",
                             "content": content,
-                        }
+                        },
                     ],
                     tools=[{"type": "image_generation"}],
                 )
@@ -1005,7 +1004,7 @@ async def create_server() -> fastmcp.FastMCP:
                                 "filename": filename,
                                 "size": len(image_bytes),
                                 "index": idx,
-                            }
+                            },
                         )
 
                 # If no images were generated, check for text response
@@ -1177,7 +1176,7 @@ async def create_server() -> fastmcp.FastMCP:
                                 "filename": filename,
                                 "size": file_size,
                                 "index": idx,
-                            }
+                            },
                         )
 
                 result = {
@@ -1248,8 +1247,8 @@ async def create_server() -> fastmcp.FastMCP:
             - Requires valid OpenAI API key with Sora-2 access
             - Files are saved to specified path within workspace
         """
-        from datetime import datetime
         import time
+        from datetime import datetime
 
         try:
             # Load environment variables
@@ -1289,54 +1288,56 @@ async def create_server() -> fastmcp.FastMCP:
 
             try:
                 start_time = time.time()
-                
+
                 # Start video generation (no print statements to avoid MCP JSON parsing issues)
                 video = client.videos.create(
                     model=model,
                     prompt=prompt,
                     seconds=str(seconds),
                 )
-                
-                progress = getattr(video, "progress", 0)
-                
+
+                getattr(video, "progress", 0)
+
                 # Monitor progress (silently, no stdout writes)
                 while video.status in ("in_progress", "queued"):
                     # Refresh status
                     video = client.videos.retrieve(video.id)
-                    progress = getattr(video, "progress", 0)
+                    getattr(video, "progress", 0)
                     time.sleep(2)
-                
+
                 if video.status == "failed":
                     message = getattr(
-                        getattr(video, "error", None), "message", "Video generation failed"
+                        getattr(video, "error", None),
+                        "message",
+                        "Video generation failed",
                     )
                     return {
                         "success": False,
                         "operation": "generate_and_store_video_no_input_images",
                         "error": message,
                     }
-                
+
                 # Download video content
                 content = client.videos.download_content(video.id, variant="video")
-                
+
                 # Generate filename with timestamp
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
                 clean_prompt = clean_prompt.replace(" ", "_")
                 filename = f"{timestamp}_{clean_prompt}.mp4"
-                
+
                 # Full file path
                 file_path = storage_dir / filename
-                
+
                 # Write video to file
                 content.write_to_file(str(file_path))
-                
+
                 # Calculate duration
                 duration = time.time() - start_time
-                
+
                 # Get file size
                 file_size = file_path.stat().st_size
-                
+
                 return {
                     "success": True,
                     "operation": "generate_and_store_video_no_input_images",
