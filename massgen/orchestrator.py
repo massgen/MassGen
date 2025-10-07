@@ -383,6 +383,32 @@ class Orchestrator(ChatAgent):
             },
         )
 
+        # Check if we should skip coordination rounds (debug/test mode)
+        if self.config.skip_coordination_rounds:
+            log_stream_chunk(
+                "orchestrator",
+                "content",
+                "⚡ [DEBUG MODE] Skipping coordination rounds, going straight to final presentation...\n\n",
+                self.orchestrator_id,
+            )
+            yield StreamChunk(
+                type="content",
+                content="⚡ [DEBUG MODE] Skipping coordination rounds, going straight to final presentation...\n\n",
+                source=self.orchestrator_id,
+            )
+
+            # Select first agent as winner (or random if needed)
+            self._selected_agent = list(self.agents.keys())[0]
+            log_coordination_step(
+                "Skipped coordination, selected first agent",
+                {"selected_agent": self._selected_agent},
+            )
+
+            # Present final answer immediately
+            async for chunk in self._present_final_answer():
+                yield chunk
+            return
+
         log_stream_chunk(
             "orchestrator",
             "content",

@@ -692,10 +692,17 @@ async def run_question_with_history(
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
-        # Get context sharing parameters from kwargs (if present in config)
-        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
-        session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")  # Default to "sessions"
+        # Get orchestrator parameters from config
+        orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Get context sharing parameters
+        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+        session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
+
+        # Get debug/test parameters
+        if orchestrator_cfg.get("skip_coordination_rounds", False):
+            orchestrator_config.skip_coordination_rounds = True
 
         # Load previous turns from session storage for multi-turn conversations
         previous_turns = load_previous_turns(session_info, session_storage)
@@ -785,9 +792,16 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
-        # Get context sharing parameters from kwargs (if present in config)
-        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
+        # Get orchestrator parameters from config
+        orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Get context sharing parameters
+        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+
+        # Get debug/test parameters
+        if orchestrator_cfg.get("skip_coordination_rounds", False):
+            orchestrator_config.skip_coordination_rounds = True
 
         orchestrator = Orchestrator(
             agents=agents,

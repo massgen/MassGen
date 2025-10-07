@@ -493,24 +493,24 @@ class PathPermissionManager:
         """
         Check if a tool is a read operation that should be tracked.
 
-        Tools that read file contents:
-        - Read: File content reading
-        - read_multimodal_files: Image/multimodal file reading
-        - compare_files: File comparison (reads both files)
-        - compare_directories: Directory comparison with content diff
-        """
-        read_tools = {
-            "read",
-            "read_multimodal_files",
-            "mcp__workspace_tools__read_multimodal_files",
-            "mcp__filesystem__read_text_file",  # Official MCP filesystem server
-            # "mcp__filesystem__read_media_file",  # Official MCP filesystem server (unused)
-            "mcp__filesystem__read_multiple_files",  # Official MCP filesystem server
-            "compare_files",
-            "compare_directories",
-        }
+        Uses substring matching to handle MCP prefixes (e.g., mcp__workspace_tools__compare_files)
 
-        return tool_name in read_tools
+        Tools that read file contents:
+        - read/Read: File content reading (matches: Read, read_text_file, read_multimodal_files, etc.)
+        - compare_files: File comparison
+        - compare_directories: Directory comparison
+        """
+        # Use lowercase for case-insensitive matching
+        tool_lower = tool_name.lower()
+
+        # Check if tool name contains any read operation keywords
+        read_keywords = [
+            # "read",  # Matches: read, Read, read_multimodal_files, mcp__filesystem__read_text_file
+            "compare_files",  # Matches: compare_files
+            "compare_directories",  # Matches: compare_directories
+        ]
+
+        return any(keyword in tool_lower for keyword in read_keywords)
 
     def _is_delete_tool(self, tool_name: str) -> bool:
         """
@@ -556,12 +556,16 @@ class PathPermissionManager:
         """
         Track files that are read by the agent.
 
+        Uses substring matching to handle MCP prefixes consistently.
+
         Args:
             tool_name: Name of the read tool
             tool_args: Arguments passed to the tool
         """
-        # Extract file path(s) from arguments
-        if tool_name == "compare_files":
+        tool_lower = tool_name.lower()
+
+        # Extract file path(s) from arguments based on tool type
+        if "compare_files" in tool_lower:
             # Compare files reads both files
             file1 = tool_args.get("file1") or tool_args.get("file_path1")
             file2 = tool_args.get("file2") or tool_args.get("file_path2")
@@ -571,20 +575,20 @@ class PathPermissionManager:
             if file2:
                 path2 = self._resolve_path_against_workspace(file2)
                 self.file_operation_tracker.mark_as_read(Path(path2))
-        elif tool_name == "compare_directories":
+        elif "compare_directories" in tool_lower:
             # Only track if show_content_diff is True (otherwise no content is read)
             if tool_args.get("show_content_diff"):
                 # Note: We can't track specific files here, but comparison counts as viewing
                 # The validation will happen on delete anyway
                 pass
-        elif tool_name == "mcp__filesystem__read_multiple_files":
+        elif "read_multiple_files" in tool_lower:
             # Read multiple files takes an array of paths
             paths = tool_args.get("paths", [])
             for file_path in paths:
                 resolved_path = self._resolve_path_against_workspace(file_path)
                 self.file_operation_tracker.mark_as_read(Path(resolved_path))
         else:
-            # Single file read operations
+            # Single file read operations (Read, read_text_file, read_multimodal_files, etc.)
             file_path = self._extract_file_path(tool_args)
             if file_path:
                 resolved_path = self._resolve_path_against_workspace(file_path)

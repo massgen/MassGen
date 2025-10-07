@@ -106,7 +106,7 @@ class FileOperationTracker:
             return (True, None)
 
         # File hasn't been read - block deletion
-        reason = f"Cannot delete '{resolved_path}': File must be read before deletion. " f"Use Read or read_multimodal_files tool to view the file first."
+        reason = f"Cannot delete '{resolved_path}': File must be read before deletion. " f"Use read (including read_multimodal_files) or diff tools to view the file first."
         logger.info(f"[FileOperationTracker] Blocking deletion: {reason}")
         return (False, reason)
 
