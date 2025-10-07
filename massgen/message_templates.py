@@ -278,6 +278,21 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         presentation_instructions = """You have been selected as the winning presenter in a coordination process.
 Present the best possible coordinated answer by combining the strengths from all participants.\n\n"""
 
+        # Add image generation instructions only if enabled
+        if enable_image_generation:
+            presentation_instructions += """For image generation tasks:
+
+1. You MUST FIRST use the `mcp__workspace_tools__extract_multimodal_files` tool
+   to read and analyze all image files created by other agents (from Shared References).
+   This step is REQUIRED before generating any new images.
+
+2. After reviewing the existing images, use the `image_generation` tool
+   to create the final images that best combine the strengths of all participants.
+
+⚠️ Do NOT use file-writing tools for image generation tasks.
+All final images MUST be created directly using the `image_generation` tool.
+"""
+
         # Add irreversible actions reminder if needed
         # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
         if has_irreversible_actions:
@@ -537,11 +552,22 @@ Based on the coordination process above, present your final answer:"""
         )
 
         # Add requirement for path explanations in answers
-        parts.append(
-            "\n**New Answer**: When calling `new_answer`:\n"
-            "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
-            "- If providing a text response, include your analysis/explanation in the `content` field\n",
-        )
+        if enable_image_generation:
+            # Enabled for image generation tasks
+            parts.append(
+                "\n**New Answer**: When calling `new_answer` tool:"
+                "- For non-image generation tasks: If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
+                "- For image generation tasks, do not use file write tools. Instead, the images are already generated directly "
+                "with the image_generation tool. Then, providing new answer with 1) briefly describing the contents of the images "
+                "and 2) listing your full cwd and the image paths you created.\n",
+            )
+        else:
+            # Not enabled for image generation tasks
+            parts.append(
+                "\n**New Answer**: When calling `new_answer`:\n"
+                "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
+                "- If providing a text response, include your analysis/explanation in the `content` field\n",
+            )
 
         # Add workspace cleanup guidance
         parts.append(
@@ -560,11 +586,20 @@ Based on the coordination process above, present your final answer:"""
             "or verify solutions before voting.\n",
         )
 
-        # Add evaluation guidance (for either voting or to determine whether new_answer is needed)
-        parts.append(
-            "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
-            "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
-        )
+        # Add voting guidance
+        if enable_image_generation:
+            # Enabled for image generation tasks
+            parts.append(
+                "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
+                "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims."
+                "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__extract_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n",
+            )
+        else:
+            # Not enabled for image generation tasks
+            parts.append(
+                "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
+                "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
+            )
 
         return "\n".join(parts)
 

@@ -787,7 +787,7 @@ uv run python -m massgen.cli \
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
-  "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a html site."
+  "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
 uv run python -m massgen.cli \
