@@ -942,7 +942,7 @@ async def create_server() -> fastmcp.FastMCP:
                     {
                         "type": "input_image",
                         "image_url": f"data:{mime_type};base64,{image_base64}",
-                    }
+                    },
                 )
 
             # Determine storage directory
@@ -967,7 +967,7 @@ async def create_server() -> fastmcp.FastMCP:
                         {
                             "role": "user",
                             "content": content,
-                        }
+                        },
                     ],
                     tools=[{"type": "image_generation"}],
                 )
@@ -1010,7 +1010,7 @@ async def create_server() -> fastmcp.FastMCP:
                                 "filename": filename,
                                 "size": len(image_bytes),
                                 "index": idx,
-                            }
+                            },
                         )
 
                 # If no images were generated, check for text response
@@ -1191,7 +1191,7 @@ async def create_server() -> fastmcp.FastMCP:
                                 "filename": filename,
                                 "size": file_size,
                                 "index": idx,
-                            }
+                            },
                         )
 
                 result = {
