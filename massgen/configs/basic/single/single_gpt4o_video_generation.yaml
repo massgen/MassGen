@@ -1,0 +1,22 @@
+# MassGen Configuration
+# Usage:
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml "Generate a 2 seconds video of 'A stylish woman walks down a Tokyo street filled with warm glowing neon signs and animated billboards. She wears a black leather jacket, a red dress, boots, and carries a purse. Rain slick road reflects lights. Camera tracks from wide to medium shot. Cinematic, moody, urban night.'"
+agents:
+  - id: "gpt4o_agent1"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      text:
+        verbosity: "medium"
+      # upload_files:
+      #   - image_path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git19/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg" # Example image to be used by the agent
+      cwd: "workspace1"  # Working directory for file operations
+      exclude_tools: ["mcp__workspace_tools__delete_file"]
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+
+ui:
+  display_type: "simple"
+  logging_enabled: true
