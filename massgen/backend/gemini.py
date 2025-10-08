@@ -1523,7 +1523,7 @@ Make your decision and include the JSON at the very end of your response."""
 
                     # Check planning mode - block MCP tools during coordination phase
                     if self.is_planning_mode_enabled():
-                        logger.info(f"[Gemini] Planning mode enabled - blocking MCP tools during coordination")
+                        logger.info("[Gemini] Planning mode enabled - blocking MCP tools during coordination")
                         # Don't set tools, which prevents automatic function calling
                         log_backend_activity(
                             "gemini",
