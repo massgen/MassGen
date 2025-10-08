@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.28 Features](#-latest-features-v0028)
+- [v0.0.29 Features](#-latest-features-v0029)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.28](#recent-achievements-v0028)
-  - [v0.0.3 - v0.0.27](#previous-achievements-v003---v0027)
+  - [v0.0.29](#recent-achievements-v0029)
+  - [v0.0.3 - v0.0.28](#previous-achievements-v003---v0028)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.29 Roadmap](#v0029-roadmap)
+- [v0.0.30 Roadmap](#v0030-roadmap)
 </details>
 
 <details open>
@@ -129,54 +129,31 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.28)
+## 🆕 Latest Features (v0.0.29)
 
-**Experience v0.0.28 AG2 Integration:**
+**Experience v0.0.29 MCP Planning Mode:**
 
-See the new AG2 framework integration in action:
+See the new MCP Planning Mode in action:
 
-[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
+[![MassGen v0.0.29 MCP Planning Mode Demo](https://img.youtube.com/vi/jLrMMEIr118/0.jpg)](https://youtu.be/jLrMMEIr118)
 
-**What's New in v0.0.28:**
-- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
-- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
-- **Improved Stability** - Better handling when MCP servers are not configured
+**What's New in v0.0.29:**
+- **MCP Planning Mode** - New coordination strategy that plans MCP tool usage without execution, preventing irreversible actions during collaboration
+- **File Operation Safety** - Read-before-delete enforcement ensures agents review files before deletion
+- **Enhanced MCP Tool Filtering** - Multi-level filtering with backend-level and per-MCP-server control
+- **Gemini Planning Mode Support** - Extended planning mode compatibility to Gemini backend
 
-**Try v0.0.28 Features Now:**
+**Try v0.0.29 MCP Planning Mode:**
 ```bash
-# Try AG2 integration with MassGen
-uv pip install -e ".[external]"
-uv run python -m massgen.cli --config massgen/configs/ag2/ag2_coder_case_study.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
-```
-
-**Experience v0.0.28 AG2 Integration:**
-
-See the new AG2 framework integration in action:
-
-[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
-
-**What's New in v0.0.28:**
-- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
-- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
-- **Improved Stability** - Better handling when MCP servers are not configured
-
-**Try v0.0.28 Features Now:**
-```bash
-# Basic AG2 single agent
+# Five agents collaborating with planning mode (no execution during coordination)
 uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_single_agent.yaml \
-  "what is quantum computing?"
+  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+  "Create a comprehensive project structure with documentation"
 
-# AG2 single agent with code execution
+# Test MCP tools with multiple agents
 uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
-  "Create a factorial function and calculate the factorial of 8. Show the result?"
-
-# Mixed team: AG2 agent + Gemini agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_gemini.yaml \
-  "what is quantum computing?"
-
+  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+  "Compare weather forecasts for New York, London, and Tokyo"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -915,24 +892,34 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.28)
+### Recent Achievements (v0.0.29)
 
-**🎉 Released: October 6, 2025**
+**🎉 Released: October 8, 2025**
 
-Version 0.0.28 introduces **AG2 Framework Integration**, enabling external agent frameworks to work within MassGen's multi-agent orchestration:
+#### MCP Planning Mode
+- **Strategic Planning**: New `CoordinationConfig` class with `enable_planning_mode` flag for safer MCP tool usage
+- **Multi-Backend Support**: Planning mode available for Response API, Chat Completions, and Gemini backends
+- **Safer Collaboration**: Agents plan tool usage without execution during coordination phase, only the winning agent executes
 
-#### AG2 Framework Integration
-- **Adapter System**: Connect external agent frameworks through new `massgen/adapters/` module with base adapter architecture
-- **AG2 Agent Support**: Use AG2 ConversableAgent and AssistantAgent types with async execution in MassGen workflows
-- **Code Execution Environments**: Run code in multiple environments - LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
-- **Ready-to-Use Configurations**: 4 example configs (`ag2_single_agent.yaml`, `ag2_coder.yaml`, `ag2_coder_case_study.yaml`, `ag2_gemini.yaml`)
+#### File Operation Safety
+- **Read-Before-Delete Enforcement**: New `FileOperationTracker` class prevents agents from deleting files they haven't read
+- **PathPermissionManager Integration**: Enhanced with read/write/delete operation tracking methods
 
-#### Improvements
-- **MCP Circuit Breaker Fix**: Cleaner initialization when MCP servers are not configured, preventing unnecessary warnings
-- **Comprehensive Testing**: Full test coverage in `test_ag2_adapter.py`, `test_agent_adapter.py`, `test_external_agent_backend.py`
-- **Enhanced Documentation**: Updated `MULTI_SOURCE_AGENT_INTEGRATION_DESIGN.md` with AG2 adapter architecture details
+#### Enhanced MCP Tool Filtering
+- **Multi-Level Control**: Combined backend-level and per-MCP-server tool filtering
+- **Server-Specific Overrides**: MCP-server `allowed_tools` can override backend-level settings
 
-### Previous Achievements (v0.0.3 - v0.0.27)
+#### New Configuration Files
+- **Planning Mode Configs**: `five_agents_discord_mcp_planning_mode.yaml`, `five_agents_filesystem_mcp_planning_mode.yaml`, `five_agents_notion_mcp_planning_mode.yaml`, `five_agents_twitter_mcp_planning_mode.yaml`, `gpt5_mini_case_study_mcp_planning_mode.yaml`
+- **MCP Test Configs**: `five_agents_travel_mcp_test.yaml`, `five_agents_weather_mcp_test.yaml`
+- **Debug Config**: `skip_coordination_test.yaml`
+
+#### Testing
+- **New Test Suites**: `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
+
+### Previous Achievements (v0.0.3 - v0.0.28)
+
+✅ **AG2 Framework Integration (v0.0.28)**: Adapter system for external agent frameworks, AG2 ConversableAgent and AssistantAgent support with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), 4 ready-to-use AG2 configurations
 
 ✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
 
@@ -1006,25 +993,25 @@ Version 0.0.28 introduces **AG2 Framework Integration**, enabling external agent
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.29 Roadmap
+### v0.0.30 Roadmap
 
-Version 0.0.29 focuses on fixing multimodal capabilities and extending backend support:
+Version 0.0.30 focuses on fixing backend issues and extending multimodal support:
 
 #### Required Features
-- **Image Generation Path Fix**: Resolve file path hallucination issues preventing correct image generation (Issue #284)
-- **Claude Multimodal Support**: Enable image processing capabilities in Claude backend to match Gemini and Response backends
+- **Backend Issues & Organization**: Fix Claude Code backend reliability issues and reorganize configuration structure for better discoverability
+- **Multimodal Support Extension**: Enable image processing capabilities in Claude and Chat Completions backends
 
 #### Optional Features
-- **Custom Tool Register System**: Complete and polish existing tool registration implementation for production readiness
-- **Web UI**: Improve and integrate existing web interface implementation (Issue #276)
+- **Group Chat Integration**: Complete AG2 group chat orchestration integration for multi-agent group conversations
+- **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
 
 Key technical approach:
-- **Path Validation**: Comprehensive testing and clear error messages for image generation workflows
-- **Claude Backend Extension**: Image input handling, understanding, and multimodal message formatting
-- **Tool Registry Polish**: Complete integration with orchestrator and refine existing implementation
-- **Web UI Integration**: Production-ready deployment with enhanced features and documentation
+- **Backend Stability**: Comprehensive error handling, fallback mechanisms, and test coverage for Claude Code
+- **Multimodal Extension**: Image input handling for Claude and Chat Completions backends with provider compatibility
+- **Configuration Cleanup**: Standardize naming conventions and improve documentation for easier navigation
+- **Extensible Architecture**: New tool registration system supporting dynamic discovery and plugin-based extensions
 
-For detailed milestones and technical specifications, see the [full v0.0.29 roadmap](ROADMAP_v0.0.29.md).
+For detailed milestones and technical specifications, see the [full v0.0.30 roadmap](ROADMAP_v0.0.30.md).
 
 ---
 
