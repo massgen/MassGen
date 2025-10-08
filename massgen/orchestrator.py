@@ -1943,6 +1943,11 @@ class Orchestrator(ChatAgent):
         # Use agent's chat method with proper system message (reset chat for clean presentation)
         presentation_content = ""
 
+        # Disable planning mode for final presentation - agent should have full tool access
+        if hasattr(agent.backend, "set_planning_mode"):
+            agent.backend.set_planning_mode(False)
+            logger.info(f"[Orchestrator] Planning mode DISABLED for final presentation by {selected_agent_id} - all tools available")
+
         try:
             # Track final round iterations (each chunk is like an iteration)
             async for chunk in agent.chat(presentation_messages, reset_chat=True):
