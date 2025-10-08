@@ -3,7 +3,13 @@
 Utility functions for AG2 (AutoGen) adapter.
 """
 import os
+import warnings
 from typing import Any, Dict
+
+# Suppress autogen deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="autogen")
+warnings.filterwarnings("ignore", message=".*jsonschema.*")
+warnings.filterwarnings("ignore", message=".*Pydantic.*")
 
 from autogen import AssistantAgent, ConversableAgent, LLMConfig
 
