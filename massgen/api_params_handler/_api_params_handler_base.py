@@ -57,6 +57,7 @@ class APIParamsHandlerBase(ABC):
             "agent_temporary_workspace",
             "context_paths",
             "context_write_access_enabled",
+            "enable_image_generation",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",

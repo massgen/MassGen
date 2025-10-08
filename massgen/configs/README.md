@@ -103,7 +103,7 @@ uv run python -m massgen.cli --config massgen/configs/tools/web-search/claude_st
 #### Code Execution
 For code interpretation and execution:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse and analyze websites"
+uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 ```
 
 #### Filesystem Operations
@@ -226,7 +226,39 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.28 - Latest
+### v0.0.29 - Latest
+**New Features:** MCP Planning Mode, File Operation Safety, Enhanced MCP Tool Filtering
+- `massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml` - Five agents with Discord MCP in planning mode
+- `massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml` - Five agents with filesystem MCP in planning mode
+- `massgen/configs/tools/planning/five_agents_notion_mcp_planning_mode.yaml` - Five agents with Notion MCP in planning mode
+- `massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml` - Five agents with Twitter MCP in planning mode
+- `massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml` - Planning mode case study configuration
+- `massgen/configs/tools/mcp/five_agents_travel_mcp_test.yaml` - Five agents testing travel-related MCP tools
+- `massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml` - Five agents testing weather MCP tools
+- `massgen/configs/debug/skip_coordination_test.yaml` - Debug configuration for testing coordination skipping
+- New `CoordinationConfig` class with `enable_planning_mode` flag for safer MCP coordination
+- New `FileOperationTracker` class for read-before-delete enforcement
+- Enhanced PathPermissionManager with operation tracking methods
+
+**Try it:**
+```bash
+# Planning mode with filesystem operations
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+  "Create a comprehensive project structure with documentation"
+
+# Multi-agent weather MCP testing
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+  "Compare weather forecasts for New York, London, and Tokyo"
+
+# Planning mode with Twitter integration
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml \
+  "Draft and plan tweet series about AI advancements"
+```
+
+### v0.0.28
 **New Features:** AG2 Framework Integration, External Agent Backend, Code Execution Support
 - `massgen/configs/ag2/ag2_single_agent.yaml` - Basic single AG2 agent setup
 - `massgen/configs/ag2/ag2_coder.yaml` - AG2 agent with code execution capabilities

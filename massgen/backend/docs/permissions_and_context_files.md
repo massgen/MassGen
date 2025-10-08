@@ -327,6 +327,128 @@ orchestrator:
 4. **Each agent** has full WRITE access to their own workspace (`workspace1`, `workspace2`)
 5. **Temporary workspaces** allow agents to share context from previous coordination rounds
 
+## Snapshot Management and Agent Coordination
+
+### Overview
+
+During multi-agent coordination, MassGen uses a snapshot-based system to enable context sharing between agents. This ensures that all agents can see each other's work (complete or partial) and collaborate effectively.
+
+### When Snapshots Are Saved
+
+Snapshots are workspace copies saved at specific coordination points:
+
+**1. Completed Answers:**
+- Agent provides a complete answer via `new_answer` tool
+- Workspace snapshot saved to `snapshot_storage/{agent_id}/`
+- Snapshot overwrites previous one (keeps only most recent)
+- Also saved to log directories with timestamp for debugging
+
+**2. Completed Votes:**
+- Agent votes for another agent's answer via `vote` tool
+- Workspace snapshot saved (captures any work done before voting)
+
+**3. Partial Work on Restart (NEW):**
+- Agent is interrupted mid-answer due to another agent providing a new answer
+- All other agents get `restart_pending = True` flag
+- **Before restarting, agent's partial workspace is saved as a snapshot**
+- This ensures other agents can see the partial work in their temp workspaces
+- Critical for preserving incremental progress during coordination
+
+### Workspace Lifecycle
+
+| Location | When Cleared | Purpose |
+|----------|-------------|---------|
+| **Agent workspace** (`workspace1/`) | After saving snapshot (except final) | Clean slate for next execution |
+| **Temp workspace** (`temp_workspaces/{agent_id}/`) | Before each agent execution | Fresh copy of all other agents' latest work |
+| **Temp workspace parent** | At orchestration startup | Remove stale data from previous runs |
+| **Snapshot storage** (`snapshots/{agent_id}/`) | When new snapshot saved | Overwritten with latest (only most recent kept) |
+
+### Context Sharing Flow
+
+**1. Snapshot Storage** (`snapshot_storage/{agent_id}/`):
+- Source of truth for each agent's latest work
+- Only most recent snapshot kept (overwritten on each save)
+- Contains complete OR partial work, whichever is most recent
+
+**2. Temporary Workspaces** (`temp_workspaces/{agent_id}/`):
+- Populated before each agent execution via `_copy_all_snapshots_to_temp_workspace()`
+- Contains all OTHER agents' latest snapshots
+- Uses anonymous IDs (agent1, agent2, etc.) for privacy
+- Read-only access for agents
+
+**3. Agent Workspace** (`workspace1/`, `workspace2/`):
+- Agent's personal working directory
+- Full write access
+- Cleared after saving snapshot (to prepare for restart)
+
+### Restart and Partial Work Preservation
+
+When an agent is restarted due to new answers from other agents:
+
+```python
+# orchestrator.py: Agent restart sequence
+1. Detect restart_pending flag is True
+2. Call _save_partial_work_on_restart(agent_id)
+   - Saves current workspace state to snapshots/
+   - Logs workspace contents for debugging
+   - Preserves any files created during partial execution
+3. Clear workspace (prepare for fresh start)
+4. Agent restarts with access to:
+   - All other agents' snapshots in temp_workspaces/
+   - Including the partial work from interrupted agents
+```
+
+**Example Coordination Flow:**
+
+```
+Round 1:
+- Agent A starts → writes files to workspace1/
+- Agent B starts → writes files to workspace2/
+- Agent A completes answer → snapshot saved to snapshots/agentA/
+- Agent B gets restart_pending=True (new answer detected)
+- Agent B's partial work saved → snapshot saved to snapshots/agentB/
+- Agent B's workspace cleared
+
+Round 2:
+- Agent A restarts
+  - temp_workspaces/agentA/ now contains agentB's partial work
+  - Can see what Agent B was working on
+- Agent B restarts
+  - temp_workspaces/agentB/ contains agentA's complete answer
+  - Can build upon Agent A's completed work
+```
+
+**Key Design Decision:** Partial work is ALWAYS saved before restart. This ensures:
+- No work is lost during agent restarts
+- All agents can see each other's progress (complete or partial)
+- Better collaboration through incremental visibility
+- Debugging is easier with complete workspace history
+
+### Implementation Details
+
+**Snapshot Save Method** (`filesystem_manager.py:save_snapshot()`):
+1. Copies workspace contents to `snapshot_storage/{agent_id}/` (overwrites existing)
+2. Also saves to log directories: `log_session/agent_id/timestamp/workspace/`
+3. Does NOT clear workspace (clearing happens separately)
+
+**Partial Work Save** (`orchestrator.py:_save_partial_work_on_restart()`):
+```python
+async def _save_partial_work_on_restart(self, agent_id: str) -> None:
+    """Save partial work before restarting due to new answers from others."""
+    await self._save_agent_snapshot(
+        agent_id,
+        answer_content=None,  # No complete answer yet
+        context_data=self.get_last_context(agent_id),
+        is_final=False,
+    )
+```
+
+**Temp Workspace Population** (`orchestrator.py:_copy_all_snapshots_to_temp_workspace()`):
+1. Collects all snapshots from `snapshot_storage/{agent_id}/` directories
+2. Clears existing temp workspace for target agent
+3. Copies all other agents' snapshots using anonymous IDs
+4. Agent can now read other agents' work through temp workspace
+
 ## Permission Validation Flow
 
 ### 1. Path Resolution

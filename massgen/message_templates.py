@@ -247,12 +247,18 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         """Get standard tools for MassGen framework."""
         return [self.get_new_answer_tool(), self.get_vote_tool(valid_agent_ids)]
 
-    def final_presentation_system_message(self, original_system_message: Optional[str] = None, enable_image_generation: bool = False) -> str:
+    def final_presentation_system_message(
+        self,
+        original_system_message: Optional[str] = None,
+        enable_image_generation: bool = False,
+        has_irreversible_actions: bool = False,
+    ) -> str:
         """System message for final answer presentation by winning agent.
 
         Args:
             original_system_message: The agent's original system message to preserve
-            enable_image_generation: Whether image generation is enabled for the agent
+            enable_image_generation: Whether image generation is enabled
+            has_irreversible_actions: Whether agent has write access to context paths (requires actual file delivery)
         """
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
@@ -275,17 +281,23 @@ Present the best possible coordinated answer by combining the strengths from all
         # Add image generation instructions only if enabled
         if enable_image_generation:
             presentation_instructions += """For image generation tasks:
-
-1. You MUST FIRST use the `mcp__workspace_tools__extract_multimodal_files` tool
-   to read and analyze all image files created by other agents (from Shared References).
-   This step is REQUIRED before generating any new images.
-
-2. After reviewing the existing images, use the `image_generation` tool
-   to create the final images that best combine the strengths of all participants.
-
-⚠️ Do NOT use file-writing tools for image generation tasks.
-All final images MUST be created directly using the `image_generation` tool.
+- Extract image paths from the existing answer and resolve them in the shared reference.
+- Gather all agent-produced images (ignore non-existent files).
+- MUST call the generate-image tool with these input images to synthesize one final image combining their strengths.
+- MUST save the final outputand output the saved path.
 """
+
+        # Add irreversible actions reminder if needed
+        # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
+        if has_irreversible_actions:
+            presentation_instructions += (
+                "### Write Access to Target Path:\n\n"
+                "Reminder: File Delivery Required. You should first place your final answer in your workspace. "
+                "However, note your workspace is NOT the final destination. You MUST copy/write files to the Target Path using FULL ABSOLUTE PATHS. "
+                "Then, clean up this Target Path by deleting any outdated or unused files. "
+                "Then, you must ALWAYS verify that the Target Path contains the correct final files, as no other agents were allowed to write to this path.\n"
+            )
+
         # Combine with original system message if provided
         if original_system_message:
             return f"""{original_system_message}
@@ -433,6 +445,7 @@ Based on the coordination process above, present your final answer:"""
         previous_turns: Optional[List[Dict[str, Any]]] = None,
         workspace_prepopulated: bool = False,
         enable_image_generation: bool = False,
+        agent_answers: Optional[Dict[str, str]] = None,
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
@@ -443,6 +456,7 @@ Based on the coordination process above, present your final answer:"""
             previous_turns: List of previous turn metadata
             workspace_prepopulated: Whether workspace is pre-populated
             enable_image_generation: Whether image generation is enabled
+            agent_answers: Dict of agent answers (keys are agent IDs) to show workspace structure
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -452,7 +466,8 @@ Based on the coordination process above, present your final answer:"""
         # Explain workspace behavior
         parts.append(
             "Your working directory is set to your workspace, so all relative paths in your file operations "
-            "will be resolved from there. This ensures each agent works in isolation while having access to shared references.\n",
+            "will be resolved from there. This ensures each agent works in isolation while having access to shared references. "
+            "Only include in your workspace files that should be used in your answer.\n",
         )
 
         if main_workspace:
@@ -467,7 +482,32 @@ Based on the coordination process above, present your final answer:"""
             parts.append(workspace_note)
 
         if temp_workspace:
-            parts.append(f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)")
+            # Build workspace tree structure
+            workspace_tree = f"**Shared Reference**: `{temp_workspace}` - Contains previous answers from all agents (read/execute-only)\n"
+
+            # Add agent subdirectories in tree format
+            # This was added bc weaker models would often try many incorrect paths.
+            # No point in requiring extra list dir calls if we can just show them the structure.
+            if agent_answers:
+                # Create anonymous mapping: agent1, agent2, etc.
+                agent_mapping = {}
+                for i, agent_id in enumerate(sorted(agent_answers.keys()), 1):
+                    agent_mapping[agent_id] = f"agent{i}"
+
+                workspace_tree += "   Available agent workspaces:\n"
+                agent_items = list(agent_mapping.items())
+                for idx, (agent_id, anon_id) in enumerate(agent_items):
+                    is_last = idx == len(agent_items) - 1
+                    prefix = "   └── " if is_last else "   ├── "
+                    workspace_tree += f"{prefix}{temp_workspace}/{anon_id}/\n"
+
+            workspace_tree += (
+                "   - To improve upon existing answers: Copy files from Shared Reference to your workspace using `copy_file` or `copy_directory` tools, then modify them\n"
+                "   - These correspond directly to the answers shown in the CURRENT ANSWERS section\n"
+                "   - However, not all workspaces may have a matching answer (e.g., if an agent was in the middle of working but restarted before submitting an answer). "
+                "So, it is wise to check the actual files in the Shared Reference, not rely solely on the CURRENT ANSWERS section.\n"
+            )
+            parts.append(workspace_tree)
 
         if context_paths:
             has_target = any(p.get("will_be_writable", False) for p in context_paths)
@@ -500,7 +540,7 @@ Based on the coordination process above, present your final answer:"""
                     elif permission == "write":
                         parts.append(
                             f"**Target Path**: `{path}` (write access) - This is where your changes must be delivered. "
-                            f"Work in your workspace, then copy/write files DIRECTLY into `{path}` using FULL ABSOLUTE PATH (not relative paths). "
+                            f"First, ensure you place your answer in your workspace, then copy/write files DIRECTLY into `{path}` using FULL ABSOLUTE PATH (not relative paths). "
                             f"Files must go directly into the target path itself (e.g., `{path}/file.txt`), NOT into a `.massgen/` subdirectory within it.",
                         )
                     else:
@@ -514,33 +554,46 @@ Based on the coordination process above, present your final answer:"""
                 "listed above (e.g., turn 1's workspace is at the path ending in `/turn_1/workspace`).",
             )
 
+        # Add intelligent task handling guidance with clear priority hierarchy
+        parts.append(
+            "\n**Task Handling Priority**: When responding to user requests, follow this priority order:\n"
+            "1. **Use MCP Tools First**: If you have specialized MCP tools available, call them DIRECTLY to complete the task\n"
+            "   - Save any outputs/artifacts from MCP tools to your workspace\n"
+            "2. **Write Code If Needed**: If MCP tools cannot complete the task, write and execute code\n"
+            "3. **Create Other Files**: Create configs, documents, or other deliverables as needed\n"
+            "4. **Text Response Otherwise**: If no tools or files are needed, provide a direct text answer\n\n"
+            "**Important**: Do NOT ask the user for clarification or additional input. Make reasonable assumptions and proceed with sensible defaults. "
+            "You will not receive user feedback, so complete the task autonomously based on the original request.\n",
+        )
+
         # Add requirement for path explanations in answers
-        if enable_image_generation:
-            # Enabled for image generation tasks
-            parts.append(
-                "\n**New Answer**: When calling `new_answer` tool:"
-                "- For non-image generation tasks, you MUST actually create files in your workspace using file write tools - "
-                "do NOT just describe what files you would create. Then, list 1) your full cwd and 2) the file paths you created, "
-                "but do NOT paste full file contents in your answer."
-                "- For image generation tasks, do not use file write tools. Instead, the images are already generated directly "
-                "with the image_generation tool. Then, providing new answer with 1) briefly describing the contents of the images "
-                "and 2) listing your full cwd and the image paths you created.\n",
-            )
-        else:
-            # Not enabled for image generation tasks
-            parts.append(
-                "\n**New Answer**: When calling `new_answer`, you MUST actually create files in your workspace using file write tools - "
-                "do NOT just describe what files you would create. Then, list 1) your full cwd and 2) the file paths you created, "
-                "but do NOT paste full file contents in your answer.\n",
-            )
+        # if enable_image_generation:
+        # #     # Enabled for image generation tasks
+        #     parts.append(
+        #         "\n**Image Generation Tasks**: When working on image generation tasks, if you find images equivalent and cannot choose between them, "
+        #         "choose the one with the smallest file size.\n"
+        #         "\n**New Answer**: When calling `new_answer` tool:"
+        #         "- For non-image generation tasks, if you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
+        #         "- For image generation tasks, do not use file write tools. Instead, the images are already generated directly "
+        #         "with the image_generation tool. Then, providing new answer with 1) briefly describing the contents of the images "
+        #         "and 2) listing your full cwd and the image paths you created.\n",
+        #     )
+        # else:
+        # Not enabled for image generation tasks
+        parts.append(
+            "\n**New Answer**: When calling `new_answer`:\n"
+            "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
+            "- If providing a text response, include your analysis/explanation in the `content` field\n",
+        )
 
         # Add workspace cleanup guidance
         parts.append(
-            "**Workspace Cleanup**: Before submitting your answer with `new_answer`, use `delete_file` or "
-            "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
-            "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
-            "This ensures only the relevant final files remain for evaluation. For example, if you created "
-            "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
+            "**Workspace Cleanup**: Before submitting your answer with `new_answer`, " "ensure that your workspace contains only the files relevant to your final answer.\n",
+            # use `delete_file` or "
+            # "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
+            # "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
+            # "This ensures only the relevant final files remain for evaluation. For example, if you created "
+            # "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
         )
 
         # Add diff tools guidance
@@ -552,19 +605,19 @@ Based on the coordination process above, present your final answer:"""
         )
 
         # Add voting guidance
-        if enable_image_generation:
-            # Enabled for image generation tasks
-            parts.append(
-                "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
-                "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims."
-                "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__extract_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n",
-            )
-        else:
-            # Not enabled for image generation tasks
-            parts.append(
-                "**Voting**: When evaluating agents' answers for voting, do NOT base your decision solely on the answer text. "
-                "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
-            )
+        # if enable_image_generation:
+        #     # Enabled for image generation tasks
+        #     parts.append(
+        #         "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
+        #         "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims."
+        #         "IMPORTANT: For image tasks, you MUST use ONLY the `mcp__workspace__extract_multimodal_files` tool to view and evaluate images. Do NOT use any other tool for this purpose.\n",
+        #     )
+        # else:
+        # Not enabled for image generation tasks
+        parts.append(
+            "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
+            "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
+        )
 
         return "\n".join(parts)
 
