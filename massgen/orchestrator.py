@@ -1270,6 +1270,15 @@ class Orchestrator(ChatAgent):
             else:
                 logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
 
+            # Check if planning mode is enabled for coordination phase
+            is_coordination_phase = self.workflow_phase == "coordinating"
+            planning_mode_enabled = self.config.coordination_config and self.config.coordination_config.enable_planning_mode and is_coordination_phase
+
+            # Add planning mode instructions to system message if enabled
+            if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
+                planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
+                agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
+
             # Build conversation with context support
             if conversation_context and conversation_context.get("conversation_history"):
                 # Use conversation context-aware building
@@ -1316,6 +1325,13 @@ class Orchestrator(ChatAgent):
             )
 
             # Clean startup without redundant messages
+            # Set planning mode on the agent's backend to control MCP tool execution
+            if hasattr(agent.backend, "set_planning_mode"):
+                agent.backend.set_planning_mode(planning_mode_enabled)
+                if planning_mode_enabled:
+                    logger.info(f"[Orchestrator] Backend planning mode ENABLED for {agent_id} - MCP tools blocked")
+                else:
+                    logger.info(f"[Orchestrator] Backend planning mode DISABLED for {agent_id} - MCP tools allowed")
 
             # Build proper conversation messages with system + user messages
             max_attempts = 3
@@ -1869,6 +1885,11 @@ class Orchestrator(ChatAgent):
         # Enable write access for final agent on context paths. This ensures that those paths marked `write` by the user are now writable (as all previous agents were read-only).
         if agent.backend.filesystem_manager:
             agent.backend.filesystem_manager.path_permission_manager.set_context_write_access_enabled(True)
+
+        # Reset backend planning mode to allow MCP tool execution during final presentation
+        if hasattr(agent.backend, "set_planning_mode"):
+            agent.backend.set_planning_mode(False)
+            logger.info(f"[Orchestrator] Backend planning mode DISABLED for final presentation: {selected_agent_id} - MCP tools now allowed")
 
         # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work

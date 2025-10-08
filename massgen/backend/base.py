@@ -57,6 +57,10 @@ class LLMBackend(ABC):
 
         # Initialize utility classes
         self.token_usage = TokenUsage()
+
+        # Planning mode flag - when True, MCP tools should be blocked during coordination
+        self._planning_mode_enabled: bool = False
+
         self.token_calculator = TokenCostCalculator()
 
         # Filesystem manager integration
@@ -385,6 +389,28 @@ class LLMBackend(ABC):
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history and session state.
         """
+        pass  # Default implementation for stateless backends
+
+    def set_planning_mode(self, enabled: bool) -> None:
+        """
+        Enable or disable planning mode for this backend.
+
+        When planning mode is enabled, MCP tools should be blocked to prevent
+        execution during coordination phase.
+
+        Args:
+            enabled: True to enable planning mode (block MCP tools), False to disable
+        """
+        self._planning_mode_enabled = enabled
+
+    def is_planning_mode_enabled(self) -> bool:
+        """
+        Check if planning mode is currently enabled.
+
+        Returns:
+            True if planning mode is enabled (MCP tools should be blocked)
+        """
+        return self._planning_mode_enabled
 
     async def _cleanup_client(self, client: Any) -> None:
         """Clean up OpenAI client resources."""
