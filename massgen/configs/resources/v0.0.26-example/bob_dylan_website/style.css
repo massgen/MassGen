@@ -1,0 +1,215 @@
+body {
+    font-family: 'Georgia', serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f8f4;
+    color: #333;
+    line-height: 1.8;
+    font-size: 17px;
+}
+
+/* Changed header to main-header for specific styling */
+#main-header {
+    background-color: #5d4037; /* Darker earthy tone */
+    color: #fff8dc; /* Creamy white */
+    padding: 2rem 0;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    transition: all 0.4s ease-in-out;
+}
+
+#main-header.shrink {
+    padding: 1rem 0;
+    background-color: #795548; /* Slightly different background when shrunk */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.header-content {
+    max-width: 960px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 20px; /* Add some horizontal padding */
+}
+
+.site-title {
+    font-size: 3.5em; /* Larger on landing page */
+    margin-bottom: 0.1em;
+    transition: font-size 0.4s ease-in-out;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+#main-header.shrink .site-title {
+    font-size: 2em; /* Smaller when shrunk */
+}
+
+.tagline {
+    font-size: 1.2em;
+    color: #d7ccc8;
+    margin-top: 0;
+    margin-bottom: 1.5em;
+    transition: opacity 0.4s ease-in-out, height 0.4s ease-in-out, margin 0.4s ease-in-out;
+}
+
+#main-header.shrink .tagline {
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+    margin: 0;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    gap: 25px;
+}
+
+nav ul li a {
+    color: #fff8dc;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1.1em;
+    padding: 8px 15px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
+}
+
+nav ul li a:hover {
+    background-color: #a1887f; /* Lighter hover background */
+    color: #5d4037; /* Darker text on hover */
+    transform: translateY(-2px);
+}
+
+main {
+    padding: 30px;
+    max-width: 960px;
+    margin: 30px auto;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+section {
+    margin-bottom: 30px;
+    border-bottom: 1px dashed #ccc;
+    padding-bottom: 30px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+
+section.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+section:last-child {
+    border-bottom: none;
+}
+
+h2 {
+    color: #8d6e63;
+    font-size: 2.2em;
+    border-left: 5px solid #a1887f;
+    padding-left: 15px;
+    margin-bottom: 20px;
+}
+
+main .intro h2 { /* Specific styling for the intro section h2 */
+    text-align: center;
+    border-left: none;
+    padding-left: 0;
+    color: #6d4c41;
+}
+
+.intro {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    text-align: justify;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+ul li {
+    background-color: #efebe9;
+    margin-bottom: 12px;
+    padding: 15px;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+ul li:hover {
+    background-color: #e0d8d6;
+    transform: translateX(5px);
+}
+
+.album-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
+}
+
+.album {
+    background-color: #fffaf0;
+    border: 1px solid #d7ccc8;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.album:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+}
+
+.album h3 {
+    color: #6d4c41;
+    font-size: 1.5em;
+    margin-top: 0;
+}
+
+blockquote {
+    background-color: #f5f5dc;
+    border-left: 8px solid #a1887f;
+    margin: 2em 0;
+    padding: 1.5em;
+    font-style: italic;
+    color: #5d4037;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+blockquote p {
+    margin-bottom: 0.5em;
+}
+
+blockquote footer {
+    text-align: right;
+    font-size: 0.9em;
+    color: #795548;
+    background: none;
+    padding: 0;
+    margin-top: 10px;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    background-color: #3e2723;
+    color: #d7ccc8;
+    margin-top: 40px;
+    box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.2);
+}

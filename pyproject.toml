@@ -46,6 +46,7 @@ dependencies = [
     "fastmcp>=2.12.3",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx-book-theme>=1.1.4",
+    "pillow>=11.3.0",
 ]
 
 [project.optional-dependencies]
@@ -77,11 +78,14 @@ docs = [
     "sphinx-inline-tabs>=2023.4.21",
     "sphinxcontrib-lunrsearch>=0.4",
 ]
+external = [
+    "ag2>=0.9.10",
+]
 all = [
 ]
 
 [project.scripts]
-massgen = "massgen.cli:main"
+massgen = "massgen.cli:cli_main"
 
 [project.urls]
 Homepage = "https://github.com/Leezekun/MassGen"

@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-from ..formatter import MCPToolFormatter, MessageFormatter, ToolFormatter
+from ..filesystem_manager import FilesystemManager, PathPermissionManagerHook
+from ..mcp_tools.hooks import FunctionHookManager, HookType
 from ..token_manager import TokenCostCalculator, TokenUsage
 
 
@@ -55,9 +56,6 @@ class LLMBackend(ABC):
         self.config = kwargs
 
         # Initialize utility classes
-        self.message_formatter = MessageFormatter()
-        self.tool_formatter = ToolFormatter()
-        self.mcp_tool_formatter = MCPToolFormatter()
         self.token_usage = TokenUsage()
         self.token_calculator = TokenCostCalculator()
 
@@ -67,9 +65,6 @@ class LLMBackend(ABC):
         if cwd:
             filesystem_support = self.get_filesystem_support()
             if filesystem_support == FilesystemSupport.MCP:
-                # Backend supports MCP - inject filesystem MCP server
-                from ..mcp_tools.filesystem_manager import FilesystemManager
-
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
@@ -85,9 +80,6 @@ class LLMBackend(ABC):
                 # Inject filesystem MCP server into configuration
                 self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
             elif filesystem_support == FilesystemSupport.NATIVE:
-                # Backend has native filesystem support - create manager but don't inject MCP
-                from ..mcp_tools.filesystem_manager import FilesystemManager
-
                 # Get temporary workspace parent from kwargs if available
                 temp_workspace_parent = kwargs.get("agent_temporary_workspace")
                 # Extract context paths and write access from backend config
@@ -109,11 +101,11 @@ class LLMBackend(ABC):
         else:
             self.filesystem_manager = None
 
+        self.formatter = None
+        self.api_params_handler = None
+
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""
-        from ..mcp_tools.filesystem_manager import PathPermissionManagerHook
-        from ..mcp_tools.hooks import FunctionHookManager, HookType
-
         # Create per-agent hook manager
         self.function_hook_manager = FunctionHookManager()
 
@@ -325,8 +317,14 @@ class LLMBackend(ABC):
         Returns:
             Tool call ID string
         """
-        # Try multiple possible ID fields
-        return tool_call.get("id") or tool_call.get("call_id") or ""
+        # Check for Response API format
+        if "call_id" in tool_call:
+            return tool_call.get("call_id", "")
+        # Check for Chat Completions format or Claude native format (both use "id")
+        elif "id" in tool_call:
+            return tool_call.get("id", "")
+        else:
+            return ""
 
     def create_tool_result_message(self, tool_call: Dict[str, Any], result_content: str) -> Dict[str, Any]:
         """
@@ -383,3 +381,11 @@ class LLMBackend(ABC):
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history and session state.
         """
+
+    async def _cleanup_client(self, client: Any) -> None:
+        """Clean up OpenAI client resources."""
+        try:
+            if client is not None and hasattr(client, "aclose"):
+                await client.aclose()
+        except Exception:
+            pass

@@ -51,6 +51,7 @@ from .agent_config import AgentConfig
 from .backend.claude import ClaudeBackend
 from .backend.gemini import GeminiBackend
 from .backend.grok import GrokBackend
+from .backend.inference import InferenceBackend
 from .backend.lmstudio import LMStudioBackend
 
 # Import main classes for convenience
@@ -67,7 +68,7 @@ from .chat_agent import (
 from .message_templates import MessageTemplates, get_templates
 from .orchestrator import Orchestrator, create_orchestrator
 
-__version__ = "0.0.23"
+__version__ = "0.0.28"
 __author__ = "MassGen Contributors"
 
 __all__ = [
@@ -77,6 +78,7 @@ __all__ = [
     "GeminiBackend",
     "GrokBackend",
     "LMStudioBackend",
+    "InferenceBackend",
     # Agents
     "ChatAgent",
     "SingleAgent",

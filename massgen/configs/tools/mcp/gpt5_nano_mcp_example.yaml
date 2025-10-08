@@ -1,0 +1,24 @@
+# MassGen Configuration: Gemini with MCP Integration
+# Usage:
+#   uv run python -m massgen.cli --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml "whats the weather of Tokyo"
+agents:
+  - id: "gpt5_nano_mcp_weather"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      mcp_servers:
+        - name: "weather"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@fak111/weather-mcp"]
+    system_message: |
+      You are an AI assistant with access to weather information through MCP (Model Context Protocol) integration.
+
+      Weather tools are available via MCP sessions and will be called automatically by the system when needed.
+      Do not output tool call syntax or function declarations. Focus on answering the user's question clearly.
+
+      When users ask about weather conditions, forecasts, or alerts, include the location and time frame in your
+      response and provide concise, up-to-date information using the integrated tools.
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

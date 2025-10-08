@@ -7,11 +7,24 @@ Inherits from LLMBackend and adds MCP-specific features.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
+import mimetypes
+from abc import abstractmethod
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
-from ..logger_config import logger
+from ..logger_config import log_backend_activity, logger
 from .base import LLMBackend, StreamChunk
+
+
+class UploadFileError(Exception):
+    """Raised when an upload specified in configuration fails to process."""
+
+
+class UnsupportedUploadSourceError(UploadFileError):
+    """Raised when a provided upload source cannot be processed (e.g., URL without fetch support)."""
+
 
 # MCP integration imports
 try:
@@ -20,11 +33,15 @@ try:
         MCPCircuitBreaker,
         MCPCircuitBreakerManager,
         MCPConfigHelper,
+        MCPConnectionError,
+        MCPError,
         MCPErrorHandler,
         MCPExecutionManager,
         MCPMessageManager,
         MCPResourceManager,
+        MCPServerError,
         MCPSetupManager,
+        MCPTimeoutError,
         MultiMCPClient,
     )
 except ImportError as e:
@@ -44,6 +61,32 @@ except ImportError as e:
     MCPConnectionError = ImportError
     MCPTimeoutError = ImportError
     MCPServerError = ImportError
+
+# Supported file types for OpenAI File Search
+FILE_SEARCH_SUPPORTED_EXTENSIONS = {
+    ".c",
+    ".cpp",
+    ".cs",
+    ".css",
+    ".doc",
+    ".docx",
+    ".html",
+    ".java",
+    ".js",
+    ".json",
+    ".md",
+    ".pdf",
+    ".php",
+    ".pptx",
+    ".py",
+    ".rb",
+    ".sh",
+    ".tex",
+    ".ts",
+    ".txt",
+}
+
+FILE_SEARCH_MAX_FILE_SIZE = 512 * 1024 * 1024  # 512 MB
 
 
 class MCPBackend(LLMBackend):
@@ -69,8 +112,8 @@ class MCPBackend(LLMBackend):
         self._mcp_tools_circuit_breaker = None
         self._circuit_breakers_enabled = MCPCircuitBreaker is not None
 
-        # Initialize circuit breaker if available
-        if self._circuit_breakers_enabled:
+        # Initialize circuit breaker if available and MCP servers are configured
+        if self._circuit_breakers_enabled and self.mcp_servers:
             # Use shared utility to build circuit breaker configuration
             mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools") if MCPConfigHelper else None
 
@@ -81,7 +124,11 @@ class MCPBackend(LLMBackend):
                 logger.warning("MCP tools circuit breaker config not available, disabling circuit breaker functionality")
                 self._circuit_breakers_enabled = False
         else:
-            logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
+            if not self.mcp_servers:
+                # No MCP servers configured - skip circuit breaker initialization silently
+                self._circuit_breakers_enabled = False
+            else:
+                logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
 
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
         self._mcp_functions: Dict[str, Function] = {}
@@ -95,6 +142,14 @@ class MCPBackend(LLMBackend):
         # Initialize backend name and agent ID for MCP operations
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
+
+    def supports_upload_files(self) -> bool:
+        """Return True if the backend supports `upload_files` preprocessing."""
+        return False
+
+    @abstractmethod
+    async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
+        """Process stream."""
 
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
@@ -178,35 +233,11 @@ class MCPBackend(LLMBackend):
             logger.info(f"Successfully initialized MCP sessions with {len(self._mcp_functions)} tools converted to functions")
 
             # Record success for circuit breaker
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client and MCPCircuitBreakerManager:
-                try:
-                    connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, "get_server_names") else []
-                    if connected_server_names:
-                        connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
-                        if connected_server_configs:
-                            await MCPCircuitBreakerManager.record_success(
-                                connected_server_configs,
-                                self._mcp_tools_circuit_breaker,
-                                backend_name=self.backend_name,
-                                agent_id=self.agent_id,
-                            )
-                except Exception as cb_error:
-                    logger.warning(f"Failed to record circuit breaker success: {cb_error}")
+            await self._record_mcp_circuit_breaker_success(servers_to_use)
 
         except Exception as e:
             # Record failure for circuit breaker
-            if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and MCPCircuitBreakerManager:
-                try:
-                    await MCPCircuitBreakerManager.record_failure(
-                        servers_to_use if "servers_to_use" in locals() else mcp_tools_servers if "mcp_tools_servers" in locals() else [],
-                        self._mcp_tools_circuit_breaker,
-                        str(e),
-                        backend_name=self.backend_name,
-                        agent_id=self.agent_id,
-                    )
-                except Exception as cb_error:
-                    logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
-
+            self._record_mcp_circuit_breaker_failure(e, self.agent_id)
             logger.warning(f"Failed to setup MCP sessions: {e}")
             self._mcp_client = None
             self._mcp_initialized = False
@@ -280,13 +311,318 @@ class MCPBackend(LLMBackend):
             return f"Error: {result['error']}", result
         return str(result), result
 
-    async def _handle_mcp_error_and_fallback(
+    async def _process_upload_files(
+        self,
+        messages: List[Dict[str, Any]],
+        all_params: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Process upload_files config entries and attach to messages.
+
+        Supports three forms:
+        - {"image_path": "..."}: loads file, encodes to base64, injects image entry
+        - {"url": "..."}: injects image entry referencing remote URL
+        - {"file_path": "..."}: document file for File Search (local path or URL)
+
+        Returns updated messages list with additional content items.
+        """
+
+        upload_entries = all_params.get("upload_files")
+        if not upload_entries:
+            return messages
+
+        if not self.supports_upload_files():
+            logger.debug(
+                "upload_files provided but backend %s does not support file uploads; ignoring",
+                self.get_provider_name(),
+            )
+            all_params.pop("upload_files", None)
+            return messages
+
+        processed_messages = list(messages)
+        extra_content: List[Dict[str, Any]] = []
+        has_file_search_files = False
+
+        for entry in upload_entries:
+            if not isinstance(entry, dict):
+                logger.warning("upload_files entry is not a dict: %s", entry)
+                raise UploadFileError("Each upload_files entry must be a mapping")
+
+            # Check for file_path (File Search documents/code)
+            file_path_value = entry.get("file_path")
+            if file_path_value:
+                # Process file_path entry for File Search
+                file_content = self._process_file_path_entry(file_path_value, all_params)
+                if file_content:
+                    extra_content.append(file_content)
+                    has_file_search_files = True
+                continue
+
+            # Check for image_path (existing image handling)
+            path_value = entry.get("image_path")
+            url_value = entry.get("url")
+
+            if path_value:
+                resolved = Path(path_value).expanduser()
+                if not resolved.is_absolute():
+                    cwd = self.config.get("cwd")
+                    if cwd:
+                        resolved = Path(cwd).joinpath(resolved)
+                    else:
+                        resolved = resolved.resolve()
+
+                if not resolved.exists():
+                    raise UploadFileError(f"File not found: {resolved}")
+
+                mime_type, _ = mimetypes.guess_type(resolved.as_posix())
+                if not mime_type:
+                    mime_type = "application/octet-stream"
+
+                try:
+                    data = resolved.read_bytes()
+                except OSError as exc:
+                    raise UploadFileError(f"Failed to read file {resolved}: {exc}") from exc
+
+                encoded = base64.b64encode(data).decode("utf-8")
+                extra_content.append(
+                    {
+                        "type": "image",
+                        "base64": encoded,
+                        "mime_type": mime_type,
+                        "source_path": str(resolved),
+                    },
+                )
+                continue
+
+            if url_value:
+                extra_content.append({"type": "image", "url": url_value})
+                continue
+
+            raise UploadFileError(
+                "upload_files entry must specify either 'image_path', 'url', or 'file_path'",
+            )
+
+        if not extra_content:
+            return processed_messages
+
+        # Track if file search files are present for API params handler
+        if has_file_search_files:
+            all_params["_has_file_search_files"] = True
+
+        if processed_messages:
+            last_message = processed_messages[-1].copy()
+            last_content = list(last_message.get("content", []))
+            last_content.extend(extra_content)
+            last_message["content"] = last_content
+            processed_messages[-1] = last_message
+        else:
+            processed_messages.append(
+                {
+                    "role": "user",
+                    "content": extra_content,
+                },
+            )
+
+        # Prevent downstream handlers from seeing upload_files
+        all_params.pop("upload_files", None)
+
+        return processed_messages
+
+    def _process_file_path_entry(
+        self,
+        file_path_value: str,
+        all_params: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        # Check if it's a URL
+        if file_path_value.startswith(("http://", "https://")):
+            logger.info(f"Queued file URL for File Search upload: {file_path_value}")
+            return {
+                "type": "file_pending_upload",
+                "url": file_path_value,
+                "source": "url",
+            }
+
+        # Local file path
+        resolved = Path(file_path_value).expanduser()
+        if not resolved.is_absolute():
+            cwd = all_params.get("cwd") or self.config.get("cwd")
+            if cwd:
+                resolved = Path(cwd).joinpath(resolved)
+            else:
+                resolved = resolved.resolve()
+
+        if not resolved.exists():
+            raise UploadFileError(f"File not found: {resolved}")
+
+        # Validate file extension
+        file_ext = resolved.suffix.lower()
+        if file_ext not in FILE_SEARCH_SUPPORTED_EXTENSIONS:
+            raise UploadFileError(
+                f"File type {file_ext} not supported by File Search. " f"Supported types: {', '.join(sorted(FILE_SEARCH_SUPPORTED_EXTENSIONS))}",
+            )
+
+        # Validate file size
+        file_size = resolved.stat().st_size
+        if file_size > FILE_SEARCH_MAX_FILE_SIZE:
+            raise UploadFileError(
+                f"File size {file_size / (1024*1024):.2f} MB exceeds " f"File Search limit of {FILE_SEARCH_MAX_FILE_SIZE / (1024*1024):.0f} MB",
+            )
+
+        # Determine MIME type
+        mime_type, _ = mimetypes.guess_type(resolved.as_posix())
+        if not mime_type:
+            mime_type = "application/octet-stream"
+
+        logger.info(f"Queued local file for File Search upload: {resolved}")
+        return {
+            "type": "file_pending_upload",
+            "path": str(resolved),
+            "mime_type": mime_type,
+            "source": "local",
+        }
+
+    async def stream_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Stream response using OpenAI Response API with unified MCP/non-MCP processing."""
+
+        agent_id = kwargs.get("agent_id", None)
+
+        log_backend_activity(
+            self.get_provider_name(),
+            "Starting stream_with_tools",
+            {"num_messages": len(messages), "num_tools": len(tools) if tools else 0},
+            agent_id=agent_id,
+        )
+
+        # Catch setup errors by wrapping the context manager itself
+        try:
+            # Use async context manager for proper MCP resource management
+            async with self:
+                client = self._create_client(**kwargs)
+
+                try:
+                    # Determine if MCP processing is needed
+                    use_mcp = bool(self._mcp_functions)
+
+                    # Use parent class method to yield MCP status chunks
+                    async for chunk in self.yield_mcp_status_chunks(use_mcp):
+                        yield chunk
+
+                    if use_mcp:
+                        # MCP MODE: Recursive function call detection and execution
+                        logger.info("Using recursive MCP execution mode")
+
+                        current_messages = self._trim_message_history(messages.copy())
+
+                        # Start recursive MCP streaming
+                        async for chunk in self._stream_with_mcp_tools(current_messages, tools, client, **kwargs):
+                            yield chunk
+
+                    else:
+                        # NON-MCP MODE: Simple passthrough streaming
+                        logger.info("Using no-MCP mode")
+
+                        # Start non-MCP streaming
+                        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                            yield chunk
+
+                except Exception as e:
+                    # Enhanced error handling for MCP-related errors during streaming
+                    if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
+                        # Record failure for circuit breaker
+                        await self._record_mcp_circuit_breaker_failure(e, agent_id)
+
+                        # Handle MCP exceptions with fallback
+                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                            yield chunk
+                    else:
+                        logger.error(f"Streaming error: {e}")
+                        yield StreamChunk(type="error", error=str(e))
+
+                finally:
+                    await self._cleanup_client(client)
+        except Exception as e:
+            # Handle exceptions that occur during MCP setup (__aenter__) or teardown
+            # Provide a clear user-facing message and fall back to non-MCP streaming
+            try:
+                client = self._create_client(**kwargs)
+
+                if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
+                    # Handle MCP exceptions with fallback
+                    async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                        yield chunk
+                else:
+                    # Generic setup error: still notify if MCP was configured
+                    if self.mcp_servers:
+                        yield StreamChunk(
+                            type="mcp_status",
+                            status="mcp_unavailable",
+                            content=f"⚠️ [MCP] Setup failed; continuing without MCP ({e})",
+                            source="mcp_setup",
+                        )
+
+                    # Proceed with non-MCP streaming
+                    async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                        yield chunk
+            except Exception as inner_e:
+                logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
+                yield StreamChunk(type="error", error=str(inner_e))
+            finally:
+                await self._cleanup_client(client)
+
+    async def _stream_without_mcp_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Simple passthrough streaming without MCP processing."""
+        agent_id = kwargs.get("agent_id", None)
+        all_params = {**self.config, **kwargs}
+        processed_messages = await self._process_upload_files(messages, all_params)
+        api_params = await self.api_params_handler.build_api_params(processed_messages, tools, all_params)
+
+        # Remove any MCP tools from the tools list
+        if "tools" in api_params:
+            non_mcp_tools = []
+            for tool in api_params.get("tools", []):
+                # Check different formats for MCP tools
+                if tool.get("type") == "function":
+                    name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
+                    if name and name in self._mcp_function_names:
+                        continue
+                elif tool.get("type") == "mcp":
+                    continue
+                non_mcp_tools.append(tool)
+            api_params["tools"] = non_mcp_tools
+
+        if "openai" in self.get_provider_name().lower():
+            stream = await client.responses.create(**api_params)
+        elif "claude" in self.get_provider_name().lower():
+            if "betas" in api_params:
+                stream = await client.beta.messages.create(**api_params)
+            else:
+                stream = await client.messages.create(**api_params)
+        else:
+            stream = await client.chat.completions.create(**api_params)
+
+        async for chunk in self._process_stream(stream, all_params, agent_id):
+            yield chunk
+
+    async def _stream_handle_mcp_exceptions(
         self,
         error: Exception,
-        api_params: Dict[str, Any],
-        provider_tools: List[Dict[str, Any]],
-        stream_func: Callable[[Dict[str, Any]], AsyncGenerator[StreamChunk, None]],
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
+        """Handle MCP exceptions with fallback streaming."""
+
         """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
         async with self._stats_lock:
             self._mcp_tool_failures += 1
@@ -313,30 +649,7 @@ class MCPBackend(LLMBackend):
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
 
-        # Build non-MCP configuration and stream fallback
-        fallback_params = dict(api_params)
-
-        # Remove any MCP tools from the tools list
-        if "tools" in fallback_params:
-            non_mcp_tools = []
-            for tool in fallback_params.get("tools", []):
-                # Check different formats for MCP tools
-                if tool.get("type") == "function":
-                    name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
-                    if name and name in self._mcp_function_names:
-                        continue
-                elif tool.get("type") == "mcp":
-                    continue
-                non_mcp_tools.append(tool)
-            fallback_params["tools"] = non_mcp_tools
-
-        # Add back provider tools if they were present
-        if provider_tools:
-            if "tools" not in fallback_params:
-                fallback_params["tools"] = []
-            fallback_params["tools"].extend(provider_tools)
-
-        async for chunk in stream_func(fallback_params):
+        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
             yield chunk
 
     def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
@@ -366,6 +679,45 @@ class MCPBackend(LLMBackend):
             return False
 
         return True
+
+    async def _record_mcp_circuit_breaker_failure(
+        self,
+        error: Exception,
+        agent_id: Optional[str] = None,
+    ) -> None:
+        """Record MCP failure for circuit breaker if enabled."""
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker:
+            try:
+                # Get current mcp_tools servers for circuit breaker failure recording
+                normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
+                mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
+
+                await MCPCircuitBreakerManager.record_failure(
+                    mcp_tools_servers,
+                    self._mcp_tools_circuit_breaker,
+                    str(error),
+                    backend_name=self.backend_name,
+                    agent_id=agent_id,
+                )
+            except Exception as cb_error:
+                logger.warning(f"Failed to record circuit breaker failure: {cb_error}")
+
+    async def _record_mcp_circuit_breaker_success(self, servers_to_use: List[Dict[str, Any]]) -> None:
+        """Record MCP success for circuit breaker if enabled."""
+        if self._circuit_breakers_enabled and self._mcp_tools_circuit_breaker and self._mcp_client and MCPCircuitBreakerManager:
+            try:
+                connected_server_names = self._mcp_client.get_server_names() if hasattr(self._mcp_client, "get_server_names") else []
+                if connected_server_names:
+                    connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
+                    if connected_server_configs:
+                        await MCPCircuitBreakerManager.record_success(
+                            connected_server_configs,
+                            self._mcp_tools_circuit_breaker,
+                            backend_name=self.backend_name,
+                            agent_id=self.agent_id,
+                        )
+            except Exception as cb_error:
+                logger.warning(f"Failed to record circuit breaker success: {cb_error}")
 
     def _trim_message_history(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Trim message history to prevent unbounded growth."""
@@ -461,26 +813,14 @@ class MCPBackend(LLMBackend):
         """Check if a tool call is an MCP function."""
         return tool_name in self._mcp_functions
 
-    def get_mcp_tools_formatted(self, formatter) -> List[Dict[str, Any]]:
+    def get_mcp_tools_formatted(self) -> List[Dict[str, Any]]:
         """Get MCP tools formatted for specific API format."""
         if not self._mcp_functions:
             return []
 
         # Determine format based on backend type
         mcp_tools = []
-        provider_name = self.get_provider_name().lower()
-
-        # Claude backend uses claude format
-        if "claude" in provider_name and hasattr(formatter, "to_claude_format"):
-            mcp_tools = formatter.to_claude_format(self._mcp_functions)
-        # OpenAI/ChatCompletions backends use chat completions format
-        elif hasattr(formatter, "to_chat_completions_format"):
-            mcp_tools = formatter.to_chat_completions_format(self._mcp_functions)
-        else:
-            # Fallback to direct conversion
-            for function in self._mcp_functions.values():
-                if hasattr(function, "to_openai_format"):
-                    mcp_tools.append(function.to_openai_format())
+        mcp_tools = self.formatter.format_mcp_tools(self._mcp_functions)
 
         # Track function names for fallback filtering
         self._track_mcp_function_names(mcp_tools)

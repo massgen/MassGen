@@ -1,0 +1,492 @@
+/* General Body & Typography */
+body {
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.8;
+    margin: 0;
+    padding: 0;
+    background: #f0f2f5; /* Lighter background for a modern feel */
+    color: #333;
+    scroll-behavior: smooth;
+}
+
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: auto;
+    overflow: hidden;
+    padding: 0 20px;
+}
+
+/* Header */
+header {
+    background: #222; /* Darker header */
+    color: #fff;
+    padding: 1rem 0;
+    border-bottom: 5px solid #a00; /* Richer red */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    padding: 0;
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8em;
+    color: #fff;
+}
+
+header nav ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+header li {
+    display: inline-block;
+    margin-left: 30px; /* More spacing for navigation items */
+}
+
+header a {
+    color: #fff;
+    text-decoration: none;
+    text-transform: uppercase;
+    font-weight: 500;
+    font-size: 1.1em;
+    transition: color 0.3s ease-in-out, transform 0.2s ease-in-out;
+    position: relative;
+}
+
+header a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    display: block;
+    margin-top: 5px;
+    right: 0;
+    background: #ffcc00; /* Accent color for hover */
+    transition: width 0.3s ease-in-out;
+}
+
+header a:hover::after {
+    width: 100%;
+    left: 0;
+    background: #ffcc00;
+}
+
+header a:hover {
+    color: #ffcc00;
+}
+
+/* Hero Section */
+#hero {
+    min-height: 550px; /* Slightly taller hero */
+    background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://upload.wikimedia.org/wikipedia/commons/e/ec/Bob_Dylan_1963.jpg') no-repeat center center/cover;
+    text-align: center;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 30px;
+}
+
+#hero h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 4.5em;
+    margin-bottom: 20px;
+    text-shadow: 4px 4px 8px rgba(0,0,0,0.8);
+    color: #ffcc00;
+    letter-spacing: 1px;
+}
+
+#hero p {
+    font-size: 1.6em;
+    max-width: 800px;
+    margin: 0 auto;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+    font-weight: 300;
+}
+
+/* General Section Styling */
+main section {
+    padding: 70px 0; /* More padding for sections */
+    margin-bottom: 30px;
+    background: #fff;
+}
+
+.card {
+    border-radius: 12px; /* Slightly more rounded corners */
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1); /* Stronger shadow */
+    padding: 50px;
+    margin-top: 40px;
+    transition: transform 0.3s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px); /* Subtle hover effect */
+}
+
+main section h2 {
+    text-align: center;
+    color: #a00; /* Consistent rich red */
+    margin-bottom: 50px;
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5em;
+    position: relative;
+    letter-spacing: 0.5px;
+}
+
+main section h2::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -20px;
+    transform: translateX(-50%);
+    width: 100px; /* Wider underline */
+    height: 4px;
+    background: #ffcc00;
+}
+
+main section h3 {
+    color: #444;
+    margin-top: 40px;
+    margin-bottom: 25px;
+    font-size: 2.2em;
+    border-bottom: 1px solid #eee; /* Lighter border */
+    padding-bottom: 12px;
+    font-family: 'Playfair Display', serif;
+}
+
+main section p {
+    font-size: 1.15em;
+    line-height: 1.9;
+    margin-bottom: 20px;
+}
+
+main section ul {
+    list-style: none;
+    padding: 0;
+}
+
+main section ul li {
+    margin-bottom: 15px;
+    padding-left: 30px;
+    position: relative;
+    font-size: 1.1em;
+}
+
+main section ul li::before {
+    content: '\2022'; /* Bullet point */
+    color: #a00; /* Richer red bullet */
+    font-weight: bold;
+    display: inline-block;
+    width: 1em;
+    margin-left: -1em;
+    position: absolute;
+    left: 0;
+    font-size: 1.2em;
+}
+
+.album-list li strong {
+    color: #a00;
+}
+
+/* Image Section (removed as per plan) */
+/* The previous #dylan-image styles are now redundant as the content it styled is removed. */
+
+/* Album Grid */
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+    text-align: center;
+}
+
+.album-item img {
+    max-width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease-in-out;
+}
+
+.album-item img:hover {
+    transform: scale(1.03);
+}
+
+.album-item p {
+    margin-top: 15px;
+    font-weight: 500;
+    font-size: 1.05em;
+}
+
+.album-item strong {
+    color: #222;
+}
+
+/* Contact Links */
+.contact-links {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.contact-links a {
+    display: inline-block;
+    background: #a00; /* Richer red button */
+    color: #fff;
+    padding: 14px 30px;
+    margin: 0 15px;
+    border-radius: 7px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1.1em;
+    transition: background 0.3s ease-in-out, transform 0.2s ease-in-out;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.contact-links a:hover {
+    background: #ffcc00; /* Accent color on hover */
+    color: #222;
+    transform: translateY(-3px);
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 40px;
+    background: #222; /* Darker footer */
+    color: #fff;
+    margin-top: 50px;
+    border-top: 5px solid #ffcc00;
+}
+
+footer p {
+    margin: 0;
+    font-size: 1em;
+}
+
+/* Tabs (Integrated from Agent 1, adjusted for Agent 2's palette) */
+.tabs {
+    margin-top: 20px;
+}
+
+.tab-buttons {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #eee;
+}
+
+.tab-button {
+    background: none;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1.2em;
+    font-family: 'Playfair Display', serif;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.3s ease;
+    color: #555;
+    border-bottom: 3px solid transparent;
+}
+
+.tab-button:hover {
+    color: #a00; /* Matching Agent 2's rich red */
+    border-color: #ffcc00; /* Matching Agent 2's accent */
+}
+
+.tab-button.active {
+    color: #a00; /* Matching Agent 2's rich red */
+    border-color: #a00; /* Matching Agent 2's rich red */
+    font-weight: 700;
+}
+
+.tab-panel {
+    display: none;
+    padding-top: 20px;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* Scroll to Top Button (Integrated from Agent 1, adjusted for Agent 2's palette) */
+#scrollToTopBtn {
+    display: none; /* Hidden by default */
+    position: fixed; /* Fixed at the bottom-right of the viewport */
+    bottom: 30px;
+    right: 30px;
+    z-index: 99;
+    border: none;
+    outline: none;
+    background-color: #a00; /* Matching Agent 2's rich red */
+    color: white;
+    cursor: pointer;
+    padding: 15px 20px;
+    border-radius: 50%;
+    font-size: 18px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: background-color 0.3s ease;
+}
+
+#scrollToTopBtn:hover {
+    background-color: #ffcc00; /* Matching Agent 2's accent color */
+    color: #222; /* Matching Agent 2's dark text color */
+}
+
+/* New style for visual elements */
+.visual-element {
+    font-size: 4em; /* Make it prominent */
+    text-align: center;
+    margin-top: 30px;
+    margin-bottom: 30px;
+    color: #ffcc00; /* Accent color */
+    filter: drop-shadow(0 0 5px rgba(255, 204, 0, 0.5)); /* Subtle glow */
+}
+
+/* Styles for landing page links */
+.landing-links {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.landing-button {
+    display: inline-block;
+    background: #a00;
+    color: #fff;
+    padding: 18px 40px;
+    margin: 0 20px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1.3em;
+    transition: background 0.3s ease-in-out, transform 0.2s ease-in-out, box-shadow 0.3s ease;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+
+.landing-button:hover {
+    background: #ffcc00;
+    color: #222;
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+}
+
+/* Specific styles for landing page section */
+#welcome {
+    padding: 100px 50px;
+    text-align: center;
+    background: linear-gradient(to right, #f8f9fa, #e9ecef); /* Lighter gradient */
+}
+
+#welcome h2 {
+    font-size: 4em;
+    color: #222;
+    margin-bottom: 30px;
+}
+
+#welcome p {
+    font-size: 1.5em;
+    color: #555;
+    margin-bottom: 50px;
+}
+
+/* Adjust header and footer for landing page to be simpler */
+body:has(#welcome) header, body:has(#welcome) footer {
+    background: #333; /* Slightly different dark shade */
+    border-bottom: none;
+    color: #f8f9fa;
+}
+
+body:has(#welcome) header h1 {
+    color: #f8f9fa;
+}
+
+body:has(#welcome) nav ul li a {
+    color: #f8f9fa;
+}
+
+body:has(#welcome) header a::after {
+    background: #ffcc00;
+}
+
+body:has(#welcome) header a:hover {
+    color: #ffcc00;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    header .container {
+        flex-direction: column;
+    }
+
+    header h1 {
+        margin-bottom: 15px;
+        font-size: 2.2em;
+    }
+
+    header nav ul li {
+        display: block;
+        padding: 8px 0;
+        margin: 0;
+    }
+
+    header nav ul li a {
+        display: block;
+        padding: 5px 0;
+    }
+
+    #hero h2 {
+        font-size: 3em;
+    }
+
+    #hero p {
+        font-size: 1.2em;
+    }
+
+    main section h2 {
+        font-size: 2.5em;
+    }
+
+    .card {
+        padding: 30px;
+    }
+
+    .album-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .contact-links a {
+        display: block;
+        margin: 0 auto 15px auto;
+        width: 80%;
+    }
+
+    .tab-button {
+        font-size: 1em;
+        padding: 10px 15px;
+    }
+
+    .landing-button {
+        font-size: 1.1em;
+        padding: 15px 30px;
+        margin: 10px 0;
+    }
+
+    #welcome h2 {
+        font-size: 3em;
+    }
+
+    #welcome p {
+        font-size: 1.2em;
+    }
+}

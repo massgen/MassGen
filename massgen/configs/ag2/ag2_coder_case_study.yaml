@@ -1,0 +1,36 @@
+# Example configuration for using AG2 with MassGen
+# Single AG2 agent example
+# uv run python -m massgen.cli --config ag2/ag2_coder_case_study.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
+agents:
+  - id: "ag2_coder"
+    backend:
+      type: ag2
+      agent_config:
+        type: assistant
+        name: "AG2_coder"
+        system_message: |
+          You are a helpful coding assistant. When asked to create and run code:
+          1. Write Python code in a markdown code block (```python ... ```)
+          2. The code will be automatically executed
+          3. Always print the results so they are visible
+
+          If you need to access information from the web, create and run a web scraping script.
+        llm_config:
+          api_type: "openai"
+          model: "gpt-5"
+        code_execution_config:
+            executor:
+              type: "LocalCommandLineCodeExecutor"
+              timeout: 60
+              work_dir: "./code_execution_workspace"
+
+  - id: "gemini2.5pro"
+    backend:
+        type: "gemini"
+        model: "gemini-2.5-pro"
+        enable_web_search: true
+
+# UI Configuration
+ui:
+  type: "rich_terminal"
+  logging_enabled: true

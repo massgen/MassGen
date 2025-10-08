@@ -51,10 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.23 Features](#-latest-features-v0023)
-- [Workspace Copy Tools](#-latest-features-v0022)
-- [Configuration Organization](#-latest-features-v0022)
-- [Enhanced File Operations](#-latest-features-v0022)
+- [v0.0.28 Features](#-latest-features-v0028)
 </details>
 
 <details open>
@@ -99,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.23](#recent-achievements-v0023)
-  - [v0.0.3 - v0.0.22](#previous-achievements-v003-v0022)
+  - [v0.0.28](#recent-achievements-v0028)
+  - [v0.0.3 - v0.0.27](#previous-achievements-v003---v0027)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-  - Web Interface
-- [v0.0.24 Roadmap](#v0024-roadmap)
+- [v0.0.29 Roadmap](#v0029-roadmap)
 </details>
 
 <details open>
@@ -132,18 +129,59 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.23)
+## 🆕 Latest Features (v0.0.28)
 
-**What's New in v0.0.23:**
-- **Backend Architecture Refactoring** - Major consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends
-- **Formatter Module** - Extracted message and tool formatting logic into dedicated `massgen/formatter/` module
-- **Massive Code Deduplication** - Streamlined chat_completions.py, claude.py, and response.py for better maintainability
-- **Bug Fixes** - Fixed coordination table escape handling on macOS and FastMCP integration
+**Experience v0.0.28 AG2 Integration:**
+
+See the new AG2 framework integration in action:
+
+[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
+
+**What's New in v0.0.28:**
+- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
+- **Improved Stability** - Better handling when MCP servers are not configured
+
+**Try v0.0.28 Features Now:**
+```bash
+# Try AG2 integration with MassGen
+uv pip install -e ".[external]"
+uv run python -m massgen.cli --config massgen/configs/ag2/ag2_coder_case_study.yaml "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
+```
+
+**Experience v0.0.28 AG2 Integration:**
+
+See the new AG2 framework integration in action:
+
+[![MassGen v0.0.28 AG2 Integration Demo](https://img.youtube.com/vi/Ui2c-GpCqK0/0.jpg)](https://youtu.be/Ui2c-GpCqK0)
+
+**What's New in v0.0.28:**
+- **AG2 Framework Integration** - Use AG2 agents alongside MassGen agents in collaborative workflows
+- **Flexible Code Execution** - Run code locally, in Docker containers, Jupyter notebooks, or serverless environments
+- **Improved Stability** - Better handling when MCP servers are not configured
+
+**Try v0.0.28 Features Now:**
+```bash
+# Basic AG2 single agent
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_single_agent.yaml \
+  "what is quantum computing?"
+
+# AG2 single agent with code execution
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_coder.yaml \
+  "Create a factorial function and calculate the factorial of 8. Show the result?"
+
+# Mixed team: AG2 agent + Gemini agent
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_gemini.yaml \
+  "what is quantum computing?"
+
+```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
 
 ---
-
 
 ## 🏗️ System Design
 
@@ -230,6 +268,7 @@ cp .env.example .env
  - [Grok](https://docs.x.ai/docs/overview)
  - [Kimi/Moonshot](https://platform.moonshot.ai/)
  - [OpenAI](https://platform.openai.com/api-keys)
+ - [POE](https://poe.com/)
  - [Z AI](https://docs.z.ai/guides/overview/quick-start)
 
 ### 3. 🧩 Supported Models and Tools
@@ -246,17 +285,22 @@ The system currently supports multiple model providers with advanced capabilitie
 - **Gemini**: Gemini 2.5 Flash, Gemini 2.5 Pro...
 - **Grok**: Grok-4, Grok-3, Grok-3-mini...
 - **OpenAI**: GPT-5 series (GPT-5, GPT-5-mini, GPT-5-nano)...
-- **Together AI**, **Fireworks AI**, **Groq**, **Kimi/Moonshot**, **Nebius AI Studio**, **OpenRouter**: LLaMA, Mistral, Qwen...
+- **Together AI**, **Fireworks AI**, **Groq**, **Kimi/Moonshot**, **Nebius AI Studio**, **OpenRouter**, **POE**: LLaMA, Mistral, Qwen...
 - **Z AI**: GLM-4.5
 
-**Local Model Support (NEW in v0.0.7):**
-- **LM Studio**: Run open-weight models locally with automatic server management
+**Local Model Support:**
+- **vLLM & SGLang** (ENHANCED in v0.0.25): Unified inference backend supporting both vLLM and SGLang servers
+  - Auto-detection between vLLM (port 8000) and SGLang (port 30000) servers
+  - Support for both vLLM and SGLang-specific parameters (top_k, repetition_penalty, separate_reasoning)
+  - Mixed server deployments with configuration example: `two_qwen_vllm_sglang.yaml`
+
+- **LM Studio** (v0.0.7+): Run open-weight models locally with automatic server management
   - Automatic LM Studio CLI installation
   - Auto-download and loading of models
   - Zero-cost usage reporting
   - Support for LLaMA, Mistral, Qwen and other open-weight models
 
-More providers and local inference engines (vllm, sglang) are welcome to be added.
+More providers and local inference engines (sglang) are welcome to be added.
 
 #### Tools
 
@@ -384,10 +428,10 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 ```bash
 # Weather service with GPT-5
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
-  "What's the weather forecast for San Francisco this week?"
+  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+  "What's the weather forecast for New York this week?"
 
-# Multi-tool MCP with Gemini - Search + Weather + Filesystem
+# Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
   "Find the best restaurants in Paris and save the recommendations to a file"
@@ -446,6 +490,7 @@ agents:
 #### **4. File System Operations & Workspace Management**
 
 MassGen provides comprehensive file system support through multiple backends, enabling agents to read, write, and manipulate files in organized workspaces.
+
 
 **Filesystem Configuration Parameters:**
 
@@ -508,31 +553,41 @@ orchestrator:
 
 → [View more filesystem examples](massgen/configs/tools/filesystem/)
 
+> ⚠️ **IMPORTANT SAFETY WARNING**
+>
+> MassGen agents can **autonomously read, write, modify, and delete files** within their permitted directories.
+>
+> **Before running MassGen with filesystem access:**
+> - Only grant access to directories you're comfortable with agents modifying
+> - Use the permission system to restrict write access where needed
+> - Consider testing in an isolated directory or virtual environment first
+> - Back up important files before granting write access
+> - Review the `context_paths` configuration carefully
+>
+> The agents will execute file operations without additional confirmation once permissions are granted.
+
 #### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
-Work directly with your existing projects! User Context Paths allow you to share specific directories and files with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
+Work directly with your existing projects! User Context Paths allow you to share specific directories with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
+
+MassGen automatically organizes all its working files under a `.massgen/` directory in your project root, keeping your project clean and making it easy to exclude MassGen's temporary files from version control.
 
 **Project Integration Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `context_paths` | list | **Yes** (for project integration) | Shared directories/files for all agents |
-| └─ `path` | string | Yes | Absolute path to your project directory or file |
+| `context_paths` | list | **Yes** (for project integration) | Shared directories for all agents |
+| └─ `path` | string | Yes | Absolute path to your project directory (**must be directory, not file**) |
 | └─ `permission` | string | Yes | Access level: `"read"` or `"write"` |
+
+**⚠️ Important:** Context paths must point to **directories**, not individual files. MassGen validates all paths during startup and will show clear error messages for missing paths or file paths.
 
 
 **Quick Start Commands:**
 
 ```bash
-# Code analysis and security audit
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/fs_permissions_test.yaml \
-  "Analyze all Python files in this project and create a comprehensive security audit report"
-
-# Project modernization
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
-  "Review this legacy codebase and create a modernization plan with updated dependencies"
+# Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
+uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 **Configuration:**
@@ -587,12 +642,50 @@ orchestrator:
 - **Data Processing**: Agents access shared datasets and generate analysis reports
 - **Project Migration**: Agents examine existing projects and create modernized versions
 
+**Clean Project Organization:**
+```
+your-project/
+├── .massgen/                          # All MassGen state
+│   ├── sessions/                      # Multi-turn conversation history (if using interactively)
+│   │   └── session_20240101_143022/
+│   │       ├── turn_1/                # Results from turn 1
+│   │       ├── turn_2/                # Results from turn 2
+│   │       └── SESSION_SUMMARY.txt    # Human-readable summary
+│   ├── workspaces/                    # Agent working directories
+│   │   ├── agent1/                    # Individual agent workspaces
+│   │   └── agent2/
+│   ├── snapshots/                     # Workspace snapshots for coordination
+│   └── temp_workspaces/               # Previous turn results for context
+├── massgen/
+└── ...
+```
+
+**Benefits:**
+- ✅ **Clean Projects** - All MassGen files contained in one directory
+- ✅ **Easy Gitignore** - Just add `.massgen/` to `.gitignore`
+- ✅ **Portable** - Move or delete `.massgen/` without affecting your project
+- ✅ **Multi-Turn Sessions** - Conversation history preserved across sessions
+
+**Configuration Auto-Organization:**
+```yaml
+orchestrator:
+  # User specifies simple names - MassGen organizes under .massgen/
+  snapshot_storage: "snapshots"         # → .massgen/snapshots/
+  session_storage: "sessions"           # → .massgen/sessions/
+  agent_temporary_workspace: "temp"     # → .massgen/temp/
+
+agents:
+  - backend:
+      cwd: "workspace1"                 # → .massgen/workspaces/workspace1/
+```
+
 → [Learn more about project integration](massgen/mcp_tools/permissions_and_context_files.md)
 
 **Security Considerations:**
 - **Agent ID Safety**: Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
 - **File Access Control**: Restrict file access using MCP server configurations when needed
-- **Path Validation**: All paths are resolved to absolute paths to prevent directory traversal attacks
+- **Path Validation**: All context paths are validated to ensure they exist and are directories (not files)
+- **Directory-Only Context Paths**: Context paths must point to directories, not individual files
 
 ---
 
@@ -624,11 +717,16 @@ uv run python -m massgen.cli \
 
 **Claude Code (Development Tools)**
 ```bash
-# Professional development environment
+# Professional development environment with auto-configured workspace
 uv run python -m massgen.cli \
   --backend claude_code \
   --model sonnet \
   "Create a Flask web app with authentication"
+
+# Default workspace directories created automatically:
+# - workspace1/              (working directory)
+# - snapshots/              (workspace snapshots)
+# - temp_workspaces/        (temporary agent workspaces)
 ```
 
 **Local Models (LM Studio - v0.0.7+)**
@@ -675,6 +773,7 @@ uv run python -m massgen.cli \
 **Web Automation:** (still in test)
 ```bash
 # Browser automation with screenshots and reporting
+# Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
   "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
@@ -816,30 +915,36 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.23)
+### Recent Achievements (v0.0.28)
 
-**🎉 Released: September 24, 2025**
+**🎉 Released: October 6, 2025**
 
-Version 0.0.23 introduces **Backend Architecture Refactoring** and **Formatter Module**, establishing cleaner, more maintainable codebase:
+Version 0.0.28 introduces **AG2 Framework Integration**, enabling external agent frameworks to work within MassGen's multi-agent orchestration:
 
-#### Backend Architecture Refactoring
-- **Major Code Consolidation**: New `base_with_mcp.py` base class consolidating common MCP functionality (488 lines)
-- **Massive Line Reduction**: Reduced ~1,932 lines across core backend files through deduplication
-- **Standardized MCP Integration**: Unified MCP client initialization and error handling across all backends
-- **Improved Maintainability**: Extracted shared MCP logic from individual backends into unified base class
+#### AG2 Framework Integration
+- **Adapter System**: Connect external agent frameworks through new `massgen/adapters/` module with base adapter architecture
+- **AG2 Agent Support**: Use AG2 ConversableAgent and AssistantAgent types with async execution in MassGen workflows
+- **Code Execution Environments**: Run code in multiple environments - LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+- **Ready-to-Use Configurations**: 4 example configs (`ag2_single_agent.yaml`, `ag2_coder.yaml`, `ag2_coder_case_study.yaml`, `ag2_gemini.yaml`)
 
-#### Formatter Module
-- **Dedicated Formatting Logic**: New `massgen/formatter/` module with specialized formatters
-- **Message Formatting**: `message_formatter.py` handles message formatting across backends
-- **Tool Formatting**: `tool_formatter.py` and `mcp_tool_formatter.py` manage tool call formatting
-- **Better Code Organization**: Separated formatting concerns from core backend logic
+#### Improvements
+- **MCP Circuit Breaker Fix**: Cleaner initialization when MCP servers are not configured, preventing unnecessary warnings
+- **Comprehensive Testing**: Full test coverage in `test_ag2_adapter.py`, `test_agent_adapter.py`, `test_external_agent_backend.py`
+- **Enhanced Documentation**: Updated `MULTI_SOURCE_AGENT_INTEGRATION_DESIGN.md` with AG2 adapter architecture details
 
-#### Bug Fixes and Improvements
-- **Coordination Table**: Fixed escape key handling on macOS with updated display components
-- **FastMCP Integration**: Added fastmcp to dependencies for workspace copy MCP support
-- **Path Handling**: Improved relative path handling for better portability
+### Previous Achievements (v0.0.3 - v0.0.27)
 
-### Recent Achievements (v0.0.23)
+✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
+
+✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
+
+✅ **Protected Paths and File-Based Context Paths (v0.0.26)**: Protect specific files within write-permitted directories, grant access to individual files instead of entire directories
+
+✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
+
+✅ **SGLang Backend Integration (v0.0.25)**: Unified vLLM/SGLang backend with auto-detection, support for SGLang-specific parameters like `separate_reasoning`, and dual server support for mixed vLLM and SGLang deployments
+
+✅ **vLLM Backend Support (v0.0.24)**: Complete integration with vLLM for high-performance local model serving, POE provider support, GPT-5-Codex model recognition, backend utility modules refactoring, and comprehensive bug fixes including streaming chunk processing
 
 ✅ **Backend Architecture Refactoring (v0.0.23)**: Major code consolidation with new `base_with_mcp.py` class reducing ~1,932 lines across backends, extracted formatter module for better code organization, and improved maintainability through unified MCP integration
 
@@ -893,33 +998,33 @@ Version 0.0.23 introduces **Backend Architecture Refactoring** and **Formatter M
 
 ### Key Future Enhancements
 
+-   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model Integration:** Adding support for more frontier models and local inference engines
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Enhanced Developer Experience:** Completing tool registration system and web interface for better visualization
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.24 Roadmap
+### v0.0.29 Roadmap
 
-Version 0.0.24 builds upon the solid backend refactoring of v0.0.23 by focusing on local model support, orchestrator improvements, and enhanced agent communication. Key priorities include:
+Version 0.0.29 focuses on fixing multimodal capabilities and extending backend support:
 
 #### Required Features
-- **VLLM Local Model Support**: Add support for VLLM backends with local models for better performance and cost efficiency
-- **Agent System Prompt Fixes**: Fix the problem where the final agent expects human feedback through system prompt changes
+- **Image Generation Path Fix**: Resolve file path hallucination issues preventing correct image generation (Issue #284)
+- **Claude Multimodal Support**: Enable image processing capabilities in Claude backend to match Gemini and Response backends
 
 #### Optional Features
-- **Refactor Orchestrator**: Streamline orchestrator code for better maintainability and performance
-- **MCP Marketplace Integration**: Integrate MCP Marketplace support for expanded tool ecosystem
+- **Custom Tool Register System**: Complete and polish existing tool registration implementation for production readiness
+- **Web UI**: Improve and integrate existing web interface implementation (Issue #276)
 
 Key technical approach:
-- **Local Model Infrastructure**: Enable high-performance local model inference through VLLM with OpenAI-compatible API
-- **Autonomous Agent Behavior**: Ensure final agents complete tasks without expecting human feedback
-- **Code Maintainability**: Streamline orchestrator code for improved performance and maintainability
-- **Tool Ecosystem**: Expand capabilities through MCP Marketplace discovery and installation
+- **Path Validation**: Comprehensive testing and clear error messages for image generation workflows
+- **Claude Backend Extension**: Image input handling, understanding, and multimodal message formatting
+- **Tool Registry Polish**: Complete integration with orchestrator and refine existing implementation
+- **Web UI Integration**: Production-ready deployment with enhanced features and documentation
 
-For detailed milestones and technical specifications, see the [full v0.0.24 roadmap](ROADMAP_v0.0.24.md).
+For detailed milestones and technical specifications, see the [full v0.0.29 roadmap](ROADMAP_v0.0.29.md).
 
 ---
 

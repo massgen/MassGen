@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from enum import Enum
 
 
@@ -30,6 +31,7 @@ MODEL_MAPPINGS = {
         "gpt-5",
         "gpt-5-mini",
         "gpt-5-nano",
+        "gpt-5-codex",
         # GPT-4.1 variants
         "gpt-4.1",
         "gpt-4.1-mini",
@@ -54,6 +56,8 @@ MODEL_MAPPINGS = {
         "o4-mini-high",
     ],
     "claude": [
+        # Claude 4.5 variants
+        "claude-sonnet-4-5-20250929",
         # Claude 4 variants
         "claude-opus-4-1-20250805",
         "claude-opus-4-20250514",

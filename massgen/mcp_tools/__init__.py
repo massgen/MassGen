@@ -43,9 +43,6 @@ from .exceptions import (
     handle_mcp_error,
 )
 
-# Permission management
-from .filesystem_manager import PathPermissionManagerHook
-
 # Hook system for function call interception
 from .hooks import (
     FunctionHook,
@@ -104,6 +101,4 @@ __all__ = [
     "FunctionHookManager",
     "PermissionClientSession",
     "convert_sessions_to_permission_sessions",
-    # Permission management
-    "PathPermissionManagerHook",
 ]

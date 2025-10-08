@@ -1578,7 +1578,7 @@ Make your decision and include the JSON at the very end of your response."""
                         # ============================================
                         if hasattr(chunk, "automatic_function_calling_history") and chunk.automatic_function_calling_history:
                             for history_item in chunk.automatic_function_calling_history:
-                                if hasattr(history_item, "parts"):
+                                if hasattr(history_item, "parts") and history_item.parts is not None:
                                     for part in history_item.parts:
                                         # Check for function_call part
                                         if hasattr(part, "function_call") and part.function_call:
@@ -1751,7 +1751,6 @@ Make your decision and include the JSON at the very end of your response."""
                     MCPError,
                     Exception,
                 ) as e:
-                    # Log MCP error for debugging
                     log_stream_chunk("backend.gemini", "mcp_error", str(e), agent_id)
 
                     # Emit user-friendly error message
@@ -2143,7 +2142,31 @@ Make your decision and include the JSON at the very end of your response."""
                 {"error": str(e)},
                 agent_id=self.agent_id,
             )
-
+        # Close internal aiohttp session held by google-genai BaseApiClient
+        try:
+            if client is not None:
+                base_client = getattr(client, "_api_client", None)
+                if base_client is not None:
+                    session = getattr(base_client, "_aiohttp_session", None)
+                    if session is not None and hasattr(session, "close"):
+                        if not session.closed:
+                            await session.close()
+                            log_backend_activity(
+                                "gemini",
+                                "Closed google-genai aiohttp session",
+                                {},
+                                agent_id=self.agent_id,
+                            )
+                        base_client._aiohttp_session = None
+                        # Yield control to allow connector cleanup
+                        await asyncio.sleep(0)
+        except Exception as e:
+            log_backend_activity(
+                "gemini",
+                "Failed to close google-genai aiohttp session",
+                {"error": str(e)},
+                agent_id=self.agent_id,
+            )
         # Close internal async transport if exposed
         try:
             if client is not None and hasattr(client, "aio") and client.aio is not None:
