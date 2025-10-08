@@ -15,9 +15,15 @@ def setup_api_keys() -> None:
         os.environ["GOOGLE_GEMINI_API_KEY"] = os.environ["GEMINI_API_KEY"]
 
 
-def validate_agent_config(cfg: Dict[str, Any]) -> None:
-    """Validate required fields in agent configuration."""
-    if "llm_config" not in cfg:
+def validate_agent_config(cfg: Dict[str, Any], require_llm_config: bool = True) -> None:
+    """
+    Validate required fields in agent configuration.
+
+    Args:
+        cfg: Agent configuration dict
+        require_llm_config: If True, llm_config is required. If False, it's optional.
+    """
+    if require_llm_config and "llm_config" not in cfg:
         raise ValueError("Each AG2 agent configuration must include 'llm_config'.")
 
     if "name" not in cfg:
@@ -94,18 +100,35 @@ def build_agent_kwargs(cfg: Dict[str, Any], llm_config: LLMConfig, code_executor
     return agent_kwargs
 
 
-def setup_agent_from_config(config: Dict[str, Any]) -> ConversableAgent:
-    """Set up a ConversableAgent from configuration."""
+def setup_agent_from_config(config: Dict[str, Any], default_llm_config: Any = None) -> ConversableAgent:
+    """
+    Set up a ConversableAgent from configuration.
+
+    Args:
+        config: Agent configuration dict
+        default_llm_config: Default llm_config to use if agent doesn't provide one
+
+    Returns:
+        ConversableAgent or AssistantAgent instance
+    """
     cfg = config.copy()
 
-    # Validate configuration
-    validate_agent_config(cfg)
+    # Check if llm_config is provided in agent config
+    has_llm_config = "llm_config" in cfg
+
+    # Validate configuration (llm_config optional if default provided)
+    validate_agent_config(cfg, require_llm_config=not default_llm_config)
 
     # Extract agent type
     agent_type = cfg.pop("type", "conversable")
 
     # Create LLM config
-    llm_config = create_llm_config(cfg.pop("llm_config"))
+    if has_llm_config:
+        llm_config = create_llm_config(cfg.pop("llm_config"))
+    elif default_llm_config:
+        llm_config = create_llm_config(default_llm_config)
+    else:
+        raise ValueError("No llm_config provided for agent and no default_llm_config available")
 
     # Create code executor if configured
     code_executor = None

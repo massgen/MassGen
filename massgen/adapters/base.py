@@ -91,39 +91,18 @@ class AgentAdapter(ABC):
         yield StreamChunk(type="complete_message", complete_message=complete_message)
         yield StreamChunk(type="done")
 
-    def convert_messages_from_massgen(
-        self,
-        messages: List[Dict[str, Any]],
-    ) -> Any:
+    @staticmethod
+    def _get_tool_name(tool: Dict[str, Any]) -> str:
         """
-        Convert MassGen messages to agent-specific format.
+        Extract tool name from tool schema.
 
-        Override this method for agent-specific conversion.
-
-        Args:
-            messages: MassGen format messages
-
-        Returns:
-            Agent-specific message format
+        Supports both formats:
+        - {"type": "function", "function": {"name": "tool_name", ...}}
+        - {"name": "tool_name", ...}
         """
-        return messages
-
-    def convert_tools_from_massgen(
-        self,
-        tools: List[Dict[str, Any]],
-    ) -> Any:
-        """
-        Convert MassGen tools to agent-specific format.
-
-        Override this method for agent-specific conversion.
-
-        Args:
-            tools: MassGen format tools
-
-        Returns:
-            Agent-specific tool format
-        """
-        return tools
+        if "function" in tool:
+            return tool["function"].get("name", "")
+        return tool.get("name", "")
 
     def convert_response_to_massgen(
         self,
