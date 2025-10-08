@@ -27,6 +27,23 @@ class TimeoutConfig:
 
 
 @dataclass
+class CoordinationConfig:
+    """Configuration for coordination behavior in MassGen.
+
+    Args:
+        enable_planning_mode: If True, agents plan without executing actions during coordination.
+                             Only the winning agent executes actions during final presentation.
+                             If False, agents execute actions during coordination (default behavior).
+        planning_mode_instruction: Custom instruction to add when planning mode is enabled.
+    """
+
+    enable_planning_mode: bool = False
+    planning_mode_instruction: str = (
+        "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools."
+    )
+
+
+@dataclass
 class AgentConfig:
     """Configuration for MassGen agents using the proven binary decision framework.
 
@@ -39,6 +56,7 @@ class AgentConfig:
         agent_id: Optional agent identifier for this configuration
         custom_system_instruction: Additional system instruction prepended to evaluation message
         timeout_config: Timeout and resource limit configuration
+        coordination_config: Configuration for coordination behavior
     """
 
     # Core backend configuration (includes tool enablement)
@@ -53,6 +71,9 @@ class AgentConfig:
 
     # Timeout and resource limits
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
+
+    # Coordination behavior
+    coordination_config: CoordinationConfig = field(default_factory=CoordinationConfig)
 
     @property
     def custom_system_instruction(self) -> Optional[str]:

@@ -754,6 +754,19 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
+        # Get coordination config from YAML (if present)
+        coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
+        if coordination_settings:
+            from .agent_config import CoordinationConfig
+
+            orchestrator_config.coordination_config = CoordinationConfig(
+                enable_planning_mode=coordination_settings.get("enable_planning_mode", False),
+                planning_mode_instruction=coordination_settings.get(
+                    "planning_mode_instruction",
+                    "During coordination, describe what you would do without actually executing actions. Only provide concrete implementation details without calling external APIs or tools.",
+                ),
+            )
+
         # Get context sharing parameters from kwargs (if present in config)
         snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
         agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
