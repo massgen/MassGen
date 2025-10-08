@@ -1,0 +1,15 @@
+# MassGen Multimodal Configuration
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_openrouter_audio_understanding.yaml "What is in this recording?"
+agent:
+  id: "audio_agent"
+  backend:
+    type: "chatcompletion"
+    base_url: "https://openrouter.ai/api/v1"
+    model: "google/gemini-2.5-flash"
+    upload_files:
+      - audio_path: "https://cdn.openai.com/API/docs/audio/alloy.wav"
+  system_message: "You are a helpful assistant"
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
