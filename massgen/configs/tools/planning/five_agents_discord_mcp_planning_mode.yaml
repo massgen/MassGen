@@ -1,4 +1,4 @@
-# Three Agent Discord MCP Test Configuration with Planning Mode
+# Five Agent Discord MCP Test Configuration with Planning Mode
 # This configuration demonstrates planning vs execution mode to prevent duplicate tool calls
 # during coordination while allowing full tool execution during final presentation
 #
@@ -9,9 +9,10 @@
 #    OPENAI_API_KEY="your_openai_key"
 #    GOOGLE_API_KEY="your_gemini_key"
 #    ANTHROPIC_API_KEY="your_claude_key"
+#    XAI_API_KEY="your_grok_key"
 #
 # Example usage:
-# uv run python -m massgen.cli --config configs/three_agents_discord_mcp_planning_mode.yaml "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
+# uv run python -m massgen.cli --config configs/five_agents_discord_mcp_planning_mode.yaml "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
 
 agents:
   - id: "gemini_discord_agent"
@@ -32,8 +33,6 @@ agents:
       - Discord server interaction via MCP integration
       - Message reading, sending, and management
       - Channel and server information access
-
-      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
 
   - id: "openai_discord_agent"
     backend:
@@ -57,9 +56,7 @@ agents:
       - Message reading, sending, and management
       - Channel and server information access
 
-      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
-
-  - id: "claude_discord_agent"
+  - id: "claude_code_discord_agent"
     backend:
       type: "claude_code"
       cwd: "claude_code_workspace_discord_mcp"
@@ -77,7 +74,49 @@ agents:
       - Message reading, sending, and management
       - Channel and server information access
 
-      IMPORTANT: During coordination phase, you are in PLANNING MODE - describe your intended actions without executing them. Only execute tools during final presentation phase.
+  - id: "claude_discord_agent"
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-20250514"
+      mcp_servers:
+        - name: "discord"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "mcp-discord", "--config", "${DISCORD_TOKEN}"]
+          env:
+            DISCORD_TOKEN: "${DISCORD_TOKEN}"
+          security:
+            level: "high"
+      exclude_tools:
+        - mcp__discord__discord_send_webhook_message
+        - mcp__discord__discord_edit_webhook_message
+    system_message: |
+      Available Discord Tools:
+      - Discord server interaction via MCP integration
+      - Message reading, sending, and management
+      - Channel and server information access
+
+  - id: "grok_discord_agent"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      mcp_servers:
+        - name: "discord"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "mcp-discord", "--config", "${DISCORD_TOKEN}"]
+          env:
+            DISCORD_TOKEN: "${DISCORD_TOKEN}"
+          security:
+            level: "high"
+      exclude_tools:
+        - mcp__discord__discord_send_webhook_message
+        - mcp__discord__discord_edit_webhook_message
+    system_message: |
+      Available Discord Tools:
+      - Discord server interaction via MCP integration
+      - Message reading, sending, and management
+      - Channel and server information access
 
 ui:
   display_type: "rich_terminal"
@@ -99,10 +138,3 @@ orchestrator:
       5. Save tool execution for the final presentation phase when the winning agent will implement the plan
 
       Focus on planning, analysis, and coordination rather than execution.
-
-# Legacy Coordination Settings (for reference - these are now under orchestrator.coordination)
-coordination:
-  voting_enabled: true
-  max_rounds: 3
-  consensus_threshold: 0.6
-  timeout_seconds: 300

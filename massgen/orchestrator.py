@@ -1821,6 +1821,11 @@ class Orchestrator(ChatAgent):
         if agent.backend.filesystem_manager:
             agent.backend.filesystem_manager.path_permission_manager.set_context_write_access_enabled(True)
 
+        # Reset backend planning mode to allow MCP tool execution during final presentation
+        if hasattr(agent.backend, "set_planning_mode"):
+            agent.backend.set_planning_mode(False)
+            logger.info(f"[Orchestrator] Backend planning mode DISABLED for final presentation: {selected_agent_id} - MCP tools now allowed")
+
         # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work
         temp_workspace_path = await self._copy_all_snapshots_to_temp_workspace(selected_agent_id)
