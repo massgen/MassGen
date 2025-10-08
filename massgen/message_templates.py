@@ -279,11 +279,8 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
 Present the best possible coordinated answer by combining the strengths from all participants.\n\n"""
 
         # Add image generation instructions only if enabled
-        # if enable_image_generation:
-        #         presentation_instructions += """For image generation tasks:
-        #         After reviewing the existing images, you must generate the final images that best combine the strengths of all images from all paticipants.
-        # """
-        presentation_instructions += """For image generation tasks:
+        if enable_image_generation:
+            presentation_instructions += """For image generation tasks:
 - Extract image paths from the existing answer and resolve them in the shared reference.
 - Gather all agent-produced images (ignore non-existent files).
 - MUST call the generate-image tool with these input images to synthesize one final image combining their strengths.
@@ -571,8 +568,10 @@ Based on the coordination process above, present your final answer:"""
 
         # Add requirement for path explanations in answers
         # if enable_image_generation:
-        #     # Enabled for image generation tasks
+        # #     # Enabled for image generation tasks
         #     parts.append(
+        #         "\n**Image Generation Tasks**: When working on image generation tasks, if you find images equivalent and cannot choose between them, "
+        #         "choose the one with the smallest file size.\n"
         #         "\n**New Answer**: When calling `new_answer` tool:"
         #         "- For non-image generation tasks, if you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
         #         "- For image generation tasks, do not use file write tools. Instead, the images are already generated directly "
@@ -588,13 +587,14 @@ Based on the coordination process above, present your final answer:"""
         )
 
         # Add workspace cleanup guidance
-        # parts.append(
-        #     "**Workspace Cleanup**: Before submitting your answer with `new_answer`, use `delete_file` or "
-        #     "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
-        #     "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
-        #     "This ensures only the relevant final files remain for evaluation. For example, if you created "
-        #     "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
-        # )
+        parts.append(
+            "**Workspace Cleanup**: Before submitting your answer with `new_answer`, " "ensure that your workspace contains only the files relevant to your final answer.\n",
+            # use `delete_file` or "
+            # "`delete_files_batch` to remove any outdated, temporary, or unused files from your workspace. "
+            # "Note: You cannot delete read-only files (e.g., files from other agents' workspaces or read-only context paths). "
+            # "This ensures only the relevant final files remain for evaluation. For example, if you created "
+            # "`old_index.html` then later created `new_website/index.html`, delete the old version.\n",
+        )
 
         # Add diff tools guidance
         parts.append(

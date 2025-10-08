@@ -11,7 +11,7 @@ agents:
       # upload_files:
       #   - image_path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git19/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg" # Example image to be used by the agent
       cwd: "workspace1"  # Working directory for file operations
-      # exclude_tools: ["mcp__workspace_tools__delete_file"]
+      enable_image_generation: true  # Enable image generation tools
 
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots

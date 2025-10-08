@@ -44,6 +44,7 @@ class FilesystemManager:
         context_paths: List[Dict[str, Any]] = None,
         context_write_access_enabled: bool = False,
         enforce_read_before_delete: bool = True,
+        enable_image_generation: bool = False,
     ):
         """
         Initialize FilesystemManager.
@@ -54,8 +55,10 @@ class FilesystemManager:
             context_paths: List of context path configurations for access control
             context_write_access_enabled: Whether write access is enabled for context paths
             enforce_read_before_delete: Whether to enforce read-before-delete policy for workspace files
+            enable_image_generation: Whether to enable image generation tools
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
+        self.enable_image_generation = enable_image_generation
 
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
@@ -214,6 +217,13 @@ class FilesystemManager:
             "env": env,
             "cwd": str(self.cwd),
         }
+
+        # Conditionally exclude image generation tools if not enabled
+        if not self.enable_image_generation:
+            config["exclude_tools"] = [
+                "generate_and_store_image_with_input_images",
+                "generate_and_store_image_no_input_images",
+            ]
 
         return config
 
