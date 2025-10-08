@@ -209,7 +209,7 @@ class MCPBackend(LLMBackend):
                 allowed_tools=self.allowed_tools,
                 exclude_tools=self.exclude_tools,
                 circuit_breaker=self._mcp_tools_circuit_breaker,
-                timeout_seconds=30,
+                timeout_seconds=120,  # Increased timeout for image generation tools
                 backend_name=self.backend_name,
                 agent_id=self.agent_id,
             )
@@ -250,6 +250,12 @@ class MCPBackend(LLMBackend):
         max_retries: int = 3,
     ) -> Tuple[str, Any]:
         """Execute MCP function with exponential backoff retry logic."""
+        # Check if planning mode is enabled - block MCP tool execution during planning
+        if self.is_planning_mode_enabled():
+            logger.info(f"[MCP] Planning mode enabled - blocking MCP tool execution: {function_name}")
+            error_str = "🚫 [MCP] Planning mode active - MCP tools blocked during coordination"
+            return error_str, {"error": error_str, "blocked_by": "planning_mode", "function_name": function_name}
+
         # Convert JSON string to dict for shared utility
         try:
             args = json.loads(arguments_json) if isinstance(arguments_json, str) else arguments_json

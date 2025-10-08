@@ -2,7 +2,7 @@
 # This config shows how agents can access user-specified files with permission control
 
 agents:
-  - id: "agent1"
+  - id: "agent_a"
     backend:
       type: "openai"
       model: "gpt-5"
@@ -12,7 +12,7 @@ agents:
         effort: "low"  # Fast responses for debugging
       cwd: "workspace1"
 
-  - id: "agent2"
+  - id: "agent_b"
     backend:
       type: "claude_code"
       cwd: "workspace2"

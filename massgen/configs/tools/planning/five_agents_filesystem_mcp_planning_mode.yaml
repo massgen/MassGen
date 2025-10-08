@@ -1,0 +1,151 @@
+# Five Agent Filesystem MCP Test Configuration with Planning Mode
+# This configuration demonstrates planning vs execution mode using local filesystem tools
+# that require NO external API keys - perfect for testing and demonstration!
+#
+# Setup Requirements:
+# 1. No external API keys needed! Uses local filesystem MCP servers
+# 2. Set environment variables in .env file:
+#    OPENAI_API_KEY="your_openai_key" (for OpenAI agent)
+#    GOOGLE_API_KEY="your_gemini_key" (for Gemini agent)
+#    ANTHROPIC_API_KEY="your_claude_key" (for Claude agent)
+#    XAI_API_KEY="your_grok_key" (for Grok agent)
+#
+# Example usage:
+# uv run python -m massgen.cli --config configs/five_agents_filesystem_mcp_planning_mode.yaml "Create a project structure for a Python web app with directories for src, tests, docs, and config. Add some example files and then analyze the structure."
+
+agents:
+  - id: "gemini_filesystem_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      mcp_servers:
+        - name: "filesystem"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+          security:
+            level: "high"
+        - name: "workspace_tools"
+          type: "stdio"
+          command: "fastmcp"
+          args: ["run", "massgen.filesystem_manager._workspace_tools_server:create_server", "--", "--allowed-paths", "."]
+          env:
+            FASTMCP_SHOW_CLI_BANNER: "false"
+    system_message: |
+      Available Filesystem Tools:
+      - Filesystem operations: read_file, write_file, create_directory, list_directory
+      - Workspace tools: copy_file, compare_files, delete_file, batch operations
+      - File analysis and management capabilities
+
+  - id: "openai_filesystem_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      mcp_servers:
+        - name: "filesystem"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+          security:
+            level: "high"
+        - name: "workspace_tools"
+          type: "stdio"
+          command: "fastmcp"
+          args: ["run", "massgen.filesystem_manager._workspace_tools_server:create_server", "--", "--allowed-paths", "."]
+          env:
+            FASTMCP_SHOW_CLI_BANNER: "false"
+    system_message: |
+      Available Filesystem Tools:
+      - Filesystem operations: read_file, write_file, create_directory, list_directory
+      - Workspace tools: copy_file, compare_files, delete_file, batch operations
+      - File analysis and management capabilities
+
+  - id: "claude_code_filesystem_agent"
+    backend:
+      type: "claude_code"
+      cwd: "claude_code_workspace_filesystem_mcp"
+      permission_mode: "bypassPermissions"
+      mcp_servers:
+        filesystem:
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+        workspace_tools:
+          type: "stdio"
+          command: "fastmcp"
+          args: ["run", "massgen.filesystem_manager._workspace_tools_server:create_server", "--", "--allowed-paths", "."]
+          env:
+            FASTMCP_SHOW_CLI_BANNER: "false"
+    system_message: |
+      Available Filesystem Tools:
+      - Filesystem operations: read_file, write_file, create_directory, list_directory
+      - Workspace tools: copy_file, compare_files, delete_file, batch operations
+      - File analysis and management capabilities
+
+  - id: "claude_filesystem_agent"
+    backend:
+      type: "claude"
+      model: "claude-sonnet-4-20250514"
+      mcp_servers:
+        - name: "filesystem"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+          security:
+            level: "high"
+        - name: "workspace_tools"
+          type: "stdio"
+          command: "fastmcp"
+          args: ["run", "massgen.filesystem_manager._workspace_tools_server:create_server", "--", "--allowed-paths", "."]
+          env:
+            FASTMCP_SHOW_CLI_BANNER: "false"
+    system_message: |
+      Available Filesystem Tools:
+      - Filesystem operations: read_file, write_file, create_directory, list_directory
+      - Workspace tools: copy_file, compare_files, delete_file, batch operations
+      - File analysis and management capabilities
+
+  - id: "grok_filesystem_agent"
+    backend:
+      type: "grok"
+      model: "grok-3-mini"
+      mcp_servers:
+        - name: "filesystem"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+          security:
+            level: "high"
+        - name: "workspace_tools"
+          type: "stdio"
+          command: "fastmcp"
+          args: ["run", "massgen.filesystem_manager._workspace_tools_server:create_server", "--", "--allowed-paths", "."]
+          env:
+            FASTMCP_SHOW_CLI_BANNER: "false"
+    system_message: |
+      Available Filesystem Tools:
+      - Filesystem operations: read_file, write_file, create_directory, list_directory
+      - Workspace tools: copy_file, compare_files, delete_file, batch operations
+      - File analysis and management capabilities
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Orchestrator Settings with Coordination Configuration
+orchestrator:
+  snapshot_storage: "massgen_logs/snapshots"  # Directory for workspace snapshots
+  agent_temporary_workspace: "massgen_logs/temp_workspaces"  # Directory for temporary agent workspaces
+  coordination:
+    enable_planning_mode: true
+    planning_mode_instruction: |
+      PLANNING MODE ACTIVE: You are currently in the coordination phase where agents discuss and plan their approach.
+      During this phase, you should:
+      1. Describe your intended file operations and reasoning
+      2. Analyze other agents' proposals for the filesystem tasks
+      3. Use only the 'vote' or 'new_answer' tools for coordination
+      4. DO NOT execute any actual filesystem operations, file creation, or directory management
+      5. Save all file operations for the final presentation phase when the winning agent will implement the plan
+
+      Focus on planning, analysis, and coordination rather than execution.
+      Example: "I would create a 'src' directory and write a main.py file..." rather than actually creating them.

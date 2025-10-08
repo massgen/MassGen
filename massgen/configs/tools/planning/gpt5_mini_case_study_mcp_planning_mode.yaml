@@ -1,0 +1,73 @@
+# Three Agent Discord MCP Test Configuration with Planning Mode
+# This configuration demonstrates planning vs execution mode to prevent duplicate tool calls
+# during coordination while allowing full tool execution during final presentation
+#
+# Setup Requirements:
+# 1. Install Discord MCP server: npm install -g mcp-discord
+# 2. Set environment variables in .env file:
+#    DISCORD_TOKEN="your_discord_bot_token"
+#    OPENAI_API_KEY="your_openai_key"
+#
+# Example usage:
+# uv run python -m massgen.cli --config massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml "Please read https://github.com/Leezekun/MassGen/issues/276 and send a message to the 'MassGen Testing Server' Discord server in the general channel with a summary and implementation next steps to notify the team of your approach. The guild ID is 1417773298309136445 and channel ID is 1417773298837880906"
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      enable_web_search: true
+      mcp_servers:
+        - name: "discord"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "mcp-discord"]
+          env:
+            DISCORD_TOKEN: "${DISCORD_TOKEN}"
+    system_message: |
+      Available Discord Tools:
+      - Discord server interaction via MCP integration
+      - Message reading, sending, and management
+      - Channel and server information access
+      - When you have access, send the message without asking for confirmation
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      enable_web_search: true
+      mcp_servers:
+        - name: "discord"
+          type: "stdio"
+          command: "npx"
+          args: ["-y", "mcp-discord"]
+          env:
+            DISCORD_TOKEN: "${DISCORD_TOKEN}"
+    system_message: |
+      Available Discord Tools:
+      - Discord server interaction via MCP integration
+      - Message reading, sending, and management
+      - Channel and server information access
+      - When you have access, send the message without asking for confirmation
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
+
+# Orchestrator Settings with Coordination Configuration
+orchestrator:
+  snapshot_storage: "snapshots"  # Directory for workspace snapshots
+  agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+  coordination:
+    enable_planning_mode: true
+    planning_mode_instruction: |
+      PLANNING MODE ACTIVE: You are currently in the coordination phase where agents discuss and plan their approach.
+      During this phase, you should:
+      1. Describe your intended actions and reasoning
+      2. Analyze other agents' proposals
+      3. Use only the 'vote' or 'new_answer' tools for coordination
+      4. You CAN use web search for information gathering
+      5. DO NOT execute Discord operations (sending messages, reading channels, etc.) - save these for execution phase
+      6. Save tool execution for the final presentation phase when the winning agent will implement the plan
+
+      Focus on planning, analysis, and coordination rather than execution.
