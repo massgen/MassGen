@@ -1,104 +1,108 @@
 
-# MassGen v0.0.29 Roadmap
+# MassGen v0.0.30 Roadmap
 
 ## Overview
 
-Version 0.0.29 focuses on fixing multimodal capabilities and extending backend support. Key priorities include:
+Version 0.0.30 focuses on fixing critical backend issues and extending multimodal support. Key priorities include:
 
-- **Image Generation Path Fix** (Required): 🐛 Fix file path hallucination issues in image generation workflow
-- **Claude Multimodal Support** (Required): 🎨 Add multimodal capabilities to Claude backend
-- **Custom Tool Register System** (Optional): 🔧 Complete and polish existing tool registration implementation
-- **Web UI** (Optional): 🌐 Improve and integrate existing web interface for production readiness
+- **Backend Issues & Organization** (Required): 🐛 Fix Claude Code backend issues and improve configuration organization
+- **Multimodal Support Extension** (Required): 🎨 Add multimodal capabilities to Claude and Chat Completions backends
+- **Group Chat Integration** (Optional): 👥 Complete AG2 group chat integration
+- **Tool Registration Refactoring** (Optional): 🔧 Refactor tool registration system for better extensibility
 
 ## Key Technical Priorities
 
-1. **Image Generation Path Fix** (REQUIRED): Resolve file path issues preventing correct image generation (Issue #284)
-2. **Claude Multimodal Support** (REQUIRED): Enable image processing capabilities in Claude backend
-3. **Custom Tool Register System** (OPTIONAL): Complete existing tool registration system for production readiness
-4. **Web UI** (OPTIONAL): Polish and integrate existing web interface implementation
+1. **Backend Issues & Organization** (REQUIRED): Resolve Claude Code backend problems and improve project structure
+2. **Multimodal Support Extension** (REQUIRED): Enable image processing in Claude and Chat Completions backends
+3. **Group Chat Integration** (OPTIONAL): Complete AG2 group chat feature integration
+4. **Tool Registration Refactoring** (OPTIONAL): Refactor tool registration architecture for scalability
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Image Generation Path Fix (REQUIRED)
+### 🎯 Milestone 1: Backend Issues & Organization (REQUIRED)
 
-**Goal**: Fix file path hallucination issues in image generation workflow (Issue #284)
+**Goal**: Fix Claude Code backend issues and improve configuration organization
 
-#### 1.1 Path Handling Fix
-- [ ] Identify and fix hallucinated path generation in image workflows
-- [ ] Ensure correct file path validation before image operations
-- [ ] Prevent fallback image generation when path is incorrect
+#### 1.1 Claude Code Backend Fixes
+- [ ] Fix Claude Code backend reliability issues
+- [ ] Improve Claude Code error handling and recovery
+- [ ] Resolve configuration compatibility problems
+- [ ] Enhance Claude Code streaming stability
 
-#### 1.2 Testing and Validation
-- [ ] Add tests for image path handling
-- [ ] Verify fix across different backends
-- [ ] Test with various image generation scenarios
+#### 1.2 Configuration Organization
+- [ ] Reorganize configuration file structure for better discoverability
+- [ ] Improve configuration documentation and examples
+- [ ] Standardize configuration naming conventions
+- [ ] Clean up deprecated or redundant configurations
+
+#### 1.3 Testing and Validation
+- [ ] Add comprehensive tests for Claude Code backend
+- [ ] Verify configuration changes don't break existing setups
+- [ ] Test error scenarios and edge cases
+- [ ] Update integration tests
 
 
-### 🎯 Milestone 2: Claude Multimodal Support (REQUIRED)
+### 🎯 Milestone 2: Multimodal Support Extension (REQUIRED)
 
-**Goal**: Add multimodal capabilities to Claude backend
+**Goal**: Add multimodal capabilities to Claude and Chat Completions backends
 
-#### 2.1 Image Processing in Claude
+#### 2.1 Claude Backend Multimodal Support
 - [ ] Implement image input handling for Claude backend
 - [ ] Support image understanding in Claude conversations
-- [ ] Handle image attachments in message format
+- [ ] Handle multimodal message formatting
 - [ ] Add configuration options for Claude multimodal features
 
-#### 2.2 Testing and Documentation
-- [ ] Test Claude multimodal with various image types and sizes
-- [ ] Verify compatibility with existing Claude workflows
-- [ ] Create examples demonstrating Claude multimodal usage
-- [ ] Document limitations and best practices
+#### 2.2 Chat Completions Backend Multimodal Support
+- [ ] Implement image input handling for Chat Completions backend
+- [ ] Support multimodal content across all Chat Completions providers
+- [ ] Ensure compatibility with OpenAI, Cerebras, Fireworks, and other providers
+- [ ] Handle provider-specific multimodal limitations gracefully
+
+#### 2.3 Testing and Documentation
+- [ ] Test multimodal support with various image types and sizes
+- [ ] Verify compatibility with existing workflows
+- [ ] Create examples demonstrating multimodal usage
+- [ ] Document limitations and best practices for each backend
 
 
-### 🎯 Milestone 3: Custom Tool Register System (OPTIONAL)
+### 🎯 Milestone 3: Group Chat Integration (OPTIONAL)
 
-**Goal**: Complete and improve tool registration system (in progress, needs refinement)
+**Goal**: Complete AG2 group chat integration feature
 
-**Note**: Initial implementation exists but requires additional work for production readiness
+#### 3.1 Group Chat Core Features
+- [ ] Complete AG2 group chat orchestration integration
+- [ ] Support multi-agent group conversations
+- [ ] Implement group chat configuration format
+- [ ] Handle group chat message routing
 
-#### 3.1 Tool Registry Improvements
-- [ ] Review and refine existing toolkit registry implementation
+#### 3.2 Testing and Examples
+- [ ] Add test coverage for group chat scenarios
+- [ ] Create example configurations for group chat use cases
+- [ ] Document group chat setup and usage patterns
+- [ ] Validate integration with existing AG2 adapter
+
+
+### 🎯 Milestone 4: Tool Registration Refactoring (OPTIONAL)
+
+**Goal**: Refactor tool registration system for better extensibility
+
+#### 4.1 Tool Registry Architecture
+- [ ] Design new tool registration architecture
+- [ ] Refactor existing tool registration implementation
 - [ ] Improve dynamic tool discovery and loading
-- [ ] Enhance plugin-based tool extensions
-- [ ] Polish toolkit abstraction layer
+- [ ] Simplify tool extension mechanism
 
-#### 3.2 Built-in Toolkits Integration
-- [ ] Complete integration of toolkit modules into orchestrator
-- [ ] Improve toolkit configuration and management
-- [ ] Add toolkit versioning and dependency handling
-- [ ] Expand toolkit testing framework
+#### 4.2 Backend Tool Integration
+- [ ] Standardize tool registration across backends
+- [ ] Improve tool configuration and management
+- [ ] Support plugin-based tool extensions
+- [ ] Add tool versioning support
 
-#### 3.3 Developer Experience
-- [ ] Complete toolkit development guide
-- [ ] Add more toolkit templates and examples
-- [ ] Improve toolkit validation and debugging tools
-- [ ] Polish toolkit API documentation and best practices
-
-
-### 🎯 Milestone 4: Web UI (OPTIONAL)
-
-**Goal**: Complete and improve web interface for enhanced user experience (Issue #276, in progress)
-
-**Note**: Initial implementation exists but requires polish and integration improvements
-
-#### 4.1 Core Web Interface Improvements
-- [ ] Refine Flask backend and WebSocket implementation
-- [ ] Improve real-time agent coordination visualization
-- [ ] Enhance conversation management and history features
-- [ ] Add better multimodal content display support
-
-#### 4.2 Interactive Features Enhancement
-- [ ] Improve web-based agent configuration interface
-- [ ] Polish interactive prompt input with multimodal upload
-- [ ] Enhance workspace file browser and preview
-- [ ] Refine session management and replay functionality
-
-#### 4.3 Integration and Production Readiness
-- [ ] Complete integration with MassGen CLI
-- [ ] Test both local and remote deployment scenarios
-- [ ] Add authentication and security features
-- [ ] Complete deployment documentation and user guide
+#### 4.3 Developer Experience
+- [ ] Create tool development documentation
+- [ ] Add tool templates and examples
+- [ ] Improve tool validation and error messages
+- [ ] Simplify custom tool creation process
 
 
 
@@ -106,61 +110,61 @@ Version 0.0.29 focuses on fixing multimodal capabilities and extending backend s
 
 ### Functional Requirements (REQUIRED)
 
-**Image Generation Path Fix:**
-- [ ] Image generation no longer uses hallucinated paths
-- [ ] Proper error handling for invalid image paths
-- [ ] Correct image operations without unnecessary fallbacks
-- [ ] Test coverage for path validation
+**Backend Issues & Organization:**
+- [ ] Claude Code backend operates reliably without critical errors
+- [ ] Configuration structure is intuitive and well-documented
+- [ ] All existing configurations continue to work
+- [ ] Test coverage for Claude Code backend scenarios
 
-**Claude Multimodal:**
+**Multimodal Support:**
 - [ ] Claude backend supports image input and understanding
-- [ ] Multimodal message formatting correctly handled
-- [ ] Compatible with existing Claude workflows
-- [ ] Documentation and examples for Claude multimodal usage
+- [ ] Chat Completions backend supports multimodal content
+- [ ] Multimodal message formatting correctly handled across backends
+- [ ] Documentation and examples for multimodal usage
 
 ### Functional Requirements (OPTIONAL)
 
-**Tool Register System:**
-- [ ] Complete and polish toolkit registry implementation
-- [ ] Full integration with orchestrator and backends
-- [ ] Production-ready toolkit API
-- [ ] Comprehensive toolkit documentation
+**Group Chat Integration:**
+- [ ] AG2 group chat feature fully integrated
+- [ ] Group chat configurations work correctly
+- [ ] Documentation for group chat setup
+- [ ] Examples demonstrating group chat use cases
 
-**Web UI:**
-- [ ] Polish web interface with improved real-time visualization
-- [ ] Enhanced multimodal content support in UI
-- [ ] Robust session management and replay features
-- [ ] Production-ready deployment with comprehensive documentation
+**Tool Registration Refactoring:**
+- [ ] New tool registration architecture implemented
+- [ ] Backward compatibility maintained
+- [ ] Simplified custom tool creation process
+- [ ] Comprehensive developer documentation
 
 ### Performance Requirements (REQUIRED)
-- [ ] Image generation path fix does not impact performance
-- [ ] Claude multimodal processing efficient and responsive
-- [ ] Tool registry with minimal lookup overhead (if implemented)
-- [ ] Web UI responsive with real-time updates (if implemented)
+- [ ] Claude Code backend fixes do not degrade performance
+- [ ] Multimodal processing efficient and responsive
+- [ ] Configuration loading remains fast
+- [ ] Group chat coordination efficient (if implemented)
 
 ### Quality Requirements (REQUIRED)
-- [ ] Test coverage for image path validation
-- [ ] Test coverage for Claude multimodal features
-- [ ] Toolkit development and testing guide (if implemented)
-- [ ] Web UI end-to-end tests (if implemented)
+- [ ] Test coverage for Claude Code backend
+- [ ] Test coverage for multimodal features
+- [ ] Configuration validation and testing
+- [ ] Group chat integration tests (if implemented)
 
 
 ## Dependencies & Risks
 
 ### Dependencies
 - **Claude API**: Multimodal support in Anthropic's Claude API
+- **OpenAI API**: Multimodal support in Chat Completions API
+- **AG2 Framework**: Group chat capabilities in AG2 (for group chat integration)
 - **Image Processing**: Pillow library for image handling and validation
-- **Web Technologies**: Flask backend with WebSocket support (for Web UI polish)
-- **Tool System**: Python plugin architecture for dynamic loading (for tool registry completion)
 
 ### Risks & Mitigations
-1. **Path Validation Complexity**: *Mitigation*: Comprehensive testing, clear error messages
+1. **Claude Code Stability**: *Mitigation*: Comprehensive error handling, fallback mechanisms
 2. **Claude API Multimodal Limitations**: *Mitigation*: Feature flags, graceful degradation
-3. **Tool Registry Complexity**: *Mitigation*: Incremental refactoring, backward compatibility
-4. **Web UI Scope Creep**: *Mitigation*: MVP-first approach, phased rollout
+3. **Configuration Migration**: *Mitigation*: Backward compatibility, migration guide
+4. **Group Chat Complexity**: *Mitigation*: Phased implementation, clear documentation
 
 
-## Future Enhancements (Post-v0.0.29)
+## Future Enhancements (Post-v0.0.30)
 
 - **Additional Framework Adapters**: LangChain, CrewAI integrations
 - **Complete Multimodal Support**: Audio and video processing for all backends
@@ -178,10 +182,10 @@ Version 0.0.29 focuses on fixing multimodal capabilities and extending backend s
 
 | Phase | Focus | Key Deliverables | Priority |
 |-------|-------|------------------|----------|
-| Phase 1 | Image Path Fix | Fix hallucinated paths (Issue #284) | **REQUIRED** |
-| Phase 2 | Claude Multimodal | Image support in Claude backend | **REQUIRED** |
-| Phase 3 | Tool System | Custom tool registry (if time permits) | OPTIONAL |
-| Phase 4 | Web UI | Web interface (if time permits) | OPTIONAL |
+| Phase 1 | Backend Fixes | Fix Claude Code issues, organize configurations | **REQUIRED** |
+| Phase 2 | Multimodal Extension | Claude & Chat Completions multimodal support | **REQUIRED** |
+| Phase 3 | Group Chat | AG2 group chat integration | OPTIONAL |
+| Phase 4 | Tool Refactoring | New tool registration architecture | OPTIONAL |
 
 
 ## Getting Started
@@ -189,21 +193,24 @@ Version 0.0.29 focuses on fixing multimodal capabilities and extending backend s
 ### For Contributors
 
 **Required Work:**
-1. Fix image generation path hallucination issues (Issue #284)
-2. Implement multimodal support for Claude backend
-3. Test and document fixes thoroughly
+1. Fix Claude Code backend reliability issues
+2. Reorganize and improve configuration structure
+3. Implement multimodal support for Claude backend
+4. Implement multimodal support for Chat Completions backend
+5. Test and document all changes thoroughly
 
 **Optional Work:**
-4. Complete and improve tool registration system (initial implementation in progress)
-5. Polish and integrate web UI for production readiness (Issue #276, initial implementation in progress)
+6. Complete AG2 group chat integration
+7. Refactor tool registration system for better extensibility
 
 ### For Users
 
-- v0.0.29 will fix image generation path issues for more reliable multimodal workflows
-- Claude backend will gain multimodal capabilities, matching Gemini and Response backends
-- All v0.0.28 configurations will remain fully compatible
-- Optional improvements: enhanced web interface and tool registration system
+- v0.0.30 will fix Claude Code backend issues for more reliable workflows
+- Claude and Chat Completions backends will gain multimodal capabilities
+- Improved configuration organization for easier navigation
+- All v0.0.29 configurations will remain fully compatible
+- Optional improvements: group chat support and enhanced tool registration
 
 ---
 
-*This roadmap prioritizes bug fixes and backend feature parity while keeping extensibility improvements as optional enhancements.*
+*This roadmap prioritizes backend stability and feature parity while keeping extensibility improvements as optional enhancements.*
