@@ -1489,19 +1489,6 @@ Make your decision and include the JSON at the very end of your response."""
             # Use streaming for real-time response
             full_content_text = ""
             final_response = None
-
-            # Check if planning mode is enabled - block MCP tool execution during planning
-            if self.is_planning_mode_enabled():
-                logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution for Gemini")
-                yield StreamChunk(
-                    type="mcp_status",
-                    status="planning_mode_blocked",
-                    content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
-                    source="planning_mode",
-                )
-                # Skip MCP sessions - continue with standard generation
-                using_sdk_mcp = False
-
             if using_sdk_mcp and self.mcp_servers:
                 # Reuse active sessions from MultiMCPClient
                 try:
