@@ -214,6 +214,45 @@ cd MassGen
 
 pip install uv
 uv venv
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+```
+
+**Global Installation using `uv tool` (Recommended for multi-directory usage):**
+
+Install MassGen using `uv tool` for isolated, global access:
+
+```bash
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install MassGen as a global tool in editable mode
+uv tool install -e .
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+
+# Now run from any directory
+cd ~/projects/website
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+
+cd ~/documents/research
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+```
+
+**Benefits of `uv tool` installation:**
+- ✅ Isolated Python environment (no conflicts with system Python)
+- ✅ Available globally from any directory
+- ✅ Editable mode (`-e .`) allows live development
+- ✅ Easy updates with `git pull` (editable mode)
+- ✅ Clean uninstall with `uv tool uninstall massgen`
+
+**Optional Dependencies:**
+```bash
+# AG2 Framework Integration (for external agent frameworks)
+uv pip install -e ".[external]"
 ```
 
 **Optional CLI Tools** (for enhanced capabilities):
@@ -753,7 +792,7 @@ uv run python -m massgen.cli \
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
-  "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
+  "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
 uv run python -m massgen.cli \

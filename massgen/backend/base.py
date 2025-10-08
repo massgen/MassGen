@@ -74,11 +74,13 @@ class LLMBackend(ABC):
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
                 context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
+                enable_image_generation = kwargs.get("enable_image_generation", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
                     context_write_access_enabled=context_write_access_enabled,
+                    enable_image_generation=enable_image_generation,
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -89,11 +91,13 @@ class LLMBackend(ABC):
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
                 context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
+                enable_image_generation = kwargs.get("enable_image_generation", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
                     context_write_access_enabled=context_write_access_enabled,
+                    enable_image_generation=enable_image_generation,
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:

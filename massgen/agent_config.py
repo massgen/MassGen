@@ -56,7 +56,7 @@ class AgentConfig:
         agent_id: Optional agent identifier for this configuration
         custom_system_instruction: Additional system instruction prepended to evaluation message
         timeout_config: Timeout and resource limit configuration
-        coordination_config: Configuration for coordination behavior
+        skip_coordination_rounds: Debug/test mode - skip voting rounds and go straight to final presentation (default: False)
     """
 
     # Core backend configuration (includes tool enablement)
@@ -72,8 +72,8 @@ class AgentConfig:
     # Timeout and resource limits
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
 
-    # Coordination behavior
-    coordination_config: CoordinationConfig = field(default_factory=CoordinationConfig)
+    # Debug/test mode - skip coordination rounds and go straight to final presentation
+    skip_coordination_rounds: bool = False
 
     @property
     def custom_system_instruction(self) -> Optional[str]:
