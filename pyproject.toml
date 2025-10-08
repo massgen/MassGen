@@ -45,6 +45,8 @@ dependencies = [
     "aiohttp>=3.8.0",
     "fastmcp>=2.12.3",
     "pillow>=11.3.0",
+    "ag2>=0.9.10",
+    "pyautogen>=0.10.0",
 ]
 
 [project.optional-dependencies]

@@ -112,8 +112,8 @@ class MCPBackend(LLMBackend):
         self._mcp_tools_circuit_breaker = None
         self._circuit_breakers_enabled = MCPCircuitBreaker is not None
 
-        # Initialize circuit breaker if available
-        if self._circuit_breakers_enabled:
+        # Initialize circuit breaker if available and MCP servers are configured
+        if self._circuit_breakers_enabled and self.mcp_servers:
             # Use shared utility to build circuit breaker configuration
             mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools") if MCPConfigHelper else None
 
@@ -124,7 +124,11 @@ class MCPBackend(LLMBackend):
                 logger.warning("MCP tools circuit breaker config not available, disabling circuit breaker functionality")
                 self._circuit_breakers_enabled = False
         else:
-            logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
+            if not self.mcp_servers:
+                # No MCP servers configured - skip circuit breaker initialization silently
+                self._circuit_breakers_enabled = False
+            else:
+                logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
 
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
         self._mcp_functions: Dict[str, Function] = {}
@@ -205,7 +209,7 @@ class MCPBackend(LLMBackend):
                 allowed_tools=self.allowed_tools,
                 exclude_tools=self.exclude_tools,
                 circuit_breaker=self._mcp_tools_circuit_breaker,
-                timeout_seconds=30,
+                timeout_seconds=120,  # Increased timeout for image generation tools
                 backend_name=self.backend_name,
                 agent_id=self.agent_id,
             )
@@ -246,6 +250,12 @@ class MCPBackend(LLMBackend):
         max_retries: int = 3,
     ) -> Tuple[str, Any]:
         """Execute MCP function with exponential backoff retry logic."""
+        # Check if planning mode is enabled - block MCP tool execution during planning
+        if self.is_planning_mode_enabled():
+            logger.info(f"[MCP] Planning mode enabled - blocking MCP tool execution: {function_name}")
+            error_str = "🚫 [MCP] Planning mode active - MCP tools blocked during coordination"
+            return error_str, {"error": error_str, "blocked_by": "planning_mode", "function_name": function_name}
+
         # Convert JSON string to dict for shared utility
         try:
             args = json.loads(arguments_json) if isinstance(arguments_json, str) else arguments_json

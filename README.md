@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.27 Features](#-latest-features-v0027)
+- [v0.0.29 Features](#-latest-features-v0029)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.27](#recent-achievements-v0027)
-  - [v0.0.3 - v0.0.26](#previous-achievements-v003---v0026)
+  - [v0.0.29](#recent-achievements-v0029)
+  - [v0.0.3 - v0.0.28](#previous-achievements-v003---v0028)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-  - Web Interface
-- [v0.0.28 Roadmap](#v0028-roadmap)
+- [v0.0.30 Roadmap](#v0030-roadmap)
 </details>
 
 <details open>
@@ -129,38 +129,31 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.27)
+## 🆕 Latest Features (v0.0.29)
 
+**Experience v0.0.29 MCP Planning Mode:**
+
+See the new MCP Planning Mode in action:
+
+[![MassGen v0.0.29 MCP Planning Mode Demo](https://img.youtube.com/vi/jLrMMEIr118/0.jpg)](https://youtu.be/jLrMMEIr118)
+
+**What's New in v0.0.29:**
+- **MCP Planning Mode** - New coordination strategy that plans MCP tool usage without execution, preventing irreversible actions during collaboration
+- **File Operation Safety** - Read-before-delete enforcement ensures agents review files before deletion
+- **Enhanced MCP Tool Filtering** - Multi-level filtering with backend-level and per-MCP-server control
+- **Gemini Planning Mode Support** - Extended planning mode compatibility to Gemini backend
+
+**Try v0.0.29 MCP Planning Mode:**
 ```bash
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
-```
-
-**Experience v0.0.27 Multimodal Features**:
-
-See the new multimodal support and image processing capabilities in action:
-
-[![MassGen v0.0.27 Multimodal Demo](https://img.youtube.com/vi/qm6Y5qSpsEg/0.jpg)](https://www.youtube.com/watch?v=qm6Y5qSpsEg)
-
-**What's New in v0.0.27:**
-- **Multimodal Support - Image Processing** - Image generation and understanding with new `stream_chunk` module
-- **Additional Features**: File upload/search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
-
-**Try v0.0.27 Features Now:**
-```bash
-# Image generation with Single agent
+# Five agents collaborating with planning mode (no execution during coordination)
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
-  "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
+  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+  "Create a comprehensive project structure with documentation"
 
-# Image understanding with multiple agents
+# Test MCP tools with multiple agents
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
-  "Please summarize the content in this image."
-
-# File search for document Q&A
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
-  "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
+  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+  "Compare weather forecasts for New York, London, and Tokyo"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -221,6 +214,45 @@ cd MassGen
 
 pip install uv
 uv venv
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+```
+
+**Global Installation using `uv tool` (Recommended for multi-directory usage):**
+
+Install MassGen using `uv tool` for isolated, global access:
+
+```bash
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install MassGen as a global tool in editable mode
+uv tool install -e .
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+
+# Now run from any directory
+cd ~/projects/website
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+
+cd ~/documents/research
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+```
+
+**Benefits of `uv tool` installation:**
+- ✅ Isolated Python environment (no conflicts with system Python)
+- ✅ Available globally from any directory
+- ✅ Editable mode (`-e .`) allows live development
+- ✅ Easy updates with `git pull` (editable mode)
+- ✅ Clean uninstall with `uv tool uninstall massgen`
+
+**Optional Dependencies:**
+```bash
+# AG2 Framework Integration (for external agent frameworks)
+uv pip install -e ".[external]"
 ```
 
 **Optional CLI Tools** (for enhanced capabilities):
@@ -760,7 +792,7 @@ uv run python -m massgen.cli \
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
-  "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
+  "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
 uv run python -m massgen.cli \
@@ -899,32 +931,36 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.27)
+### Recent Achievements (v0.0.29)
 
-**🎉 Released: October 3, 2025**
+**🎉 Released: October 8, 2025**
 
-Version 0.0.27 introduces **Multimodal Support** with image processing capabilities, enabling agents to generate, understand, and process images alongside text:
+#### MCP Planning Mode
+- **Strategic Planning**: New `CoordinationConfig` class with `enable_planning_mode` flag for safer MCP tool usage
+- **Multi-Backend Support**: Planning mode available for Response API, Chat Completions, and Gemini backends
+- **Safer Collaboration**: Agents plan tool usage without execution during coordination phase, only the winning agent executes
 
-#### Multimodal Support - Image Processing
-- **StreamChunk Module**: New architecture with dedicated `stream_chunk` module for handling multimodal content
-- **Image Generation and Understanding**: Multi-agent image generation and analysis with OpenAI's APIs
-- **Enhanced Display**: Terminal UI for rendering images, backend support for multimodal capabilities
+#### File Operation Safety
+- **Read-Before-Delete Enforcement**: New `FileOperationTracker` class prevents agents from deleting files they haven't read
+- **PathPermissionManager Integration**: Enhanced with read/write/delete operation tracking methods
 
-#### File Upload and File Search
-- **File Upload**: Support for uploading files to backends via `upload_files` parameter
-- **File Search**: Vector-based file search for document Q&A with automatic vector store cleanup
+#### Enhanced MCP Tool Filtering
+- **Multi-Level Control**: Combined backend-level and per-MCP-server tool filtering
+- **Server-Specific Overrides**: MCP-server `allowed_tools` can override backend-level settings
 
-#### Model and Tool Enhancements
-- **Claude Sonnet 4.5**: Added latest Claude model (`claude-sonnet-4-5-20250929`)
-- **Workspace Multimodal Tools**: New `read_multimodal_files` MCP tool for image processing
-- **API Parameters Handler**: New module for centralized parameter management
+#### New Configuration Files
+- **Planning Mode Configs**: `five_agents_discord_mcp_planning_mode.yaml`, `five_agents_filesystem_mcp_planning_mode.yaml`, `five_agents_notion_mcp_planning_mode.yaml`, `five_agents_twitter_mcp_planning_mode.yaml`, `gpt5_mini_case_study_mcp_planning_mode.yaml`
+- **MCP Test Configs**: `five_agents_travel_mcp_test.yaml`, `five_agents_weather_mcp_test.yaml`
+- **Debug Config**: `skip_coordination_test.yaml`
 
-#### Documentation and Resources
-- **Case Study**: Multi-turn filesystem support documentation
-- **Configurations**: New configs for image generation, understanding, and file search
-- **Example Resources**: Sample multimodal content for testing
+#### Testing
+- **New Test Suites**: `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
 
-### Previous Achievements (v0.0.3 - v0.0.26)
+### Previous Achievements (v0.0.3 - v0.0.28)
+
+✅ **AG2 Framework Integration (v0.0.28)**: Adapter system for external agent frameworks, AG2 ConversableAgent and AssistantAgent support with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), 4 ready-to-use AG2 configurations
+
+✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
 
 ✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
 
@@ -988,33 +1024,33 @@ Version 0.0.27 introduces **Multimodal Support** with image processing capabilit
 
 ### Key Future Enhancements
 
+-   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model Integration:** Adding support for more frontier models and local inference engines
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Enhanced Developer Experience:** Completing tool registration system and web interface for better visualization
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.28 Roadmap
+### v0.0.30 Roadmap
 
-Version 0.0.28 focuses on integrating external agent frameworks, completing multimodal support, and enhancing extensibility:
+Version 0.0.30 focuses on fixing backend issues and extending multimodal support:
 
 #### Required Features
-- **AG2 Integration (AdaptAgent)**: Enable AG2 agents to participate in MassGen's multi-agent workflows with seamless orchestration
-- **Complete Multimodal Support**: Extend audio and video processing capabilities beyond the image support added in v0.0.27
+- **Backend Issues & Organization**: Fix Claude Code backend reliability issues and reorganize configuration structure for better discoverability
+- **Multimodal Support Extension**: Enable image processing capabilities in Claude and Chat Completions backends
 
 #### Optional Features
-- **Custom Tool Register System**: Refactor tool registration for better extensibility and plugin support
-- **Web UI**: Modern web interface for real-time agent coordination visualization
+- **Group Chat Integration**: Complete AG2 group chat orchestration integration for multi-agent group conversations
+- **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
 
 Key technical approach:
-- **AG2 Integration**: Adapter system enabling AG2 agents to work within MassGen orchestration with mixed-team support
-- **Audio/Video Processing**: Extend existing multimodal infrastructure with audio transcription, video understanding, and generation capabilities
-- **Tool Registry**: Plugin-based toolkit architecture for dynamic tool discovery and loading
-- **Web Interface**: Real-time visualization with multimodal content support and session management
+- **Backend Stability**: Comprehensive error handling, fallback mechanisms, and test coverage for Claude Code
+- **Multimodal Extension**: Image input handling for Claude and Chat Completions backends with provider compatibility
+- **Configuration Cleanup**: Standardize naming conventions and improve documentation for easier navigation
+- **Extensible Architecture**: New tool registration system supporting dynamic discovery and plugin-based extensions
 
-For detailed milestones and technical specifications, see the [full v0.0.28 roadmap](ROADMAP_v0.0.28.md).
+For detailed milestones and technical specifications, see the [full v0.0.30 roadmap](ROADMAP_v0.0.30.md).
 
 ---
 

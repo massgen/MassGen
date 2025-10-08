@@ -1516,18 +1516,32 @@ Make your decision and include the JSON at the very end of your response."""
                     # Apply sessions as tools, do not mix with builtin or function_declarations
                     session_config = dict(config)
 
-                    # Log session types for debugging if needed
-                    logger.debug(f"[Gemini] Passing {len(mcp_sessions)} sessions to SDK: {[type(s).__name__ for s in mcp_sessions]}")
-
-                    session_config["tools"] = mcp_sessions
-
-                    # Track MCP tool usage attempt
-                    self._mcp_tool_calls_count += 1
-
-                    # Get available tools from MCP client
+                    # Get available tools from MCP client for logging
                     available_tools = []
                     if self._mcp_client:
                         available_tools = list(self._mcp_client.tools.keys())
+
+                    # Check planning mode - block MCP tools during coordination phase
+                    if self.is_planning_mode_enabled():
+                        logger.info("[Gemini] Planning mode enabled - blocking MCP tools during coordination")
+                        # Don't set tools, which prevents automatic function calling
+                        log_backend_activity(
+                            "gemini",
+                            "MCP tools blocked in planning mode",
+                            {
+                                "blocked_tools": len(available_tools),
+                                "session_count": len(mcp_sessions),
+                            },
+                            agent_id=agent_id,
+                        )
+                    else:
+                        # Log session types for debugging if needed
+                        logger.debug(f"[Gemini] Passing {len(mcp_sessions)} sessions to SDK: {[type(s).__name__ for s in mcp_sessions]}")
+
+                        session_config["tools"] = mcp_sessions
+
+                    # Track MCP tool usage attempt
+                    self._mcp_tool_calls_count += 1
 
                     log_backend_activity(
                         "gemini",

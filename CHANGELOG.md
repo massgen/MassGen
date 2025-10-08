@@ -5,6 +5,124 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.29] - 2025-10-08
+
+### Added
+- **MCP Planning Mode**: New coordination strategy for irreversible MCP actions
+  - New `CoordinationConfig` class with `enable_planning_mode` flag
+  - Agents plan without executing during coordination, winning agent executes during final presentation
+  - Orchestrator and frontend coordination UI support
+  - Support for multiple backends: Response API, Chat Completions, and Gemini
+  - Test suites in `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
+
+- **File Operation Tracker**: Read-before-delete enforcement for safer file operations
+  - New `FileOperationTracker` class in `filesystem_manager/_file_operation_tracker.py`
+  - Prevents agents from deleting files they haven't read first
+  - Tracks read files and agent-created files (created files exempt from read requirement)
+  - Directory deletion validation with comprehensive error messages
+
+- **Path Permission Manager Enhancements**: Integration with FileOperationTracker
+  - Added read/write/delete operation tracking methods to `PathPermissionManager`
+  - Integration with `FileOperationTracker` for read-before-delete enforcement
+  - Enhanced delete validation for files and batch operations
+  - Extended test coverage in `test_path_permission_manager.py`
+
+### Changed
+- **Message Templates**: Improved multi-agent coordination guidance
+  - Added `has_irreversible_actions` support for context path write access
+  - Explicit temporary workspace path structure display for better agent understanding
+  - Task handling priority hierarchy and simplified new_answer requirements
+  - Unified evaluation guidance
+
+- **MCP Tool Filtering**: Enhanced multi-level filtering capabilities
+  - Combined backend-level and per-MCP-server tool filtering
+  - MCP-server-specific `allowed_tools` can override backend-level settings
+  - Merged `exclude_tools` from both backend and MCP server configurations
+
+- **Backend Planning Mode Support**: Extended planning mode to multiple backends
+  - Enhanced `base.py`, `response.py`, `chat_completions.py`, and `gemini.py`
+  - Gemini backend now supports planning mode with session-based tool execution
+  - Planning mode support across all major backend types
+
+
+### Fixed
+- **Circuit Breaker Logic**: Enhanced MCP server initialization in `base_with_mcp.py`
+- **Final Answer Context**: Improved workspace copying when no new answer is provided
+- **Multi-turn MCP Usage**: Addressed non-use of MCP in certain scenarios and improved final answer autonomy
+- **Configuration Issues**: Updated Playwright automation configuration and fixed agent IDs
+
+### Documentations, Configurations and Resources
+
+- **MCP Planning Mode Examples**: 5 new planning mode configurations in `tools/planning/`
+  - `five_agents_discord_mcp_planning_mode.yaml`: Discord MCP with planning mode (5 agents)
+  - `five_agents_filesystem_mcp_planning_mode.yaml`: Filesystem MCP with planning mode
+  - `five_agents_notion_mcp_planning_mode.yaml`: Notion MCP with planning mode (5 agents)
+  - `five_agents_twitter_mcp_planning_mode.yaml`: Twitter MCP with planning mode (5 agents)
+  - `gpt5_mini_case_study_mcp_planning_mode.yaml`: Case study configuration
+
+- **MCP Example Configurations**: New example configurations for MCP integration in `tools/mcp/`
+  - `five_agents_travel_mcp_test.yaml`: Travel planning MCP example (5 agents)
+  - `five_agents_weather_mcp_test.yaml`: Weather service MCP example (5 agents)
+
+- **Debug Configurations**: New debugging and testing utilities
+  - `skip_coordination_test.yaml`: Test configuration for skipping coordination rounds
+
+- **Documentation Updates**: Enhanced project documentation
+  - Updated `permissions_and_context_files.md` in `backend/docs/` with file operation tracking details
+  - Updated README with AG2 as optional installation and uv tool instructions
+
+### Technical Details
+- **Commits**: 23+ commits including planning mode, file operation tracking, and MCP enhancements
+- **Files Modified**: 43 files across agent config, backend, filesystem manager, MCP tools, and configurations
+- **Major Features**: MCP planning mode, FileOperationTracker, enhanced permissions, MCP tool filtering
+- **New Tests**: `test_mcp_blocking.py`, `test_gemini_planning_mode.py` for planning mode validation
+- **Contributors**: @ncrispino @franklinnwren @qidanrui @sonichi @praneeth999 and the MassGen team
+
+## [0.0.28] - 2025-10-06
+
+### Added
+- **AG2 Framework Integration**: Complete adapter system for external agent frameworks
+  - New `massgen/adapters/` module with base adapter architecture (`base.py`, `ag2_adapter.py`)
+  - Support for AG2 ConversableAgent and AssistantAgent types
+  - Code execution capabilities with multiple executor types: LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+  - Function/tool calling support for AG2 agents
+  - Async execution with `a_generate_reply` for autonomous operation
+  - AG2 utilities module for agent setup and API key management (`adapters/utils/ag2_utils.py`)
+
+- **External Agent Backend**: New backend type for integrating external frameworks
+  - New `ExternalAgentBackend` class supporting adapter registry pattern
+  - Bridge between MassGen orchestration and external agent frameworks via adapters
+  - Framework-specific configuration extraction and validation
+  - Currently supports AG2 with extensible architecture for future frameworks
+
+- **AG2 Test Suite**: Comprehensive test coverage for AG2 integration
+  - `test_ag2_adapter.py`: AG2 adapter functionality tests
+  - `test_agent_adapter.py`: Base adapter interface tests
+  - `test_external_agent_backend.py`: External backend integration tests
+
+### Fixed
+- **MCP Circuit Breaker Logic**: Enhanced initialization for MCP servers
+  - Improved circuit breaker state management in `base_with_mcp.py`
+  - Better error handling during MCP server initialization
+
+### Documentations, Configurations and Resources
+
+- **AG2 Configuration Examples**: New YAML configurations demonstrating AG2 integration
+  - `ag2/ag2_single_agent.yaml`: Basic single AG2 agent setup
+  - `ag2/ag2_coder.yaml`: AG2 agent with code execution
+  - `ag2/ag2_coder_case_study.yaml`: Multi-agent setup with AG2 and Gemini
+  - `ag2/ag2_gemini.yaml`: AG2-Gemini hybrid configuration
+
+- **Design Documentation**: Enhanced multi-source agent integration design
+  - Updated `MULTI_SOURCE_AGENT_INTEGRATION_DESIGN.md` with AG2 adapter architecture
+
+### Technical Details
+- **Commits**: 12 commits including AG2 integration, testing, and configuration examples
+- **Files Modified**: 18 files with 1,423 insertions and 71 deletions
+- **Major Features**: AG2 framework integration, external agent backend, adapter architecture
+- **New Module**: `massgen/adapters/` with AG2 support
+- **Contributors**: @Eric-Shang @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.27] - 2025-10-03
 
 ### Added

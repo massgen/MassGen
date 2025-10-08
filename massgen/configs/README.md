@@ -103,7 +103,7 @@ uv run python -m massgen.cli --config massgen/configs/tools/web-search/claude_st
 #### Code Execution
 For code interpretation and execution:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse and analyze websites"
+uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 ```
 
 #### Filesystem Operations
@@ -226,7 +226,68 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.27 - Latest
+### v0.0.29 - Latest
+**New Features:** MCP Planning Mode, File Operation Safety, Enhanced MCP Tool Filtering
+- `massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml` - Five agents with Discord MCP in planning mode
+- `massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml` - Five agents with filesystem MCP in planning mode
+- `massgen/configs/tools/planning/five_agents_notion_mcp_planning_mode.yaml` - Five agents with Notion MCP in planning mode
+- `massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml` - Five agents with Twitter MCP in planning mode
+- `massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml` - Planning mode case study configuration
+- `massgen/configs/tools/mcp/five_agents_travel_mcp_test.yaml` - Five agents testing travel-related MCP tools
+- `massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml` - Five agents testing weather MCP tools
+- `massgen/configs/debug/skip_coordination_test.yaml` - Debug configuration for testing coordination skipping
+- New `CoordinationConfig` class with `enable_planning_mode` flag for safer MCP coordination
+- New `FileOperationTracker` class for read-before-delete enforcement
+- Enhanced PathPermissionManager with operation tracking methods
+
+**Try it:**
+```bash
+# Planning mode with filesystem operations
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+  "Create a comprehensive project structure with documentation"
+
+# Multi-agent weather MCP testing
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+  "Compare weather forecasts for New York, London, and Tokyo"
+
+# Planning mode with Twitter integration
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml \
+  "Draft and plan tweet series about AI advancements"
+```
+
+### v0.0.28
+**New Features:** AG2 Framework Integration, External Agent Backend, Code Execution Support
+- `massgen/configs/ag2/ag2_single_agent.yaml` - Basic single AG2 agent setup
+- `massgen/configs/ag2/ag2_coder.yaml` - AG2 agent with code execution capabilities
+- `massgen/configs/ag2/ag2_coder_case_study.yaml` - Multi-agent setup with AG2 and Gemini
+- `massgen/configs/ag2/ag2_gemini.yaml` - AG2-Gemini hybrid configuration
+- New `massgen/adapters/` module for external framework integration
+- New `ExternalAgentBackend` class bridging MassGen with external frameworks
+- Multiple code executor types: LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+
+**Try it:**
+```bash
+# AG2 single agent with code execution
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_coder.yaml \
+  "Create a factorial function and calculate the factorial of 8. Show the result?"
+
+# Mixed team: AG2 agent + Gemini agent
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_gemini.yaml \
+  "what is quantum computing?"
+
+# AG2 case study: Compare AG2 and MassGen (requires external dependency)
+uv pip install -e ".[external]"
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+  "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
+```
+
+### v0.0.27
 **New Features:** Multimodal Support (Image Processing), File Upload and File Search, Claude Sonnet 4.5
 - `massgen/configs/basic/multi/gpt4o_image_generation.yaml` - Multi-agent image generation
 - `massgen/configs/basic/multi/gpt5nano_image_understanding.yaml` - Multi-agent image understanding
