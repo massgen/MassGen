@@ -1272,7 +1272,11 @@ class Orchestrator(ChatAgent):
 
             # Check if planning mode is enabled for coordination phase
             is_coordination_phase = self.workflow_phase == "coordinating"
-            planning_mode_enabled = self.config.coordination_config and self.config.coordination_config.enable_planning_mode and is_coordination_phase
+            planning_mode_enabled = (
+                self.config.coordination_config and self.config.coordination_config.enable_planning_mode and is_coordination_phase
+                if self.config and hasattr(self.config, "coordination_config")
+                else False
+            )
 
             # Add planning mode instructions to system message if enabled
             if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
