@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.26 Features](#-latest-features-v0026)
+- [v0.0.29 Features](#-latest-features-v0029)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.26](#recent-achievements-v0026)
-  - [v0.0.3 - v0.0.25](#previous-achievements-v003---v0025)
+  - [v0.0.29](#recent-achievements-v0029)
+  - [v0.0.3 - v0.0.28](#previous-achievements-v003---v0028)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-  - Web Interface
-- [v0.0.27 Roadmap](#v0027-roadmap)
+- [v0.0.30 Roadmap](#v0030-roadmap)
 </details>
 
 <details open>
@@ -129,24 +129,31 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.26)
+## 🆕 Latest Features (v0.0.29)
 
-**What's New in v0.0.26:**
-- **File Deletion and Workspace Management** - New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison
-- **Protected Paths Feature** - Protect specific files within write-permitted directories, allowing agents to read but not modify designated reference files
-- **File-Based Context Paths** - Grant access to individual files instead of entire directories for more precise permission control
+**Experience v0.0.29 MCP Planning Mode:**
 
-**Try v0.0.26 Features Now:**
+See the new MCP Planning Mode in action:
+
+[![MassGen v0.0.29 MCP Planning Mode Demo](https://img.youtube.com/vi/jLrMMEIr118/0.jpg)](https://youtu.be/jLrMMEIr118)
+
+**What's New in v0.0.29:**
+- **MCP Planning Mode** - New coordination strategy that plans MCP tool usage without execution, preventing irreversible actions during collaboration
+- **File Operation Safety** - Read-before-delete enforcement ensures agents review files before deletion
+- **Enhanced MCP Tool Filtering** - Multi-level filtering with backend-level and per-MCP-server control
+- **Gemini Planning Mode Support** - Extended planning mode compatibility to Gemini backend
+
+**Try v0.0.29 MCP Planning Mode:**
 ```bash
-# Protected paths - keep reference files safe while allowing modifications
+# Five agents collaborating with planning mode (no execution during coordination)
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
-  "Review the HTML and CSS files, then improve the styling"
+  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+  "Create a comprehensive project structure with documentation"
 
-# File-based context paths - grant access to specific files
+# Test MCP tools with multiple agents
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml \
-  "Analyze the CSS file and make modern improvements"
+  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+  "Compare weather forecasts for New York, London, and Tokyo"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -207,6 +214,45 @@ cd MassGen
 
 pip install uv
 uv venv
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+```
+
+**Global Installation using `uv tool` (Recommended for multi-directory usage):**
+
+Install MassGen using `uv tool` for isolated, global access:
+
+```bash
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install MassGen as a global tool in editable mode
+uv tool install -e .
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+
+# Now run from any directory
+cd ~/projects/website
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+
+cd ~/documents/research
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+```
+
+**Benefits of `uv tool` installation:**
+- ✅ Isolated Python environment (no conflicts with system Python)
+- ✅ Available globally from any directory
+- ✅ Editable mode (`-e .`) allows live development
+- ✅ Easy updates with `git pull` (editable mode)
+- ✅ Clean uninstall with `uv tool uninstall massgen`
+
+**Optional Dependencies:**
+```bash
+# AG2 Framework Integration (for external agent frameworks)
+uv pip install -e ".[external]"
 ```
 
 **Optional CLI Tools** (for enhanced capabilities):
@@ -746,7 +792,7 @@ uv run python -m massgen.cli \
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
-  "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
+  "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
 uv run python -m massgen.cli \
@@ -885,38 +931,40 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.26)
+### Recent Achievements (v0.0.29)
 
-**🎉 Released: October 1, 2025**
+**🎉 Released: October 8, 2025**
 
-Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protected Paths**, and **File-Based Context Paths**, enabling more precise control over agent file access:
+#### MCP Planning Mode
+- **Strategic Planning**: New `CoordinationConfig` class with `enable_planning_mode` flag for safer MCP tool usage
+- **Multi-Backend Support**: Planning mode available for Response API, Chat Completions, and Gemini backends
+- **Safer Collaboration**: Agents plan tool usage without execution during coordination phase, only the winning agent executes
 
-#### File Deletion and Workspace Management
-- **New MCP Tools**: `delete_file`, `delete_files_batch` for workspace cleanup
-- **Comparison Tools**: `compare_directories`, `compare_files` for file diffing
-- **Consolidated Tools**: Unified `_workspace_tools_server.py` replacing previous implementations
+#### File Operation Safety
+- **Read-Before-Delete Enforcement**: New `FileOperationTracker` class prevents agents from deleting files they haven't read
+- **PathPermissionManager Integration**: Enhanced with read/write/delete operation tracking methods
 
-#### Protected Paths Feature
-- **Selective Protection**: Protect specific files within write-permitted directories
-- **Read-Only References**: Agents can read but not modify protected files
-- **Fine-Grained Control**: Shield important files while allowing changes to others
+#### Enhanced MCP Tool Filtering
+- **Multi-Level Control**: Combined backend-level and per-MCP-server tool filtering
+- **Server-Specific Overrides**: MCP-server `allowed_tools` can override backend-level settings
 
-#### File-Based Context Paths
-- **Individual File Access**: Context paths can now be individual files, not just directories
-- **Flexible Permissions**: Grant read/write access to specific files without directory-wide permissions
-- **Better Security**: More precise control over what agents can access
+#### New Configuration Files
+- **Planning Mode Configs**: `five_agents_discord_mcp_planning_mode.yaml`, `five_agents_filesystem_mcp_planning_mode.yaml`, `five_agents_notion_mcp_planning_mode.yaml`, `five_agents_twitter_mcp_planning_mode.yaml`, `gpt5_mini_case_study_mcp_planning_mode.yaml`
+- **MCP Test Configs**: `five_agents_travel_mcp_test.yaml`, `five_agents_weather_mcp_test.yaml`
+- **Debug Config**: `skip_coordination_test.yaml`
 
-#### Code Organization
-- **Path Permission Manager**: Enhanced handling of edge cases and nested path scenarios
-- **CLI Improvements**: Interactive prompts for context path configuration
+#### Testing
+- **New Test Suites**: `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
 
-#### Documentation, Configurations and Resources
-- **Design Documentation**: New `file_deletion_and_context_files.md` documenting file deletion and context file features
-- **Release Workflow**: Added `release_example_checklist.md` for standardized release process
-- **Configuration Examples**: `gemini_gpt5nano_protected_paths.yaml`, `gemini_gpt5nano_file_context_path.yaml`, `grok4_gpt5_gemini_filesystem.yaml`
-- **Example Resources**: Bob Dylan website and Beatles HTML examples in `v0.0.26-example/`
+### Previous Achievements (v0.0.3 - v0.0.28)
 
-### Previous Achievements (v0.0.3 - v0.0.25)
+✅ **AG2 Framework Integration (v0.0.28)**: Adapter system for external agent frameworks, AG2 ConversableAgent and AssistantAgent support with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), 4 ready-to-use AG2 configurations
+
+✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
+
+✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
+
+✅ **Protected Paths and File-Based Context Paths (v0.0.26)**: Protect specific files within write-permitted directories, grant access to individual files instead of entire directories
 
 ✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
 
@@ -976,33 +1024,33 @@ Version 0.0.26 enhances filesystem capabilities with **File Deletion**, **Protec
 
 ### Key Future Enhancements
 
+-   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model Integration:** Adding support for more frontier models and local inference engines
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Enhanced Developer Experience:** Completing tool registration system and web interface for better visualization
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.27 Roadmap
+### v0.0.30 Roadmap
 
-Version 0.0.27 builds upon the filesystem infrastructure of v0.0.26 by focusing on coding agent capabilities, multimodal support, and finishing core refactoring work. Key enhancements include:
+Version 0.0.30 focuses on fixing backend issues and extending multimodal support:
 
 #### Required Features
-- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring with enhanced iteration and multi-turn support
-- **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
-- **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
+- **Backend Issues & Organization**: Fix Claude Code backend reliability issues and reorganize configuration structure for better discoverability
+- **Multimodal Support Extension**: Enable image processing capabilities in Claude and Chat Completions backends
 
 #### Optional Features
-- **Additional Agent Backends from Other Frameworks**: Integration with AG2, LangChain, and other agent frameworks
+- **Group Chat Integration**: Complete AG2 group chat orchestration integration for multi-agent group conversations
+- **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
 
 Key technical approach:
-- **Coding Agent**: Enhanced system prompts encouraging more iterations, multi-turn conversation support with `.massgen/sessions/`, workspace diff logging, and consolidated `.massgen/` directory structure
-- **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
-- **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
-- **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
+- **Backend Stability**: Comprehensive error handling, fallback mechanisms, and test coverage for Claude Code
+- **Multimodal Extension**: Image input handling for Claude and Chat Completions backends with provider compatibility
+- **Configuration Cleanup**: Standardize naming conventions and improve documentation for easier navigation
+- **Extensible Architecture**: New tool registration system supporting dynamic discovery and plugin-based extensions
 
-For detailed milestones and technical specifications, see the [full v0.0.27 roadmap](ROADMAP_v0.0.27.md).
+For detailed milestones and technical specifications, see the [full v0.0.30 roadmap](ROADMAP_v0.0.30.md).
 
 ---
 

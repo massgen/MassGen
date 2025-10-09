@@ -214,6 +214,19 @@ class ChatCompletionsBackend(MCPBackend):
             mcp_functions_executed = False
             updated_messages = current_messages.copy()
 
+            # Check if planning mode is enabled - block MCP tool execution during planning
+            if self.is_planning_mode_enabled():
+                logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution")
+                yield StreamChunk(
+                    type="mcp_status",
+                    status="planning_mode_blocked",
+                    content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
+                    source="planning_mode",
+                )
+                # Skip all MCP tool execution but still continue with workflow
+                yield StreamChunk(type="done")
+                return
+
             # Create single assistant message with all tool calls
             if captured_function_calls:
                 # First add the assistant message with ALL tool_calls (both MCP and non-MCP)

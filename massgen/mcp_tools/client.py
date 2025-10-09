@@ -949,12 +949,21 @@ class MultiMCPClient:
                 return server_name, None
 
             try:
+                # Combine backend-level and per-server tool filtering
+                # For exclude_tools: combine both lists (exclude from either source)
+                server_exclude = server_config.get("exclude_tools", [])
+                combined_exclude = list(set((self.exclude_tools or []) + server_exclude))
+
+                # For allowed_tools: server-specific overrides backend-level (if present)
+                server_allowed = server_config.get("allowed_tools")
+                combined_allowed = server_allowed if server_allowed is not None else self.allowed_tools
+
                 # Create new client (disconnected clients are handled in the calling method)
                 client = MCPClient(
                     server_config,
                     timeout_seconds=self.timeout_seconds,
-                    allowed_tools=self.allowed_tools,
-                    exclude_tools=self.exclude_tools,
+                    allowed_tools=combined_allowed,
+                    exclude_tools=combined_exclude if combined_exclude else None,
                     status_callback=self.status_callback,
                     hooks=self.hooks,
                 )

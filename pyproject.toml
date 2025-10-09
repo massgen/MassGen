@@ -45,6 +45,8 @@ dependencies = [
     "aiohttp>=3.8.0",
     "fastmcp>=2.12.3",
     "pillow>=11.3.0",
+    "ag2>=0.9.10",
+    "pyautogen>=0.10.0",
 ]
 
 [project.optional-dependencies]
@@ -65,6 +67,9 @@ docs = [
     "sphinx>=5.0.0",
     "sphinx-rtd-theme>=1.2.0",
     "myst-parser>=1.0.0",
+]
+external = [
+    "ag2>=0.9.10",
 ]
 all = [
 ]

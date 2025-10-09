@@ -1,0 +1,26 @@
+# Example configuration for using AG2 with MassGen
+# Single AG2 agent example
+# uv run python -m massgen.cli --config ag2/ag2_single_agent.yaml "what is quantum computing?"
+agents:
+  - id: "ag2_assistant"
+    backend:
+      type: ag2
+      agent_config:
+        type: assistant
+        name: "AG2_Assistant"
+        system_message: "You are a helpful AI assistant powered by AG2."
+        llm_config:
+            api_type: "openai"
+            model: "gpt-4o"
+            temperature: 0.7
+            cache_seed: 42
+
+# Optional orchestrator configuration
+orchestrator:
+  rounds: 3
+  parallel: true
+
+# UI Configuration
+ui:
+  type: "rich_terminal"
+  logging_enabled: true
