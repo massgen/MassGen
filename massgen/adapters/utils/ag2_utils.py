@@ -5,13 +5,14 @@ Utility functions for AG2 (AutoGen) adapter.
 import os
 import warnings
 from typing import Any, Dict
-from autogen import AssistantAgent, ConversableAgent, LLMConfig
 
+from autogen import AssistantAgent, ConversableAgent, LLMConfig
 
 # Suppress autogen deprecation warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="autogen")
 warnings.filterwarnings("ignore", message=".*jsonschema.*")
 warnings.filterwarnings("ignore", message=".*Pydantic.*")
+
 
 def setup_api_keys() -> None:
     """Set up API keys for AG2 compatibility."""
