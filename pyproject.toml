@@ -39,7 +39,7 @@ dependencies = [
     "rich==14.1.0",
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
-    "claude-code-sdk>=0.0.22",
+    "claude-agent-sdk>=0.0.22",
     "loguru>=0.7.0",
     "mcp>=1.12.0",
     "aiohttp>=3.8.0",
