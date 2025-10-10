@@ -789,9 +789,14 @@ class ClaudeCodeBackend(LLMBackend):
             else:
                 # Original approach for Mac/Linux and Windows with simple prompts
                 try:
-                    # Always use system_prompt (append_system_prompt removed in claude-agent-sdk)
-                    # workflow_system_prompt includes base system content + MassGen tools
-                    client = self.create_client(**{**all_params, "system_prompt": workflow_system_prompt})
+                    # Use Claude Code preset with append for workflow system prompt
+                    # This maintains Claude Code's default behavior while adding MassGen tools
+                    system_prompt_config = {
+                        "type": "preset",
+                        "preset": "claude_code",
+                        "append": workflow_system_prompt,
+                    }
+                    client = self.create_client(**{**all_params, "system_prompt": system_prompt_config})
                     self._pending_system_prompt = None
 
                 except Exception as create_error:
