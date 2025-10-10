@@ -12,7 +12,7 @@ cerebras-cloud-sdk==1.46.0
 lmstudio==1.4.1
 requests>=2.31.0
 typing-extensions>=4.0.0
-claude-code-sdk>=0.0.19
+claude-agent-sdk>=0.0.22
 loguru>=0.7.0
 mcp>=1.12.0
 fastmcp>=2.12.3

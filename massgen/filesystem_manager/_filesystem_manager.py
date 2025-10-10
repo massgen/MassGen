@@ -299,10 +299,10 @@ class FilesystemManager:
 
     def get_claude_code_hooks_config(self) -> Dict[str, Any]:
         """
-        Get Claude Code SDK hooks configuration.
+        Get Claude Agent SDK hooks configuration.
 
         Returns:
-            Hooks configuration dict for ClaudeCodeOptions
+            Hooks configuration dict for ClaudeAgentOptions
         """
         return self.path_permission_manager.get_claude_code_hooks_config()
 
