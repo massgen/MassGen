@@ -1,108 +1,120 @@
 
-# MassGen v0.0.30 Roadmap
+# MassGen v0.0.31 Roadmap
 
 ## Overview
 
-Version 0.0.30 focuses on fixing critical backend issues and extending multimodal support. Key priorities include:
+Version 0.0.31 focuses on enhancing MCP planning mode capabilities and AG2 group chat integration. Key priorities include:
 
-- **Backend Issues & Organization** (Required): 🐛 Fix Claude Code backend issues and improve configuration organization
-- **Multimodal Support Extension** (Required): 🎨 Add multimodal capabilities to Claude and Chat Completions backends
-- **Group Chat Integration** (Optional): 👥 Complete AG2 group chat integration
+- **Planning Mode Enhancements** (Required): 🎯 Improve planning mode with tool restrictions, multi-backend support, and multi-turn integration
+- **AG2 Group Chat Integration** (Required): 👥 Implement user agent orchestration with AG2 group chat and streaming API
 - **Tool Registration Refactoring** (Optional): 🔧 Refactor tool registration system for better extensibility
+- **Memory Framework** (Optional): 🧠 Implement future memory capabilities for persistent agent context
 
 ## Key Technical Priorities
 
-1. **Backend Issues & Organization** (REQUIRED): Resolve Claude Code backend problems and improve project structure
-2. **Multimodal Support Extension** (REQUIRED): Enable image processing in Claude and Chat Completions backends
-3. **Group Chat Integration** (OPTIONAL): Complete AG2 group chat feature integration
-4. **Tool Registration Refactoring** (OPTIONAL): Refactor tool registration architecture for scalability
+1. **Planning Mode Enhancements** (REQUIRED): Extend planning mode with tool whitelisting/blacklisting, full backend coverage, and multi-turn support
+2. **AG2 Group Chat Integration** (REQUIRED): Enable orchestrator-to-user-agent communication with AG2 group chat and streaming API
+3. **Tool Registration Refactoring** (OPTIONAL): Refactor tool registration architecture for scalability
+4. **Memory Framework** (OPTIONAL): Design and implement memory system for agent context persistence
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Backend Issues & Organization (REQUIRED)
+### 🎯 Milestone 1: Planning Mode Enhancements (REQUIRED)
 
-**Goal**: Fix Claude Code backend issues and improve configuration organization
+**Goal**: Improve planning mode capabilities with tool restrictions, backend coverage, and multi-turn support
 
-#### 1.1 Claude Code Backend Fixes
-- [ ] Fix Claude Code backend reliability issues
-- [ ] Improve Claude Code error handling and recovery
-- [ ] Resolve configuration compatibility problems
-- [ ] Enhance Claude Code streaming stability
+#### 1.1 Tool Restriction System
+- [ ] Design whitelist/blacklist system for planning vs. execution tools
+- [ ] Implement configuration format for tool restrictions
+- [ ] Support automatic tool labeling with human-in-the-loop option
+- [ ] Add validation for tool usage during planning and execution phases
 
-#### 1.2 Configuration Organization
-- [ ] Reorganize configuration file structure for better discoverability
-- [ ] Improve configuration documentation and examples
-- [ ] Standardize configuration naming conventions
-- [ ] Clean up deprecated or redundant configurations
+#### 1.2 Multi-turn Integration
+- [ ] Integrate planning mode with multi-turn conversation framework
+- [ ] Support planning mode persistence across conversation turns
+- [ ] Handle planning mode state transitions in multi-turn scenarios
+- [ ] Test planning mode behavior in extended conversations
 
-#### 1.3 Testing and Validation
-- [ ] Add comprehensive tests for Claude Code backend
-- [ ] Verify configuration changes don't break existing setups
-- [ ] Test error scenarios and edge cases
-- [ ] Update integration tests
-
-
-### 🎯 Milestone 2: Multimodal Support Extension (REQUIRED)
-
-**Goal**: Add multimodal capabilities to Claude and Chat Completions backends
-
-#### 2.1 Claude Backend Multimodal Support
-- [ ] Implement image input handling for Claude backend
-- [ ] Support image understanding in Claude conversations
-- [ ] Handle multimodal message formatting
-- [ ] Add configuration options for Claude multimodal features
-
-#### 2.2 Chat Completions Backend Multimodal Support
-- [ ] Implement image input handling for Chat Completions backend
-- [ ] Support multimodal content across all Chat Completions providers
-- [ ] Ensure compatibility with OpenAI, Cerebras, Fireworks, and other providers
-- [ ] Handle provider-specific multimodal limitations gracefully
-
-#### 2.3 Testing and Documentation
-- [ ] Test multimodal support with various image types and sizes
-- [ ] Verify compatibility with existing workflows
-- [ ] Create examples demonstrating multimodal usage
-- [ ] Document limitations and best practices for each backend
+#### 1.3 Testing and Documentation
+- [ ] Add comprehensive tests for tool restriction system
+- [ ] Create example configurations demonstrating planning mode features
+- [ ] Document planning mode best practices and limitations
+- [ ] Update case studies with new planning mode capabilities
 
 
-### 🎯 Milestone 3: Group Chat Integration (OPTIONAL)
+### 🎯 Milestone 2: AG2 Group Chat Integration (REQUIRED)
 
-**Goal**: Complete AG2 group chat integration feature
+**Goal**: Implement user agent orchestration with AG2 group chat and streaming API
 
-#### 3.1 Group Chat Core Features
-- [ ] Complete AG2 group chat orchestration integration
-- [ ] Support multi-agent group conversations
-- [ ] Implement group chat configuration format
-- [ ] Handle group chat message routing
+#### 2.1 User Agent Architecture
+- [ ] Design orchestrator-to-user-agent communication pattern
+- [ ] Implement user agent that initiates AG2 group chat
+- [ ] Support task delegation from orchestrator to user agent
+- [ ] Handle group chat results back to orchestrator
 
-#### 3.2 Testing and Examples
-- [ ] Add test coverage for group chat scenarios
-- [ ] Create example configurations for group chat use cases
-- [ ] Document group chat setup and usage patterns
-- [ ] Validate integration with existing AG2 adapter
+#### 2.2 Streaming API Integration
+- [ ] Implement streaming API for user agent communication
+- [ ] Support real-time updates from group chat to orchestrator
+- [ ] Handle streaming message formatting and routing
+- [ ] Test streaming performance and reliability
+
+#### 2.3 Group Chat Configuration
+- [ ] Define configuration format for user agent and group chat
+- [ ] Support flexible group chat agent composition
+- [ ] Enable dynamic group chat member selection
+- [ ] Add validation for group chat configurations
+
+#### 2.4 Testing and Examples
+- [ ] Add test coverage for user agent orchestration
+- [ ] Test AG2 group chat integration end-to-end
+- [ ] Create example configurations for group chat scenarios
+- [ ] Document user agent setup and usage patterns
 
 
-### 🎯 Milestone 4: Tool Registration Refactoring (OPTIONAL)
+### 🎯 Milestone 3: Tool Registration Refactoring (OPTIONAL)
 
 **Goal**: Refactor tool registration system for better extensibility
 
-#### 4.1 Tool Registry Architecture
+#### 3.1 Tool Registry Architecture
 - [ ] Design new tool registration architecture
 - [ ] Refactor existing tool registration implementation
 - [ ] Improve dynamic tool discovery and loading
 - [ ] Simplify tool extension mechanism
 
-#### 4.2 Backend Tool Integration
+#### 3.2 Backend Tool Integration
 - [ ] Standardize tool registration across backends
 - [ ] Improve tool configuration and management
 - [ ] Support plugin-based tool extensions
 - [ ] Add tool versioning support
 
-#### 4.3 Developer Experience
+#### 3.3 Developer Experience
 - [ ] Create tool development documentation
 - [ ] Add tool templates and examples
 - [ ] Improve tool validation and error messages
 - [ ] Simplify custom tool creation process
+
+
+### 🎯 Milestone 4: Memory Framework (OPTIONAL)
+
+**Goal**: Design and implement memory system for agent context persistence
+
+#### 4.1 Memory Architecture Design
+- [ ] Design memory storage and retrieval architecture
+- [ ] Define memory scope and lifecycle management
+- [ ] Support different memory types (short-term, long-term, episodic)
+- [ ] Plan integration with existing agent framework
+
+#### 4.2 Memory Implementation
+- [ ] Implement memory storage backend
+- [ ] Build memory indexing and search capabilities
+- [ ] Support memory sharing across agents
+- [ ] Handle memory persistence and cleanup
+
+#### 4.3 Integration and Testing
+- [ ] Integrate memory system with orchestrator
+- [ ] Add memory configuration options
+- [ ] Test memory performance and scalability
+- [ ] Create examples demonstrating memory usage
 
 
 
@@ -110,25 +122,21 @@ Version 0.0.30 focuses on fixing critical backend issues and extending multimoda
 
 ### Functional Requirements (REQUIRED)
 
-**Backend Issues & Organization:**
-- [ ] Claude Code backend operates reliably without critical errors
-- [ ] Configuration structure is intuitive and well-documented
-- [ ] All existing configurations continue to work
-- [ ] Test coverage for Claude Code backend scenarios
+**Planning Mode Enhancements:**
+- [ ] Tool whitelist/blacklist system fully functional
+- [ ] Planning mode works across all backends
+- [ ] Multi-turn planning mode support integrated
+- [ ] Comprehensive test coverage for planning mode features
+- [ ] Documentation and examples for new planning mode capabilities
 
-**Multimodal Support:**
-- [ ] Claude backend supports image input and understanding
-- [ ] Chat Completions backend supports multimodal content
-- [ ] Multimodal message formatting correctly handled across backends
-- [ ] Documentation and examples for multimodal usage
+**AG2 Group Chat Integration:**
+- [ ] User agent orchestration pattern implemented
+- [ ] AG2 group chat integration complete
+- [ ] Streaming API operational for user agent communication
+- [ ] Group chat configurations work correctly
+- [ ] Documentation for user agent and group chat setup
 
 ### Functional Requirements (OPTIONAL)
-
-**Group Chat Integration:**
-- [ ] AG2 group chat feature fully integrated
-- [ ] Group chat configurations work correctly
-- [ ] Documentation for group chat setup
-- [ ] Examples demonstrating group chat use cases
 
 **Tool Registration Refactoring:**
 - [ ] New tool registration architecture implemented
@@ -136,40 +144,48 @@ Version 0.0.30 focuses on fixing critical backend issues and extending multimoda
 - [ ] Simplified custom tool creation process
 - [ ] Comprehensive developer documentation
 
+**Memory Framework:**
+- [ ] Memory architecture designed and documented
+- [ ] Basic memory storage and retrieval working
+- [ ] Memory integration with agents functional
+- [ ] Examples demonstrating memory usage
+
 ### Performance Requirements (REQUIRED)
-- [ ] Claude Code backend fixes do not degrade performance
-- [ ] Multimodal processing efficient and responsive
-- [ ] Configuration loading remains fast
-- [ ] Group chat coordination efficient (if implemented)
+- [ ] Planning mode enhancements do not degrade performance
+- [ ] Streaming API responsive and efficient
+- [ ] Group chat coordination efficient
+- [ ] Memory operations (if implemented) have minimal overhead
 
 ### Quality Requirements (REQUIRED)
-- [ ] Test coverage for Claude Code backend
-- [ ] Test coverage for multimodal features
-- [ ] Configuration validation and testing
-- [ ] Group chat integration tests (if implemented)
+- [ ] Test coverage for planning mode enhancements
+- [ ] Test coverage for user agent and group chat features
+- [ ] Comprehensive integration tests
+- [ ] Tool registration tests (if implemented)
+- [ ] Memory framework tests (if implemented)
 
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **Claude API**: Multimodal support in Anthropic's Claude API
-- **OpenAI API**: Multimodal support in Chat Completions API
-- **AG2 Framework**: Group chat capabilities in AG2 (for group chat integration)
-- **Image Processing**: Pillow library for image handling and validation
+- **MCP Framework**: Tool restriction capabilities in MCP servers
+- **AG2 Framework**: Group chat and streaming API capabilities
+- **All Backend APIs**: Planning mode support across different providers
+- **Memory Storage**: Database or storage backend for memory framework (if implemented)
 
 ### Risks & Mitigations
-1. **Claude Code Stability**: *Mitigation*: Comprehensive error handling, fallback mechanisms
-2. **Claude API Multimodal Limitations**: *Mitigation*: Feature flags, graceful degradation
-3. **Configuration Migration**: *Mitigation*: Backward compatibility, migration guide
-4. **Group Chat Complexity**: *Mitigation*: Phased implementation, clear documentation
+1. **Tool Restriction Complexity**: *Mitigation*: Clear configuration format, validation, comprehensive testing
+2. **Backend Compatibility**: *Mitigation*: Incremental rollout, fallback for unsupported backends
+3. **AG2 Integration Challenges**: *Mitigation*: Phased implementation, clear interface contracts
+4. **Streaming Performance**: *Mitigation*: Optimize streaming pipeline, add buffering mechanisms
+5. **Memory Scalability**: *Mitigation*: Efficient indexing, configurable retention policies
 
 
-## Future Enhancements (Post-v0.0.30)
+## Future Enhancements (Post-v0.0.31)
 
-- **Additional Framework Adapters**: LangChain, CrewAI integrations
-- **Complete Multimodal Support**: Audio and video processing for all backends
-- **Advanced Coding Agent**: Specialized prompts and workspace management for coding tasks
-- **Enterprise Features**: Advanced permissions, audit logs, team collaboration
+- **Advanced Planning Strategies**: Dynamic planning strategy selection based on task complexity
+- **Multi-Agent Memory Sharing**: Collaborative memory across multiple agents
+- **Enhanced Group Chat**: Support for hierarchical group chats and nested conversations
+- **Tool Marketplace**: Community-contributed tool registry and discovery
 
 
 ### Long-term Vision
@@ -182,10 +198,10 @@ Version 0.0.30 focuses on fixing critical backend issues and extending multimoda
 
 | Phase | Focus | Key Deliverables | Priority |
 |-------|-------|------------------|----------|
-| Phase 1 | Backend Fixes | Fix Claude Code issues, organize configurations | **REQUIRED** |
-| Phase 2 | Multimodal Extension | Claude & Chat Completions multimodal support | **REQUIRED** |
-| Phase 3 | Group Chat | AG2 group chat integration | OPTIONAL |
-| Phase 4 | Tool Refactoring | New tool registration architecture | OPTIONAL |
+| Phase 1 | Planning Mode | Tool restrictions, backend support, multi-turn integration | **REQUIRED** |
+| Phase 2 | AG2 Group Chat | User agent orchestration, streaming API, group chat integration | **REQUIRED** |
+| Phase 3 | Tool Refactoring | New tool registration architecture | OPTIONAL |
+| Phase 4 | Memory Framework | Memory system design and implementation | OPTIONAL |
 
 
 ## Getting Started
@@ -193,24 +209,25 @@ Version 0.0.30 focuses on fixing critical backend issues and extending multimoda
 ### For Contributors
 
 **Required Work:**
-1. Fix Claude Code backend reliability issues
-2. Reorganize and improve configuration structure
-3. Implement multimodal support for Claude backend
-4. Implement multimodal support for Chat Completions backend
-5. Test and document all changes thoroughly
+1. Implement tool whitelist/blacklist system for planning mode
+2. Verify and test planning mode across all backends
+3. Integrate planning mode with multi-turn framework
+4. Implement user agent orchestration pattern
+5. Build AG2 group chat integration with streaming API
+6. Test and document all changes thoroughly
 
 **Optional Work:**
-6. Complete AG2 group chat integration
 7. Refactor tool registration system for better extensibility
+8. Design and implement memory framework
 
 ### For Users
 
-- v0.0.30 will fix Claude Code backend issues for more reliable workflows
-- Claude and Chat Completions backends will gain multimodal capabilities
-- Improved configuration organization for easier navigation
-- All v0.0.29 configurations will remain fully compatible
-- Optional improvements: group chat support and enhanced tool registration
+- v0.0.31 will enhance planning mode with more control over tool execution
+- AG2 group chat integration enables complex multi-agent workflows
+- Planning mode will work seamlessly across all backends
+- Multi-turn support for planning mode enables extended workflows
+- Optional improvements: better tool registration and memory capabilities
 
 ---
 
-*This roadmap prioritizes backend stability and feature parity while keeping extensibility improvements as optional enhancements.*
+*This roadmap prioritizes planning mode improvements and AG2 integration while keeping tool refactoring and memory as optional enhancements.*
