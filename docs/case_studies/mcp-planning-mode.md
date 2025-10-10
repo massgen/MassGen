@@ -58,7 +58,7 @@ A baseline would use MCP without planning mode, where agents execute tools durin
 # Pre-v0.0.29: No planning mode - agents execute tools immediately
 # Would cause multiple Discord messages during coordination
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5mini_claude_code_discord_mcp_example.yaml \
+  --config massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml \
   "Please read https://github.com/Leezekun/MassGen/issues/276 and send a message to Discord..."
 ```
 

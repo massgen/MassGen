@@ -190,7 +190,7 @@ Watch the v0.0.28 AG2 Framework Integration in action:
 Key artifacts from the case study run:
 - AG2 agent successfully executed web scraping code (GitHub API + README parsing) to gather live repository data
 - Both AG2 and Gemini agents generated comprehensive comparisons
-- Agents engaged in multiple rounds of refinement (17 total restarts)
+- Agents engaged in multiple iterations of refinement (17 total restarts)
 - Final consensus reached through MassGen's voting mechanism
 
 ---
@@ -225,11 +225,11 @@ For example:
 - `agent2.3` = Agent 2's 3rd answer (after 2 restarts)
 - `agent1.final` = Agent 1's final answer as the winner
 
-**Multi-Round Refinement Pattern:**
+**Multi-Iteration Refinement Pattern:**
 The coordination log reveals an intensive collaborative refinement process:
 - **Total restarts**: 17 (Agent 1: 9 restarts, Agent 2: 8 restarts)
 - **Total answers**: 2 final answers (agent1.2, agent2.8 after multiple refinements)
-- **Voting rounds**: Multiple voting rounds with agents critiquing and improving
+- **Voting iterations**: Multiple voting iterations with agents critiquing and improving
 
 **Agent 1 (AG2 agent) - Code Execution Approach:**
 1. **Initial attempt (agent1.1)**: Leveraged AG2's code execution capability to write and execute a Python script that programmatically analyzed both frameworks through:
@@ -255,7 +255,7 @@ The coordination log reveals an intensive collaborative refinement process:
 The coordination table shows sophisticated voting behavior:
 
 1. **Agent 1 (AG2) voting behavior:**
-   - Voted for Agent 2's answers initially (agent2.1, agent2.3, agent2.4) across multiple rounds
+   - Voted for Agent 2's answers initially (agent2.1, agent2.3, agent2.4) across multiple iterations
    - Later voted for its own refined answer (agent1.2) after multiple improvements
    - Reasoning: "Concise, accurate bullet-point comparison focused on differences"
 
@@ -265,7 +265,7 @@ The coordination table shows sophisticated voting behavior:
 
 3. **Winner selection:**
    - Agent 1 (AG2 agent) selected as winner with answer agent1.2
-   - Both agents voted for themselves in final rounds, but Agent 1's answer was selected as the winner
+   - Both agents voted for themselves in final iterations, but Agent 1's answer was selected as the winner
 
 **Key v0.0.28 improvement**: AG2 agents can fully participate in MassGen's voting mechanism, demonstrating that external framework agents understand and contribute to consensus building.
 
@@ -288,52 +288,36 @@ To provide concrete evidence of the quality difference, here are the actual answ
 Here's a concise differences summary between AG2 and MassGen for LLM agents:
 
 - Core purpose
-  - AG2: General-purpose AgentOS/SDK for building, orchestrating, and running multi-agent
-    applications with tools, memory, and human-in-the-loop.
-  - MassGen: Test-time scaling/ensemble system; runs multiple agents/models on the same task
-    in parallel with debate/consensus to improve a single result.
+  - AG2: General-purpose AgentOS/SDK for building, orchestrating, and running multi-agent applications with tools, memory, and human-in-the-loop.
+  - MassGen: Test-time scaling/ensemble system; runs multiple agents/models on the same task in parallel with debate/consensus to improve a single result.
 
 - Collaboration pattern
-  - AG2: Role-specialized agents (planner, executor, reviewer, etc.) coordinated via structured
-    workflows or group chats; typically sequential or staged interactions.
-  - MassGen: Peer agents work concurrently on the same prompt; share observations, critique,
-    and converge via voting/aggregation.
+  - AG2: Role-specialized agents (planner, executor, reviewer, etc.) coordinated via structured workflows or group chats; typically sequential or staged interactions.
+  - MassGen: Peer agents work concurrently on the same prompt; share observations, critique, and converge via voting/aggregation.
 
 - Workflow primitives
-  - AG2: Conversable agents, tool/function calling, memory/state, group-chat patterns, workflow
-    orchestration, strong human-in-the-loop options.
-  - MassGen: Round-based parallel runs, self-reflection/debate, cross-agent comparison,
-    consensus/majority selection.
+  - AG2: Conversable agents, tool/function calling, memory/state, group-chat patterns, workflow orchestration, strong human-in-the-loop options.
+  - MassGen: Round-based parallel runs, self-reflection/debate, cross-agent comparison, consensus/majority selection.
 
 - Scope and extensibility
-  - AG2: Broad framework for end-to-end apps (tools, RAG, web/actions, integrations), suitable
-    for production pipelines and complex automations.
-  - MassGen: Focused on quality-boosting ensemble logic; often wrapped around existing
-    prompts/tools to raise single-task answer quality.
+  - AG2: Broad framework for end-to-end apps (tools, RAG, web/actions, integrations), suitable for production pipelines and complex automations.
+  - MassGen: Focused on quality-boosting ensemble logic; often wrapped around existing prompts/tools to raise single-task answer quality.
 
 - Model/provider usage
-  - AG2: Integrates with multiple model providers and tool ecosystems; emphasizes building
-    blocks for complete agent systems.
-  - MassGen: Encourages using diverse LLMs/providers in parallel to gain complementary
-    strengths and better consensus.
+  - AG2: Integrates with multiple model providers and tool ecosystems; emphasizes building blocks for complete agent systems.
+  - MassGen: Encourages using diverse LLMs/providers in parallel to gain complementary strengths and better consensus.
 
 - Trade-offs
-  - AG2: More scaffolding and control; best for multi-step workflows, reliability, and
-    auditability. Latency depends on workflow depth.
-  - MassGen: Higher per-task cost/latency due to many parallel runs; trades compute for
-    improved accuracy/robustness on a single query.
+  - AG2: More scaffolding and control; best for multi-step workflows, reliability, and auditability. Latency depends on workflow depth.
+  - MassGen: Higher per-task cost/latency due to many parallel runs; trades compute for improved accuracy/robustness on a single query.
 
 - Typical use cases
-  - AG2: Automated coding/review loops, data/ETL agents, RAG assistants, customer support
-    flows, complex task pipelines.
-  - MassGen: Hard reasoning/coding challenges, creative generation, evaluations where ensemble
-    consensus boosts final quality.
+  - AG2: Automated coding/review loops, data/ETL agents, RAG assistants, customer support flows, complex task pipelines.
+  - MassGen: Hard reasoning/coding challenges, creative generation, evaluations where ensemble consensus boosts final quality.
 
 - Quick guidance
-  - Choose AG2 when you need to build, orchestrate, and operate agent workflows with tools,
-    memory, and roles.
-  - Choose MassGen when you want to boost the final answer quality on a single task via
-    parallel multi-agent debate/consensus.
+  - Choose AG2 when you need to build, orchestrate, and operate agent workflows with tools, memory, and roles.
+  - Choose MassGen when you want to boost the final answer quality on a single task via parallel multi-agent debate/consensus.
 ```
 </details>
 
@@ -502,13 +486,13 @@ This intensive refinement pattern suggests:
 - AG2's async execution (`a_generate_reply`) integrated smoothly with MassGen's orchestration
 - Code execution workspace (`./code_execution_workspace`) managed without conflicts
 - AG2's system messages and LLM config preserved within MassGen's agent configuration
-- No compatibility issues between AG2's conversation patterns and MassGen's coordination
+- No compatibility issues between AG2's conversation model and MassGen's coordination
 
 <h2 id="conclusion">🎯 Conclusion</h2>
 
 The AG2 Framework Integration in v0.0.28 successfully solves the framework interoperability challenge that users faced when trying to combine specialized agent capabilities with MassGen's consensus approach. The key user benefits specifically enabled by this feature include:
 
-1. **Best of Both Worlds**: Users can now leverage AG2's specialized capabilities (code execution, tool calling, agent patterns) within MassGen's multi-agent consensus framework
+1. **Best of Both Worlds**: Users can now leverage AG2's specialized capabilities (code execution, tool calling) within MassGen's multi-agent consensus framework
 2. **Extensible Future**: The adapter architecture opens the door to integrating other frameworks (LangGraph, CrewAI), exponentially expanding MassGen's capabilities
 
 **Broader Implications:**
