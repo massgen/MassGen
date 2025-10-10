@@ -14,6 +14,7 @@ Supported Providers and Environment Variables:
 - OpenRouter: OPENROUTER_API_KEY
 - ZAI: ZAI_API_KEY
 - POE: POE_API_KEY
+- Qwen: QWEN_API_KEY
 """
 
 from __future__ import annotations
@@ -51,6 +52,10 @@ class ChatCompletionsBackend(MCPBackend):
         self.backend_name = self.get_provider_name()
         self.formatter = ChatCompletionsFormatter()
         self.api_params_handler = ChatCompletionsAPIParamsHandler(self)
+
+    def supports_upload_files(self) -> bool:
+        """Chat Completions backend supports upload_files preprocessing."""
+        return True
 
     async def stream_with_tools(
         self,
@@ -636,6 +641,8 @@ class ChatCompletionsBackend(MCPBackend):
             return "Kimi"
         elif "poe.com" in base_url:
             return "POE"
+        elif "aliyuncs.com" in base_url:
+            return "Qwen"
         else:
             return "ChatCompletion"
 
