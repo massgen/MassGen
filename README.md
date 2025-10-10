@@ -132,7 +132,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 ## 🆕 Latest Features (v0.0.30)
 
 **What's New in v0.0.30:**
-- **Multimodal Audio and Video** - w
+- **Multimodal Audio and Video** - Extended multimodal support from images to audio (WAV, MP3) and video (MP4, AVI, MOV, WEBM) across Chat Completions and Claude backends
 - **Qwen API Integration** - Added Qwen API provider support to Chat Completions backend for video understanding capabilities
 
 **Try v0.0.30 Multimodal Features:**
