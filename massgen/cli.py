@@ -182,6 +182,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
     - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
     - POE (poe.com) -> POE_API_KEY
+    - Qwen (dashscope.aliyuncs.com) -> QWEN_API_KEY
 
     External agent frameworks are supported via the adapter registry.
     """
@@ -262,6 +263,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 api_key = os.getenv("POE_API_KEY")
                 if not api_key:
                     raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
+            elif base_url and "aliyuncs.com" in base_url:
+                api_key = os.getenv("QWEN_API_KEY")
+                if not api_key:
+                    raise ConfigurationError("Qwen API key not found. Set QWEN_API_KEY or provide in config.")
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -1208,6 +1213,7 @@ Environment Variables:
     NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
     OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
     POE_API_KEY         - For POE (poe.com)
+    QWEN_API_KEY        - For Qwen (dashscope.aliyuncs.com)
 
   Note: The chatcompletion backend auto-detects the provider from the base_url
         and uses the appropriate environment variable for API key.

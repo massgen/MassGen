@@ -5,6 +5,64 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.30] - 2025-10-10
+
+### Changed
+- **Multimodal Support - Audio and Video Processing**: Extended v0.0.27's image-only multimodal foundation
+  - Audio file support with WAV and MP3 formats for Chat Completions and Claude backends
+  - Video file support with MP4, AVI, MOV, WEBM formats for Chat Completions and Claude backends
+  - Audio/video path parameters (`audio_path`, `video_path`) for local files and HTTP/HTTPS URLs
+  - Base64 encoding for local audio/video files with automatic MIME type detection
+  - Configurable media file size limits (default 64MB, configurable via `media_max_file_size_mb`)
+  - New audio/video content formatters in `_chat_completions_formatter.py` and `_claude_formatter.py`
+  - Enhanced `base_with_mcp.py` with 340+ lines of multimodal content processing
+
+- **Claude Code Backend SDK Update**: Updated to newer Agent SDK package
+  - Migrated from `claude-code-sdk>=0.0.19` to `claude-agent-sdk>=0.0.22`
+  - Updated internal SDK classes: `ClaudeCodeOptions` → `ClaudeAgentOptions`
+  - Enhanced bash tool permission validation in `PathPermissionManager`
+  - Improved system message handling with SDK preset support
+  - New bash/shell/exec tool detection for dangerous operation prevention
+
+- **Chat Completions Backend Enhancement**: Qwen API provider integration
+  - Added Qwen API support to existing Chat Completions provider ecosystem
+  - New `QWEN_API_KEY` environment variable support
+  - Qwen-specific configuration examples for video understanding
+
+### Fixed
+- **Planning Mode Configuration**: Fixed crash when configuration lacks `coordination_config`
+  - Added null check in `orchestrator.py` to prevent AttributeError
+  - Improved graceful handling of missing planning mode configuration
+
+- **Claude Code System Message Handling**: Resolved system message processing issues
+  - Fixed system message extraction and formatting in `claude_code.py`
+  - Better integration with Agent SDK for message handling
+
+- **AG2 Adapter Import Ordering**: Resolved import sequence issues
+  - Fixed import statements in `adapters/utils/ag2_utils.py`
+  - Pre-commit isort formatting corrections
+
+### Documentations, Configurations and Resources
+
+- **Case Studies**: Comprehensive documentation for v0.0.28 and v0.0.29 features
+  - `ag2-framework-integration.md`: AG2 adapter system and external framework integration
+  - `mcp-planning-mode.md`: MCP Planning Mode design and implementation guide
+
+- **New Configuration Files**: Added 7 new example configurations
+  - `ag2/ag2_case_study.yaml`: AG2 framework integration case study configuration
+  - `filesystem/cc_gpt5_gemini_filesystem.yaml`: Claude Code, GPT-5, and Gemini filesystem collaboration
+  - `basic/single/single_gemini2.5pro.yaml`: Gemini 2.5 Pro single agent setup
+  - `basic/single/single_openrouter_audio_understanding.yaml`: Audio understanding with OpenRouter
+  - `basic/single/single_qwen_video_understanding.yaml`: Video understanding with Qwen API
+  - `debug/test_sdk_migration.yaml`: Claude Code SDK migration testing
+
+### Technical Details
+- **Commits**: 20 commits including multimodal enhancements, Claude Code SDK migration, and documentation
+- **Files Modified**: 25 files with 2,501 insertions and 84 deletions
+- **Major Features**: Audio/video multimodal support, Claude Code Agent SDK migration, Qwen API integration
+- **Dependencies Updated**: `anthropic>=0.61.0`, `claudecode>=0.0.12`
+- **Contributors**: @ncrispino @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.29] - 2025-10-08
 
 ### Added

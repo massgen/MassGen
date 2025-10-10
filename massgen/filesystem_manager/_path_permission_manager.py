@@ -717,33 +717,73 @@ class PathPermissionManager:
             logger.error(f"[PathPermissionManager] Error validating batch delete: {e}")
             return (False, f"Batch delete validation failed: {e}")
 
+    def _is_path_within_allowed_directories(self, path: Path) -> bool:
+        """
+        Check if a path is within any allowed directory (workspace or context paths).
+
+        This enforces directory boundaries - paths outside managed directories are not allowed.
+
+        Args:
+            path: Path to check
+
+        Returns:
+            True if path is within allowed directories, False otherwise
+        """
+        resolved_path = path.resolve()
+
+        # Check if path is within any managed path (excluding file_context_parent)
+        for managed_path in self.managed_paths:
+            # file_context_parent paths don't grant access, only their specific files do
+            if managed_path.path_type == "file_context_parent":
+                continue
+
+            if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
+                return True
+
+        return False
+
     def _validate_file_context_access(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """
-        Validate access for file context paths (prevents sibling file access).
+        Validate access for all file operations - enforces directory boundaries and permissions.
 
-        When a specific file is added as a context path, only that file should be accessible,
-        not other files in the same directory. This method checks all tool calls to enforce this.
+        This method ensures that:
+        1. ALL file operations are restricted to workspace + context paths (directory boundary)
+        2. Read/write permissions are enforced within allowed directories
+        3. Sibling file access is prevented for file-specific context paths
+
+        Args:
+            tool_name: Name of the tool being called
+            tool_args: Arguments passed to the tool
+
+        Returns:
+            Tuple of (allowed: bool, reason: Optional[str])
         """
         # Extract file path from arguments
         file_path = self._extract_file_path(tool_args)
         if not file_path:
-            # Can't determine path - allow it (tool may not access files)
+            # Can't determine path - allow it (tool may not access files, or uses different args)
             return (True, None)
 
         # Resolve relative paths against workspace
         file_path = self._resolve_path_against_workspace(file_path)
         path = Path(file_path).resolve()
-        permission = self.get_permission(path)
-        logger.debug(f"[PathPermissionManager] Validating file context access for '{tool_name}' on path: {path} with permission: {permission}")
 
-        # If permission is None, check if in file_context_parent directory
+        # SECURITY: Check directory boundary - path must be within allowed directories
+        if not self._is_path_within_allowed_directories(path):
+            logger.warning(f"[PathPermissionManager] BLOCKED: '{tool_name}' attempted to access path outside allowed directories: {path}")
+            return (False, f"Access denied: '{path}' is outside allowed directories. Only workspace and context paths are accessible.")
+
+        permission = self.get_permission(path)
+        logger.debug(f"[PathPermissionManager] Validating '{tool_name}' on path: {path} with permission: {permission}")
+
+        # If permission is None but we're within allowed directories, check for file_context_parent edge case
         if permission is None:
             parent_paths = [mp for mp in self.managed_paths if mp.path_type == "file_context_parent"]
             for parent_mp in parent_paths:
                 if parent_mp.contains(path):
                     # Path is in a file context parent dir, but not the specific file
                     return (False, f"Access denied: '{path}' is not an explicitly allowed file in this directory")
-            # Not in any managed paths - allow (likely workspace or other valid path)
+            # Within allowed directories and has no specific restrictions - allow
             return (True, None)
 
         # Has explicit permission - allow
@@ -803,6 +843,11 @@ class PathPermissionManager:
         if not path_str:
             return path_str
 
+        # Handle tilde expansion (home directory)
+        if path_str.startswith("~"):
+            path = Path(path_str).expanduser()
+            return str(path)
+
         path = Path(path_str)
         if path.is_absolute():
             return path_str
@@ -860,6 +905,9 @@ class PathPermissionManager:
 
         As of v0.0.20, only Claude Code supports execution.
 
+        For Claude Code: Validates directory boundaries for all paths in Bash commands.
+        This prevents access to paths outside workspace + context paths.
+
         """
         # Extract command from arguments
         command = tool_args.get("command", "") or tool_args.get("cmd", "")
@@ -908,6 +956,57 @@ class PathPermissionManager:
         for pattern in dangerous_patterns:
             if pattern in command.lower():
                 return (False, f"Dangerous command pattern '{pattern}' is not allowed")
+
+        # Block command injection techniques that can bypass path validation
+        # Environment variables: $HOME, $TMPDIR, ${VAR}, etc.
+        if "$" in command:
+            # Allow common safe variables like $?, $#, $$, $0-$9
+            # Block everything else including $HOME, $USER, $(command), ${var}
+            safe_vars = ["$?", "$#", "$$"]
+            has_unsafe_var = False
+            if "$(" in command or "${" in command:
+                has_unsafe_var = True
+            elif any(c in command for c in ["$HOME", "$USER", "$TMPDIR", "$PWD", "$OLDPWD", "$PATH"]):
+                has_unsafe_var = True
+            else:
+                # Check for $VAR pattern (dollar followed by letters)
+                import re
+
+                if re.search(r"\$[A-Za-z_][A-Za-z0-9_]*", command):
+                    # Allow only the safe ones
+                    for safe in safe_vars:
+                        command = command.replace(safe, "")
+                    if re.search(r"\$[A-Za-z_][A-Za-z0-9_]*", command):
+                        has_unsafe_var = True
+
+            if has_unsafe_var:
+                return (False, "Environment variables in Bash commands are not allowed (security risk: can reference paths outside workspace)")
+
+        # Block command substitution (can execute arbitrary commands and use output as paths)
+        if "`" in command:
+            return (False, "Backtick command substitution is not allowed (security risk)")
+
+        # Block process substitution (can access arbitrary paths)
+        if "<(" in command or ">(" in command:
+            return (False, "Process substitution is not allowed (security risk)")
+
+        # CLAUDE CODE SPECIFIC: Extract and validate all paths (absolute and relative) in the command
+        # This prevents Bash commands from accessing paths outside allowed directories (e.g., ../../)
+        paths = self._extract_paths_from_command(command)
+        for path_str in paths:
+            try:
+                # Resolve relative paths against workspace
+                resolved_path_str = self._resolve_path_against_workspace(path_str)
+                path = Path(resolved_path_str).resolve()
+
+                # Check if this path is within allowed directories
+                if not self._is_path_within_allowed_directories(path):
+                    logger.warning(f"[PathPermissionManager] BLOCKED Bash command accessing path outside allowed directories: {path} (from: {path_str})")
+                    return (False, f"Access denied: Bash command references '{path_str}' which resolves to '{path}' outside allowed directories")
+            except Exception as e:
+                logger.debug(f"[PathPermissionManager] Could not validate path '{path_str}' in Bash command: {e}")
+                # If we can't parse it, allow it - might not be a real path
+                continue
 
         return (True, None)
 
@@ -971,6 +1070,63 @@ class PathPermissionManager:
 
         return None
 
+    def _extract_paths_from_command(self, command: str) -> List[str]:
+        """
+        Extract all potential file/directory paths from a Bash command for validation.
+
+        This is Claude Code specific - extracts paths to validate directory boundaries.
+        Looks for both absolute paths (starting with /) and relative paths (including ../).
+
+        Args:
+            command: Bash command string
+
+        Returns:
+            List of path strings found in the command
+        """
+        import shlex
+
+        paths = []
+
+        try:
+            # Split command into tokens, handling quoted strings properly
+            tokens = shlex.split(command)
+        except ValueError:
+            # If shlex fails (malformed quotes), fall back to simple split
+            tokens = command.split()
+
+        for token in tokens:
+            # Strip common decorations
+            cleaned = token.strip("\"'").strip()
+
+            # Skip obvious non-paths (flags, empty strings, etc.)
+            if not cleaned:
+                continue
+            if cleaned.startswith("-"):  # Flags like -la, --help
+                continue
+            if cleaned in ["&&", "||", "|", ";", ">"]:  # Operators
+                continue
+
+            # Check if it looks like a path:
+            # 1. Absolute paths (starts with /)
+            # 2. Home directory paths (starts with ~ - including single char ~)
+            # 3. Relative parent paths (starts with ../ or is ..)
+            # 4. Relative current paths (starts with ./)
+            if cleaned.startswith("/") or cleaned.startswith("~") or cleaned.startswith("../") or cleaned == ".." or cleaned.startswith("./"):
+                # Handle wildcards - extract base directory before wildcard
+                if "*" in cleaned or "?" in cleaned or "[" in cleaned:
+                    # Split on wildcard and take the directory part
+                    base = cleaned.split("*")[0].split("?")[0].split("[")[0]
+                    # If base ends with /, remove it
+                    if base.endswith("/"):
+                        base = base[:-1]
+                    # Validate the base directory instead
+                    if base:
+                        paths.append(base)
+                else:
+                    paths.append(cleaned)
+
+        return paths
+
     def get_accessible_paths(self) -> List[Path]:
         """Get list of all accessible paths."""
         return [path.path for path in self.managed_paths]
@@ -1032,28 +1188,33 @@ class PathPermissionManager:
 
     def get_claude_code_hooks_config(self) -> Dict[str, Any]:
         """
-        Get Claude Code SDK hooks configuration.
+        Get Claude Agent SDK hooks configuration.
 
         Returns:
-            Hooks configuration dict for ClaudeCodeOptions
+            Hooks configuration dict for ClaudeAgentOptions
         """
         if not self.managed_paths:
             return {}
 
         # Import here to avoid dependency issues if SDK not available
         try:
-            from claude_code_sdk import HookMatcher
+            from claude_agent_sdk import HookMatcher
         except ImportError:
-            logger.warning("[PathPermissionManager] claude_code_sdk not available, hooks disabled")
+            logger.warning("[PathPermissionManager] claude_agent_sdk not available, hooks disabled")
             return {}
 
         return {
             "PreToolUse": [
-                # Apply context validation to write tools
+                # Apply directory boundary + permission validation to ALL file-access tools
+                # This ensures Claude cannot access files outside workspace + context paths
+                HookMatcher(matcher="Read", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="Write", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="Edit", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="MultiEdit", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="NotebookEdit", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="Grep", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="Glob", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="LS", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="Bash", hooks=[self.validate_context_access]),
             ],
         }
