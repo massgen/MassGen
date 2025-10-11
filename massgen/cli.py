@@ -1261,6 +1261,11 @@ Environment Variables:
     parser.add_argument("--no-display", action="store_true", help="Disable visual coordination display")
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
+    parser.add_argument(
+        "--build-config",
+        action="store_true",
+        help="Launch interactive configuration builder to create config file"
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
@@ -1278,6 +1283,30 @@ Environment Variables:
     if args.debug:
         logger.info("Debug mode enabled")
         logger.debug(f"Command line arguments: {vars(args)}")
+
+    # Launch interactive config builder if requested
+    if args.build_config:
+        from .config_builder import ConfigBuilder
+        builder = ConfigBuilder()
+        result = builder.run()
+        
+        if result and len(result) == 2:
+            filepath, question = result
+            if filepath and question:
+                # Update args to use the newly created config
+                args.config = filepath
+                args.question = question
+            elif filepath:
+                # Config created but user chose not to run
+                print(f"\n✅ Configuration saved to: {filepath}")
+                print(f"Run with: python -m massgen.cli --config {filepath} \"Your question\"")
+                return
+            else:
+                # User cancelled
+                return
+        else:
+            # Builder returned None (cancelled or error)
+            return
 
     # Validate arguments
     if not args.backend:
