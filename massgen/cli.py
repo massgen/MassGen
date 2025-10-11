@@ -1264,7 +1264,7 @@ Environment Variables:
     parser.add_argument(
         "--build-config",
         action="store_true",
-        help="Launch interactive configuration builder to create config file"
+        help="Launch interactive configuration builder to create config file",
     )
 
     # Timeout options
@@ -1287,9 +1287,10 @@ Environment Variables:
     # Launch interactive config builder if requested
     if args.build_config:
         from .config_builder import ConfigBuilder
+
         builder = ConfigBuilder()
         result = builder.run()
-        
+
         if result and len(result) == 2:
             filepath, question = result
             if filepath and question:
@@ -1299,7 +1300,7 @@ Environment Variables:
             elif filepath:
                 # Config created but user chose not to run
                 print(f"\n✅ Configuration saved to: {filepath}")
-                print(f"Run with: python -m massgen.cli --config {filepath} \"Your question\"")
+                print(f'Run with: python -m massgen.cli --config {filepath} "Your question"')
                 return
             else:
                 # User cancelled
