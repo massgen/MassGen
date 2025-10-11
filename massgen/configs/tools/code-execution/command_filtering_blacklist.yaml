@@ -1,0 +1,39 @@
+# Command Execution with Additional Blacklist Filtering
+# Blocks commands beyond the default safety checks
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/command_filtering_blacklist.yaml "Create a simple data analysis script"
+
+agent:
+  id: "network_restricted_agent"
+  backend:
+    type: "gemini"
+    model: "gemini-2.5-pro"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    command_line_blocked_commands:
+      - "rm .*"        # Block ALL rm commands (default only blocks rm -rf /)
+      - "curl .*"      # Block network requests
+      - "wget .*"      # Block file downloads
+      - "git push.*"   # Block pushing to remotes
+      - "npm publish.*"  # Block package publishing
+
+  system_message: |
+    You are a coding assistant with network and file deletion restrictions.
+
+    Default safety (always blocked):
+    - rm -rf /, dd, fork bombs, /dev writes, sudo, su, chmod, chown
+
+    Additional blocks in this config:
+    - All rm commands (even specific files)
+    - Network requests (curl, wget)
+    - Git push operations
+    - npm publish operations
+
+    You can still run Python, local tests, git commits, and other local dev tools.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

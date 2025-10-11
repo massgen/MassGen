@@ -58,6 +58,11 @@ class APIParamsHandlerBase(ABC):
             "context_paths",
             "context_write_access_enabled",
             "enable_image_generation",
+            "enable_mcp_command_line",
+            "command_line_allowed_commands",
+            "command_line_blocked_commands",
+            "command_execution_prefix",
+            "command_execution_venv_path",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",

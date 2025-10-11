@@ -437,6 +437,33 @@ Based on the coordination process above, present your final answer:"""
         messages.append({"role": "user", "content": self.enforcement_message()})
         return messages
 
+    def command_execution_system_message(
+        self,
+        command_execution_prefix: Optional[str] = None,
+        command_execution_venv_path: Optional[str] = None,
+    ) -> str:
+        """Generate concise command execution instructions when command line execution is enabled.
+
+        Args:
+            command_execution_prefix: Command prefix like "uv run" or "conda run -n myenv"
+            command_execution_venv_path: Custom virtual environment path
+        """
+        parts = ["## Command Execution"]
+        parts.append("You can run command line commands using the `execute_command` tool.\n")
+
+        if command_execution_prefix:
+            parts.append(
+                f"**IMPORTANT**: Commands are automatically prefixed with `{command_execution_prefix}` - do NOT add it yourself.\n"
+                f"✓ Correct: execute_command(\"python script.py\")\n"
+                f"✗ Wrong: execute_command(\"{command_execution_prefix} python script.py\")"
+            )
+        elif command_execution_venv_path:
+            parts.append(f"Commands will use the virtual environment at `{command_execution_venv_path}`.")
+        else:
+            parts.append("If a `.venv` directory exists in your workspace, it will be automatically used.")
+
+        return "\n".join(parts)
+
     def filesystem_system_message(
         self,
         main_workspace: Optional[str] = None,
@@ -446,6 +473,9 @@ Based on the coordination process above, present your final answer:"""
         workspace_prepopulated: bool = False,
         enable_image_generation: bool = False,
         agent_answers: Optional[Dict[str, str]] = None,
+        enable_command_execution: bool = False,
+        command_execution_prefix: Optional[str] = None,
+        command_execution_venv_path: Optional[str] = None,
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
@@ -457,6 +487,9 @@ Based on the coordination process above, present your final answer:"""
             workspace_prepopulated: Whether workspace is pre-populated
             enable_image_generation: Whether image generation is enabled
             agent_answers: Dict of agent answers (keys are agent IDs) to show workspace structure
+            enable_command_execution: Whether command line execution is enabled
+            command_execution_prefix: Command prefix like "uv run" or "conda run -n myenv"
+            command_execution_venv_path: Custom virtual environment path
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -618,6 +651,14 @@ Based on the coordination process above, present your final answer:"""
             "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
             "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
         )
+
+        # Add command execution instructions if enabled
+        if enable_command_execution:
+            command_exec_message = self.command_execution_system_message(
+                command_execution_prefix=command_execution_prefix,
+                command_execution_venv_path=command_execution_venv_path,
+            )
+            parts.append(f"\n{command_exec_message}")
 
         return "\n".join(parts)
 

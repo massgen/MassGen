@@ -1,0 +1,36 @@
+# Command Execution with uv Package Management
+# All commands automatically use "uv run" prefix
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/uv_package_management.yaml "Build a CLI tool with dependencies"
+
+agent:
+  id: "uv_project_agent"
+  backend:
+    type: "openai"
+    model: "gpt-4.1"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    command_execution_prefix: "uv run"  # All commands prefixed with "uv run"
+
+  system_message: |
+    You work on a uv-managed Python project.
+
+    IMPORTANT: Commands are automatically prefixed with "uv run" - DO NOT include it yourself!
+
+    Correct usage:
+    - execute_command("python script.py") ✅
+    - execute_command("pytest tests/") ✅
+    - execute_command("python -m pip install requests") ✅
+
+    Wrong usage (will break):
+    - execute_command("uv run python script.py") ❌
+    - execute_command("python -m uv.run ...") ❌
+
+    Just use normal commands - the system handles "uv run" for you automatically.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
