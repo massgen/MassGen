@@ -16,6 +16,7 @@ Tools provided:
 - compare_files: Compare two text files and show unified diff
 - generate_and_store_image_variation: Create variations of existing images using DALL-E 2
 - generate_and_store_image: Generate new images from text prompts using DALL-E
+- generate_and_store_audio_no_input_audios: Generate audio speech from text using OpenAI TTS API
 """
 
 import argparse
@@ -1221,6 +1222,173 @@ async def create_server() -> fastmcp.FastMCP:
                 "success": False,
                 "operation": "generate_and_store_image_no_input_images",
                 "error": f"Failed to generate or save image: {str(e)}",
+            }
+
+    @mcp.tool()
+    def generate_and_store_audio_no_input_audios(
+        input_text: str,
+        voice: str = "coral",
+        model: str = "gpt-4o-mini-tts",
+        instructions: Optional[str] = None,
+        storage_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate audio speech from text using OpenAI's TTS API and store it in the workspace.
+
+        This tool generates audio speech from text using OpenAI's Text-to-Speech API
+        and saves it to the workspace with automatic organization.
+
+        Args:
+            input_text: The text to convert to speech
+            voice: Voice to use (default: "coral")
+                   Options: "ash", "ballad", "coral", "sage", "verse"
+            model: Model to use for generation (default: "gpt-4o-mini-tts")
+                   Options: "gpt-4o-mini-tts", "tts-1", "tts-1-hd"
+            instructions: Optional instructions for speech style (e.g., "Speak in a cheerful and positive tone.")
+            storage_path: Directory path where to save the audio (optional)
+                         - Relative path: Resolved relative to workspace (e.g., "audio/generated")
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "generate_and_store_audio_no_input_audios"
+            - audio: Generated audio file information (file_path, filename, size)
+            - model: Model used for generation
+            - voice: Voice used for generation
+            - input_text: The text that was converted to speech
+            - instructions: Instructions used (if any)
+
+        Examples:
+            generate_and_store_audio_no_input_audios("Hello world!")
+            → Generates and saves to: 20240115_143022_speech.mp3
+
+            generate_and_store_audio_no_input_audios(
+                "Welcome to our presentation",
+                voice="sage",
+                instructions="Speak formally and clearly",
+                storage_path="audio/presentations"
+            )
+            → Generates and saves to: audio/presentations/20240115_143022_speech.mp3
+
+        Security:
+            - Requires valid OpenAI API key (automatically detected from .env or environment)
+            - Files are saved to specified path within workspace
+            - Path must be within allowed directories
+
+        Note:
+            API key is automatically detected in this order:
+            1. First checks .env file in current directory or parent directories
+            2. Then checks environment variables
+        """
+        from datetime import datetime
+
+        try:
+            # Try to find and load .env file from multiple locations
+            # 1. Try loading from script directory
+            script_dir = Path(__file__).parent.parent.parent  # Go up to project root
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                # 2. Try loading from current directory and parent directories
+                load_dotenv()
+
+            # Get API key from environment (load_dotenv will have loaded .env file)
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_audio_no_input_audios",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
+                }
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
+
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+
+            # Validate storage directory is within allowed paths
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+
+            # Create directory if it doesn't exist
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                filename = f"{timestamp}_speech.mp3"
+                file_path = storage_dir / filename
+
+                # Generate audio using OpenAI TTS API with streaming
+                kwargs = {
+                    "model": model,
+                    "voice": voice,
+                    "input": input_text,
+                }
+                
+                # Add instructions if provided
+                if instructions:
+                    kwargs["instructions"] = instructions
+
+                # Use streaming response to save directly to file
+                with client.audio.speech.with_streaming_response.create(**kwargs) as response:
+                    response.stream_to_file(file_path)
+
+                # Get file size
+                file_size = file_path.stat().st_size
+
+                # Print save information
+                print(f"[Audio Generation] Saved audio file:")
+                print(f"  - File: {file_path}")
+                print(f"  - Size: {file_size:,} bytes")
+                print(f"  - Voice: {voice}")
+                print(f"  - Model: {model}")
+                print(f"  - Text: {input_text[:50]}..." if len(input_text) > 50 else f"  - Text: {input_text}")
+                if instructions:
+                    print(f"  - Instructions: {instructions}")
+
+                result = {
+                    "success": True,
+                    "operation": "generate_and_store_audio_no_input_audios",
+                    "audio": {
+                        "file_path": str(file_path),
+                        "filename": filename,
+                        "size": file_size,
+                    },
+                    "model": model,
+                    "voice": voice,
+                    "input_text": input_text,
+                }
+                
+                if instructions:
+                    result["instructions"] = instructions
+
+                return result
+
+            except Exception as api_error:
+                print(f"OpenAI API error: {str(api_error)}")
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_audio_no_input_audios",
+                    "error": f"OpenAI API error: {str(api_error)}",
+                }
+
+        except Exception as e:
+            print(f"Error generating or saving audio: {str(e)}")
+            return {
+                "success": False,
+                "operation": "generate_and_store_audio_no_input_audios",
+                "error": f"Failed to generate or save audio: {str(e)}",
             }
 
     print("🚀 Workspace Copy MCP Server started and ready")
