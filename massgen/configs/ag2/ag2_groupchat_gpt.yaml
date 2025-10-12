@@ -1,7 +1,17 @@
 # Example configuration for using AG2 GroupChat with MassGen
 # The entire GroupChat acts as a single agent in MassGen's orchestration
- # uv run python -m massgen.cli --config ag2/ag2_groupchat.yaml "Write a Python function to calculate factorial."
+ # uv run python -m massgen.cli --config ag2/ag2_groupchat_gpt.yaml "Write a Python function to calculate factorial."
 agents:
+  - id: "gpt-5-nano"
+    system_message: "You are an expert programmer who writes clean, efficient code."
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+
   - id: "ag2_team"
     backend:
       type: ag2

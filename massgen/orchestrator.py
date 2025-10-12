@@ -42,7 +42,7 @@ from .logger_config import (
 )
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
-from .utils import ActionType, AgentStatus
+from .utils import ActionType, AgentStatus, CoordinationStage
 
 
 @dataclass
@@ -1291,20 +1291,20 @@ class Orchestrator(ChatAgent):
                     # First attempt: orchestrator provides initial conversation
                     # But we need the agent to have this in its history for subsequent calls
                     # First attempt: provide complete conversation and reset agent's history
-                    chat_stream = agent.chat(conversation_messages, self.workflow_tools, reset_chat=True)
+                    chat_stream = agent.chat(conversation_messages, self.workflow_tools, reset_chat=True, current_stage=CoordinationStage.INITIAL_ANSWER)
                 else:
                     # Subsequent attempts: send enforcement message (set by error handling)
 
                     if isinstance(enforcement_msg, list):
                         # Tool message array
-                        chat_stream = agent.chat(enforcement_msg, self.workflow_tools, reset_chat=False)
+                        chat_stream = agent.chat(enforcement_msg, self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
                     else:
                         # Single user message
                         enforcement_message = {
                             "role": "user",
                             "content": enforcement_msg,
                         }
-                        chat_stream = agent.chat([enforcement_message], self.workflow_tools, reset_chat=False)
+                        chat_stream = agent.chat([enforcement_message], self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
@@ -1929,7 +1929,7 @@ class Orchestrator(ChatAgent):
 
         try:
             # Track final round iterations (each chunk is like an iteration)
-            async for chunk in agent.chat(presentation_messages, reset_chat=True):
+            async for chunk in agent.chat(presentation_messages, reset_chat=True, current_stage=CoordinationStage.PRESENTATION):
                 chunk_type = self._get_chunk_type_value(chunk)
                 # Start new iteration for this chunk
                 self.coordination_tracker.start_new_iteration()

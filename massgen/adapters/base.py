@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Base adapter class for external agent frameworks.
+Base adapter class for external agent agents.
 """
 import asyncio
 from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from massgen.backend.base import StreamChunk
+from massgen.utils import CoordinationStage
 
 
 class AgentAdapter(ABC):
@@ -14,16 +15,17 @@ class AgentAdapter(ABC):
     Abstract base class for external agent adapters.
 
     Adapters handle:
-    - Message format conversion between MassGen and external frameworks
+    - Message format conversion between MassGen and external agents
     - Tool/function conversion and mapping
-    - Streaming simulation for non-streaming frameworks
-    - State management for stateful frameworks
+    - Streaming simulation for non-streaming agents
+    - State management for stateful agents
     """
 
     def __init__(self, **kwargs):
-        """Initialize adapter with framework-specific configuration."""
+        """Initialize adapter with agent-specific configuration."""
         self.config = kwargs
         self._conversation_history = []
+        self.coordination_stage = None
 
     @abstractmethod
     async def execute_streaming(
@@ -36,11 +38,11 @@ class AgentAdapter(ABC):
         Stream response with tool support.
 
         This method must:
-        1. Convert MassGen messages to framework format
-        2. Convert MassGen tools to framework format
-        3. Call the framework's agent
+        1. Convert MassGen messages to agent format
+        2. Convert MassGen tools to agent format
+        3. Call the agent
         4. Convert response back to MassGen format
-        5. Simulate streaming if framework doesn't support it
+        5. Simulate streaming if agent doesn't support it
 
         Args:
             messages: MassGen format messages
@@ -49,6 +51,7 @@ class AgentAdapter(ABC):
 
         Yields:
             StreamChunk: Standardized response chunks
+
         """
 
     async def simulate_streaming(
@@ -58,7 +61,7 @@ class AgentAdapter(ABC):
         delay: float = 0.01,
     ) -> AsyncGenerator[StreamChunk, None]:
         """
-        Simulate streaming for frameworks that don't support it natively.
+        Simulate streaming for agents that don't support it natively.
 
         Args:
             content: Complete response content
@@ -104,17 +107,34 @@ class AgentAdapter(ABC):
             return tool["function"].get("name", "")
         return tool.get("name", "")
 
+    def convert_messages_from_massgen(
+        self,
+        messages: List[Dict[str, Any]],
+    ) -> Any:
+        """
+        Convert MassGen messages to agent-specific format.
+
+        Override this method for agent-specific conversion.
+
+        Args:
+            messages: List of MassGen format messages
+
+        Returns:
+            agent-specific message format
+        """
+        return messages
+
     def convert_response_to_massgen(
         self,
         response: Any,
     ) -> Dict[str, Any]:
         """
-        Convert framework response to MassGen format.
+        Convert agent response to MassGen format.
 
-        Override this method for framework-specific conversion.
+        Override this method for agent-specific conversion.
 
         Args:
-            response: Framework-specific response
+            response: agent-specific response
 
         Returns:
             MassGen format response with content and optional tool_calls
@@ -124,11 +144,28 @@ class AgentAdapter(ABC):
             "tool_calls": None,
         }
 
+    def convert_tools_from_massgen(
+        self,
+        tools: List[Dict[str, Any]],
+    ) -> Any:
+        """
+        Convert MassGen tools to agent-specific format.
+
+        Override this method for agent-specific conversion.
+
+        Args:
+            tools: List of MassGen format tools
+
+        Returns:
+            agent-specific tool format
+        """
+        return tools
+
     def is_stateful(self) -> bool:
         """
         Check if this adapter maintains conversation state.
 
-        Override if your framework is stateless.
+        Override if your agent is stateless.
         """
         return False
 
@@ -139,4 +176,8 @@ class AgentAdapter(ABC):
     def reset_state(self) -> None:
         """Reset adapter state."""
         self.clear_history()
-        # Override to add framework-specific reset logic
+        # Override to add agent-specific reset logic
+
+    def set_stage(self, stage: CoordinationStage) -> None:
+        """Set the coordination stage for the adapter, if applicable."""
+        self.coordination_stage = stage

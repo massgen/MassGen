@@ -7,13 +7,21 @@ Supports both single agents and GroupChat configurations.
 from typing import Any, AsyncGenerator, Dict, List
 
 from autogen import ConversableAgent
-from autogen.agentchat import a_initiate_group_chat
+from autogen.agentchat import a_run_group_chat
 from autogen.agentchat.group.patterns import AutoPattern, RoundRobinPattern
 
 from massgen.logger_config import log_backend_activity, logger
 
+from ..utils import CoordinationStage
 from .base import AgentAdapter, StreamChunk
-from .utils.ag2_utils import create_llm_config, setup_agent_from_config, setup_api_keys
+from .utils.ag2_utils import (
+    create_llm_config,
+    get_group_initial_message,
+    get_user_agent_initial_system_message,
+    postprocess_group_chat_results,
+    setup_agent_from_config,
+    setup_api_keys,
+)
 
 DEFAULT_MAX_ROUNDS = 20
 SUPPORTED_GROUPCHAT_PATTERNS = ["auto", "round_robin"]
@@ -69,7 +77,6 @@ class AG2Adapter(AgentAdapter):
             raise ValueError(
                 "Backend configuration must contain either 'agent_config' for single agent " "or 'group_config' for GroupChat.",
             )
-
         # Initialize AG2 components
         self._setup_agents()
 
@@ -170,7 +177,7 @@ class AG2Adapter(AgentAdapter):
             # Create default user_agent
             return ConversableAgent(
                 name="User",
-                description="Makes final decision after reviewing expert discussions. Calls workflow tools to provide the final answer.",
+                description="Oversees the process. Should NEVER be selected to speak.",
                 human_input_mode="NEVER",
                 code_execution_config=False,
                 llm_config=create_llm_config(default_llm_config),
@@ -249,7 +256,7 @@ class AG2Adapter(AgentAdapter):
         else:
             raise NotImplementedError(f"Pattern type '{pattern_type}' not supported")
 
-    async def _execute_single_agent(self, messages: List[Dict[str, Any]], agent_id: str) -> tuple[str, Any]:
+    async def _execute_single_agent(self, messages: List[Dict[str, Any]], agent: ConversableAgent) -> AsyncGenerator[StreamChunk, None]:
         """
         Execute single AG2 agent.
 
@@ -260,24 +267,39 @@ class AG2Adapter(AgentAdapter):
         Returns:
             Tuple of (content, tool_calls)
         """
-        result = await self.agent.a_generate_reply(messages)
+        result = await agent.a_generate_reply(messages)
 
-        # Log received response
-        log_backend_activity(
-            "ag2",
-            "Received response from AG2",
-            {"response_type": type(result).__name__},
-            agent_id=agent_id,
-        )
+        # # Log received response
+        # log_backend_activity(
+        #     "ag2",
+        #     "Received response from AG2",
+        #     {"response_type": type(result).__name__},
+        #     agent_id=self.agent_id,
+        # )
 
         # Extract content and tool_calls from AG2 response
         # MassGen and AG2 use same format for tool calls
         content = result.get("content", "") if isinstance(result, dict) else str(result)
         tool_calls = result.get("tool_calls") if isinstance(result, dict) else None
 
-        return content, tool_calls
+        # Log extracted data
+        log_backend_activity(
+            "ag2",
+            "Received response data from AG2",
+            {
+                "has_content": bool(content),
+                "content_length": len(content) if content else 0,
+                "has_tool_calls": bool(tool_calls),
+                "tool_count": len(tool_calls) if tool_calls else 0,
+            },
+            agent_id=self.agent_id,
+        )
 
-    async def _execute_group_chat(self, messages: List[Dict[str, Any]], agent_id: str) -> tuple[str, Any]:
+        # Use base class simulate_streaming method
+        async for chunk in self.simulate_streaming(content, tool_calls):
+            yield chunk
+
+    async def _execute_group_chat(self, messages: List[Dict[str, Any]]) -> AsyncGenerator[str, None]:
         """
         Execute AG2 group chat with pattern.
 
@@ -292,45 +314,59 @@ class AG2Adapter(AgentAdapter):
         for message in messages:
             message["name"] = "User"
 
-            # Run the group chat pattern
-            # The pattern will coordinate agents until user_agent generates tool_calls
-            result, final_context, last_speaker = await a_initiate_group_chat(
-                pattern=self.pattern,
-                messages=messages,
-                max_rounds=self.group_max_rounds,
-            )
-
-        conversation = result.chat_history
-
-        # Extract the final result from user_agent
-        # The user_agent should have generated tool_calls (new_answer or vote)
-        content = ""
-        tool_calls = None
-
-        # Get the last message from the conversation
-        if conversation:
-            last_message = conversation[-1]
-
-            # Extract content and tool_calls
-            if isinstance(last_message, dict):
-                content = last_message.get("content", "")
-                tool_calls = last_message.get("tool_calls")
-
-        # Log extracted data
-        log_backend_activity(
-            "ag2",
-            "Extracted GroupChat response data",
-            {
-                "has_content": bool(content),
-                "content_length": len(content) if content else 0,
-                "has_tool_calls": bool(tool_calls),
-                "tool_count": len(tool_calls) if tool_calls else 0,
-                "num_messages": len(conversation) if conversation else 0,
-            },
-            agent_id=agent_id,
+        # The pattern will coordinate agents until user_agent generates tool_calls
+        # print("group chat massages: ", messages)
+        response = await a_run_group_chat(
+            pattern=self.pattern,
+            messages=messages,
+            max_rounds=self.group_max_rounds,
         )
 
-        return content, tool_calls
+        last_group_chat_event_msgs = []  # Store messages from the last event
+
+        def process_and_log_event(*args, **kwargs) -> None:
+            """Process and log AG2 event, returning string representation."""
+            line = " ".join(str(arg) for arg in args)
+            # print("Logging event message: ", message)
+            last_group_chat_event_msgs.append(line)
+
+        async for event in response.events:
+            # print("Event: ", event)
+            last_group_chat_event_msgs.clear()
+            event.print(f=process_and_log_event)
+            formatted_message = "\n".join(last_group_chat_event_msgs)
+
+            log_backend_activity(
+                "ag2",
+                "Received response from AG2",
+                {"message": formatted_message},
+                agent_id=self.agent_id,
+            )
+            yield formatted_message
+
+    async def _execute_group_chat_with_user_agent(self, messages: List[Dict[str, Any]]) -> AsyncGenerator[StreamChunk, None]:
+        messages_to_execute = []
+        if self.coordination_stage == CoordinationStage.INITIAL_ANSWER:
+            messages[0] = get_group_initial_message()
+            async for event_msg in self._execute_group_chat(messages):
+                yield StreamChunk(type="content", content=event_msg)
+
+            self._register_workflow_tools_to_user_agent()
+            self.user_agent.update_system_message(get_user_agent_initial_system_message())
+
+            results = list(self.user_agent._oai_messages.values())[0]
+
+            messages_to_execute = postprocess_group_chat_results(results)
+
+        elif self.coordination_stage == CoordinationStage.ENFORCEMENT:
+            messages_to_execute = messages
+
+        elif self.coordination_stage == CoordinationStage.PRESENTATION:
+            self.user_agent.update_system_message(messages[0]["content"])
+            messages_to_execute = messages[1]
+
+        async for chunk in self._execute_single_agent(messages=messages_to_execute, agent=self.user_agent):
+            yield chunk
 
     async def execute_streaming(
         self,
@@ -344,9 +380,11 @@ class AG2Adapter(AgentAdapter):
         Since AG2 doesn't support streaming, we simulate it.
         """
         try:
-            print("Tools received in AG2Adapter:", tools)  # Debug print
+            # print("Tools received in AG2Adapter:", tools)  # Debug print
             self._register_tools(tools)
-            agent_id = kwargs.get("agent_id", "ag2_agent")
+            agent_id = kwargs.get("agent_id")
+            if agent_id:
+                self.agent_id = agent_id
 
             # Log start
             log_backend_activity(
@@ -358,26 +396,11 @@ class AG2Adapter(AgentAdapter):
 
             # Execute agent or group chat
             if self.is_group_chat:
-                content, tool_calls = await self._execute_group_chat(messages, agent_id)
+                async for chunk in self._execute_group_chat_with_user_agent(messages):
+                    yield chunk
             else:
-                content, tool_calls = await self._execute_single_agent(messages, agent_id)
-
-            # Log extracted data
-            log_backend_activity(
-                "ag2",
-                "Extracted response data",
-                {
-                    "has_content": bool(content),
-                    "content_length": len(content) if content else 0,
-                    "has_tool_calls": bool(tool_calls),
-                    "tool_count": len(tool_calls) if tool_calls else 0,
-                },
-                agent_id=agent_id,
-            )
-
-            # Use base class simulate_streaming method
-            async for chunk in self.simulate_streaming(content, tool_calls):
-                yield chunk
+                async for chunk in self._execute_single_agent(messages, self.user_agent):
+                    yield chunk
 
         except Exception as e:
             logger.error(f"[AG2Adapter] Error in execute_streaming: {e}", exc_info=True)
@@ -426,11 +449,6 @@ class AG2Adapter(AgentAdapter):
         """Register tools to group chat agents based on type."""
         workflow_tools, other_tools = self._separate_workflow_and_other_tools(tools)
 
-        # Register workflow tools ONLY to user_agent
-        for tool in workflow_tools:
-            self.user_agent.update_tool_signature(tool_sig=tool, is_remove=False)
-            logger.info(f"[AG2Adapter] Registered workflow tool '{self._get_tool_name(tool)}' to user_agent")
-
         # Register other tools to ALL expert agents (not user_agent)
         for agent in self.agents:
             for tool in other_tools:
@@ -458,4 +476,15 @@ class AG2Adapter(AgentAdapter):
             else:
                 other_tools.append(tool)
 
+        if "new_answer" in workflow_tools and "vote" not in workflow_tools:
+            raise ValueError("Both 'new_answer' and 'vote' workflow tools must be provided.")
+        self.workflow_tools = workflow_tools
+
         return workflow_tools, other_tools
+
+    def _register_workflow_tools_to_user_agent(self) -> None:
+        """Register workflow tools to user_agent."""
+        for tool in self.workflow_tools:
+            self.user_agent.update_tool_signature(tool_sig=tool, is_remove=False)
+
+        logger.info(f"[AG2Adapter] Registered {len(self.workflow_tools)} workflow tools to user_agent '{self.user_agent.name}'")

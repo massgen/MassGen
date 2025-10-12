@@ -25,6 +25,14 @@ class AgentStatus(Enum):
     COMPLETED = "completed"  # finished all work -- will not be called again
 
 
+class CoordinationStage(Enum):
+    """Stages of the coordination process."""
+
+    INITIAL_ANSWER = "initial_answer"  # initial answer generation
+    ENFORCEMENT = "enforcement"
+    PRESENTATION = "presentation"
+
+
 MODEL_MAPPINGS = {
     "openai": [
         # GPT-5 variants

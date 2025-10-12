@@ -13,6 +13,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from ..filesystem_manager import FilesystemManager, PathPermissionManagerHook
 from ..mcp_tools.hooks import FunctionHookManager, HookType
 from ..token_manager import TokenCostCalculator, TokenUsage
+from ..utils import CoordinationStage
 
 
 class FilesystemSupport(Enum):
@@ -103,6 +104,7 @@ class LLMBackend(ABC):
 
         self.formatter = None
         self.api_params_handler = None
+        self.coordination_stage = None
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""
@@ -389,3 +391,12 @@ class LLMBackend(ABC):
                 await client.aclose()
         except Exception:
             pass
+
+    def set_stage(self, stage: CoordinationStage) -> None:
+        """
+        Set the current coordination stage for the backend.
+
+        Args:
+            stage: CoordinationStage enum value
+        """
+        self.coordination_stage = stage
