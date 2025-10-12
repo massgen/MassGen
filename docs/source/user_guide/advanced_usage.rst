@@ -1,523 +1,697 @@
-Advanced Usage
-==============
+Advanced Features
+=================
 
-This guide covers advanced patterns and techniques for building sophisticated multi-agent systems with MassGen.
+This guide covers advanced MassGen features for power users, including multi-turn sessions, planning mode, workspace management, context paths, and AG2 framework integration.
 
-Advanced Orchestration Patterns
---------------------------------
+.. note::
 
-Hierarchical Orchestration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+   All features are configured through YAML and CLI flags, not Python code.
 
-Create multi-level agent hierarchies:
+Multi-Turn Sessions
+-------------------
 
-.. code-block:: python
+MassGen supports interactive multi-turn conversations with persistent context across turns. Sessions are automatically saved with conversation history.
 
-   from massgen import Agent, Orchestrator
+**Quick Start:**
 
-   # Team leads
-   research_lead = Agent(name="ResearchLead", backend=backend, role="Research coordinator")
-   dev_lead = Agent(name="DevLead", backend=backend, role="Development coordinator")
+.. code-block:: bash
 
-   # Research team
-   research_team = Orchestrator(
-       agents=[
-           Agent(name="DataAnalyst", backend=backend),
-           Agent(name="MarketResearcher", backend=backend)
-       ],
-       coordinator=research_lead
-   )
+   # Start interactive session (omit the question)
+   uv run python -m massgen.cli \
+     --config massgen/configs/basic/multi/three_agents_default.yaml
 
-   # Development team
-   dev_team = Orchestrator(
-       agents=[
-           Agent(name="Backend Dev", backend=backend),
-           Agent(name="Frontend Dev", backend=backend)
-       ],
-       coordinator=dev_lead
-   )
+.. seealso::
+   :doc:`multi_turn_mode` - Complete interactive mode guide including commands (/clear, /quit), session storage, coordination tracking, and debugging
 
-   # Master orchestrator
-   master = Orchestrator(
-       orchestrators=[research_team, dev_team],
-       strategy="hierarchical"
-   )
+MCP Planning Mode
+-----------------
 
-   result = master.run("Design and implement a new feature")
+Planning mode (v0.0.29) prevents MCP tools from executing during coordination, making multi-agent collaboration safer for operations with side effects.
 
-Dynamic Agent Creation
-~~~~~~~~~~~~~~~~~~~~~~
+**How It Works:**
 
-Create agents dynamically based on task requirements:
+* Agents **plan** tool usage without execution during coordination
+* Only the winning agent **executes** MCP tools
+* Prevents irreversible actions and conflicting operations
 
-.. code-block:: python
+**Quick Example:**
 
-   from massgen import DynamicOrchestrator
+.. code-block:: yaml
 
-   class TaskBasedOrchestrator(DynamicOrchestrator):
-       def create_agents_for_task(self, task):
-           agents = []
+   orchestrator:
+     coordination:
+       enable_planning_mode: true   # Only winning agent executes MCP tools
 
-           if "research" in task.lower():
-               agents.append(Agent(name="Researcher", backend=backend))
+.. seealso::
+   :doc:`mcp_integration` - Complete MCP planning mode guide including configuration, supported backends, and safety considerations
 
-           if "code" in task.lower():
-               agents.append(Agent(name="Coder", backend=backend))
+**Demo:**
 
-           if "review" in task.lower():
-               agents.append(Agent(name="Reviewer", backend=backend))
+See the `MCP Planning Mode demo video <https://youtu.be/jLrMMEIr118>`_ for planning mode in action.
 
-           return agents
+Workspace Management
+--------------------
 
-   orchestrator = TaskBasedOrchestrator()
-   result = orchestrator.run("Research and code a solution")
+MassGen provides sophisticated workspace management for agents working with files, including isolated workspaces, snapshots, and automatic organization under the ``.massgen/`` directory.
 
-Adaptive Strategies
+.. seealso::
+   :doc:`file_operations` - Complete workspace management guide including workspace isolation, snapshots, temporary workspaces, and .massgen directory structure
+
+Context Paths & Project Integration
+------------------------------------
+
+Context paths allow agents to access your existing projects with granular permissions.
+
+Basic Context Paths
 ~~~~~~~~~~~~~~~~~~~
 
-Switch strategies based on task characteristics:
+Share specific directories with all agents:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen import AdaptiveOrchestrator
+   agents:
+     - id: "code_reviewer"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4"
+         cwd: "workspace"             # Agent's isolated work area
 
-   orchestrator = AdaptiveOrchestrator(
-       agents=agents,
-       strategy_selector=lambda task: (
-           "parallel" if "urgent" in task.lower()
-           else "consensus" if "decision" in task.lower()
-           else "sequential"
-       )
-   )
+   orchestrator:
+     context_paths:
+       - path: "/absolute/path/to/project/src"
+         permission: "read"           # Agents can analyze code
+       - path: "/absolute/path/to/project/docs"
+         permission: "write"          # Agents can update docs
 
-Memory and Context Management
------------------------------
+**Important:**
 
-Shared Memory
-~~~~~~~~~~~~~
+* Context paths must be **absolute paths**
+* Context paths must point to **directories**, not files
+* Paths are validated during startup
 
-Implement shared memory across agents:
+Permission Levels
+~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+**read permission:**
 
-   from massgen.memory import SharedMemory
+* Agents can read files in the directory
+* No modifications allowed
+* Safe for code analysis, documentation review
 
-   shared_memory = SharedMemory(
-       capacity=10000,  # tokens
-       persistence=True,
-       storage_path="./memory"
-   )
+**write permission:**
 
-   agent1 = Agent(
-       name="Agent1",
-       backend=backend,
-       memory=shared_memory
-   )
+* Agents can read and modify files
+* Can create, edit, and delete files
+* Use with caution
 
-   agent2 = Agent(
-       name="Agent2",
-       backend=backend,
-       memory=shared_memory
-   )
-
-   # Agents can access shared knowledge
-   orchestrator = Orchestrator(agents=[agent1, agent2])
-
-Long-term Memory
-~~~~~~~~~~~~~~~~
-
-Implement persistent long-term memory:
-
-.. code-block:: python
-
-   from massgen.memory import LongTermMemory
-
-   ltm = LongTermMemory(
-       backend="vector_db",  # or "sql", "graph"
-       connection_string="...",
-       embedding_model="text-embedding-ada-002"
-   )
-
-   agent = Agent(
-       name="MemoryAgent",
-       backend=backend,
-       long_term_memory=ltm
-   )
-
-   # Agent remembers across sessions
-   result = agent.run("What did we discuss last week?")
-
-Context Windows
+Safety Features
 ~~~~~~~~~~~~~~~
 
-Manage context windows efficiently:
+**During Coordination:**
 
-.. code-block:: python
+* All agents have **read-only** access to context paths
+* Prevents multiple agents from modifying files simultaneously
 
-   from massgen.memory import ContextManager
+**Final Agent (Winner):**
 
-   context_manager = ContextManager(
-       max_tokens=8000,
-       strategy="sliding_window",  # or "summary", "importance"
-       compression_ratio=0.5
-   )
+* Gets the configured permission (read or write)
+* Only one agent modifies files
 
-   agent = Agent(
-       name="ContextAgent",
-       backend=backend,
-       context_manager=context_manager
-   )
+**File Operation Safety (v0.0.29):**
 
-Custom Agent Behaviors
-----------------------
+* Read-before-delete enforcement
+* Agents must read a file before deleting it
+* Prevents accidental data loss
 
-Agent Personalities
-~~~~~~~~~~~~~~~~~~~
+**Example:**
 
-Define distinct agent personalities:
+.. code-block:: bash
 
-.. code-block:: python
+   # Multi-agent project collaboration
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
+     "Analyze the codebase and suggest improvements"
 
-   from massgen import PersonalityAgent
+See :doc:`project_integration` for comprehensive project integration guide.
 
-   creative_agent = PersonalityAgent(
-       name="CreativeAgent",
-       backend=backend,
-       personality={
-           "creativity": 0.9,
-           "analytical": 0.3,
-           "risk_taking": 0.7,
-           "detail_oriented": 0.4
-       },
-       communication_style="informal"
-   )
+AG2 Framework Integration
+--------------------------
 
-   analytical_agent = PersonalityAgent(
-       name="AnalyticalAgent",
-       backend=backend,
-       personality={
-           "creativity": 0.3,
-           "analytical": 0.9,
-           "risk_taking": 0.2,
-           "detail_oriented": 0.8
-       },
-       communication_style="formal"
-   )
+MassGen integrates with the AG2 framework for advanced code execution and external agent capabilities.
 
-Specialized Agents
+Basic AG2 Configuration
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+   agents:
+     - id: "ag2_agent"
+       backend:
+         type: "ag2"
+         agent_type: "ConversableAgent"
+         llm_config:
+           config_list:
+             - model: "gpt-4"
+               api_key: "${OPENAI_API_KEY}"
+
+AG2 Code Execution
 ~~~~~~~~~~~~~~~~~~
 
-Create highly specialized agents:
+Configure code execution environments:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen import SpecializedAgent
+   agents:
+     - id: "ag2_coder"
+       backend:
+         type: "ag2"
+         agent_type: "ConversableAgent"
+         llm_config:
+           config_list:
+             - model: "gpt-4"
+               api_key: "${OPENAI_API_KEY}"
+         code_execution_config:
+           executor: "local"           # or "docker", "jupyter", "yepcode"
+           work_dir: "coding"
 
-   class CodeReviewAgent(SpecializedAgent):
-       def __init__(self, **kwargs):
-           super().__init__(**kwargs)
-           self.specialization = "code_review"
-           self.review_criteria = [
-               "code_quality",
-               "performance",
-               "security",
-               "maintainability"
-           ]
+**Execution Environments:**
 
-       def review_code(self, code):
-           reviews = {}
-           for criterion in self.review_criteria:
-               reviews[criterion] = self.evaluate(code, criterion)
-           return reviews
+* ``local`` - Execute on local machine
+* ``docker`` - Execute in Docker container (safe)
+* ``jupyter`` - Execute in Jupyter kernel
+* ``yepcode`` - Execute in YepCode environment
 
-   reviewer = CodeReviewAgent(
-       name="Reviewer",
-       backend=backend
-   )
+Hybrid Configurations
+~~~~~~~~~~~~~~~~~~~~~
+
+Combine MassGen and AG2 agents:
+
+.. code-block:: yaml
+
+   agents:
+     # Native MassGen agent
+     - id: "gemini_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         enable_web_search: true
+
+     # AG2 agent with code execution
+     - id: "ag2_coder"
+       backend:
+         type: "ag2"
+         agent_type: "ConversableAgent"
+         llm_config:
+           config_list:
+             - model: "gpt-4"
+               api_key: "${OPENAI_API_KEY}"
+         code_execution_config:
+           executor: "docker"
+           work_dir: "coding"
+
+**Example:**
+
+.. code-block:: bash
+
+   # Hybrid MassGen + AG2 collaboration
+   uv run python -m massgen.cli \
+     --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+     "Build a data analysis pipeline with visualizations"
+
+See :doc:`ag2_integration` for complete AG2 documentation.
+
+Logging and Debugging
+---------------------
+
+MassGen provides comprehensive logging capabilities for debugging and monitoring multi-agent workflows (v0.0.13-v0.0.14).
+
+Logging System
+~~~~~~~~~~~~~~
+
+**Unified Logging Infrastructure:**
+
+* Centralized logger with colored console output
+* File logging with automatic organization
+* Consistent format across all backends
+* Color-coded log levels for better visibility
+
+**Log Levels:**
+
+* **DEBUG** (cyan): Verbose information for troubleshooting
+* **INFO** (green): General operational messages
+* **WARNING** (yellow): Important notices
+* **ERROR** (red): Error conditions
+
+Debug Mode
+~~~~~~~~~~
+
+Enable verbose debugging with the ``--debug`` flag:
+
+.. code-block:: bash
+
+   # Enable debug mode
+   uv run python -m massgen.cli \
+     --config massgen/configs/basic/multi/three_agents_default.yaml \
+     --debug \
+     "Your question"
+
+**Debug Output Includes:**
+
+* Detailed orchestrator activities
+* Agent messages and coordination events
+* Backend operations and API calls
+* Tool calls and responses
+* MCP server interactions
+* File operations and permissions
+* Voting and consensus tracking
+
+Log File Structure
+~~~~~~~~~~~~~~~~~~
+
+Logs are organized in a structured directory:
+
+.. code-block:: text
+
+   massgen_logs/
+   └── log_{timestamp}/
+       ├── agent_outputs/
+       │   ├── agent_id.txt                    # Raw output from each agent
+       │   ├── final_presentation_agent_id.txt # Final presentation
+       │   └── system_status.txt               # System status information
+       ├── agent_id/
+       │   └── {answer_generation_timestamp}/
+       │       └── files_included_in_generated_answer
+       ├── final_workspace/
+       │   └── agent_id/
+       │       └── {answer_generation_timestamp}/
+       │           └── files_included_in_generated_answer
+       └── massgen.log / massgen_debug.log     # Main log file
+
+**Log Files:**
+
+* ``massgen.log``: General logging (INFO level)
+* ``massgen_debug.log``: Verbose debugging (DEBUG level, when --debug is used)
+
+Reading Logs
+~~~~~~~~~~~~
+
+**Find Your Logs:**
+
+.. code-block:: bash
+
+   # Logs are in massgen_logs/ directory
+   ls -lt massgen_logs/          # List recent log directories
+
+   # View debug log
+   cat massgen_logs/log_*/massgen_debug.log
+
+   # View agent output
+   cat massgen_logs/log_*/agent_outputs/agent_id.txt
+
+**What to Look For:**
+
+* **Orchestrator Activities**: Coordination rounds, voting results, consensus detection
+* **Agent Messages**: What each agent is thinking and proposing
+* **Backend Operations**: API calls, response times, token usage
+* **Tool Calls**: Which tools were called and their results
+* **Errors**: Stack traces and error messages
+
+Common Debug Scenarios
+~~~~~~~~~~~~~~~~~~~~~~
+
+**Problem: Agents not collaborating:**
+
+.. code-block:: bash
+
+   # Check debug log for coordination events
+   grep "coordination" massgen_logs/log_*/massgen_debug.log
+
+   # Check voting results
+   grep "vote" massgen_logs/log_*/massgen_debug.log
+
+**Problem: MCP tools not working:**
+
+.. code-block:: bash
+
+   # Check MCP server initialization
+   grep "MCP" massgen_logs/log_*/massgen_debug.log
+
+   # Check tool calls
+   grep "tool_call" massgen_logs/log_*/massgen_debug.log
+
+**Problem: File operations failing:**
+
+.. code-block:: bash
+
+   # Check file operations
+   grep "file" massgen_logs/log_*/massgen_debug.log
+
+   # Check permissions
+   grep "permission" massgen_logs/log_*/massgen_debug.log
+
+Coordination Tracking
+---------------------
+
+MassGen includes a comprehensive coordination tracking system for visualizing multi-agent interactions (v0.0.19).
+
+Coordination Table
+~~~~~~~~~~~~~~~~~~
+
+Press ``r`` during execution to view the interactive coordination table:
+
+.. code-block:: bash
+
+   # Start MassGen
+   uv run python -m massgen.cli \
+     --config massgen/configs/basic/multi/three_agents_default.yaml
+
+   # During execution, press 'r' to view coordination table
+
+**Coordination Table Shows:**
+
+* Agent status across all rounds
+* Answers provided by each agent
+* Votes cast by each agent
+* Coordination events (NEW_ANSWER, VOTE, ERROR, TIMEOUT)
+* Timestamps for all events
+* Consensus detection
+
+Agent Status Tracking
+~~~~~~~~~~~~~~~~~~~~~
+
+**Agent Status Types:**
+
+* **STREAMING**: Agent is currently generating response
+* **VOTED**: Agent has cast a vote
+* **ANSWERED**: Agent has provided an answer
+* **RESTARTING**: Agent is restarting based on new information
+* **ERROR**: Agent encountered an error
+* **TIMEOUT**: Agent exceeded time limit
+* **COMPLETED**: Agent finished its task
+
+**Action Types:**
+
+* **NEW_ANSWER**: Agent provided a new answer
+* **VOTE**: Agent voted for another agent's answer
+* **VOTE_IGNORED**: Vote was not counted (late arrival, etc.)
+* **ERROR**: Agent operation failed
+* **TIMEOUT**: Agent operation timed out
+* **CANCELLED**: Agent operation was cancelled
+
+Understanding the Coordination Table
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Table Format:**
+
+.. code-block:: text
+
+   Round 1:
+   ┌────────────┬────────────┬────────────┬────────────┐
+   │ Agent      │ Status     │ Action     │ Timestamp  │
+   ├────────────┼────────────┼────────────┼────────────┤
+   │ agent1     │ ANSWERED   │ NEW_ANSWER │ 14:30:22   │
+   │ agent2     │ VOTED      │ VOTE       │ 14:30:45   │
+   │ agent3     │ ANSWERED   │ NEW_ANSWER │ 14:30:50   │
+   └────────────┴────────────┴────────────┴────────────┘
+
+**Reading the Table:**
+
+1. **Round Number**: Shows which coordination round
+2. **Agent Column**: Agent ID
+3. **Status**: Current agent state (see Agent Status Types)
+4. **Action**: What action the agent took
+5. **Timestamp**: When the action occurred
+
+**Coordination Events:**
+
+* **Answer Generation**: Agent creates a new answer (NEW_ANSWER)
+* **Voting**: Agent votes for another agent's answer (VOTE)
+* **Coordination**: Multiple agents refine based on others' work
+* **Consensus**: System detects when agents agree (multiple votes for same answer)
+
+Using Coordination Data for Debugging
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Identify Stuck Agents:**
+
+.. code-block:: text
+
+   # Look for agents with TIMEOUT or ERROR status
+   Round 3:
+   agent1    COMPLETED    VOTE         14:35:10
+   agent2    TIMEOUT      TIMEOUT      14:35:45  ← Agent stuck
+   agent3    COMPLETED    VOTE         14:35:12
+
+**Track Voting Patterns:**
+
+.. code-block:: text
+
+   # See which agents are influencing the group
+   Round 2:
+   agent1    ANSWERED     NEW_ANSWER   14:32:10
+   agent2    VOTED        VOTE         14:32:30  ← Voted for agent1
+   agent3    VOTED        VOTE         14:32:35  ← Voted for agent1
+   # Consensus: agent1's answer is winning
+
+**Detect Collaboration Issues:**
+
+.. code-block:: text
+
+   # All agents providing answers, no votes = poor collaboration
+   Round 3:
+   agent1    ANSWERED     NEW_ANSWER   14:33:00
+   agent2    ANSWERED     NEW_ANSWER   14:33:05
+   agent3    ANSWERED     NEW_ANSWER   14:33:10
+   # Problem: No agent is voting for others' answers
+
+Coordination Tracker API
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The coordination tracker captures all events programmatically:
+
+**Events Tracked:**
+
+* Answer submissions with timestamps
+* Vote submissions with target agent
+* Agent status transitions
+* Phase changes (coordination → final presentation)
+* Error conditions
+* Timeout events
+
+**Use Cases:**
+
+* Post-execution analysis
+* Performance optimization
+* Understanding agent behavior
+* Debugging coordination issues
+* Generating coordination reports
+
+Advanced CLI Options
+--------------------
+
+Complete CLI reference:
+
+.. code-block:: bash
+
+   uv run python -m massgen.cli \
+     --config path/to/config.yaml \  # Configuration file
+     --model model-name \            # Quick model setup (alternative to --config)
+     --backend backend-type \        # Backend type for quick setup
+     --system-message "prompt" \     # Custom system message
+     --no-display \                  # Disable real-time UI
+     --no-logs \                     # Disable logging
+     --debug \                       # Enable debug mode
+     "Your question"                 # Optional - omit for interactive mode
+
+See :doc:`../reference/cli` for complete CLI documentation.
+
+Configuration Best Practices
+-----------------------------
+
+1. **Incremental Testing**
+
+   * Test single agent before multi-agent
+   * Verify tools work individually
+   * Add complexity gradually
+
+2. **Workspace Organization**
+
+   * See :doc:`file_operations` for workspace best practices
+
+3. **Permission Management**
+
+   * Start with read-only context paths
+   * Test in isolated directories first
+   * Use write permissions sparingly
+
+4. **MCP Safety**
+
+   * Enable planning mode for file operations
+   * Use tool filtering (allowed_tools, exclude_tools)
+   * Test MCP servers independently
+
+5. **Multi-Turn Sessions**
+
+   * Use clear conversation boundaries
+   * Review session summaries
+   * Clean up old sessions periodically
+
+6. **Debugging**
+
+   * Use ``--debug`` for troubleshooting
+   * Check logs in ``agent_outputs/log_{time}/``
+   * Verify configuration with simple tests first
+
+Advanced Examples
+-----------------
+
+Complex Multi-Agent System
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+   agents:
+     # Research agent with web search
+     - id: "researcher"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         enable_web_search: true
+       system_message: "Research specialist with web search capabilities"
+
+     # Analysis agent with reasoning
+     - id: "analyst"
+       backend:
+         type: "openai"
+         model: "gpt-5"
+         reasoning:
+           effort: "high"
+       system_message: "Deep analysis with advanced reasoning"
+
+     # Development agent with file operations
+     - id: "developer"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4"
+         cwd: "workspace"
+       system_message: "Development specialist with file operations"
+
+     # Testing agent with AG2 code execution
+     - id: "tester"
+       backend:
+         type: "ag2"
+         agent_type: "ConversableAgent"
+         llm_config:
+           config_list:
+             - model: "gpt-4"
+               api_key: "${OPENAI_API_KEY}"
+         code_execution_config:
+           executor: "docker"
+           work_dir: "testing"
+
+   orchestrator:
+     max_rounds: 5
+     voting_config:
+       threshold: 0.6
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp"
+     coordination:
+       enable_planning_mode: true
+     context_paths:
+       - path: "/path/to/project/src"
+         permission: "read"
+       - path: "/path/to/project/tests"
+         permission: "write"
 
 Performance Optimization
 ------------------------
 
-Parallel Processing
-~~~~~~~~~~~~~~~~~~~
+Parallel Execution
+~~~~~~~~~~~~~~~~~~
 
-Optimize parallel agent execution:
-
-.. code-block:: python
-
-   from massgen import ParallelOrchestrator
-   import asyncio
-
-   async def main():
-       orchestrator = ParallelOrchestrator(
-           agents=agents,
-           max_concurrent=10,
-           batch_size=5,
-           use_thread_pool=True
-       )
-
-       tasks = ["Task 1", "Task 2", "Task 3", ...]
-       results = await orchestrator.batch_process(tasks)
-       return results
-
-   results = asyncio.run(main())
+MassGen executes agents in parallel by default. No special configuration needed.
 
 Resource Management
 ~~~~~~~~~~~~~~~~~~~
 
-Manage computational resources:
+Control agent resources:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen import ResourceManager
+   backend:
+     type: "openai"
+     model: "gpt-5-nano"
+     max_tokens: 4096              # Limit response length
+     timeout: 60                   # Request timeout
 
-   resource_manager = ResourceManager(
-       max_tokens_per_minute=100000,
-       max_concurrent_requests=20,
-       priority_queue=True
-   )
+   orchestrator:
+     max_rounds: 5                 # Limit coordination rounds
 
-   orchestrator = Orchestrator(
-       agents=agents,
-       resource_manager=resource_manager
-   )
+Cost Optimization
+~~~~~~~~~~~~~~~~~
 
-   # High priority task
-   result = orchestrator.run(
-       "Urgent task",
-       priority="high"
-   )
+Strategies to reduce costs:
 
-Caching Strategies
-~~~~~~~~~~~~~~~~~~
-
-Implement intelligent caching:
-
-.. code-block:: python
-
-   from massgen.cache import IntelligentCache
-
-   cache = IntelligentCache(
-       strategy="semantic",  # Cache based on semantic similarity
-       similarity_threshold=0.95,
-       ttl=3600,
-       max_size=1000
-   )
-
-   agent = Agent(
-       name="CachedAgent",
-       backend=backend,
-       cache=cache
-   )
-
-Advanced Error Handling
------------------------
-
-Circuit Breaker Pattern
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-Implement circuit breakers:
-
-.. code-block:: python
-
-   from massgen.resilience import CircuitBreaker
-
-   circuit_breaker = CircuitBreaker(
-       failure_threshold=5,
-       recovery_timeout=60,
-       half_open_attempts=3
-   )
-
-   agent = Agent(
-       name="ResilientAgent",
-       backend=backend,
-       circuit_breaker=circuit_breaker
-   )
-
-Compensation Actions
-~~~~~~~~~~~~~~~~~~~~
-
-Define compensation strategies:
-
-.. code-block:: python
-
-   from massgen import CompensatingOrchestrator
-
-   orchestrator = CompensatingOrchestrator(
-       agents=agents,
-       compensation_map={
-           "api_call_failed": lambda: use_cached_data(),
-           "agent_timeout": lambda: use_fallback_agent(),
-           "consensus_failed": lambda: request_human_input()
-       }
-   )
-
-Monitoring and Observability
-----------------------------
-
-Distributed Tracing
-~~~~~~~~~~~~~~~~~~~
-
-Implement distributed tracing:
-
-.. code-block:: python
-
-   from massgen.observability import Tracer
-
-   tracer = Tracer(
-       service_name="massgen",
-       endpoint="http://jaeger:14268/api/traces"
-   )
-
-   orchestrator = Orchestrator(
-       agents=agents,
-       tracer=tracer
-   )
-
-   with tracer.span("complex_task"):
-       result = orchestrator.run("Complex multi-step task")
-
-Metrics Collection
-~~~~~~~~~~~~~~~~~~
-
-Collect detailed metrics:
-
-.. code-block:: python
-
-   from massgen.metrics import MetricsCollector
-
-   metrics = MetricsCollector(
-       backend="prometheus",
-       push_gateway="http://prometheus:9091"
-   )
-
-   @metrics.track("task_duration")
-   def run_task(orchestrator, task):
-       return orchestrator.run(task)
-
-   # Access metrics
-   print(metrics.get_metric("task_duration").percentile(95))
-
-Integration Patterns
---------------------
-
-Event-Driven Architecture
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Implement event-driven patterns:
-
-.. code-block:: python
-
-   from massgen.events import EventBus, Event
-
-   event_bus = EventBus()
-
-   @event_bus.on("task_completed")
-   def handle_completion(event: Event):
-       logger.info(f"Task {event.task_id} completed")
-       # Trigger next workflow
-
-   orchestrator = Orchestrator(
-       agents=agents,
-       event_bus=event_bus
-   )
-
-   result = orchestrator.run("Task that triggers events")
-
-Microservices Integration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Integrate with microservices:
-
-.. code-block:: python
-
-   from massgen.integration import MicroserviceAgent
-
-   order_agent = MicroserviceAgent(
-       name="OrderService",
-       backend=backend,
-       service_url="http://order-service:8080",
-       circuit_breaker=True,
-       retry_policy="exponential"
-   )
-
-   inventory_agent = MicroserviceAgent(
-       name="InventoryService",
-       backend=backend,
-       service_url="http://inventory-service:8080"
-   )
-
-   orchestrator = Orchestrator(agents=[order_agent, inventory_agent])
-
-Testing Strategies
-------------------
-
-Unit Testing Agents
-~~~~~~~~~~~~~~~~~~~
-
-Test individual agents:
-
-.. code-block:: python
-
-   import pytest
-   from massgen.testing import MockBackend, AgentTester
-
-   def test_agent_response():
-       mock_backend = MockBackend(
-           responses=["Mocked response"]
-       )
-
-       agent = Agent(
-           name="TestAgent",
-           backend=mock_backend
-       )
-
-       tester = AgentTester(agent)
-       result = tester.test_response("Test input")
-
-       assert "Mocked response" in result
-
-Integration Testing
-~~~~~~~~~~~~~~~~~~~
-
-Test agent interactions:
-
-.. code-block:: python
-
-   from massgen.testing import OrchestratorTester
-
-   def test_orchestration():
-       tester = OrchestratorTester(
-           agents=[agent1, agent2],
-           mock_responses={
-               "agent1": ["Response 1"],
-               "agent2": ["Response 2"]
-           }
-       )
-
-       result = tester.test_orchestration(
-           task="Test task",
-           expected_interactions=2
-       )
-
-       assert result.success
-       assert len(result.interactions) == 2
-
-Best Practices
---------------
-
-1. **Modular Design**: Keep agents focused on specific responsibilities
-2. **Error Recovery**: Always implement fallback mechanisms
-3. **Resource Limits**: Set appropriate limits for tokens and requests
-4. **Monitoring**: Implement comprehensive monitoring and alerting
-5. **Testing**: Test both individual agents and orchestration patterns
-6. **Documentation**: Document agent roles and interaction patterns
-7. **Security**: Implement proper authentication and data validation
-8. **Versioning**: Version your agent configurations and prompts
+* Use **GPT-5-nano** instead of GPT-5
+* Use **Gemini 2.5 Flash** for research (very cost-effective)
+* Use **Grok-3-mini** instead of Grok-3
+* Use **LM Studio** for local, free inference
+* Limit ``max_rounds`` in orchestrator
+* Reduce ``max_tokens`` for concise responses
 
 Next Steps
 ----------
 
-* :doc:`../api/index` - Complete API reference
-* :doc:`../examples/advanced_patterns` - Advanced examples
-* :doc:`../development/architecture` - System architecture
+* :doc:`multi_turn_mode` - Interactive sessions and conversation management
+* :doc:`file_operations` - Workspace management and file operations
+* :doc:`project_integration` - Secure project access with context paths
+* :doc:`ag2_integration` - AG2 framework integration
+* :doc:`mcp_integration` - MCP planning mode and tool filtering
+* :doc:`../examples/advanced_patterns` - Advanced configuration patterns
+* :doc:`../reference/yaml_schema` - Complete YAML reference
+
+Troubleshooting
+---------------
+
+**Session not found:**
+
+Check session storage configuration:
+
+.. code-block:: yaml
+
+   orchestrator:
+     session_storage: "sessions"    # Sessions saved to .massgen/sessions/
+
+**Workspace permissions error:**
+
+See :doc:`file_operations` for workspace setup and troubleshooting.
+
+**Context path not found:**
+
+Verify paths are absolute and exist:
+
+.. code-block:: yaml
+
+   context_paths:
+     - path: "/absolute/path/to/dir"  # ✅ Absolute
+       permission: "read"
+
+   # Not this:
+     - path: "relative/path"           # ❌ Must be absolute
+       permission: "read"
+
+**Planning mode not working:**
+
+Ensure backend supports planning mode:
+
+.. code-block:: yaml
+
+   # Supported backends for planning mode
+   backend:
+     type: "openai"      # ✅
+     type: "claude"      # ✅
+     type: "gemini"      # ✅
+
+   # Not supported
+   backend:
+     type: "grok"        # ❌ Planning mode not available

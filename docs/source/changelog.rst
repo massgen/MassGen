@@ -1,71 +1,69 @@
 Changelog
 =========
 
-All notable changes to MassGen will be documented in this file.
+.. note::
 
-[0.0.17] - 2024-12-20
----------------------
+   **Primary Source:** This page includes content from the root `CHANGELOG.md <https://github.com/Leezekun/MassGen/blob/main/CHANGELOG.md>`_ file, which is the authoritative source for all MassGen release history.
 
-Added
-~~~~~
-* MCP (Model Context Protocol) integration
-* Support for Cerebras and LMStudio backends
-* Enhanced tool system
-* Improved consensus mechanisms
-* Documentation system
+This changelog follows the `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_ format and adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-Changed
-~~~~~~~
-* Updated backend interfaces
-* Improved error handling
-* Enhanced performance optimization
+Latest Releases
+---------------
 
-Fixed
-~~~~~
-* Memory management issues
-* Backend connection stability
-* Tool execution errors
+For the complete changelog including all releases and detailed changes, please see the full changelog below.
 
-[0.0.16] - 2024-12-15
----------------------
+Recent Highlights
+~~~~~~~~~~~~~~~~~
 
-Added
-~~~~~
-* Google Gemini backend support
-* XAI Grok backend support
-* Parallel orchestration strategy
-* Basic tool framework
+**v0.0.29** (2025-10-08)
+  - MCP Planning Mode for safer coordination
+  - File Operation Tracker with read-before-delete enforcement
+  - Enhanced MCP tool filtering
 
-Changed
-~~~~~~~
-* Refactored agent architecture
-* Improved orchestration logic
+**v0.0.28** (2025-10-06)
+  - AG2 Framework Integration
+  - External agent backend architecture
+  - Code execution capabilities
 
-[0.0.15] - 2024-12-10
----------------------
+**v0.0.27** (2025-10-03)
+  - Multimodal support with image processing
+  - File upload and search functionality
+  - Claude Sonnet 4.5 support
 
-Added
-~~~~~
-* Initial multi-agent support
-* OpenAI backend
-* Anthropic backend
-* Basic orchestration
+---
 
-Changed
-~~~~~~~
-* Core architecture design
+Full Changelog
+--------------
 
-[0.0.1] - 2024-11-01
---------------------
+.. include:: ../../CHANGELOG.md
+   :parser: myst_parser.sphinx_
 
-Added
-~~~~~
-* Initial project structure
-* Basic agent implementation
-* Simple orchestration
+Quick Navigation
+----------------
+
+**By Version:**
+
+- v0.0.29 - MCP Planning Mode and File Operation Safety
+- v0.0.28 - AG2 Framework Integration
+- v0.0.27 - Multimodal Support and Image Processing
+- v0.0.26 - File Deletion and Context Files
+- v0.0.25 - Multi-Turn Filesystem Support
+
+**By Feature Category:**
+
+- **MCP Integration**: v0.0.29, v0.0.15-v0.0.20
+- **Multimodal Support**: v0.0.27
+- **Backend Support**: v0.0.24 (vLLM), v0.0.10 (Azure OpenAI), v0.0.7 (LM Studio)
+- **Filesystem Features**: v0.0.26, v0.0.25, v0.0.16
+- **Agent Coordination**: v0.0.19, v0.0.11
 
 See Also
 --------
 
-* `GitHub Releases <https://github.com/Leezekun/MassGen/releases>`_
-* :doc:`development/roadmap`
+* :doc:`development/roadmap` - Future development plans
+* `GitHub Releases <https://github.com/Leezekun/MassGen/releases>`_ - Official releases
+* `Release Documentation <../../docs/releases/>`_ - Detailed release notes for each version
+
+---
+
+*Last synced with CHANGELOG.md: October 2025*

@@ -1,62 +1,73 @@
-Contributing
-============
+Contributing to MassGen
+======================
 
-We welcome contributions to MassGen! This guide will help you get started.
+.. note::
 
-Getting Started
----------------
+   **Primary Source:** This page includes content from the root `CONTRIBUTING.md <https://github.com/Leezekun/MassGen/blob/main/CONTRIBUTING.md>`_ file, which is the authoritative source for contribution guidelines.
 
-1. Fork the repository
-2. Clone your fork
-3. Create a new branch
-4. Make your changes
+We welcome contributions to MassGen! This guide will help you get started with development, testing, and documentation.
+
+Quick Start
+-----------
+
+1. Fork the repository on GitHub
+2. Clone your fork locally
+3. Create a feature branch from ``dev/v0.0.30``
+4. Make your changes following our guidelines
 5. Submit a pull request
 
-Development Setup
------------------
+For comprehensive contribution guidelines, please see the full guide below.
 
-.. code-block:: bash
+---
 
-   # Clone the repository
-   git clone https://github.com/Leezekun/MassGen.git
-   cd MassGen
+Full Contributing Guide
+------------------------
 
-   # Create virtual environment
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+.. include:: ../../../CONTRIBUTING.md
+   :parser: myst_parser.sphinx_
 
-   # Install in development mode
-   pip install -e .
-   pip install -e .[dev]
+Key Sections
+------------
 
-Coding Standards
-----------------
+**Development Setup**
 
-* Follow PEP 8
-* Use type hints
-* Write docstrings
-* Add unit tests
-* Update documentation
+- Fork and clone the repository
+- Set up Python environment with ``uv``
+- Install pre-commit hooks
+- Configure environment variables
 
-Testing
--------
+**Development Workflow**
 
-.. code-block:: bash
+- Create feature branches from ``dev/v0.0.30``
+- Follow code quality standards
+- Run tests before committing
+- Write descriptive commit messages
 
-   # Run tests
-   pytest
+**Documentation Guidelines**
 
-   # With coverage
-   pytest --cov=massgen
+- Update user guides for new features
+- Write design docs for complex implementations
+- Create ADRs for architectural decisions
+- Add examples and tests
+- Follow :doc:`writing_configs` when creating configuration files
 
-   # Run specific tests
-   pytest tests/test_agents.py
+**Pull Request Process**
 
-Pull Request Process
---------------------
+- Ensure all checks pass
+- Update CHANGELOG.md
+- Target ``dev/v0.0.30`` branch
+- Include clear description and context
 
-1. Update documentation
-2. Add tests for new features
-3. Ensure all tests pass
-4. Update CHANGELOG.md
-5. Submit PR with clear description
+See Also
+--------
+
+* `GitHub Repository <https://github.com/Leezekun/MassGen>`_
+* `Discord Community <https://discord.gg/VVrT2rQaz5>`_
+* `Issue Tracker <https://github.com/Leezekun/MassGen/issues>`_
+* :doc:`writing_configs` - Configuration file writing guide
+* :doc:`roadmap` - Development roadmap
+* :doc:`architecture` - System architecture
+
+---
+
+*Last synced with CONTRIBUTING.md: October 2025*

@@ -1,66 +1,116 @@
-Roadmap
-=======
+MassGen Roadmap
+===============
 
-MassGen development roadmap and future plans.
+.. note::
 
-Current Version
----------------
+   **Primary Source:** This page includes content from the root `ROADMAP.md <https://github.com/Leezekun/MassGen/blob/main/ROADMAP.md>`_ file, which is the authoritative source for all development plans.
 
-**v0.0.17** - Current Release
+MassGen's roadmap is organized by timeframe to provide clarity on priorities:
 
-* Multi-agent orchestration
-* Multiple backend support
-* Tool system
-* MCP integration
-* Basic consensus mechanisms
+- **Short-Term** (2-4 weeks): Critical fixes and required features
+- **Medium-Term** (1-2 months): Optional enhancements
+- **Long-Term** (3-6 months): Strategic vision and enterprise features
 
-Upcoming Features
------------------
+Quick Overview
+--------------
 
-Short Term (Q1 2025)
-~~~~~~~~~~~~~~~~~~~~
+**Current Version:** v0.0.29
 
-* Enhanced memory management
-* Improved consensus algorithms
-* Additional tool integrations
-* Performance optimizations
-* Extended MCP support
+**Next Release:** v0.0.30
 
-Medium Term (Q2-Q3 2025)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+**Focus:** Backend stability and multimodal feature parity
 
-* Visual workflow designer
-* Agent marketplace
-* Advanced monitoring dashboard
-* Distributed orchestration
-* Custom model fine-tuning support
+Short-Term Priorities (v0.0.30)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Long Term (Q4 2025+)
-~~~~~~~~~~~~~~~~~~~~~
+1. **Backend Issues & Organization** (REQUIRED)
+   - Fix Claude Code backend reliability
+   - Improve configuration discoverability
+   - Enhance error handling
 
-* Autonomous agent evolution
-* Multi-modal agent capabilities
-* Cross-platform deployment
-* Enterprise features
-* AI safety mechanisms
+2. **Multimodal Support Extension** (REQUIRED)
+   - Image support for Claude backend
+   - Image support for Chat Completions backend
+   - Cross-provider compatibility
 
-Community Requests
+Medium-Term Goals
+~~~~~~~~~~~~~~~~~
+
+3. **AG2 Group Chat Integration** (OPTIONAL)
+   - Multi-agent group conversations
+   - Group chat orchestration
+
+4. **Tool Registration Refactoring** (OPTIONAL)
+   - Simplified tool creation
+   - Plugin-based extensions
+
+5. **Context Window Management**
+   - Session compression
+   - Enhanced summarization
+
+Long-Term Vision
+~~~~~~~~~~~~~~~~
+
+- Visual Workflow Designer
+- Enterprise Features (RBAC, audit logs, analytics)
+- Additional Framework Adapters (LangChain, CrewAI)
+- Complete Multimodal Support (audio, video)
+- Advanced Coding Agent
+- Real-Time Collaboration
+- Distributed Orchestration
+
+---
+
+Full Roadmap
+------------
+
+.. include:: ../../../ROADMAP.md
+   :parser: myst_parser.sphinx_
+
+Track-Specific Roadmaps
+-----------------------
+
+For detailed feature-specific plans, see the track roadmaps (available in the repository):
+
+- Multimodal Track (``docs/source/tracks/multimodal/roadmap.md``) - Multimodal capabilities
+- Memory Track (``docs/source/tracks/memory/roadmap.md``) - Memory and context management
+- Coding Agent Track (``docs/source/tracks/coding-agent/roadmap.md``) - Coding assistance features
+- Web UI Track (``docs/source/tracks/web-ui/roadmap.md``) - Web interface development
+- AgentAdapter Backends Track (``docs/source/tracks/agentadapter-backends/roadmap.md``) - Framework integrations
+- Irreversible Actions Track (``docs/source/tracks/irreversible-actions/roadmap.md``) - Safety mechanisms
+
+Contributing
+------------
+
+Want to contribute to the roadmap? Here's how:
+
+**For v0.0.30 (Short-Term):**
+
+1. Check GitHub issues tagged with ``v0.0.30`` milestone
+2. Focus on REQUIRED tasks first (backend fixes, multimodal support)
+3. See :doc:`contributing` for development setup
+
+**For Future Releases:**
+
+1. Open an issue to discuss your proposal
+2. Consider writing an RFC for large features (see :doc:`../rfcs/index`)
+3. Follow the case-driven development methodology (see ADR-0004)
+
+GitHub Integration
 ------------------
 
-Top requested features:
+* `GitHub Issues <https://github.com/Leezekun/MassGen/issues>`_ - Report bugs and request features
+* `Project Boards <https://github.com/Leezekun/MassGen/projects>`_ - Track progress
+* `Milestones <https://github.com/Leezekun/MassGen/milestones>`_ - View release planning
 
-1. Better debugging tools
-2. More example templates
-3. Cloud deployment guides
-4. Performance benchmarks
-5. Integration with popular frameworks
+See Also
+--------
 
-Contributing to Roadmap
-------------------------
+* :doc:`contributing` - Contribution guidelines with documentation requirements
+* :doc:`../decisions/index` - Architecture decisions (ADRs)
+* :doc:`../rfcs/index` - Feature proposals (RFCs)
+* :doc:`../changelog` - Complete release history
 
-We welcome community input! Please:
+---
 
-* Open issues for feature requests
-* Vote on existing proposals
-* Contribute implementations
-* Join discussions on Discord
+*Last synced with ROADMAP.md: October 2025*

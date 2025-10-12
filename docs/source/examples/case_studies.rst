@@ -1,137 +1,166 @@
 Case Studies
 ============
 
-Real-world applications of MassGen.
+Real-world MassGen case studies demonstrating multi-agent collaboration on complex tasks.
 
-Content Generation Pipeline
----------------------------
+.. note::
 
-A complete content generation system using multiple specialized agents.
+   These case studies are based on actual MassGen sessions with real session logs and outcomes.
+   This page is auto-generated from the `docs/case_studies/ directory <https://github.com/Leezekun/MassGen/tree/main/docs/case_studies>`_.
 
-.. code-block:: python
+Overview
+--------
 
-   from massgen import Agent, Orchestrator
-   from massgen.tools import WebSearch, FileWriter
+Each case study includes:
 
-   # Specialized content agents
-   researcher = Agent(
-       name="ContentResearcher",
-       backend=OpenAIBackend(),
-       tools=[WebSearch()],
-       role="Research topics and gather information"
-   )
+* **Problem description** - The task or question given to agents
+* **Configuration used** - YAML config and CLI command
+* **Agent collaboration** - How agents worked together
+* **Final outcome** - Results and quality assessment
+* **Session logs** - Actual coordination history and voting patterns
 
-   writer = Agent(
-       name="ContentWriter",
-       backend=AnthropicBackend(),
-       role="Write engaging content"
-   )
+**Total Case Studies**: 13
 
-   editor = Agent(
-       name="ContentEditor",
-       backend=GoogleBackend(),
-       role="Edit and refine content"
-   )
+Research and Analysis
+---------------------
 
-   seo_optimizer = Agent(
-       name="SEOOptimizer",
-       backend=OpenAIBackend(),
-       role="Optimize content for search engines"
-   )
+MassGen  Berkeley Agentic AI Summit Summary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   # Content pipeline
-   content_pipeline = Orchestrator(
-       agents=[researcher, writer, editor, seo_optimizer],
-       strategy="sequential"
-   )
+**Case Study:** `berkeley-conference-talks.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/berkeley-conference-talks.md>`_
 
-   article = content_pipeline.run(
-       "Create a comprehensive article about quantum computing"
-   )
+MassGen  AI News Synthesis - Cross-Verification and Content Aggregation Excellence
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Data Analysis System
---------------------
+**Case Study:** `diverse_ai_news.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/diverse_ai_news.md>`_
 
-Multi-agent data analysis with specialized roles.
+MassGen  Grok-4 HLE Benchmark Cost Analysis - Unanimous Expert Consensus
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+**Case Study:** `grok_hle_cost.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/grok_hle_cost.md>`_
 
-   from massgen import Agent, Orchestrator
-   from massgen.tools import DatabaseQuery, Calculator
 
-   # Data analysis team
-   data_collector = Agent(
-       name="DataCollector",
-       backend=backend,
-       tools=[DatabaseQuery()],
-       role="Collect and prepare data"
-   )
+Travel and Recommendations
+--------------------------
 
-   statistician = Agent(
-       name="Statistician",
-       backend=backend,
-       tools=[Calculator()],
-       role="Perform statistical analysis"
-   )
+MassGen  Stockholm Travel Guide - Extended Intelligence Sharing and Comprehensive Convergence
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   visualizer = Agent(
-       name="Visualizer",
-       backend=backend,
-       role="Create data visualizations"
-   )
+**Case Study:** `stockholm_travel_guide.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/stockholm_travel_guide.md>`_
 
-   interpreter = Agent(
-       name="Interpreter",
-       backend=backend,
-       role="Interpret results and insights"
-   )
 
-   # Analysis pipeline
-   analysis_system = Orchestrator(
-       agents=[data_collector, statistician, visualizer, interpreter],
-       strategy="sequential"
-   )
+Creative Writing
+----------------
 
-   insights = analysis_system.run(
-       "Analyze customer behavior patterns from last quarter"
-   )
+MassGen  Collaborative Creative Writing
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Customer Support System
------------------------
+**Case Study:** `collaborative_creative_writing.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/collaborative_creative_writing.md>`_
 
-Intelligent customer support with escalation.
 
-.. code-block:: python
+Technical Analysis
+------------------
 
-   from massgen import Agent, Orchestrator
+MassGen  Comprehensive Algorithm Enumeration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   # Support hierarchy
-   tier1_agent = Agent(
-       name="Tier1Support",
-       backend=OpenAIBackend(model="gpt-3.5-turbo"),
-       role="Handle basic inquiries"
-   )
+**Case Study:** `fibonacci_number_algorithms.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/fibonacci_number_algorithms.md>`_
 
-   tier2_agent = Agent(
-       name="Tier2Support",
-       backend=OpenAIBackend(model="gpt-4"),
-       role="Handle complex issues"
-   )
 
-   specialist_agent = Agent(
-       name="Specialist",
-       backend=AnthropicBackend(model="claude-3-opus"),
-       role="Handle specialized technical issues"
-   )
+Advanced Features
+-----------------
 
-   # Support system with escalation
-   support_system = Orchestrator(
-       agents=[tier1_agent, tier2_agent, specialist_agent],
-       strategy="escalation",
-       escalation_threshold=0.3  # Confidence threshold
-   )
+MassGen v0.0.12-0.0.14: Enhanced Logging and Workspace Management
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   response = support_system.run(
-       customer_query,
-       context={"customer_tier": "premium", "history": previous_tickets}
-   )
+**Case Study:** `claude-code-workspace-management.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/claude-code-workspace-management.md>`_
+
+MassGen v0.0.15: Gemini MCP Notion Integration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Case Study:** `gemini-mcp-notion-integration.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/gemini-mcp-notion-integration.md>`_
+
+MassGen v0.0.25: Multi-Turn Filesystem Support with Persistent Context
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Case Study:** `multi-turn-filesystem-support.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/multi-turn-filesystem-support.md>`_
+
+MassGen v0.0.16: Unified Filesystem Support with MCP Integration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Configuration:**
+
+.. code-block:: bash
+
+   agents:
+     - id: "gemini_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-pro"
+
+     - id: "claude_code"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4-20250514"
+         cwd: "claude_code_workspace"
+
+   orchestrator:
+       snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+       agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+
+   ui:
+     display_type: "rich_terminal"
+     logging_enabled: true
+
+**Case Study:** `unified-filesystem-mcp-integration.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/unified-filesystem-mcp-integration.md>`_
+
+MassGen  Advanced Filesystem with User Context Path Support
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Case Study:** `user-context-path-support-with-copy-mcp.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/user-context-path-support-with-copy-mcp.md>`_
+
+
+Problem Solving
+---------------
+
+MassGen  Super Intelligence Approaches
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Case Study:** `SuperIntelligence.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/SuperIntelligence.md>`_
+
+MassGen  IMO 2025 AI Winners
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Case Study:** `imo_2025_winner.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/imo_2025_winner.md>`_
+
+
+Running Your Own Case Studies
+------------------------------
+
+To create your own case studies:
+
+1. Run MassGen with interesting tasks
+2. Save session logs and outputs
+3. Use the `case-study-template.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/case-study-template.md>`_
+4. Submit a pull request to ``docs/case_studies/``
+
+See :doc:`../user_guide/logging` for details on accessing session logs.
+
+Contributing
+------------
+
+We welcome new case studies! To contribute:
+
+* Follow the case study template
+* Include configuration and session logs
+* Provide clear highlights and insights
+* See `Contributing Guidelines <https://github.com/Leezekun/MassGen/blob/main/CONTRIBUTING.md>`_
+
+Next Steps
+----------
+
+* :doc:`basic_examples` - Start with simpler examples
+* :doc:`../user_guide/multi_turn_mode` - Interactive sessions
+* :doc:`../user_guide/logging` - Understanding session logs
+* :doc:`../user_guide/mcp_integration` - External tool integration
+* :doc:`../reference/yaml_schema` - Complete configuration reference

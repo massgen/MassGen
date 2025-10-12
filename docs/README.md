@@ -146,31 +146,36 @@ Add scripts to `source/_static/custom.js`
 
 ## 🚢 Deployment
 
-### GitHub Pages
+Documentation is automatically deployed to **GitHub Pages** and **ReadTheDocs**.
 
-Documentation is automatically deployed via GitHub Actions:
-
-1. Push to `main` or `doc_web` branch
-2. GitHub Actions builds the docs
-3. Deploys to GitHub Pages
-
-### Read the Docs
-
-For versioned documentation:
-
-1. Connect your GitHub repo to Read the Docs
-2. Configure using `.readthedocs.yaml`
-3. Builds trigger automatically on push
-
-### Manual Deployment
+### Quick Commands
 
 ```bash
-# Build for production
-make clean html
+# Run all validation checks
+make docs-check
 
-# The built files are in build/html/
-# Upload to your web server
+# Build and serve locally
+make docs-serve
+
+# Build HTML documentation
+make docs-build
 ```
+
+### Full Deployment Guide
+
+See **[DOCUMENTATION_DEPLOYMENT.md](DOCUMENTATION_DEPLOYMENT.md)** for comprehensive documentation including:
+
+- 📦 Deployment platforms (GitHub Pages, ReadTheDocs)
+- 🧪 Testing GitHub Actions workflows
+- ✅ Validation scripts usage
+- 🔄 CI/CD integration
+- 🛠️ Troubleshooting guide
+
+### Quick Overview
+
+**GitHub Pages:** Deploys automatically on push to `main` or `doc_web`
+**ReadTheDocs:** Builds automatically on push to `main`
+**Local:** `make docs-serve` → http://localhost:8000
 
 ## 🛠️ Useful Commands
 

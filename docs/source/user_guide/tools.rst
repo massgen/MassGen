@@ -1,468 +1,438 @@
-Tools
-=====
+Tools and Capabilities
+======================
 
-Tools extend agent capabilities beyond text generation, enabling them to interact with external systems and perform specialized tasks.
+MassGen agents access tools through backend capabilities and MCP (Model Context Protocol) integration. Tools enable agents to search the web, execute code, manipulate files, and interact with external systems.
+
+.. note::
+
+   Tools in MassGen are not Python classes to import. They are either:
+
+   1. **Backend built-in tools** - Configured via YAML flags
+   2. **MCP servers** - External tools via Model Context Protocol
+   3. **File operations** - Via Claude Code or MCP filesystem server
 
 Overview
 --------
 
-Tools in MassGen:
+MassGen provides three ways for agents to use tools:
 
-* Provide specific capabilities to agents
-* Are executed when agents need them
-* Can be chained together for complex tasks
-* Support both synchronous and asynchronous execution
+1. **Backend Built-in Tools**: Web search, code execution, file operations provided by model APIs
+2. **MCP Integration**: External tools through the Model Context Protocol
+3. **AG2 Framework Tools**: Tools from the AG2 framework (when using AG2 backend)
 
-Built-in Tools
---------------
+Backend Built-in Tools
+-----------------------
+
+Different backends provide different built-in capabilities. These are enabled via YAML configuration flags.
 
 Web Search
 ~~~~~~~~~~
 
-Enable agents to search the internet:
+Enable web search for real-time information:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.tools import WebSearch
+   agents:
+     - id: "researcher"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         enable_web_search: true
 
-   search_tool = WebSearch(
-       api_key="your-search-api-key",  # Optional
-       max_results=10,
-       safe_search=True,
-       region="us"
-   )
+**Supported Backends:**
 
-   agent = Agent(
-       name="ResearchAgent",
-       backend=backend,
-       tools=[search_tool]
-   )
+* ``openai`` - GPT models with web search
+* ``claude`` - Claude with web search
+* ``claude_code`` - Claude Code with web search
+* ``gemini`` - Gemini with Google search
+* ``grok`` - Grok with real-time search
 
-   # Agent can now search when needed
-   result = agent.run("Find the latest developments in quantum computing")
+**Example:**
 
-Calculator
-~~~~~~~~~~
+.. code-block:: bash
 
-Perform mathematical calculations:
-
-.. code-block:: python
-
-   from massgen.tools import Calculator
-
-   calc_tool = Calculator(
-       precision=10,
-       scientific_mode=True,
-       symbolic_math=False
-   )
-
-   agent = Agent(
-       name="MathAgent",
-       backend=backend,
-       tools=[calc_tool]
-   )
-
-   result = agent.run("Calculate the compound interest on $10,000 at 5% for 10 years")
-
-File Operations
-~~~~~~~~~~~~~~~
-
-Read and write files:
-
-.. code-block:: python
-
-   from massgen.tools import FileReader, FileWriter
-
-   reader = FileReader(
-       allowed_extensions=[".txt", ".md", ".json"],
-       max_file_size=10_000_000  # 10MB
-   )
-
-   writer = FileWriter(
-       output_directory="./outputs",
-       create_directories=True
-   )
-
-   agent = Agent(
-       name="FileAgent",
-       backend=backend,
-       tools=[reader, writer]
-   )
-
-Database Query
-~~~~~~~~~~~~~~
-
-Execute database queries:
-
-.. code-block:: python
-
-   from massgen.tools import DatabaseQuery
-
-   db_tool = DatabaseQuery(
-       connection_string="postgresql://user:pass@localhost/db",
-       read_only=True,
-       timeout=30
-   )
-
-   agent = Agent(
-       name="DataAgent",
-       backend=backend,
-       tools=[db_tool]
-   )
-
-   result = agent.run("Find all users who registered last month")
-
-API Integration
-~~~~~~~~~~~~~~~
-
-Call external APIs:
-
-.. code-block:: python
-
-   from massgen.tools import APICall
-
-   api_tool = APICall(
-       base_url="https://api.example.com",
-       headers={"Authorization": "Bearer token"},
-       timeout=30,
-       retry_count=3
-   )
-
-   agent = Agent(
-       name="APIAgent",
-       backend=backend,
-       tools=[api_tool]
-   )
+   uv run python -m massgen.cli \
+     --config massgen/configs/basic/multi/three_agents_default.yaml \
+     "What are the latest developments in quantum computing?"
 
 Code Execution
 ~~~~~~~~~~~~~~
 
-Execute code safely:
+Enable code execution for computational tasks:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.tools import CodeExecutor
+   agents:
+     - id: "coder"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         enable_code_interpreter: true
 
-   code_tool = CodeExecutor(
-       languages=["python", "javascript"],
-       sandbox=True,
-       timeout=10,
-       memory_limit="512MB"
-   )
+**Supported Backends:**
 
-   agent = Agent(
-       name="CodingAgent",
-       backend=backend,
-       tools=[code_tool]
-   )
+* ``openai`` - Code interpreter (Python)
+* ``claude`` - Code execution
+* ``claude_code`` - Full development environment
+* ``gemini`` - Code execution
+* ``ag2`` - Multiple execution environments
 
-Creating Custom Tools
----------------------
+**Example:**
 
-Basic Tool Structure
-~~~~~~~~~~~~~~~~~~~~
+.. code-block:: bash
 
-Create your own tools:
+   uv run python -m massgen.cli \
+     --model gpt-5-nano \
+     --backend openai \
+     "Calculate the first 100 prime numbers and plot their distribution"
 
-.. code-block:: python
-
-   from massgen.tools import Tool
-   from typing import Any, Dict
-
-   class CustomTool(Tool):
-       def __init__(self, **kwargs):
-           super().__init__(**kwargs)
-           self.name = "CustomTool"
-           self.description = "Description of what this tool does"
-
-       def execute(self, *args, **kwargs) -> Any:
-           """Execute the tool's functionality"""
-           # Your implementation here
-           result = self._perform_operation(args, kwargs)
-           return result
-
-       def validate_input(self, *args, **kwargs) -> bool:
-           """Validate input before execution"""
-           # Input validation logic
-           return True
-
-Advanced Tool Example
-~~~~~~~~~~~~~~~~~~~~~
-
-A weather information tool:
-
-.. code-block:: python
-
-   import requests
-   from massgen.tools import Tool
-
-   class WeatherTool(Tool):
-       def __init__(self, api_key: str):
-           super().__init__()
-           self.name = "WeatherTool"
-           self.description = "Get current weather information"
-           self.api_key = api_key
-           self.base_url = "https://api.weather.com/v1"
-
-       def execute(self, location: str) -> Dict:
-           """Get weather for a location"""
-           if not self.validate_input(location):
-               raise ValueError("Invalid location")
-
-           response = requests.get(
-               f"{self.base_url}/current",
-               params={"location": location, "key": self.api_key}
-           )
-
-           if response.status_code == 200:
-               return response.json()
-           else:
-               raise Exception(f"Weather API error: {response.status_code}")
-
-       def validate_input(self, location: str) -> bool:
-           """Validate location input"""
-           return bool(location and isinstance(location, str))
-
-Tool Composition
-----------------
-
-Chaining Tools
-~~~~~~~~~~~~~~
-
-Chain tools for complex operations:
-
-.. code-block:: python
-
-   from massgen.tools import ToolChain
-
-   chain = ToolChain([
-       WebSearch(),
-       DataExtractor(),
-       Summarizer(),
-       FileWriter()
-   ])
-
-   agent = Agent(
-       name="ChainAgent",
-       backend=backend,
-       tools=[chain]
-   )
-
-   # Tools execute in sequence
-   result = agent.run("Research and summarize latest AI trends, save to file")
-
-Conditional Tools
-~~~~~~~~~~~~~~~~~
-
-Use tools conditionally:
-
-.. code-block:: python
-
-   from massgen.tools import ConditionalTool
-
-   conditional_tool = ConditionalTool(
-       tool=ExpensiveTool(),
-       condition=lambda context: context.get("use_expensive", False)
-   )
-
-   agent = Agent(
-       name="ConditionalAgent",
-       backend=backend,
-       tools=[conditional_tool]
-   )
-
-Tool Configuration
-------------------
-
-Tool Parameters
+File Operations
 ~~~~~~~~~~~~~~~
 
-Configure tool behavior:
+Enable file system access:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   tool = WebSearch(
-       # Authentication
-       api_key="...",
+   agents:
+     - id: "file_agent"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4"
+         cwd: "workspace"           # Working directory
 
-       # Behavior
-       max_results=10,
-       timeout=30,
+   orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
 
-       # Filtering
-       safe_search=True,
-       language="en",
-       region="us",
+**Supported Backends:**
 
-       # Caching
-       cache_results=True,
-       cache_ttl=3600
-   )
+* ``claude_code`` - Native file tools (Read, Write, Edit, Bash, Grep, Glob)
+* ``claude`` - Via MCP filesystem server
+* ``gemini`` - Via MCP filesystem server
+* ``grok`` - Via MCP filesystem server
+* ``openai`` - Via MCP filesystem server
 
-Tool Permissions
-~~~~~~~~~~~~~~~~
+See :doc:`file_operations` for comprehensive file operation documentation.
 
-Control tool access:
-
-.. code-block:: python
-
-   from massgen.tools import ToolPermissions
-
-   permissions = ToolPermissions(
-       read_files=True,
-       write_files=False,
-       network_access=True,
-       execute_code=False
-   )
-
-   tool = FileReader(permissions=permissions)
-
-Asynchronous Tools
-------------------
-
-Async Tool Implementation
+Backend Tool Capabilities
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create asynchronous tools:
+Different backends support different built-in tools. For the complete and authoritative backend tool support matrix, see :doc:`backends`.
 
-.. code-block:: python
+**Quick Summary:**
 
-   import asyncio
-   from massgen.tools import AsyncTool
+* **Web Search**: OpenAI, Claude, Claude Code, Gemini, Grok
+* **Code Execution**: OpenAI, Claude, Claude Code, Gemini, AG2
+* **File Operations**: Claude Code (native), others via MCP
+* **MCP Support**: All backends except Azure OpenAI and LM Studio
 
-   class AsyncWebScraper(AsyncTool):
-       async def execute_async(self, url: str) -> str:
-           """Asynchronously scrape a webpage"""
-           async with aiohttp.ClientSession() as session:
-               async with session.get(url) as response:
-                   return await response.text()
+See :doc:`backends` for the complete backend capabilities table with all features and limitations.
 
-   # Use with async agents
-   agent = Agent(
-       name="AsyncAgent",
-       backend=backend,
-       tools=[AsyncWebScraper()],
-       async_mode=True
-   )
+MCP (Model Context Protocol) Integration
+-----------------------------------------
 
-Parallel Tool Execution
-~~~~~~~~~~~~~~~~~~~~~~~~
+MCP allows agents to access external tools and services including web search, weather, filesystem access, Discord, Twitter, and many more.
 
-Execute multiple tools in parallel:
+**Quick Example:**
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.tools import ParallelTools
+   agents:
+     - id: "agent_with_mcp"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         mcp_servers:
+           - name: "weather"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@fak111/weather-mcp"]
 
-   parallel_tools = ParallelTools([
-       WebSearch(),
-       DatabaseQuery(),
-       APICall()
-   ])
+**Key Features:**
 
-   agent = Agent(
-       name="ParallelAgent",
-       backend=backend,
-       tools=[parallel_tools]
-   )
+* Common MCP servers (weather, search, filesystem)
+* Multi-server configurations
+* Tool filtering (allowed_tools/exclude_tools)
+* Planning mode for safety (v0.0.29)
+* HTTP and stdio transports
 
-   # Tools execute simultaneously
-   result = agent.run("Gather data from multiple sources")
+.. seealso::
+   :doc:`mcp_integration` - Complete MCP guide with configuration, common servers, tool filtering, planning mode, and security considerations
 
-Tool Monitoring
----------------
+AG2 Framework Tools
+-------------------
 
-Logging Tool Usage
+When using the AG2 backend, agents can access AG2 framework tools:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "ag2_coder"
+       backend:
+         type: "ag2"
+         agent_type: "ConversableAgent"
+         llm_config:
+           config_list:
+             - model: "gpt-4"
+               api_key: "${OPENAI_API_KEY}"
+         code_execution_config:
+           executor: "local"           # or "docker", "jupyter"
+           work_dir: "coding"
+
+**Supported Executors:**
+
+* ``local`` - Execute code on local machine
+* ``docker`` - Execute in Docker container
+* ``jupyter`` - Execute in Jupyter kernel
+* ``yepcode`` - Execute in YepCode environment
+
+See :doc:`ag2_integration` for detailed AG2 tool configuration.
+
+Tool Configuration Patterns
+----------------------------
+
+Combining Built-in and MCP Tools
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use both backend tools and MCP servers:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "full_stack_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+
+         # Built-in tools
+         enable_web_search: true
+         enable_code_execution: true
+
+         # External MCP tools
+         mcp_servers:
+           - name: "database"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@custom/database-mcp"]
+
+Specialized Agent Tools
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Configure different tools for different agents:
+
+.. code-block:: yaml
+
+   agents:
+     # Research agent with web search
+     - id: "researcher"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         enable_web_search: true
+
+     # Development agent with file operations
+     - id: "developer"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4"
+         cwd: "workspace"
+
+     # Data agent with MCP database access
+     - id: "data_analyst"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         enable_code_interpreter: true
+         mcp_servers:
+           - name: "database"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@custom/db-server"]
+
+Tool Usage Examples
+-------------------
+
+Web Search Example
 ~~~~~~~~~~~~~~~~~~
 
-Monitor tool execution:
+.. code-block:: bash
 
-.. code-block:: python
+   # Single agent with web search
+   uv run python -m massgen.cli \
+     --model gemini-2.5-flash \
+     "Research the latest AI developments and summarize key trends"
 
-   from massgen.tools import ToolMonitor
+   # Multi-agent research
+   uv run python -m massgen.cli \
+     --config massgen/configs/basic/multi/three_agents_default.yaml \
+     "Compare renewable energy adoption rates across different countries"
 
-   monitor = ToolMonitor(
-       log_level="INFO",
-       track_usage=True,
-       track_performance=True
-   )
+Code Execution Example
+~~~~~~~~~~~~~~~~~~~~~~
 
-   tool = WebSearch(monitor=monitor)
+.. code-block:: bash
 
-   # Access usage statistics
-   stats = monitor.get_statistics()
-   print(f"Total calls: {stats['total_calls']}")
-   print(f"Average duration: {stats['avg_duration']}")
+   # Code generation and execution
+   uv run python -m massgen.cli \
+     --model gpt-5-nano \
+     "Write and execute a Python script to analyze CSV data and create visualizations"
 
-Tool Metrics
-~~~~~~~~~~~~
+   # Multi-agent coding
+   uv run python -m massgen.cli \
+     --config massgen/configs/ag2/ag2_coder.yaml \
+     "Create a web scraper for product prices and generate a comparison report"
 
-Collect tool metrics:
+File Operations Example
+~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+.. code-block:: bash
 
-   from massgen.tools import MetricsCollector
+   # File operations with Claude Code
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+     "Create a Python project structure with tests and documentation"
 
-   metrics = MetricsCollector()
+   # Multi-agent file collaboration
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+     "Analyze code quality and generate improvement recommendations"
 
-   tool = Calculator(metrics_collector=metrics)
+MCP Tools Example
+~~~~~~~~~~~~~~~~~
 
-   # Get metrics
-   tool_metrics = metrics.get_metrics("Calculator")
-   print(f"Success rate: {tool_metrics['success_rate']}")
-   print(f"Error count: {tool_metrics['error_count']}")
+.. code-block:: bash
 
-Error Handling
---------------
+   # Weather information
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+     "What's the weather forecast for New York this week?"
 
-Tool Error Recovery
-~~~~~~~~~~~~~~~~~~~
+   # Multi-server MCP
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+     "Find hotels in London and check the weather forecast"
 
-Handle tool failures gracefully:
+Tool Configuration Best Practices
+----------------------------------
 
-.. code-block:: python
+1. **Enable only needed tools**: Reduce API costs and improve focus
+2. **Use MCP for external integrations**: Standardized protocol for tools
+3. **Combine backend strengths**: Use different backends for different tool needs
+4. **Test tools independently**: Verify MCP servers work before multi-agent use
+5. **Filter dangerous tools**: Use allowed_tools/exclude_tools for safety
+6. **Use planning mode for safety**: Enable for MCP tools with side effects
+7. **Document tool requirements**: Note required API keys and dependencies
 
-   from massgen.tools import ToolWithFallback
+Security Considerations
+-----------------------
 
-   tool = ToolWithFallback(
-       primary=PrimaryAPITool(),
-       fallback=BackupAPITool(),
-       retry_primary=3,
-       fallback_on_errors=[500, 503]
-   )
+File Operations
+~~~~~~~~~~~~~~~
 
-Tool Timeout Handling
-~~~~~~~~~~~~~~~~~~~~~
+.. warning::
 
-Manage tool timeouts:
+   Agents with file operations can read, write, modify, and delete files within permitted directories.
 
-.. code-block:: python
+   * Only grant access to safe directories
+   * Use read-only permissions when possible
+   * Test in isolated environments first
+   * Back up important files before granting write access
 
-   from massgen.tools import TimeoutHandler
+See :doc:`project_integration` for secure file access configuration.
 
-   tool = WebSearch(
-       timeout=10,
-       timeout_handler=TimeoutHandler(
-           action="retry",  # or "fail", "fallback"
-           max_retries=2,
-           backoff_factor=2.0
-       )
-   )
+MCP Tool Safety
+~~~~~~~~~~~~~~~
 
-Best Practices
---------------
+* **Review MCP servers**: Verify third-party MCP server code
+* **Use tool filtering**: Restrict dangerous operations
+* **Enable planning mode**: Prevent execution during coordination
+* **Monitor tool usage**: Check logs for unexpected tool calls
+* **Set timeouts**: Prevent long-running operations
 
-1. **Tool Selection**: Choose tools that match agent roles
-2. **Error Handling**: Always implement proper error handling
-3. **Input Validation**: Validate inputs before execution
-4. **Resource Management**: Monitor and limit resource usage
-5. **Caching**: Cache expensive tool results when appropriate
-6. **Documentation**: Provide clear descriptions for custom tools
-7. **Testing**: Test tools independently before agent integration
+API Key Management
+~~~~~~~~~~~~~~~~~~
+
+* **Never commit keys**: Use environment variables only
+* **Use .env files**: Keep credentials in .env (gitignored)
+* **Rotate keys regularly**: Update API keys periodically
+* **Monitor usage**: Track API costs and rate limits
+
+Troubleshooting
+---------------
+
+**Tool not working:**
+
+Check that the backend supports the tool:
+
+.. code-block:: yaml
+
+   # Grok doesn't support code execution
+   backend:
+     type: "grok"
+     model: "grok-3-mini"
+     enable_code_interpreter: true  # ❌ Not supported
+
+   # Use OpenAI instead
+   backend:
+     type: "openai"
+     model: "gpt-5-nano"
+     enable_code_interpreter: true  # ✅ Supported
+
+**MCP server not found:**
+
+Ensure the MCP server package is available:
+
+.. code-block:: bash
+
+   # Test MCP server installation
+   npx -y @fak111/weather-mcp
+
+   # Install globally for faster startup
+   npm install -g @fak111/weather-mcp
+
+**File operations failing:**
+
+Check workspace configuration:
+
+.. code-block:: yaml
+
+   # Correct workspace setup
+   agents:
+     - backend:
+         type: "claude_code"
+         cwd: "workspace"            # ✅ Directory exists
+
+   orchestrator:
+     snapshot_storage: "snapshots"   # ✅ Configured
+     agent_temporary_workspace: "temp"  # ✅ Configured
+
+**MCP tool not executing:**
+
+Verify tool filtering configuration:
+
+.. code-block:: yaml
+
+   # If using allowed_tools, ensure the tool is listed
+   allowed_tools:
+     - "mcp__weather__get_current_weather"  # Tool name must match exactly
+
+   # Check tool name with --debug flag
+   uv run python -m massgen.cli --debug --config your-config.yaml "..."
 
 Next Steps
 ----------
 
-* :doc:`mcp_integration` - Model Context Protocol integration
-* :doc:`advanced_usage` - Advanced tool patterns
-* :doc:`../examples/basic_examples` - Tool usage examples
+* :doc:`mcp_integration` - Complete MCP integration guide
+* :doc:`file_operations` - File system operations
+* :doc:`project_integration` - Secure project access
+* :doc:`ag2_integration` - AG2 framework tools
+* :doc:`../examples/basic_examples` - See tools in action
+* :doc:`backends` - Backend tool capabilities
+
+Additional Resources
+--------------------
+
+* `MCP Server Registry <https://github.com/modelcontextprotocol/servers>`_ - Official MCP servers
+* `MCP Documentation <https://modelcontextprotocol.io/>`_ - Protocol specification
+* `Backend Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/BACKEND_CONFIGURATION.md>`_ - Detailed backend settings
+* :doc:`../reference/yaml_schema` - Complete YAML reference

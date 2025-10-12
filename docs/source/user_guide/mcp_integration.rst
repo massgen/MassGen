@@ -1,422 +1,498 @@
 MCP Integration
-===============
+================
 
-MassGen supports the Model Context Protocol (MCP) for standardized tool integration and agent communication.
+MassGen supports the Model Context Protocol (MCP) for standardized tool integration. MCP enables agents to use external tools through a unified interface.
 
 What is MCP?
 ------------
 
-The Model Context Protocol (MCP) is:
+From the official documentation:
 
-* A standard protocol for AI model interactions
-* Enables seamless tool integration across platforms
-* Provides consistent interfaces for agent capabilities
-* Supports both local and remote tool execution
+   MCP is an open protocol that standardizes how applications provide context to LLMs. Think of MCP like a USB-C port for AI applications. Just as USB-C provides a standardized way to connect your devices to various peripherals and accessories, MCP provides a standardized way to connect AI models to different data sources and tools.
 
-Enabling MCP
-------------
+MassGen integrates MCP through YAML configuration, allowing agents to access tools like:
 
-Basic Setup
-~~~~~~~~~~~
+* Web search (Brave, Google)
+* Weather services
+* File operations
+* Discord, Twitter, Notion APIs
+* And many more MCP servers
 
-Enable MCP in your MassGen configuration:
+Quick Start
+-----------
 
-.. code-block:: python
+**Single MCP tool (weather):**
 
-   from massgen import Agent, Orchestrator
-   from massgen.mcp import MCPServer, MCPClient
+.. code-block:: bash
 
-   # Start MCP server
-   mcp_server = MCPServer(
-       port=8765,
-       host="localhost",
-       auth_token="your-secret-token"
-   )
-   mcp_server.start()
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+     "What's the weather forecast for New York this week?"
 
-   # Create MCP-enabled agent
-   agent = Agent(
-       name="MCPAgent",
-       backend=backend,
-       mcp_client=MCPClient(
-           server_url="http://localhost:8765",
-           auth_token="your-secret-token"
-       )
-   )
+**Multiple MCP tools:**
 
-MCP Tools
----------
+.. code-block:: bash
 
-Registering MCP Tools
-~~~~~~~~~~~~~~~~~~~~~
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+     "Find the best restaurants in Paris and save the recommendations to a file"
 
-Register tools with the MCP server:
+Backend Support
+---------------
 
-.. code-block:: python
+MCP integration is available for most MassGen backends. For the complete backend capabilities matrix including MCP support status, see :doc:`backends`.
 
-   from massgen.mcp import MCPTool
+**Backends with MCP Support:**
 
-   @mcp_server.register_tool
-   class CustomMCPTool(MCPTool):
-       name = "custom_tool"
-       description = "A custom MCP tool"
+* ✅ Claude API - Full MCP integration
+* ✅ Claude Code - Native MCP + file tools
+* ✅ Gemini API - Full MCP integration with planning mode
+* ✅ Grok API - Full MCP integration
+* ✅ OpenAI API - Full MCP integration
+* ✅ Z AI - MCP integration available
+* ❌ Azure OpenAI - Not yet supported
 
-       def execute(self, params):
-           # Tool implementation
-           return {"result": "success"}
+See :doc:`backends` for detailed backend capabilities and feature comparison.
 
-Using Remote MCP Tools
-~~~~~~~~~~~~~~~~~~~~~~
-
-Connect to remote MCP services:
-
-.. code-block:: python
-
-   from massgen.mcp import RemoteMCPClient
-
-   remote_client = RemoteMCPClient(
-       server_url="https://mcp.example.com",
-       api_key="your-api-key"
-   )
-
-   agent = Agent(
-       name="RemoteAgent",
-       backend=backend,
-       mcp_client=remote_client
-   )
-
-   # Agent can now use remote MCP tools
-   result = agent.run("Use remote translation service")
-
-MCP Communication
------------------
-
-Agent-to-Agent via MCP
-~~~~~~~~~~~~~~~~~~~~~~
-
-Enable direct agent communication through MCP:
-
-.. code-block:: python
-
-   from massgen.mcp import MCPBridge
-
-   # Create MCP bridge for agent communication
-   bridge = MCPBridge()
-
-   agent1 = Agent(
-       name="Agent1",
-       backend=backend1,
-       mcp_bridge=bridge
-   )
-
-   agent2 = Agent(
-       name="Agent2",
-       backend=backend2,
-       mcp_bridge=bridge
-   )
-
-   # Agents can now communicate directly
-   orchestrator = Orchestrator(
-       agents=[agent1, agent2],
-       communication_protocol="mcp"
-   )
-
-MCP Messages
-~~~~~~~~~~~~
-
-Send and receive MCP messages:
-
-.. code-block:: python
-
-   from massgen.mcp import MCPMessage
-
-   # Send message
-   message = MCPMessage(
-       type="request",
-       content="Analyze this data",
-       metadata={"priority": "high"}
-   )
-
-   response = agent.send_mcp_message(message, target="Agent2")
-
-   # Handle incoming messages
-   @agent.on_mcp_message
-   def handle_message(message):
-       if message.type == "request":
-           return process_request(message)
-
-MCP Tool Discovery
-------------------
-
-Automatic Discovery
-~~~~~~~~~~~~~~~~~~~
-
-Discover available MCP tools:
-
-.. code-block:: python
-
-   from massgen.mcp import MCPDiscovery
-
-   discovery = MCPDiscovery(
-       mcp_client=mcp_client,
-       auto_refresh=True,
-       refresh_interval=60  # seconds
-   )
-
-   # Get available tools
-   tools = discovery.get_available_tools()
-   for tool in tools:
-       print(f"Tool: {tool.name} - {tool.description}")
-
-   # Auto-configure agent with discovered tools
-   agent = Agent(
-       name="AutoAgent",
-       backend=backend,
-       tools=discovery.get_tools_for_role("researcher")
-   )
-
-Tool Capabilities
-~~~~~~~~~~~~~~~~~
-
-Query tool capabilities:
-
-.. code-block:: python
-
-   # Get tool metadata
-   tool_info = mcp_client.get_tool_info("web_search")
-   print(f"Parameters: {tool_info.parameters}")
-   print(f"Returns: {tool_info.return_type}")
-   print(f"Rate limit: {tool_info.rate_limit}")
-
-MCP Workflows
+Configuration
 -------------
 
-Defining MCP Workflows
-~~~~~~~~~~~~~~~~~~~~~~
+Basic MCP Setup
+~~~~~~~~~~~~~~~
 
-Create structured workflows with MCP:
+Add MCP servers to your agent's backend configuration:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.mcp import MCPWorkflow
+   agents:
+     - id: "agent_with_mcp"
+       backend:
+         type: "openai"              # Your backend choice
+         model: "gpt-5-mini"         # Your model choice
 
-   workflow = MCPWorkflow(
-       name="research_workflow",
-       steps=[
-           {"tool": "web_search", "params": {"query": "{input}"}},
-           {"tool": "summarize", "params": {"text": "{step1.result}"}},
-           {"tool": "translate", "params": {"text": "{step2.result}", "lang": "es"}}
-       ]
-   )
+         # Add MCP servers here
+         mcp_servers:
+           - name: "weather"         # Server name (you choose this)
+             type: "stdio"           # Communication type
+             command: "npx"          # Command to run
+             args: ["-y", "@modelcontextprotocol/server-weather"]
 
-   # Register workflow
-   mcp_server.register_workflow(workflow)
+That's it! The agent can now check weather.
 
-   # Use workflow in agent
-   agent = Agent(
-       name="WorkflowAgent",
-       backend=backend,
-       workflows=[workflow]
-   )
-
-   result = agent.run_workflow("research_workflow", input="quantum computing")
-
-Workflow Orchestration
-~~~~~~~~~~~~~~~~~~~~~~
-
-Orchestrate complex MCP workflows:
-
-.. code-block:: python
-
-   from massgen.mcp import WorkflowOrchestrator
-
-   orchestrator = WorkflowOrchestrator(
-       mcp_server=mcp_server,
-       parallel_execution=True,
-       max_concurrent=5
-   )
-
-   # Define complex workflow
-   complex_workflow = {
-       "name": "data_pipeline",
-       "stages": [
-           {
-               "name": "collect",
-               "parallel": True,
-               "tools": ["scraper", "api_fetcher", "db_query"]
-           },
-           {
-               "name": "process",
-               "tools": ["cleaner", "transformer"]
-           },
-           {
-               "name": "analyze",
-               "tools": ["ml_model", "statistical_analysis"]
-           }
-       ]
-   }
-
-   result = orchestrator.execute_workflow(complex_workflow)
-
-MCP Security
-------------
-
-Authentication
-~~~~~~~~~~~~~~
-
-Implement MCP authentication:
-
-.. code-block:: python
-
-   from massgen.mcp import MCPAuth
-
-   auth = MCPAuth(
-       method="oauth2",  # or "api_key", "jwt"
-       client_id="your-client-id",
-       client_secret="your-client-secret",
-       token_endpoint="https://auth.example.com/token"
-   )
-
-   mcp_client = MCPClient(
-       server_url="https://mcp.example.com",
-       auth=auth
-   )
-
-Encryption
-~~~~~~~~~~
-
-Enable end-to-end encryption:
-
-.. code-block:: python
-
-   from massgen.mcp import MCPEncryption
-
-   encryption = MCPEncryption(
-       algorithm="AES-256-GCM",
-       key_exchange="ECDH",
-       public_key="..."
-   )
-
-   secure_client = MCPClient(
-       server_url="https://mcp.example.com",
-       encryption=encryption
-   )
-
-MCP Monitoring
---------------
-
-Logging and Metrics
+MCP Transport Types
 ~~~~~~~~~~~~~~~~~~~
 
-Monitor MCP operations:
+**stdio (Standard Input/Output)**
 
-.. code-block:: python
+Most MCP servers use stdio transport:
 
-   from massgen.mcp import MCPMonitor
+.. code-block:: yaml
 
-   monitor = MCPMonitor(
-       log_level="INFO",
-       metrics_enabled=True,
-       trace_requests=True
-   )
+   mcp_servers:
+     - name: "weather"
+       type: "stdio"                # stdio transport
+       command: "npx"               # Command to launch server
+       args: ["-y", "@modelcontextprotocol/server-weather"]
 
-   mcp_server = MCPServer(
-       port=8765,
-       monitor=monitor
-   )
+**streamable-http (HTTP/SSE)**
 
-   # Access metrics
-   metrics = monitor.get_metrics()
-   print(f"Total requests: {metrics['total_requests']}")
-   print(f"Average latency: {metrics['avg_latency_ms']}")
+Some MCP servers use HTTP with Server-Sent Events:
 
-Health Checks
-~~~~~~~~~~~~~
+.. code-block:: yaml
 
-Implement MCP health checks:
+   mcp_servers:
+     - name: "custom_api"
+       type: "streamable-http"      # HTTP transport
+       url: "http://localhost:8080/mcp/sse"
 
-.. code-block:: python
+Configuration Parameters
+~~~~~~~~~~~~~~~~~~~~~~~~
 
-   from massgen.mcp import MCPHealthCheck
+.. list-table::
+   :header-rows: 1
+   :widths: 25 15 60
 
-   health_check = MCPHealthCheck(
-       interval=30,  # seconds
-       timeout=5,
-       failure_threshold=3
-   )
+   * - Parameter
+     - Required
+     - Description
+   * - ``name``
+     - Yes
+     - Unique name for the MCP server
+   * - ``type``
+     - Yes
+     - Transport: ``"stdio"`` or ``"streamable-http"``
+   * - ``command``
+     - stdio only
+     - Command to run the MCP server
+   * - ``args``
+     - stdio only
+     - Arguments for the command
+   * - ``url``
+     - http only
+     - Server endpoint URL
+   * - ``env``
+     - No
+     - Environment variables to pass
 
-   mcp_client = MCPClient(
-       server_url="https://mcp.example.com",
-       health_check=health_check
-   )
+Common MCP Servers
+------------------
 
-   # Check health status
-   if mcp_client.is_healthy():
-       result = agent.run("Execute task")
+Weather
+~~~~~~~
 
-Advanced MCP Features
----------------------
+.. code-block:: yaml
 
-MCP Plugins
-~~~~~~~~~~~
+   mcp_servers:
+     - name: "weather"
+       type: "stdio"
+       command: "npx"
+       args: ["-y", "@modelcontextprotocol/server-weather"]
 
-Create and use MCP plugins:
+Web Search (Brave)
+~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+Requires ``BRAVE_API_KEY`` in your ``.env`` file:
 
-   from massgen.mcp import MCPPlugin
+.. code-block:: yaml
 
-   class CustomPlugin(MCPPlugin):
-       def on_request(self, request):
-           # Modify request before sending
-           request.headers["X-Custom"] = "value"
-           return request
+   mcp_servers:
+     - name: "search"
+       type: "stdio"
+       command: "npx"
+       args: ["-y", "@modelcontextprotocol/server-brave-search"]
+       env:
+         BRAVE_API_KEY: "${BRAVE_API_KEY}"
 
-       def on_response(self, response):
-           # Process response
-           return response
+Filesystem
+~~~~~~~~~~
 
-   mcp_client = MCPClient(
-       server_url="https://mcp.example.com",
-       plugins=[CustomPlugin()]
-   )
+.. code-block:: yaml
 
-MCP Federation
-~~~~~~~~~~~~~~
+   mcp_servers:
+     - name: "filesystem"
+       type: "stdio"
+       command: "npx"
+       args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
 
-Connect multiple MCP servers:
+Discord
+~~~~~~~
 
-.. code-block:: python
+Requires Discord bot token. See `Discord MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/docs/DISCORD_MCP_SETUP.md>`_:
 
-   from massgen.mcp import MCPFederation
+.. code-block:: yaml
 
-   federation = MCPFederation([
-       MCPServer(port=8765, name="server1"),
-       MCPServer(port=8766, name="server2"),
-       MCPServer(port=8767, name="server3")
-   ])
+   mcp_servers:
+     - name: "discord"
+       type: "stdio"
+       command: "npx"
+       args: ["-y", "@modelcontextprotocol/server-discord"]
+       env:
+         DISCORD_BOT_TOKEN: "${DISCORD_BOT_TOKEN}"
 
-   # Tools are available across all servers
-   agent = Agent(
-       name="FederatedAgent",
-       backend=backend,
-       mcp_federation=federation
-   )
+Twitter
+~~~~~~~
 
-Best Practices
+Requires Twitter API credentials. See `Twitter MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/docs/TWITTER_MCP_ENESCINAR_SETUP.md>`_:
+
+.. code-block:: yaml
+
+   mcp_servers:
+     - name: "twitter"
+       type: "stdio"
+       command: "npx"
+       args: ["-y", "mcp-server-twitter-unofficial"]
+       env:
+         TWITTER_USERNAME: "${TWITTER_USERNAME}"
+         TWITTER_PASSWORD: "${TWITTER_PASSWORD}"
+
+Multiple MCP Servers
+--------------------
+
+Agents can use multiple MCP servers simultaneously:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "multi_tool_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         mcp_servers:
+           # Web search
+           - name: "search"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-brave-search"]
+             env:
+               BRAVE_API_KEY: "${BRAVE_API_KEY}"
+
+           # Weather data
+           - name: "weather"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-weather"]
+
+           # File operations
+           - name: "filesystem"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+
+The agent can use all three tools together. For example: "Search for weather apps, check the weather in Paris, and save recommendations to a file"
+
+Tool Filtering
 --------------
 
-1. **Version Management**: Always specify MCP protocol version
-2. **Error Handling**: Implement robust error handling for network issues
-3. **Caching**: Cache tool discovery results
-4. **Security**: Always use authentication and encryption in production
-5. **Monitoring**: Monitor MCP performance and availability
-6. **Documentation**: Document custom MCP tools and workflows
-7. **Testing**: Test MCP integrations thoroughly
+Control which MCP tools are available to agents.
+
+Backend-Level Filtering
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Exclude specific tools at the backend level:
+
+.. code-block:: yaml
+
+   backend:
+     type: "openai"
+     model: "gpt-4o-mini"
+     exclude_tools:
+       - mcp__discord__discord_send_webhook_message  # Exclude dangerous tools
+     mcp_servers:
+       - name: "discord"
+         type: "stdio"
+         command: "npx"
+         args: ["-y", "@modelcontextprotocol/server-discord"]
+
+MCP-Server-Specific Filtering
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Override with allowed tools per MCP server:
+
+.. code-block:: yaml
+
+   backend:
+     type: "openai"
+     model: "gpt-4o-mini"
+     mcp_servers:
+       - name: "discord"
+         type: "stdio"
+         command: "npx"
+         args: ["-y", "@modelcontextprotocol/server-discord"]
+         allowed_tools:  # Whitelist specific tools
+           - mcp__discord__discord_read_messages
+           - mcp__discord__discord_send_message
+
+Merged Exclusions
+~~~~~~~~~~~~~~~~~
+
+``exclude_tools`` from both backend and MCP server configs are combined:
+
+.. code-block:: yaml
+
+   backend:
+     exclude_tools:
+       - mcp__discord__send_webhook  # Backend-level exclusion
+     mcp_servers:
+       - name: "discord"
+         exclude_tools:
+           - mcp__discord__delete_channel  # MCP-level exclusion
+         # Both tools are excluded
+
+MCP Planning Mode
+-----------------
+
+**NEW in v0.0.29**
+
+Planning mode prevents irreversible actions during multi-agent coordination.
+
+How It Works
+~~~~~~~~~~~~
+
+**Without planning mode:**
+
+1. All agents execute MCP tools during coordination
+2. Risk of duplicate or premature actions
+3. Example: Multiple agents posting to Discord
+
+**With planning mode:**
+
+1. During coordination: Agents **plan** tool usage without execution
+2. Agents discuss and vote on best approach
+3. Final agent: **Executes** the planned tools
+
+Configuration
+~~~~~~~~~~~~~
+
+Enable planning mode in orchestrator config:
+
+.. code-block:: yaml
+
+   orchestrator:
+     coordination:
+       enable_planning_mode: true
+       planning_mode_instruction: |
+         PLANNING MODE ACTIVE: You are currently in the coordination phase.
+         During this phase:
+         1. Describe your intended actions and reasoning
+         2. Analyze other agents' proposals
+         3. Use only 'vote' or 'new_answer' tools for coordination
+         4. DO NOT execute any actual MCP commands
+         5. Save execution for final presentation phase
+
+Example Configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+   agents:
+     - id: "gemini_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         mcp_servers:
+           - name: "filesystem"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+
+   orchestrator:
+     coordination:
+       enable_planning_mode: true
+       planning_mode_instruction: |
+         Focus on planning and coordination rather than execution.
+         Describe what you would do, don't actually do it yet.
+
+Usage
+~~~~~
+
+.. code-block:: bash
+
+   # Five agents with planning mode (no execution during coordination)
+   uv run python -m massgen.cli \
+     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+     "Create a comprehensive project structure with documentation"
+
+**What happens:**
+
+1. **Coordination phase** → Agents discuss and plan file structure
+2. **Voting** → Agents vote for best plan
+3. **Final presentation** → Winning agent **executes** the plan
+
+Multi-Backend Support
+~~~~~~~~~~~~~~~~~~~~~
+
+Planning mode works across:
+
+* Response API (Claude)
+* Chat Completions (OpenAI, Grok, etc.)
+* Gemini with session-based tool execution
+
+Complete Example
+----------------
+
+Full configuration with multiple MCP servers and planning mode:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "research_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         mcp_servers:
+           # Web search
+           - name: "search"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-brave-search"]
+             env:
+               BRAVE_API_KEY: "${BRAVE_API_KEY}"
+             allowed_tools:
+               - mcp__search__brave_web_search
+
+           # Weather
+           - name: "weather"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-weather"]
+
+           # Filesystem
+           - name: "filesystem"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+
+     - id: "analyst_agent"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         exclude_tools:
+           - mcp__filesystem__delete_file  # Prevent deletions
+         mcp_servers:
+           - name: "filesystem"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+
+   orchestrator:
+     coordination:
+       enable_planning_mode: true
+       planning_mode_instruction: |
+         PLANNING MODE: Describe your intended tool usage.
+         Do not execute tools during coordination.
+
+   ui:
+     display_type: "rich_terminal"
+     logging_enabled: true
+
+Security Considerations
+-----------------------
+
+1. **Tool Filtering** - Use ``allowed_tools`` and ``exclude_tools`` to limit capabilities
+2. **Planning Mode** - Enable for tasks with irreversible actions
+3. **Environment Variables** - Store API keys in ``.env``, never in config files
+4. **Path Restrictions** - Limit filesystem server to specific directories
+5. **Review Permissions** - Check what each MCP server can do before enabling
+
+Troubleshooting
+---------------
+
+**MCP server not found:**
+
+Ensure the MCP server package is installed:
+
+.. code-block:: bash
+
+   npx -y @modelcontextprotocol/server-weather
+
+**Tools not appearing:**
+
+* Check backend MCP support (see table above)
+* Verify ``mcp_servers`` configuration
+* Check for tool filtering (``allowed_tools``, ``exclude_tools``)
+
+**Environment variables not working:**
+
+.. code-block:: bash
+
+   # Set in .env file
+   BRAVE_API_KEY=your_key_here
+
+   # Reference in config
+   env:
+     BRAVE_API_KEY: "${BRAVE_API_KEY}"
+
+**Planning mode not working:**
+
+* Ensure backend supports planning mode
+* Check ``enable_planning_mode: true`` in orchestrator config
+* Verify ``planning_mode_instruction`` is set
 
 Next Steps
 ----------
 
-* :doc:`advanced_usage` - Advanced MCP patterns
-* :doc:`../api/index` - MCP API reference
-* :doc:`../examples/basic_examples` - MCP usage examples
+* :doc:`file_operations` - Filesystem MCP integration
+* :doc:`project_integration` - Using MCP with context paths
+* :doc:`multi_turn_mode` - MCP in interactive sessions
+* :doc:`../quickstart/running-massgen` - More examples
+* `MCP Server Registry <https://github.com/modelcontextprotocol/servers>`_ - Browse available MCP servers

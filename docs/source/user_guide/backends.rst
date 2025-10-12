@@ -1,398 +1,670 @@
-Backends
-========
+Backend Configuration
+=====================
 
-MassGen supports multiple LLM backends, allowing you to leverage different AI models for your agents.
+Backends connect MassGen agents to AI model providers. Each backend is configured in YAML and provides specific capabilities like web search, code execution, and file operations.
+
+.. note::
+
+   Backends are not Python classes to import. They are configured in YAML files using the ``type`` field.
 
 Overview
 --------
 
-Backends provide the AI capabilities for agents. Each backend:
+Each agent in MassGen requires a backend configuration that specifies:
 
-* Connects to a specific LLM provider
-* Handles API communication
-* Manages model-specific parameters
-* Provides consistent interface
+* **Provider**: Which AI service to use (OpenAI, Claude, Gemini, etc.)
+* **Model**: Which specific model within that provider
+* **Capabilities**: Which built-in tools are enabled
+* **Parameters**: Model settings like temperature, max_tokens, etc.
 
 Available Backends
 ------------------
 
+Backend Types
+~~~~~~~~~~~~~
+
+MassGen supports these backend types (configured via ``type`` field in YAML):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - Backend Type
+     - Provider
+     - Models
+   * - ``openai``
+     - OpenAI
+     - GPT-5, GPT-5-mini, GPT-5-nano, GPT-4, GPT-4o
+   * - ``claude``
+     - Anthropic
+     - Claude Haiku 3.5, Claude Sonnet 4, Claude Opus 4
+   * - ``claude_code``
+     - Anthropic (SDK)
+     - Claude Sonnet 4, Claude Opus 4 (with dev tools)
+   * - ``gemini``
+     - Google
+     - Gemini 2.5 Flash, Gemini 2.5 Pro
+   * - ``grok``
+     - xAI
+     - Grok-4, Grok-3, Grok-3-mini
+   * - ``azure_openai``
+     - Microsoft Azure
+     - GPT-4, GPT-4o, GPT-5 (Azure deployments)
+   * - ``zai``
+     - ZhipuAI
+     - GLM-4.5
+   * - ``ag2``
+     - AG2 Framework
+     - Any AG2-compatible agent
+   * - ``lmstudio``
+     - LM Studio
+     - Local open-source models
+   * - ``chatcompletion``
+     - Generic
+     - Any OpenAI-compatible API
+
+Backend Capabilities
+~~~~~~~~~~~~~~~~~~~~
+
+Different backends support different built-in tools:
+
+.. list-table:: Backend Tool Support
+   :header-rows: 1
+   :widths: 20 15 15 15 15 20
+
+   * - Backend
+     - Web Search
+     - Code Execution
+     - File Operations
+     - MCP Support
+     - Special Features
+   * - ``openai``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - Reasoning, function calling
+   * - ``claude``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - Long context, vision
+   * - ``claude_code``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - **Native dev tools, workspace**
+   * - ``gemini``
+     - ✅
+     - ✅
+     - ✅
+     - ✅
+     - Multimodal, fast
+   * - ``grok``
+     - ✅
+     - ❌
+     - ✅
+     - ✅
+     - Real-time data
+   * - ``azure_openai``
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - Code interpreter
+   * - ``zai``
+     - ❌
+     - ❌
+     - ✅
+     - ✅
+     - GLM models
+   * - ``ag2``
+     - Varies
+     - ✅
+     - Varies
+     - Varies
+     - External framework
+   * - ``lmstudio``
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - Local, private
+
+Source: `README.md Tools Table <https://github.com/Leezekun/MassGen/blob/main/README.md#tools>`_
+
+Configuring Backends
+--------------------
+
+Basic Backend Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Every agent needs a ``backend`` section in the YAML configuration:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "my_agent"
+       backend:
+         type: "openai"          # Backend type (required)
+         model: "gpt-5-nano"     # Model name (required)
+
+Backend-Specific Examples
+-------------------------
+
 OpenAI Backend
 ~~~~~~~~~~~~~~
 
-Supports OpenAI's GPT models:
+**Basic Configuration:**
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.backends import OpenAIBackend
+   agents:
+     - id: "gpt_agent"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         enable_web_search: true
+         enable_code_interpreter: true
 
-   backend = OpenAIBackend(
-       model="gpt-4",  # or "gpt-3.5-turbo", "gpt-4-turbo"
-       api_key="sk-...",  # Optional, uses env var if not provided
-       temperature=0.7,
-       max_tokens=2000,
-       top_p=1.0,
-       frequency_penalty=0.0,
-       presence_penalty=0.0,
-       stream=False
-   )
+**With Reasoning Parameters:**
 
-   agent = Agent(name="GPTAgent", backend=backend)
+.. code-block:: yaml
 
-Anthropic Backend
-~~~~~~~~~~~~~~~~~
+   agents:
+     - id: "reasoning_agent"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         text:
+           verbosity: "medium"      # low, medium, high
+         reasoning:
+           effort: "high"            # low, medium, high
+           summary: "auto"           # auto, concise, detailed
 
-Supports Anthropic's Claude models:
+**Supported Models:** GPT-5, GPT-5-mini, GPT-5-nano, GPT-4, GPT-4o, GPT-4-turbo, GPT-3.5-turbo
 
-.. code-block:: python
-
-   from massgen.backends import AnthropicBackend
-
-   backend = AnthropicBackend(
-       model="claude-3-opus-20240229",  # or "claude-3-sonnet", "claude-3-haiku"
-       api_key="sk-ant-...",
-       max_tokens=4096,
-       temperature=0.7,
-       top_p=1.0,
-       top_k=40
-   )
-
-   agent = Agent(name="ClaudeAgent", backend=backend)
-
-Google Backend
+Claude Backend
 ~~~~~~~~~~~~~~
 
-Supports Google's Gemini models:
+**Basic Configuration:**
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.backends import GoogleBackend
+   agents:
+     - id: "claude_agent"
+       backend:
+         type: "claude"
+         model: "claude-sonnet-4"
+         enable_web_search: true
+         enable_code_interpreter: true
 
-   backend = GoogleBackend(
-       model="gemini-pro",  # or "gemini-pro-vision"
-       api_key="...",
-       temperature=0.8,
-       top_p=0.95,
-       top_k=40,
-       max_output_tokens=2048
-   )
+**With MCP Integration:**
 
-   agent = Agent(name="GeminiAgent", backend=backend)
+.. code-block:: yaml
 
-XAI Backend
+   agents:
+     - id: "claude_mcp"
+       backend:
+         type: "claude"
+         model: "claude-sonnet-4"
+         mcp_servers:
+           - name: "weather"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@modelcontextprotocol/server-weather"]
+
+**Supported Models:** claude-sonnet-4, claude-opus-4, claude-3-5-sonnet-latest, claude-3-5-haiku-latest
+
+Claude Code Backend
+~~~~~~~~~~~~~~~~~~~
+
+**With Workspace Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "code_agent"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4"
+         cwd: "workspace"           # Working directory for file operations
+
+   orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
+**Special Features:**
+
+* Native file operations (Read, Write, Edit, Bash, Grep, Glob)
+* Workspace isolation
+* Snapshot sharing between agents
+* Full development tool suite
+
+Gemini Backend
+~~~~~~~~~~~~~~
+
+**Basic Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "gemini_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         enable_web_search: true
+         enable_code_execution: true
+
+**With Safety Settings:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "safe_gemini"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-pro"
+         safety_settings:
+           HARM_CATEGORY_HARASSMENT: "BLOCK_MEDIUM_AND_ABOVE"
+           HARM_CATEGORY_HATE_SPEECH: "BLOCK_MEDIUM_AND_ABOVE"
+
+**Supported Models:** gemini-2.5-flash, gemini-2.5-pro, gemini-2.5-flash-thinking
+
+Grok Backend
+~~~~~~~~~~~~
+
+**Basic Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "grok_agent"
+       backend:
+         type: "grok"
+         model: "grok-3-mini"
+         enable_web_search: true
+
+**Supported Models:** grok-4, grok-3, grok-3-mini, grok-beta
+
+Azure OpenAI Backend
+~~~~~~~~~~~~~~~~~~~~
+
+**Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "azure_agent"
+       backend:
+         type: "azure_openai"
+         model: "gpt-4"
+         deployment_name: "my-gpt4-deployment"
+         api_version: "2024-02-15-preview"
+
+**Required Environment Variables:**
+
+.. code-block:: bash
+
+   AZURE_OPENAI_API_KEY=...
+   AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+   AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+AG2 Backend
 ~~~~~~~~~~~
 
-Supports XAI's Grok models:
+**Configuration:**
 
-.. code-block:: python
+.. code-block:: yaml
 
-   from massgen.backends import XAIBackend
+   agents:
+     - id: "ag2_agent"
+       backend:
+         type: "ag2"
+         agent_type: "ConversableAgent"
+         llm_config:
+           config_list:
+             - model: "gpt-4"
+               api_key: "${OPENAI_API_KEY}"
+         code_execution_config:
+           executor: "local"
+           work_dir: "coding"
 
-   backend = XAIBackend(
-       model="grok-beta",
-       api_key="...",
-       temperature=0.7,
-       max_tokens=2000
-   )
+See :doc:`ag2_integration` for detailed AG2 configuration.
 
-   agent = Agent(name="GrokAgent", backend=backend)
-
-Cerebras Backend
-~~~~~~~~~~~~~~~~
-
-Supports Cerebras Cloud models:
-
-.. code-block:: python
-
-   from massgen.backends import CerebrasBackend
-
-   backend = CerebrasBackend(
-       model="cerebras-gpt",
-       api_key="...",
-       temperature=0.7,
-       max_tokens=2000
-   )
-
-   agent = Agent(name="CerebrasAgent", backend=backend)
-
-LMStudio Backend
-~~~~~~~~~~~~~~~~
-
-For local models via LMStudio:
-
-.. code-block:: python
-
-   from massgen.backends import LMStudioBackend
-
-   backend = LMStudioBackend(
-       base_url="http://localhost:1234",
-       model="local-model-name",
-       temperature=0.7,
-       max_tokens=2000
-   )
-
-   agent = Agent(name="LocalAgent", backend=backend)
-
-Backend Configuration
----------------------
-
-Common Parameters
+LM Studio Backend
 ~~~~~~~~~~~~~~~~~
 
-Most backends support these parameters:
+**For Local Models:**
 
-* **model**: The specific model to use
-* **temperature**: Controls randomness (0.0-2.0)
-* **max_tokens**: Maximum response length
-* **top_p**: Nucleus sampling parameter
-* **api_key**: Authentication key (can use environment variable)
+.. code-block:: yaml
 
-Advanced Configuration
-~~~~~~~~~~~~~~~~~~~~~~
+   agents:
+     - id: "local_agent"
+       backend:
+         type: "lmstudio"
+         model: "lmstudio-community/Meta-Llama-3.1-8B-Instruct-GGUF"
+         port: 1234
 
-**Rate Limiting**
+**Features:**
 
-Handle API rate limits:
+* Automatic LM Studio CLI installation
+* Auto-download and loading of models
+* Zero-cost usage
+* Full privacy (local inference)
 
-.. code-block:: python
+Local Inference Backends (vLLM & SGLang)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   backend = OpenAIBackend(
-       model="gpt-4",
-       rate_limit=60,  # requests per minute
-       retry_on_rate_limit=True,
-       max_retries=3
-   )
+**Unified Inference Backend** (v0.0.24-v0.0.25)
 
-**Timeout Configuration**
+MassGen supports high-performance local model serving through vLLM and SGLang with automatic server detection:
 
-Set request timeouts:
+.. code-block:: yaml
 
-.. code-block:: python
+   agents:
+     - id: "local_vllm"
+       backend:
+         type: "chatcompletion"
+         model: "meta-llama/Llama-3.1-8B-Instruct"
+         base_url: "http://localhost:8000/v1"    # vLLM default port
+         api_key: "EMPTY"
 
-   backend = AnthropicBackend(
-       model="claude-3-opus",
-       timeout=30,  # seconds
-       connection_timeout=10
-   )
+     - id: "local_sglang"
+       backend:
+         type: "chatcompletion"
+         model: "meta-llama/Llama-3.1-8B-Instruct"
+         base_url: "http://localhost:30000/v1"   # SGLang default port
+         api_key: "${SGLANG_API_KEY}"
 
-**Custom Headers**
+**Auto-Detection:**
 
-Add custom HTTP headers:
+* **vLLM**: Default port 8000
+* **SGLang**: Default port 30000
+* Automatically detects server type based on configuration
+* Unified InferenceBackend class handles both
 
-.. code-block:: python
+**SGLang-Specific Parameters:**
 
-   backend = OpenAIBackend(
-       model="gpt-4",
-       custom_headers={
-           "X-Custom-Header": "value"
-       }
-   )
+.. code-block:: yaml
+
+   backend:
+     type: "chatcompletion"
+     model: "meta-llama/Llama-3.1-8B-Instruct"
+     base_url: "http://localhost:30000/v1"
+     separate_reasoning: true        # SGLang guided generation
+     top_k: 50                        # Sampling parameter
+     repetition_penalty: 1.1          # Prevent repetition
+
+**Mixed Deployments:**
+
+Run both vLLM and SGLang simultaneously:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "vllm_agent"
+       backend:
+         type: "chatcompletion"
+         model: "Qwen/Qwen2.5-7B-Instruct"
+         base_url: "http://localhost:8000/v1"
+         api_key: "EMPTY"
+
+     - id: "sglang_agent"
+       backend:
+         type: "chatcompletion"
+         model: "Qwen/Qwen2.5-7B-Instruct"
+         base_url: "http://localhost:30000/v1"
+         api_key: "${SGLANG_API_KEY}"
+         separate_reasoning: true
+
+**Benefits of Local Inference:**
+
+* **Cost Savings**: Zero API costs after initial setup
+* **Privacy**: No data sent to external services
+* **Control**: Full control over model selection and parameters
+* **Performance**: Optimized for high-throughput inference
+* **Customization**: Fine-tune models for specific use cases
+
+**Setup vLLM Server:**
+
+.. code-block:: bash
+
+   # Install vLLM
+   pip install vllm
+
+   # Start vLLM server
+   vllm serve meta-llama/Llama-3.1-8B-Instruct \
+     --host 0.0.0.0 \
+     --port 8000
+
+**Setup SGLang Server:**
+
+.. code-block:: bash
+
+   # Install SGLang
+   pip install "sglang[all]"
+
+   # Start SGLang server
+   python -m sglang.launch_server \
+     --model-path meta-llama/Llama-3.1-8B-Instruct \
+     --host 0.0.0.0 \
+     --port 30000
+
+**Configuration Example:**
+
+See ``massgen/configs/providers/local/two_qwen_vllm_sglang.yaml`` for a complete mixed deployment example.
+
+Common Backend Parameters
+-------------------------
+
+Model Parameters
+~~~~~~~~~~~~~~~~
+
+All backends support these common parameters:
+
+.. code-block:: yaml
+
+   backend:
+     type: "openai"
+     model: "gpt-5-nano"
+
+     # Generation parameters
+     temperature: 0.7           # Randomness (0.0-2.0, default 0.7)
+     max_tokens: 4096           # Maximum response length
+     top_p: 1.0                 # Nucleus sampling (0.0-1.0)
+
+     # API configuration
+     api_key: "${OPENAI_API_KEY}"  # Optional - uses env var by default
+     timeout: 60                    # Request timeout in seconds
+
+Tool Configuration
+~~~~~~~~~~~~~~~~~~
+
+Enable or disable built-in tools:
+
+.. code-block:: yaml
+
+   backend:
+     type: "gemini"
+     model: "gemini-2.5-flash"
+
+     # Enable tools
+     enable_web_search: true
+     enable_code_execution: true
+
+     # MCP servers (see MCP Integration guide)
+     mcp_servers:
+       - name: "server_name"
+         type: "stdio"
+         command: "npx"
+         args: ["..."]
+
+Multi-Backend Configurations
+-----------------------------
+
+Using Different Backends
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Each agent can use a different backend:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "fast_researcher"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         enable_web_search: true
+
+     - id: "deep_analyst"
+       backend:
+         type: "openai"
+         model: "gpt-5"
+         reasoning:
+           effort: "high"
+
+     - id: "code_expert"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4"
+         cwd: "workspace"
+
+This is the **recommended approach** - use each backend's strengths:
+
+* **Gemini 2.5 Flash**: Fast research with web search
+* **GPT-5**: Advanced reasoning and analysis
+* **Claude Code**: Development with file operations
+
+Backend Selection Guide
+-----------------------
 
 Choosing the Right Backend
---------------------------
-
-Model Comparison
-~~~~~~~~~~~~~~~~
-
-.. list-table:: Backend Comparison
-   :header-rows: 1
-   :widths: 20 20 20 20 20
-
-   * - Backend
-     - Strength
-     - Speed
-     - Cost
-     - Use Case
-   * - GPT-4
-     - General tasks
-     - Medium
-     - High
-     - Complex reasoning
-   * - Claude 3
-     - Long context
-     - Medium
-     - High
-     - Document analysis
-   * - Gemini
-     - Multimodal
-     - Fast
-     - Medium
-     - Vision + text
-   * - Grok
-     - Real-time data
-     - Fast
-     - Medium
-     - Current events
-   * - Local
-     - Privacy
-     - Varies
-     - Low
-     - Sensitive data
-
-Backend Selection Strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code-block:: python
+Consider these factors when selecting backends:
 
-   # Use different backends for different tasks
-   research_agent = Agent(
-       name="Researcher",
-       backend=OpenAIBackend(model="gpt-4"),
-       role="Deep research and analysis"
-   )
+**For Research Tasks:**
 
-   summary_agent = Agent(
-       name="Summarizer",
-       backend=AnthropicBackend(model="claude-3-haiku"),
-       role="Quick summarization"
-   )
+* **Gemini 2.5 Flash**: Fast, cost-effective, excellent web search
+* **GPT-5-nano**: Good reasoning with web search
+* **Grok**: Real-time information access
 
-   vision_agent = Agent(
-       name="VisionAnalyst",
-       backend=GoogleBackend(model="gemini-pro-vision"),
-       role="Image analysis"
-   )
+**For Coding Tasks:**
 
-Custom Backends
+* **Claude Code**: Best for file operations, full dev tools
+* **GPT-5**: Advanced code generation with reasoning
+* **Gemini 2.5 Pro**: Complex code analysis
+
+**For Analysis Tasks:**
+
+* **GPT-5**: Deep reasoning and complex analysis
+* **Claude Sonnet 4**: Long context, detailed analysis
+* **Gemini 2.5 Pro**: Comprehensive multimodal analysis
+
+**For Cost-Sensitive Tasks:**
+
+* **GPT-5-nano**: Low-cost OpenAI model
+* **Grok-3-mini**: Fast and affordable
+* **Gemini 2.5 Flash**: Very cost-effective
+* **LM Studio**: Free (local inference)
+
+**For Privacy-Sensitive Tasks:**
+
+* **LM Studio**: Fully local, no data sharing
+* **Azure OpenAI**: Enterprise security
+* **Self-hosted vLLM**: Private cloud deployment
+
+Backend Configuration Best Practices
+-------------------------------------
+
+1. **Start with defaults**: Test with default parameters before tuning
+2. **Use environment variables**: Never hardcode API keys
+3. **Match backend to task**: Use each backend's strengths
+4. **Enable only needed tools**: Disable unused capabilities
+5. **Set appropriate timeouts**: Longer timeouts for complex tasks
+6. **Monitor costs**: Track API usage across backends
+7. **Test configurations**: Verify settings before production use
+
+Advanced Backend Configuration
+-------------------------------
+
+For detailed backend-specific parameters, see:
+
+* `Backend Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/BACKEND_CONFIGURATION.md>`_
+* :doc:`../reference/yaml_schema` - Complete YAML schema
+
+MCP Integration
+~~~~~~~~~~~~~~~
+
+See :doc:`mcp_integration` for:
+
+* Adding MCP servers to backends
+* Tool filtering (allowed_tools, exclude_tools)
+* Planning mode configuration (v0.0.29)
+* HTTP-based MCP servers
+
+File Operations
+~~~~~~~~~~~~~~~
+
+See :doc:`file_operations` for:
+
+* Workspace configuration
+* Snapshot storage
+* Permission management
+* Cross-agent file sharing
+
+Troubleshooting
 ---------------
 
-Creating a Custom Backend
-~~~~~~~~~~~~~~~~~~~~~~~~~
+**Backend not found:**
 
-Implement your own backend:
+Ensure the backend type is correct:
 
-.. code-block:: python
+.. code-block:: bash
 
-   from massgen.backends import Backend
+   # Correct backend types
+   type: "openai"         # ✅
+   type: "claude_code"    # ✅
+   type: "gemini"         # ✅
 
-   class CustomBackend(Backend):
-       def __init__(self, **kwargs):
-           super().__init__(**kwargs)
-           self.client = self._initialize_client()
+   # Incorrect (common mistakes)
+   type: "gpt"            # ❌ Use "openai"
+   type: "claude"         # ✅ (but consider "claude_code" for dev tools)
+   type: "google"         # ❌ Use "gemini"
 
-       def _initialize_client(self):
-           # Initialize your API client
-           pass
+**API key not found:**
 
-       def generate(self, prompt, **kwargs):
-           # Implement generation logic
-           response = self.client.complete(prompt, **kwargs)
-           return response.text
+Check your ``.env`` file has the correct variable name:
 
-       def stream_generate(self, prompt, **kwargs):
-           # Implement streaming if supported
-           for chunk in self.client.stream(prompt, **kwargs):
-               yield chunk
+.. code-block:: bash
 
-Backend Adapters
-~~~~~~~~~~~~~~~~
+   # Backend type → Environment variable
+   openai       → OPENAI_API_KEY
+   claude       → ANTHROPIC_API_KEY
+   gemini       → GOOGLE_API_KEY
+   grok         → XAI_API_KEY
+   azure_openai → AZURE_OPENAI_API_KEY
 
-Create adapters for existing APIs:
+**Model not supported:**
 
-.. code-block:: python
+Verify the model name matches the backend's supported models:
 
-   from massgen.backends import HTTPBackend
+.. code-block:: yaml
 
-   class CustomAPIBackend(HTTPBackend):
-       def __init__(self, api_url, **kwargs):
-           super().__init__(base_url=api_url, **kwargs)
-
-       def prepare_request(self, prompt, **kwargs):
-           return {
-               "endpoint": "/generate",
-               "payload": {
-                   "text": prompt,
-                   "parameters": kwargs
-               }
-           }
-
-       def parse_response(self, response):
-           return response.json()["generated_text"]
-
-Performance Optimization
-------------------------
-
-Caching Responses
-~~~~~~~~~~~~~~~~~
-
-Enable response caching:
-
-.. code-block:: python
-
-   backend = OpenAIBackend(
-       model="gpt-4",
-       cache_enabled=True,
-       cache_ttl=3600,  # 1 hour
-       cache_size=1000  # max entries
-   )
-
-Batch Processing
-~~~~~~~~~~~~~~~~
-
-Process multiple requests efficiently:
-
-.. code-block:: python
-
-   backend = OpenAIBackend(model="gpt-4")
-
-   prompts = ["Prompt 1", "Prompt 2", "Prompt 3"]
-   responses = backend.batch_generate(prompts, batch_size=10)
-
-Load Balancing
-~~~~~~~~~~~~~~
-
-Distribute load across multiple API keys:
-
-.. code-block:: python
-
-   from massgen.backends import LoadBalancedBackend
-
-   backend = LoadBalancedBackend(
-       backends=[
-           OpenAIBackend(api_key="key1"),
-           OpenAIBackend(api_key="key2"),
-           OpenAIBackend(api_key="key3")
-       ],
-       strategy="round_robin"  # or "random", "least_loaded"
-   )
-
-Error Handling
---------------
-
-Retry Logic
-~~~~~~~~~~~
-
-Configure retry behavior:
-
-.. code-block:: python
-
-   backend = OpenAIBackend(
-       model="gpt-4",
-       max_retries=3,
-       retry_delay=1.0,
-       exponential_backoff=True,
-       retry_on_errors=[429, 500, 502, 503]
-   )
-
-Fallback Backends
-~~~~~~~~~~~~~~~~~
-
-Set up fallback options:
-
-.. code-block:: python
-
-   from massgen.backends import FallbackBackend
-
-   backend = FallbackBackend(
-       primary=OpenAIBackend(model="gpt-4"),
-       fallbacks=[
-           AnthropicBackend(model="claude-3-opus"),
-           GoogleBackend(model="gemini-pro")
-       ]
-   )
+   # Check supported models in README.md or use --model flag
+   backend:
+     type: "openai"
+     model: "gpt-5-nano"  # ✅ Supported
+     model: "gpt-6"       # ❌ Not yet available
 
 Next Steps
 ----------
 
-* :doc:`tools` - Enhance agents with tools
-* :doc:`mcp_integration` - MCP protocol integration
-* :doc:`advanced_usage` - Advanced backend patterns
+* :doc:`../quickstart/configuration` - Full configuration guide
+* :doc:`mcp_integration` - Add external tools via MCP
+* :doc:`file_operations` - Enable file system operations
+* :doc:`../reference/supported_models` - Complete model list
+* :doc:`../examples/basic_examples` - See backends in action

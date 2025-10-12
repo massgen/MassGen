@@ -1,158 +1,499 @@
 Configuration
 =============
 
-MassGen supports multiple configuration methods to set up your API keys and customize agent behavior.
+MassGen is configured using environment variables for API keys and YAML files for agent definitions and orchestrator settings. This guide shows you how to set up your configuration.
+
+.. note::
+
+   MassGen is currently a CLI tool with YAML configuration. All configuration is done through YAML files and environment variables. A Python library API is planned for future releases.
 
 Environment Variables
 ---------------------
 
-The recommended way to configure API keys is through environment variables. Create a `.env` file in your project root:
+API keys are configured through a ``.env`` file in the MassGen directory. This is the recommended way to manage credentials securely.
+
+Creating Your .env File
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Copy the example environment file and add your API keys:
 
 .. code-block:: bash
 
-   # OpenAI
-   OPENAI_API_KEY=your-openai-api-key
+   # Copy the example file
+   cp .env.example .env
+
+   # Edit the file with your API keys
+   # (Only add keys for the models you plan to use)
+
+Example .env File
+~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   # OpenAI (for GPT-5, GPT-4, etc.)
+   OPENAI_API_KEY=sk-...
 
    # Anthropic Claude
-   ANTHROPIC_API_KEY=your-anthropic-api-key
+   ANTHROPIC_API_KEY=sk-ant-...
 
    # Google Gemini
-   GOOGLE_API_KEY=your-google-api-key
+   GOOGLE_API_KEY=...
 
    # xAI Grok
-   XAI_API_KEY=your-xai-api-key
+   XAI_API_KEY=...
 
-   # Cerebras
-   CEREBRAS_API_KEY=your-cerebras-api-key
+   # Azure OpenAI
+   AZURE_OPENAI_API_KEY=...
+   AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+   AZURE_OPENAI_API_VERSION=2024-02-15-preview
 
-Configuration File
-------------------
+   # Other providers (optional)
+   CEREBRAS_API_KEY=...
+   MOONSHOT_API_KEY=...
+   ZHIPUAI_API_KEY=...
 
-Create a `config.yaml` file for more detailed configuration:
+**Getting API Keys:**
+
+* `OpenAI <https://platform.openai.com/api-keys>`_
+* `Anthropic Claude <https://docs.anthropic.com/en/api/overview>`_
+* `Google Gemini <https://ai.google.dev/gemini-api/docs>`_
+* `xAI Grok <https://docs.x.ai/docs/overview>`_
+* `Azure OpenAI <https://learn.microsoft.com/en-us/azure/ai-services/openai/>`_
+
+YAML Configuration Files
+-------------------------
+
+MassGen uses YAML files to define agents, their backends, and orchestrator settings. Configuration files are stored in ``massgen/configs/`` and can be referenced using the ``--config`` flag.
+
+Basic Configuration Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A minimal MassGen configuration has these top-level keys:
+
+.. code-block:: yaml
+
+   agents:              # List of agents (required)
+     - id: "agent_id"   # Agent definitions
+       backend: ...     # Backend configuration
+       system_message: ...  # Optional system prompt
+
+   orchestrator:        # Orchestrator settings (optional, required for file ops)
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+     context_paths: ...
+
+   ui:                  # UI settings (optional)
+     display_type: "rich_terminal"
+     logging_enabled: true
+
+Single Agent Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For a single agent, use the ``agents`` field with one entry:
+
+.. code-block:: yaml
+
+   # massgen/configs/basic/single/single_gpt5nano.yaml
+   agents:
+     - id: "gpt-5-nano"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         enable_web_search: true
+         enable_code_interpreter: true
+
+   ui:
+     display_type: "rich_terminal"
+     logging_enabled: true
+
+**Run this configuration:**
+
+.. code-block:: bash
+
+   uv run python -m massgen.cli \
+     --config massgen/configs/basic/single/single_gpt5nano.yaml \
+     "What is machine learning?"
+
+Multi-Agent Configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For multiple agents, add more entries to the ``agents`` list:
+
+.. code-block:: yaml
+
+   # massgen/configs/basic/multi/three_agents_default.yaml
+   agents:
+     - id: "gemini2.5flash"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+         enable_web_search: true
+
+     - id: "gpt5nano"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         enable_web_search: true
+         enable_code_interpreter: true
+
+     - id: "grok3mini"
+       backend:
+         type: "grok"
+         model: "grok-3-mini"
+         enable_web_search: true
+
+   ui:
+     display_type: "rich_terminal"
+     logging_enabled: true
+
+**Run this configuration:**
+
+.. code-block:: bash
+
+   uv run python -m massgen.cli \
+     --config massgen/configs/basic/multi/three_agents_default.yaml \
+     "Analyze the pros and cons of renewable energy"
+
+Backend Configuration
+---------------------
+
+Each agent requires a ``backend`` configuration that specifies the model provider and settings.
+
+Backend Types
+~~~~~~~~~~~~~
+
+Available backend types:
+
+* ``openai`` - OpenAI models (GPT-5, GPT-4, etc.)
+* ``claude`` - Anthropic Claude models
+* ``claude_code`` - Claude Code SDK with dev tools
+* ``gemini`` - Google Gemini models
+* ``grok`` - xAI Grok models
+* ``azure_openai`` - Azure OpenAI deployment
+* ``zai`` - ZhipuAI GLM models
+* ``ag2`` - AG2 framework integration
+* ``lmstudio`` - Local models via LM Studio
+* ``chatcompletion`` - Generic OpenAI-compatible API
+
+Basic Backend Structure
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: yaml
+
+   backend:
+     type: "openai"           # Backend type (required)
+     model: "gpt-5-nano"      # Model name (required)
+     api_key: "..."           # Optional - uses env var by default
+     temperature: 0.7         # Optional - model parameters
+     max_tokens: 4096         # Optional - response length
+
+Backend-Specific Features
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Different backends support different built-in tools:
+
+.. code-block:: yaml
+
+   # OpenAI with tools
+   backend:
+     type: "openai"
+     model: "gpt-5-nano"
+     enable_web_search: true
+     enable_code_interpreter: true
+
+   # Gemini with tools
+   backend:
+     type: "gemini"
+     model: "gemini-2.5-flash"
+     enable_web_search: true
+     enable_code_execution: true
+
+   # Claude Code with workspace
+   backend:
+     type: "claude_code"
+     model: "claude-sonnet-4"
+     cwd: "workspace"          # Working directory for file operations
+
+See :doc:`../reference/yaml_schema` for complete backend options.
+
+System Messages
+---------------
+
+Customize agent behavior with system messages:
 
 .. code-block:: yaml
 
    agents:
-     - name: Claude
-       backend: claude
-       model: claude-3-opus-20240229
-       temperature: 0.7
-       max_tokens: 4096
+     - id: "research_agent"
+       backend:
+         type: "gemini"
+         model: "gemini-2.5-flash"
+       system_message: |
+         You are a research specialist. When answering questions:
+         1. Always search for current information
+         2. Cite your sources
+         3. Provide comprehensive analysis
 
-     - name: GPT
-       backend: openai
-       model: gpt-4
-       temperature: 0.8
-       max_tokens: 4096
+     - id: "code_agent"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+       system_message: |
+         You are a coding expert. When solving problems:
+         1. Write clean, well-documented code
+         2. Use code execution to test solutions
+         3. Explain your approach clearly
 
-     - name: Gemini
-       backend: gemini
-       model: gemini-pro
-       temperature: 0.9
+Orchestrator Configuration
+--------------------------
+
+Control workspace sharing and project integration:
+
+.. code-block:: yaml
 
    orchestrator:
-     strategy: consensus
-     max_rounds: 5
-     timeout: 300
+     snapshot_storage: "snapshots"              # Workspace snapshots for sharing
+     agent_temporary_workspace: "temp_workspaces"  # Temporary workspaces
+     context_paths:                             # Project integration
+       - path: "/absolute/path/to/project"
+         permission: "read"                     # read or write
 
-Loading Configuration
----------------------
+Advanced Configuration
+----------------------
 
-Load configuration in your code:
+MCP Integration
+~~~~~~~~~~~~~~~
 
-.. code-block:: python
+Add MCP (Model Context Protocol) servers for external tools:
 
-   from massgen import load_config
-   import os
-   from dotenv import load_dotenv
+.. code-block:: yaml
 
-   # Load environment variables
-   load_dotenv()
+   agents:
+     - id: "agent_with_mcp"
+       backend:
+         type: "openai"
+         model: "gpt-5-nano"
+         mcp_servers:
+           - name: "weather"
+             type: "stdio"
+             command: "npx"
+             args: ["-y", "@fak111/weather-mcp"]
 
-   # Load configuration file
-   config = load_config("config.yaml")
+See :doc:`../user_guide/mcp_integration` for details.
 
-   # Create agents from configuration
-   agents = config.create_agents()
+File Operations
+~~~~~~~~~~~~~~~
 
-Backend-Specific Configuration
--------------------------------
+Enable file system access for agents:
 
-OpenAI-Compatible Backends
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: yaml
 
-.. code-block:: python
+   agents:
+     - id: "file_agent"
+       backend:
+         type: "claude_code"
+         model: "claude-sonnet-4"
+         cwd: "workspace"       # Agent's working directory
 
-   backend = ChatCompletionsBackend(
-       api_key=os.getenv("OPENAI_API_KEY"),
-       base_url="https://api.openai.com/v1",
-       model="gpt-4",
-       temperature=0.7,
-       max_tokens=4096
-   )
+   orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
 
-Claude Backend
-~~~~~~~~~~~~~~
+See :doc:`../user_guide/file_operations` for details.
 
-.. code-block:: python
+Project Integration
+~~~~~~~~~~~~~~~~~~~
 
-   from massgen.backend import ClaudeBackend
+Share directories with agents (read or write access):
 
-   backend = ClaudeBackend(
-       api_key=os.getenv("ANTHROPIC_API_KEY"),
-       model="claude-3-opus-20240229",
-       max_tokens=4096
-   )
+.. code-block:: yaml
 
-Gemini Backend
-~~~~~~~~~~~~~~
+   agents:
+     - id: "project_agent"
+       backend:
+         type: "claude_code"
+         cwd: "workspace"
 
-.. code-block:: python
+   orchestrator:
+     context_paths:
+       - path: "/absolute/path/to/project/src"
+         permission: "read"      # Agents can analyze code
+       - path: "/absolute/path/to/project/docs"
+         permission: "write"     # Agents can update docs
 
-   from massgen.backend import GeminiBackend
+See :doc:`../user_guide/project_integration` for details.
 
-   backend = GeminiBackend(
-       api_key=os.getenv("GOOGLE_API_KEY"),
-       model="gemini-pro",
-       temperature=0.9
-   )
+Protected Paths
+~~~~~~~~~~~~~~~
 
-Advanced Settings
------------------
+Make specific files read-only within writable context paths:
 
-Orchestration Strategies
-~~~~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: yaml
 
-Configure different orchestration strategies:
+   orchestrator:
+     context_paths:
+       - path: "/project"
+         permission: "write"
+         protected_paths:
+           - "config.json"        # Read-only
+           - "template.html"      # Read-only
+           # Other files remain writable
 
-.. code-block:: python
+**Use Case**: Allow agents to modify most files while protecting critical configurations or templates.
 
-   # Sequential processing
-   orchestrator = Orchestrator(agents=agents, strategy="sequential")
+See :doc:`../user_guide/protected_paths` for complete documentation.
 
-   # Parallel processing
-   orchestrator = Orchestrator(agents=agents, strategy="parallel")
+Planning Mode
+~~~~~~~~~~~~~
 
-   # Consensus building
-   orchestrator = Orchestrator(agents=agents, strategy="consensus")
+Prevent irreversible actions during multi-agent coordination:
 
-Logging Configuration
+.. code-block:: yaml
+
+   orchestrator:
+     coordination:
+       enable_planning_mode: true
+       planning_mode_instruction: |
+         PLANNING MODE: Describe your intended actions without executing.
+         Save execution for the final presentation phase.
+
+**Use Case**: File operations, API calls, or any task with irreversible consequences.
+
+See :doc:`../user_guide/planning_mode` for complete documentation.
+
+Timeout Configuration
 ~~~~~~~~~~~~~~~~~~~~~
 
-Configure logging for debugging:
+Control maximum coordination time:
 
-.. code-block:: python
+.. code-block:: yaml
 
-   import logging
+   timeout_settings:
+     orchestrator_timeout_seconds: 1800  # 30 minutes (default)
 
-   logging.basicConfig(
-       level=logging.INFO,
-       format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-   )
+**CLI Override**:
+
+.. code-block:: bash
+
+   uv run python -m massgen.cli --orchestrator-timeout 600 --config config.yaml
+
+See :doc:`../reference/timeouts` for complete timeout documentation.
+
+Configuration Without Files
+---------------------------
+
+For quick tests, you can use CLI flags without a configuration file:
+
+.. code-block:: bash
+
+   # Single agent with model flag
+   uv run python -m massgen.cli --model gemini-2.5-flash "Your question"
+
+   # With backend specification
+   uv run python -m massgen.cli --backend claude --model claude-sonnet-4 "Your question"
+
+   # With custom system message
+   uv run python -m massgen.cli \
+     --model gpt-5-nano \
+     --system-message "You are a helpful coding assistant" \
+     "Write a Python function to sort a list"
+
+CLI Configuration Parameters
+----------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 60 20
+
+   * - Parameter
+     - Description
+     - Required
+   * - ``--config``
+     - Path to YAML configuration file
+     - No*
+   * - ``--model``
+     - Model name for quick setup (e.g., ``gemini-2.5-flash``)
+     - No*
+   * - ``--backend``
+     - Backend type for quick setup (e.g., ``claude``, ``openai``)
+     - No
+   * - ``--system-message``
+     - Custom system prompt for agent
+     - No
+   * - ``--no-display``
+     - Disable real-time UI
+     - No
+   * - ``--no-logs``
+     - Disable logging
+     - No
+   * - ``--debug``
+     - Enable verbose debug logging
+     - No
+
+\* Either ``--config`` or ``--model`` is required (they are mutually exclusive).
+
+Configuration Best Practices
+-----------------------------
+
+1. **Start Simple**: Use single agent configs for testing, then scale to multi-agent
+2. **Use Environment Variables**: Never commit API keys to version control
+3. **Organize Configs**: Group related configurations in directories
+4. **Comment Your YAML**: Add comments to explain agent roles and settings
+5. **Test Incrementally**: Verify each agent works before combining them
+6. **Version Your Configs**: Track configuration changes in version control
+
+Example Configuration Templates
+-------------------------------
+
+All configuration examples are in ``massgen/configs/``:
+
+* ``basic/single/`` - Single agent templates
+* ``basic/multi/`` - Multi-agent collaboration templates
+* ``tools/mcp/`` - MCP integration examples
+* ``tools/filesystem/`` - File operation examples
+* ``ag2/`` - AG2 framework integration examples
+
+See the `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/README.md>`_ for the complete catalog.
 
 Next Steps
 ----------
 
-* :doc:`../user_guide/concepts` - Deep dive into MassGen concepts
-* :doc:`../user_guide/backends` - Explore all available backends
-* :doc:`../examples/index` - See complete examples
+* :doc:`running-massgen` - Learn how to run MassGen with your configuration
+* :doc:`../user_guide/concepts` - Understand MassGen architecture
+* :doc:`../reference/yaml_schema` - Complete YAML schema reference
+* :doc:`../reference/supported_models` - See all supported models and backends
+
+Troubleshooting
+---------------
+
+**Configuration not found:**
+
+Ensure the path is correct relative to the MassGen directory:
+
+.. code-block:: bash
+
+   # Correct - relative to MassGen root
+   uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml
+
+   # Incorrect - missing massgen/ prefix
+   uv run python -m massgen.cli --config configs/basic/multi/three_agents_default.yaml
+
+**API key not found:**
+
+Check that your ``.env`` file exists and contains the correct key:
+
+.. code-block:: bash
+
+   # Verify .env file exists
+   ls -la .env
+
+   # Check for the required key
+   grep "OPENAI_API_KEY" .env
+
+**YAML syntax error:**
+
+Validate your YAML syntax:
+
+.. code-block:: bash
+
+   python -c "import yaml; yaml.safe_load(open('your-config.yaml'))"
