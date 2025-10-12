@@ -9,12 +9,13 @@ import traceback
 from pathlib import Path
 
 # Removed wc_server import - now using factory function approach
-from massgen.backend.utils.filesystem_manager import (
+from massgen.filesystem_manager import (
+    FileOperationTracker,
     FilesystemManager,
     PathPermissionManager,
     Permission,
 )
-from massgen.backend.utils.filesystem_manager._workspace_copy_server import (
+from massgen.filesystem_manager._workspace_tools_server import (
     _validate_and_resolve_paths,
     _validate_path_access,
     get_copy_file_pairs,
@@ -90,15 +91,15 @@ async def test_mcp_relative_paths():
         assert actual_cwd == expected_cwd, f"Expected cwd={expected_cwd}, got {actual_cwd}"
         print("✅ Filesystem config has correct cwd")
 
-        # Get workspace copy config - should also include cwd parameter
-        workspace_copy_config = filesystem_manager.get_workspace_copy_mcp_config()
-        print(f"🔧 Workspace copy MCP config: {workspace_copy_config}")
+        # Get workspace tools config - should also include cwd parameter
+        workspace_tools_config = filesystem_manager.get_workspace_tools_mcp_config()
+        print(f"🔧 Workspace tools MCP config: {workspace_tools_config}")
 
         # Verify cwd is set correctly (resolve both paths to handle /private prefix on macOS)
         expected_cwd = str(workspace_dir.resolve())
-        actual_cwd = str(Path(workspace_copy_config.get("cwd")).resolve())
+        actual_cwd = str(Path(workspace_tools_config.get("cwd")).resolve())
         assert actual_cwd == expected_cwd, f"Expected cwd={expected_cwd}, got {actual_cwd}"
-        print("✅ Workspace copy config has correct cwd")
+        print("✅ Workspace tools config has correct cwd")
 
         # Test filesystem MCP server
         print("\n📡 Testing filesystem MCP server...")
@@ -130,11 +131,11 @@ async def test_mcp_relative_paths():
         except Exception as e:
             print(f"❌ Filesystem MCP server test failed: {e}")
 
-        # Test workspace copy MCP server
-        print("\n📦 Testing workspace copy MCP server...")
+        # Test workspace tools MCP server
+        print("\n📦 Testing workspace tools MCP server...")
         try:
-            async with MCPClient(workspace_copy_config, timeout_seconds=10) as client:
-                print("✅ Workspace copy MCP server connected successfully")
+            async with MCPClient(workspace_tools_config, timeout_seconds=10) as client:
+                print("✅ Workspace tools MCP server connected successfully")
                 tools = client.get_available_tools()
                 print(f"🔧 Available tools: {tools}")
 
@@ -544,8 +545,8 @@ def test_extract_file_from_command():
         helper.teardown()
 
 
-def test_workspace_copy_tools():
-    print("\n📦 Testing workspace copy tool validation...")
+def test_workspace_tools():
+    print("\n📦 Testing workspace tools validation...")
 
     helper = TestHelper()
     helper.setup()
@@ -559,7 +560,7 @@ def test_workspace_copy_tools():
         # Add temp_workspace_dir to the permission manager's allowed paths
         manager.add_path(temp_workspace_dir, Permission.READ, "temp_workspace")
 
-        copy_tools = ["copy_file", "copy_files_batch", "mcp__workspace_copy__copy_file", "mcp__workspace_copy__copy_files_batch"]
+        copy_tools = ["copy_file", "copy_files_batch", "mcp__workspace_tools__copy_file", "mcp__workspace_tools__copy_files_batch"]
         for tool in copy_tools:
             if not manager._is_write_tool(tool):
                 print(f"❌ Failed: {tool} should be detected as write tool")
@@ -771,8 +772,8 @@ def test_path_priority_resolution():
         helper.teardown()
 
 
-def test_workspace_copy_server_path_validation():
-    print("\n🏗️  Testing workspace copy server path validation...")
+def test_workspace_tools_server_path_validation():
+    print("\n🏗️  Testing workspace tools server path validation...")
 
     helper = TestHelper()
     helper.setup()
@@ -890,6 +891,987 @@ def test_workspace_copy_server_path_validation():
         helper.teardown()
 
 
+def test_file_context_paths():
+    print("\n📄 Testing file-based context paths...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create test files
+        test_file = helper.context_dir / "important_file.txt"
+        test_file.write_text("important content")
+        sibling_file = helper.context_dir / "sibling_file.txt"
+        sibling_file.write_text("sibling content")
+        another_sibling = helper.context_dir / "another_file.txt"
+        another_sibling.write_text("another content")
+
+        # Create manager with file-specific context path
+        manager = PathPermissionManager(context_write_access_enabled=False)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Add file context path (not directory)
+        file_context_paths = [{"path": str(test_file), "permission": "read"}]
+        manager.add_context_paths(file_context_paths)
+
+        print("  Testing file gets read permission...")
+        permission = manager.get_permission(test_file)
+        if permission != Permission.READ:
+            print(f"❌ Failed: File should have read permission, got {permission}")
+            return False
+
+        print("  Testing sibling file has no permission...")
+        permission = manager.get_permission(sibling_file)
+        if permission is not None:
+            print(f"❌ Failed: Sibling file should have no permission, got {permission}")
+            return False
+
+        print("  Testing parent directory has no direct permission...")
+        permission = manager.get_permission(helper.context_dir)
+        if permission is not None:
+            print(f"❌ Failed: Parent directory should have no permission, got {permission}")
+            return False
+
+        print("  Testing write tool access to sibling file is blocked...")
+        # Try to write to sibling file - should be blocked
+        tool_args = {"file_path": str(sibling_file)}
+        allowed, reason = manager._validate_write_tool("Write", tool_args)
+        if allowed:
+            print("❌ Failed: Write to sibling file should be blocked")
+            return False
+        if "not an explicitly allowed file" not in reason:
+            print(f"❌ Failed: Expected 'not an explicitly allowed file' in reason, got: {reason}")
+            return False
+
+        print("  Testing write tool access to another sibling is also blocked...")
+        tool_args = {"file_path": str(another_sibling)}
+        allowed, reason = manager._validate_write_tool("Write", tool_args)
+        if allowed:
+            print("❌ Failed: Write to another sibling should be blocked")
+            return False
+
+        print("  Testing read tool access to allowed file works...")
+        # Try to read the explicitly allowed file - should work
+        tool_args = {"file_path": str(test_file)}
+        allowed, reason = manager._validate_write_tool("Read", tool_args)
+        # Read tools are always allowed
+        if not allowed:
+            print(f"❌ Failed: Read of allowed file should work. Reason: {reason}")
+            return False
+
+        print("  Testing file context path with write permission...")
+        manager2 = PathPermissionManager(context_write_access_enabled=True)
+        manager2.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+        file_context_paths2 = [{"path": str(test_file), "permission": "write"}]
+        manager2.add_context_paths(file_context_paths2)
+
+        permission = manager2.get_permission(test_file)
+        if permission != Permission.WRITE:
+            print(f"❌ Failed: File should have write permission when enabled, got {permission}")
+            return False
+
+        print("  Testing write to allowed file works with write permission...")
+        tool_args = {"file_path": str(test_file)}
+        allowed, reason = manager2._validate_write_tool("Write", tool_args)
+        if not allowed:
+            print(f"❌ Failed: Write to allowed file should work with write permission. Reason: {reason}")
+            return False
+
+        print("  Testing write to sibling still blocked even with write-enabled file context...")
+        tool_args = {"file_path": str(sibling_file)}
+        allowed, reason = manager2._validate_write_tool("Write", tool_args)
+        if allowed:
+            print("❌ Failed: Write to sibling should still be blocked")
+            return False
+
+        print("  Testing parent directory still has no MCP paths...")
+        mcp_paths = manager.get_mcp_filesystem_paths()
+        # Parent should be in allowed paths for MCP access but not grant permissions
+        if str(helper.context_dir.resolve()) not in mcp_paths:
+            print("❌ Failed: Parent directory should be in MCP allowed paths for file access")
+            return False
+
+        print("  Testing deletion of sibling file is blocked...")
+        tool_args = {"path": str(sibling_file)}
+        allowed, reason = manager._validate_write_tool("delete_file", tool_args)
+        if allowed:
+            print("❌ Failed: Deletion of sibling file should be blocked")
+            return False
+
+        print("  Testing copy to sibling location is blocked...")
+        tool_args = {
+            "source_path": str(helper.workspace_dir / "workspace_file.txt"),
+            "destination_path": str(another_sibling),
+        }
+        allowed, reason = manager._validate_write_tool("copy_file", tool_args)
+        if allowed:
+            print("❌ Failed: Copy to sibling location should be blocked")
+            return False
+
+        print("✅ File-based context paths work correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+def test_delete_operations():
+    print("\n🗑️  Testing deletion operations...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        manager = helper.create_permission_manager(context_write_enabled=False)
+
+        print("  Testing delete_file detected as write tool...")
+        if not manager._is_write_tool("delete_file"):
+            print("❌ Failed: delete_file should be detected as write tool")
+            return False
+
+        if not manager._is_write_tool("delete_files_batch"):
+            print("❌ Failed: delete_files_batch should be detected as write tool")
+            return False
+
+        print("  Testing deletion permission validation...")
+        # Test workspace deletion (allowed)
+        test_file = helper.workspace_dir / "test.txt"
+        test_file.write_text("content")
+        tool_args = {"path": str(test_file)}
+        allowed, reason = manager._validate_write_tool("delete_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: Workspace file deletion should be allowed. Reason: {reason}")
+            return False
+
+        # Test read-only context deletion (blocked)
+        readonly_file = helper.readonly_dir / "readonly_file.txt"
+        tool_args = {"path": str(readonly_file)}
+        allowed, reason = manager._validate_write_tool("delete_file", tool_args)
+        if allowed:
+            print("❌ Failed: Read-only file deletion should be blocked")
+            return False
+        if "read-only context path" not in reason:
+            print(f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}")
+            return False
+
+        # Test writable context deletion (allowed)
+        manager2 = helper.create_permission_manager(context_write_enabled=True)
+        context_file = helper.context_dir / "context_file.txt"
+        tool_args = {"path": str(context_file)}
+        allowed, reason = manager2._validate_write_tool("delete_file", tool_args)
+        if not allowed:
+            print(f"❌ Failed: Writable context file deletion should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing batch deletion permissions...")
+        # Create multiple files
+        for i in range(3):
+            (helper.workspace_dir / f"file{i}.txt").write_text(f"content {i}")
+
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
+        allowed, reason = manager._validate_write_tool("delete_files_batch", tool_args)
+        # Note: This should succeed because workspace is writable
+        # The actual deletion logic is in workspace_tools_server
+
+        print("✅ Deletion operation permissions work correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+def test_permission_path_root_protection():
+    print("\n🛡️  Testing permission path root protection...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        from massgen.filesystem_manager._workspace_tools_server import (
+            _is_permission_path_root,
+        )
+
+        print("  Testing workspace root is protected...")
+        # The workspace root itself should be protected
+        if not _is_permission_path_root(helper.workspace_dir, [helper.workspace_dir]):
+            print("❌ Failed: Workspace root should be protected from deletion")
+            return False
+
+        print("  Testing files within workspace are NOT protected...")
+        # Files/dirs inside workspace should NOT be protected
+        test_file = helper.workspace_dir / "file.txt"
+        test_file.write_text("content")
+        if _is_permission_path_root(test_file, [helper.workspace_dir]):
+            print("❌ Failed: Files within workspace should not be protected by root check")
+            return False
+
+        test_subdir = helper.workspace_dir / "subdir"
+        test_subdir.mkdir()
+        if _is_permission_path_root(test_subdir, [helper.workspace_dir]):
+            print("❌ Failed: Subdirs within workspace should not be protected by root check")
+            return False
+
+        print("  Testing nested directories are NOT protected...")
+        nested = helper.workspace_dir / "a" / "b" / "c"
+        nested.mkdir(parents=True)
+        if _is_permission_path_root(nested, [helper.workspace_dir]):
+            print("❌ Failed: Nested directories should not be protected by root check")
+            return False
+
+        print("  Testing system files still protected within workspace...")
+        from massgen.filesystem_manager._workspace_tools_server import _is_critical_path
+
+        system_dir = helper.workspace_dir / ".massgen"
+        system_dir.mkdir()
+        # Pass allowed_paths so it checks within workspace context
+        if not _is_critical_path(system_dir, [helper.workspace_dir]):
+            print("❌ Failed: .massgen should still be protected by critical path check")
+            return False
+
+        # But workspace root itself is NOT a critical path (when checking within allowed paths)
+        if _is_critical_path(helper.workspace_dir, [helper.workspace_dir]):
+            print("❌ Failed: Workspace root should not be a critical path when within allowed paths")
+            return False
+
+        # Regular user directory within workspace should not be critical
+        user_dir = helper.workspace_dir / "user_project"
+        user_dir.mkdir()
+        if _is_critical_path(user_dir, [helper.workspace_dir]):
+            print("❌ Failed: Regular user directory should not be critical within workspace")
+            return False
+
+        print("  Testing real-world scenario: workspace under .massgen/workspaces/...")
+        # This is the critical test that was missing!
+        # Simulate real workspace path: /project/.massgen/workspaces/workspace1/
+        massgen_dir = helper.temp_dir / ".massgen"
+        massgen_dir.mkdir()
+        workspaces_dir = massgen_dir / "workspaces"
+        workspaces_dir.mkdir()
+        real_workspace = workspaces_dir / "workspace1"
+        real_workspace.mkdir()
+
+        # User creates a directory in their workspace
+        user_project = real_workspace / "bob_dylan_website"
+        user_project.mkdir()
+        (user_project / "index.html").write_text("<html></html>")
+
+        # This should NOT be blocked even though path contains .massgen
+        if _is_critical_path(user_project, [real_workspace]):
+            print("❌ Failed: User project should not be critical within workspace even if parent has .massgen")
+            print(f"   Path: {user_project}")
+            print(f"   Workspace: {real_workspace}")
+            return False
+
+        # But system files within that workspace should still be blocked
+        git_dir = real_workspace / ".git"
+        git_dir.mkdir()
+        if not _is_critical_path(git_dir, [real_workspace]):
+            print("❌ Failed: .git should still be critical within workspace")
+            return False
+
+        # And .massgen itself within workspace should be blocked
+        massgen_subdir = real_workspace / ".massgen"
+        massgen_subdir.mkdir()
+        if not _is_critical_path(massgen_subdir, [real_workspace]):
+            print("❌ Failed: .massgen subdir should be critical within workspace")
+            return False
+
+        print("  Testing multiple permission paths...")
+        allowed_paths = [helper.workspace_dir, helper.context_dir, helper.readonly_dir]
+
+        # All roots should be protected
+        for path in allowed_paths:
+            if not _is_permission_path_root(path, allowed_paths):
+                print(f"❌ Failed: {path} should be protected as root")
+                return False
+
+        # Files within any root should not be protected
+        for root_dir in allowed_paths:
+            test_file = root_dir / "test.txt"
+            test_file.write_text("test")
+            if _is_permission_path_root(test_file, allowed_paths):
+                print(f"❌ Failed: File {test_file} should not be protected as root")
+                return False
+
+        print("✅ Permission path root protection works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+def test_protected_paths():
+    print("\n🛡️  Testing protected paths feature...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create test structure
+        test_dir = helper.temp_dir / "test_project"
+        test_dir.mkdir()
+        (test_dir / "modifiable.txt").write_text("can modify")
+        (test_dir / "protected.txt").write_text("cannot modify")
+        protected_dir = test_dir / "protected_dir"
+        protected_dir.mkdir()
+        (protected_dir / "nested.txt").write_text("also protected")
+
+        print("  Testing protected paths configuration...")
+        manager = PathPermissionManager(context_write_access_enabled=True)
+
+        # Add context path with protected paths
+        context_paths = [
+            {
+                "path": str(test_dir),
+                "permission": "write",
+                "protected_paths": ["protected.txt", "protected_dir/"],  # Relative paths
+            },
+        ]
+        manager.add_context_paths(context_paths)
+
+        print("  Testing modifiable file has WRITE permission...")
+        modifiable = test_dir / "modifiable.txt"
+        permission = manager.get_permission(modifiable)
+        if permission != Permission.WRITE:
+            print(f"❌ Failed: Modifiable file should have WRITE, got {permission}")
+            return False
+
+        print("  Testing protected file has READ permission...")
+        protected_file = test_dir / "protected.txt"
+        permission = manager.get_permission(protected_file)
+        if permission != Permission.READ:
+            print(f"❌ Failed: Protected file should have READ (forced), got {permission}")
+            return False
+
+        print("  Testing files in protected directory have READ permission...")
+        nested_file = protected_dir / "nested.txt"
+        permission = manager.get_permission(nested_file)
+        if permission != Permission.READ:
+            print(f"❌ Failed: File in protected dir should have READ, got {permission}")
+            return False
+
+        print("  Testing protected directory itself has READ permission...")
+        permission = manager.get_permission(protected_dir)
+        if permission != Permission.READ:
+            print(f"❌ Failed: Protected directory should have READ, got {permission}")
+            return False
+
+        print("  Testing write tool validation on protected paths...")
+        # Try to write to protected file (should be blocked)
+        tool_args = {"file_path": str(protected_file)}
+        allowed, reason = manager._validate_write_tool("Write", tool_args)
+        if allowed:
+            print("❌ Failed: Write to protected file should be blocked")
+            return False
+        if "read-only" not in reason.lower():
+            print(f"❌ Failed: Expected 'read-only' in reason, got: {reason}")
+            return False
+
+        # Try to delete protected file (should be blocked)
+        tool_args = {"path": str(protected_file)}
+        allowed, reason = manager._validate_write_tool("delete_file", tool_args)
+        if allowed:
+            print("❌ Failed: Delete of protected file should be blocked")
+            return False
+
+        # Try to write to modifiable file (should be allowed)
+        tool_args = {"file_path": str(modifiable)}
+        allowed, reason = manager._validate_write_tool("Write", tool_args)
+        if not allowed:
+            print(f"❌ Failed: Write to modifiable file should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing absolute protected paths...")
+        test_dir2 = helper.temp_dir / "test_project2"
+        test_dir2.mkdir()
+        (test_dir2 / "file.txt").write_text("content")
+        protected_abs = test_dir2 / "protected_abs.txt"
+        protected_abs.write_text("absolutely protected")
+
+        manager2 = PathPermissionManager(context_write_access_enabled=True)
+        context_paths2 = [
+            {
+                "path": str(test_dir2),
+                "permission": "write",
+                "protected_paths": [str(protected_abs)],  # Absolute path
+            },
+        ]
+        manager2.add_context_paths(context_paths2)
+
+        permission = manager2.get_permission(protected_abs)
+        if permission != Permission.READ:
+            print(f"❌ Failed: Absolutely protected file should have READ, got {permission}")
+            return False
+
+        print("  Testing protected paths outside context path are ignored...")
+        test_dir3 = helper.temp_dir / "test_project3"
+        test_dir3.mkdir()
+        outside_file = helper.temp_dir / "outside.txt"
+        outside_file.write_text("outside")
+
+        manager3 = PathPermissionManager(context_write_access_enabled=True)
+        context_paths3 = [
+            {
+                "path": str(test_dir3),
+                "permission": "write",
+                "protected_paths": [str(outside_file)],  # Outside context path
+            },
+        ]
+        # This should log a warning and skip the protected path
+        manager3.add_context_paths(context_paths3)
+
+        print("✅ Protected paths work correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_delete_file_real_workspace_scenario():
+    print("\n🧪 Testing delete_file with real .massgen/workspaces/ path...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Simulate REAL MassGen workspace structure
+        massgen_root = helper.temp_dir / ".massgen"
+        massgen_root.mkdir()
+        workspaces_dir = massgen_root / "workspaces"
+        workspaces_dir.mkdir()
+        workspace = workspaces_dir / "workspace1"
+        workspace.mkdir()
+
+        # User creates files in their workspace
+        user_project = workspace / "my_website"
+        user_project.mkdir()
+        index_file = user_project / "index.html"
+        index_file.write_text("<html><body>Hello World</body></html>")
+        styles_file = user_project / "styles.css"
+        styles_file.write_text("body { color: blue; }")
+
+        print(f"  Created test workspace at: {workspace}")
+        print(f"  User project: {user_project}")
+
+        # Import the helper functions directly to test logic
+        from massgen.filesystem_manager._workspace_tools_server import (
+            _is_critical_path,
+            _is_permission_path_root,
+        )
+
+        # Test 1: User file should NOT be critical (key test!)
+        print("  Testing that user file is not critical...")
+        if _is_critical_path(index_file, [workspace]):
+            print("❌ Failed: User file should not be critical")
+            print(f"   Path: {index_file}")
+            print(f"   Workspace: {workspace}")
+            return False
+
+        print("  ✓ User file correctly allowed")
+
+        # Test 2: User directory should NOT be critical
+        print("  Testing that user directory is not critical...")
+        if _is_critical_path(user_project, [workspace]):
+            print("❌ Failed: User directory should not be critical")
+            print(f"   Path: {user_project}")
+            return False
+
+        print("  ✓ User directory correctly allowed")
+
+        # Test 3: .git within workspace SHOULD be critical
+        git_dir = workspace / ".git"
+        git_dir.mkdir()
+
+        print("  Testing that .git is still protected...")
+        if not _is_critical_path(git_dir, [workspace]):
+            print("❌ Failed: .git should be critical within workspace")
+            return False
+
+        print("  ✓ .git correctly blocked")
+
+        # Test 4: .env within workspace SHOULD be critical
+        env_file = workspace / ".env"
+        env_file.write_text("SECRET=123")
+
+        print("  Testing that .env is still protected...")
+        if not _is_critical_path(env_file, [workspace]):
+            print("❌ Failed: .env should be critical within workspace")
+            return False
+
+        print("  ✓ .env correctly blocked")
+
+        # Test 5: Workspace root SHOULD be protected
+        print("  Testing that workspace root is protected...")
+        if not _is_permission_path_root(workspace, [workspace]):
+            print("❌ Failed: Workspace root should be protected")
+            return False
+
+        print("  ✓ Workspace root correctly blocked")
+
+        print("✅ Real workspace deletion scenario works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_compare_tools():
+    print("\n🔍 Testing comparison tools...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        print("  Testing compare tools are not write tools...")
+        manager = helper.create_permission_manager()
+
+        if manager._is_write_tool("compare_directories"):
+            print("❌ Failed: compare_directories should not be write tool")
+            return False
+
+        if manager._is_write_tool("compare_files"):
+            print("❌ Failed: compare_files should not be write tool")
+            return False
+
+        print("  Testing compare operations are always allowed...")
+        # Compare tools should never be blocked since they're read-only
+        tool_args = {"dir1": str(helper.workspace_dir), "dir2": str(helper.context_dir)}
+        allowed, reason = await manager.pre_tool_use_hook("compare_directories", tool_args)
+        if not allowed:
+            print(f"❌ Failed: compare_directories should be allowed. Reason: {reason}")
+            return False
+
+        tool_args = {"file1": str(helper.workspace_dir / "workspace_file.txt"), "file2": str(helper.context_dir / "context_file.txt")}
+        allowed, reason = await manager.pre_tool_use_hook("compare_files", tool_args)
+        if not allowed:
+            print(f"❌ Failed: compare_files should be allowed. Reason: {reason}")
+            return False
+
+        print("✅ Comparison tools work correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+def test_file_operation_tracker():
+    print("\n📊 Testing FileOperationTracker...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        tracker = FileOperationTracker(enforce_read_before_delete=True)
+
+        print("  Testing file read tracking...")
+        test_file = helper.workspace_dir / "test.txt"
+        test_file.write_text("content")
+
+        # File not read yet
+        if tracker.was_read(test_file):
+            print("❌ Failed: File should not be marked as read initially")
+            return False
+
+        # Mark as read
+        tracker.mark_as_read(test_file)
+
+        if not tracker.was_read(test_file):
+            print("❌ Failed: File should be marked as read after mark_as_read")
+            return False
+
+        print("  Testing created file tracking...")
+        created_file = helper.workspace_dir / "created.txt"
+        created_file.write_text("new content")
+
+        tracker.mark_as_created(created_file)
+
+        if not tracker.was_read(created_file):
+            print("❌ Failed: Created file should count as 'read'")
+            return False
+
+        print("  Testing delete validation...")
+        # Can delete read file
+        can_delete, reason = tracker.can_delete(test_file)
+        if not can_delete:
+            print(f"❌ Failed: Should allow delete of read file. Reason: {reason}")
+            return False
+
+        # Cannot delete unread file
+        unread_file = helper.workspace_dir / "unread.txt"
+        unread_file.write_text("unread content")
+        can_delete, reason = tracker.can_delete(unread_file)
+        if can_delete:
+            print("❌ Failed: Should block delete of unread file")
+            return False
+        if "must be read before deletion" not in reason:
+            print(f"❌ Failed: Expected 'must be read before deletion' in reason, got: {reason}")
+            return False
+
+        # Can delete created file (even if not explicitly read)
+        can_delete, reason = tracker.can_delete(created_file)
+        if not can_delete:
+            print(f"❌ Failed: Should allow delete of created file. Reason: {reason}")
+            return False
+
+        print("  Testing directory delete validation...")
+        test_dir = helper.workspace_dir / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "file1.txt").write_text("content 1")
+        (test_dir / "file2.txt").write_text("content 2")
+
+        # Cannot delete directory with unread files
+        can_delete, reason = tracker.can_delete_directory(test_dir)
+        if can_delete:
+            print("❌ Failed: Should block delete of directory with unread files")
+            return False
+
+        # Mark files as read
+        tracker.mark_as_read(test_dir / "file1.txt")
+        tracker.mark_as_read(test_dir / "file2.txt")
+
+        # Now can delete
+        can_delete, reason = tracker.can_delete_directory(test_dir)
+        if not can_delete:
+            print(f"❌ Failed: Should allow delete of directory with all files read. Reason: {reason}")
+            return False
+
+        print("  Testing tracker stats...")
+        stats = tracker.get_stats()
+        if stats["read_files"] < 3:  # test_file + file1 + file2
+            print(f"❌ Failed: Expected at least 3 read files, got {stats['read_files']}")
+            return False
+        if stats["created_files"] < 1:  # created_file
+            print(f"❌ Failed: Expected at least 1 created file, got {stats['created_files']}")
+            return False
+
+        print("  Testing tracker clear...")
+        tracker.clear()
+        stats = tracker.get_stats()
+        if stats["read_files"] != 0 or stats["created_files"] != 0:
+            print(f"❌ Failed: Tracker should be empty after clear, got {stats}")
+            return False
+
+        print("  Testing disabled enforcement...")
+        tracker_disabled = FileOperationTracker(enforce_read_before_delete=False)
+        can_delete, reason = tracker_disabled.can_delete(unread_file)
+        if not can_delete:
+            print("❌ Failed: Should allow delete when enforcement disabled")
+            return False
+
+        print("✅ FileOperationTracker works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_read_before_delete_tracking():
+    print("\n📖 Testing read-before-delete tracking...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete enabled
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=True)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create test files
+        file1 = helper.workspace_dir / "file1.txt"
+        file1.write_text("content 1")
+        file2 = helper.workspace_dir / "file2.txt"
+        file2.write_text("content 2")
+
+        print("  Testing Read tool tracking...")
+        # Read file1
+        tool_args = {"file_path": str(file1)}
+        allowed, reason = await manager.pre_tool_use_hook("Read", tool_args)
+
+        # Should be tracked as read
+        if not manager.file_operation_tracker.was_read(file1):
+            print("❌ Failed: Read tool should track file as read")
+            return False
+
+        print("  Testing Write tool tracking (creates file)...")
+        new_file = helper.workspace_dir / "new_file.txt"
+        tool_args = {"file_path": str(new_file)}
+        allowed, reason = await manager.pre_tool_use_hook("Write", tool_args)
+
+        # Write should track file as created
+        if not manager.file_operation_tracker.was_read(new_file):
+            print("❌ Failed: Write tool should track file as created")
+            return False
+
+        print("  Testing read_multimodal_files tracking...")
+        image_file = helper.workspace_dir / "image.png"
+        image_file.write_text("fake image data")
+        tool_args = {"path": str(image_file)}
+        allowed, reason = await manager.pre_tool_use_hook("read_multimodal_files", tool_args)
+
+        if not manager.file_operation_tracker.was_read(image_file):
+            print("❌ Failed: read_multimodal_files should track file as read")
+            return False
+
+        # Reset tracking for MCP version test
+        manager.file_operation_tracker = FileOperationTracker()
+
+        print("  Testing mcp__workspace_tools__read_multimodal_files tracking...")
+        image_file2 = helper.workspace_dir / "image2.png"
+        image_file2.write_text("fake image data")
+        tool_args = {"path": str(image_file2)}
+        allowed, reason = await manager.pre_tool_use_hook("mcp__workspace_tools__read_multimodal_files", tool_args)
+
+        if not manager.file_operation_tracker.was_read(image_file2):
+            print("❌ Failed: mcp__workspace_tools__read_multimodal_files should track file as read")
+            return False
+
+        print("  Testing mcp__filesystem__read_text_file tracking...")
+        text_file = helper.workspace_dir / "text.txt"
+        text_file.write_text("test content")
+        tool_args = {"path": str(text_file)}
+        allowed, reason = await manager.pre_tool_use_hook("mcp__filesystem__read_text_file", tool_args)
+
+        if not manager.file_operation_tracker.was_read(text_file):
+            print("❌ Failed: mcp__filesystem__read_text_file should track file as read")
+            return False
+
+        print("  Testing mcp__filesystem__read_multiple_files tracking...")
+        file3 = helper.workspace_dir / "file3.txt"
+        file4 = helper.workspace_dir / "file4.txt"
+        file3.write_text("content3")
+        file4.write_text("content4")
+        tool_args = {"paths": [str(file3), str(file4)]}
+        allowed, reason = await manager.pre_tool_use_hook("mcp__filesystem__read_multiple_files", tool_args)
+
+        if not manager.file_operation_tracker.was_read(file3):
+            print("❌ Failed: mcp__filesystem__read_multiple_files should track file3 as read")
+            return False
+        if not manager.file_operation_tracker.was_read(file4):
+            print("❌ Failed: mcp__filesystem__read_multiple_files should track file4 as read")
+            return False
+
+        print("  Testing compare_files tracking...")
+        tool_args = {"file1": str(file1), "file2": str(file2)}
+        allowed, reason = await manager.pre_tool_use_hook("compare_files", tool_args)
+
+        # Both files should be tracked
+        if not manager.file_operation_tracker.was_read(file1):
+            print("❌ Failed: compare_files should track file1 as read")
+            return False
+        if not manager.file_operation_tracker.was_read(file2):
+            print("❌ Failed: compare_files should track file2 as read")
+            return False
+
+        print("✅ Read-before-delete tracking works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_delete_validation_with_read_requirement():
+    print("\n🗑️  Testing delete validation with read requirement...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete enabled
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=True)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create test files
+        read_file = helper.workspace_dir / "read_file.txt"
+        read_file.write_text("content")
+        unread_file = helper.workspace_dir / "unread_file.txt"
+        unread_file.write_text("content")
+
+        print("  Testing delete of unread file is blocked...")
+        tool_args = {"path": str(unread_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if allowed:
+            print("❌ Failed: Delete of unread file should be blocked")
+            return False
+        if "must be read before deletion" not in reason:
+            print(f"❌ Failed: Expected 'must be read before deletion' in reason, got: {reason}")
+            return False
+
+        print("  Testing delete after reading is allowed...")
+        # Read the file first
+        read_args = {"file_path": str(unread_file)}
+        await manager.pre_tool_use_hook("Read", read_args)
+
+        # Now delete should work
+        tool_args = {"path": str(unread_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete after reading should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing delete of created file is allowed...")
+        new_file = helper.workspace_dir / "new.txt"
+        write_args = {"file_path": str(new_file)}
+        await manager.pre_tool_use_hook("Write", write_args)
+
+        # Can delete created file without reading
+        tool_args = {"path": str(new_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete of created file should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing directory delete with unread files...")
+        test_dir = helper.workspace_dir / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "file1.txt").write_text("content 1")
+        (test_dir / "file2.txt").write_text("content 2")
+
+        tool_args = {"path": str(test_dir), "recursive": True}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if allowed:
+            print("❌ Failed: Delete of directory with unread files should be blocked")
+            return False
+
+        # Read files
+        await manager.pre_tool_use_hook("Read", {"file_path": str(test_dir / "file1.txt")})
+        await manager.pre_tool_use_hook("Read", {"file_path": str(test_dir / "file2.txt")})
+
+        # Now should work
+        tool_args = {"path": str(test_dir), "recursive": True}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete after reading all files should be allowed. Reason: {reason}")
+            return False
+
+        print("✅ Delete validation with read requirement works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_batch_delete_with_read_requirement():
+    print("\n🗑️📦 Testing batch delete with read requirement...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete enabled
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=True)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create test files
+        for i in range(3):
+            (helper.workspace_dir / f"file{i}.txt").write_text(f"content {i}")
+
+        print("  Testing batch delete of unread files is blocked...")
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if allowed:
+            print("❌ Failed: Batch delete of unread files should be blocked")
+            return False
+        if "unread file(s)" not in reason:
+            print(f"❌ Failed: Expected 'unread file(s)' in reason, got: {reason}")
+            return False
+
+        print("  Testing batch delete after reading some files...")
+        # Read only file0 and file1
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "file0.txt")})
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "file1.txt")})
+
+        # Still should be blocked because file2 is unread
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if allowed:
+            print("❌ Failed: Batch delete should still be blocked with unread files")
+            return False
+
+        print("  Testing batch delete after reading all files...")
+        # Read file2
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "file2.txt")})
+
+        # Now should work
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Batch delete after reading all should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing batch delete with exclusions...")
+        # Create new files
+        (helper.workspace_dir / "include1.txt").write_text("include 1")
+        (helper.workspace_dir / "include2.txt").write_text("include 2")
+        (helper.workspace_dir / "exclude1.txt").write_text("exclude 1")
+
+        # Read only included files
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "include1.txt")})
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "include2.txt")})
+
+        # Should work because excluded files aren't checked
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["include*.txt"], "exclude_patterns": ["exclude*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Batch delete with proper exclusions should work. Reason: {reason}")
+            return False
+
+        print("✅ Batch delete with read requirement works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_read_before_delete_disabled():
+    print("\n🔓 Testing read-before-delete when disabled...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete DISABLED
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=False)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create unread file
+        unread_file = helper.workspace_dir / "unread.txt"
+        unread_file.write_text("content")
+
+        print("  Testing delete of unread file is allowed when disabled...")
+        tool_args = {"path": str(unread_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete should be allowed when enforcement disabled. Reason: {reason}")
+            return False
+
+        print("  Testing batch delete of unread files is allowed...")
+        for i in range(3):
+            (helper.workspace_dir / f"batch{i}.txt").write_text(f"content {i}")
+
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["batch*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Batch delete should be allowed when enforcement disabled. Reason: {reason}")
+            return False
+
+        print("✅ Read-before-delete disabled mode works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
 async def main():
     print("\n" + "=" * 60)
     print("🧪 Path Permission Manager Test Suite")
@@ -901,13 +1883,24 @@ async def main():
         test_validate_command_tool,
         test_context_write_access_toggle,
         test_extract_file_from_command,
-        test_workspace_copy_tools,
-        test_workspace_copy_server_path_validation,
+        test_workspace_tools,
+        test_workspace_tools_server_path_validation,
+        test_file_context_paths,
+        test_delete_operations,
+        test_permission_path_root_protection,
+        test_protected_paths,
+        test_file_operation_tracker,
     ]
 
     async_tests = [
         test_pre_tool_use_hook,
         test_mcp_relative_paths,
+        test_delete_file_real_workspace_scenario,
+        test_compare_tools,
+        test_read_before_delete_tracking,
+        test_delete_validation_with_read_requirement,
+        test_batch_delete_with_read_requirement,
+        test_read_before_delete_disabled,
     ]
 
     passed = 0

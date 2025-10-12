@@ -5,6 +5,311 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.30] - 2025-10-10
+
+### Changed
+- **Multimodal Support - Audio and Video Processing**: Extended v0.0.27's image-only multimodal foundation
+  - Audio file support with WAV and MP3 formats for Chat Completions and Claude backends
+  - Video file support with MP4, AVI, MOV, WEBM formats for Chat Completions and Claude backends
+  - Audio/video path parameters (`audio_path`, `video_path`) for local files and HTTP/HTTPS URLs
+  - Base64 encoding for local audio/video files with automatic MIME type detection
+  - Configurable media file size limits (default 64MB, configurable via `media_max_file_size_mb`)
+  - New audio/video content formatters in `_chat_completions_formatter.py` and `_claude_formatter.py`
+  - Enhanced `base_with_mcp.py` with 340+ lines of multimodal content processing
+
+- **Claude Code Backend SDK Update**: Updated to newer Agent SDK package
+  - Migrated from `claude-code-sdk>=0.0.19` to `claude-agent-sdk>=0.0.22`
+  - Updated internal SDK classes: `ClaudeCodeOptions` → `ClaudeAgentOptions`
+  - Enhanced bash tool permission validation in `PathPermissionManager`
+  - Improved system message handling with SDK preset support
+  - New bash/shell/exec tool detection for dangerous operation prevention
+
+- **Chat Completions Backend Enhancement**: Qwen API provider integration
+  - Added Qwen API support to existing Chat Completions provider ecosystem
+  - New `QWEN_API_KEY` environment variable support
+  - Qwen-specific configuration examples for video understanding
+
+### Fixed
+- **Planning Mode Configuration**: Fixed crash when configuration lacks `coordination_config`
+  - Added null check in `orchestrator.py` to prevent AttributeError
+  - Improved graceful handling of missing planning mode configuration
+
+- **Claude Code System Message Handling**: Resolved system message processing issues
+  - Fixed system message extraction and formatting in `claude_code.py`
+  - Better integration with Agent SDK for message handling
+
+- **AG2 Adapter Import Ordering**: Resolved import sequence issues
+  - Fixed import statements in `adapters/utils/ag2_utils.py`
+  - Pre-commit isort formatting corrections
+
+### Documentations, Configurations and Resources
+
+- **Case Studies**: Comprehensive documentation for v0.0.28 and v0.0.29 features
+  - `ag2-framework-integration.md`: AG2 adapter system and external framework integration
+  - `mcp-planning-mode.md`: MCP Planning Mode design and implementation guide
+
+- **New Configuration Files**: Added 7 new example configurations
+  - `ag2/ag2_case_study.yaml`: AG2 framework integration case study configuration
+  - `filesystem/cc_gpt5_gemini_filesystem.yaml`: Claude Code, GPT-5, and Gemini filesystem collaboration
+  - `basic/single/single_gemini2.5pro.yaml`: Gemini 2.5 Pro single agent setup
+  - `basic/single/single_openrouter_audio_understanding.yaml`: Audio understanding with OpenRouter
+  - `basic/single/single_qwen_video_understanding.yaml`: Video understanding with Qwen API
+  - `debug/test_sdk_migration.yaml`: Claude Code SDK migration testing
+
+### Technical Details
+- **Commits**: 20 commits including multimodal enhancements, Claude Code SDK migration, and documentation
+- **Files Modified**: 25 files with 2,501 insertions and 84 deletions
+- **Major Features**: Audio/video multimodal support, Claude Code Agent SDK migration, Qwen API integration
+- **Dependencies Updated**: `anthropic>=0.61.0`, `claudecode>=0.0.12`
+- **Contributors**: @ncrispino @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.0.29] - 2025-10-08
+
+### Added
+- **MCP Planning Mode**: New coordination strategy for irreversible MCP actions
+  - New `CoordinationConfig` class with `enable_planning_mode` flag
+  - Agents plan without executing during coordination, winning agent executes during final presentation
+  - Orchestrator and frontend coordination UI support
+  - Support for multiple backends: Response API, Chat Completions, and Gemini
+  - Test suites in `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
+
+- **File Operation Tracker**: Read-before-delete enforcement for safer file operations
+  - New `FileOperationTracker` class in `filesystem_manager/_file_operation_tracker.py`
+  - Prevents agents from deleting files they haven't read first
+  - Tracks read files and agent-created files (created files exempt from read requirement)
+  - Directory deletion validation with comprehensive error messages
+
+- **Path Permission Manager Enhancements**: Integration with FileOperationTracker
+  - Added read/write/delete operation tracking methods to `PathPermissionManager`
+  - Integration with `FileOperationTracker` for read-before-delete enforcement
+  - Enhanced delete validation for files and batch operations
+  - Extended test coverage in `test_path_permission_manager.py`
+
+### Changed
+- **Message Templates**: Improved multi-agent coordination guidance
+  - Added `has_irreversible_actions` support for context path write access
+  - Explicit temporary workspace path structure display for better agent understanding
+  - Task handling priority hierarchy and simplified new_answer requirements
+  - Unified evaluation guidance
+
+- **MCP Tool Filtering**: Enhanced multi-level filtering capabilities
+  - Combined backend-level and per-MCP-server tool filtering
+  - MCP-server-specific `allowed_tools` can override backend-level settings
+  - Merged `exclude_tools` from both backend and MCP server configurations
+
+- **Backend Planning Mode Support**: Extended planning mode to multiple backends
+  - Enhanced `base.py`, `response.py`, `chat_completions.py`, and `gemini.py`
+  - Gemini backend now supports planning mode with session-based tool execution
+  - Planning mode support across all major backend types
+
+
+### Fixed
+- **Circuit Breaker Logic**: Enhanced MCP server initialization in `base_with_mcp.py`
+- **Final Answer Context**: Improved workspace copying when no new answer is provided
+- **Multi-turn MCP Usage**: Addressed non-use of MCP in certain scenarios and improved final answer autonomy
+- **Configuration Issues**: Updated Playwright automation configuration and fixed agent IDs
+
+### Documentations, Configurations and Resources
+
+- **MCP Planning Mode Examples**: 5 new planning mode configurations in `tools/planning/`
+  - `five_agents_discord_mcp_planning_mode.yaml`: Discord MCP with planning mode (5 agents)
+  - `five_agents_filesystem_mcp_planning_mode.yaml`: Filesystem MCP with planning mode
+  - `five_agents_notion_mcp_planning_mode.yaml`: Notion MCP with planning mode (5 agents)
+  - `five_agents_twitter_mcp_planning_mode.yaml`: Twitter MCP with planning mode (5 agents)
+  - `gpt5_mini_case_study_mcp_planning_mode.yaml`: Case study configuration
+
+- **MCP Example Configurations**: New example configurations for MCP integration in `tools/mcp/`
+  - `five_agents_travel_mcp_test.yaml`: Travel planning MCP example (5 agents)
+  - `five_agents_weather_mcp_test.yaml`: Weather service MCP example (5 agents)
+
+- **Debug Configurations**: New debugging and testing utilities
+  - `skip_coordination_test.yaml`: Test configuration for skipping coordination rounds
+
+- **Documentation Updates**: Enhanced project documentation
+  - Updated `permissions_and_context_files.md` in `backend/docs/` with file operation tracking details
+  - Updated README with AG2 as optional installation and uv tool instructions
+
+### Technical Details
+- **Commits**: 23+ commits including planning mode, file operation tracking, and MCP enhancements
+- **Files Modified**: 43 files across agent config, backend, filesystem manager, MCP tools, and configurations
+- **Major Features**: MCP planning mode, FileOperationTracker, enhanced permissions, MCP tool filtering
+- **New Tests**: `test_mcp_blocking.py`, `test_gemini_planning_mode.py` for planning mode validation
+- **Contributors**: @ncrispino @franklinnwren @qidanrui @sonichi @praneeth999 and the MassGen team
+
+## [0.0.28] - 2025-10-06
+
+### Added
+- **AG2 Framework Integration**: Complete adapter system for external agent frameworks
+  - New `massgen/adapters/` module with base adapter architecture (`base.py`, `ag2_adapter.py`)
+  - Support for AG2 ConversableAgent and AssistantAgent types
+  - Code execution capabilities with multiple executor types: LocalCommandLineCodeExecutor, DockerCommandLineCodeExecutor, JupyterCodeExecutor, YepCodeCodeExecutor
+  - Function/tool calling support for AG2 agents
+  - Async execution with `a_generate_reply` for autonomous operation
+  - AG2 utilities module for agent setup and API key management (`adapters/utils/ag2_utils.py`)
+
+- **External Agent Backend**: New backend type for integrating external frameworks
+  - New `ExternalAgentBackend` class supporting adapter registry pattern
+  - Bridge between MassGen orchestration and external agent frameworks via adapters
+  - Framework-specific configuration extraction and validation
+  - Currently supports AG2 with extensible architecture for future frameworks
+
+- **AG2 Test Suite**: Comprehensive test coverage for AG2 integration
+  - `test_ag2_adapter.py`: AG2 adapter functionality tests
+  - `test_agent_adapter.py`: Base adapter interface tests
+  - `test_external_agent_backend.py`: External backend integration tests
+
+### Fixed
+- **MCP Circuit Breaker Logic**: Enhanced initialization for MCP servers
+  - Improved circuit breaker state management in `base_with_mcp.py`
+  - Better error handling during MCP server initialization
+
+### Documentations, Configurations and Resources
+
+- **AG2 Configuration Examples**: New YAML configurations demonstrating AG2 integration
+  - `ag2/ag2_single_agent.yaml`: Basic single AG2 agent setup
+  - `ag2/ag2_coder.yaml`: AG2 agent with code execution
+  - `ag2/ag2_coder_case_study.yaml`: Multi-agent setup with AG2 and Gemini
+  - `ag2/ag2_gemini.yaml`: AG2-Gemini hybrid configuration
+
+- **Design Documentation**: Enhanced multi-source agent integration design
+  - Updated `MULTI_SOURCE_AGENT_INTEGRATION_DESIGN.md` with AG2 adapter architecture
+
+### Technical Details
+- **Commits**: 12 commits including AG2 integration, testing, and configuration examples
+- **Files Modified**: 18 files with 1,423 insertions and 71 deletions
+- **Major Features**: AG2 framework integration, external agent backend, adapter architecture
+- **New Module**: `massgen/adapters/` with AG2 support
+- **Contributors**: @Eric-Shang @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.0.27] - 2025-10-03
+
+### Added
+- **Multimodal Support - Image Processing**: Foundation for multimodal content processing
+  - New `stream_chunk` module with base classes for multimodal content (`base.py`, `text.py`, `multimodal.py`)
+  - Support for image input and output in conversation messages
+  - Image generation and understanding capabilities for multi-agent workflows
+  - Multimodal content structure supporting images, audio, video, and documents (architecture ready)
+
+- **File Upload and File Search**: Extended backend capabilities for document operations
+  - File upload support integrated into Response backend via `_response_api_params_handler.py`
+  - File search functionality for enhanced context retrieval and Q&A
+  - Vector store management for file search operations
+  - Cleanup utilities for uploaded files and vector stores
+
+- **Workspace Tools Enhancements**: Extended MCP-based workspace management
+  - Added `read_multimodal_files` tool for reading images as base64 data with MIME type
+
+- **Claude Sonnet 4.5 Support**: Added latest Claude model to model mappings
+  - Support for Claude Sonnet 4.5 (`claude-sonnet-4-5-20250929`)
+  - Updated model registry in `utils.py`
+
+### Changed
+- **Message Architecture Refactoring**: Extracted and refactored messaging system for multimodal support
+  - Extracted `StreamChunk` classes into dedicated module (`massgen/stream_chunk/`)
+  - Enhanced message templates for image generation workflows
+  - Improved orchestrator and chat agent for multimodal message handling
+
+- **Backend Enhancements**: Extended backends for multimodal and file operations
+  - Enhanced `response.py` with image generation, understanding, and saving capabilities
+  - Improved `base_with_mcp.py` with image handling for MCP-based workflows
+  - New `api_params_handler` module for centralized parameter management including file uploads
+  - Better streaming and error handling for multimodal content
+
+- **Frontend Display Improvements**: Enhanced terminal UI for multimodal content
+  - Refactored `rich_terminal_display.py` for rendering images in terminal
+  - Improved message formatting and visual presentation
+
+### Documentations, Configurations and Resources
+
+- **New Configuration Files**: Added multimodal and enhanced filesystem examples
+  - `gpt4o_image_generation.yaml`: Multi-agent image generation setup
+  - `gpt5nano_image_understanding.yaml`: Multi-agent image understanding configuration
+  - `single_gpt4o_image_generation.yaml`: Single agent image generation
+  - `single_gpt5nano_image_understanding.yaml`: Single agent image understanding
+  - `single_gpt5nano_file_search.yaml`: Single agent file search example
+  - `grok4_gpt5_gemini_filesystem.yaml`: Enhanced filesystem configuration
+  - Updated `claude_code_gpt5nano.yaml` with improved filesystem settings
+
+- **Case Study Documentation**: New `multi-turn-filesystem-support.md` demonstrating v0.0.25 multi-turn capabilities with Bob Dylan website example
+
+- **Presentation Materials**: New `applied-ai-summit.html` presentation with updated build scripts and call-to-action slides
+
+- **Example Resources**: New `multimodality.jpg` for testing multimodal capabilities under `massgen/configs/resources/v0.0.27-example/`
+
+
+### Technical Details
+- **Major Features**: Image processing foundation, StreamChunk architecture, file upload/search, workspace multimodal tools
+- **New Module**: `massgen/stream_chunk/` with base, text, and multimodal classes
+- **Contributors**: @qidanrui @sonichi @praneeth999 @ncrispino @Henry-811 and the MassGen team
+
+## [0.0.26] - 2025-10-01
+
+### Added
+- **File Deletion and Workspace Management**: New MCP tools for workspace file operations
+  - New workspace deletion tools: `delete_file`, `delete_files_batch` for managing workspace files
+  - New comparison tools: `compare_directories`, `compare_files` for file diffing
+  - Consolidated `_workspace_tools_server.py` replacing previous `_workspace_copy_server.py`
+  - Improved workspace cleanup mechanisms for multi-turn sessions
+  - Proper permission checks for all file operations
+
+- **File-Based Context Paths**: Support for single file access without exposing entire directories
+  - Context paths can now be individual files, not just directories
+  - Better control over agent access to specific reference files
+  - Enhanced path validation distinguishing between file and directory contexts
+
+- **Protected Paths Feature**: Prevent agents from modifying specific reference files
+  - Protected paths within write-permitted context paths
+  - Agents can read but not modify protected files
+
+
+### Changed
+- **Code Refactoring**: Improved module structure and import paths
+  - Moved utility modules from `backend/utils/` to top-level `massgen/` directory
+  - Relocated `api_params_handler`, `formatter`, and `filesystem_manager` modules
+  - Simplified import paths and improved code discoverability
+  - Better separation of concerns between backend-specific and shared utilities
+
+- **Path Permission Manager**: Major enhancements to permission system
+  - Enhanced `will_be_writable` logic for better permission state tracking
+  - Improved path validation distinguishing between context paths and workspace paths
+  - Comprehensive test coverage in `test_path_permission_manager.py`
+  - Better handling of edge cases and nested path scenarios
+
+### Fixed
+- **Path Permission Edge Cases**: Resolved various permission checking issues
+  - Fixed file context path validation logic
+  - Corrected protected path matching behavior
+  - Improved handling of nested paths and symbolic links
+  - Better error handling for non-existent paths
+
+### Documentations, Configurations and Resources
+
+- **Example Resources**: Added v0.0.26 example resources for testing new features
+  - Bob Dylan themed website with multiple pages and styles
+  - Additional HTML, CSS, and JavaScript examples
+  - Resources organized under `massgen/configs/resources/v0.0.26-example/`
+
+- **Design Documentation**: Added comprehensive design documentation
+  - New `file_deletion_and_context_files.md` documenting file deletion and context file features
+  - Updated `permissions_and_context_files.md` with v0.0.26 features
+  - Added detailed examples for protected paths and file context paths
+
+- **Release Workflow Documentation**: Added comprehensive release example checklist
+  - Step-by-step guide for release preparation in `docs/workflows/release_example_checklist.md`
+  - Best practices for testing new features
+
+- **Configuration Examples**: New configuration examples for v0.0.26 features
+  - `gemini_gpt5nano_protected_paths.yaml`: Protected paths example
+  - `gemini_gpt5nano_file_context_path.yaml`: File-based context paths example
+  - `gemini_gemini_workspace_cleanup.yaml`: Workspace cleanup example
+
+### Technical Details
+- **Commits**: 20+ commits including file deletion tools, protected paths, and refactoring
+- **Files Modified**: 46 files with 4,343 insertions and 836 deletions
+- **Major Features**: File deletion tools, protected paths, file-based context paths, enhanced CLI prompts
+- **New Tools**: `delete_file`, `delete_files_batch`, `compare_directories`, `compare_files` MCP tools
+- **Contributors**: @praneeth999 @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.25] - 2025-09-29
 
 ### Added

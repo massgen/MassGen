@@ -7,12 +7,26 @@ Inherits from LLMBackend and adds MCP-specific features.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
+import mimetypes
 from abc import abstractmethod
+from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
+
+import httpx
 
 from ..logger_config import log_backend_activity, logger
 from .base import LLMBackend, StreamChunk
+
+
+class UploadFileError(Exception):
+    """Raised when an upload specified in configuration fails to process."""
+
+
+class UnsupportedUploadSourceError(UploadFileError):
+    """Raised when a provided upload source cannot be processed (e.g., URL without fetch support)."""
+
 
 # MCP integration imports
 try:
@@ -50,6 +64,48 @@ except ImportError as e:
     MCPTimeoutError = ImportError
     MCPServerError = ImportError
 
+# Supported file types for OpenAI File Search
+# NOTE: These are the extensions supported by OpenAI's File Search API.
+# Claude Files API has different restrictions (only .pdf and .txt) - see claude.py for Claude-specific validation.
+FILE_SEARCH_SUPPORTED_EXTENSIONS = {
+    ".c",
+    ".cpp",
+    ".cs",
+    ".css",
+    ".doc",
+    ".docx",
+    ".html",
+    ".java",
+    ".js",
+    ".json",
+    ".md",
+    ".pdf",
+    ".php",
+    ".pptx",
+    ".py",
+    ".rb",
+    ".sh",
+    ".tex",
+    ".ts",
+    ".txt",
+}
+
+FILE_SEARCH_MAX_FILE_SIZE = 512 * 1024 * 1024  # 512 MB
+# Max size for media uploads (audio/video). Configurable via `media_max_file_size_mb` in config/all_params.
+MEDIA_MAX_FILE_SIZE_MB = 64
+
+# Supported audio formats for OpenAI audio models (starting with wav and mp3)
+SUPPORTED_AUDIO_FORMATS = {"mp3", "wav"}
+
+# Supported audio MIME types (for validation consistency)
+SUPPORTED_AUDIO_MIME_TYPES = {
+    "audio/wav",
+    "audio/wave",
+    "audio/x-wav",
+    "audio/mpeg",
+    "audio/mp3",
+}
+
 
 class MCPBackend(LLMBackend):
     """Base backend class with MCP (Model Context Protocol) support."""
@@ -74,8 +130,8 @@ class MCPBackend(LLMBackend):
         self._mcp_tools_circuit_breaker = None
         self._circuit_breakers_enabled = MCPCircuitBreaker is not None
 
-        # Initialize circuit breaker if available
-        if self._circuit_breakers_enabled:
+        # Initialize circuit breaker if available and MCP servers are configured
+        if self._circuit_breakers_enabled and self.mcp_servers:
             # Use shared utility to build circuit breaker configuration
             mcp_tools_config = MCPConfigHelper.build_circuit_breaker_config("mcp_tools") if MCPConfigHelper else None
 
@@ -86,7 +142,11 @@ class MCPBackend(LLMBackend):
                 logger.warning("MCP tools circuit breaker config not available, disabling circuit breaker functionality")
                 self._circuit_breakers_enabled = False
         else:
-            logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
+            if not self.mcp_servers:
+                # No MCP servers configured - skip circuit breaker initialization silently
+                self._circuit_breakers_enabled = False
+            else:
+                logger.warning("Circuit breakers not available - proceeding without circuit breaker protection")
 
         # Function registry for mcp_tools-based servers (stdio + streamable-http)
         self._mcp_functions: Dict[str, Function] = {}
@@ -100,6 +160,10 @@ class MCPBackend(LLMBackend):
         # Initialize backend name and agent ID for MCP operations
         self.backend_name = self.get_provider_name()
         self.agent_id = kwargs.get("agent_id", None)
+
+    def supports_upload_files(self) -> bool:
+        """Return True if the backend supports `upload_files` preprocessing."""
+        return False
 
     @abstractmethod
     async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
@@ -163,7 +227,7 @@ class MCPBackend(LLMBackend):
                 allowed_tools=self.allowed_tools,
                 exclude_tools=self.exclude_tools,
                 circuit_breaker=self._mcp_tools_circuit_breaker,
-                timeout_seconds=30,
+                timeout_seconds=120,  # Increased timeout for image generation tools
                 backend_name=self.backend_name,
                 agent_id=self.agent_id,
             )
@@ -204,6 +268,12 @@ class MCPBackend(LLMBackend):
         max_retries: int = 3,
     ) -> Tuple[str, Any]:
         """Execute MCP function with exponential backoff retry logic."""
+        # Check if planning mode is enabled - block MCP tool execution during planning
+        if self.is_planning_mode_enabled():
+            logger.info(f"[MCP] Planning mode enabled - blocking MCP tool execution: {function_name}")
+            error_str = "🚫 [MCP] Planning mode active - MCP tools blocked during coordination"
+            return error_str, {"error": error_str, "blocked_by": "planning_mode", "function_name": function_name}
+
         # Convert JSON string to dict for shared utility
         try:
             args = json.loads(arguments_json) if isinstance(arguments_json, str) else arguments_json
@@ -264,6 +334,423 @@ class MCPBackend(LLMBackend):
         if isinstance(result, dict) and "error" in result:
             return f"Error: {result['error']}", result
         return str(result), result
+
+    async def _process_upload_files(
+        self,
+        messages: List[Dict[str, Any]],
+        all_params: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Process upload_files config entries and attach to messages.
+
+        Supports these forms:
+
+        - {"image_path": "..."}: image file path or HTTP/HTTPS URL
+          - Local paths: loads and base64-encodes the image file
+          - URLs: passed directly without encoding
+          Supported formats: PNG, JPEG, WEBP, GIF, BMP, TIFF, HEIC (provider-dependent)
+
+        - {"audio_path": "..."}: audio file path or HTTP/HTTPS URL
+          - Local paths: loads and base64-encodes the audio file
+          - URLs: fetched and base64-encoded (30s timeout, configurable size limit)
+          Supported formats: WAV, MP3 (strictly validated)
+
+        - {"video_path": "..."}: video file path or HTTP/HTTPS URL
+          - Local paths: loads and base64-encodes the video file
+          - URLs: passed directly without encoding, converted to video_url format
+          Supported formats: MP4, AVI, MOV, WEBM (provider-dependent)
+
+        - {"file_path": "..."}: document/code file for File Search (local path or URL)
+          - Local paths: validated against supported extensions and size limits
+          - URLs: queued for upload without local validation
+          Supported extensions: .c, .cpp, .cs, .css, .doc, .docx, .html, .java, .js,
+          .json, .md, .pdf, .php, .pptx, .py, .rb, .sh, .tex, .ts, .txt
+
+        Note: Format support varies by provider (OpenAI, Qwen, vLLM, etc.). The implementation
+        uses MIME type detection for automatic format handling.
+
+        Audio/Video/Image uploads are limited by `media_max_file_size_mb` (default 64MB).
+        File Search files are limited to 512MB. You can override limits via config or call parameters.
+
+        Returns updated messages list with additional content items.
+        """
+
+        upload_entries = all_params.get("upload_files")
+        if not upload_entries:
+            return messages
+
+        if not self.supports_upload_files():
+            logger.debug(
+                "upload_files provided but backend %s does not support file uploads; ignoring",
+                self.get_provider_name(),
+            )
+            all_params.pop("upload_files", None)
+            return messages
+
+        processed_messages = list(messages)
+        extra_content: List[Dict[str, Any]] = []
+        has_file_search_files = False
+
+        for entry in upload_entries:
+            if not isinstance(entry, dict):
+                logger.warning("upload_files entry is not a dict: %s", entry)
+                raise UploadFileError("Each upload_files entry must be a mapping")
+
+            # Check for file_path (File Search documents/code)
+            file_path_value = entry.get("file_path")
+            if file_path_value:
+                # Process file_path entry for File Search
+                file_content = self._process_file_path_entry(file_path_value, all_params)
+                if file_content:
+                    extra_content.append(file_content)
+                    has_file_search_files = True
+                continue
+
+            # Check for image_path (supports both URLs and local paths)
+            # image_url deprecated; use image_path with http(s) URL instead
+            path_value = entry.get("image_path")
+
+            if path_value:
+                # Check if it's a URL (like file_path does)
+                if path_value.startswith(("http://", "https://")):
+                    # Handle image URLs directly (no base64 encoding needed)
+                    extra_content.append(
+                        {
+                            "type": "image",
+                            "url": path_value,
+                        },
+                    )
+                else:
+                    # Handle local file paths
+                    resolved = self._resolve_local_path(path_value, all_params)
+
+                    if not resolved.exists():
+                        raise UploadFileError(f"File not found: {resolved}")
+
+                    # Enforce configurable media size limit (in MB) for images (parity with audio/video)
+                    limit_mb = all_params.get("media_max_file_size_mb") or self.config.get("media_max_file_size_mb") or MEDIA_MAX_FILE_SIZE_MB
+                    self._validate_media_size(resolved, int(limit_mb))
+
+                    encoded, mime_type = self._read_base64(resolved)
+                    if not mime_type:
+                        mime_type = "image/jpeg"
+
+                    extra_content.append(
+                        {
+                            "type": "image",
+                            "base64": encoded,
+                            "mime_type": mime_type,
+                            "source_path": str(resolved),
+                        },
+                    )
+
+                continue
+
+            audio_path_value = entry.get("audio_path")
+
+            if audio_path_value:
+                # Check if it's a URL (like file_path does)
+                if audio_path_value.startswith(("http://", "https://")):
+                    # Fetch audio URL and convert to base64
+                    encoded, mime_type = await self._fetch_audio_url_as_base64(
+                        audio_path_value,
+                        all_params,
+                    )
+                    extra_content.append(
+                        {
+                            "type": "audio",
+                            "base64": encoded,
+                            "mime_type": mime_type,
+                        },
+                    )
+                else:
+                    # Handle local file paths
+                    resolved = self._resolve_local_path(audio_path_value, all_params)
+
+                    if not resolved.exists():
+                        raise UploadFileError(f"Audio file not found: {resolved}")
+
+                    # Enforce configurable media size limit (in MB)
+                    limit_mb = all_params.get("media_max_file_size_mb") or self.config.get("media_max_file_size_mb") or MEDIA_MAX_FILE_SIZE_MB
+
+                    self._validate_media_size(resolved, int(limit_mb))
+
+                    encoded, mime_type = self._read_base64(resolved)
+
+                    # Validate audio format (wav and mp3 only)
+                    mime_lower = (mime_type or "").split(";")[0].strip().lower()
+                    if mime_lower not in SUPPORTED_AUDIO_MIME_TYPES:
+                        raise UploadFileError(
+                            f"Unsupported audio format for {resolved}. " f"Supported formats: mp3, wav",
+                        )
+
+                    # Normalize MIME type
+                    if mime_lower in {"audio/wav", "audio/wave", "audio/x-wav"}:
+                        mime_type = "audio/wav"
+                    else:
+                        mime_type = "audio/mpeg"
+
+                    extra_content.append(
+                        {
+                            "type": "audio",
+                            "base64": encoded,
+                            "mime_type": mime_type,
+                            "source_path": str(resolved),
+                        },
+                    )
+
+                continue
+
+            # Check for video_path (supports both URLs and local paths)
+            video_path_value = entry.get("video_path")
+
+            if video_path_value:
+                # Check if it's a URL
+                if video_path_value.startswith(("http://", "https://")):
+                    # Handle video URLs directly (no base64 encoding needed)
+                    extra_content.append(
+                        {
+                            "type": "video_url",
+                            "url": video_path_value,
+                        },
+                    )
+                else:
+                    # Handle local file paths
+                    resolved = self._resolve_local_path(video_path_value, all_params)
+
+                    if not resolved.exists():
+                        raise UploadFileError(f"Video file not found: {resolved}")
+
+                    # Enforce configurable media size limit (in MB)
+                    limit_mb = all_params.get("media_max_file_size_mb") or self.config.get("media_max_file_size_mb") or MEDIA_MAX_FILE_SIZE_MB
+
+                    self._validate_media_size(resolved, int(limit_mb))
+
+                    encoded, mime_type = self._read_base64(resolved)
+                    if not mime_type:
+                        mime_type = "video/mp4"
+                    extra_content.append(
+                        {
+                            "type": "video",
+                            "base64": encoded,
+                            "mime_type": mime_type,
+                            "source_path": str(resolved),
+                        },
+                    )
+
+                continue
+
+            raise UploadFileError(
+                "upload_files entry must specify either 'image_path', 'audio_path', 'video_path', or 'file_path'",
+            )
+
+        if not extra_content:
+            return processed_messages
+
+        # Track if file search files are present for API params handler
+        if has_file_search_files:
+            all_params["_has_file_search_files"] = True
+
+        if processed_messages:
+            last_message = processed_messages[-1].copy()
+            last_content = last_message.get("content", [])
+
+            if isinstance(last_content, str):
+                last_content = [{"type": "text", "text": last_content}]
+            elif isinstance(last_content, dict) and "type" in last_content:
+                last_content = [dict(last_content)]
+            elif isinstance(last_content, list):
+                if all(isinstance(item, str) for item in last_content):
+                    last_content = [{"type": "text", "text": item} for item in last_content]
+                elif all(isinstance(item, dict) and "type" in item and "text" in item for item in last_content):
+                    last_content = list(last_content)
+                else:
+                    last_content = []
+            else:
+                last_content = []
+
+            last_content.extend(extra_content)
+            last_message["content"] = last_content
+            processed_messages[-1] = last_message
+        else:
+            processed_messages.append(
+                {
+                    "role": "user",
+                    "content": extra_content,
+                },
+            )
+
+        # Prevent downstream handlers from seeing upload_files
+        all_params.pop("upload_files", None)
+
+        return processed_messages
+
+    def _process_file_path_entry(
+        self,
+        file_path_value: str,
+        all_params: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Process file path entry and validate against provider-specific restrictions.
+
+        Note: This base implementation validates against OpenAI File Search extensions.
+        Backends like Claude may have additional restrictions (e.g., only .pdf and .txt)
+        and should perform provider-specific validation in their upload methods.
+        """
+        # Check if it's a URL
+        if file_path_value.startswith(("http://", "https://")):
+            logger.info(f"Queued file URL for File Search upload: {file_path_value}")
+            return {
+                "type": "file_pending_upload",
+                "url": file_path_value,
+                "source": "url",
+            }
+
+        # Local file path
+        resolved = Path(file_path_value).expanduser()
+        if not resolved.is_absolute():
+            cwd = all_params.get("cwd") or self.config.get("cwd")
+            if cwd:
+                resolved = Path(cwd).joinpath(resolved)
+            else:
+                resolved = resolved.resolve()
+
+        if not resolved.exists():
+            raise UploadFileError(f"File not found: {resolved}")
+
+        # Validate file extension (OpenAI File Search extensions)
+        # Note: Backends like Claude may override with stricter validation
+        file_ext = resolved.suffix.lower()
+        if file_ext not in FILE_SEARCH_SUPPORTED_EXTENSIONS:
+            raise UploadFileError(
+                f"File type {file_ext} not supported by File Search. " f"Supported types: {', '.join(sorted(FILE_SEARCH_SUPPORTED_EXTENSIONS))}",
+            )
+
+        # Validate file size
+        file_size = resolved.stat().st_size
+        if file_size > FILE_SEARCH_MAX_FILE_SIZE:
+            raise UploadFileError(
+                f"File size {file_size / (1024*1024):.2f} MB exceeds " f"File Search limit of {FILE_SEARCH_MAX_FILE_SIZE / (1024*1024):.0f} MB",
+            )
+
+        # Determine MIME type
+        mime_type, _ = mimetypes.guess_type(resolved.as_posix())
+        if not mime_type:
+            mime_type = "application/octet-stream"
+
+        logger.info(f"Queued local file for File Search upload: {resolved}")
+        return {
+            "type": "file_pending_upload",
+            "path": str(resolved),
+            "mime_type": mime_type,
+            "source": "local",
+        }
+
+    def _resolve_local_path(self, raw_path: str, all_params: Dict[str, Any]) -> Path:
+        """Resolve a local path using cwd from all_params or config, mirroring file_path resolution."""
+        resolved = Path(raw_path).expanduser()
+        if not resolved.is_absolute():
+            cwd = all_params.get("cwd") or self.config.get("cwd")
+            if cwd:
+                resolved = Path(cwd).joinpath(resolved)
+            else:
+                resolved = resolved.resolve()
+        return resolved
+
+    def _validate_media_size(self, path: Path, limit_mb: int) -> None:
+        """Validate media file size against MB limit; raise UploadFileError if exceeded."""
+        file_size = path.stat().st_size
+        if file_size > limit_mb * 1024 * 1024:
+            logger.warning(
+                f"Media file too large: {file_size / (1024 * 1024):.2f} MB at {path} (limit {limit_mb} MB)",
+            )
+            raise UploadFileError(
+                f"Media file size {file_size / (1024 * 1024):.2f} MB exceeds limit of {limit_mb:.0f} MB: {path}",
+            )
+
+    def _read_base64(self, path: Path) -> Tuple[str, str]:
+        """Read file bytes and return (base64, guessed_mime_type)."""
+        mime_type, _ = mimetypes.guess_type(path.as_posix())
+        try:
+            data = path.read_bytes()
+        except OSError as exc:
+            raise UploadFileError(f"Failed to read file {path}: {exc}") from exc
+        encoded = base64.b64encode(data).decode("utf-8")
+        return encoded, (mime_type or "")
+
+    async def _fetch_audio_url_as_base64(
+        self,
+        url: str,
+        all_params: Dict[str, Any],
+    ) -> Tuple[str, str]:
+        """
+        Fetch audio from URL and return (base64_encoded_data, mime_type).
+
+        Currently supports: wav, mp3
+
+        Args:
+            url: HTTP/HTTPS URL to fetch audio from
+            all_params: Parameters dict containing optional media_max_file_size_mb
+
+        Returns:
+            Tuple of (base64_encoded_string, mime_type)
+
+        Raises:
+            UploadFileError: If fetch fails, format is unsupported, or size exceeds limit
+        """
+        # Get size limit from config (default 64MB)
+        limit_mb = all_params.get("media_max_file_size_mb") or self.config.get("media_max_file_size_mb") or MEDIA_MAX_FILE_SIZE_MB
+        max_size_bytes = int(limit_mb) * 1024 * 1024
+
+        async with httpx.AsyncClient() as http_client:
+            try:
+                response = await http_client.get(url, timeout=30.0)
+                response.raise_for_status()
+            except httpx.TimeoutException as exc:
+                raise UploadFileError(
+                    f"Timeout (30s) while fetching audio from {url}",
+                ) from exc
+            except httpx.HTTPError as exc:
+                raise UploadFileError(
+                    f"Failed to fetch audio from {url}: {exc}",
+                ) from exc
+
+            # Validate Content-Type
+            content_type = response.headers.get("Content-Type", "")
+            mime_type = content_type.split(";")[0].strip().lower()
+
+            # Simple format validation (wav and mp3 only)
+            if mime_type not in SUPPORTED_AUDIO_MIME_TYPES:
+                # Try to guess from URL extension
+                guessed_mime, _ = mimetypes.guess_type(url)
+                if guessed_mime and guessed_mime.lower() in SUPPORTED_AUDIO_MIME_TYPES:
+                    mime_type = guessed_mime.lower()
+                else:
+                    raise UploadFileError(
+                        f"Unsupported audio format for {url}. " f"Supported formats: {', '.join(sorted(SUPPORTED_AUDIO_FORMATS))}",
+                    )
+
+            # Normalize MIME type
+            if mime_type in {"audio/wav", "audio/wave", "audio/x-wav"}:
+                mime_type = "audio/wav"
+            elif mime_type in {"audio/mpeg", "audio/mp3"}:
+                mime_type = "audio/mpeg"
+
+            # Get audio bytes
+            audio_bytes = response.content
+
+            # Validate size
+            if len(audio_bytes) > max_size_bytes:
+                raise UploadFileError(
+                    f"Audio file size {len(audio_bytes) / (1024 * 1024):.2f} MB exceeds limit of {limit_mb} MB: {url}",
+                )
+
+            # Encode to base64
+            encoded = base64.b64encode(audio_bytes).decode("utf-8")
+
+            logger.info(
+                f"Fetched and encoded audio from URL: {url} " f"({len(audio_bytes) / (1024 * 1024):.2f} MB, {mime_type})",
+            )
+
+            return encoded, mime_type
 
     async def stream_with_tools(
         self,
@@ -368,7 +855,8 @@ class MCPBackend(LLMBackend):
         """Simple passthrough streaming without MCP processing."""
         agent_id = kwargs.get("agent_id", None)
         all_params = {**self.config, **kwargs}
-        api_params = await self.api_params_handler.build_api_params(messages, tools, all_params)
+        processed_messages = await self._process_upload_files(messages, all_params)
+        api_params = await self.api_params_handler.build_api_params(processed_messages, tools, all_params)
 
         # Remove any MCP tools from the tools list
         if "tools" in api_params:

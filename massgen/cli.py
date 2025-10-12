@@ -88,6 +88,30 @@ class ConfigurationError(Exception):
     """Configuration error for CLI."""
 
 
+def _substitute_variables(obj: Any, variables: Dict[str, str]) -> Any:
+    """Recursively substitute ${var} references in config with actual values.
+
+    Args:
+        obj: Config object (dict, list, str, or other)
+        variables: Dict of variable names to values
+
+    Returns:
+        Config object with variables substituted
+    """
+    if isinstance(obj, dict):
+        return {k: _substitute_variables(v, variables) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_substitute_variables(item, variables) for item in obj]
+    elif isinstance(obj, str):
+        # Replace ${var} with value
+        result = obj
+        for var_name, var_value in variables.items():
+            result = result.replace(f"${{{var_name}}}", var_value)
+        return result
+    else:
+        return obj
+
+
 def load_config_file(config_path: str) -> Dict[str, Any]:
     """Load configuration from YAML or JSON file.
 
@@ -95,6 +119,8 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
     1. Exact path as provided (absolute or relative to CWD)
     2. If just a filename, search in package's configs/ directory
     3. If a relative path, also try within package's configs/ directory
+
+    Supports variable substitution: ${cwd} in any string will be replaced with the agent's cwd value.
     """
     path = Path(config_path)
 
@@ -145,6 +171,9 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - gemini: Google Gemini (requires GOOGLE_API_KEY or GEMINI_API_KEY)
     - chatcompletion: OpenAI-compatible providers (auto-detects API key based on base_url)
 
+    Supported backend with external dependencies:
+    - ag2/autogen: AG2 (AutoGen) framework agents
+
     For chatcompletion backend, the following providers are auto-detected:
     - Cerebras AI (cerebras.ai) -> CEREBRAS_API_KEY
     - Together AI (together.ai/together.xyz) -> TOGETHER_API_KEY
@@ -153,8 +182,20 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
     - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
     - POE (poe.com) -> POE_API_KEY
+    - Qwen (dashscope.aliyuncs.com) -> QWEN_API_KEY
+
+    External agent frameworks are supported via the adapter registry.
     """
     backend_type = backend_type.lower()
+
+    # Check if this is a framework/adapter type
+    from massgen.adapters import adapter_registry
+
+    if backend_type in adapter_registry:
+        # Use ExternalAgentBackend for all registered adapter types
+        from massgen.backend.external import ExternalAgentBackend
+
+        return ExternalAgentBackend(adapter_type=backend_type, **kwargs)
 
     if backend_type == "openai":
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
@@ -222,6 +263,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 api_key = os.getenv("POE_API_KEY")
                 if not api_key:
                     raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
+            elif base_url and "aliyuncs.com" in base_url:
+                api_key = os.getenv("QWEN_API_KEY")
+                if not api_key:
+                    raise ConfigurationError("Qwen API key not found. Set QWEN_API_KEY or provide in config.")
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -281,6 +326,11 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
+
+        # Substitute variables like ${cwd} in backend config
+        if "cwd" in backend_config:
+            variables = {"cwd": backend_config["cwd"]}
+            backend_config = _substitute_variables(backend_config, variables)
 
         # Infer backend type from model if not explicitly provided
         backend_type = backend_config.get("type") or (get_backend_type_from_model(backend_config["model"]) if "model" in backend_config else None)
@@ -389,16 +439,16 @@ def create_simple_config(
 
 
 def validate_context_paths(config: Dict[str, Any]) -> None:
-    """Validate that all context paths in the config are valid directories.
+    """Validate that all context paths in the config exist.
 
-    Context paths must be directories due to MCP filesystem server limitations.
-    Raises ConfigurationError with clear message if any paths don't exist or aren't directories.
+    Context paths can be either files or directories.
+    File-level context paths allow access to specific files without exposing sibling files.
+    Raises ConfigurationError with clear message if any paths don't exist.
     """
     orchestrator_cfg = config.get("orchestrator", {})
     context_paths = orchestrator_cfg.get("context_paths", [])
 
     missing_paths = []
-    file_paths = []
 
     for context_path_config in context_paths:
         if isinstance(context_path_config, dict):
@@ -411,24 +461,12 @@ def validate_context_paths(config: Dict[str, Any]) -> None:
             path_obj = Path(path)
             if not path_obj.exists():
                 missing_paths.append(path)
-            elif path_obj.is_file():
-                file_paths.append(path)
 
-    errors = []
     if missing_paths:
-        errors.append("Context paths not found:")
+        errors = ["Context paths not found:"]
         for path in missing_paths:
             errors.append(f"  - {path}")
-
-    if file_paths:
-        errors.append("Context paths must be directories, not files:")
-        for path in file_paths:
-            errors.append(f"  - {path}")
-        errors.append("Hint: Use the parent directory instead")
-        errors.append("Note: File-level context paths may be supported in future versions")
-
-    if errors:
-        errors.append("\nPlease update your configuration with valid directory paths.")
+        errors.append("\nPlease update your configuration with valid paths.")
         raise ConfigurationError("\n".join(errors))
 
 
@@ -659,10 +697,17 @@ async def run_question_with_history(
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
-        # Get context sharing parameters from kwargs (if present in config)
-        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
-        session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")  # Default to "sessions"
+        # Get orchestrator parameters from config
+        orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Get context sharing parameters
+        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+        session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
+
+        # Get debug/test parameters
+        if orchestrator_cfg.get("skip_coordination_rounds", False):
+            orchestrator_config.skip_coordination_rounds = True
 
         # Load previous turns from session storage for multi-turn conversations
         previous_turns = load_previous_turns(session_info, session_storage)
@@ -752,9 +797,16 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
-        # Get context sharing parameters from kwargs (if present in config)
-        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
+        # Get orchestrator parameters from config
+        orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Get context sharing parameters
+        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+
+        # Get debug/test parameters
+        if orchestrator_cfg.get("skip_coordination_rounds", False):
+            orchestrator_config.skip_coordination_rounds = True
 
         orchestrator = Orchestrator(
             agents=agents,
@@ -810,7 +862,7 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
         print("\n❓ Add current directory as context path?", flush=True)
         print(f"   {cwd}", flush=True)
         try:
-            response = input("   [Y]es (default) / [N]o / [C]ustom path: ").strip().lower()
+            response = input("   [Y]es (default) / [P]rotected / [N]o / [C]ustom path: ").strip().lower()
 
             if response in ["y", "yes", ""]:
                 # Add CWD with write permission
@@ -819,21 +871,86 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                 orchestrator_cfg["context_paths"].append({"path": cwd_str, "permission": "write"})
                 print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
                 return True
+            elif response in ["p", "protected"]:
+                # Add CWD with write permission and protected paths
+                protected_paths = []
+                print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                while True:
+                    protected_input = input("     → ").strip()
+                    if not protected_input:
+                        break
+                    protected_paths.append(protected_input)
+
+                if "context_paths" not in orchestrator_cfg:
+                    orchestrator_cfg["context_paths"] = []
+
+                context_config = {"path": cwd_str, "permission": "write"}
+                if protected_paths:
+                    context_config["protected_paths"] = protected_paths
+
+                orchestrator_cfg["context_paths"].append(context_config)
+                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                if protected_paths:
+                    for protected in protected_paths:
+                        print(f"     🔒 {protected}", flush=True)
+                return True
+            elif response in ["n", "no"]:
+                # User explicitly declined
+                return False
             elif response in ["c", "custom"]:
-                custom_path = input("   Enter path: ").strip()
-                if custom_path:
+                # Loop until valid path or user cancels
+                while True:
+                    custom_path = input("   Enter path (absolute or relative, file or directory): ").strip()
+                    if not custom_path:
+                        print(f"   {BRIGHT_YELLOW}⚠ Cancelled{RESET}", flush=True)
+                        return False
+
+                    # Resolve to absolute path
                     abs_path = str(Path(custom_path).resolve())
-                    if Path(abs_path).exists():
-                        permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
-                        if permission not in ["read", "write"]:
-                            permission = "write"
-                        if "context_paths" not in orchestrator_cfg:
-                            orchestrator_cfg["context_paths"] = []
-                        orchestrator_cfg["context_paths"].append({"path": abs_path, "permission": permission})
-                        print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
-                        return True
-                    else:
+
+                    # Check if path exists
+                    if not Path(abs_path).exists():
                         print(f"   {BRIGHT_RED}✗ Path does not exist: {abs_path}{RESET}", flush=True)
+                        retry = input("   Try again? [Y/n]: ").strip().lower()
+                        if retry in ["n", "no"]:
+                            return False
+                        continue
+
+                    # Valid path (file or directory), ask for permission
+                    permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
+                    if permission not in ["read", "write"]:
+                        permission = "write"
+
+                    # Ask about protected paths if write permission
+                    protected_paths = []
+                    if permission == "write":
+                        add_protected = input("   Add protected paths (files/dirs immune from modification)? [y/N]: ").strip().lower()
+                        if add_protected in ["y", "yes"]:
+                            print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                            while True:
+                                protected_input = input("     → ").strip()
+                                if not protected_input:
+                                    break
+                                protected_paths.append(protected_input)
+
+                    if "context_paths" not in orchestrator_cfg:
+                        orchestrator_cfg["context_paths"] = []
+
+                    context_config = {"path": abs_path, "permission": permission}
+                    if protected_paths:
+                        context_config["protected_paths"] = protected_paths
+
+                    orchestrator_cfg["context_paths"].append(context_config)
+                    print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
+                    if protected_paths:
+                        for protected in protected_paths:
+                            print(f"     🔒 {protected}", flush=True)
+                    return True
+            else:
+                # Invalid response - clarify options
+                print(f"   {BRIGHT_RED}✗ Invalid option: '{response}'{RESET}", flush=True)
+                print(f"   {BRIGHT_YELLOW}Please choose: y/yes, p/protected, n/no, or c/custom{RESET}", flush=True)
+                return False
         except (KeyboardInterrupt, EOFError):
             print()  # New line after Ctrl+C
             return False
@@ -1096,6 +1213,7 @@ Environment Variables:
     NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
     OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
     POE_API_KEY         - For POE (poe.com)
+    QWEN_API_KEY        - For Qwen (dashscope.aliyuncs.com)
 
   Note: The chatcompletion backend auto-detects the provider from the base_url
         and uses the appropriate environment variable for API key.

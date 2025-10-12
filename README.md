@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.25 Features](#-latest-features-v0025)
+- [v0.0.30 Features](#-latest-features-v0030)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.25](#recent-achievements-v0025)
-  - [v0.0.3 - v0.0.24](#previous-achievements-v003---v0024)
+  - [v0.0.30](#recent-achievements-v0030)
+  - [v0.0.3 - v0.0.29](#previous-achievements-v003---v0029)
 - [Key Future Enhancements](#key-future-enhancements)
+  - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-  - Web Interface
-- [v0.0.26 Roadmap](#v0026-roadmap)
+- [v0.0.31 Roadmap](#v0031-roadmap)
 </details>
 
 <details open>
@@ -129,88 +129,28 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.25)
+## 🆕 Latest Features (v0.0.30)
 
-### Quick Start: Running Multi-Turn MassGen
+**What's New in v0.0.30:**
+- **Multimodal Audio and Video** - Extended multimodal support from images to audio (WAV, MP3) and video (MP4, AVI, MOV, WEBM) across Chat Completions and Claude backends
+- **Qwen API Integration** - Added Qwen API provider support to Chat Completions backend for video understanding capabilities
 
-#### 1. Install MassGen Globally
-
+**Try v0.0.30 Multimodal Features:**
 ```bash
-# Clone the repository
-git clone https://github.com/Leezekun/MassGen.git
-cd MassGen
+# Audio understanding with OpenRouter
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_openrouter_audio_understanding.yaml \
+  "What is in this recording?"
 
-# Install MassGen as a global tool
-uv tool install -e .
+# Video understanding with Qwen API
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_qwen_video_understanding.yaml \
+  "Describe what happens in this video"
 ```
 
-#### 2. Run Multi-Turn in Any Directory
+→ [See all release examples](massgen/configs/README.md#release-history--examples)
 
-```bash
-# Create and navigate to your project directory
-mkdir testing
-cd testing
-
-# Run MassGen with multi-turn filesystem support
-uv tool run massgen --config tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml
-
-# You'll be prompted to add the current directory as a context path
-📂 Context Paths:
-   No context paths configured
-
-❓ Add current directory as context path?
-   /Users/user/testing
-   [Y]es (default) / [N]o / [C]ustom path: [Enter]
-
-✓ Added /Users/user/testing (write)
-
-# Now you can have multi-turn conversations
-User: "Create a simple Express.js API with authentication"
-Assistant: [Creates API files in /Users/user/testing/]
-
-User: "Add user profile management to the API"
-Assistant: [Builds upon the existing API, referencing previous work]
-
-User: "Add password reset functionality"
-Assistant: [Further extends the API based on all previous turns]
-```
-
-### 3. What You Get
-
-**File Structure:**
-```
-testing/
-├── .massgen/                          # All MassGen state
-│   ├── sessions/session_20250928_143022/
-│   │   ├── SESSION_SUMMARY.txt        # Human-readable conversation summary
-│   │   ├── turn_1/
-│   │   │   ├── workspace/             # Final output from turn 1
-│   │   │   ├── answer.txt             # Agent's response with corrected paths
-│   │   │   └── metadata.json          # Turn metadata (timestamp, winning agent)
-│   │   ├── turn_2/
-│   │   │   └── ...                    # Same structure for turn 2
-│   │   └── turn_3/
-│   │       └── ...                    # Same structure for turn 3
-│   ├── workspaces/                    # Agent working areas during execution
-│   │   ├── workspace1/                # Agent 1's workspace
-│   │   ├── workspace2/                # Agent 2's workspace
-│   │   └── workspace3/                # Agent 3's workspace
-│   ├── snapshots/                     # Latest snapshots for context sharing
-│   │   ├── agent_a/                   # Latest work from agent A
-│   │   ├── agent_b/                   # Latest work from agent B
-│   │   └── agent_c/                   # Latest work from agent C
-│   ├── temp_workspaces/               # Temporary workspace for agent coordination
-│   │   ├── agent1/                    # Previous turn results for reference
-│   │   ├── agent2/                    # (Anonymous IDs for context sharing)
-│   │   └── agent3/
-│   └── massgen_logs/log_20250928_143022/  # Debug logs
-│       ├── turn_1/massgen_debug.log
-│       ├── turn_2/massgen_debug.log
-│       └── turn_3/massgen_debug.log
-└── ...
-```
 ---
-
 
 ## 🏗️ System Design
 
@@ -266,6 +206,45 @@ cd MassGen
 
 pip install uv
 uv venv
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+```
+
+**Global Installation using `uv tool` (Recommended for multi-directory usage):**
+
+Install MassGen using `uv tool` for isolated, global access:
+
+```bash
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install MassGen as a global tool in editable mode
+uv tool install -e .
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+
+# Now run from any directory
+cd ~/projects/website
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+
+cd ~/documents/research
+uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+```
+
+**Benefits of `uv tool` installation:**
+- ✅ Isolated Python environment (no conflicts with system Python)
+- ✅ Available globally from any directory
+- ✅ Editable mode (`-e .`) allows live development
+- ✅ Easy updates with `git pull` (editable mode)
+- ✅ Clean uninstall with `uv tool uninstall massgen`
+
+**Optional Dependencies:**
+```bash
+# AG2 Framework Integration (for external agent frameworks)
+uv pip install -e ".[external]"
 ```
 
 **Optional CLI Tools** (for enhanced capabilities):
@@ -337,15 +316,17 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
-|---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
-| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API**  | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ✅ | ✅ | Web search, **MCP integration** |
-| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
+| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal (Image/Audio/Video) | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------:|:----------:|:-----------------|
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
+| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code execution, **MCP integration**|
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | ❌ | Web search, **MCP integration** |
+| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code interpreter, **MCP integration** |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ❌ | **MCP integration** |
+
+**Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
 
 
 ### 4. 🏃 Run MassGen
@@ -805,7 +786,7 @@ uv run python -m massgen.cli \
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
 uv run python -m massgen.cli \
   --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
-  "Browse https://github.com/Leezekun/MassGen and suggest improvements. Include screenshots in a PDF"
+  "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
 uv run python -m massgen.cli \
@@ -944,35 +925,54 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.25)
+### Recent Achievements (v0.0.30)
 
-**🎉 Released: September 29, 2025**
+**🎉 Released: October 10, 2025**
 
-Version 0.0.25 introduces **Multi-Turn Filesystem Support** and **SGLang Backend Integration**, enabling persistent conversation context and unified inference backend capabilities:
+#### Multimodal Support Extension
+- **Audio Processing**: WAV and MP3 format support for Chat Completions and Claude backends
+- **Video Processing**: MP4, AVI, MOV, WEBM format support for Chat Completions and Claude backends
+- **Flexible Media Input**: Support for local file paths and HTTP/HTTPS URLs
+- **Extended Base64 Encoding**: Now supports audio and video files in addition to images
+- **Configurable Limits**: Media file size limits (default 64MB, configurable via `media_max_file_size_mb`)
 
-#### Multi-Turn Filesystem Support
-- **Persistent Context**: Maintain file context and modifications across conversation turns with automatic session management
-- **Smart Workspace Management**: Automatic `.massgen` directory structure for organized project state
-- **Session Persistence**: Workspace snapshots and restoration between turns for seamless continuity
-- **Easy Setup**: Ready-to-use multi-turn configurations for various agent combinations
+#### Claude Code Backend SDK Update
+- **Package Migration**: Updated from `claude-code-sdk>=0.0.19` to `claude-agent-sdk>=0.0.22`
+- **Internal Updates**: SDK class changes (`ClaudeCodeOptions` → `ClaudeAgentOptions`)
+- **Enhanced Security**: Improved bash tool permission validation
+- **System Message Handling**: Better SDK preset support
 
-#### SGLang Backend Integration
-- **Unified Inference**: Single backend supporting both vLLM and SGLang servers with auto-detection
-- **Advanced Features**: SGLang-specific parameters like `separate_reasoning` for guided generation
-- **Dual Server Support**: Configure mixed deployments with vLLM (port 8000) and SGLang (port 30000)
+#### Chat Completions Backend Enhancement
+- **Qwen API Integration**: Added Qwen API provider to Chat Completions ecosystem
+- **New Environment Variable**: `QWEN_API_KEY` support
+- **Video Understanding**: Qwen-specific configuration examples
 
-#### Enhanced Path Permission System
-- **Smart Exclusions**: Default patterns for `.git`, `node_modules`, `.venv`, and other common directories
-- **Better Validation**: Improved path handling with `will_be_writable` flag for permission state tracking
+#### Bug Fixes
+- **Planning Mode Stability**: Fixed crash when configuration lacks `coordination_config`
+- **Message Handling**: Resolved Claude Code system message processing issues
+- **Import Organization**: Fixed AG2 adapter import ordering
 
-#### System Prompt & Backend Improvements
-- **Multi-Turn Guidance**: Enhanced system prompts with better conversation context awareness
-- **Backend Fixes**: Resolved Gemini MCP connection errors and Grok backend issues
-- **Import Fixes**: Corrected configuration and import problems across backends
-- **Code Quality**: Fixed code generation prompts for consistency
+#### Documentation and Configuration
+- **Case Studies**: `ag2-framework-integration.md`, `mcp-planning-mode.md`
+- **New Configuration Files**: `ag2_case_study.yaml`, `cc_gpt5_gemini_filesystem.yaml`, `single_gemini2.5pro.yaml`, `single_openrouter_audio_understanding.yaml`, `single_qwen_video_understanding.yaml`, `test_sdk_migration.yaml`
 
+### Previous Achievements (v0.0.3 - v0.0.29)
 
-### Previous Achievements (v0.0.3 - v0.0.24)
+✅ **MCP Planning Mode (v0.0.29)**: Strategic planning coordination strategy for safer MCP tool usage, multi-backend support (Response API, Chat Completions, Gemini), agents plan without execution during coordination, 5 planning mode configurations
+
+✅ **File Operation Safety (v0.0.29)**: Read-before-delete enforcement with `FileOperationTracker` class, `PathPermissionManager` integration with operation tracking methods, enhanced file operation safety mechanisms
+
+✅ **AG2 Framework Integration (v0.0.28)**: Adapter system for external agent frameworks, AG2 ConversableAgent and AssistantAgent support with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), 4 ready-to-use AG2 configurations
+
+✅ **Multimodal Support - Image Processing (v0.0.27)**: New `stream_chunk` module for multimodal content, image generation and understanding capabilities, file upload and search for document Q&A, Claude Sonnet 4.5 support, enhanced workspace multimodal tools
+
+✅ **File Deletion and Workspace Management (v0.0.26)**: New MCP tools (`delete_file`, `delete_files_batch`, `compare_directories`, `compare_files`) for workspace cleanup and file comparison, consolidated `_workspace_tools_server.py`, enhanced path permission manager
+
+✅ **Protected Paths and File-Based Context Paths (v0.0.26)**: Protect specific files within write-permitted directories, grant access to individual files instead of entire directories
+
+✅ **Multi-Turn Filesystem Support (v0.0.25)**: Multi-turn conversation support with persistent context across turns, automatic `.massgen` directory structure, workspace snapshots and restoration, enhanced path permission system with smart exclusions, and comprehensive backend improvements
+
+✅ **SGLang Backend Integration (v0.0.25)**: Unified vLLM/SGLang backend with auto-detection, support for SGLang-specific parameters like `separate_reasoning`, and dual server support for mixed vLLM and SGLang deployments
 
 ✅ **vLLM Backend Support (v0.0.24)**: Complete integration with vLLM for high-performance local model serving, POE provider support, GPT-5-Codex model recognition, backend utility modules refactoring, and comprehensive bug fixes including streaming chunk processing
 
@@ -1028,33 +1028,33 @@ Version 0.0.25 introduces **Multi-Turn Filesystem Support** and **SGLang Backend
 
 ### Key Future Enhancements
 
+-   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
 -   **Advanced Agent Collaboration:** Exploring improved communication patterns and consensus-building protocols to improve agent synergy
 -   **Expanded Model Integration:** Adding support for more frontier models and local inference engines
 -   **Improved Performance & Scalability:** Optimizing the streaming and logging mechanisms for better performance and resource management
--   **Enhanced Developer Experience:** Introducing a more modular agent design and a comprehensive benchmarking framework for easier extension and evaluation
--   **Web Interface:** Developing a web-based UI for better visualization and interaction with the agent ecosystem
+-   **Enhanced Developer Experience:** Completing tool registration system and web interface for better visualization
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.26 Roadmap
+### v0.0.31 Roadmap
 
-Version 0.0.26 builds upon the multi-turn filesystem support and SGLang integration of v0.0.25 by focusing on multimodal capabilities, additional backend integrations, and finishing core refactoring work. Key enhancements include:
+Version 0.0.31 focuses on enhancing planning mode capabilities and AG2 group chat integration:
 
 #### Required Features
-- **Multimodal Support**: Complete implementation of image, audio, and video processing capabilities
-- **Finish Refactoring Various Aspects of MassGen**: Complete orchestrator and messaging system refactoring for better maintainability
+- **Planning Mode Enhancements**: Tool whitelist/blacklist system, multi-turn integration, comprehensive testing
+- **AG2 Group Chat Integration**: User agent orchestration with AG2 group chat and streaming API
 
 #### Optional Features
-- **Additional Agent Backends from Other Frameworks**Integration with AG2, LangChain, and other agent frameworks
-- **Coding Agent**: Specialized agent for code generation, debugging, and refactoring tasks
+- **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
+- **Memory Framework**: Design and implement memory system for agent context persistence
 
 Key technical approach:
-- **Multimodal Architecture**: Unified message format supporting text, images, audio, and video with efficient streaming
-- **Orchestrator Refactoring**: Extract coordination logic into separate modules with improved error handling
-- **Framework Integration**: Abstraction layer for external agent frameworks with unified adapter interface
-- **Specialized Coding**: Enhanced programming capabilities with code analysis and execution environment integration
+- **Planning Mode**: Tool restriction system with whitelist/blacklist, multi-turn conversation support, planning mode persistence
+- **AG2 Integration**: Orchestrator-to-user-agent communication pattern, streaming API for group chat updates
+- **Tool Registry**: Improved dynamic tool discovery and loading with plugin-based extensions
+- **Memory System**: Storage and retrieval architecture with different memory types (short-term, long-term, episodic)
 
-For detailed milestones and technical specifications, see the [full v0.0.26 roadmap](ROADMAP_v0.0.26.md).
+For detailed milestones and technical specifications, see the [full v0.0.31 roadmap](ROADMAP_v0.0.31.md).
 
 ---
 

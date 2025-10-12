@@ -21,18 +21,23 @@ Multi-Tool Capabilities:
 """
 from __future__ import annotations
 
+import base64
+import binascii
 import json
+import mimetypes
 import os
-from typing import Any, AsyncGenerator, Callable, Dict, List, Optional
+from pathlib import Path
+from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Tuple
 
 import anthropic
+import httpx
 
+from ..api_params_handler import ClaudeAPIParamsHandler
+from ..formatter import ClaudeFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..mcp_tools.backend_utils import MCPErrorHandler
 from .base import FilesystemSupport, StreamChunk
-from .base_with_mcp import MCPBackend
-from .utils.api_params_handler import ClaudeAPIParamsHandler
-from .utils.formatter import ClaudeFormatter
+from .base_with_mcp import MCPBackend, UploadFileError
 
 
 class ClaudeBackend(MCPBackend):
@@ -45,6 +50,474 @@ class ClaudeBackend(MCPBackend):
         self.code_session_hours = 0.0  # Track code execution usage
         self.formatter = ClaudeFormatter()
         self.api_params_handler = ClaudeAPIParamsHandler(self)
+        self._uploaded_file_ids: List[str] = []
+
+    def supports_upload_files(self) -> bool:
+        """Claude Vision supports inline images; Files API handles PDFs and text docs."""
+
+        return True
+
+    async def stream_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Override to ensure Files API cleanup happens after streaming completes."""
+        try:
+            async for chunk in super().stream_with_tools(messages, tools, **kwargs):
+                yield chunk
+        finally:
+            await self._cleanup_files_api_resources(**kwargs)
+
+    async def _process_upload_files(
+        self,
+        messages: List[Dict[str, Any]],
+        all_params: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Convert upload_files entries into Claude-compatible multimodal content."""
+
+        processed_messages = await super()._process_upload_files(messages, all_params)
+        if not processed_messages:
+            return processed_messages
+
+        allowed_mime_types = {
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+        }
+        max_image_size_bytes = 5 * 1024 * 1024
+
+        for message in processed_messages:
+            content = message.get("content")
+            if not isinstance(content, list):
+                continue
+
+            converted_items: List[Dict[str, Any]] = []
+            for item in content:
+                if not isinstance(item, dict):
+                    converted_items.append(item)
+                    continue
+
+                item_type = item.get("type")
+                if item_type == "file_pending_upload":
+                    converted_items.append(item)
+                    continue
+
+                if item_type != "image":
+                    converted_items.append(item)
+                    continue
+
+                if "source" in item and isinstance(item["source"], dict):
+                    converted_items.append(item)
+                    continue
+
+                # Handle base64-encoded images
+                if "base64" in item:
+                    mime_type = (item.get("mime_type") or "").lower()
+                    if mime_type not in allowed_mime_types:
+                        raise UploadFileError(
+                            f"Unsupported Claude image MIME type: {mime_type or 'unknown'}",
+                        )
+
+                    try:
+                        decoded = base64.b64decode(item["base64"], validate=True)
+                    except binascii.Error as exc:
+                        raise UploadFileError("Invalid base64 image data") from exc
+
+                    if len(decoded) > max_image_size_bytes:
+                        raise UploadFileError(
+                            "Claude Vision image exceeds 5MB size limit",
+                        )
+
+                    converted_item = {key: value for key, value in item.items() if key not in {"base64", "mime_type"}}
+                    converted_item["type"] = "image"
+                    converted_item["source"] = {
+                        "type": "base64",
+                        "media_type": mime_type,
+                        "data": item["base64"],
+                    }
+                    logger.debug(
+                        "Converted base64 image for Claude Vision: %s",
+                        converted_item.get("source_path", "inline"),
+                    )
+                    converted_items.append(converted_item)
+                    continue
+
+                # Handle URL-referenced images
+                if "url" in item:
+                    converted_item = {key: value for key, value in item.items() if key != "url"}
+                    converted_item["type"] = "image"
+                    converted_item["source"] = {
+                        "type": "url",
+                        "url": item["url"],
+                    }
+                    logger.debug(
+                        "Converted URL image for Claude Vision: %s",
+                        item["url"],
+                    )
+                    converted_items.append(converted_item)
+                    continue
+
+                # Handle Files API references
+                if "file_id" in item:
+                    converted_item = {key: value for key, value in item.items() if key != "file_id"}
+                    converted_item["type"] = "image"
+                    converted_item["source"] = {
+                        "type": "file",
+                        "file_id": item["file_id"],
+                    }
+                    logger.debug(
+                        "Attached Claude file_id reference for image: %s",
+                        item["file_id"],
+                    )
+                    converted_items.append(converted_item)
+                    continue
+
+                converted_items.append(item)
+
+            message["content"] = converted_items
+
+        return processed_messages
+
+    async def _upload_files_via_files_api(
+        self,
+        messages: List[Dict[str, Any]],
+        client,
+        agent_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Upload files via Claude Files API and replace pending markers with document blocks.
+
+        Claude Files API only supports PDF and TXT files. Unsupported files are gracefully
+        skipped and replaced with informative text notes to maintain workflow continuity.
+        """
+        # Claude Files API only supports PDF and TXT files
+        CLAUDE_FILES_API_SUPPORTED_EXTENSIONS = {".pdf", ".txt"}
+        CLAUDE_FILES_API_SUPPORTED_MIME_TYPES = {
+            "application/pdf",
+            "text/plain",
+            "text/txt",
+        }
+
+        # Find all file_pending_upload markers
+        file_locations: List[Tuple[int, int]] = []
+        for msg_idx, message in enumerate(messages):
+            content = message.get("content")
+            if not isinstance(content, list):
+                continue
+            for item_idx, item in enumerate(content):
+                if isinstance(item, dict) and item.get("type") == "file_pending_upload":
+                    file_locations.append((msg_idx, item_idx))
+
+        if not file_locations:
+            return messages
+
+        httpx_client = None
+        try:
+            httpx_client = httpx.AsyncClient()
+
+            # Track uploaded file IDs, skipped files, failed uploads, and their corresponding locations
+            uploaded_files: List[Tuple[int, int, str]] = []  # (msg_idx, item_idx, file_id)
+            skipped_files: List[Tuple[int, int, str, str]] = []  # (msg_idx, item_idx, filename, reason)
+            failed_uploads: List[Tuple[int, int, str, str]] = []  # (msg_idx, item_idx, filename, reason)
+
+            for msg_idx, item_idx in file_locations:
+                marker = messages[msg_idx]["content"][item_idx]
+                source = marker.get("source")
+                file_path = marker.get("path")
+                url = marker.get("url")
+                mime_type = marker.get("mime_type", "application/octet-stream")
+                filename_hint = marker.get("filename") or marker.get("name")
+
+                # Validate file extension and MIME type for Claude Files API
+                file_ext = None
+                filename = None
+
+                if source == "local" and file_path:
+                    file_ext = Path(file_path).suffix.lower()
+                    filename = Path(file_path).name
+                    # Re-validate MIME type using mimetypes module for accuracy
+                    guessed_mime, _ = mimetypes.guess_type(file_path)
+                    if guessed_mime:
+                        mime_type = guessed_mime
+                elif source == "url" and url:
+                    # Extract extension from URL (strip query parameters and fragments)
+                    url_path = url.split("?")[0].split("#")[0]
+                    file_ext = Path(url_path).suffix.lower()
+                    filename = Path(url_path).name or url
+                    if not filename_hint:
+                        filename_hint = filename
+                    # Re-validate MIME type using mimetypes module
+                    guessed_mime, _ = mimetypes.guess_type(url_path)
+                    if guessed_mime:
+                        mime_type = guessed_mime
+
+                # Check if file type is supported (both extension and MIME type)
+                is_supported = False
+                skip_reason = None
+
+                if file_ext and file_ext.lower() in CLAUDE_FILES_API_SUPPORTED_EXTENSIONS:
+                    # Extension is supported, now check MIME type
+                    if mime_type and mime_type.lower() in CLAUDE_FILES_API_SUPPORTED_MIME_TYPES:
+                        is_supported = True
+                    else:
+                        skip_reason = f"MIME type '{mime_type}' not supported (extension {file_ext} is valid)"
+                else:
+                    skip_reason = f"File extension '{file_ext or 'unknown'}' not supported"
+
+                # If file is not supported, skip it gracefully and log warning
+                if not is_supported:
+                    logger.warning(
+                        f"[Agent {agent_id or 'default'}] Skipping unsupported file for Claude Files API: "
+                        f"{filename or file_path or url} - {skip_reason}. "
+                        f"Only PDF and TXT files are supported.",
+                    )
+                    skipped_files.append((msg_idx, item_idx, filename or file_path or url or "unknown", skip_reason))
+                    continue
+
+                try:
+                    if source == "local" and file_path:
+                        # Upload local file
+                        path_obj = Path(file_path)
+                        filename = path_obj.name
+                        with open(file_path, "rb") as f:
+                            file_bytes = f.read()
+
+                        uploaded_file = await client.beta.files.upload(
+                            file=(filename, file_bytes, mime_type),
+                        )
+                        file_id = getattr(uploaded_file, "id", None)
+                        if file_id:
+                            self._uploaded_file_ids.append(file_id)
+                            uploaded_files.append((msg_idx, item_idx, file_id))
+                            logger.info(
+                                f"[Agent {agent_id or 'default'}] Uploaded local file via Files API: {filename} -> {file_id}",
+                            )
+                        else:
+                            failure_reason = "Claude Files API response missing file_id"
+                            failed_uploads.append(
+                                (
+                                    msg_idx,
+                                    item_idx,
+                                    filename or filename_hint or file_path or "unknown",
+                                    failure_reason,
+                                ),
+                            )
+                            logger.warning(
+                                f"[Agent {agent_id or 'default'}] Failed to upload file via Files API: {failure_reason}",
+                            )
+
+                    elif source == "url" and url:
+                        # Download and upload URL file
+                        response = await httpx_client.get(url, timeout=30.0)
+                        response.raise_for_status()
+
+                        # Enforce Claude Files API 500 MB size limit
+                        max_size_bytes = 500 * 1024 * 1024  # 500 MB
+                        content_length = response.headers.get("Content-Length")
+                        if content_length:
+                            file_size = int(content_length)
+                            if file_size > max_size_bytes:
+                                raise UploadFileError(
+                                    f"File size {file_size / (1024 * 1024):.2f} MB exceeds Claude Files API limit of 500 MB",
+                                )
+
+                        file_bytes = response.content
+
+                        # Cap bytes read if Content-Length was missing
+                        if len(file_bytes) > max_size_bytes:
+                            raise UploadFileError(
+                                f"Downloaded file size {len(file_bytes) / (1024 * 1024):.2f} MB exceeds Claude Files API limit of 500 MB",
+                            )
+
+                        filename = url.split("/")[-1] or "document"
+
+                        uploaded_file = await client.beta.files.upload(
+                            file=(filename, file_bytes, mime_type),
+                        )
+                        file_id = getattr(uploaded_file, "id", None)
+                        if file_id:
+                            self._uploaded_file_ids.append(file_id)
+                            uploaded_files.append((msg_idx, item_idx, file_id))
+                            logger.info(
+                                f"[Agent {agent_id or 'default'}] Uploaded URL file via Files API: {url} -> {file_id}",
+                            )
+                        else:
+                            failure_reason = "Claude Files API response missing file_id"
+                            failed_uploads.append(
+                                (
+                                    msg_idx,
+                                    item_idx,
+                                    filename or filename_hint or url or "unknown",
+                                    failure_reason,
+                                ),
+                            )
+                            logger.warning(
+                                f"[Agent {agent_id or 'default'}] Failed to upload file via Files API: {failure_reason}",
+                            )
+
+                except Exception as upload_error:
+                    logger.warning(
+                        f"[Agent {agent_id or 'default'}] Failed to upload file via Files API: {upload_error}",
+                    )
+                    failure_context = filename or filename_hint or file_path or url or "unknown"
+                    failed_uploads.append((msg_idx, item_idx, failure_context, str(upload_error)))
+                    continue
+
+        except Exception as e:
+            logger.warning(f"[Agent {agent_id or 'default'}] Files API upload error: {e}")
+            raise UploadFileError(f"Files API upload failed: {e}") from e
+        finally:
+            if httpx_client:
+                await httpx_client.aclose()
+
+        # Clone messages and replace markers with document blocks or text notes
+        updated_messages = [msg.copy() for msg in messages]
+
+        # Replace successfully uploaded files with document blocks
+        for msg_idx, item_idx, file_id in reversed(uploaded_files):
+            content = updated_messages[msg_idx]["content"]
+            if isinstance(content, list):
+                # Create document block
+                document_block = {
+                    "type": "document",
+                    "source": {
+                        "type": "file",
+                        "file_id": file_id,
+                    },
+                }
+                # Replace marker with document block
+                new_content = content[:item_idx] + [document_block] + content[item_idx + 1 :]
+                updated_messages[msg_idx]["content"] = new_content
+
+        # Replace skipped files with informative text notes
+        for msg_idx, item_idx, filename, reason in reversed(skipped_files):
+            content = updated_messages[msg_idx]["content"]
+            if isinstance(content, list):
+                # Create text note explaining the limitation
+                text_note = {
+                    "type": "text",
+                    "text": (f"\n[Note: File '{filename}' was not uploaded to Claude Files API. " f"Reason: {reason}. " f"Claude Files API only supports PDF and TXT files.]\n"),
+                }
+                # Replace marker with text note
+                new_content = content[:item_idx] + [text_note] + content[item_idx + 1 :]
+                updated_messages[msg_idx]["content"] = new_content
+
+        # Replace failed uploads with informative text notes
+        for msg_idx, item_idx, filename, reason in reversed(failed_uploads):
+            content = updated_messages[msg_idx]["content"]
+            if isinstance(content, list):
+                text_note = {
+                    "type": "text",
+                    "text": (f"\n[Note: File '{filename}' failed to upload to Claude Files API. " f"Reason: {reason}.]\n"),
+                }
+                new_content = content[:item_idx] + [text_note] + content[item_idx + 1 :]
+                updated_messages[msg_idx]["content"] = new_content
+
+        # Final sweep to ensure all file_pending_upload markers were replaced
+        self._ensure_no_pending_upload_markers(updated_messages)
+
+        return updated_messages
+
+    async def _cleanup_files_api_resources(self, **kwargs) -> None:
+        """Clean up uploaded files via Files API."""
+        if not self._uploaded_file_ids:
+            return
+
+        agent_id = kwargs.get("agent_id")
+        logger.info(
+            f"[Agent {agent_id or 'default'}] Cleaning up {len(self._uploaded_file_ids)} Files API resources...",
+        )
+
+        client = None
+        try:
+            client = self._create_client(**kwargs)
+
+            for file_id in self._uploaded_file_ids:
+                try:
+                    await client.beta.files.delete(file_id)
+                    logger.debug(f"[Agent {agent_id or 'default'}] Deleted Files API file: {file_id}")
+                except Exception as delete_error:
+                    logger.warning(
+                        f"[Agent {agent_id or 'default'}] Failed to delete Files API file {file_id}: {delete_error}",
+                    )
+                    continue
+
+            self._uploaded_file_ids.clear()
+            logger.info(f"[Agent {agent_id or 'default'}] Files API cleanup completed")
+
+        except Exception as e:
+            logger.warning(f"[Agent {agent_id or 'default'}] Files API cleanup error: {e}")
+        finally:
+            if client and hasattr(client, "aclose"):
+                await client.aclose()
+
+    def _ensure_no_pending_upload_markers(self, messages: List[Dict[str, Any]]) -> None:
+        """Raise UploadFileError if any file_pending_upload markers remain."""
+        if not messages:
+            return
+
+        for msg_idx, message in enumerate(messages):
+            content = message.get("content")
+            if not isinstance(content, list):
+                continue
+            for item_idx, item in enumerate(content):
+                if isinstance(item, dict) and item.get("type") == "file_pending_upload":
+                    identifier = item.get("filename") or item.get("name") or item.get("path") or item.get("url") or "unknown"
+                    raise UploadFileError(
+                        "Claude Files API upload left unresolved file_pending_upload marker " f"(message {msg_idx}, item {item_idx}, source {identifier}).",
+                    )
+
+    async def _stream_without_mcp_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: List[Dict[str, Any]],
+        client,
+        **kwargs,
+    ) -> AsyncGenerator[StreamChunk, None]:
+        """Override to integrate Files API uploads into non-MCP streaming."""
+        agent_id = kwargs.get("agent_id", None)
+        all_params = {**self.config, **kwargs}
+        processed_messages = await self._process_upload_files(messages, all_params)
+
+        # Check if we need to upload files via Files API
+        if all_params.get("_has_file_search_files"):
+            logger.info("Processing Files API uploads...")
+            processed_messages = await self._upload_files_via_files_api(processed_messages, client, agent_id)
+            all_params["_has_files_api_files"] = True
+            all_params.pop("_has_file_search_files", None)
+
+        self._ensure_no_pending_upload_markers(processed_messages)
+
+        api_params = await self.api_params_handler.build_api_params(processed_messages, tools, all_params)
+
+        # Remove any MCP tools from the tools list
+        if "tools" in api_params:
+            non_mcp_tools = []
+            for tool in api_params.get("tools", []):
+                # Check different formats for MCP tools
+                if tool.get("type") == "function":
+                    name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
+                    if name and name in self._mcp_function_names:
+                        continue
+                elif tool.get("type") == "mcp":
+                    continue
+                non_mcp_tools.append(tool)
+            if non_mcp_tools:
+                api_params["tools"] = non_mcp_tools
+            else:
+                api_params.pop("tools", None)
+
+        # Create stream (handle betas)
+        if "betas" in api_params:
+            stream = await client.beta.messages.create(**api_params)
+        else:
+            stream = await client.messages.create(**api_params)
+
+        # Process stream chunks
+        async for chunk in self._process_stream(stream, all_params, agent_id):
+            yield chunk
 
     async def _stream_with_mcp_tools(
         self,
@@ -57,6 +530,17 @@ class ClaudeBackend(MCPBackend):
 
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
+
+        # Check if we need to upload files via Files API
+        if all_params.get("_has_file_search_files"):
+            logger.info("Processing Files API uploads in MCP mode...")
+            agent_id = kwargs.get("agent_id")
+            current_messages = await self._upload_files_via_files_api(current_messages, client, agent_id)
+            all_params["_has_files_api_files"] = True
+            all_params.pop("_has_file_search_files", None)
+
+        self._ensure_no_pending_upload_markers(current_messages)
+
         api_params = await self.api_params_handler.build_api_params(current_messages, tools, all_params)
 
         agent_id = kwargs.get("agent_id", None)

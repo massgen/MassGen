@@ -55,9 +55,9 @@ import warnings
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
-from claude_code_sdk import (  # type: ignore
+from claude_agent_sdk import (  # type: ignore
     AssistantMessage,
-    ClaudeCodeOptions,
+    ClaudeAgentOptions,
     ClaudeSDKClient,
     ResultMessage,
     SystemMessage,
@@ -659,22 +659,26 @@ class ClaudeCodeBackend(LLMBackend):
 
         return tool_calls
 
-    def _build_claude_options(self, **options_kwargs) -> ClaudeCodeOptions:
-        """Build ClaudeCodeOptions with provided parameters.
+    def _build_claude_options(self, **options_kwargs) -> ClaudeAgentOptions:
+        """Build ClaudeAgentOptions with provided parameters.
 
         Creates a secure configuration that allows ALL Claude Code tools while
         explicitly disallowing dangerous operations. This gives Claude Code
         maximum power while maintaining security.
 
+        Important: Sets the Claude Code preset as the default system prompt to maintain
+        v0.0.x behavior. In claude-agent-sdk v0.1.0+, system prompts default to empty,
+        so we explicitly request the claude_code preset.
+
         Returns:
-            ClaudeCodeOptions configured with provided parameters and
+            ClaudeAgentOptions configured with provided parameters and
             security restrictions
         """
         options_kwargs.get("cwd", os.getcwd())
         permission_mode = options_kwargs.get("permission_mode", "acceptEdits")
         allowed_tools = options_kwargs.get("allowed_tools", self.get_supported_builtin_tools())
 
-        # Filter out parameters handled separately or not for ClaudeCodeOptions
+        # Filter out parameters handled separately or not for ClaudeAgentOptions
         excluded_params = self.get_base_excluded_config_params() | {
             # Claude Code specific exclusions
             "api_key",
@@ -697,17 +701,22 @@ class ClaudeCodeBackend(LLMBackend):
             **{k: v for k, v in options_kwargs.items() if k not in excluded_params},
         }
 
+        # Set Claude Code preset as default system prompt (migration from v0.0.x to v0.1.0+)
+        # This ensures we get Claude Code's default behavior instead of empty system prompt
+        if "system_prompt" not in options:
+            options["system_prompt"] = {"type": "preset", "preset": "claude_code"}
+
         # Add hooks if available
         if hooks_config:
             options["hooks"] = hooks_config
 
-        return ClaudeCodeOptions(**options)
+        return ClaudeAgentOptions(**options)
 
     def create_client(self, **options_kwargs) -> ClaudeSDKClient:
         """Create ClaudeSDKClient with configurable parameters.
 
         Args:
-            **options_kwargs: ClaudeCodeOptions parameters
+            **options_kwargs: ClaudeAgentOptions parameters
 
         Returns:
             ClaudeSDKClient instance
@@ -773,31 +782,27 @@ class ClaudeCodeBackend(LLMBackend):
             if sys.platform == "win32" and len(workflow_system_prompt) > 200:
                 # Windows with complex prompt: use post-connection delivery to avoid hang
                 print("[ClaudeCodeBackend] Windows detected complex system prompt, using post-connection delivery")
-                clean_params = {k: v for k, v in all_params.items() if k not in ["system_prompt", "append_system_prompt"]}
+                clean_params = {k: v for k, v in all_params.items() if k not in ["system_prompt"]}
                 client = self.create_client(**clean_params)
                 self._pending_system_prompt = workflow_system_prompt
 
             else:
                 # Original approach for Mac/Linux and Windows with simple prompts
                 try:
-                    # Handle different system prompt mode
-                    if all_params.get("system_prompt"):
-                        # Create client with system_prompt
-                        client = self.create_client(**{**all_params, "system_prompt": workflow_system_prompt})
-                    else:
-                        # Create client with the enhanced system prompt
-                        client = self.create_client(
-                            **{
-                                **all_params,
-                                "append_system_prompt": workflow_system_prompt,
-                            },
-                        )
+                    # Use Claude Code preset with append for workflow system prompt
+                    # This maintains Claude Code's default behavior while adding MassGen tools
+                    system_prompt_config = {
+                        "type": "preset",
+                        "preset": "claude_code",
+                        "append": workflow_system_prompt,
+                    }
+                    client = self.create_client(**{**all_params, "system_prompt": system_prompt_config})
                     self._pending_system_prompt = None
 
                 except Exception as create_error:
                     # Fallback for unexpected failures
                     if sys.platform == "win32":
-                        clean_params = {k: v for k, v in all_params.items() if k not in ["system_prompt", "append_system_prompt"]}
+                        clean_params = {k: v for k, v in all_params.items() if k not in ["system_prompt"]}
                         client = self.create_client(**clean_params)
                         self._pending_system_prompt = workflow_system_prompt
                     else:

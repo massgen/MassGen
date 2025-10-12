@@ -41,6 +41,7 @@ from .logger_config import (
     log_tool_call,
 )
 from .message_templates import MessageTemplates
+from .stream_chunk import ChunkType
 from .utils import ActionType, AgentStatus
 
 
@@ -204,6 +205,24 @@ class Orchestrator(ChatAgent):
                     snapshot_storage=self._snapshot_storage,
                     agent_temporary_workspace=self._agent_temporary_workspace,
                 )
+
+    @staticmethod
+    def _get_chunk_type_value(chunk) -> str:
+        """
+        Extract chunk type as string, handling both legacy and typed chunks.
+
+        Args:
+            chunk: StreamChunk, TextStreamChunk, or MultimodalStreamChunk
+
+        Returns:
+            String representation of chunk type (e.g., "content", "tool_calls")
+        """
+        chunk_type = chunk.type
+
+        if isinstance(chunk_type, ChunkType):
+            return chunk_type.value
+
+        return str(chunk_type)
 
     async def chat(
         self,
@@ -382,6 +401,32 @@ class Orchestrator(ChatAgent):
                 "has_context": conversation_context is not None,
             },
         )
+
+        # Check if we should skip coordination rounds (debug/test mode)
+        if self.config.skip_coordination_rounds:
+            log_stream_chunk(
+                "orchestrator",
+                "content",
+                "⚡ [DEBUG MODE] Skipping coordination rounds, going straight to final presentation...\n\n",
+                self.orchestrator_id,
+            )
+            yield StreamChunk(
+                type="content",
+                content="⚡ [DEBUG MODE] Skipping coordination rounds, going straight to final presentation...\n\n",
+                source=self.orchestrator_id,
+            )
+
+            # Select first agent as winner (or random if needed)
+            self._selected_agent = list(self.agents.keys())[0]
+            log_coordination_step(
+                "Skipped coordination, selected first agent",
+                {"selected_agent": self._selected_agent},
+            )
+
+            # Present final answer immediately
+            async for chunk in self._present_final_answer():
+                yield chunk
+            return
 
         log_stream_chunk(
             "orchestrator",
@@ -896,6 +941,11 @@ class Orchestrator(ChatAgent):
         if agent.backend.filesystem_manager:
             logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} has filesystem_manager, calling save_snapshot with timestamp={timestamp if not is_final else None}")
             await agent.backend.filesystem_manager.save_snapshot(timestamp=timestamp if not is_final else None, is_final=is_final)
+
+            # Clear workspace after saving snapshot (but not for final snapshots)
+            if not is_final:
+                agent.backend.filesystem_manager.clear_workspace()
+                logger.info(f"[Orchestrator._save_agent_snapshot] Cleared workspace for {agent_id} after saving snapshot")
         else:
             logger.info(f"[Orchestrator._save_agent_snapshot] Agent {agent_id} does not have filesystem_manager")
 
@@ -943,6 +993,30 @@ class Orchestrator(ChatAgent):
         """Check if agent should restart and yield restart message if needed. This will always be called when exiting out of _stream_agent_execution()."""
         restart_pending = self.agent_states[agent_id].restart_pending
         return restart_pending
+
+    async def _save_partial_work_on_restart(self, agent_id: str) -> None:
+        """
+        Save partial work snapshot when agent is restarting due to new answers from others.
+        This ensures that any work done before the restart is preserved and shared with other agents.
+
+        Args:
+            agent_id: ID of the agent being restarted
+        """
+        agent = self.agents.get(agent_id)
+        if not agent or not agent.backend.filesystem_manager:
+            return
+
+        logger.info(f"[Orchestrator._save_partial_work_on_restart] Saving partial work for {agent_id} before restart")
+
+        # Save the partial work snapshot with context
+        await self._save_agent_snapshot(
+            agent_id,
+            answer_content=None,  # No complete answer yet
+            context_data=self.get_last_context(agent_id),
+            is_final=False,
+        )
+
+        agent.backend.filesystem_manager.log_current_state("after saving partial work on restart")
 
     def _normalize_workspace_paths_in_answers(self, answers: Dict[str, str], viewing_agent_id: Optional[str] = None) -> Dict[str, str]:
         """Normalize absolute workspace paths in agent answers to accessible temporary workspace paths.
@@ -1188,12 +1262,21 @@ class Orchestrator(ChatAgent):
                 # Check if workspace was pre-populated (has any previous turns)
                 workspace_prepopulated = len(previous_turns_context) > 0
 
+                # Check if image generation is enabled for this agent
+                enable_image_generation = False
+                if hasattr(agent, "config") and agent.config:
+                    enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
+                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+                    enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
+
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
                     temp_workspace=temp_workspace,
                     context_paths=context_paths,
                     previous_turns=turns_to_show,
                     workspace_prepopulated=workspace_prepopulated,
+                    enable_image_generation=enable_image_generation,
+                    agent_answers=answers,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1205,6 +1288,19 @@ class Orchestrator(ChatAgent):
                 logger.info(f"[Orchestrator] Agent {agent_id} sees normalized answers: {normalized_answers}")
             else:
                 logger.info(f"[Orchestrator] Agent {agent_id} sees no existing answers")
+
+            # Check if planning mode is enabled for coordination phase
+            is_coordination_phase = self.workflow_phase == "coordinating"
+            planning_mode_enabled = (
+                self.config.coordination_config and self.config.coordination_config.enable_planning_mode and is_coordination_phase
+                if self.config and hasattr(self.config, "coordination_config")
+                else False
+            )
+
+            # Add planning mode instructions to system message if enabled
+            if planning_mode_enabled and self.config.coordination_config.planning_mode_instruction:
+                planning_instructions = f"\n\n{self.config.coordination_config.planning_mode_instruction}"
+                agent_system_message = f"{agent_system_message}{planning_instructions}" if agent_system_message else planning_instructions.strip()
 
             # Build conversation with context support
             if conversation_context and conversation_context.get("conversation_history"):
@@ -1252,6 +1348,13 @@ class Orchestrator(ChatAgent):
             )
 
             # Clean startup without redundant messages
+            # Set planning mode on the agent's backend to control MCP tool execution
+            if hasattr(agent.backend, "set_planning_mode"):
+                agent.backend.set_planning_mode(planning_mode_enabled)
+                if planning_mode_enabled:
+                    logger.info(f"[Orchestrator] Backend planning mode ENABLED for {agent_id} - MCP tools blocked")
+                else:
+                    logger.info(f"[Orchestrator] Backend planning mode DISABLED for {agent_id} - MCP tools allowed")
 
             # Build proper conversation messages with system + user messages
             max_attempts = 3
@@ -1269,6 +1372,8 @@ class Orchestrator(ChatAgent):
 
                 if self._check_restart_pending(agent_id):
                     logger.info(f"[Orchestrator] Agent {agent_id} restarting due to restart_pending flag")
+                    # Save any partial work before restarting
+                    await self._save_partial_work_on_restart(agent_id)
                     # yield ("content", "🔄 Gracefully restarting due to new answers from other agents")
                     yield (
                         "content",
@@ -1304,7 +1409,8 @@ class Orchestrator(ChatAgent):
                 logger.info(f"[Orchestrator] Agent {agent_id} starting to stream chat response...")
 
                 async for chunk in chat_stream:
-                    if chunk.type == "content":
+                    chunk_type = self._get_chunk_type_value(chunk)
+                    if chunk_type == "content":
                         response_text += chunk.content
                         # Stream agent content directly - source field handles attribution
                         yield ("content", chunk.content)
@@ -1318,7 +1424,7 @@ class Orchestrator(ChatAgent):
                             {"content": chunk.content},
                             backend_name=backend_name,
                         )
-                    elif chunk.type in [
+                    elif chunk_type in [
                         "reasoning",
                         "reasoning_done",
                         "reasoning_summary",
@@ -1338,16 +1444,16 @@ class Orchestrator(ChatAgent):
                             summary_index=getattr(chunk, "summary_index", None),
                         )
                         yield ("reasoning", reasoning_chunk)
-                    elif chunk.type == "backend_status":
+                    elif chunk_type == "backend_status":
                         pass
-                    elif chunk.type == "mcp_status":
+                    elif chunk_type == "mcp_status":
                         # Forward MCP status messages with proper formatting
                         mcp_content = f"🔧 MCP: {chunk.content}"
                         yield ("content", mcp_content)
-                    elif chunk.type == "debug":
+                    elif chunk_type == "debug":
                         # Forward debug chunks
                         yield ("debug", chunk.content)
-                    elif chunk.type == "tool_calls":
+                    elif chunk_type == "tool_calls":
                         # Use the correct tool_calls field
                         chunk_tool_calls = getattr(chunk, "tool_calls", []) or []
                         tool_calls.extend(chunk_tool_calls)
@@ -1397,7 +1503,7 @@ class Orchestrator(ChatAgent):
                             else:
                                 yield ("content", f"🔧 Using {tool_name}")
                                 log_tool_call(agent_id, tool_name, tool_args, None, backend_name)
-                    elif chunk.type == "error":
+                    elif chunk_type == "error":
                         # Stream error information to user interface
                         error_msg = getattr(chunk, "error", str(chunk.content)) if hasattr(chunk, "error") else str(chunk.content)
                         yield ("content", f"❌ Error: {error_msg}\n")
@@ -1407,6 +1513,7 @@ class Orchestrator(ChatAgent):
                 if len(vote_calls) > 1:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
+                            await self._save_partial_work_on_restart(agent_id)
                             yield (
                                 "content",
                                 f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1437,6 +1544,7 @@ class Orchestrator(ChatAgent):
                 if len(vote_calls) > 0 and len(new_answer_calls) > 0:
                     if attempt < max_attempts - 1:
                         if self._check_restart_pending(agent_id):
+                            await self._save_partial_work_on_restart(agent_id)
                             yield (
                                 "content",
                                 f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1468,6 +1576,7 @@ class Orchestrator(ChatAgent):
                             logger.info(f"[Orchestrator] Agent {agent_id} voting from options: {list(answers.keys()) if answers else 'No answers available'}")
                             # Check if agent should restart - votes invalid during restart
                             if self._check_restart_pending(agent_id):
+                                await self._save_partial_work_on_restart(agent_id)
                                 yield (
                                     "content",
                                     f"🔄 [{agent_id}] Vote invalid - restarting due to new answers",
@@ -1481,6 +1590,7 @@ class Orchestrator(ChatAgent):
                                 # Invalid - can't vote when no answers exist
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
                                         yield (
                                             "content",
                                             f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1514,6 +1624,7 @@ class Orchestrator(ChatAgent):
                             if voted_agent not in answers:
                                 if attempt < max_attempts - 1:
                                     if self._check_restart_pending(agent_id):
+                                        await self._save_partial_work_on_restart(agent_id)
                                         yield (
                                             "content",
                                             f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1565,6 +1676,7 @@ class Orchestrator(ChatAgent):
                                 if normalized_new_content.strip() == normalized_existing_content.strip():
                                     if attempt < max_attempts - 1:
                                         if self._check_restart_pending(agent_id):
+                                            await self._save_partial_work_on_restart(agent_id)
                                             yield (
                                                 "content",
                                                 f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1600,6 +1712,7 @@ class Orchestrator(ChatAgent):
                 # Case 3: Non-workflow response, need enforcement (only if no workflow tool was found)
                 if not workflow_tool_found:
                     if self._check_restart_pending(agent_id):
+                        await self._save_partial_work_on_restart(agent_id)
                         yield (
                             "content",
                             f"🔁 [{agent_id}] gracefully restarting due to new answer detected\n",
@@ -1796,6 +1909,11 @@ class Orchestrator(ChatAgent):
         if agent.backend.filesystem_manager:
             agent.backend.filesystem_manager.path_permission_manager.set_context_write_access_enabled(True)
 
+        # Reset backend planning mode to allow MCP tool execution during final presentation
+        if hasattr(agent.backend, "set_planning_mode"):
+            agent.backend.set_planning_mode(False)
+            logger.info(f"[Orchestrator] Backend planning mode DISABLED for final presentation: {selected_agent_id} - MCP tools now allowed")
+
         # Copy all agents' snapshots to temp workspace to preserve context from coordination phase
         # This allows the agent to reference and access previous work
         temp_workspace_path = await self._copy_all_snapshots_to_temp_workspace(selected_agent_id)
@@ -1837,8 +1955,26 @@ class Orchestrator(ChatAgent):
         # Get agent's configurable system message using the standard interface
         agent_system_message = agent.get_configurable_system_message()
 
+        # Check if image generation is enabled for this agent
+        enable_image_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_image_generation = agent.config.backend_params.get("enable_image_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
+
+        # Check if agent has write access to context paths (requires file delivery)
+        has_irreversible_actions = False
+        if agent.backend.filesystem_manager:
+            context_paths = agent.backend.filesystem_manager.path_permission_manager.get_context_paths()
+            # Check if any context path has write permission
+            has_irreversible_actions = any(cp.get("permission") == "write" for cp in context_paths)
+
         # Build system message with workspace context if available
-        base_system_message = self.message_templates.final_presentation_system_message(agent_system_message)
+        base_system_message = self.message_templates.final_presentation_system_message(
+            agent_system_message,
+            enable_image_generation,
+            has_irreversible_actions,
+        )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
         for aid, state in self.agent_states.items():
@@ -1871,6 +2007,8 @@ class Orchestrator(ChatAgent):
                     context_paths=context_paths,
                     previous_turns=turns_to_show,
                     workspace_prepopulated=workspace_prepopulated,
+                    enable_image_generation=enable_image_generation,
+                    agent_answers=all_answers,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message
@@ -1913,14 +2051,15 @@ class Orchestrator(ChatAgent):
         try:
             # Track final round iterations (each chunk is like an iteration)
             async for chunk in agent.chat(presentation_messages, reset_chat=True):
+                chunk_type = self._get_chunk_type_value(chunk)
                 # Start new iteration for this chunk
                 self.coordination_tracker.start_new_iteration()
                 # Use the same streaming approach as regular coordination
-                if chunk.type == "content" and chunk.content:
+                if chunk_type == "content" and chunk.content:
                     presentation_content += chunk.content
                     log_stream_chunk("orchestrator", "content", chunk.content, selected_agent_id)
                     yield StreamChunk(type="content", content=chunk.content, source=selected_agent_id)
-                elif chunk.type in [
+                elif chunk_type in [
                     "reasoning",
                     "reasoning_done",
                     "reasoning_summary",
@@ -1928,7 +2067,7 @@ class Orchestrator(ChatAgent):
                 ]:
                     # Stream reasoning content with proper attribution (same as main coordination)
                     reasoning_chunk = StreamChunk(
-                        type=chunk.type,
+                        type=chunk_type,
                         content=chunk.content,
                         source=selected_agent_id,
                         reasoning_delta=getattr(chunk, "reasoning_delta", None),
@@ -1942,7 +2081,9 @@ class Orchestrator(ChatAgent):
                     # Use the same format as main coordination for consistency
                     log_stream_chunk("orchestrator", chunk.type, chunk.content, selected_agent_id)
                     yield reasoning_chunk
-                elif chunk.type == "backend_status":
+                elif chunk_type == "backend_status":
+                    import json
+
                     status_json = json.loads(chunk.content)
                     cwd = status_json["cwd"]
                     session_id = status_json["session_id"]
@@ -1952,13 +2093,12 @@ class Orchestrator(ChatAgent):
 
                     log_stream_chunk("orchestrator", "content", content, selected_agent_id)
                     yield StreamChunk(type="content", content=content, source=selected_agent_id)
-                elif chunk.type == "mcp_status":
+                elif chunk_type == "mcp_status":
                     # Handle MCP status messages in final presentation
                     mcp_content = f"🔧 MCP: {chunk.content}"
                     log_stream_chunk("orchestrator", "content", mcp_content, selected_agent_id)
                     yield StreamChunk(type="content", content=mcp_content, source=selected_agent_id)
-
-                elif chunk.type == "done":
+                elif chunk_type == "done":
                     # Save the final workspace snapshot (from final workspace directory)
                     final_answer = presentation_content.strip() if presentation_content.strip() else self.agent_states[selected_agent_id].answer  # fallback to stored answer if no content generated
                     final_context = self.get_last_context(selected_agent_id)
@@ -1974,7 +2114,7 @@ class Orchestrator(ChatAgent):
 
                     log_stream_chunk("orchestrator", "done", None, selected_agent_id)
                     yield StreamChunk(type="done", source=selected_agent_id)
-                elif chunk.type == "error":
+                elif chunk_type == "error":
                     log_stream_chunk("orchestrator", "error", chunk.error, selected_agent_id)
                     yield StreamChunk(type="error", error=chunk.error, source=selected_agent_id)
                 # Pass through other chunk types as-is but with source
@@ -1982,12 +2122,12 @@ class Orchestrator(ChatAgent):
                     if hasattr(chunk, "source"):
                         log_stream_chunk(
                             "orchestrator",
-                            chunk.type,
+                            chunk_type,
                             getattr(chunk, "content", ""),
                             selected_agent_id,
                         )
                         yield StreamChunk(
-                            type=chunk.type,
+                            type=chunk_type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
                             **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},
@@ -1995,12 +2135,12 @@ class Orchestrator(ChatAgent):
                     else:
                         log_stream_chunk(
                             "orchestrator",
-                            chunk.type,
+                            chunk_type,
                             getattr(chunk, "content", ""),
                             selected_agent_id,
                         )
                         yield StreamChunk(
-                            type=chunk.type,
+                            type=chunk_type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
                             **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},

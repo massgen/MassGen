@@ -1,0 +1,17 @@
+# DEBUG: Test SDK Migration - Verify claude-agent-sdk works
+# Run: uv run python -m massgen.cli --config massgen/configs/debug/test_sdk_migration.yaml "List files in workspace"
+
+agents:
+  - id: "sdk_test"
+    backend:
+      type: "claude_code"
+      cwd: "workspace_sdk_test"
+      model: "claude-sonnet-4-20250514"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  type: "rich_terminal"
+  logging_enabled: true

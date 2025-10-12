@@ -1,0 +1,22 @@
+# uv tool run massgen --config tools/filesystem/multiturn/two_claude_code_flash_filesystem_multiturn.yaml
+agents:
+  - id: "agent_a"
+    backend:
+      type: "claude_code"
+      cwd: "workspace1"  # Working directory for file operations
+      model: "claude-sonnet-4-20250514"
+
+  - id: "agent_b"
+    backend:
+      type: "claude_code"
+      cwd: "workspace2"  # Working directory for file operations
+      model: "claude-sonnet-4-20250514"
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+    session_storage: "sessions"  # Used for multi-turn conversations to store previous rounds.
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

@@ -14,6 +14,7 @@ Supported Providers and Environment Variables:
 - OpenRouter: OPENROUTER_API_KEY
 - ZAI: ZAI_API_KEY
 - POE: POE_API_KEY
+- Qwen: QWEN_API_KEY
 """
 
 from __future__ import annotations
@@ -24,13 +25,13 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 # Third-party imports
 from openai import AsyncOpenAI
 
+from ..api_params_handler import ChatCompletionsAPIParamsHandler
+from ..formatter import ChatCompletionsFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 
 # Local imports
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend
-from .utils.api_params_handler import ChatCompletionsAPIParamsHandler
-from .utils.formatter import ChatCompletionsFormatter
 
 
 class ChatCompletionsBackend(MCPBackend):
@@ -51,6 +52,10 @@ class ChatCompletionsBackend(MCPBackend):
         self.backend_name = self.get_provider_name()
         self.formatter = ChatCompletionsFormatter()
         self.api_params_handler = ChatCompletionsAPIParamsHandler(self)
+
+    def supports_upload_files(self) -> bool:
+        """Chat Completions backend supports upload_files preprocessing."""
+        return True
 
     async def stream_with_tools(
         self,
@@ -208,6 +213,19 @@ class ChatCompletionsBackend(MCPBackend):
             # Execute only MCP function calls
             mcp_functions_executed = False
             updated_messages = current_messages.copy()
+
+            # Check if planning mode is enabled - block MCP tool execution during planning
+            if self.is_planning_mode_enabled():
+                logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution")
+                yield StreamChunk(
+                    type="mcp_status",
+                    status="planning_mode_blocked",
+                    content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
+                    source="planning_mode",
+                )
+                # Skip all MCP tool execution but still continue with workflow
+                yield StreamChunk(type="done")
+                return
 
             # Create single assistant message with all tool calls
             if captured_function_calls:
@@ -628,6 +646,8 @@ class ChatCompletionsBackend(MCPBackend):
             return "Kimi"
         elif "poe.com" in base_url:
             return "POE"
+        elif "aliyuncs.com" in base_url:
+            return "Qwen"
         else:
             return "ChatCompletion"
 
