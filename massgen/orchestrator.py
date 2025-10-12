@@ -1984,6 +1984,7 @@ class Orchestrator(ChatAgent):
             agent_system_message,
             enable_image_generation,
             has_irreversible_actions,
+            enable_command_execution,
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED

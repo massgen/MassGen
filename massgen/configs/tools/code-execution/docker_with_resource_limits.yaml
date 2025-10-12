@@ -1,0 +1,34 @@
+# Command Execution with Docker Isolation and Resource Limits
+# Demonstrates resource limits (CPU, memory) and network control
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml "Build a web scraper"
+
+agent:
+  id: "resource_limited_agent"
+  backend:
+    type: "openai"
+    model: "gpt-4o"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    enable_docker_isolation: true
+    docker_image: "massgen/mcp-runtime:latest"
+    docker_network_mode: "bridge"  # Options: none (no network), bridge (default Docker), host (full network)
+    docker_memory_limit: "2g"  # Limit container to 2GB RAM
+    docker_cpu_limit: 2.0  # Limit container to 2 CPU cores
+
+  system_message: |
+    You are a coding assistant running in a resource-limited Docker container.
+
+    Resource Limits:
+    - CPU: 2 cores
+    - Memory: 2GB
+    - Network: Bridge mode (can access network)
+
+    Use resources efficiently and be mindful of these constraints.
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

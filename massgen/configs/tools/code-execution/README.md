@@ -80,6 +80,97 @@ uv run python -m massgen.cli \
   "Write a web scraper and review it"
 ```
 
+## Docker Isolation Examples
+
+### 7. Simple Docker Isolation
+**File:** `docker_simple.yaml`
+
+**Minimal setup** with Docker isolation - perfect for getting started!
+
+```bash
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_simple.yaml \
+  "Write a Python script to calculate fibonacci numbers and test it"
+```
+
+**Features:**
+- MCP servers on **host** (secure, no source code exposure)
+- Commands execute in **Docker** (isolated)
+- No resource limits (uses defaults)
+- Network mode: none (no internet access)
+- Simple, minimal configuration
+
+**Perfect for:**
+- ✅ Getting started with Docker isolation
+- ✅ Testing Docker setup
+- ✅ Learning the basics
+- ✅ Local development without network needs
+
+### 8. Docker with Resource Limits and Network
+**File:** `docker_with_resource_limits.yaml`
+
+**Default and Recommended:** MCP servers run on host, commands execute in Docker.
+
+```bash
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml \
+  "Build a web scraper"
+```
+
+**Features:**
+- MCP servers on **host** (secure, no source code exposure)
+- Commands execute in **Docker** (isolated)
+- Memory limit: 2GB
+- CPU limit: 2 cores
+- Network mode: bridge (can access internet)
+
+**Benefits:**
+- ✅ Good isolation for agent code execution
+- ✅ MCP server implementation stays secure
+- ✅ No source code exposure to agent
+- ✅ Recommended for production use
+
+### 9. Full MCP-in-Docker (Experimental)
+**File:** `docker_basic_isolation.yaml`
+
+**⚠️ EXPERIMENTAL:** Run MCP servers AND commands inside Docker container.
+
+```bash
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_basic_isolation.yaml \
+  "Write a Python script representing a cli calculator and test it"
+```
+
+**Configuration:**
+```yaml
+enable_docker_isolation: true
+docker_run_mcp_inside: true  # Experimental mode
+```
+
+**⚠️ Warning:** This mode mounts the massgen codebase into the container at `/app/massgen`, which means the agent can potentially access MCP server source code. This breaks isolation boundaries.
+
+**Use only for:**
+- Development
+- Debugging
+- Testing
+
+**Future plans:** We plan to support full MCP-in-Docker without breaking isolation by using the [official MCP filesystem server's Docker support](https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem) and implementing similar solutions for custom MCP servers.
+
+### 10. Mixed Docker and Local Agents
+**File:** `docker_mixed_agents.yaml`
+
+Multi-agent setup with some agents in Docker (security) and others local (performance).
+
+```bash
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_mixed_agents.yaml \
+  "Create and test a calculator app"
+```
+
+**Use Case:**
+- Code writer in Docker (untrusted code)
+- Code tester local (trusted test execution)
+
 ## Configuration Options
 
 ### Basic Setup
@@ -127,6 +218,70 @@ agent:
     # Option 3: Auto-detect (default) - no config needed
     # Automatically detects .venv in workspace
 ```
+
+### Docker Isolation
+```yaml
+agent:
+  backend:
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    enable_docker_isolation: true  # Enable Docker isolation
+
+    # docker_run_mcp_inside defaults to false (commands-only mode, recommended)
+    # Set to true for experimental full MCP-in-Docker mode
+
+    # Optional: Customize Docker settings
+    docker_image: "massgen/mcp-runtime:latest"  # Custom image
+    docker_network_mode: "none"  # none/bridge/host
+    docker_memory_limit: "2g"  # Memory limit (e.g., "2g", "512m")
+    docker_cpu_limit: 2.0  # CPU cores (e.g., 2.0)
+```
+
+**Docker Isolation Modes:**
+
+**Mode 1: Commands-Only (Default, Recommended)**
+```yaml
+enable_docker_isolation: true
+# docker_run_mcp_inside defaults to false
+```
+- ✅ MCP servers on host (secure)
+- ✅ Commands in Docker (isolated)
+- ✅ No source code exposure
+- ✅ Recommended for production
+
+**Mode 2: Full MCP-in-Docker (Experimental)**
+```yaml
+enable_docker_isolation: true
+docker_run_mcp_inside: true  # Experimental
+```
+- ⚠️ MCP servers in Docker
+- ⚠️ Exposes MCP source code to agent
+- ⚠️ Breaks isolation boundaries
+- ⚠️ Use only for development/testing
+
+See [Docker README](../../../docker/README.md) for detailed information.
+
+**Prerequisites:**
+- Docker must be installed and running
+- Build the Docker image:
+  ```bash
+  docker build -t massgen/mcp-runtime:latest -f massgen/docker/Dockerfile .
+  ```
+- Install Python docker library:
+  ```bash
+  pip install docker
+  ```
+
+**Network Modes:**
+- `none`: No network access (most secure, default)
+- `bridge`: Standard Docker networking (can access internet)
+- `host`: Use host's network stack (least isolated)
+
+**Important Notes:**
+- Workspaces are cleared between agent turns (fresh slate)
+- `.venv` directories and installed packages are deleted each turn
+- Packages need to be reinstalled each turn
+- **Recommendation:** Use `requirements.txt` to track dependencies for reproducibility
 
 ## Default Safety
 

@@ -63,6 +63,13 @@ class APIParamsHandlerBase(ABC):
             "command_line_blocked_commands",
             "command_execution_prefix",
             "command_execution_venv_path",
+            # Docker isolation parameters (handled by FilesystemManager)
+            "enable_docker_isolation",
+            "docker_run_mcp_inside",
+            "docker_image",
+            "docker_network_mode",
+            "docker_memory_limit",
+            "docker_cpu_limit",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",

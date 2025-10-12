@@ -252,6 +252,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         original_system_message: Optional[str] = None,
         enable_image_generation: bool = False,
         has_irreversible_actions: bool = False,
+        enable_command_execution: bool = False,
     ) -> str:
         """System message for final answer presentation by winning agent.
 
@@ -259,6 +260,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
             original_system_message: The agent's original system message to preserve
             enable_image_generation: Whether image generation is enabled
             has_irreversible_actions: Whether agent has write access to context paths (requires actual file delivery)
+            enable_command_execution: Whether command execution is enabled for this agent
         """
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
@@ -296,6 +298,14 @@ Present the best possible coordinated answer by combining the strengths from all
                 "However, note your workspace is NOT the final destination. You MUST copy/write files to the Target Path using FULL ABSOLUTE PATHS. "
                 "Then, clean up this Target Path by deleting any outdated or unused files. "
                 "Then, you must ALWAYS verify that the Target Path contains the correct final files, as no other agents were allowed to write to this path.\n"
+            )
+
+        # Add requirements.txt guidance if command execution is enabled
+        if enable_command_execution:
+            presentation_instructions += (
+                "### Package Dependencies:\n\n"
+                "Create a `requirements.txt` file listing all Python packages needed to run your code. "
+                "This helps users reproduce your work later. Include only the packages you actually used in your solution.\n"
             )
 
         # Combine with original system message if provided

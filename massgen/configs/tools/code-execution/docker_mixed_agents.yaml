@@ -1,0 +1,42 @@
+# Multi-Agent with Mixed Docker and Local Execution
+# Demonstrates different isolation levels for different agents
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/docker_mixed_agents.yaml "Create and test a calculator app"
+
+agents:
+  - id: "code_writer"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace"
+      enable_mcp_command_line: true
+      enable_docker_isolation: true  # Code writer runs in Docker for security
+      docker_network_mode: "none"  # No network access for code writer
+
+  - id: "code_tester"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      cwd: "workspace"
+      enable_mcp_command_line: true
+      enable_docker_isolation: false  # Code tester runs locally for faster execution
+      command_line_allowed_commands:
+        - "python .*"
+        - "pytest .*"
+
+    system_message: |
+      You are a code tester running directly on the host system.
+
+      You can:
+      - Run tests with pytest
+      - Execute Python scripts
+      - Verify code functionality
+
+      You have restricted command access (only python and pytest).
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
