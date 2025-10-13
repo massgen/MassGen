@@ -292,7 +292,7 @@ Present the best possible coordinated answer by combining the strengths from all
         if enable_audio_generation:
             presentation_instructions += """For audio generation tasks:
 - Extract audio paths from the existing answer and resolve them in the shared reference.
-- Gather all agent-produced audio (ignore non-existent files), then call the generate_text_with_input_audio tool to get transcriptions for all audio files.
+- Gather ALL audio files produced by EVERY agent (ignore non-existent files). IMPORTANT: You MUST call the generate_text_with_input_audio tool to obtain transcriptions for EACH AND EVERY audio file from ALL agents - no audio should be skipped or overlooked.
 - MUST combine the strengths of all transcriptions into one final detailed transcription that captures the best elements from each.
 - MUST use the convert_text_to_audio tool to convert this final transcription to a new audio file and save it, then output the saved path.
 """

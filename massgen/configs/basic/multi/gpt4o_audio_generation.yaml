@@ -26,5 +26,5 @@ orchestrator:
 
 # UI Configuration
 ui:
-  type: "simple"
+  type: "rich_terminal"
   logging_enabled: true
