@@ -1,13 +1,20 @@
 # Basic Command Execution with Auto-detect Virtual Environment
 # Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/basic_command_execution.yaml "Write a Python function to calculate factorial and test it"
 
-agent:
-  id: "coder"
-  backend:
-    type: "openai"
-    model: "gpt-5-mini"
-    cwd: "workspace"
-    enable_mcp_command_line: true
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
 
 orchestrator:
   snapshot_storage: "snapshots"
