@@ -15,7 +15,9 @@ from .base import AgentAdapter, StreamChunk
 from .utils.ag2_utils import (
     create_llm_config,
     get_group_initial_message,
-    get_user_agent_initial_system_message,
+    get_user_agent_default_description,
+    get_user_agent_default_system_message,
+    get_user_agent_tool_call_message,
     postprocess_group_chat_results,
     register_tools_for_agent,
     setup_agent_from_config,
@@ -111,8 +113,8 @@ class AG2Adapter(AgentAdapter):
             raise ValueError("group_config must include 'pattern' configuration")
 
         # Get default llm_config from group_config (required)
-        default_llm_config = self.group_config.get("llm_config")
-        if not default_llm_config:
+        self.default_llm_config = self.group_config.get("llm_config")
+        if not self.default_llm_config:
             raise ValueError("group_config must include 'llm_config' as default for all agents")
 
         # Create sub-agents from configuration
@@ -120,7 +122,7 @@ class AG2Adapter(AgentAdapter):
         agent_name_map = {}
 
         for agent_cfg in self.group_config.get("agents", []):
-            agent = setup_agent_from_config(agent_cfg, default_llm_config=default_llm_config)
+            agent = setup_agent_from_config(agent_cfg, default_llm_config=self.default_llm_config)
             agents.append(agent)
             agent_name_map[agent.name] = agent
 
@@ -142,11 +144,11 @@ class AG2Adapter(AgentAdapter):
         # Set up user_agent
         self.user_agent = self._setup_user_agent(
             user_agent_config=self.group_config.get("user_agent"),
-            default_llm_config=default_llm_config,
+            default_llm_config=self.default_llm_config,
         )
 
         # Set up group_manager_args
-        group_manager_args = self._setup_group_manager_args(pattern_config, default_llm_config)
+        group_manager_args = self._setup_group_manager_args(pattern_config, self.default_llm_config)
 
         # Create pattern based on type
         self.pattern = self._create_pattern(pattern_type, pattern_config, agents, agent_name_map, group_manager_args)
@@ -179,14 +181,15 @@ class AG2Adapter(AgentAdapter):
             # Validate name is "User"
             if user_agent.name != "User":
                 raise ValueError(
-                    f"user_agent name must be 'User', got '{user_agent.name}'. ",
+                    f"user_agent name must be 'User', got '{user_agent.name}' for termination condition to work",
                 )
             return user_agent
         else:
             # Create default user_agent
             return ConversableAgent(
                 name="User",
-                description="Oversees the process. Should NEVER be selected to speak.",
+                system_message=get_user_agent_default_system_message(),
+                description=get_user_agent_default_description(),
                 human_input_mode="NEVER",
                 code_execution_config=False,
                 llm_config=create_llm_config(default_llm_config),
@@ -211,8 +214,8 @@ class AG2Adapter(AgentAdapter):
         else:
             group_manager_args["llm_config"] = create_llm_config(group_manager_args["llm_config"])
 
-        # Add termination condition: terminate when User generates tool_calls
-        group_manager_args["is_termination_msg"] = lambda msg: (msg.get("name") == self.user_agent.name and "tool_calls" in msg)
+        # Add termination condition: terminate when User says "TERMINATE"
+        group_manager_args["is_termination_msg"] = lambda msg: (msg.get("name") == self.user_agent.name and "TERMINATE" in msg.get("content", ""))
 
         return group_manager_args
 
@@ -343,21 +346,24 @@ class AG2Adapter(AgentAdapter):
     async def _execute_group_chat_with_user_agent(self, messages: List[Dict[str, Any]]) -> AsyncGenerator[StreamChunk, None]:
         messages_to_execute = []
         if self.coordination_stage == CoordinationStage.INITIAL_ANSWER:
+            # Todo: should make ag2 integration stateful and put this in reset_state
+            self.user_agent.update_system_message(get_user_agent_default_system_message())
+
             messages[0] = get_group_initial_message()
             async for event_msg in self._execute_group_chat(messages):
                 yield StreamChunk(type="content", content=event_msg)
-
             results = list(self.user_agent._oai_messages.values())[0]
-            self.user_agent.update_system_message(get_user_agent_initial_system_message())
+
+            self.user_agent.update_system_message(get_user_agent_tool_call_message())
             register_tools_for_agent(self.workflow_tools, self.user_agent)
 
             messages_to_execute = postprocess_group_chat_results(results)
 
         elif self.coordination_stage == CoordinationStage.ENFORCEMENT:
+            register_tools_for_agent(self.workflow_tools, self.user_agent)
             messages_to_execute = messages
 
         elif self.coordination_stage == CoordinationStage.PRESENTATION:
-            unregister_tools_for_agent(self.workflow_tools, self.user_agent)
             self.user_agent.update_system_message(messages[0]["content"])
             messages_to_execute = [messages[1]]
 
@@ -396,6 +402,9 @@ class AG2Adapter(AgentAdapter):
             else:
                 async for chunk in self._execute_single_agent(messages, self.agent):
                     yield chunk
+
+            # unregister workflow tools after each chat to make sure they're not used in wrong time
+            unregister_tools_for_agent(self.workflow_tools, self.user_agent)
 
         except Exception as e:
             logger.error(f"[AG2Adapter] Error in execute_streaming: {e}", exc_info=True)

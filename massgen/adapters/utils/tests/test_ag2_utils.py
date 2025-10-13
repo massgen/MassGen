@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 from massgen.adapters.utils.ag2_utils import (
     create_llm_config,
     get_group_initial_message,
-    get_user_agent_initial_system_message,
     postprocess_group_chat_results,
     register_tools_for_agent,
     unregister_tools_for_agent,
@@ -95,20 +94,6 @@ def test_get_group_initial_message():
     # Content should mention key concepts
     assert "CURRENT ANSWER" in message["content"]
     assert "ORIGINAL MESSAGE" in message["content"]
-
-
-def test_get_user_agent_initial_system_message():
-    """Test getting user agent system message."""
-    message = get_user_agent_initial_system_message()
-
-    # Should return a string
-    assert isinstance(message, str)
-
-    # Should mention workflow tools
-    assert "vote" in message.lower() or "new_answer" in message.lower()
-
-    # Should mention the User agent role
-    assert "User" in message
 
 
 def test_register_tools_for_agent():

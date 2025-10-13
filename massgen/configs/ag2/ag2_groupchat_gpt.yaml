@@ -20,7 +20,7 @@ agents:
         # Individual agents can override this if needed
         llm_config:
             api_type: "openai"
-            model: "gpt-4o"
+            model: "gpt-5"
 
         agents:
           - type: assistant
@@ -91,10 +91,12 @@ agents:
 
         # Optional: Override the default user agent behavior
         # By default, a minimal user_agent is created automatically
-        # You can provide custom configuration here:
+        # You can provide custom configuration here.- agents:
+        # However, it plays an important role in terminating the chat, so it shouldn't be changed ideally1
         # user_agent:
         #   name: "User"  # Must be "User" for termination to work
-        #   system_message: "Custom system message for user agent"
+        #   system_message: "MUST say 'TERMINATE' when the original request is well answered. Do NOT do anything else."
+        #   description: "MUST ONLY be selected when the original request is well answered and the conversation should terminate."
         #   llm_config:  # Optional: override llm_config
         #     api_type: "openai"
         #     model: "gpt-4o"

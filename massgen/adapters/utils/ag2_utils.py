@@ -182,8 +182,8 @@ def get_group_initial_message() -> Dict[str, Any] | None:
     return {"role": "system", "content": initial_message}
 
 
-def get_user_agent_initial_system_message() -> str:
-    system_message = """"
+def get_user_agent_tool_call_message() -> str:
+    system_message = """
     You are the User agent overseeing a team of expert agents. They worked together to create an improved answer to the ORIGINAL MESSAGE based on CURRENT ANSWER (if given).
 
     Does CURRENT ANSWER address the ORIGINAL MESSAGE well? If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
@@ -193,6 +193,22 @@ def get_user_agent_initial_system_message() -> str:
     """
 
     return system_message
+
+
+def get_user_agent_default_system_message() -> str:
+    system_message = """
+    "MUST say 'TERMINATE' when the original request is well answered. Do NOT do anything else."
+    """
+    return system_message
+
+
+def get_user_agent_default_description() -> str:
+    description = """
+    ALWAYS check if other agents still needs to be selected before selected this agent.
+    MUST ONLY be selected when the original request is well answered and the conversation should terminate.
+    """
+
+    return description
 
 
 def postprocess_group_chat_results(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

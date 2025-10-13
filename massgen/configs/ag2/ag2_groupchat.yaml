@@ -10,7 +10,7 @@ agents:
         # Individual agents can override this if needed
         llm_config:
             api_type: "openai"
-            model: "gpt-4o"
+            model: "gpt-5"
 
         agents:
           - type: assistant
@@ -35,7 +35,7 @@ agents:
 
           - type: assistant
             name: "Tester"
-            description: "QA engineer who writes and runs tests. Should be selected if new code has not been validated."
+#            description: "QA engineer who writes and runs tests. Should be selected if new code has not been validated."
             system_message: |
               You are a QA engineer. Your role is to:
               1. Write test code in Python that validates the provided function
@@ -79,12 +79,14 @@ agents:
                 api_type: "google"
                 model: "gemini-2.5-flash"
 
-        # Optional: Override the default user agent behavior
+        # Optional: Override the default user agent behavior. Not recommended to change.
         # By default, a minimal user_agent is created automatically
-        # You can provide custom configuration here:
+        # You can provide custom configuration here.
+        # However, it plays an important role in terminating the chat, so it shouldn't be changed ideally.
         # user_agent:
         #   name: "User"  # Must be "User" for termination to work
-        #   system_message: "Custom system message for user agent"
+        #   system_message: "MUST say 'TERMINATE' when the original request is well answered. Do NOT do anything else."
+        #   description: "MUST ONLY be selected when the original request is well answered and the conversation should terminate."
         #   llm_config:  # Optional: override llm_config
         #     api_type: "openai"
         #     model: "gpt-4o"
