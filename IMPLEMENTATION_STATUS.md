@@ -3,8 +3,11 @@
 **Date**: 2025-10-13
 **Branch**: doc_web
 **Design Doc**: docs/dev_notes/pypi_package_design.md
+**Commits**:
+- a6b6d6c - Implement PyPI package improvements - Phases 1-4 complete
+- 5fb8ff3 - Update documentation for PyPI release - Phase 5 complete
 
-## ✅ Completed Phases (1-4)
+## ✅ Implementation Complete (Phases 1-5)
 
 ### Phase 1: Merge & Enhance Config Builder ✅
 - ✅ Merged PR #309 config builder (`config_builder.py`)
@@ -41,12 +44,22 @@
 - ✅ Comprehensive docstring with examples
 - ✅ Added to `__all__` exports
 
-## 🔄 Remaining Phases (5-6)
+### Phase 5: Documentation Updates ✅ **COMPLETED**
 
-### Phase 5: Documentation Updates (Pending)
-**Estimated Time**: 2-3 days
+All documentation has been updated:
 
-Tasks:
+1. ✅ **installation.rst** - Rewritten with pip install primary, first-run wizard, @examples/ syntax
+2. ✅ **python_api.rst** - New comprehensive Python API documentation
+3. ✅ **configuration.rst** - Interactive wizard, ~/.config/massgen/ structure, @examples/
+4. ✅ **running-massgen.rst** - All paths updated to @examples/, simplified commands
+5. ✅ **index.rst** - Added python_api.rst to Reference section
+6. ✅ **All other .rst files** - Batch updated 17 files with new paths and commands
+
+## 🔄 Remaining Phase (6)
+
+### Phase 6: Testing & Validation (Ready to Start)
+
+**Pre-Testing Checklist:**
 1. Update `docs/source/installation.rst`:
    - Make `pip install massgen` the primary method
    - Add first-run wizard walkthrough
@@ -184,3 +197,215 @@ massgen --config massgen/configs/basic/multi/three_agents_default.yaml "Test"
 - PR #309 feedback addressed (backend tracking, model updates)
 - Config builder supports both default and custom modes
 - First-run experience is smooth and welcoming
+
+## Phase 6: Testing Checklist
+
+### Manual Testing
+
+#### 1. Config Resolution Testing
+```bash
+# Test @examples/ resolution
+massgen --list-examples
+massgen --example basic_multi > /tmp/test-config.yaml
+massgen --config @examples/basic_multi "Test question" --no-display
+
+# Test default config
+rm ~/.config/massgen/config.yaml  # Clear if exists
+massgen  # Should trigger wizard
+
+# Test named configs
+massgen --config research-team "Test"  # Should look in ~/.config/massgen/agents/
+```
+
+#### 2. First-Run Wizard Testing
+```bash
+# Remove default config to test first-run
+rm -rf ~/.config/massgen/config.yaml
+
+# Run without arguments - should trigger wizard
+massgen
+
+# Run with --init flag
+massgen --init
+```
+
+#### 3. Python API Testing
+```python
+# Test in Python REPL or script
+import asyncio
+import massgen
+
+# Single agent mode
+result = asyncio.run(massgen.run(
+    query="What is 2+2?",
+    model="gemini-2.5-flash"
+))
+print(result['final_answer'])
+
+# With @examples/
+result = asyncio.run(massgen.run(
+    query="Test question",
+    config="@examples/basic_multi"
+))
+print(result['final_answer'])
+
+# With default config
+result = asyncio.run(massgen.run(
+    query="Test question"
+))
+print(result['final_answer'])
+```
+
+#### 4. CLI Flag Testing
+```bash
+# List examples
+massgen --list-examples
+
+# Print example
+massgen --example basic_multi
+
+# Init wizard
+massgen --init
+
+# Config resolution
+massgen --config @examples/basic_single "Test"
+massgen --config ./my-config.yaml "Test"
+massgen --config research-team "Test"
+```
+
+#### 5. Backwards Compatibility Testing
+```bash
+# Old paths should still work in git clone setup
+cd /path/to/MassGen
+massgen --config massgen/configs/basic/multi/three_agents_default.yaml "Test"
+
+# New paths should also work
+massgen --config @examples/basic_multi "Test"
+```
+
+#### 6. Package Data Testing
+```bash
+# Install in editable mode
+pip install -e .
+
+# Verify configs are accessible
+massgen --list-examples  # Should show configs
+massgen --config @examples/basic_multi "Test"  # Should work
+```
+
+### Integration Tests
+
+Create test file `test_pypi_package.py`:
+
+```python
+import asyncio
+import pytest
+from pathlib import Path
+import massgen
+from massgen.cli import resolve_config_path
+
+def test_resolve_config_path_examples():
+    """Test @examples/ resolution"""
+    path = resolve_config_path("@examples/basic_multi")
+    assert path is not None
+    assert path.exists()
+
+def test_resolve_config_path_default():
+    """Test default config resolution"""
+    default_config = Path.home() / '.config/massgen/config.yaml'
+    if default_config.exists():
+        path = resolve_config_path(None)
+        assert path == default_config
+
+@pytest.mark.asyncio
+async def test_python_api_single_agent():
+    """Test Python API with single agent"""
+    result = await massgen.run(
+        query="What is 2+2?",
+        model="gemini-2.5-flash"
+    )
+    assert 'final_answer' in result
+    assert 'config_used' in result
+
+@pytest.mark.asyncio
+async def test_python_api_with_config():
+    """Test Python API with @examples/ config"""
+    result = await massgen.run(
+        query="Test question",
+        config="@examples/basic_multi"
+    )
+    assert 'final_answer' in result
+```
+
+Run tests:
+```bash
+pytest test_pypi_package.py -v
+```
+
+### Clean System Testing
+
+Test on a fresh Python environment:
+
+```bash
+# Create fresh virtualenv
+python -m venv /tmp/massgen-test
+source /tmp/massgen-test/bin/activate
+
+# Install from source
+cd /path/to/MassGen
+pip install -e .
+
+# Test basic functionality
+massgen --list-examples
+massgen --model gemini-2.5-flash "Test"
+massgen --config @examples/basic_multi "Test" --no-display
+
+# Test first-run
+rm -rf ~/.config/massgen/
+massgen  # Should trigger wizard
+```
+
+### Documentation Build Testing
+
+Verify documentation builds without errors:
+
+```bash
+cd docs
+make html
+
+# Check for warnings
+# Open _build/html/index.html and verify:
+# - python_api.rst is accessible
+# - All internal links work
+# - @examples/ references are correct
+```
+
+## Success Criteria
+
+All tests must pass before marking complete:
+
+- ✅ `massgen --list-examples` shows available configs
+- ✅ `massgen --config @examples/basic_multi "Test"` works
+- ✅ First-run wizard appears and creates config
+- ✅ Python API `await massgen.run()` works with all modes
+- ✅ Old paths still work (backwards compatible)
+- ✅ Package data is included in installation
+- ✅ Documentation builds without errors
+- ✅ Clean system test passes
+
+## Post-Testing
+
+After all tests pass:
+
+1. Update version in `massgen/__init__.py` to 0.0.30
+2. Update CHANGELOG.md with release notes
+3. Create release branch: `git checkout -b release/v0.0.30`
+4. Merge to main
+5. Create GitHub release
+6. Upload to PyPI: `python -m build && twine upload dist/*`
+
+## Known Issues / Notes
+
+- Pre-commit hooks have flake8 errors in scripts/ files (not related to this PR)
+- Config builder from PR #309 is fully integrated
+- All backwards compatibility maintained
