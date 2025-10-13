@@ -112,6 +112,82 @@ def _substitute_variables(obj: Any, variables: Dict[str, str]) -> Any:
         return obj
 
 
+def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
+    """Resolve config file with flexible syntax.
+
+    Priority:
+    1. @examples/NAME → Package examples (search configs directory)
+    2. Absolute/relative paths (backwards compatible)
+    3. Named configs in ~/.config/massgen/agents/
+    4. ~/.config/massgen/config.yaml (default config)
+    5. None → trigger config builder
+
+    Args:
+        config_arg: Config argument (can be @examples/NAME, path, or None)
+
+    Returns:
+        Path to config file, or None if config builder should run
+
+    Raises:
+        ConfigurationError: If config file not found
+    """
+    # Check for default config first if no config_arg provided
+    if not config_arg:
+        default_config = Path.home() / ".config/massgen/config.yaml"
+        if default_config.exists():
+            return default_config
+        return None  # Trigger builder
+
+    # Handle @examples/ prefix - search in package configs
+    if config_arg.startswith("@examples/"):
+        name = config_arg[10:]  # Remove '@examples/' prefix
+        try:
+            from importlib.resources import files
+
+            configs_root = files("massgen") / "configs"
+
+            # Search recursively for matching name
+            # Try to find by filename stem match
+            for config_file in configs_root.rglob("*.yaml"):
+                # Check if name matches the file stem or is contained in the path
+                if name in config_file.name or name in str(config_file):
+                    return Path(str(config_file))
+
+            raise ConfigurationError(
+                f"Config '{config_arg}' not found in package.\n" f"Use --list-examples to see available configs.",
+            )
+        except Exception as e:
+            if isinstance(e, ConfigurationError):
+                raise
+            raise ConfigurationError(f"Error loading package config: {e}")
+
+    # Try as regular path (absolute or relative)
+    path = Path(config_arg).expanduser()
+    if path.exists():
+        return path
+
+    # Try in user config directory (~/.config/massgen/agents/)
+    user_agents_dir = Path.home() / ".config/massgen/agents"
+    user_config = user_agents_dir / f"{config_arg}.yaml"
+    if user_config.exists():
+        return user_config
+
+    # Also try with .yaml extension if not provided
+    if not config_arg.endswith((".yaml", ".yml")):
+        user_config_with_ext = user_agents_dir / f"{config_arg}.yaml"
+        if user_config_with_ext.exists():
+            return user_config_with_ext
+
+    # Config not found anywhere
+    raise ConfigurationError(
+        f"Configuration file not found: {config_arg}\n"
+        f"Searched in:\n"
+        f"  - Current directory: {Path.cwd() / config_arg}\n"
+        f"  - User configs: {user_agents_dir / config_arg}.yaml\n"
+        f"Use --list-examples to see available package configs.",
+    )
+
+
 def load_config_file(config_path: str) -> Dict[str, Any]:
     """Load configuration from YAML or JSON file.
 
@@ -953,6 +1029,92 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
     return False
 
 
+def show_available_examples():
+    """Display available example configurations from package."""
+    try:
+        from importlib.resources import files
+
+        configs_root = files("massgen") / "configs"
+
+        print(f"\n{BRIGHT_CYAN}Available Example Configurations{RESET}")
+        print("=" * 60)
+
+        # Organize by category
+        categories = {}
+        for config_file in sorted(configs_root.rglob("*.yaml")):
+            # Get relative path from configs root
+            rel_path = str(config_file).replace(str(configs_root) + "/", "")
+            # Extract category (first directory)
+            parts = rel_path.split("/")
+            category = parts[0] if len(parts) > 1 else "root"
+
+            if category not in categories:
+                categories[category] = []
+
+            # Create a short name for @examples/
+            # Use the path without .yaml extension
+            short_name = rel_path.replace(".yaml", "").replace("/", "_")
+
+            categories[category].append((short_name, rel_path))
+
+        # Display categories
+        for category, configs in sorted(categories.items()):
+            print(f"\n{BRIGHT_YELLOW}{category.title()}:{RESET}")
+            for short_name, rel_path in configs[:10]:  # Limit to avoid overwhelming
+                print(f"  {BRIGHT_GREEN}@examples/{short_name:<40}{RESET} {rel_path}")
+
+            if len(configs) > 10:
+                print(f"  ... and {len(configs) - 10} more")
+
+        print(f"\n{BRIGHT_BLUE}Usage:{RESET}")
+        print('  massgen --config @examples/SHORTNAME "Your question"')
+        print("  massgen --example SHORTNAME > my-config.yaml")
+        print()
+
+    except Exception as e:
+        print(f"Error listing examples: {e}")
+        print("Examples may not be available (development mode?)")
+
+
+def print_example_config(name: str):
+    """Print an example config to stdout.
+
+    Args:
+        name: Name of the example (can include or exclude @examples/ prefix)
+    """
+    try:
+        # Remove @examples/ prefix if present
+        if name.startswith("@examples/"):
+            name = name[10:]
+
+        # Try to resolve the config
+        resolved = resolve_config_path(f"@examples/{name}")
+        if resolved:
+            with open(resolved, "r") as f:
+                print(f.read())
+        else:
+            print(f"Error: Could not find example '{name}'", file=sys.stderr)
+            print("Use --list-examples to see available configs", file=sys.stderr)
+            sys.exit(1)
+
+    except ConfigurationError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error printing example config: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def should_run_builder() -> bool:
+    """Check if config builder should run automatically.
+
+    Returns True if:
+    - No default config exists at ~/.config/massgen/config.yaml
+    """
+    default_config = Path.home() / ".config/massgen/config.yaml"
+    return not default_config.exists()
+
+
 def print_help_messages():
     print(
         "\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.",
@@ -1223,7 +1385,7 @@ Environment Variables:
 
     # Configuration options
     config_group = parser.add_mutually_exclusive_group()
-    config_group.add_argument("--config", type=str, help="Path to YAML/JSON configuration file")
+    config_group.add_argument("--config", type=str, help="Path to YAML/JSON configuration file or @examples/NAME")
     config_group.add_argument(
         "--backend",
         type=str,
@@ -1261,6 +1423,21 @@ Environment Variables:
     parser.add_argument("--no-display", action="store_true", help="Disable visual coordination display")
     parser.add_argument("--no-logs", action="store_true", help="Disable logging")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
+    parser.add_argument(
+        "--init",
+        action="store_true",
+        help="Launch interactive configuration builder to create config file",
+    )
+    parser.add_argument(
+        "--list-examples",
+        action="store_true",
+        help="List available example configurations from package",
+    )
+    parser.add_argument(
+        "--example",
+        type=str,
+        help="Print example config to stdout (e.g., --example basic_multi)",
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
@@ -1279,6 +1456,66 @@ Environment Variables:
         logger.info("Debug mode enabled")
         logger.debug(f"Command line arguments: {vars(args)}")
 
+    # Handle special commands first
+    if args.list_examples:
+        show_available_examples()
+        return
+
+    if args.example:
+        print_example_config(args.example)
+        return
+
+    # Launch interactive config builder if requested
+    if args.init:
+        from .config_builder import ConfigBuilder
+
+        builder = ConfigBuilder()
+        result = builder.run()
+
+        if result and len(result) == 2:
+            filepath, question = result
+            if filepath and question:
+                # Update args to use the newly created config
+                args.config = filepath
+                args.question = question
+            elif filepath:
+                # Config created but user chose not to run
+                print(f"\n✅ Configuration saved to: {filepath}")
+                print(f'Run with: python -m massgen.cli --config {filepath} "Your question"')
+                return
+            else:
+                # User cancelled
+                return
+        else:
+            # Builder returned None (cancelled or error)
+            return
+
+    # First-run detection: auto-trigger builder if no config specified and first run
+    if not args.question and not args.config and not args.model and not args.backend:
+        if should_run_builder():
+            print(f"\n{BRIGHT_CYAN}👋 Welcome to MassGen!{RESET}")
+            print("Let's set up your default configuration...\n")
+
+            from .config_builder import ConfigBuilder
+
+            builder = ConfigBuilder(default_mode=True)
+            result = builder.run()
+
+            if result and len(result) == 2:
+                filepath, question = result
+                if filepath:
+                    args.config = filepath
+                    if question:
+                        args.question = question
+                    else:
+                        print("\n✅ Configuration saved! You can now run queries.")
+                        print('Example: massgen "Your question here"')
+                        return
+                else:
+                    return
+            else:
+                return
+
     # Validate arguments
     if not args.backend:
         if not args.model and not args.config:
@@ -1287,9 +1524,14 @@ Environment Variables:
     try:
         # Load or create configuration
         if args.config:
-            config = load_config_file(args.config)
+            # Resolve config path (handles @examples/, paths, ~/.config/massgen/agents/)
+            resolved_path = resolve_config_path(args.config)
+            if resolved_path is None:
+                # This shouldn't happen if we reached here, but handle it
+                raise ConfigurationError("Could not resolve config path")
+            config = load_config_file(str(resolved_path))
             if args.debug:
-                logger.debug(f"Loaded config from file: {args.config}")
+                logger.debug(f"Resolved config path: {resolved_path}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
         else:
             model = args.model

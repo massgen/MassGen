@@ -9,9 +9,12 @@ Supports multiple LLM providers with standardized StreamChunk interface:
 - Claude (Messages API with multi-tool support)
 - Gemini (structured output for coordination)
 - Claude Code (claude-code-sdk streaming integration)
-TODO - Gemini CLI (command-line interface integration)
-TODO - Clean up StreamChunk design (too many optional fields for reasoning/provider features)
-TODO - Check if we indeed need to pass agent_id & session_id to backends
+
+TODO:
+
+- Gemini CLI (command-line interface integration)
+- Clean up StreamChunk design (too many optional fields for reasoning/provider features)
+- Check if we indeed need to pass agent_id & session_id to backends
 """
 
 from .base import LLMBackend, StreamChunk, TokenUsage

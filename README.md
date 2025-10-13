@@ -1050,7 +1050,7 @@ Key technical approach:
 - **Configuration Cleanup**: Standardize naming conventions and improve documentation for easier navigation
 - **Extensible Architecture**: New tool registration system supporting dynamic discovery and plugin-based extensions
 
-For detailed milestones and technical specifications, see the [full v0.0.30 roadmap](ROADMAP_v0.0.30.md).
+For detailed milestones, technical specifications, and long-term vision, see the [complete roadmap](ROADMAP.md).
 
 ---
 

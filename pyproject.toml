@@ -109,7 +109,12 @@ include = ["agents*", "massgen*"]
 exclude = ["tests*", "docs*", "future_mass*"]
 
 [tool.setuptools.package-data]
-massgen = ["examples/*.yaml", "backends/.env.example"]
+massgen = [
+    "configs/**/*.yaml",
+    "configs/**/*.yml",
+    "examples/*.yaml",
+    "backends/.env.example"
+]
 "*" = ["*.json", "*.yaml", "*.yml", "*.md"]
 
 # Black configuration

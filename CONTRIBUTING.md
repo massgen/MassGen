@@ -298,6 +298,83 @@ We welcome contributions in these areas:
 - **Testing & Benchmarking**: Add test coverage and benchmarking frameworks
 - **Bug Fixes**: Fix issues and edge cases
 
+## 📊 Track Maintenance (For Track Leads)
+
+MassGen organizes development work into **6 tracks**, each with its own focus area and maintainer. If you're contributing to a specific track, follow these lightweight maintenance guidelines:
+
+### Track Structure
+
+Each track has two files in `docs/source/tracks/{track-name}/`:
+
+1. **`index.md`** - Weekly sprint tracking (updated frequently)
+2. **`roadmap.md`** - Long-term vision (updated monthly)
+
+### Updating Your Track (2-Minute Weekly Update)
+
+**When:** Every week during active development
+
+**What to update in `index.md`:**
+
+1. **Sprint section** - Move completed tasks to "Recently Completed", add new tasks
+2. **In Progress** - Update status and any blockers
+3. **Notes & Decisions** - Add new discussion topics or decisions needed
+4. **Updated date** - Change header date
+
+**Template for quick updates:**
+```markdown
+## 🎯 Current Sprint (v0.0.30)
+
+### P0 - Critical
+- [ ] Your critical task here
+
+### P1 - High
+- [ ] Your high priority task
+- [x] Completed task (move to Recently Completed section)
+
+### P2 - Medium
+- [ ] Nice-to-have improvements
+```
+
+### Roadmap Overview Auto-Generation
+
+The main `ROADMAP.md` file includes an auto-generated Track Status Overview table. After updating your track's `index.md`, regenerate the overview:
+
+```bash
+# Generate updated track status table
+python scripts/generate_roadmap_overview.py > /tmp/track_status.md
+
+# Then manually copy the table section into ROADMAP.md
+# (Or let automation handle it in future)
+```
+
+### Track Lead Responsibilities
+
+- **Weekly:** Update `index.md` sprint section (2 minutes)
+- **Monthly:** Review and update `roadmap.md` if vision changes
+- **As needed:** Review PRs with your track's label (e.g., `track:multimodal`)
+- **Major changes:** Create RFC in `docs/source/rfcs/` for discussion
+
+### Track Labels
+
+Use GitHub labels to organize work:
+- `track:multimodal` - Multimodal capabilities
+- `track:memory` - Session and context management
+- `track:coding-agent` - Filesystem and code operations
+- `track:web-ui` - User interface and visualization
+- `track:backends` - LLM provider integrations
+- `track:safety` - Security and permissions
+
+### Finding Your Track
+
+All tracks are documented in `docs/source/tracks/`:
+
+- **[Multimodal Track](docs/source/tracks/multimodal/index.md)** - Image/video/audio support
+- **[Memory Track](docs/source/tracks/memory/index.md)** - Context and session management
+- **[Coding Agent Track](docs/source/tracks/coding-agent/index.md)** - File operations and tools
+- **[Web UI Track](docs/source/tracks/web-ui/index.md)** - Terminal displays and visualization
+- **[AgentAdapter Backends Track](docs/source/tracks/agentadapter-backends/index.md)** - LLM provider integrations
+- **[Irreversible Actions Track](docs/source/tracks/irreversible-actions/index.md)** - Safety and permissions
+
 ## 📝 Pull Request Guidelines
 
 ### Before Submitting
@@ -364,6 +441,204 @@ When reporting issues, please include:
 - Profile code for performance bottlenecks
 - Consider memory usage for large-scale operations
 - Optimize streaming and async operations
+
+## 📚 Documentation Guidelines
+
+### When Implementing a New Feature
+
+Every feature needs documentation! Here's how to decide where and what to write.
+
+#### 1. Decide Where to Document
+
+**Add to existing user guide when:**
+- ✅ Feature extends existing functionality (e.g., new backend → add to `backends.rst`)
+- ✅ Natural fit in current documentation structure
+- ✅ Small enhancement (< 200 words of documentation)
+
+**Create new user guide when:**
+- ✅ Feature is a major new capability (e.g., multi-turn mode)
+- ✅ Deserves its own page (> 500 words of documentation)
+- ✅ Introduces new concepts or workflows
+
+**Examples:**
+- Adding OpenAI o1 model → Update `user_guide/backends.rst`
+- New multi-turn conversation system → Create `user_guide/multi_turn_mode.rst`
+- New MCP server → Add to `user_guide/mcp_integration.rst`
+
+#### 2. Required Documentation for Every Feature
+
+**Always update these files:**
+
+1. ✅ **User Guide** - How users interact with the feature
+   - Location: `docs/source/user_guide/`
+   - What to include: Usage examples, configuration, common patterns
+
+2. ✅ **Configuration Docs** - If feature adds config options
+   - Location: `docs/source/quickstart/configuration.rst`
+   - What to include: YAML examples, parameter descriptions
+
+3. ✅ **API Reference** - If feature changes Python API
+   - Location: `docs/source/api/`
+   - What to include: Docstrings, function signatures, examples
+
+4. ✅ **CHANGELOG.md** - What changed in this version
+   - Location: Root directory
+   - What to include: Brief description under "Added", "Changed", or "Fixed"
+
+5. ✅ **Examples** (for significant features)
+   - Location: `docs/source/examples/basic_examples.rst`
+   - What to include: Runnable code showing feature in action
+
+#### 3. Optional Design Documentation
+
+**When to write additional documentation:**
+
+##### Design Doc (for complex implementation)
+
+**Write when:**
+- Implementation is complex and needs explanation for maintainers
+- Future contributors need to understand the design choices
+- Multiple approaches were considered
+
+**Location:** `docs/dev_notes/feature_name_design.md`
+
+**Examples:**
+- `multi_turn_filesystem_design.md` - Complex state management
+- `gemini_filesystem_mcp_design.md` - Integration architecture
+
+##### Architecture Decision Record (ADR)
+
+**Write when:**
+- You made an important architectural choice
+- Decision impacts future development
+- Tradeoffs between options need documentation
+
+**Location:** `docs/source/decisions/NNNN-title.rst`
+
+**Examples:**
+- ADR-0001: Use Sphinx for documentation
+- ADR-0002: Use PyTorch as ML framework
+- ADR-0003: Multi-agent parallel architecture
+
+**Format:** See existing ADRs for template
+
+##### Request for Comments (RFC)
+
+**Write BEFORE implementing when:**
+- Feature is large and complex (> 2 weeks work)
+- Multiple viable approaches exist
+- Community input would improve the design
+- Feature affects multiple components
+
+**Location:** `docs/source/rfcs/NNNN-title.rst`
+
+**Examples:**
+- Visual workflow designer
+- Distributed orchestration system
+- Enterprise permission system
+
+**Process:** RFC → Community feedback → Decision → Implementation → ADR
+
+##### Case Study (after feature is complete)
+
+**Write when:**
+- Want to demonstrate real-world usage
+- Feature is significant enough to showcase
+- Following case-driven development methodology (see ADR-0004)
+
+**Location:** `docs/case_studies/feature_name.md`
+
+**Examples:**
+- `claude-code-workspace-management.md`
+- `unified-filesystem-mcp-integration.md`
+
+#### 4. Documentation Decision Flowchart
+
+```
+┌─────────────────────────────────────────┐
+│  Implementing a New Feature             │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│  ALWAYS: Update user guide, config      │
+│  docs, API docs, CHANGELOG.md           │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+      Is implementation complex?
+                 │
+        Yes ──┬──┴──┬── No
+              │     │
+              ▼     └──────────────┐
+   ┌──────────────────┐            │
+   │ Write Design Doc │            │
+   │ (dev_notes/)     │            │
+   └──────┬───────────┘            │
+          │                        │
+          ▼                        ▼
+   Made important          Want to showcase
+   architectural choice?   real-world usage?
+          │                        │
+     Yes──┼──No             Yes────┼────No
+          │                        │
+          ▼                        ▼
+   ┌──────────────┐         ┌──────────────┐
+   │  Write ADR   │         │ Write Case   │
+   │ (decisions/) │         │ Study        │
+   └──────────────┘         │ (case_studies/)|
+                            └──────────────┘
+```
+
+#### 5. Quick Reference
+
+| Document Type | When to Use | Location | Required? |
+|--------------|-------------|----------|-----------|
+| **User Guide** | Every feature | `docs/source/user_guide/` | ✅ Yes |
+| **Config Docs** | Config changes | `docs/source/quickstart/configuration.rst` | ✅ Yes |
+| **API Docs** | API changes | `docs/source/api/` | ✅ Yes |
+| **CHANGELOG** | Every PR | `CHANGELOG.md` | ✅ Yes |
+| **Examples** | Significant features | `docs/source/examples/` | ✅ Yes |
+| **Design Doc** | Complex implementation | `docs/dev_notes/` | ⚠️ Optional |
+| **ADR** | Architectural decisions | `docs/source/decisions/` | ⚠️ Optional |
+| **RFC** | Large proposals (before coding) | `docs/source/rfcs/` | ⚠️ Optional |
+| **Case Study** | Demonstrate usage | `docs/case_studies/` | ⚠️ Optional |
+
+#### 6. Documentation Quality Standards
+
+**User-facing documentation must:**
+- ✅ Include runnable code examples
+- ✅ Show expected output
+- ✅ Explain configuration options
+- ✅ Link to related features
+- ✅ Follow single source of truth principle (no duplication)
+
+**Design documentation should:**
+- ✅ Explain the "why" not just the "what"
+- ✅ Document alternatives considered
+- ✅ Include diagrams for complex flows
+- ✅ Link to related code files
+
+### Documentation Validation
+
+Before submitting a PR with documentation changes:
+
+```bash
+# Run all documentation checks
+make docs-check
+
+# Build and preview locally
+make docs-serve
+# Visit http://localhost:8000
+
+# Verify no broken links
+make docs-validate
+
+# Verify no duplication
+make docs-duplication
+```
+
+See [docs/DOCUMENTATION_DEPLOYMENT.md](docs/DOCUMENTATION_DEPLOYMENT.md) for comprehensive testing guide.
 
 ## 📄 License
 
