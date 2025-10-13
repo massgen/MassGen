@@ -13,15 +13,113 @@ MassGen requires **Python 3.11 or higher**. You can check your Python version wi
 
 If you need to install or upgrade Python, visit `python.org/downloads <https://www.python.org/downloads/>`_.
 
-Core Installation
-=================
+Quick Start Installation
+========================
 
-There are two ways to install MassGen:
+**Method 1: PyPI Installation** (Recommended)
+----------------------------------------------
 
-Installation Methods
---------------------
+The easiest way to get started with MassGen is via pip:
 
-**Method 1: Local Installation** (simpler, works in MassGen directory)
+.. code-block:: bash
+
+   # Install MassGen
+   pip install massgen
+
+   # Run MassGen for the first time
+   massgen
+
+That's it! On first run, MassGen will launch an interactive setup wizard to help you configure your agents.
+
+First-Run Experience
+~~~~~~~~~~~~~~~~~~~~
+
+When you run ``massgen`` for the first time, you'll see a friendly setup wizard:
+
+.. code-block:: text
+
+   ╔═══════════════════════════════════════════════════════════╗
+   ║   🚀 MassGen Interactive Configuration Builder 🚀        ║
+   ║                                                           ║
+   ║   Create custom multi-agent configurations in minutes!   ║
+   ╚═══════════════════════════════════════════════════════════╝
+
+   Step 1: Select Your Use Case
+   -----------------------------
+   1. Simple Q&A
+   2. Research & Analysis
+   3. Code Generation & Development
+   4. Creative Writing
+   5. Data Analysis
+   6. Web Automation
+   7. Custom Configuration
+
+   Step 2: Configure Agents
+   -------------------------
+   Available providers:
+   1. OpenAI (GPT-5, GPT-4, etc.) ✅
+   2. Anthropic Claude ✅
+   3. Google Gemini ✅
+   4. xAI Grok ❌ (API key not found)
+   ...
+
+   Step 3: Configure Tools & Capabilities
+   ---------------------------------------
+   Enable web search? [Y/n]: y
+   Enable code execution? [Y/n]: y
+   Enable filesystem operations? [Y/n]: n
+   ...
+
+   Step 4: Review & Save Configuration
+   ------------------------------------
+   ✅ Configuration saved to: ~/.config/massgen/config.yaml
+
+   Run with: massgen "Your question"
+
+Your configuration is saved to ``~/.config/massgen/config.yaml`` and will be used for all future runs.
+
+Quick Usage Examples
+~~~~~~~~~~~~~~~~~~~
+
+After setup, using MassGen is simple:
+
+.. code-block:: bash
+
+   # Use your default configuration
+   massgen "What is quantum computing?"
+
+   # Override with a specific model for this query
+   massgen --model gpt-5-mini "Quick question"
+
+   # Use a pre-built example configuration
+   massgen --config @examples/basic_multi "Compare renewable energy sources"
+
+   # Start interactive multi-turn mode
+   massgen
+
+Example Configurations
+~~~~~~~~~~~~~~~~~~~~~~
+
+MassGen ships with ready-to-use example configurations:
+
+.. code-block:: bash
+
+   # List all available examples
+   massgen --list-examples
+
+   # Use an example configuration
+   massgen --config @examples/basic_single "Your question"
+   massgen --config @examples/research_team "Research query"
+
+   # Copy an example to customize
+   massgen --example basic_multi > my-config.yaml
+
+See :doc:`configuration` for more details on customizing configurations.
+
+**Method 2: Development Installation** (For Contributors)
+----------------------------------------------------------
+
+If you want to contribute to MassGen or customize the source code:
 
 .. code-block:: bash
 
@@ -29,129 +127,128 @@ Installation Methods
    git clone https://github.com/Leezekun/MassGen.git
    cd MassGen
 
-   # Install uv (fast Python package installer)
+   # Install in editable mode
+   pip install -e .
+
+   # Or with uv (faster)
    pip install uv
+   uv pip install -e .
 
-   # Create virtual environment
-   uv venv
+Development installation gives you:
 
-**Method 2: Global Installation with uv tool** (recommended for multi-directory usage)
+- 🔄 **Live changes**: Edits are immediately reflected
+- 🛠️ **Full source access**: Modify any part of MassGen
+- 📦 **All features**: Same as pip install, but with source code
 
-.. code-block:: bash
+Using MassGen After Installation
+=================================
 
-   # Clone the repository
-   git clone https://github.com/Leezekun/MassGen.git
-   cd MassGen
+After installing via either method, you can use MassGen in several ways:
 
-   # Install uv (if you don't have it)
-   pip install uv
-
-   # Install MassGen as a global tool in editable mode
-   uv tool install -e .
-
-Why Use uv tool Installation?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``uv tool`` installation method provides significant benefits:
-
-.. grid:: 2
-   :gutter: 3
-
-   .. grid-item-card:: 🔒 Isolated Environment
-
-      Creates an isolated Python environment with no conflicts with your system Python or other projects.
-
-   .. grid-item-card:: 🌍 Global Access
-
-      Available from any directory - use MassGen wherever you need it.
-
-   .. grid-item-card:: 🔄 Live Development
-
-      Editable mode (``-e .``) means changes are reflected immediately without reinstalling.
-
-   .. grid-item-card:: ⚡ Easy Updates
-
-      Simply run ``git pull`` to get the latest features (editable mode automatically uses new code).
-
-   .. grid-item-card:: 🧹 Clean Uninstall
-
-      Remove completely with ``uv tool uninstall massgen`` when needed.
-
-   .. grid-item-card:: 📦 Dependency Management
-
-      uv handles all dependencies efficiently and reliably.
-
-How to Use Each Method
+Command Line Interface
 ----------------------
 
-**If you installed with Method 1 (Local):**
+.. code-block:: bash
+
+   # Single query with default config
+   massgen "Your question"
+
+   # Interactive multi-turn mode
+   massgen
+
+   # Quick single-agent mode
+   massgen --model gemini-2.5-flash "Quick question"
+
+   # Use example configuration
+   massgen --config @examples/basic_multi "Complex question"
+
+   # Use custom configuration file
+   massgen --config ./my-agents.yaml "Your question"
+
+Python API
+----------
+
+MassGen provides a simple async Python API:
+
+.. code-block:: python
+
+   import asyncio
+   import massgen
+
+   # Quick single-agent query
+   result = await massgen.run(
+       query="What is machine learning?",
+       model="gpt-5-mini"
+   )
+   print(result['final_answer'])
+
+   # Multi-agent with configuration
+   result = await massgen.run(
+       query="Analyze climate change trends",
+       config="@examples/research_team"
+   )
+
+   # Or from sync code
+   result = asyncio.run(
+       massgen.run("Question", model="gemini-2.5-flash")
+   )
+
+See :doc:`../reference/python_api` for complete API documentation.
+
+Configuration Management
+========================
+
+Configuration Files Location
+----------------------------
+
+MassGen uses the following directory structure:
+
+.. code-block:: text
+
+   ~/.config/massgen/
+   ├── config.yaml              # Your default configuration (from wizard)
+   ├── agents/                  # Your custom named configurations
+   │   ├── research-team.yaml
+   │   └── coding-agents.yaml
+   └── .env                     # API keys (optional)
+
+The ``config.yaml`` file is created by the setup wizard and used by default when you run ``massgen`` without specifying a config.
+
+Reconfiguring MassGen
+----------------------
+
+You can re-run the setup wizard anytime:
 
 .. code-block:: bash
 
-   # Always run from the MassGen directory
-   cd /path/to/MassGen
-   uv run python -m massgen.cli --model gemini-2.5-flash "Your question"
-   uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml
+   # Launch configuration wizard
+   massgen --init
 
-**If you installed with Method 2 (Global uv tool):**
+   # This will:
+   # - Let you create a new default config (overwrites existing)
+   # - Or save as a named config in ~/.config/massgen/agents/
 
-.. code-block:: bash
-
-   # Run from anywhere!
-   cd ~/my-project
-   uv tool run massgen --model gemini-2.5-flash "Your question"
-   uv tool run massgen --config /absolute/path/to/config.yaml
-
-   # Or with local config in your project
-   uv tool run massgen --config ./my-agents.yaml
-
-Optional Dependencies
-=====================
-
-AG2 Framework Integration
---------------------------
-
-If you want to use AG2 agents alongside native MassGen agents, install the external dependencies:
-
-.. code-block:: bash
-
-   uv pip install -e ".[external]"
-
-This is **only required** if you plan to use AG2 configuration files.
-
-Optional CLI Tools
-==================
-
-Enhanced Capabilities
+API Key Configuration
 ---------------------
 
-Install these optional tools for enhanced MassGen capabilities:
+MassGen looks for API keys in the following order:
 
-Claude Code CLI
-~~~~~~~~~~~~~~~
+1. Environment variables (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, etc.)
+2. ``~/.config/massgen/.env`` file (created by setup wizard)
+3. Project-specific ``.env`` file in current directory
 
-Advanced coding assistant with comprehensive development tools:
-
-.. code-block:: bash
-
-   npm install -g @anthropic-ai/claude-code
-
-LM Studio
-~~~~~~~~~
-
-Local model inference for running open-weight models:
-
-**For MacOS/Linux:**
+To set up API keys manually:
 
 .. code-block:: bash
 
-   sudo ~/.lmstudio/bin/lms bootstrap
+   # Create or edit the .env file
+   vim ~/.config/massgen/.env
 
-**For Windows:**
-
-.. code-block:: bash
-
-   cmd /c %USERPROFILE%/.lmstudio/bin/lms.exe bootstrap
+   # Add your API keys
+   OPENAI_API_KEY=sk-your-key-here
+   ANTHROPIC_API_KEY=sk-ant-your-key
+   GOOGLE_API_KEY=your-gemini-key
+   XAI_API_KEY=xai-your-key
 
 Multi-Turn Filesystem Setup
 ============================
@@ -200,24 +297,53 @@ Benefits of .massgen Organization
 
       Multi-turn conversation history is preserved across sessions for continuity.
 
-Configuration Auto-Organization
---------------------------------
+Optional Dependencies
+=====================
 
-MassGen automatically organizes configuration paths under ``.massgen/``:
+AG2 Framework Integration
+--------------------------
 
-.. code-block:: yaml
+If you want to use AG2 agents alongside native MassGen agents:
 
-   orchestrator:
-     # You specify simple names - MassGen organizes under .massgen/
-     snapshot_storage: "snapshots"         # → .massgen/snapshots/
-     session_storage: "sessions"           # → .massgen/sessions/
-     agent_temporary_workspace: "temp"     # → .massgen/temp/
+.. code-block:: bash
 
-   agents:
-     - backend:
-         cwd: "workspace1"                 # → .massgen/workspaces/workspace1/
+   pip install massgen[external]
 
-This keeps your configuration clean while maintaining organized project structure.
+This is **only required** if you plan to use AG2 configuration files.
+
+Optional CLI Tools
+==================
+
+Enhanced Capabilities
+---------------------
+
+Install these optional tools for enhanced MassGen capabilities:
+
+Claude Code CLI
+~~~~~~~~~~~~~~~
+
+Advanced coding assistant with comprehensive development tools:
+
+.. code-block:: bash
+
+   npm install -g @anthropic-ai/claude-code
+
+LM Studio
+~~~~~~~~~
+
+Local model inference for running open-weight models:
+
+**For MacOS/Linux:**
+
+.. code-block:: bash
+
+   sudo ~/.lmstudio/bin/lms bootstrap
+
+**For Windows:**
+
+.. code-block:: bash
+
+   cmd /c %USERPROFILE%/.lmstudio/bin/lms.exe bootstrap
 
 Verification Steps
 ==================
@@ -226,23 +352,23 @@ After installation, verify MassGen is correctly installed:
 
 .. code-block:: bash
 
-   # For local installation
-   uv run python -m massgen.cli --help
-
-   # For global uv tool installation
-   uv tool run massgen --help
+   # Check MassGen is available
+   massgen --help
 
 You should see the MassGen CLI help message with all available options.
 
 Quick Test
 ----------
 
-Try a simple single-agent query to verify everything works:
+Try a simple query to verify everything works:
 
 .. code-block:: bash
 
-   # Replace with your preferred model
-   uv run python -m massgen.cli --model gemini-2.5-flash "What is MassGen?"
+   # Single agent mode (no config needed)
+   massgen --model gemini-2.5-flash "What is MassGen?"
+
+   # Or run the wizard and try your default config
+   massgen "Tell me about multi-agent systems"
 
 Next Steps
 ==========
@@ -250,12 +376,27 @@ Next Steps
 Now that you have MassGen installed, you're ready to:
 
 1. :doc:`running-massgen` - Learn how to run MassGen with different configurations
-2. :doc:`configuration` - Configure API keys and customize settings
+2. :doc:`configuration` - Understand configuration options and customization
 3. :doc:`../user_guide/multi_turn_mode` - Explore multi-turn interactive conversations
-4. :doc:`../user_guide/file_operations` - Learn about file operations and workspace management
+4. :doc:`../reference/python_api` - Use MassGen programmatically from Python
 
 Troubleshooting
 ===============
+
+Setup Wizard Not Appearing
+---------------------------
+
+If the wizard doesn't appear on first run:
+
+.. code-block:: bash
+
+   # Manually trigger the setup wizard
+   massgen --init
+
+   # Or check if a config already exists
+   ls ~/.config/massgen/config.yaml
+
+To start fresh, remove the existing config and run again.
 
 Python Version Issues
 ---------------------
@@ -268,32 +409,59 @@ If you encounter Python version errors:
    python --version
 
    # If below 3.11, install a newer version from python.org
-   # Then create a new virtual environment with the correct Python
+   # Then reinstall MassGen
+   pip install --upgrade massgen
 
-uv Installation Issues
-----------------------
+Missing Example Configurations
+-------------------------------
 
-If ``uv`` installation fails:
-
-.. code-block:: bash
-
-   # Try upgrading pip first
-   pip install --upgrade pip
-
-   # Then install uv
-   pip install uv
-
-Permission Issues
------------------
-
-If you encounter permission errors during installation:
+If ``--list-examples`` shows no results:
 
 .. code-block:: bash
 
-   # On MacOS/Linux, you might need to use sudo for global installations
-   sudo npm install -g @anthropic-ai/claude-code
+   # Reinstall MassGen to ensure package data is included
+   pip install --force-reinstall massgen
 
-   # Or use --user flag for pip
-   pip install --user uv
+   # Verify installation
+   massgen --list-examples
 
-For more help, visit our `GitHub Issues <https://github.com/Leezekun/MassGen/issues>`_ or join our `Discord community <https://discord.massgen.ai>`_.
+API Key Errors
+--------------
+
+If you see "API key not found" errors:
+
+1. Check your ``.env`` file exists: ``~/.config/massgen/.env``
+2. Verify the key is correctly named (e.g., ``OPENAI_API_KEY``)
+3. Re-run the wizard: ``massgen --init``
+
+For more help, visit our `GitHub Issues <https://github.com/Leezekun/MassGen/issues>`_ or join our community.
+
+Backwards Compatibility
+=======================
+
+For Existing Users
+------------------
+
+If you previously used MassGen via git clone, **all your existing workflows continue to work**:
+
+.. code-block:: bash
+
+   # Old commands still work
+   cd /path/to/MassGen
+   uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
+
+   # New commands also work in the same directory
+   massgen --config @examples/basic_multi "Question"
+
+You can install MassGen globally via pip even if you have a git clone:
+
+.. code-block:: bash
+
+   cd /path/to/MassGen
+   pip install -e .  # Editable install
+
+   # Now you can use 'massgen' from anywhere
+   cd ~/other-project
+   massgen "Question"
+
+Both old paths (``massgen/configs/...``) and new paths (``@examples/...``) work interchangeably.

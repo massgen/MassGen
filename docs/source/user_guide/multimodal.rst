@@ -45,8 +45,8 @@ Enable image generation in your agent configuration:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
+   massgen \
+     --config @examples/basic/single/single_gpt4o_image_generation.yaml \
      "Generate an image of gray tabby cat hugging an otter with an orange scarf."
 
 Multi-Agent Image Generation
@@ -83,8 +83,8 @@ Leverage multiple agents to refine and improve image generation prompts:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/gpt4o_image_generation.yaml \
+   massgen \
+     --config @examples/basic/multi/gpt4o_image_generation.yaml \
      "Create a professional logo for a tech startup focused on AI"
 
 **How It Works:**
@@ -112,15 +112,15 @@ Upload images for agents to analyze:
          type: "openai"
          model: "gpt-5-nano"
          upload_files:
-           - image_path: "massgen/configs/resources/v0.0.27-example/multimodality.jpg"
+           - image_path: "@examples/resources/v0.0.27-example/multimodality.jpg"
        system_message: "You are a helpful assistant"
 
 **Example Command:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/single/single_gpt5nano_image_understanding.yaml \
+   massgen \
+     --config @examples/basic/single/single_gpt5nano_image_understanding.yaml \
      "Please summarize the content in this image."
 
 Multi-Agent Image Analysis
@@ -136,7 +136,7 @@ Multiple agents can provide diverse perspectives on image content:
          type: "openai"
          model: "gpt-5-nano"
          upload_files:
-           - image_path: "massgen/configs/resources/v0.0.27-example/multimodality.jpg"
+           - image_path: "@examples/resources/v0.0.27-example/multimodality.jpg"
        system_message: "You are a helpful assistant"
 
      - id: "response_agent2"
@@ -144,15 +144,15 @@ Multiple agents can provide diverse perspectives on image content:
          type: "openai"
          model: "gpt-5-nano"
          upload_files:
-           - image_path: "massgen/configs/resources/v0.0.27-example/multimodality.jpg"
+           - image_path: "@examples/resources/v0.0.27-example/multimodality.jpg"
        system_message: "You are a helpful assistant"
 
 **Example Command:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
+   massgen \
+     --config @examples/basic/multi/gpt5nano_image_understanding.yaml \
      "Analyze this image and identify key elements, mood, and composition."
 
 **Use Cases:**
@@ -218,8 +218,8 @@ The OpenAI backend automatically manages vector stores for file search:
 .. code-block:: bash
 
    # Document Q&A with file search
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
+   massgen \
+     --config @examples/basic/single/single_gpt5nano_file_search.yaml \
      "What are the main conclusions from the uploaded research paper?"
 
 Multimodal MCP Tools
@@ -339,19 +339,19 @@ Complete configuration files are available in the MassGen repository:
 
 **Image Generation:**
 
-* ``massgen/configs/basic/single/single_gpt4o_image_generation.yaml``
-* ``massgen/configs/basic/multi/gpt4o_image_generation.yaml``
+* ``@examples/basic/single/single_gpt4o_image_generation.yaml``
+* ``@examples/basic/multi/gpt4o_image_generation.yaml``
 
 **Image Understanding:**
 
-* ``massgen/configs/basic/single/single_gpt5nano_image_understanding.yaml``
-* ``massgen/configs/basic/multi/gpt5nano_image_understanding.yaml``
+* ``@examples/basic/single/single_gpt5nano_image_understanding.yaml``
+* ``@examples/basic/multi/gpt5nano_image_understanding.yaml``
 
 **File Search:**
 
-* ``massgen/configs/basic/single/single_gpt5nano_file_search.yaml``
+* ``@examples/basic/single/single_gpt5nano_file_search.yaml``
 
-Browse all examples in the `Configuration README <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/README.md>`_.
+Browse all examples in the `Configuration README <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_.
 
 Best Practices
 --------------

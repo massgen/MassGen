@@ -8,7 +8,7 @@ Basic Usage
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli [OPTIONS] ["<your question>"]
+   massgen [OPTIONS] ["<your question>"]
 
 CLI Parameters
 --------------
@@ -45,15 +45,15 @@ Quick Single Agent
 .. code-block:: bash
 
    # Fastest way to test - no config file
-   uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
-   uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
+   massgen --model claude-3-5-sonnet-latest "What is machine learning?"
+   massgen --model gemini-2.5-flash "Explain quantum computing"
 
 With Specific Backend
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --backend gemini \
      --model gemini-2.5-flash \
      "What are the latest developments in AI?"
@@ -64,8 +64,8 @@ Multi-Agent with Config
 .. code-block:: bash
 
    # Recommended: Use YAML config for multi-agent
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "Analyze the pros and cons of renewable energy"
 
 Interactive Mode
@@ -74,20 +74,20 @@ Interactive Mode
 .. code-block:: bash
 
    # Omit question to enter interactive chat mode
-   uv run python -m massgen.cli --model gemini-2.5-flash
+   massgen --model gemini-2.5-flash
 
    # Multi-agent interactive
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml
 
 Debug Mode
 ~~~~~~~~~~
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --debug \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "Your question here"
 
 Disable UI
@@ -96,7 +96,7 @@ Disable UI
 .. code-block:: bash
 
    # Simple text output instead of rich terminal UI
-   uv run python -m massgen.cli \
+   massgen \
      --no-display \
      --config config.yaml \
      "Question"

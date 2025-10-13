@@ -4,7 +4,7 @@ Running MassGen
 This guide shows you how to run MassGen with different configurations.
 
 .. important::
-   **Configuration File Paths:** Example commands show paths like ``massgen/configs/...`` These are **relative paths** that only work when you're in the MassGen repository directory. See `Using Config Files from Anywhere`_ below for how to run from other directories.
+   **Configuration File Paths:** Example commands show paths like ``@examples/...`` These are **relative paths** that only work when you're in the MassGen repository directory. See `Using Config Files from Anywhere`_ below for how to run from other directories.
 
 CLI Parameters
 --------------
@@ -42,15 +42,15 @@ The fastest way to test MassGen - no configuration file needed:
 .. code-block:: bash
 
    # Quick test with any supported model
-   uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
-   uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
-   uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
+   massgen --model claude-3-5-sonnet-latest "What is machine learning?"
+   massgen --model gemini-2.5-flash "Explain quantum computing"
+   massgen --model gpt-5-nano "Summarize the latest AI developments"
 
 **With specific backend:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --backend gemini \
      --model gemini-2.5-flash \
      "What are the latest developments in AI?"
@@ -66,8 +66,8 @@ The recommended way to use MassGen - multiple agents working together:
 .. code-block:: bash
 
    # Three powerful agents collaborate
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "Analyze the pros and cons of renewable energy"
 
 This configuration uses:
@@ -89,11 +89,11 @@ Start MassGen without a question to enter interactive chat mode:
 .. code-block:: bash
 
    # Single agent interactive mode
-   uv run python -m massgen.cli --model gemini-2.5-flash
+   massgen --model gemini-2.5-flash
 
    # Multi-agent interactive mode
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml
 
 Features:
 
@@ -113,13 +113,13 @@ Add tools to your agents using Model Context Protocol:
 .. code-block:: bash
 
    # Single MCP tool (weather)
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+   massgen \
+     --config @examples/tools/mcp/gpt5_nano_mcp_example.yaml \
      "What's the weather forecast for New York this week?"
 
    # Multiple MCP tools (search + weather + filesystem)
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+   massgen \
+     --config @examples/tools/mcp/multimcp_gemini.yaml \
      "Find the best restaurants in Paris and save the recommendations to a file"
 
 See :doc:`../user_guide/mcp_integration` for detailed MCP configuration.
@@ -132,13 +132,13 @@ Agents can work with files in isolated workspaces:
 .. code-block:: bash
 
    # Single agent with file operations
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_single.yaml \
      "Create a Python web scraper and save results to CSV"
 
    # Multi-agent file collaboration
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_context_sharing.yaml \
      "Generate a comprehensive project report with charts and analysis"
 
 Features:
@@ -158,8 +158,8 @@ Work directly with your existing codebase using context paths:
 .. code-block:: bash
 
    # Multi-agent collaboration on your project
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
+   massgen \
+     --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
      "Enhance the website with dark/light theme toggle and interactive features"
 
 Configuration example:
@@ -185,13 +185,13 @@ Integrate AG2 agents with code execution:
 .. code-block:: bash
 
    # Single AG2 agent with code execution
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder.yaml \
      "Write a Python script to analyze CSV data and create visualizations"
 
    # AG2 + Gemini hybrid collaboration
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder_case_study.yaml \
      "Compare AG2 and MassGen frameworks, use code to fetch documentation"
 
 See :doc:`../user_guide/ag2_integration` for configuration details.
@@ -211,13 +211,13 @@ By default, MassGen shows a rich terminal UI with:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli --no-display --config config.yaml "Question"
+   massgen --no-display --config config.yaml "Question"
 
 **Debug Mode:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli --debug --config config.yaml "Question"
+   massgen --debug --config config.yaml "Question"
 
 Debug logs saved to ``agent_outputs/log_{timestamp}/massgen_debug.log`` with detailed:
 
@@ -239,11 +239,11 @@ MassGen configuration paths work differently depending on your installation meth
 .. code-block:: bash
 
    # You're in /Users/you/MassGen/
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "Your question"
 
-This works because ``massgen/configs/...`` is a **relative path** from the current directory.
+This works because ``@examples/...`` is a **relative path** from the current directory.
 
 **When Running from Other Directories:**
 
@@ -252,8 +252,8 @@ If you're in a different directory (like ``~/my-project/``), relative paths won'
 .. code-block:: bash
 
    # You're in /Users/you/my-project/
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml  # ❌ Won't work!
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml  # ❌ Won't work!
      "Your question"
 
 **Solutions:**
@@ -262,8 +262,8 @@ If you're in a different directory (like ``~/my-project/``), relative paths won'
 
    .. code-block:: bash
 
-      uv run python -m massgen.cli \
-        --config /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml \
+      massgen \
+        --config /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml \
         "Your question"
 
 2. **Copy config to your project:**
@@ -271,10 +271,10 @@ If you're in a different directory (like ``~/my-project/``), relative paths won'
    .. code-block:: bash
 
       # Copy the config you want to use
-      cp /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml ./my-config.yaml
+      cp /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml ./my-config.yaml
 
       # Run with local config
-      uv run python -m massgen.cli --config ./my-config.yaml "Your question"
+      massgen --config ./my-config.yaml "Your question"
 
 3. **Use uv tool installation (recommended for multi-directory usage):**
 
@@ -312,16 +312,16 @@ This means MassGen can't find the config file at the path you specified.
    # Output: /Users/you/my-project
 
    # This won't work (relative path from MassGen repo)
-   uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen --config @examples/basic/multi/three_agents_default.yaml
 
    # Solution 1: Use absolute path
-   uv run python -m massgen.cli \
-     --config /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml \
      "Your question"
 
    # Solution 2: Copy config locally
-   cp /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml ./agents.yaml
-   uv run python -m massgen.cli --config ./agents.yaml "Your question"
+   cp /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml ./agents.yaml
+   massgen --config ./agents.yaml "Your question"
 
 Quick Reference
 ~~~~~~~~~~~~~~~
@@ -333,7 +333,7 @@ Quick Reference
    * - Situation
      - Solution
    * - Running from MassGen repo directory
-     - Use relative paths: ``massgen/configs/...``
+     - Use relative paths: ``@examples/...``
    * - Running from another directory
      - Use absolute paths or copy config locally
    * - Want to run from any directory easily

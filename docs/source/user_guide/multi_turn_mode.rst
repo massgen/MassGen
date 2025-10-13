@@ -13,15 +13,15 @@ Simply omit the question when running MassGen to enter interactive chat mode:
 .. code-block:: bash
 
    # Interactive mode with quick model selection
-   uv run python -m massgen.cli --model gpt-5-mini
+   massgen --model gpt-5-mini
 
 **Multi-agent:**
 
 .. code-block:: bash
 
    # Multi-agent interactive mode
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml
 
 How It Works
 ------------
@@ -268,8 +268,8 @@ Example: Iterative Code Development
 .. code-block:: bash
 
    # Start interactive session with file operations
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_single.yaml
+   massgen \
+     --config @examples/tools/filesystem/claude_code_single.yaml
 
 Session example:
 
@@ -296,9 +296,9 @@ Enable debug mode for detailed logging:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --debug \
-     --config massgen/configs/basic/multi/three_agents_default.yaml
+     --config @examples/basic/multi/three_agents_default.yaml
 
 Debug logs saved to ``agent_outputs/log_{timestamp}/massgen_debug.log`` include:
 

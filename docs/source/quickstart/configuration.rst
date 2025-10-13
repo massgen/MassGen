@@ -5,12 +5,80 @@ MassGen is configured using environment variables for API keys and YAML files fo
 
 .. note::
 
-   MassGen is currently a CLI tool with YAML configuration. All configuration is done through YAML files and environment variables. A Python library API is planned for future releases.
+   MassGen provides both a CLI and a Python API. Configuration can be done via the interactive setup wizard, YAML files, or programmatically. See :doc:`../reference/python_api` for Python API usage.
+
+Configuration Methods
+=====================
+
+MassGen offers three ways to configure your agents:
+
+1. **Interactive Setup Wizard** (Recommended for beginners)
+2. **YAML Configuration Files** (For advanced customization)
+3. **CLI Flags** (For quick one-off queries)
+
+Interactive Setup Wizard
+-------------------------
+
+The easiest way to configure MassGen is through the interactive wizard:
+
+.. code-block:: bash
+
+   # First run automatically triggers the wizard
+   massgen
+
+   # Or manually launch it
+   massgen --init
+
+The wizard guides you through 4 simple steps:
+
+1. **Select Your Use Case**: Choose from pre-built templates (Research, Coding, Q&A, etc.)
+2. **Configure Agents**: Select providers and models (wizard detects available API keys)
+3. **Configure Tools**: Enable web search, code execution, file operations, etc.
+4. **Review & Save**: Save to ``~/.config/massgen/config.yaml``
+
+After completing the wizard, your configuration is ready to use:
+
+.. code-block:: bash
+
+   massgen "Your question"  # Uses default config automatically
+
+Configuration Directory Structure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+After installation, MassGen uses this directory structure:
+
+.. code-block:: text
+
+   ~/.config/massgen/
+   ├── config.yaml              # Default configuration (from wizard)
+   ├── agents/                  # Your custom named configurations
+   │   ├── research-team.yaml
+   │   ├── coding-agents.yaml
+   │   └── custom-setup.yaml
+   ├── .env                     # API keys (optional)
+   └── sessions/                # Multi-turn conversation history
+
+You can:
+
+- Edit ``config.yaml`` to modify your default setup
+- Add named configs to ``agents/`` for specialized tasks
+- Store API keys in ``.env`` for convenience
+
+**Creating Named Configurations:**
+
+.. code-block:: bash
+
+   # Run the wizard in named config mode
+   massgen --init
+
+   # Choose to save to ~/.config/massgen/agents/ instead of default
+   # Then use it:
+   massgen --config research-team "Your question"
 
 Environment Variables
 ---------------------
 
-API keys are configured through a ``.env`` file in the MassGen directory. This is the recommended way to manage credentials securely.
+API keys are configured through environment variables or a ``.env`` file. After pip install, the setup wizard can create ``~/.config/massgen/.env`` for you.
 
 Creating Your .env File
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -63,7 +131,7 @@ Example .env File
 YAML Configuration Files
 -------------------------
 
-MassGen uses YAML files to define agents, their backends, and orchestrator settings. Configuration files are stored in ``massgen/configs/`` and can be referenced using the ``--config`` flag.
+MassGen uses YAML files to define agents, their backends, and orchestrator settings. Configuration files are stored in ``@examples/`` and can be referenced using the ``--config`` flag.
 
 Basic Configuration Structure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -93,7 +161,7 @@ For a single agent, use the ``agents`` field (plural) with one entry:
 
 .. code-block:: yaml
 
-   # massgen/configs/basic/single/single_gpt5nano.yaml
+   # @examples/basic_single
    agents:                # Note: plural 'agents' even for single agent
      - id: "gpt-5-nano"
        backend:
@@ -116,8 +184,8 @@ For a single agent, use the ``agents`` field (plural) with one entry:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/single/single_gpt5nano.yaml \
+   massgen \
+     --config @examples/basic_single \
      "What is machine learning?"
 
 Multi-Agent Configuration
@@ -127,7 +195,7 @@ For multiple agents, add more entries to the ``agents`` list:
 
 .. code-block:: yaml
 
-   # massgen/configs/basic/multi/three_agents_default.yaml
+   # @examples/basic_multi
    agents:
      - id: "gemini2.5flash"
        backend:
@@ -156,8 +224,8 @@ For multiple agents, add more entries to the ``agents`` list:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic_multi \
      "Analyze the pros and cons of renewable energy"
 
 Backend Configuration
@@ -381,7 +449,7 @@ Control maximum coordination time:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli --orchestrator-timeout 600 --config config.yaml
+   massgen --orchestrator-timeout 600 --config config.yaml
 
 See :doc:`../reference/timeouts` for complete timeout documentation.
 
@@ -393,13 +461,13 @@ For quick tests, you can use CLI flags without a configuration file:
 .. code-block:: bash
 
    # Single agent with model flag
-   uv run python -m massgen.cli --model gemini-2.5-flash "Your question"
+   massgen --model gemini-2.5-flash "Your question"
 
    # With backend specification
-   uv run python -m massgen.cli --backend claude --model claude-sonnet-4 "Your question"
+   massgen --backend claude --model claude-sonnet-4 "Your question"
 
    # With custom system message
-   uv run python -m massgen.cli \
+   massgen \
      --model gpt-5-nano \
      --system-message "You are a helpful coding assistant" \
      "Write a Python function to sort a list"
@@ -451,15 +519,15 @@ Configuration Best Practices
 Example Configuration Templates
 -------------------------------
 
-All configuration examples are in ``massgen/configs/``:
+All configuration examples are in ``@examples/``:
 
-* ``basic/single/`` - Single agent templates
-* ``basic/multi/`` - Multi-agent collaboration templates
-* ``tools/mcp/`` - MCP integration examples
-* ``tools/filesystem/`` - File operation examples
-* ``ag2/`` - AG2 framework integration examples
+* ``@examples/basic_single`` - Single agent configuration
+* ``@examples/basic_multi`` - Multi-agent collaboration
+* ``@examples/tools_mcp_*`` - MCP integration examples
+* ``@examples/tools_filesystem_*`` - File operation examples
+* ``@examples/ag2_*`` - AG2 framework integration
 
-See the `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/README.md>`_ for the complete catalog.
+See the `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_ for the complete catalog.
 
 Next Steps
 ----------
@@ -479,10 +547,10 @@ Ensure the path is correct relative to the MassGen directory:
 .. code-block:: bash
 
    # Correct - relative to MassGen root
-   uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen --config @examples/basic_multi
 
    # Incorrect - missing massgen/ prefix
-   uv run python -m massgen.cli --config configs/basic/multi/three_agents_default.yaml
+   massgen --config configs/basic/multi/three_agents_default.yaml
 
 **API key not found:**
 

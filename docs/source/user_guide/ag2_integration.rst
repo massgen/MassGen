@@ -24,16 +24,16 @@ Quick Start
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder.yaml \
      "Write a Python script to analyze CSV data and create visualizations"
 
 **AG2 + Native MassGen hybrid:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder_case_study.yaml \
      "Compare AG2 and MassGen frameworks, use code to fetch documentation"
 
 Installation
@@ -275,8 +275,8 @@ AG2 agents excel at code-based data analysis:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_data_analyst.yaml \
+   massgen \
+     --config @examples/ag2/ag2_data_analyst.yaml \
      "Analyze sales_data.csv and identify trends, create visualizations"
 
 The AG2 agent:
@@ -293,8 +293,8 @@ AG2 agents can write and execute scraping code:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder.yaml \
      "Scrape the top 10 articles from Hacker News and save to JSON"
 
 Framework Comparison
@@ -304,8 +304,8 @@ Use AG2 alongside native agents for comparative analysis:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder_case_study.yaml \
      "Compare AG2 and MassGen frameworks, fetch and analyze documentation"
 
 Testing and Validation
@@ -315,8 +315,8 @@ AG2 agents can write and execute test code:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_test_writer.yaml \
+   massgen \
+     --config @examples/ag2/ag2_test_writer.yaml \
      "Write comprehensive unit tests for the authentication module and run them"
 
 Benefits of AG2 Integration

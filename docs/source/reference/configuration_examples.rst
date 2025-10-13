@@ -6,11 +6,11 @@ This reference provides a comprehensive catalog of MassGen configuration example
 Directory Structure
 -------------------
 
-All configuration files are located in ``massgen/configs/``:
+All configuration files are located in ``@examples/``:
 
 .. code-block:: text
 
-   massgen/configs/
+   @examples/
    ├── basic/                 # Simple configs to get started
    │   ├── single/           # Single agent examples
    │   └── multi/            # Multi-agent examples
@@ -44,8 +44,8 @@ Recommended Showcase Example
 .. code-block:: bash
 
    # Three powerful agents (Gemini, GPT-5, Grok) with enhanced workspace tools
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "Your complex task"
 
 This configuration combines:
@@ -62,21 +62,21 @@ Quick Setup Without Config Files
 .. code-block:: bash
 
    # Quick test with any supported model - no configuration needed
-   uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
-   uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
-   uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
+   massgen --model claude-3-5-sonnet-latest "What is machine learning?"
+   massgen --model gemini-2.5-flash "Explain quantum computing"
+   massgen --model gpt-5-nano "Summarize the latest AI developments"
 
 **Interactive Mode:**
 
 .. code-block:: bash
 
    # Start interactive chat (no initial question)
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml
 
    # Debug mode for troubleshooting
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      --debug "Your question"
 
 Tool-Enabled Configurations
@@ -90,13 +90,13 @@ MCP enables agents to use external tools and services:
 .. code-block:: bash
 
    # Weather queries
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/gemini_mcp_example.yaml \
+   massgen \
+     --config @examples/tools/mcp/gemini_mcp_example.yaml \
      "What's the weather in Tokyo?"
 
    # Discord integration
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/claude_code_discord_mcp_example.yaml \
+   massgen \
+     --config @examples/tools/mcp/claude_code_discord_mcp_example.yaml \
      "Extract latest messages"
 
 See :doc:`../user_guide/mcp_integration` for complete MCP documentation.
@@ -109,8 +109,8 @@ Prevent irreversible actions during coordination:
 .. code-block:: bash
 
    # Five agents with planning mode enabled
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
      "Create a comprehensive project structure"
 
 See :doc:`../user_guide/planning_mode` for complete planning mode documentation.
@@ -122,8 +122,8 @@ For agents with web search capabilities:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/web-search/claude_streamable_http_test.yaml \
+   massgen \
+     --config @examples/tools/web-search/claude_streamable_http_test.yaml \
      "Search for latest news"
 
 Code Execution
@@ -133,8 +133,8 @@ For code interpretation and execution:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
+   massgen \
+     --config @examples/tools/code-execution/multi_agent_playwright_automation.yaml \
      "Browse three issues in https://github.com/Leezekun/MassGen and suggest improvements"
 
 Filesystem Operations
@@ -145,13 +145,13 @@ For file manipulation, :term:`workspace` management, and :term:`context path` in
 .. code-block:: bash
 
    # Single agent with enhanced file operations
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_single.yaml \
      "Analyze this codebase"
 
    # Multi-agent workspace collaboration
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_context_sharing.yaml \
      "Create shared workspace files"
 
 See :doc:`../user_guide/file_operations` for complete filesystem documentation.
@@ -166,8 +166,8 @@ OpenAI (GPT-5 Series)
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/providers/openai/gpt5.yaml \
+   massgen \
+     --config @examples/providers/openai/gpt5.yaml \
      "Complex reasoning task"
 
 Claude
@@ -175,8 +175,8 @@ Claude
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/providers/claude/claude_mcp_example.yaml \
+   massgen \
+     --config @examples/providers/claude/claude_mcp_example.yaml \
      "Creative writing task"
 
 Gemini
@@ -184,8 +184,8 @@ Gemini
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/providers/gemini/gemini_mcp_example.yaml \
+   massgen \
+     --config @examples/providers/gemini/gemini_mcp_example.yaml \
      "Research task"
 
 Local Models
@@ -194,8 +194,8 @@ Local Models
 .. code-block:: bash
 
    # Requires LM Studio running locally
-   uv run python -m massgen.cli \
-     --config massgen/configs/providers/local/lmstudio.yaml \
+   massgen \
+     --config @examples/providers/local/lmstudio.yaml \
      "Run with local model"
 
 See :doc:`../reference/supported_models` for choosing backends.
@@ -210,8 +210,8 @@ Creative Teams
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/teams/creative/creative_team.yaml \
+   massgen \
+     --config @examples/teams/creative/creative_team.yaml \
      "Write a story"
 
 Research Teams
@@ -219,8 +219,8 @@ Research Teams
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/teams/research/research_team.yaml \
+   massgen \
+     --config @examples/teams/research/research_team.yaml \
      "Analyze market trends"
 
 Development Teams
@@ -228,8 +228,8 @@ Development Teams
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/teams/development/zai_coding_team.yaml \
+   massgen \
+     --config @examples/teams/development/zai_coding_team.yaml \
      "Build a web app"
 
 Configuration File Format
@@ -313,23 +313,23 @@ v0.0.29 - Latest
 
 **Key Configurations:**
 
-* ``massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml`` - Five agents with Discord MCP in planning mode
-* ``massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml`` - Five agents with filesystem MCP in planning mode
-* ``massgen/configs/tools/planning/five_agents_notion_mcp_planning_mode.yaml`` - Five agents with Notion MCP in planning mode
-* ``massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml`` - Five agents testing weather MCP tools
+* ``@examples/tools/planning/five_agents_discord_mcp_planning_mode.yaml`` - Five agents with Discord MCP in planning mode
+* ``@examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml`` - Five agents with filesystem MCP in planning mode
+* ``@examples/tools/planning/five_agents_notion_mcp_planning_mode.yaml`` - Five agents with Notion MCP in planning mode
+* ``@examples/tools/mcp/five_agents_weather_mcp_test.yaml`` - Five agents testing weather MCP tools
 
 **Try it:**
 
 .. code-block:: bash
 
    # Planning mode with filesystem operations
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
      "Create a comprehensive project structure with documentation"
 
    # Multi-agent weather MCP testing
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+   massgen \
+     --config @examples/tools/mcp/five_agents_weather_mcp_test.yaml \
      "Compare weather forecasts for New York, London, and Tokyo"
 
 v0.0.28
@@ -339,22 +339,22 @@ v0.0.28
 
 **Key Configurations:**
 
-* ``massgen/configs/ag2/ag2_single_agent.yaml`` - Basic single AG2 agent setup
-* ``massgen/configs/ag2/ag2_coder.yaml`` - AG2 agent with code execution capabilities
-* ``massgen/configs/ag2/ag2_gemini.yaml`` - AG2-Gemini hybrid configuration
+* ``@examples/ag2/ag2_single_agent.yaml`` - Basic single AG2 agent setup
+* ``@examples/ag2/ag2_coder.yaml`` - AG2 agent with code execution capabilities
+* ``@examples/ag2/ag2_gemini.yaml`` - AG2-Gemini hybrid configuration
 
 **Try it:**
 
 .. code-block:: bash
 
    # AG2 single agent with code execution
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder.yaml \
      "Create a factorial function and calculate the factorial of 8"
 
    # Mixed team: AG2 agent + Gemini agent
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_gemini.yaml \
+   massgen \
+     --config @examples/ag2/ag2_gemini.yaml \
      "what is quantum computing?"
 
 v0.0.27
@@ -364,22 +364,22 @@ v0.0.27
 
 **Key Configurations:**
 
-* ``massgen/configs/basic/multi/gpt4o_image_generation.yaml`` - Multi-agent image generation
-* ``massgen/configs/basic/multi/gpt5nano_image_understanding.yaml`` - Multi-agent image understanding
-* ``massgen/configs/basic/single/single_gpt5nano_file_search.yaml`` - File search for document Q&A
+* ``@examples/basic/multi/gpt4o_image_generation.yaml`` - Multi-agent image generation
+* ``@examples/basic/multi/gpt5nano_image_understanding.yaml`` - Multi-agent image understanding
+* ``@examples/basic/single/single_gpt5nano_file_search.yaml`` - File search for document Q&A
 
 **Try it:**
 
 .. code-block:: bash
 
    # Image generation
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
+   massgen \
+     --config @examples/basic/single/single_gpt4o_image_generation.yaml \
      "Generate an image of a gray tabby cat hugging an otter"
 
    # Image understanding
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
+   massgen \
+     --config @examples/basic/multi/gpt5nano_image_understanding.yaml \
      "Please summarize the content in this image"
 
 v0.0.26
@@ -389,17 +389,17 @@ v0.0.26
 
 **Key Configurations:**
 
-* ``massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml`` - Protected paths configuration
-* ``massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml`` - File-based context paths
-* ``massgen/configs/tools/filesystem/grok4_gpt5_gemini_filesystem.yaml`` - Multi-agent filesystem collaboration
+* ``@examples/tools/filesystem/gemini_gpt5nano_protected_paths.yaml`` - Protected paths configuration
+* ``@examples/tools/filesystem/gemini_gpt5nano_file_context_path.yaml`` - File-based context paths
+* ``@examples/tools/filesystem/grok4_gpt5_gemini_filesystem.yaml`` - Multi-agent filesystem collaboration
 
 **Try it:**
 
 .. code-block:: bash
 
    # Protected paths - keep reference files safe
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
+   massgen \
+     --config @examples/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
      "Review the HTML and CSS files, then improve the styling"
 
 v0.0.25
@@ -409,17 +409,17 @@ v0.0.25
 
 **Key Configurations:**
 
-* ``massgen/configs/tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml`` - Multi-turn with Gemini agents
-* ``massgen/configs/tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml`` - Three-agent multi-turn
-* ``massgen/configs/basic/multi/two_qwen_vllm_sglang.yaml`` - Mixed vLLM and SGLang deployment
+* ``@examples/tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml`` - Multi-turn with Gemini agents
+* ``@examples/tools/filesystem/multiturn/grok4_gpt5_claude_code_filesystem_multiturn.yaml`` - Three-agent multi-turn
+* ``@examples/basic/multi/two_qwen_vllm_sglang.yaml`` - Mixed vLLM and SGLang deployment
 
 **Example Multi-Turn Session:**
 
 .. code-block:: bash
 
    # Turn 1 - Initial creation
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml
+   massgen \
+     --config @examples/tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml
 
    Turn 1: Make a website about Bob Dylan
    # Creates workspace and saves state to .massgen/sessions/
@@ -431,7 +431,7 @@ v0.0.25
 v0.0.24 and Earlier
 ~~~~~~~~~~~~~~~~~~~
 
-See the `GitHub repository <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/README.md>`_ for complete release history including:
+See the `GitHub repository <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_ for complete release history including:
 
 * v0.0.24 - vLLM Backend Support
 * v0.0.23 - Backend Architecture Refactoring

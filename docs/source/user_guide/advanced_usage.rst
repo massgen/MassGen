@@ -17,8 +17,8 @@ MassGen supports interactive multi-turn conversations with persistent context ac
 .. code-block:: bash
 
    # Start interactive session (omit the question)
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml
 
 .. seealso::
    :doc:`multi_turn_mode` - Complete interactive mode guide including commands (/clear, /quit), session storage, coordination tracking, and debugging
@@ -128,8 +128,8 @@ Safety Features
 .. code-block:: bash
 
    # Multi-agent project collaboration
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
+   massgen \
+     --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
      "Analyze the codebase and suggest improvements"
 
 See :doc:`project_integration` for comprehensive project integration guide.
@@ -214,8 +214,8 @@ Combine MassGen and AG2 agents:
 .. code-block:: bash
 
    # Hybrid MassGen + AG2 collaboration
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder_case_study.yaml \
      "Build a data analysis pipeline with visualizations"
 
 See :doc:`ag2_integration` for complete AG2 documentation.
@@ -250,8 +250,8 @@ Enable verbose debugging with the ``--debug`` flag:
 .. code-block:: bash
 
    # Enable debug mode
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      --debug \
      "Your question"
 
@@ -362,8 +362,8 @@ Press ``r`` during execution to view the interactive coordination table:
 .. code-block:: bash
 
    # Start MassGen
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml
 
    # During execution, press 'r' to view coordination table
 
@@ -493,7 +493,7 @@ Complete CLI reference:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --config path/to/config.yaml \  # Configuration file
      --model model-name \            # Quick model setup (alternative to --config)
      --backend backend-type \        # Backend type for quick setup

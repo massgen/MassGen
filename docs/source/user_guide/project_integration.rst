@@ -21,8 +21,8 @@ Quick Start
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
+   massgen \
+     --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
      "Enhance the website with dark/light theme toggle and interactive features"
 
 Configuration
@@ -295,7 +295,7 @@ Agents analyze your source code and suggest improvements:
    uv tool run massgen "Review the authentication module for security issues and best practices"
 
    # Or with explicit config
-   uv run python -m massgen.cli \
+   massgen \
      --config code_review.yaml \
      "Review the authentication module for security issues and best practices"
 
@@ -323,7 +323,7 @@ Agents read project code to understand context and generate/update documentation
    uv tool run massgen "Update the API documentation to reflect recent changes in the auth module"
 
    # Or with explicit config
-   uv run python -m massgen.cli \
+   massgen \
      --config doc_generator.yaml \
      "Update the API documentation to reflect recent changes in the auth module"
 
@@ -351,7 +351,7 @@ Agents access shared datasets and generate analysis reports:
    uv tool run massgen "Analyze the Q4 sales data and create a comprehensive report with visualizations"
 
    # Or with explicit config
-   uv run python -m massgen.cli \
+   massgen \
      --config data_analysis.yaml \
      "Analyze the Q4 sales data and create a comprehensive report with visualizations"
 
@@ -379,7 +379,7 @@ Agents examine existing projects and create modernized versions:
    uv tool run massgen "Migrate the Flask 1.x application to Flask 3.x with modern best practices"
 
    # Or with explicit config
-   uv run python -m massgen.cli \
+   massgen \
      --config migration.yaml \
      "Migrate the Flask 1.x application to Flask 3.x with modern best practices"
 

@@ -25,16 +25,16 @@ Quick Start
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+   massgen \
+     --config @examples/tools/mcp/gpt5_nano_mcp_example.yaml \
      "What's the weather forecast for New York this week?"
 
 **Multiple MCP tools:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+   massgen \
+     --config @examples/tools/mcp/multimcp_gemini.yaml \
      "Find the best restaurants in Paris and save the recommendations to a file"
 
 Backend Support
@@ -177,7 +177,7 @@ Filesystem
 Discord
 ~~~~~~~
 
-Requires Discord bot token. See `Discord MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/docs/DISCORD_MCP_SETUP.md>`_:
+Requires Discord bot token. See `Discord MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/docs/DISCORD_MCP_SETUP.md>`_:
 
 .. code-block:: yaml
 
@@ -192,7 +192,7 @@ Requires Discord bot token. See `Discord MCP Setup Guide <https://github.com/Lee
 Twitter
 ~~~~~~~
 
-Requires Twitter API credentials. See `Twitter MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/docs/TWITTER_MCP_ENESCINAR_SETUP.md>`_:
+Requires Twitter API credentials. See `Twitter MCP Setup Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/docs/TWITTER_MCP_ENESCINAR_SETUP.md>`_:
 
 .. code-block:: yaml
 
@@ -368,8 +368,8 @@ Usage
 .. code-block:: bash
 
    # Five agents with planning mode (no execution during coordination)
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
      "Create a comprehensive project structure with documentation"
 
 **What happens:**

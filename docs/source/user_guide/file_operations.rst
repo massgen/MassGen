@@ -18,16 +18,16 @@ Quick Start
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_single.yaml \
      "Create a Python web scraper and save results to CSV"
 
 **Multi-agent file collaboration:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_context_sharing.yaml \
      "Generate a comprehensive project report with charts and analysis"
 
 .. warning::
@@ -126,7 +126,7 @@ Claude Code has built-in file operation tools:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --backend claude_code \
      --model sonnet \
      "Create a Python project with src/, tests/, and docs/ directories"
@@ -459,7 +459,7 @@ Example: Multi-Agent Document Processing
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --config document_processing.yaml \
      "Analyze data.csv and create a comprehensive report with visualizations"
 

@@ -110,8 +110,8 @@ Latest Features (v0.0.29)
 
       .. code-block:: bash
 
-         uv run python -m massgen.cli \
-           --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+         massgen \
+           --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
            "Create a comprehensive project structure"
 
    .. grid-item-card:: 🛡️ File Operation Safety
@@ -141,16 +141,16 @@ Latest Features (v0.0.29)
 .. code-block:: bash
 
    # Five agents collaborating with planning mode (no execution during coordination)
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
      "Create a comprehensive project structure with documentation"
 
    # Test MCP tools with multiple agents
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+   massgen \
+     --config @examples/tools/mcp/five_agents_weather_mcp_test.yaml \
      "Compare weather forecasts for New York, London, and Tokyo"
 
-See all release examples in `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/README.md#release-history--examples>`_.
+See all release examples in `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md#release-history--examples>`_.
 
 Quick Start
 -----------
@@ -189,7 +189,7 @@ Step 3: Run Your First Task
 .. code-block:: bash
 
    # Simplest command - uses one model, no config file needed
-   uv run python -m massgen.cli --model gemini-2.5-flash "What is 2+2?"
+   massgen --model gemini-2.5-flash "What is 2+2?"
 
 **Expected output:** The agent responds directly with the answer. *This takes ~5 seconds and costs ~$0.001*
 
@@ -200,14 +200,14 @@ Once the single agent works, experience MassGen's power with multiple agents:
 .. code-block:: bash
 
    # Three agents collaborate on the answer
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "What are the pros and cons of renewable energy?"
 
 **What happens:** You'll see agents discuss, vote, and converge on the best answer. The coordination table shows real-time progress.
 
 .. note::
-   **Config file paths:** Examples show ``massgen/configs/...`` which works when you're in the MassGen repo directory. See :doc:`quickstart/running-massgen` for how to use configs from other directories.
+   **Config file paths:** Examples show ``@examples/...`` which works when you're in the MassGen repo directory. See :doc:`quickstart/running-massgen` for how to use configs from other directories.
 
 **Next Steps:**
 
@@ -243,7 +243,7 @@ Core Concepts
    MassGen uses YAML files to configure agents, models, tools, and coordination strategies. No code required!
 
 **CLI-Based**
-   Simple command-line interface: ``uv run python -m massgen.cli``
+   Simple command-line interface: ``massgen``
 
 **Multi-Agent Coordination**
    Agents vote for solutions and reach consensus through natural collaboration with real-time visualization.
@@ -289,6 +289,7 @@ Documentation Sections
 
       **Reference**
 
+      * :doc:`reference/python_api`
       * :doc:`reference/cli`
       * :doc:`reference/yaml_schema`
       * :doc:`reference/configuration_examples`
@@ -340,6 +341,7 @@ Documentation Sections
    :hidden:
    :caption: Reference
 
+   reference/python_api
    reference/cli
    reference/yaml_schema
    reference/configuration_examples

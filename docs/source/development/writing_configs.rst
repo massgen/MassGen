@@ -35,7 +35,7 @@ Place config files in the appropriate category directory:
 
 .. code-block:: text
 
-   massgen/configs/tools/{category}/
+   @examples/tools/{category}/
 
 **Categories:**
 
@@ -72,11 +72,11 @@ Use this approach:
 .. code-block:: bash
 
    # 1. Find similar configs
-   ls massgen/configs/tools/{relevant_category}/
+   ls @examples/tools/{relevant_category}/
 
    # 2. Read them to understand structure
-   cat massgen/configs/tools/multimodal/gpt5mini_gpt5nano_image_analysis.yaml
-   cat massgen/configs/basic/multi/three_agents_default.yaml
+   cat @examples/tools/multimodal/gpt5mini_gpt5nano_image_analysis.yaml
+   cat @examples/basic/multi/three_agents_default.yaml
 
 Configuration Rules
 ~~~~~~~~~~~~~~~~~~~
@@ -160,8 +160,8 @@ Here's a fully annotated config template showing all conventions:
    # - {Key capability 3}
    #
    # Run with:
-   #   uv run python -m massgen.cli \
-   #     --config massgen/configs/tools/{category}/{filename}.yaml \
+   #   massgen \
+   #     --config @examples/tools/{category}/{filename}.yaml \
    #     "{example prompt}"
 
    # ====================
@@ -240,7 +240,7 @@ Here's a fully annotated config template showing all conventions:
 
      # Optional: Shared read-only context (orchestrator-level)
      context_paths:
-       - path: "massgen/configs/resources/v{X.Y.Z}-example/{subdirectory}"
+       - path: "@examples/resources/v{X.Y.Z}-example/{subdirectory}"
          permission: "read"
 
    # ====================
@@ -268,12 +268,12 @@ If your config needs source files for testing (e.g., code files to analyze, docu
 
 .. code-block:: text
 
-   massgen/configs/resources/v{X.Y.Z}-example/{subdirectory}/
+   @examples/resources/v{X.Y.Z}-example/{subdirectory}/
 
 **Examples:**
 
-* ``massgen/configs/resources/v0.0.29-example/python_project/``
-* ``massgen/configs/resources/v0.0.30-example/documentation/``
+* ``@examples/resources/v0.0.29-example/python_project/``
+* ``@examples/resources/v0.0.30-example/documentation/``
 
 **Rules:**
 
@@ -288,7 +288,7 @@ Example resource setup:
 
    orchestrator:
      context_paths:
-       - path: "massgen/configs/resources/v0.0.29-example/python_project"
+       - path: "@examples/resources/v0.0.29-example/python_project"
          permission: "read"
 
 Config Creation Workflow
@@ -301,12 +301,12 @@ Follow this workflow to create a new config:
 .. code-block:: bash
 
    # Find similar configs
-   ls massgen/configs/tools/{relevant_category}/
-   ls massgen/configs/basic/multi/
+   ls @examples/tools/{relevant_category}/
+   ls @examples/basic/multi/
 
    # Read 2-3 examples to understand structure
-   cat massgen/configs/tools/multimodal/example1.yaml
-   cat massgen/configs/tools/mcp/example2.yaml
+   cat @examples/tools/multimodal/example1.yaml
+   cat @examples/tools/mcp/example2.yaml
 
 **Step 2: Copy and Adapt Structure**
 
@@ -333,8 +333,8 @@ Follow this workflow to create a new config:
 .. code-block:: bash
 
    # Test with a simple prompt
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/{category}/{your_config}.yaml \
+   massgen \
+     --config @examples/tools/{category}/{your_config}.yaml \
      "Test prompt that exercises the key features"
 
 **Step 6: Document Expected Behavior**
@@ -355,7 +355,7 @@ Configuration Structure
 
 ☐ Follows naming convention: ``{agent1}_{agent2}_{feature}.yaml``
 
-☐ Located in correct category: ``massgen/configs/tools/{category}/``
+☐ Located in correct category: ``@examples/tools/{category}/``
 
 ☐ Header comment includes: use case, description, run command
 
@@ -390,7 +390,7 @@ Orchestrator Configuration
 Resources & Testing
 ~~~~~~~~~~~~~~~~~~~
 
-☐ Resource files copied to ``massgen/configs/resources/v{X.Y.Z}-example/``
+☐ Resource files copied to ``@examples/resources/v{X.Y.Z}-example/``
 
 ☐ Resource files are complete and self-contained
 
@@ -482,7 +482,7 @@ Agents with Filesystem Access
 
    orchestrator:
      context_paths:
-       - path: "massgen/configs/resources/v0.0.29-example/source"
+       - path: "@examples/resources/v0.0.29-example/source"
          permission: "read"  # Shared read-only source
 
 Agents with MCP Tools

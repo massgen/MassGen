@@ -25,8 +25,8 @@ Quick Start
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
+   massgen \
+     --config @examples/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
      "Review the HTML and CSS files, then improve the styling"
 
 What Are Protected Paths?
@@ -152,7 +152,7 @@ Realistic configuration for a web project:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --config website_config.yaml \
      "Improve the CSS styling while keeping the HTML structure intact"
 

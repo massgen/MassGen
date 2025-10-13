@@ -14,16 +14,16 @@ Quick Start
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
      "Create a comprehensive project structure with documentation"
 
 **Example with MCP tools:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
      "Compare weather forecasts for New York, London, and Tokyo"
 
 What is Planning Mode?
@@ -90,8 +90,8 @@ MCP External Tools
 .. code-block:: bash
 
    # Weather API example with planning mode
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
      "Get weather data for multiple cities"
 
 **Why**: Prevents redundant API calls, rate limiting issues, and conflicting external state changes.
@@ -307,12 +307,12 @@ Examples by Use Case
 Example 1: Project Structure Creation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Config**: ``massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml``
+**Config**: ``@examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml``
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
      "Create a Python microservice project with src/, tests/, docker/, and docs/ directories. Add starter files."
 
 **Result**: Agents discuss the ideal structure, vote on the best approach, then winning agent creates everything cleanly.
@@ -320,12 +320,12 @@ Example 1: Project Structure Creation
 Example 2: Weather Data Collection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Config**: ``massgen/configs/tools/planning/five_agents_weather_mcp_planning_mode.yaml``
+**Config**: ``@examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml``
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
      "Fetch weather data for San Francisco, New York, and London. Compare temperatures."
 
 **Result**: Agents plan the API calls, agree on data format, then winning agent makes the actual requests.
@@ -333,12 +333,12 @@ Example 2: Weather Data Collection
 Example 3: Social Media Integration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Config**: ``massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml``
+**Config**: ``@examples/tools/planning/five_agents_twitter_mcp_planning_mode.yaml``
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_twitter_mcp_planning_mode.yaml \
      "Analyze recent tweets about AI and post a summary"
 
 **Result**: Agents plan search queries and post content without actually posting during coordination.

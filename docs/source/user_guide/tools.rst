@@ -51,8 +51,8 @@ Enable web search for real-time information:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "What are the latest developments in quantum computing?"
 
 Code Execution
@@ -81,7 +81,7 @@ Enable code execution for computational tasks:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --model gpt-5-nano \
      --backend openai \
      "Calculate the first 100 prime numbers and plot their distribution"
@@ -258,13 +258,13 @@ Web Search Example
 .. code-block:: bash
 
    # Single agent with web search
-   uv run python -m massgen.cli \
+   massgen \
      --model gemini-2.5-flash \
      "Research the latest AI developments and summarize key trends"
 
    # Multi-agent research
-   uv run python -m massgen.cli \
-     --config massgen/configs/basic/multi/three_agents_default.yaml \
+   massgen \
+     --config @examples/basic/multi/three_agents_default.yaml \
      "Compare renewable energy adoption rates across different countries"
 
 Code Execution Example
@@ -273,13 +273,13 @@ Code Execution Example
 .. code-block:: bash
 
    # Code generation and execution
-   uv run python -m massgen.cli \
+   massgen \
      --model gpt-5-nano \
      "Write and execute a Python script to analyze CSV data and create visualizations"
 
    # Multi-agent coding
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder.yaml \
      "Create a web scraper for product prices and generate a comparison report"
 
 File Operations Example
@@ -288,13 +288,13 @@ File Operations Example
 .. code-block:: bash
 
    # File operations with Claude Code
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_single.yaml \
      "Create a Python project structure with tests and documentation"
 
    # Multi-agent file collaboration
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+   massgen \
+     --config @examples/tools/filesystem/claude_code_context_sharing.yaml \
      "Analyze code quality and generate improvement recommendations"
 
 MCP Tools Example
@@ -303,13 +303,13 @@ MCP Tools Example
 .. code-block:: bash
 
    # Weather information
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+   massgen \
+     --config @examples/tools/mcp/gpt5_nano_mcp_example.yaml \
      "What's the weather forecast for New York this week?"
 
    # Multi-server MCP
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+   massgen \
+     --config @examples/tools/mcp/multimcp_gemini.yaml \
      "Find hotels in London and check the weather forecast"
 
 Tool Configuration Best Practices
@@ -417,7 +417,7 @@ Verify tool filtering configuration:
      - "mcp__weather__get_current_weather"  # Tool name must match exactly
 
    # Check tool name with --debug flag
-   uv run python -m massgen.cli --debug --config your-config.yaml "..."
+   massgen --debug --config your-config.yaml "..."
 
 Next Steps
 ----------
@@ -434,5 +434,5 @@ Additional Resources
 
 * `MCP Server Registry <https://github.com/modelcontextprotocol/servers>`_ - Official MCP servers
 * `MCP Documentation <https://modelcontextprotocol.io/>`_ - Protocol specification
-* `Backend Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/BACKEND_CONFIGURATION.md>`_ - Detailed backend settings
+* `Backend Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/BACKEND_CONFIGURATION.md>`_ - Detailed backend settings
 * :doc:`../reference/yaml_schema` - Complete YAML reference

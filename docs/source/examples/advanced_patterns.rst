@@ -15,7 +15,7 @@ Creative Team
 
 A specialized team for creative writing and storytelling tasks:
 
-**Configuration:** ``massgen/configs/teams/creative/creative_team.yaml``
+**Configuration:** ``@examples/teams/creative/creative_team.yaml``
 
 .. code-block:: yaml
 
@@ -52,8 +52,8 @@ A specialized team for creative writing and storytelling tasks:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/teams/creative/creative_team.yaml \
+   massgen \
+     --config @examples/teams/creative/creative_team.yaml \
      "Write a short story about a robot who discovers music"
 
 Research Team
@@ -61,7 +61,7 @@ Research Team
 
 Specialized configuration for research and analysis tasks:
 
-**Configuration:** ``massgen/configs/teams/research/research_team.yaml``
+**Configuration:** ``@examples/teams/research/research_team.yaml``
 
 .. code-block:: yaml
 
@@ -101,8 +101,8 @@ Specialized configuration for research and analysis tasks:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/teams/research/research_team.yaml \
+   massgen \
+     --config @examples/teams/research/research_team.yaml \
      "Research quantum computing developments and synthesize key findings"
 
 MCP Planning Mode
@@ -113,7 +113,7 @@ Planning mode prevents MCP tools from executing during coordination, making coll
 Filesystem Planning Mode
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Configuration:** ``massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml``
+**Configuration:** ``@examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml``
 
 Five agents collaborating on filesystem tasks with planning mode:
 
@@ -144,8 +144,8 @@ Five agents collaborating on filesystem tasks with planning mode:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+   massgen \
+     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
      "Create a Python project structure with directories for src, tests, docs"
 
 **How it works:**
@@ -249,7 +249,7 @@ Agents working on real codebases with granular permissions:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
+   massgen \
      --config your-project-config.yaml \
      "Analyze the codebase and add comprehensive tests"
 
@@ -272,8 +272,8 @@ Build projects incrementally with maintained context:
 .. code-block:: bash
 
    # Start interactive session with file operations
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/filesystem/claude_code_single.yaml
+   massgen \
+     --config @examples/tools/filesystem/claude_code_single.yaml
 
 **Example session:**
 
@@ -347,8 +347,8 @@ Combine multiple external tools:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+   massgen \
+     --config @examples/tools/mcp/multimcp_gemini.yaml \
      "Find hotels in Paris, check the weather, and save recommendations"
 
 AG2 Framework Integration
@@ -387,8 +387,8 @@ Combine MassGen orchestration with AG2 code execution:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli \
-     --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+   massgen \
+     --config @examples/ag2/ag2_coder_case_study.yaml \
      "Build a data analysis pipeline with visualizations"
 
 See :doc:`../user_guide/ag2_integration` for complete AG2 documentation.
@@ -503,7 +503,7 @@ Configuration Best Practices
 Configuration Examples Repository
 ----------------------------------
 
-All example configurations are in ``massgen/configs/``:
+All example configurations are in ``@examples/``:
 
 **By Feature:**
 
@@ -521,7 +521,7 @@ All example configurations are in ``massgen/configs/``:
 * Data analysis
 * Project management
 
-See the `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/README.md>`_ for the complete catalog.
+See the `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_ for the complete catalog.
 
 Next Steps
 ----------

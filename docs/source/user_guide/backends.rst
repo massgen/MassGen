@@ -451,7 +451,7 @@ Run both vLLM and SGLang simultaneously:
 
 **Configuration Example:**
 
-See ``massgen/configs/providers/local/two_qwen_vllm_sglang.yaml`` for a complete mixed deployment example.
+See ``@examples/providers/local/two_qwen_vllm_sglang.yaml`` for a complete mixed deployment example.
 
 Common Backend Parameters
 -------------------------
@@ -589,7 +589,7 @@ Advanced Backend Configuration
 
 For detailed backend-specific parameters, see:
 
-* `Backend Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/massgen/configs/BACKEND_CONFIGURATION.md>`_
+* `Backend Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/BACKEND_CONFIGURATION.md>`_
 * :doc:`../reference/yaml_schema` - Complete YAML schema
 
 MCP Integration
