@@ -31,15 +31,26 @@ First time setup! Let's configure MassGen.
 ✓ Found ANTHROPIC_API_KEY in environment
 ✗ OPENAI_API_KEY not found
 
-What will you use MassGen for?
-  [1] Research (web search, multi-agent collaboration)
-  [2] Coding (file operations, development tools)
-  [3] Single agent (fast, simple)
-  [4] Skip (use temporary config)
+What will you primarily use MassGen for?
 
-Choice: 1
+  [1] Custom Configuration (Recommended)
+      → Build your own multi-agent team from scratch
 
-Creating research configuration...
+  [2] Research & Analysis (Pre-built Multi-Agent Team)
+      → 3-agent team: Gemini 2.5 Pro + GPT-5 Mini + Grok-4 Fast Reasoning
+
+  [3] Coding & Development (Pre-built Multi-Agent Team)
+      → 2-agent team: Claude Code + GPT-5
+
+  [4] Single Agent (Fast & Simple)
+      → Claude Sonnet 4
+
+  [5] Skip Setup
+      → Temporary config (not saved)
+
+Choice: 2
+
+Creating Research & Analysis configuration...
   ✓ Saved to ~/.config/massgen/config.yaml
 
 Running your query...
