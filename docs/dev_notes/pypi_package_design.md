@@ -140,6 +140,42 @@ uv run python -m massgen.cli \
 # ✓ Still works!
 ```
 
+### Python API for Git Clone Users
+
+**Git clone users can also use the Python API!** Just install the local package in editable mode:
+
+```bash
+cd /path/to/MassGen
+uv pip install -e .  # Editable install
+```
+
+Then use the Python API from anywhere:
+
+```python
+import massgen
+
+# Works exactly like pip install users
+result = await massgen.run("Question", model="gemini-2.5-flash")
+print(result['final_answer'])
+
+# Use with config files
+result = await massgen.run("Question", config="@examples/basic_multi")
+
+# Or use local config files
+result = await massgen.run(
+    "Question",
+    config="massgen/configs/basic/multi/three_agents_default.yaml"
+)
+```
+
+**All features work:**
+- ✓ `massgen.run()` API
+- ✓ Config resolution (`@examples/` syntax)
+- ✓ Config builder (`massgen --init`)
+- ✓ All CLI commands
+
+**The only difference:** Git clone users can edit the source code directly and see changes immediately (since it's an editable install).
+
 ### Both Old and New Syntax Work
 
 After implementing this design, **both** syntaxes work:
@@ -282,6 +318,66 @@ def should_run_builder() -> bool:
     return not user_config.exists()
 ```
 
+#### Config Persistence
+
+**After completing the wizard on first run:**
+- Config is saved to `~/.config/massgen/config.yaml`
+- ✓ Automatically loaded on all future runs
+- ✓ No wizard on subsequent runs
+- User can override per-query with `--config` or `--model` flags
+
+**If wizard is skipped (option [5]):**
+- No config is saved (temporary)
+- ✓ Wizard will run again on next invocation
+- User can avoid wizard by using `--config` or `--model` flags
+
+**Changing saved config:**
+
+```bash
+# Re-run wizard to replace config
+massgen --init
+
+# Or edit directly
+vim ~/.config/massgen/config.yaml
+
+# Or override per-query (doesn't change saved config)
+massgen --config @examples/basic_single "Question"
+massgen --model gemini-2.5-flash "Question"
+```
+
+**Example: First run (wizard completed)**
+
+```bash
+# First run
+$ massgen "What is AI?"
+# → Wizard runs
+# → User selects [2] Research & Analysis
+# → Config saved to ~/.config/massgen/config.yaml
+# → Query runs with research team
+
+# Second run
+$ massgen "What is machine learning?"
+# → NO wizard (config exists)
+# → Loads ~/.config/massgen/config.yaml
+# → Runs with research team from first run
+```
+
+**Example: First run (wizard skipped)**
+
+```bash
+# First run
+$ massgen "What is AI?"
+# → Wizard runs
+# → User selects [5] Skip Setup
+# → Config NOT saved
+# → Query runs with default single agent
+
+# Second run
+$ massgen "What is machine learning?"
+# → Wizard runs AGAIN (no saved config)
+# → User must choose or skip again
+```
+
 #### Interactive Wizard Flow
 
 **Step 1: Welcome & API Key Check**
@@ -306,24 +402,25 @@ You have 2/4 provider keys configured.
 ```
 What will you primarily use MassGen for?
 
-  [1] Research & Analysis
-      → Multi-agent team with web search
+  [1] Custom Configuration (Recommended)
+      → Build your own multi-agent team from scratch
+      → Choose number of agents, backends, models, and tools
+      → Most flexible option
+
+  [2] Research & Analysis (Pre-built Multi-Agent Team)
+      → 3-agent team with web search
+      → Gemini 2.5 Pro + GPT-5 Mini + Grok-4 Fast Reasoning
       → Best for: research, current events, fact-checking
-      → Agents: Gemini 2.5 Flash + GPT-5 Nano + Grok-3 Mini
 
-  [2] Coding & Development
-      → Agents with file operations and code execution
-      → Best for: software projects, code review, development
-      → Agents: Claude Code + GPT-5 Nano
+  [3] Coding & Development (Pre-built Multi-Agent Team)
+      → 2-agent team with file operations and code execution
+      → Claude Code + GPT-5
+      → Best for: software projects, code review
 
-  [3] Single Agent (Fast & Simple)
-      → One powerful agent
+  [4] Single Agent (Fast & Simple)
+      → One powerful agent (no coordination overhead)
+      → Claude Sonnet 4
       → Best for: quick questions, simple tasks
-      → Agent: Claude Sonnet 4
-
-  [4] Custom Configuration
-      → Build your own agent team
-      → Advanced: choose backends, models, tools
 
   [5] Skip Setup
       → Use temporary config for this session only
@@ -334,20 +431,38 @@ Choice [1-5]: 1
 
 **Step 3: Configuration Preview**
 ```
-Creating Research & Analysis configuration...
+Creating Custom configuration...
+
+How many agents would you like? [1-5]: 3
+
+Select backend for Agent 1:
+  [1] Anthropic Claude
+  [2] OpenAI GPT
+  [3] Google Gemini
+  [4] xAI Grok
+Choice: 3
+
+Select model:
+  [1] gemini-2.5-pro
+  [2] gemini-2.5-flash
+Choice: 1
+
+Enable web search? [Y/n]: y
+
+[... repeat for agents 2 and 3 ...]
 
 Your Agent Team:
-  • Gemini 2.5 Flash (Google)
+  • Gemini 2.5 Pro (Google)
+    - Web search enabled
+    - Advanced reasoning
+
+  • GPT-5 Mini (OpenAI)
     - Web search enabled
     - Fast, cost-effective
 
-  • GPT-5 Nano (OpenAI)
-    - Code interpreter enabled
-    - Advanced reasoning
-
-  • Grok-3 Mini (xAI)
+  • Grok-4 Fast Reasoning (xAI)
+    - Web search enabled
     - Real-time information
-    - Alternative perspectives
 
 Coordination: Multi-agent voting and consensus
 UI: Rich terminal display with live coordination
@@ -375,28 +490,27 @@ Running your query with research team...
 └── agents/                        # Directory for user's custom configs
 ```
 
-**Example `config.yaml` (Research preset):**
+**Example `config.yaml` (Custom/Research preset):**
 ```yaml
 agents:
   - id: "gemini_researcher"
     backend:
       type: "gemini"
-      model: "gemini-2.5-flash"
+      model: "gemini-2.5-pro"
       enable_web_search: true
     system_message: "You are a research specialist..."
 
   - id: "gpt_analyst"
     backend:
       type: "openai"
-      model: "gpt-5-nano"
+      model: "gpt-5-mini"
       enable_web_search: true
-      enable_code_interpreter: true
     system_message: "You are an analytical thinker..."
 
   - id: "grok_checker"
     backend:
       type: "grok"
-      model: "grok-3-mini"
+      model: "grok-4-fast-reasoning"
       enable_web_search: true
     system_message: "You provide alternative perspectives..."
 
@@ -411,27 +525,28 @@ ui:
 
 #### Preset Templates
 
-**1. Research & Analysis**
-- 3 agents: Gemini + GPT + Grok
-- All with web search
+**1. Custom Configuration (Recommended, Default)**
+- Interactive builder
+- Choose number of agents
+- Select backend and model for each agent
+- Configure tools per agent (web search, file operations, etc.)
+- Most flexible option - users build exactly what they need
+
+**2. Research & Analysis (Pre-built Multi-Agent Team)**
+- 3 agents: Gemini 2.5 Pro + GPT-5 Mini + Grok-4 Fast Reasoning
+- All with web search enabled
 - Optimized for: current events, fact-checking, comprehensive research
 
-**2. Coding & Development**
-- 2 agents: Claude Code + GPT
+**3. Coding & Development (Pre-built Multi-Agent Team)**
+- 2 agents: Claude Code + GPT-5
 - File operations enabled
 - Code execution enabled
 - Optimized for: software development, code review
 
-**3. Single Agent**
+**4. Single Agent (Fast & Simple)**
 - 1 agent: Claude Sonnet 4
 - Fast, no coordination overhead
 - Optimized for: quick questions, simple tasks
-
-**4. Custom**
-- Interactive builder for advanced users
-- Choose number of agents
-- Select backend for each
-- Configure tools per agent
 
 #### Integration with PR #309
 
