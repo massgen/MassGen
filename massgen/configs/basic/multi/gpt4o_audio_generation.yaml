@@ -1,0 +1,30 @@
+# Example configuration demonstrating context_paths filesystem access control
+# This config shows how agents can access user-specified files with permission control
+# uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt4o_audio_generation.yaml "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
+agents:
+  - id: "gpt4o_1"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      text:
+        verbosity: "medium"
+      cwd: "workspace1"
+      enable_audio_generation: true  # Enable audio generation (currently not implemented)
+
+  - id: "gpt4o_2"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      text:
+        verbosity: "medium"
+      cwd: "workspace2"
+      enable_audio_generation: true  # Enable audio generation (currently not implemented)
+
+orchestrator:
+    snapshot_storage: "snapshots"
+    agent_temporary_workspace: "temp_workspaces"
+
+# UI Configuration
+ui:
+  type: "simple"
+  logging_enabled: true

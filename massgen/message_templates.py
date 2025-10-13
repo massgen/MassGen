@@ -251,6 +251,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         self,
         original_system_message: Optional[str] = None,
         enable_image_generation: bool = False,
+        enable_audio_generation: bool = False,
         has_irreversible_actions: bool = False,
     ) -> str:
         """System message for final answer presentation by winning agent.
@@ -258,6 +259,7 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         Args:
             original_system_message: The agent's original system message to preserve
             enable_image_generation: Whether image generation is enabled
+            enable_audio_generation: Whether audio generation is enabled
             has_irreversible_actions: Whether agent has write access to context paths (requires actual file delivery)
         """
         if "final_presentation_system_message" in self._template_overrides:
@@ -286,6 +288,15 @@ Present the best possible coordinated answer by combining the strengths from all
 - MUST call the generate-image tool with these input images to synthesize one final image combining their strengths.
 - MUST save the final outputand output the saved path.
 """
+        # Add audio generation instructions only if enabled
+        if enable_audio_generation:
+            presentation_instructions += """For audio generation tasks:
+- Extract audio paths from the existing answer and resolve them in the shared reference.
+- Gather all agent-produced audio (ignore non-existent files), then call the generate_text_with_input_audio tool to get transcriptions for all audio files.
+- MUST combine the strengths of all transcriptions into one final detailed transcription that captures the best elements from each.
+- MUST use the convert_text_to_audio tool to convert this final transcription to a new audio file and save it, then output the saved path.
+"""
+        print(presentation_instructions)
 
         # Add irreversible actions reminder if needed
         # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
