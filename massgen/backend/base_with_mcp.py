@@ -32,6 +32,7 @@ try:
         Function,
         MCPCircuitBreaker,
         MCPCircuitBreakerManager,
+        MCPClient,
         MCPConfigHelper,
         MCPConnectionError,
         MCPError,
@@ -42,7 +43,6 @@ try:
         MCPServerError,
         MCPSetupManager,
         MCPTimeoutError,
-        MCPClient,
     )
 except ImportError as e:
     logger.warning(f"MCP import failed: {e}")

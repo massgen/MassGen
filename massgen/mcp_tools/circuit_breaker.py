@@ -7,7 +7,7 @@ Provides unified failure tracking and circuit breaker functionality across all M
 
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from ..logger_config import log_mcp_activity
 
@@ -160,8 +160,6 @@ class MCPCircuitBreaker:
                     agent_id=self.agent_id or agent_id,
                 )
             self._reset_server(server_name)
-
-
 
     def _reset_server(self, server_name: str) -> None:
         """Reset circuit breaker state for a specific server."""

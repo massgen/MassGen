@@ -4,8 +4,6 @@ MCP client implementation for connecting to MCP servers. This module provides en
 functionality to connect with MCP servers and integrate external tools into the MassGen workflow.
 """
 import asyncio
-import os
-import re
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
@@ -27,7 +25,12 @@ from .exceptions import (
     MCPTimeoutError,
     MCPValidationError,
 )
-from .security import substitute_env_variables, prepare_command, sanitize_tool_name, validate_tool_arguments
+from .security import (
+    prepare_command,
+    sanitize_tool_name,
+    substitute_env_variables,
+    validate_tool_arguments,
+)
 
 
 class ConnectionState(Enum):
@@ -78,6 +81,7 @@ def _ensure_timedelta(value: Union[int, float, timedelta], default_seconds: floa
 @dataclass
 class _ServerClient:
     """Internal container for per-server state."""
+
     session: Optional[ClientSession] = None
     manager_task: Optional[asyncio.Task] = None
     connected_event: asyncio.Event = None
@@ -99,7 +103,7 @@ class MCPClient:
     """
     Unified MCP client for communicating with single or multiple MCP servers.
     Provides improved security, error handling, and async context management.
-    
+
     Accepts a list of server configurations and automatically handles:
     - Consistent tool naming: Always uses prefixed names (mcp__server__tool)
     - Circuit breaker protection for all servers
@@ -130,28 +134,28 @@ class MCPClient:
         """
         # Validate all server configs
         self._server_configs = [MCPConfigValidator.validate_server_config(config) for config in server_configs]
-        
+
         # Set name to first server's name for backward compatibility
         self.name = self._server_configs[0]["name"]
-        
+
         self.timeout_seconds = timeout_seconds
         self.allowed_tools = allowed_tools
         self.exclude_tools = exclude_tools
         self.status_callback = status_callback
         self.hooks = hooks or {}
-        
+
         # Initialize circuit breaker for ALL scenarios
         self._circuit_breaker = MCPCircuitBreaker()
-        
+
         # Per-server tracking
         self._server_clients: Dict[str, _ServerClient] = {}
         for config in self._server_configs:
             self._server_clients[config["name"]] = _ServerClient()
-        
+
         # Unified registry for tools
         self.tools: Dict[str, mcp_types.Tool] = {}
         self._tool_to_server: Dict[str, str] = {}
-        
+
         # Connection management
         self._initialized = False
         self._cleanup_done = False
@@ -174,7 +178,7 @@ class MCPClient:
         if not server_client or not server_client.session:
             raise MCPConnectionError(
                 f"Server '{server_name}' not connected",
-                server_name=server_name
+                server_name=server_name,
             )
         return server_client.session
 
@@ -182,9 +186,9 @@ class MCPClient:
         """Connect to MCP server(s) and discover capabilities with circuit breaker integration."""
         if self._initialized:
             return
-        
+
         logger.info(f"Connecting to {len(self._server_configs)} MCP server(s)...")
-        
+
         # Send connecting status if callback is available
         if self.status_callback:
             await self.status_callback(
@@ -194,21 +198,21 @@ class MCPClient:
                     "server_count": len(self._server_configs),
                 },
             )
-        
+
         if len(self._server_configs) > 1:
             # Multi-server: connect in parallel
             await self._connect_all_parallel()
         else:
             # Single-server: connect sequentially
             await self._connect_single()
-        
+
         # Only mark as initialized if at least one server connected successfully
         self._initialized = any(sc.initialized for sc in self._server_clients.values())
-        
+
         # Count successful and failed connections
         successful_count = len([sc for sc in self._server_clients.values() if sc.initialized])
         failed_count = len(self._server_configs) - successful_count
-        
+
         # Send connection summary status if callback is available
         if self.status_callback:
             await self.status_callback(
@@ -224,43 +228,43 @@ class MCPClient:
 
     async def _connect_server(self, server_name: str, config: Dict[str, Any]) -> bool:
         """Connect to a single server with circuit breaker integration.
-        
+
         Returns:
             True on success, False on failure
         """
         server_client = self._server_clients[server_name]
-        
+
         async with server_client.connection_lock:
             # Check circuit breaker
             if self._circuit_breaker.should_skip_server(server_name):
                 logger.warning(f"Skipping server {server_name} due to circuit breaker")
                 server_client.connection_state = ConnectionState.FAILED
                 return False
-            
+
             server_client.connection_state = ConnectionState.CONNECTING
-            
+
             try:
                 # Start background manager task
                 server_client.manager_task = asyncio.create_task(
-                    self._run_manager(server_name, config)
+                    self._run_manager(server_name, config),
                 )
-                
+
                 # Wait for connection
                 await asyncio.wait_for(server_client.connected_event.wait(), timeout=30.0)
-                
+
                 if not server_client.initialized or server_client.connection_state != ConnectionState.CONNECTED:
                     raise MCPConnectionError(f"Failed to connect to {server_name}")
-                
+
                 # Record success
                 self._circuit_breaker.record_success(server_name)
                 logger.info(f"✅ MCP server '{server_name}' connected successfully!")
                 return True
-                
+
             except Exception as e:
                 self._circuit_breaker.record_failure(server_name)
                 server_client.connection_state = ConnectionState.FAILED
                 logger.error(f"Failed to connect to {server_name}: {e}")
-                
+
                 # Cleanup manager task to prevent resource leak
                 if server_client.manager_task and not server_client.manager_task.done():
                     server_client.disconnect_event.set()
@@ -277,14 +281,14 @@ class MCPClient:
                         logger.error(f"Error cleaning up manager task for {server_name}: {cleanup_error}")
                     finally:
                         server_client.manager_task = None
-                
+
                 return False
 
     async def _connect_single(self) -> None:
         """Connect to single server."""
         config = self._server_configs[0]
         server_name = config["name"]
-        
+
         success = await self._connect_server(server_name, config)
         if not success:
             raise MCPConnectionError(f"Failed to connect to {server_name}")
@@ -293,7 +297,7 @@ class MCPClient:
         """Connect to all servers in parallel."""
         tasks = [self._connect_server(c["name"], c) for c in self._server_configs]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Log results
         successful = sum(1 for r in results if r is True)
         logger.info(f"Connected to {successful}/{len(self._server_configs)} servers")
@@ -393,7 +397,7 @@ class MCPClient:
         """Background task that owns the transport and session contexts for a server."""
         server_client = self._server_clients[server_name]
         connection_successful = False
-        
+
         try:
             transport_ctx = self._create_transport_context(config)
 
@@ -456,14 +460,14 @@ class MCPClient:
     async def _discover_capabilities(self, server_name: str, config: Dict[str, Any]) -> None:
         """Discover server capabilities (tools, resources, prompts) with name prefixing for multi-server."""
         logger.debug(f"Discovering capabilities for {server_name}")
-        
+
         session = self._get_server_session(server_name)
 
         try:
             # Combine backend-level and per-server tool filtering
             server_exclude = config.get("exclude_tools", [])
             combined_exclude = list(set((self.exclude_tools or []) + server_exclude))
-            
+
             server_allowed = config.get("allowed_tools")
             combined_allowed = server_allowed if server_allowed is not None else self.allowed_tools
 
@@ -477,12 +481,11 @@ class MCPClient:
                 if combined_allowed is None or tool.name in combined_allowed:
                     # Always apply name prefixing for consistency
                     prefixed_name = sanitize_tool_name(tool.name, server_name)
-                    
+
                     self.tools[prefixed_name] = tool
                     self._tool_to_server[prefixed_name] = server_name
 
-            logger.info(f"Discovered capabilities for {server_name}: "
-                       f"{len([t for t, s in self._tool_to_server.items() if s == server_name])} tools")
+            logger.info(f"Discovered capabilities for {server_name}: " f"{len([t for t, s in self._tool_to_server.items() if s == server_name])} tools")
 
         except Exception as e:
             logger.error(f"Failed to discover server capabilities for {server_name}: {e}", exc_info=True)
@@ -492,17 +495,13 @@ class MCPClient:
         """Disconnect from all MCP servers."""
         if not self._initialized:
             return
-        
+
         # Disconnect all servers (works for single or multiple)
-        tasks = [
-            self._disconnect_one(name, client)
-            for name, client in self._server_clients.items()
-            if client.connection_state != ConnectionState.DISCONNECTED
-        ]
-        
+        tasks = [self._disconnect_one(name, client) for name, client in self._server_clients.items() if client.connection_state != ConnectionState.DISCONNECTED]
+
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         self._initialized = False
 
     async def _disconnect_one(self, server_name: str, server_client: _ServerClient) -> None:
@@ -585,9 +584,9 @@ class MCPClient:
         server_name = self._tool_to_server.get(tool_name)
         if not server_name:
             raise MCPError(f"Tool '{tool_name}' not mapped to any server")
-        
+
         # Extract original tool name (remove prefix - always prefixed)
-        original_tool_name = tool_name[len(f"mcp__{server_name}__"):]
+        original_tool_name = tool_name[len(f"mcp__{server_name}__") :]
 
         session = self._get_server_session(server_name)
 
@@ -690,8 +689,6 @@ class MCPClient:
                 sessions.append(server_client.session)
         return sessions
 
-
-
     async def health_check_all(self) -> Dict[str, bool]:
         """
         Perform health check on all connected MCP servers.
@@ -747,7 +744,7 @@ class MCPClient:
                     continue
 
                 logger.info(f"Attempting to reconnect failed server: {server_name}")
-                
+
                 # Find the config for this server
                 config = next((c for c in self._server_configs if c["name"] == server_name), None)
                 if not config:
@@ -758,7 +755,7 @@ class MCPClient:
                 for attempt in range(max_retries):
                     try:
                         if attempt > 0:
-                            await asyncio.sleep(1.0 * (2 ** attempt))  # Exponential backoff
+                            await asyncio.sleep(1.0 * (2**attempt))  # Exponential backoff
 
                         # Disconnect first
                         server_client = self._server_clients[server_name]
@@ -768,7 +765,7 @@ class MCPClient:
                         server_client.connected_event = asyncio.Event()
                         server_client.disconnect_event = asyncio.Event()
                         server_client.manager_task = asyncio.create_task(
-                            self._run_manager(server_name, config)
+                            self._run_manager(server_name, config),
                         )
                         await asyncio.wait_for(server_client.connected_event.wait(), timeout=30.0)
 
@@ -807,7 +804,7 @@ class MCPClient:
             if self._cleanup_done:
                 return
 
-            logger.debug(f"Starting cleanup for MCPClient")
+            logger.debug("Starting cleanup for MCPClient")
 
             try:
                 # Disconnect all servers
@@ -818,7 +815,7 @@ class MCPClient:
                 self._tool_to_server.clear()
 
                 self._cleanup_done = True
-                logger.debug(f"Cleanup completed for MCPClient")
+                logger.debug("Cleanup completed for MCPClient")
 
             except Exception as e:
                 logger.error(f"Error during cleanup: {e}")

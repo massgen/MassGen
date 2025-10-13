@@ -12,7 +12,6 @@ import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
 
-
 # Security validation constants
 MAX_COMMAND_LENGTH = 1000
 MAX_ARG_LENGTH = 500
@@ -165,7 +164,7 @@ def prepare_command(
 ) -> List[str]:
     """
     Sanitize a command and split it into parts before using it to run an MCP server.
-    
+
     Returns:
         List of command parts
 

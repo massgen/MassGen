@@ -7,7 +7,7 @@ backend integration settings, and orchestrator coordination parameters.
 
 from typing import Any, Dict
 
-from .exceptions import MCPConfigurationError, MCPValidationError
+from .exceptions import MCPConfigurationError
 
 
 class MCPConfigValidator:

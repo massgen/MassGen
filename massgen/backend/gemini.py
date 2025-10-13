@@ -45,7 +45,7 @@ except ImportError:
 
 # MCP integration imports
 try:
-    from ..mcp_tools import MCPConnectionError, MCPError, MCPClient
+    from ..mcp_tools import MCPClient, MCPConnectionError, MCPError
     from ..mcp_tools.config_validator import MCPConfigValidator
     from ..mcp_tools.exceptions import (
         MCPConfigurationError,
