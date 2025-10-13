@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
 import math
+
 
 def factorial(n: int) -> int:
     """Compute the factorial of a non-negative integer n using math.factorial.
@@ -22,6 +24,7 @@ def factorial(n: int) -> int:
         raise ValueError("n must be a non-negative integer")
 
     return math.factorial(n)
+
 
 # Example Usage
 print(factorial(5))  # Output: 120
