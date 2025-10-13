@@ -83,6 +83,9 @@ class ExternalAgentBackend(LLMBackend):
         Yields:
             StreamChunk: Response chunks
         """
+        if self.coordination_stage:
+            self.adapter.set_stage(self.coordination_stage)
+
         # Forward to adapter
         async for chunk in self.adapter.execute_streaming(messages, tools, **kwargs):
             yield chunk

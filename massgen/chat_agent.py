@@ -15,6 +15,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .backend.base import LLMBackend, StreamChunk
 from .stream_chunk import ChunkType
+from .utils import CoordinationStage
 
 
 class ChatAgent(ABC):
@@ -36,6 +37,7 @@ class ChatAgent(ABC):
         tools: List[Dict[str, Any]] = None,
         reset_chat: bool = False,
         clear_history: bool = False,
+        current_stage: CoordinationStage = None,
     ) -> AsyncGenerator[StreamChunk, None]:
         """
         Enhanced chat interface supporting tool calls and responses.
@@ -49,6 +51,7 @@ class ChatAgent(ABC):
             tools: Optional tools to provide to the agent
             reset_chat: If True, reset the agent's conversation history to the provided messages
             clear_history: If True, clear history but keep system message before processing messages
+            current_stage: Optional current coordination stage for orchestrator use
 
         Yields:
             StreamChunk: Streaming response chunks
@@ -238,7 +241,12 @@ class SingleAgent(ChatAgent):
         tools: List[Dict[str, Any]] = None,
         reset_chat: bool = False,
         clear_history: bool = False,
+        current_stage: CoordinationStage = None,
     ) -> AsyncGenerator[StreamChunk, None]:
+        # print("Agent: ", self.agent_id)
+        # for message in messages:
+        #     print(f"Message: {message}\n")
+        # print("Messages End. \n")
         """Process messages through single backend with tool support."""
         if clear_history:
             # Clear history but keep system message if it exists
@@ -265,6 +273,10 @@ class SingleAgent(ChatAgent):
             else:
                 # Stateless: send full conversation history
                 backend_messages = self.conversation_history.copy()
+
+        if current_stage:
+            self.backend.set_stage(current_stage)
+
         # Create backend stream and process it
         backend_stream = self.backend.stream_with_tools(
             messages=backend_messages,
