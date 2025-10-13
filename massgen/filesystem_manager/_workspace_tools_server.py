@@ -822,14 +822,14 @@ async def create_server() -> fastmcp.FastMCP:
     def generate_and_store_image_with_input_images(
         base_image_paths: List[str],
         prompt: str = "Create a variation of the provided images",
-        model: str = "gpt-4o",
+        model: str = "gpt-4.1",
         n: int = 1,
         storage_path: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Create variations based on multiple input images using OpenAI's gpt-4o API.
+        Create variations based on multiple input images using OpenAI's gpt-4.1 API.
 
-        This tool generates image variations based on multiple base images using OpenAI's gpt-4o API
+        This tool generates image variations based on multiple base images using OpenAI's gpt-4.1 API
         and saves them to the workspace with automatic organization.
 
         Args:
@@ -837,7 +837,7 @@ async def create_server() -> fastmcp.FastMCP:
                         - Relative path: Resolved relative to workspace
                         - Absolute path: Must be within allowed directories
             prompt: Text description for the variation (default: "Create a variation of the provided images")
-            model: Model to use (default: "gpt-4o")
+            model: Model to use (default: "gpt-4.1")
             n: Number of variations to generate (default: 1)
             storage_path: Directory path where to save variations (optional)
                          - Relative path: Resolved relative to workspace
@@ -961,7 +961,8 @@ async def create_server() -> fastmcp.FastMCP:
 
             try:
                 # print("Content for OpenAI API:", str(content))
-                # Generate variations using gpt-4o API with all images at once
+                # Generate variations using gpt-4.1 API with all images at once
+                # append content to a file
                 response = client.responses.create(
                     model=model,
                     input=[
@@ -1044,20 +1045,20 @@ async def create_server() -> fastmcp.FastMCP:
     @mcp.tool()
     def generate_and_store_image_no_input_images(
         prompt: str,
-        model: str = "gpt-4o",
+        model: str = "gpt-4.1",
         storage_path: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Generate image using OpenAI's response with gpt-4o **WITHOUT ANY INPUT IMAGES** and store it in the workspace.
+        Generate image using OpenAI's response with gpt-4.1 **WITHOUT ANY INPUT IMAGES** and store it in the workspace.
 
-        This tool Generate image using OpenAI's response with gpt-4o **WITHOUT ANY INPUT IMAGES** and store it in the workspace.
+        This tool Generate image using OpenAI's response with gpt-4.1 **WITHOUT ANY INPUT IMAGES** and store it in the workspace.
 
         Args:
             prompt: Text description of the image to generate
-            model: Model to use for generation (default: "gpt-4o")
-                   Options: "gpt-4o"
+            model: Model to use for generation (default: "gpt-4.1")
+                   Options: "gpt-4.1"
             n: Number of images to generate (default: 1)
-               - gpt-4o: only 1
+               - gpt-4.1: only 1
             storage_path: Directory path where to save the image (optional)
                          - Relative path: Resolved relative to workspace (e.g., "images/generated")
                          - Absolute path: Must be within allowed directories
@@ -1133,7 +1134,7 @@ async def create_server() -> fastmcp.FastMCP:
             storage_dir.mkdir(parents=True, exist_ok=True)
 
             try:
-                # Generate image using OpenAI API with gpt-4o non-streaming format
+                # Generate image using OpenAI API with gpt-4.1 non-streaming format
                 response = client.responses.create(
                     model=model,
                     input=prompt,

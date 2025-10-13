@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import fnmatch
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -7,6 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from ..logger_config import logger
 from ..mcp_tools.hooks import HookResult
 from ._base import Permission
+from ._file_operation_tracker import FileOperationTracker
+from ._workspace_tools_server import get_copy_file_pairs
 
 
 @dataclass
@@ -86,7 +90,7 @@ class PathPermissionManager:
         "massgen_logs",
     ]
 
-    def __init__(self, context_write_access_enabled: bool = False):
+    def __init__(self, context_write_access_enabled: bool = False, enforce_read_before_delete: bool = True):
         """
         Initialize path permission manager.
 
@@ -95,6 +99,7 @@ class PathPermissionManager:
                 have write access). If False, we change all context paths to read-only. Can be later updated with
                 set_context_write_access_enabled(), in which case all existing context paths will be updated
                 accordingly so that those that were "write" in YAML become writable again.
+            enforce_read_before_delete: Whether to enforce read-before-delete policy for workspace files
         """
         self.managed_paths: List[ManagedPath] = []
         self.context_write_access_enabled = context_write_access_enabled
@@ -102,7 +107,10 @@ class PathPermissionManager:
         # Cache for quick permission lookups
         self._permission_cache: Dict[Path, Permission] = {}
 
-        logger.info(f"[PathPermissionManager] Initialized with context_write_access_enabled={context_write_access_enabled}")
+        # File operation tracker for read-before-delete enforcement
+        self.file_operation_tracker = FileOperationTracker(enforce_read_before_delete=enforce_read_before_delete)
+
+        logger.info(f"[PathPermissionManager] Initialized with context_write_access_enabled={context_write_access_enabled}, enforce_read_before_delete={enforce_read_before_delete}")
 
     def add_path(self, path: Path, permission: Permission, path_type: str) -> None:
         """
@@ -426,9 +434,21 @@ class PathPermissionManager:
             - allowed: Whether the tool call should proceed
             - reason: Explanation if blocked (None if allowed)
         """
+        # Track read operations for read-before-delete enforcement
+        if self._is_read_tool(tool_name):
+            self._track_read_operation(tool_name, tool_args)
+
         # Check if this is a write operation using pattern matching
         if self._is_write_tool(tool_name):
-            return self._validate_write_tool(tool_name, tool_args)
+            result = self._validate_write_tool(tool_name, tool_args)
+            # Track file creation for write tools that succeed
+            if result[0] and self._is_create_tool(tool_name):
+                self._track_create_operation(tool_name, tool_args)
+            return result
+
+        # Check if this is a delete operation
+        if self._is_delete_tool(tool_name):
+            return self._validate_delete_tool(tool_name, tool_args)
 
         # Tools that can potentially modify through commands
         command_tools = {"Bash", "bash", "shell", "exec"}
@@ -451,17 +471,15 @@ class PathPermissionManager:
         - Claude Code: Write, Edit, MultiEdit, NotebookEdit, etc.
         - MCP filesystem: write_file, edit_file, create_directory, move_file
         - Any other tools with write/edit/create/move in the name
-        """
-        import re
 
-        # Pattern matches tools that modify files/directories
+        Note: Delete operations are handled separately by _is_delete_tool
+        """
+        # Pattern matches tools that modify files/directories (excluding deletes)
         write_patterns = [
             r".*[Ww]rite.*",  # Write, write_file, NotebookWrite, etc.
             r".*[Ee]dit.*",  # Edit, edit_file, MultiEdit, NotebookEdit, etc.
             r".*[Cc]reate.*",  # create_directory, etc.
             r".*[Mm]ove.*",  # move_file, etc.
-            r".*[Dd]elete.*",  # delete operations
-            r".*[Rr]emove.*",  # remove operations
             r".*[Cc]opy.*",  # copy_file, copy_files_batch, etc.
         ]
 
@@ -471,33 +489,301 @@ class PathPermissionManager:
 
         return False
 
+    def _is_read_tool(self, tool_name: str) -> bool:
+        """
+        Check if a tool is a read operation that should be tracked.
+
+        Uses substring matching to handle MCP prefixes (e.g., mcp__workspace_tools__compare_files)
+
+        Tools that read file contents:
+        - read/Read: File content reading (matches: Read, read_text_file, read_multimodal_files, etc.)
+        - compare_files: File comparison
+        - compare_directories: Directory comparison
+        """
+        # Use lowercase for case-insensitive matching
+        tool_lower = tool_name.lower()
+
+        # Check if tool name contains any read operation keywords
+        read_keywords = [
+            # "read",  # Matches: read, Read, read_multimodal_files, mcp__filesystem__read_text_file
+            "compare_files",  # Matches: compare_files
+            "compare_directories",  # Matches: compare_directories
+        ]
+
+        return any(keyword in tool_lower for keyword in read_keywords)
+
+    def _is_delete_tool(self, tool_name: str) -> bool:
+        """
+        Check if a tool is a delete operation.
+
+        Tools that delete files:
+        - delete_file: Single file deletion
+        - delete_files_batch: Batch file deletion
+        - Any tool with delete/remove in the name
+        """
+        delete_patterns = [
+            r".*[Dd]elete.*",  # delete_file, delete_files_batch, etc.
+            r".*[Rr]emove.*",  # remove operations
+        ]
+
+        for pattern in delete_patterns:
+            if re.match(pattern, tool_name):
+                return True
+
+        return False
+
+    def _is_create_tool(self, tool_name: str) -> bool:
+        """
+        Check if a tool creates new files (for tracking created files).
+
+        Tools that create files:
+        - Write: Creates new files
+        - write_file: MCP filesystem write
+        - create_directory: Creates directories
+        """
+        create_patterns = [
+            r".*[Ww]rite.*",  # Write, write_file, etc.
+            r".*[Cc]reate.*",  # create_directory, etc.
+        ]
+
+        for pattern in create_patterns:
+            if re.match(pattern, tool_name):
+                return True
+
+        return False
+
+    def _track_read_operation(self, tool_name: str, tool_args: Dict[str, Any]) -> None:
+        """
+        Track files that are read by the agent.
+
+        Uses substring matching to handle MCP prefixes consistently.
+
+        Args:
+            tool_name: Name of the read tool
+            tool_args: Arguments passed to the tool
+        """
+        tool_lower = tool_name.lower()
+
+        # Extract file path(s) from arguments based on tool type
+        if "compare_files" in tool_lower:
+            # Compare files reads both files
+            file1 = tool_args.get("file1") or tool_args.get("file_path1")
+            file2 = tool_args.get("file2") or tool_args.get("file_path2")
+            if file1:
+                path1 = self._resolve_path_against_workspace(file1)
+                self.file_operation_tracker.mark_as_read(Path(path1))
+            if file2:
+                path2 = self._resolve_path_against_workspace(file2)
+                self.file_operation_tracker.mark_as_read(Path(path2))
+        elif "compare_directories" in tool_lower:
+            # Only track if show_content_diff is True (otherwise no content is read)
+            if tool_args.get("show_content_diff"):
+                # Note: We can't track specific files here, but comparison counts as viewing
+                # The validation will happen on delete anyway
+                pass
+        elif "read_multiple_files" in tool_lower:
+            # Read multiple files takes an array of paths
+            paths = tool_args.get("paths", [])
+            for file_path in paths:
+                resolved_path = self._resolve_path_against_workspace(file_path)
+                self.file_operation_tracker.mark_as_read(Path(resolved_path))
+        else:
+            # Single file read operations (Read, read_text_file, read_multimodal_files, etc.)
+            file_path = self._extract_file_path(tool_args)
+            if file_path:
+                resolved_path = self._resolve_path_against_workspace(file_path)
+                self.file_operation_tracker.mark_as_read(Path(resolved_path))
+
+    def _track_create_operation(self, tool_name: str, tool_args: Dict[str, Any]) -> None:
+        """
+        Track files that are created by the agent.
+
+        Args:
+            tool_name: Name of the create tool
+            tool_args: Arguments passed to the tool
+        """
+        file_path = self._extract_file_path(tool_args)
+        if file_path:
+            resolved_path = self._resolve_path_against_workspace(file_path)
+            self.file_operation_tracker.mark_as_created(Path(resolved_path))
+
+    def _validate_delete_tool(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """
+        Validate delete tool operations using read-before-delete policy.
+
+        Args:
+            tool_name: Name of the delete tool
+            tool_args: Arguments passed to the tool
+
+        Returns:
+            Tuple of (allowed: bool, reason: Optional[str])
+        """
+        # First check normal write permissions
+        permission_result = self._validate_write_tool(tool_name, tool_args)
+        if not permission_result[0]:
+            return permission_result
+
+        # Special handling for batch delete operations
+        if tool_name == "delete_files_batch":
+            return self._validate_delete_files_batch(tool_args)
+
+        # Extract file path
+        file_path = self._extract_file_path(tool_args)
+        if not file_path:
+            # Can't determine path - allow (will fail elsewhere if invalid)
+            return (True, None)
+
+        # Resolve path
+        resolved_path = self._resolve_path_against_workspace(file_path)
+        path = Path(resolved_path)
+
+        # Check if it's a directory or file
+        if path.is_dir():
+            # Check directory deletion
+            can_delete, reason = self.file_operation_tracker.can_delete_directory(path)
+            if not can_delete:
+                return (False, reason)
+        else:
+            # Check file deletion
+            can_delete, reason = self.file_operation_tracker.can_delete(path)
+            if not can_delete:
+                return (False, reason)
+
+        return (True, None)
+
+    def _validate_delete_files_batch(self, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """
+        Validate batch delete operations by checking all files that would be deleted.
+
+        Args:
+            tool_args: Arguments for delete_files_batch
+
+        Returns:
+            Tuple of (allowed: bool, reason: Optional[str])
+        """
+        try:
+            base_path = tool_args.get("base_path")
+            include_patterns = tool_args.get("include_patterns") or ["*"]
+            exclude_patterns = tool_args.get("exclude_patterns") or []
+
+            if not base_path:
+                return (False, "delete_files_batch requires base_path")
+
+            # Resolve base path
+            resolved_base = self._resolve_path_against_workspace(base_path)
+            base = Path(resolved_base)
+
+            if not base.exists():
+                # Path doesn't exist - will fail in actual tool, allow validation to pass
+                return (True, None)
+
+            # Collect files that would be deleted
+            unread_files = []
+            for item in base.rglob("*"):
+                if not item.is_file():
+                    continue
+
+                # Get relative path from base
+                rel_path = item.relative_to(base)
+                rel_path_str = str(rel_path)
+
+                # Check include patterns
+                included = any(fnmatch.fnmatch(rel_path_str, pattern) for pattern in include_patterns)
+                if not included:
+                    continue
+
+                # Check exclude patterns
+                excluded = any(fnmatch.fnmatch(rel_path_str, pattern) for pattern in exclude_patterns)
+                if excluded:
+                    continue
+
+                # Check if file was read
+                if not self.file_operation_tracker.was_read(item):
+                    unread_files.append(rel_path_str)
+
+            if unread_files:
+                # Limit to first 3 unread files for readable error message
+                example_files = unread_files[:3]
+                suffix = f" (and {len(unread_files) - 3} more)" if len(unread_files) > 3 else ""
+                reason = (
+                    f"Cannot delete {len(unread_files)} unread file(s). " f"Examples: {', '.join(example_files)}{suffix}. " f"Please read files before deletion using Read or read_multimodal_files."
+                )
+                logger.info(f"[PathPermissionManager] Blocking batch delete: {reason}")
+                return (False, reason)
+
+            return (True, None)
+
+        except Exception as e:
+            logger.error(f"[PathPermissionManager] Error validating batch delete: {e}")
+            return (False, f"Batch delete validation failed: {e}")
+
+    def _is_path_within_allowed_directories(self, path: Path) -> bool:
+        """
+        Check if a path is within any allowed directory (workspace or context paths).
+
+        This enforces directory boundaries - paths outside managed directories are not allowed.
+
+        Args:
+            path: Path to check
+
+        Returns:
+            True if path is within allowed directories, False otherwise
+        """
+        resolved_path = path.resolve()
+
+        # Check if path is within any managed path (excluding file_context_parent)
+        for managed_path in self.managed_paths:
+            # file_context_parent paths don't grant access, only their specific files do
+            if managed_path.path_type == "file_context_parent":
+                continue
+
+            if managed_path.contains(resolved_path) or managed_path.path == resolved_path:
+                return True
+
+        return False
+
     def _validate_file_context_access(self, tool_name: str, tool_args: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """
-        Validate access for file context paths (prevents sibling file access).
+        Validate access for all file operations - enforces directory boundaries and permissions.
 
-        When a specific file is added as a context path, only that file should be accessible,
-        not other files in the same directory. This method checks all tool calls to enforce this.
+        This method ensures that:
+        1. ALL file operations are restricted to workspace + context paths (directory boundary)
+        2. Read/write permissions are enforced within allowed directories
+        3. Sibling file access is prevented for file-specific context paths
+
+        Args:
+            tool_name: Name of the tool being called
+            tool_args: Arguments passed to the tool
+
+        Returns:
+            Tuple of (allowed: bool, reason: Optional[str])
         """
         # Extract file path from arguments
         file_path = self._extract_file_path(tool_args)
         if not file_path:
-            # Can't determine path - allow it (tool may not access files)
+            # Can't determine path - allow it (tool may not access files, or uses different args)
             return (True, None)
 
         # Resolve relative paths against workspace
         file_path = self._resolve_path_against_workspace(file_path)
         path = Path(file_path).resolve()
-        permission = self.get_permission(path)
-        logger.debug(f"[PathPermissionManager] Validating file context access for '{tool_name}' on path: {path} with permission: {permission}")
 
-        # If permission is None, check if in file_context_parent directory
+        # SECURITY: Check directory boundary - path must be within allowed directories
+        if not self._is_path_within_allowed_directories(path):
+            logger.warning(f"[PathPermissionManager] BLOCKED: '{tool_name}' attempted to access path outside allowed directories: {path}")
+            return (False, f"Access denied: '{path}' is outside allowed directories. Only workspace and context paths are accessible.")
+
+        permission = self.get_permission(path)
+        logger.debug(f"[PathPermissionManager] Validating '{tool_name}' on path: {path} with permission: {permission}")
+
+        # If permission is None but we're within allowed directories, check for file_context_parent edge case
         if permission is None:
             parent_paths = [mp for mp in self.managed_paths if mp.path_type == "file_context_parent"]
             for parent_mp in parent_paths:
                 if parent_mp.contains(path):
                     # Path is in a file context parent dir, but not the specific file
                     return (False, f"Access denied: '{path}' is not an explicitly allowed file in this directory")
-            # Not in any managed paths - allow (likely workspace or other valid path)
+            # Within allowed directories and has no specific restrictions - allow
             return (True, None)
 
         # Has explicit permission - allow
@@ -557,6 +843,11 @@ class PathPermissionManager:
         if not path_str:
             return path_str
 
+        # Handle tilde expansion (home directory)
+        if path_str.startswith("~"):
+            path = Path(path_str).expanduser()
+            return str(path)
+
         path = Path(path_str)
         if path.is_absolute():
             return path_str
@@ -575,9 +866,6 @@ class PathPermissionManager:
         """Validate copy_files_batch by checking all destination paths after globbing."""
         try:
             logger.debug(f"[PathPermissionManager] copy_files_batch validation - context_write_access_enabled: {self.context_write_access_enabled}")
-            # Import the helper function from workspace tools server
-            from ._workspace_tools_server import get_copy_file_pairs
-
             # Get all the file pairs that would be copied
             source_base_path = tool_args.get("source_base_path")
             destination_base_path = tool_args.get("destination_base_path", "")
@@ -616,6 +904,9 @@ class PathPermissionManager:
         """Validate command tool access.
 
         As of v0.0.20, only Claude Code supports execution.
+
+        For Claude Code: Validates directory boundaries for all paths in Bash commands.
+        This prevents access to paths outside workspace + context paths.
 
         """
         # Extract command from arguments
@@ -665,6 +956,57 @@ class PathPermissionManager:
         for pattern in dangerous_patterns:
             if pattern in command.lower():
                 return (False, f"Dangerous command pattern '{pattern}' is not allowed")
+
+        # Block command injection techniques that can bypass path validation
+        # Environment variables: $HOME, $TMPDIR, ${VAR}, etc.
+        if "$" in command:
+            # Allow common safe variables like $?, $#, $$, $0-$9
+            # Block everything else including $HOME, $USER, $(command), ${var}
+            safe_vars = ["$?", "$#", "$$"]
+            has_unsafe_var = False
+            if "$(" in command or "${" in command:
+                has_unsafe_var = True
+            elif any(c in command for c in ["$HOME", "$USER", "$TMPDIR", "$PWD", "$OLDPWD", "$PATH"]):
+                has_unsafe_var = True
+            else:
+                # Check for $VAR pattern (dollar followed by letters)
+                import re
+
+                if re.search(r"\$[A-Za-z_][A-Za-z0-9_]*", command):
+                    # Allow only the safe ones
+                    for safe in safe_vars:
+                        command = command.replace(safe, "")
+                    if re.search(r"\$[A-Za-z_][A-Za-z0-9_]*", command):
+                        has_unsafe_var = True
+
+            if has_unsafe_var:
+                return (False, "Environment variables in Bash commands are not allowed (security risk: can reference paths outside workspace)")
+
+        # Block command substitution (can execute arbitrary commands and use output as paths)
+        if "`" in command:
+            return (False, "Backtick command substitution is not allowed (security risk)")
+
+        # Block process substitution (can access arbitrary paths)
+        if "<(" in command or ">(" in command:
+            return (False, "Process substitution is not allowed (security risk)")
+
+        # CLAUDE CODE SPECIFIC: Extract and validate all paths (absolute and relative) in the command
+        # This prevents Bash commands from accessing paths outside allowed directories (e.g., ../../)
+        paths = self._extract_paths_from_command(command)
+        for path_str in paths:
+            try:
+                # Resolve relative paths against workspace
+                resolved_path_str = self._resolve_path_against_workspace(path_str)
+                path = Path(resolved_path_str).resolve()
+
+                # Check if this path is within allowed directories
+                if not self._is_path_within_allowed_directories(path):
+                    logger.warning(f"[PathPermissionManager] BLOCKED Bash command accessing path outside allowed directories: {path} (from: {path_str})")
+                    return (False, f"Access denied: Bash command references '{path_str}' which resolves to '{path}' outside allowed directories")
+            except Exception as e:
+                logger.debug(f"[PathPermissionManager] Could not validate path '{path_str}' in Bash command: {e}")
+                # If we can't parse it, allow it - might not be a real path
+                continue
 
         return (True, None)
 
@@ -728,6 +1070,63 @@ class PathPermissionManager:
 
         return None
 
+    def _extract_paths_from_command(self, command: str) -> List[str]:
+        """
+        Extract all potential file/directory paths from a Bash command for validation.
+
+        This is Claude Code specific - extracts paths to validate directory boundaries.
+        Looks for both absolute paths (starting with /) and relative paths (including ../).
+
+        Args:
+            command: Bash command string
+
+        Returns:
+            List of path strings found in the command
+        """
+        import shlex
+
+        paths = []
+
+        try:
+            # Split command into tokens, handling quoted strings properly
+            tokens = shlex.split(command)
+        except ValueError:
+            # If shlex fails (malformed quotes), fall back to simple split
+            tokens = command.split()
+
+        for token in tokens:
+            # Strip common decorations
+            cleaned = token.strip("\"'").strip()
+
+            # Skip obvious non-paths (flags, empty strings, etc.)
+            if not cleaned:
+                continue
+            if cleaned.startswith("-"):  # Flags like -la, --help
+                continue
+            if cleaned in ["&&", "||", "|", ";", ">"]:  # Operators
+                continue
+
+            # Check if it looks like a path:
+            # 1. Absolute paths (starts with /)
+            # 2. Home directory paths (starts with ~ - including single char ~)
+            # 3. Relative parent paths (starts with ../ or is ..)
+            # 4. Relative current paths (starts with ./)
+            if cleaned.startswith("/") or cleaned.startswith("~") or cleaned.startswith("../") or cleaned == ".." or cleaned.startswith("./"):
+                # Handle wildcards - extract base directory before wildcard
+                if "*" in cleaned or "?" in cleaned or "[" in cleaned:
+                    # Split on wildcard and take the directory part
+                    base = cleaned.split("*")[0].split("?")[0].split("[")[0]
+                    # If base ends with /, remove it
+                    if base.endswith("/"):
+                        base = base[:-1]
+                    # Validate the base directory instead
+                    if base:
+                        paths.append(base)
+                else:
+                    paths.append(cleaned)
+
+        return paths
+
     def get_accessible_paths(self) -> List[Path]:
         """Get list of all accessible paths."""
         return [path.path for path in self.managed_paths]
@@ -789,28 +1188,33 @@ class PathPermissionManager:
 
     def get_claude_code_hooks_config(self) -> Dict[str, Any]:
         """
-        Get Claude Code SDK hooks configuration.
+        Get Claude Agent SDK hooks configuration.
 
         Returns:
-            Hooks configuration dict for ClaudeCodeOptions
+            Hooks configuration dict for ClaudeAgentOptions
         """
         if not self.managed_paths:
             return {}
 
         # Import here to avoid dependency issues if SDK not available
         try:
-            from claude_code_sdk import HookMatcher
+            from claude_agent_sdk import HookMatcher
         except ImportError:
-            logger.warning("[PathPermissionManager] claude_code_sdk not available, hooks disabled")
+            logger.warning("[PathPermissionManager] claude_agent_sdk not available, hooks disabled")
             return {}
 
         return {
             "PreToolUse": [
-                # Apply context validation to write tools
+                # Apply directory boundary + permission validation to ALL file-access tools
+                # This ensures Claude cannot access files outside workspace + context paths
+                HookMatcher(matcher="Read", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="Write", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="Edit", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="MultiEdit", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="NotebookEdit", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="Grep", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="Glob", hooks=[self.validate_context_access]),
+                HookMatcher(matcher="LS", hooks=[self.validate_context_access]),
                 HookMatcher(matcher="Bash", hooks=[self.validate_context_access]),
             ],
         }
@@ -831,9 +1235,6 @@ class PathPermissionManagerHook:
     async def execute(self, function_name: str, arguments: str, context=None, **kwargs):
         """Execute permission check using PathPermissionManager."""
         try:
-            # Import hook result here to avoid circular imports
-            # Parse arguments from JSON string
-
             try:
                 tool_args = json.loads(arguments) if arguments else {}
             except (json.JSONDecodeError, ValueError) as e:

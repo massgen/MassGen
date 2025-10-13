@@ -132,6 +132,12 @@ class CoordinationUI:
         Returns:
             Final coordinated response
         """
+        # Initialize variables that may be referenced in finally block
+        selected_agent = ""
+        vote_results = {}
+        final_result = ""
+        final_answer = ""
+
         # Reset display to ensure clean state for each coordination
         if self.display is not None:
             self.display.cleanup()
@@ -288,6 +294,10 @@ class CoordinationUI:
             status = orchestrator.get_status()
             vote_results = status.get("vote_results", {})
             selected_agent = status.get("selected_agent")
+
+            # Ensure selected_agent is not None to prevent UnboundLocalError
+            if selected_agent is None:
+                selected_agent = ""
 
             # if vote_results.get('vote_counts'):
             #     self._display_vote_results(vote_results)
@@ -500,6 +510,12 @@ class CoordinationUI:
         Returns:
             Final coordinated response
         """
+        # Initialize variables that may be referenced in finally block
+        selected_agent = ""
+        vote_results = {}
+        final_result = ""
+        final_answer = ""
+
         # Reset display to ensure clean state for each coordination
         if self.display is not None:
             self.display.cleanup()
@@ -655,6 +671,10 @@ class CoordinationUI:
             status = orchestrator.get_status()
             vote_results = status.get("vote_results", {})
             selected_agent = status.get("selected_agent")
+
+            # Ensure selected_agent is not None to prevent UnboundLocalError
+            if selected_agent is None:
+                selected_agent = ""
 
             # if vote_results.get('vote_counts'):
             #     self._display_vote_results(vote_results)

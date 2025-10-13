@@ -10,6 +10,7 @@ from pathlib import Path
 
 # Removed wc_server import - now using factory function approach
 from massgen.filesystem_manager import (
+    FileOperationTracker,
     FilesystemManager,
     PathPermissionManager,
     Permission,
@@ -1453,6 +1454,424 @@ async def test_compare_tools():
         helper.teardown()
 
 
+def test_file_operation_tracker():
+    print("\n📊 Testing FileOperationTracker...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        tracker = FileOperationTracker(enforce_read_before_delete=True)
+
+        print("  Testing file read tracking...")
+        test_file = helper.workspace_dir / "test.txt"
+        test_file.write_text("content")
+
+        # File not read yet
+        if tracker.was_read(test_file):
+            print("❌ Failed: File should not be marked as read initially")
+            return False
+
+        # Mark as read
+        tracker.mark_as_read(test_file)
+
+        if not tracker.was_read(test_file):
+            print("❌ Failed: File should be marked as read after mark_as_read")
+            return False
+
+        print("  Testing created file tracking...")
+        created_file = helper.workspace_dir / "created.txt"
+        created_file.write_text("new content")
+
+        tracker.mark_as_created(created_file)
+
+        if not tracker.was_read(created_file):
+            print("❌ Failed: Created file should count as 'read'")
+            return False
+
+        print("  Testing delete validation...")
+        # Can delete read file
+        can_delete, reason = tracker.can_delete(test_file)
+        if not can_delete:
+            print(f"❌ Failed: Should allow delete of read file. Reason: {reason}")
+            return False
+
+        # Cannot delete unread file
+        unread_file = helper.workspace_dir / "unread.txt"
+        unread_file.write_text("unread content")
+        can_delete, reason = tracker.can_delete(unread_file)
+        if can_delete:
+            print("❌ Failed: Should block delete of unread file")
+            return False
+        if "must be read before deletion" not in reason:
+            print(f"❌ Failed: Expected 'must be read before deletion' in reason, got: {reason}")
+            return False
+
+        # Can delete created file (even if not explicitly read)
+        can_delete, reason = tracker.can_delete(created_file)
+        if not can_delete:
+            print(f"❌ Failed: Should allow delete of created file. Reason: {reason}")
+            return False
+
+        print("  Testing directory delete validation...")
+        test_dir = helper.workspace_dir / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "file1.txt").write_text("content 1")
+        (test_dir / "file2.txt").write_text("content 2")
+
+        # Cannot delete directory with unread files
+        can_delete, reason = tracker.can_delete_directory(test_dir)
+        if can_delete:
+            print("❌ Failed: Should block delete of directory with unread files")
+            return False
+
+        # Mark files as read
+        tracker.mark_as_read(test_dir / "file1.txt")
+        tracker.mark_as_read(test_dir / "file2.txt")
+
+        # Now can delete
+        can_delete, reason = tracker.can_delete_directory(test_dir)
+        if not can_delete:
+            print(f"❌ Failed: Should allow delete of directory with all files read. Reason: {reason}")
+            return False
+
+        print("  Testing tracker stats...")
+        stats = tracker.get_stats()
+        if stats["read_files"] < 3:  # test_file + file1 + file2
+            print(f"❌ Failed: Expected at least 3 read files, got {stats['read_files']}")
+            return False
+        if stats["created_files"] < 1:  # created_file
+            print(f"❌ Failed: Expected at least 1 created file, got {stats['created_files']}")
+            return False
+
+        print("  Testing tracker clear...")
+        tracker.clear()
+        stats = tracker.get_stats()
+        if stats["read_files"] != 0 or stats["created_files"] != 0:
+            print(f"❌ Failed: Tracker should be empty after clear, got {stats}")
+            return False
+
+        print("  Testing disabled enforcement...")
+        tracker_disabled = FileOperationTracker(enforce_read_before_delete=False)
+        can_delete, reason = tracker_disabled.can_delete(unread_file)
+        if not can_delete:
+            print("❌ Failed: Should allow delete when enforcement disabled")
+            return False
+
+        print("✅ FileOperationTracker works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_read_before_delete_tracking():
+    print("\n📖 Testing read-before-delete tracking...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete enabled
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=True)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create test files
+        file1 = helper.workspace_dir / "file1.txt"
+        file1.write_text("content 1")
+        file2 = helper.workspace_dir / "file2.txt"
+        file2.write_text("content 2")
+
+        print("  Testing Read tool tracking...")
+        # Read file1
+        tool_args = {"file_path": str(file1)}
+        allowed, reason = await manager.pre_tool_use_hook("Read", tool_args)
+
+        # Should be tracked as read
+        if not manager.file_operation_tracker.was_read(file1):
+            print("❌ Failed: Read tool should track file as read")
+            return False
+
+        print("  Testing Write tool tracking (creates file)...")
+        new_file = helper.workspace_dir / "new_file.txt"
+        tool_args = {"file_path": str(new_file)}
+        allowed, reason = await manager.pre_tool_use_hook("Write", tool_args)
+
+        # Write should track file as created
+        if not manager.file_operation_tracker.was_read(new_file):
+            print("❌ Failed: Write tool should track file as created")
+            return False
+
+        print("  Testing read_multimodal_files tracking...")
+        image_file = helper.workspace_dir / "image.png"
+        image_file.write_text("fake image data")
+        tool_args = {"path": str(image_file)}
+        allowed, reason = await manager.pre_tool_use_hook("read_multimodal_files", tool_args)
+
+        if not manager.file_operation_tracker.was_read(image_file):
+            print("❌ Failed: read_multimodal_files should track file as read")
+            return False
+
+        # Reset tracking for MCP version test
+        manager.file_operation_tracker = FileOperationTracker()
+
+        print("  Testing mcp__workspace_tools__read_multimodal_files tracking...")
+        image_file2 = helper.workspace_dir / "image2.png"
+        image_file2.write_text("fake image data")
+        tool_args = {"path": str(image_file2)}
+        allowed, reason = await manager.pre_tool_use_hook("mcp__workspace_tools__read_multimodal_files", tool_args)
+
+        if not manager.file_operation_tracker.was_read(image_file2):
+            print("❌ Failed: mcp__workspace_tools__read_multimodal_files should track file as read")
+            return False
+
+        print("  Testing mcp__filesystem__read_text_file tracking...")
+        text_file = helper.workspace_dir / "text.txt"
+        text_file.write_text("test content")
+        tool_args = {"path": str(text_file)}
+        allowed, reason = await manager.pre_tool_use_hook("mcp__filesystem__read_text_file", tool_args)
+
+        if not manager.file_operation_tracker.was_read(text_file):
+            print("❌ Failed: mcp__filesystem__read_text_file should track file as read")
+            return False
+
+        print("  Testing mcp__filesystem__read_multiple_files tracking...")
+        file3 = helper.workspace_dir / "file3.txt"
+        file4 = helper.workspace_dir / "file4.txt"
+        file3.write_text("content3")
+        file4.write_text("content4")
+        tool_args = {"paths": [str(file3), str(file4)]}
+        allowed, reason = await manager.pre_tool_use_hook("mcp__filesystem__read_multiple_files", tool_args)
+
+        if not manager.file_operation_tracker.was_read(file3):
+            print("❌ Failed: mcp__filesystem__read_multiple_files should track file3 as read")
+            return False
+        if not manager.file_operation_tracker.was_read(file4):
+            print("❌ Failed: mcp__filesystem__read_multiple_files should track file4 as read")
+            return False
+
+        print("  Testing compare_files tracking...")
+        tool_args = {"file1": str(file1), "file2": str(file2)}
+        allowed, reason = await manager.pre_tool_use_hook("compare_files", tool_args)
+
+        # Both files should be tracked
+        if not manager.file_operation_tracker.was_read(file1):
+            print("❌ Failed: compare_files should track file1 as read")
+            return False
+        if not manager.file_operation_tracker.was_read(file2):
+            print("❌ Failed: compare_files should track file2 as read")
+            return False
+
+        print("✅ Read-before-delete tracking works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_delete_validation_with_read_requirement():
+    print("\n🗑️  Testing delete validation with read requirement...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete enabled
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=True)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create test files
+        read_file = helper.workspace_dir / "read_file.txt"
+        read_file.write_text("content")
+        unread_file = helper.workspace_dir / "unread_file.txt"
+        unread_file.write_text("content")
+
+        print("  Testing delete of unread file is blocked...")
+        tool_args = {"path": str(unread_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if allowed:
+            print("❌ Failed: Delete of unread file should be blocked")
+            return False
+        if "must be read before deletion" not in reason:
+            print(f"❌ Failed: Expected 'must be read before deletion' in reason, got: {reason}")
+            return False
+
+        print("  Testing delete after reading is allowed...")
+        # Read the file first
+        read_args = {"file_path": str(unread_file)}
+        await manager.pre_tool_use_hook("Read", read_args)
+
+        # Now delete should work
+        tool_args = {"path": str(unread_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete after reading should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing delete of created file is allowed...")
+        new_file = helper.workspace_dir / "new.txt"
+        write_args = {"file_path": str(new_file)}
+        await manager.pre_tool_use_hook("Write", write_args)
+
+        # Can delete created file without reading
+        tool_args = {"path": str(new_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete of created file should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing directory delete with unread files...")
+        test_dir = helper.workspace_dir / "test_dir"
+        test_dir.mkdir()
+        (test_dir / "file1.txt").write_text("content 1")
+        (test_dir / "file2.txt").write_text("content 2")
+
+        tool_args = {"path": str(test_dir), "recursive": True}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if allowed:
+            print("❌ Failed: Delete of directory with unread files should be blocked")
+            return False
+
+        # Read files
+        await manager.pre_tool_use_hook("Read", {"file_path": str(test_dir / "file1.txt")})
+        await manager.pre_tool_use_hook("Read", {"file_path": str(test_dir / "file2.txt")})
+
+        # Now should work
+        tool_args = {"path": str(test_dir), "recursive": True}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete after reading all files should be allowed. Reason: {reason}")
+            return False
+
+        print("✅ Delete validation with read requirement works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_batch_delete_with_read_requirement():
+    print("\n🗑️📦 Testing batch delete with read requirement...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete enabled
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=True)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create test files
+        for i in range(3):
+            (helper.workspace_dir / f"file{i}.txt").write_text(f"content {i}")
+
+        print("  Testing batch delete of unread files is blocked...")
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if allowed:
+            print("❌ Failed: Batch delete of unread files should be blocked")
+            return False
+        if "unread file(s)" not in reason:
+            print(f"❌ Failed: Expected 'unread file(s)' in reason, got: {reason}")
+            return False
+
+        print("  Testing batch delete after reading some files...")
+        # Read only file0 and file1
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "file0.txt")})
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "file1.txt")})
+
+        # Still should be blocked because file2 is unread
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if allowed:
+            print("❌ Failed: Batch delete should still be blocked with unread files")
+            return False
+
+        print("  Testing batch delete after reading all files...")
+        # Read file2
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "file2.txt")})
+
+        # Now should work
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Batch delete after reading all should be allowed. Reason: {reason}")
+            return False
+
+        print("  Testing batch delete with exclusions...")
+        # Create new files
+        (helper.workspace_dir / "include1.txt").write_text("include 1")
+        (helper.workspace_dir / "include2.txt").write_text("include 2")
+        (helper.workspace_dir / "exclude1.txt").write_text("exclude 1")
+
+        # Read only included files
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "include1.txt")})
+        await manager.pre_tool_use_hook("Read", {"file_path": str(helper.workspace_dir / "include2.txt")})
+
+        # Should work because excluded files aren't checked
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["include*.txt"], "exclude_patterns": ["exclude*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Batch delete with proper exclusions should work. Reason: {reason}")
+            return False
+
+        print("✅ Batch delete with read requirement works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
+async def test_read_before_delete_disabled():
+    print("\n🔓 Testing read-before-delete when disabled...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        # Create manager with read-before-delete DISABLED
+        manager = PathPermissionManager(context_write_access_enabled=True, enforce_read_before_delete=False)
+        manager.add_path(helper.workspace_dir, Permission.WRITE, "workspace")
+
+        # Create unread file
+        unread_file = helper.workspace_dir / "unread.txt"
+        unread_file.write_text("content")
+
+        print("  Testing delete of unread file is allowed when disabled...")
+        tool_args = {"path": str(unread_file)}
+        allowed, reason = await manager.pre_tool_use_hook("delete_file", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Delete should be allowed when enforcement disabled. Reason: {reason}")
+            return False
+
+        print("  Testing batch delete of unread files is allowed...")
+        for i in range(3):
+            (helper.workspace_dir / f"batch{i}.txt").write_text(f"content {i}")
+
+        tool_args = {"base_path": str(helper.workspace_dir), "include_patterns": ["batch*.txt"]}
+        allowed, reason = await manager.pre_tool_use_hook("delete_files_batch", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Batch delete should be allowed when enforcement disabled. Reason: {reason}")
+            return False
+
+        print("✅ Read-before-delete disabled mode works correctly")
+        return True
+
+    finally:
+        helper.teardown()
+
+
 async def main():
     print("\n" + "=" * 60)
     print("🧪 Path Permission Manager Test Suite")
@@ -1470,6 +1889,7 @@ async def main():
         test_delete_operations,
         test_permission_path_root_protection,
         test_protected_paths,
+        test_file_operation_tracker,
     ]
 
     async_tests = [
@@ -1477,6 +1897,10 @@ async def main():
         test_mcp_relative_paths,
         test_delete_file_real_workspace_scenario,
         test_compare_tools,
+        test_read_before_delete_tracking,
+        test_delete_validation_with_read_requirement,
+        test_batch_delete_with_read_requirement,
+        test_read_before_delete_disabled,
     ]
 
     passed = 0

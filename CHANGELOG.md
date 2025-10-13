@@ -5,6 +5,137 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.30] - 2025-10-10
+
+### Changed
+- **Multimodal Support - Audio and Video Processing**: Extended v0.0.27's image-only multimodal foundation
+  - Audio file support with WAV and MP3 formats for Chat Completions and Claude backends
+  - Video file support with MP4, AVI, MOV, WEBM formats for Chat Completions and Claude backends
+  - Audio/video path parameters (`audio_path`, `video_path`) for local files and HTTP/HTTPS URLs
+  - Base64 encoding for local audio/video files with automatic MIME type detection
+  - Configurable media file size limits (default 64MB, configurable via `media_max_file_size_mb`)
+  - New audio/video content formatters in `_chat_completions_formatter.py` and `_claude_formatter.py`
+  - Enhanced `base_with_mcp.py` with 340+ lines of multimodal content processing
+
+- **Claude Code Backend SDK Update**: Updated to newer Agent SDK package
+  - Migrated from `claude-code-sdk>=0.0.19` to `claude-agent-sdk>=0.0.22`
+  - Updated internal SDK classes: `ClaudeCodeOptions` → `ClaudeAgentOptions`
+  - Enhanced bash tool permission validation in `PathPermissionManager`
+  - Improved system message handling with SDK preset support
+  - New bash/shell/exec tool detection for dangerous operation prevention
+
+- **Chat Completions Backend Enhancement**: Qwen API provider integration
+  - Added Qwen API support to existing Chat Completions provider ecosystem
+  - New `QWEN_API_KEY` environment variable support
+  - Qwen-specific configuration examples for video understanding
+
+### Fixed
+- **Planning Mode Configuration**: Fixed crash when configuration lacks `coordination_config`
+  - Added null check in `orchestrator.py` to prevent AttributeError
+  - Improved graceful handling of missing planning mode configuration
+
+- **Claude Code System Message Handling**: Resolved system message processing issues
+  - Fixed system message extraction and formatting in `claude_code.py`
+  - Better integration with Agent SDK for message handling
+
+- **AG2 Adapter Import Ordering**: Resolved import sequence issues
+  - Fixed import statements in `adapters/utils/ag2_utils.py`
+  - Pre-commit isort formatting corrections
+
+### Documentations, Configurations and Resources
+
+- **Case Studies**: Comprehensive documentation for v0.0.28 and v0.0.29 features
+  - `ag2-framework-integration.md`: AG2 adapter system and external framework integration
+  - `mcp-planning-mode.md`: MCP Planning Mode design and implementation guide
+
+- **New Configuration Files**: Added 7 new example configurations
+  - `ag2/ag2_case_study.yaml`: AG2 framework integration case study configuration
+  - `filesystem/cc_gpt5_gemini_filesystem.yaml`: Claude Code, GPT-5, and Gemini filesystem collaboration
+  - `basic/single/single_gemini2.5pro.yaml`: Gemini 2.5 Pro single agent setup
+  - `basic/single/single_openrouter_audio_understanding.yaml`: Audio understanding with OpenRouter
+  - `basic/single/single_qwen_video_understanding.yaml`: Video understanding with Qwen API
+  - `debug/test_sdk_migration.yaml`: Claude Code SDK migration testing
+
+### Technical Details
+- **Commits**: 20 commits including multimodal enhancements, Claude Code SDK migration, and documentation
+- **Files Modified**: 25 files with 2,501 insertions and 84 deletions
+- **Major Features**: Audio/video multimodal support, Claude Code Agent SDK migration, Qwen API integration
+- **Dependencies Updated**: `anthropic>=0.61.0`, `claudecode>=0.0.12`
+- **Contributors**: @ncrispino @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.0.29] - 2025-10-08
+
+### Added
+- **MCP Planning Mode**: New coordination strategy for irreversible MCP actions
+  - New `CoordinationConfig` class with `enable_planning_mode` flag
+  - Agents plan without executing during coordination, winning agent executes during final presentation
+  - Orchestrator and frontend coordination UI support
+  - Support for multiple backends: Response API, Chat Completions, and Gemini
+  - Test suites in `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
+
+- **File Operation Tracker**: Read-before-delete enforcement for safer file operations
+  - New `FileOperationTracker` class in `filesystem_manager/_file_operation_tracker.py`
+  - Prevents agents from deleting files they haven't read first
+  - Tracks read files and agent-created files (created files exempt from read requirement)
+  - Directory deletion validation with comprehensive error messages
+
+- **Path Permission Manager Enhancements**: Integration with FileOperationTracker
+  - Added read/write/delete operation tracking methods to `PathPermissionManager`
+  - Integration with `FileOperationTracker` for read-before-delete enforcement
+  - Enhanced delete validation for files and batch operations
+  - Extended test coverage in `test_path_permission_manager.py`
+
+### Changed
+- **Message Templates**: Improved multi-agent coordination guidance
+  - Added `has_irreversible_actions` support for context path write access
+  - Explicit temporary workspace path structure display for better agent understanding
+  - Task handling priority hierarchy and simplified new_answer requirements
+  - Unified evaluation guidance
+
+- **MCP Tool Filtering**: Enhanced multi-level filtering capabilities
+  - Combined backend-level and per-MCP-server tool filtering
+  - MCP-server-specific `allowed_tools` can override backend-level settings
+  - Merged `exclude_tools` from both backend and MCP server configurations
+
+- **Backend Planning Mode Support**: Extended planning mode to multiple backends
+  - Enhanced `base.py`, `response.py`, `chat_completions.py`, and `gemini.py`
+  - Gemini backend now supports planning mode with session-based tool execution
+  - Planning mode support across all major backend types
+
+
+### Fixed
+- **Circuit Breaker Logic**: Enhanced MCP server initialization in `base_with_mcp.py`
+- **Final Answer Context**: Improved workspace copying when no new answer is provided
+- **Multi-turn MCP Usage**: Addressed non-use of MCP in certain scenarios and improved final answer autonomy
+- **Configuration Issues**: Updated Playwright automation configuration and fixed agent IDs
+
+### Documentations, Configurations and Resources
+
+- **MCP Planning Mode Examples**: 5 new planning mode configurations in `tools/planning/`
+  - `five_agents_discord_mcp_planning_mode.yaml`: Discord MCP with planning mode (5 agents)
+  - `five_agents_filesystem_mcp_planning_mode.yaml`: Filesystem MCP with planning mode
+  - `five_agents_notion_mcp_planning_mode.yaml`: Notion MCP with planning mode (5 agents)
+  - `five_agents_twitter_mcp_planning_mode.yaml`: Twitter MCP with planning mode (5 agents)
+  - `gpt5_mini_case_study_mcp_planning_mode.yaml`: Case study configuration
+
+- **MCP Example Configurations**: New example configurations for MCP integration in `tools/mcp/`
+  - `five_agents_travel_mcp_test.yaml`: Travel planning MCP example (5 agents)
+  - `five_agents_weather_mcp_test.yaml`: Weather service MCP example (5 agents)
+
+- **Debug Configurations**: New debugging and testing utilities
+  - `skip_coordination_test.yaml`: Test configuration for skipping coordination rounds
+
+- **Documentation Updates**: Enhanced project documentation
+  - Updated `permissions_and_context_files.md` in `backend/docs/` with file operation tracking details
+  - Updated README with AG2 as optional installation and uv tool instructions
+
+### Technical Details
+- **Commits**: 23+ commits including planning mode, file operation tracking, and MCP enhancements
+- **Files Modified**: 43 files across agent config, backend, filesystem manager, MCP tools, and configurations
+- **Major Features**: MCP planning mode, FileOperationTracker, enhanced permissions, MCP tool filtering
+- **New Tests**: `test_mcp_blocking.py`, `test_gemini_planning_mode.py` for planning mode validation
+- **Contributors**: @ncrispino @franklinnwren @qidanrui @sonichi @praneeth999 and the MassGen team
+
 ## [0.0.28] - 2025-10-06
 
 ### Added
