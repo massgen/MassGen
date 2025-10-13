@@ -315,7 +315,6 @@ class AG2Adapter(AgentAdapter):
             message["name"] = "User"
 
         # The pattern will coordinate agents until user_agent generates tool_calls
-        # print("group chat massages: ", messages)
         response = await a_run_group_chat(
             pattern=self.pattern,
             messages=messages,
@@ -327,11 +326,9 @@ class AG2Adapter(AgentAdapter):
         def process_and_log_event(*args, **kwargs) -> None:
             """Process and log AG2 event, returning string representation."""
             line = " ".join(str(arg) for arg in args)
-            # print("Logging event message: ", message)
             last_group_chat_event_msgs.append(line)
 
         async for event in response.events:
-            # print("Event: ", event)
             last_group_chat_event_msgs.clear()
             event.print(f=process_and_log_event)
             formatted_message = "\n".join(last_group_chat_event_msgs)
@@ -363,7 +360,7 @@ class AG2Adapter(AgentAdapter):
 
         elif self.coordination_stage == CoordinationStage.PRESENTATION:
             self.user_agent.update_system_message(messages[0]["content"])
-            messages_to_execute = messages[1]
+            messages_to_execute = [messages[1]]
 
         async for chunk in self._execute_single_agent(messages=messages_to_execute, agent=self.user_agent):
             yield chunk
@@ -380,7 +377,6 @@ class AG2Adapter(AgentAdapter):
         Since AG2 doesn't support streaming, we simulate it.
         """
         try:
-            # print("Tools received in AG2Adapter:", tools)  # Debug print
             self._register_tools(tools)
             agent_id = kwargs.get("agent_id")
             if agent_id:
