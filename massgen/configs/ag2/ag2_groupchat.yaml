@@ -35,7 +35,7 @@ agents:
 
           - type: assistant
             name: "Tester"
-#            description: "QA engineer who writes and runs tests. Should be selected if new code has not been validated."
+            description: "QA engineer who writes and runs tests. Should be selected if new code has not been validated."
             system_message: |
               You are a QA engineer. Your role is to:
               1. Write test code in Python that validates the provided function
