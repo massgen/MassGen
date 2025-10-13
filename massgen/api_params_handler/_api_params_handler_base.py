@@ -62,6 +62,7 @@ class APIParamsHandlerBase(ABC):
             "command_line_allowed_commands",
             "command_line_blocked_commands",
             # Backend identification (handled by orchestrator)
+            "enable_audio_generation",  # Audio generation parameter
             "type",
             "agent_id",
             "session_id",

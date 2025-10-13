@@ -49,6 +49,7 @@ class FilesystemManager:
         enable_mcp_command_line: bool = False,
         command_line_allowed_commands: List[str] = None,
         command_line_blocked_commands: List[str] = None,
+        enable_audio_generation: bool = False,
     ):
         """
         Initialize FilesystemManager.
@@ -69,6 +70,7 @@ class FilesystemManager:
         self.enable_mcp_command_line = enable_mcp_command_line
         self.command_line_allowed_commands = command_line_allowed_commands
         self.command_line_blocked_commands = command_line_blocked_commands
+        self.enable_audio_generation = enable_audio_generation
 
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
@@ -236,6 +238,15 @@ class FilesystemManager:
                 "generate_and_store_image_with_input_images",
                 "generate_and_store_image_no_input_images",
             ]
+        if not self.enable_audio_generation:
+            if "exclude_tools" not in config:
+                config["exclude_tools"] = []
+            config["exclude_tools"].extend(
+                [
+                    "generate_and_store_audio_with_input_audios",
+                    "generate_and_store_audio_no_input_audios",
+                ],
+            )
 
         return config
 

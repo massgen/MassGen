@@ -78,6 +78,7 @@ class LLMBackend(ABC):
                 enable_mcp_command_line = kwargs.get("enable_mcp_command_line", False)
                 command_line_allowed_commands = kwargs.get("command_line_allowed_commands")
                 command_line_blocked_commands = kwargs.get("command_line_blocked_commands")
+                enable_audio_generation = kwargs.get("enable_audio_generation", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
@@ -87,6 +88,7 @@ class LLMBackend(ABC):
                     enable_mcp_command_line=enable_mcp_command_line,
                     command_line_allowed_commands=command_line_allowed_commands,
                     command_line_blocked_commands=command_line_blocked_commands,
+                    enable_audio_generation=enable_audio_generation,
                 )
 
                 # Inject filesystem MCP server into configuration
