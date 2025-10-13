@@ -211,6 +211,8 @@ uv.lock
 claude_code_workspace*/
 claude_code*/
 
+code_execution_workspaces*/
+
 snapshots*/
 temp_workspaces*/
 workspace*/

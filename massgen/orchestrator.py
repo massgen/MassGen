@@ -42,7 +42,7 @@ from .logger_config import (
 )
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
-from .utils import ActionType, AgentStatus
+from .utils import ActionType, AgentStatus, CoordinationStage
 
 
 @dataclass
@@ -1250,6 +1250,13 @@ class Orchestrator(ChatAgent):
                 elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
                     enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
 
+                # Extract command execution parameters
+                enable_command_execution = False
+                if hasattr(agent, "config") and agent.config:
+                    enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+                    enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
                     temp_workspace=temp_workspace,
@@ -1258,6 +1265,7 @@ class Orchestrator(ChatAgent):
                     workspace_prepopulated=workspace_prepopulated,
                     enable_image_generation=enable_image_generation,
                     agent_answers=answers,
+                    enable_command_execution=enable_command_execution,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1369,20 +1377,20 @@ class Orchestrator(ChatAgent):
                     # First attempt: orchestrator provides initial conversation
                     # But we need the agent to have this in its history for subsequent calls
                     # First attempt: provide complete conversation and reset agent's history
-                    chat_stream = agent.chat(conversation_messages, self.workflow_tools, reset_chat=True)
+                    chat_stream = agent.chat(conversation_messages, self.workflow_tools, reset_chat=True, current_stage=CoordinationStage.INITIAL_ANSWER)
                 else:
                     # Subsequent attempts: send enforcement message (set by error handling)
 
                     if isinstance(enforcement_msg, list):
                         # Tool message array
-                        chat_stream = agent.chat(enforcement_msg, self.workflow_tools, reset_chat=False)
+                        chat_stream = agent.chat(enforcement_msg, self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
                     else:
                         # Single user message
                         enforcement_message = {
                             "role": "user",
                             "content": enforcement_msg,
                         }
-                        chat_stream = agent.chat([enforcement_message], self.workflow_tools, reset_chat=False)
+                        chat_stream = agent.chat([enforcement_message], self.workflow_tools, reset_chat=False, current_stage=CoordinationStage.ENFORCEMENT)
                 response_text = ""
                 tool_calls = []
                 workflow_tool_found = False
@@ -1943,6 +1951,19 @@ class Orchestrator(ChatAgent):
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
 
+        # Extract command execution parameters
+        enable_command_execution = False
+        if hasattr(agent, "config") and agent.config:
+            enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+        # Check if audio generation is enabled for this agent
+        enable_audio_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_audio_generation = agent.config.backend_params.get("enable_audio_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_audio_generation = agent.backend.backend_params.get("enable_audio_generation", False)
+
         # Check if agent has write access to context paths (requires file delivery)
         has_irreversible_actions = False
         if agent.backend.filesystem_manager:
@@ -1954,7 +1975,9 @@ class Orchestrator(ChatAgent):
         base_system_message = self.message_templates.final_presentation_system_message(
             agent_system_message,
             enable_image_generation,
+            enable_audio_generation,
             has_irreversible_actions,
+            enable_command_execution,
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
@@ -1990,6 +2013,7 @@ class Orchestrator(ChatAgent):
                     workspace_prepopulated=workspace_prepopulated,
                     enable_image_generation=enable_image_generation,
                     agent_answers=all_answers,
+                    enable_command_execution=enable_command_execution,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message
@@ -2031,7 +2055,7 @@ class Orchestrator(ChatAgent):
 
         try:
             # Track final round iterations (each chunk is like an iteration)
-            async for chunk in agent.chat(presentation_messages, reset_chat=True):
+            async for chunk in agent.chat(presentation_messages, reset_chat=True, current_stage=CoordinationStage.PRESENTATION):
                 chunk_type = self._get_chunk_type_value(chunk)
                 # Start new iteration for this chunk
                 self.coordination_tracker.start_new_iteration()

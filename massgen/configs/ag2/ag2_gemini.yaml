@@ -21,11 +21,6 @@ agents:
         model: "gemini-2.5-flash"
         enable_web_search: true
 
-# Optional orchestrator configuration
-orchestrator:
-  rounds: 3
-  parallel: true
-
 # UI Configuration
 ui:
   type: "rich_terminal"

@@ -15,11 +15,6 @@ agents:
             temperature: 0.7
             cache_seed: 42
 
-# Optional orchestrator configuration
-orchestrator:
-  rounds: 3
-  parallel: true
-
 # UI Configuration
 ui:
   type: "rich_terminal"
