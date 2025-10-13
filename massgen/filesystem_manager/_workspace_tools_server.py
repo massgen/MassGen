@@ -25,7 +25,6 @@ import base64
 import difflib
 import filecmp
 import fnmatch
-import io
 import os
 import shutil
 from pathlib import Path
@@ -34,8 +33,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import fastmcp
 from dotenv import load_dotenv
 from openai import OpenAI
-
-
 
 
 def get_copy_file_pairs(
@@ -1150,9 +1147,9 @@ async def create_server() -> fastmcp.FastMCP:
                     messages=[
                         {
                             "role": "user",
-                            "content": prompt
-                        }
-                    ]
+                            "content": prompt,
+                        },
+                    ],
                 )
 
                 # Check if audio data is available
@@ -1168,13 +1165,13 @@ async def create_server() -> fastmcp.FastMCP:
 
                 # Generate filename with timestamp
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                
+
                 # Clean prompt for filename (first 30 chars)
                 clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
                 clean_prompt = clean_prompt.replace(" ", "_")
-                
+
                 filename = f"{timestamp}_{clean_prompt}.{audio_format}"
-                
+
                 # Full file path
                 file_path = storage_dir / filename
 
@@ -1395,16 +1392,16 @@ async def create_server() -> fastmcp.FastMCP:
     ) -> Dict[str, Any]:
         """
         Transcribe audio file(s) to text using OpenAI's Transcription API.
-        
+
         This tool processes one or more audio files through OpenAI's Transcription API
         to extract the text content from the audio. Each file is processed separately.
-        
+
         Args:
             audio_paths: List of paths to input audio files (WAV, MP3, M4A, etc.)
                         - Relative path: Resolved relative to workspace
                         - Absolute path: Must be within allowed directories
             model: Model to use (default: "gpt-4o-transcribe")
-        
+
         Returns:
             Dictionary containing:
             - success: Whether operation succeeded
@@ -1412,14 +1409,14 @@ async def create_server() -> fastmcp.FastMCP:
             - transcriptions: List of transcription results for each file
             - audio_files: List of paths to the input audio files
             - model: Model used
-        
+
         Examples:
             generate_text_with_input_audio(["recording.wav"])
             → Returns transcription for recording.wav
-            
+
             generate_text_with_input_audio(["interview1.mp3", "interview2.mp3"])
             → Returns separate transcriptions for each file
-        
+
         Security:
             - Requires valid OpenAI API key
             - All input audio files must exist and be readable
@@ -1432,40 +1429,40 @@ async def create_server() -> fastmcp.FastMCP:
                 load_dotenv(env_path)
             else:
                 load_dotenv()
-            
+
             openai_api_key = os.getenv("OPENAI_API_KEY")
-            
+
             if not openai_api_key:
                 return {
                     "success": False,
                     "operation": "generate_text_with_input_audio",
                     "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
                 }
-            
+
             # Initialize OpenAI client
             client = OpenAI(api_key=openai_api_key)
-            
+
             # Validate and process input audio files
             validated_audio_paths = []
-            audio_extensions = ['.wav', '.mp3', '.m4a', '.mp4', '.ogg', '.flac', '.aac', '.wma', '.opus']
-            
+            audio_extensions = [".wav", ".mp3", ".m4a", ".mp4", ".ogg", ".flac", ".aac", ".wma", ".opus"]
+
             for audio_path_str in audio_paths:
                 # Resolve audio path
                 if Path(audio_path_str).is_absolute():
                     audio_path = Path(audio_path_str).resolve()
                 else:
                     audio_path = (Path.cwd() / audio_path_str).resolve()
-                
+
                 # Validate audio path
                 _validate_path_access(audio_path, mcp.allowed_paths)
-                
+
                 if not audio_path.exists():
                     return {
                         "success": False,
                         "operation": "generate_text_with_input_audio",
                         "error": f"Audio file does not exist: {audio_path}",
                     }
-                
+
                 # Check if file is an audio file
                 if audio_path.suffix.lower() not in audio_extensions:
                     return {
@@ -1473,12 +1470,12 @@ async def create_server() -> fastmcp.FastMCP:
                         "operation": "generate_text_with_input_audio",
                         "error": f"File does not appear to be an audio file: {audio_path}",
                     }
-                
+
                 validated_audio_paths.append(audio_path)
-            
+
             # Process each audio file separately using OpenAI Transcription API
             transcriptions = []
-            
+
             for audio_path in validated_audio_paths:
                 try:
                     # Open audio file
@@ -1489,20 +1486,22 @@ async def create_server() -> fastmcp.FastMCP:
                             file=audio_file,
                             response_format="text",
                         )
-                    
+
                     # Add transcription to list
-                    transcriptions.append({
-                        "file": str(audio_path),
-                        "transcription": transcription
-                    })
-                    
+                    transcriptions.append(
+                        {
+                            "file": str(audio_path),
+                            "transcription": transcription,
+                        }
+                    )
+
                 except Exception as api_error:
                     return {
                         "success": False,
                         "operation": "generate_text_with_input_audio",
                         "error": f"Transcription API error for file {audio_path}: {str(api_error)}",
                     }
-            
+
             return {
                 "success": True,
                 "operation": "generate_text_with_input_audio",
@@ -1510,7 +1509,7 @@ async def create_server() -> fastmcp.FastMCP:
                 "audio_files": [str(p) for p in validated_audio_paths],
                 "model": model,
             }
-            
+
         except Exception as e:
             return {
                 "success": False,
@@ -1529,11 +1528,11 @@ async def create_server() -> fastmcp.FastMCP:
     ) -> Dict[str, Any]:
         """
         Convert text (transcription) directly to speech using OpenAI's TTS API with streaming response.
-        
+
         This tool converts text directly to speech audio using OpenAI's Text-to-Speech API,
         designed specifically for converting transcriptions or any text content to spoken audio.
         Uses streaming response for efficient file handling.
-        
+
         Args:
             input_text: The text content to convert to speech (e.g., transcription text)
             model: TTS model to use (default: "gpt-4o-mini-tts")
@@ -1547,7 +1546,7 @@ async def create_server() -> fastmcp.FastMCP:
                          - None/empty: Saves to workspace root
             audio_format: Output audio format (default: "mp3")
                          Options: "mp3", "opus", "aac", "flac", "wav", "pcm"
-        
+
         Returns:
             Dictionary containing:
             - success: Whether operation succeeded
@@ -1558,25 +1557,25 @@ async def create_server() -> fastmcp.FastMCP:
             - format: Audio format used
             - text_length: Length of input text
             - instructions: Speaking instructions if provided
-        
+
         Examples:
             convert_text_to_speech("Hello world, this is a test.")
             → Converts text to speech and saves as MP3
-            
+
             convert_text_to_speech(
                 "Today is a wonderful day to build something people love!",
                 voice="coral",
                 instructions="Speak in a cheerful and positive tone."
             )
             → Converts with specific voice and speaking instructions
-        
+
         Security:
             - Requires valid OpenAI API key
             - Files are saved to specified path within workspace
             - Path must be within allowed directories
         """
         from datetime import datetime
-        
+
         try:
             # Load environment variables
             script_dir = Path(__file__).parent.parent.parent
@@ -1585,19 +1584,19 @@ async def create_server() -> fastmcp.FastMCP:
                 load_dotenv(env_path)
             else:
                 load_dotenv()
-            
+
             openai_api_key = os.getenv("OPENAI_API_KEY")
-            
+
             if not openai_api_key:
                 return {
                     "success": False,
                     "operation": "convert_text_to_speech",
                     "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
                 }
-            
+
             # Initialize OpenAI client
             client = OpenAI(api_key=openai_api_key)
-            
+
             # Determine storage directory
             if storage_path:
                 if Path(storage_path).is_absolute():
@@ -1606,23 +1605,23 @@ async def create_server() -> fastmcp.FastMCP:
                     storage_dir = (Path.cwd() / storage_path).resolve()
             else:
                 storage_dir = Path.cwd()
-            
+
             # Validate storage directory is within allowed paths
             _validate_path_access(storage_dir, mcp.allowed_paths)
-            
+
             # Create directory if it doesn't exist
             storage_dir.mkdir(parents=True, exist_ok=True)
-            
+
             # Generate filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            
+
             # Clean text for filename (first 30 chars)
             clean_text = "".join(c for c in input_text[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
             clean_text = clean_text.replace(" ", "_")
-            
+
             filename = f"speech_{timestamp}_{clean_text}.{audio_format}"
             file_path = storage_dir / filename
-            
+
             try:
                 # Prepare request parameters
                 request_params = {
@@ -1630,19 +1629,19 @@ async def create_server() -> fastmcp.FastMCP:
                     "voice": voice,
                     "input": input_text,
                 }
-                
+
                 # Add instructions if provided (only for models that support it)
                 if instructions and model in ["gpt-4o-mini-tts"]:
                     request_params["instructions"] = instructions
-                
+
                 # Use streaming response for efficient file handling
                 with client.audio.speech.with_streaming_response.create(**request_params) as response:
                     # Stream directly to file
                     response.stream_to_file(file_path)
-                
+
                 # Get file size
                 file_size = file_path.stat().st_size
-                
+
                 return {
                     "success": True,
                     "operation": "convert_text_to_speech",
@@ -1658,14 +1657,14 @@ async def create_server() -> fastmcp.FastMCP:
                     "text_length": len(input_text),
                     "instructions": instructions if instructions else None,
                 }
-                
+
             except Exception as api_error:
                 return {
                     "success": False,
                     "operation": "convert_text_to_speech",
                     "error": f"OpenAI TTS API error: {str(api_error)}",
                 }
-            
+
         except Exception as e:
             return {
                 "success": False,

@@ -82,7 +82,7 @@ class LLMBackend(ABC):
                     context_paths=context_paths,
                     context_write_access_enabled=context_write_access_enabled,
                     enable_image_generation=enable_image_generation,
-                    enable_audio_generation=enable_audio_generation
+                    enable_audio_generation=enable_audio_generation,
                 )
 
                 # Inject filesystem MCP server into configuration
