@@ -1,0 +1,24 @@
+# MassGen Configuration
+# Usage:
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
+
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml "Generate a 4 seconds video for 'Cherry blossom petals falling in the spring breeze, sunlight filtering through the pink petals creating a soft halo, slow motion capture, aesthetically beautiful and romantic, depth of field effect.'"
+
+agents:
+  - id: "gpt4o_agent1"
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      text:
+        verbosity: "medium"
+      # upload_files:
+      #   - image_path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git19/MassGen/massgen/configs/resources/v0.0.27-example/multimodality.jpg" # Example image to be used by the agent
+      cwd: "workspace1"  # Working directory for file operations
+
+orchestrator:
+    snapshot_storage: "snapshots"  # Directory to store workspace snapshots
+    agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+
+ui:
+  display_type: "simple"
+  logging_enabled: true

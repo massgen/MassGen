@@ -14,8 +14,9 @@ Tools provided:
 - delete_files_batch: Delete multiple files with pattern matching
 - compare_directories: Compare two directories and show differences
 - compare_files: Compare two text files and show unified diff
-- generate_and_store_image_variation: Create variations of existing images using DALL-E 2
-- generate_and_store_image: Generate new images from text prompts using DALL-E
+- generate_and_store_image_with_input_images: Create variations of existing images using GPT-4o
+- generate_and_store_image_no_input_images: Generate new images from text prompts using GPT-4o
+- generate_and_store_video_no_input_images: Generate videos from text prompts using Sora-2
 """
 
 import argparse
@@ -997,13 +998,6 @@ async def create_server() -> fastmcp.FastMCP:
                         # Save image
                         file_path.write_bytes(image_bytes)
 
-                        # Print save information
-                        print(f"[Image Variation] Saved variation {idx+1}/{n}:")
-                        print(f"  - File: {file_path}")
-                        print(f"  - Size: {len(image_bytes):,} bytes")
-                        print(f"  - Model: {model}")
-                        print(f"  - Source images: {len(validated_paths)} file(s)")
-
                         all_variations.append(
                             {
                                 "source_images": [str(p) for p in validated_paths],
@@ -1025,7 +1019,6 @@ async def create_server() -> fastmcp.FastMCP:
                         }
 
             except Exception as api_error:
-                print(f"OpenAI API error: {api_error}")
                 return {
                     "success": False,
                     "operation": "generate_and_store_image_with_input_images",
@@ -1043,7 +1036,6 @@ async def create_server() -> fastmcp.FastMCP:
             }
 
         except Exception as e:
-            print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
                 "operation": "generate_and_store_image_with_input_images",
@@ -1179,13 +1171,6 @@ async def create_server() -> fastmcp.FastMCP:
                         file_path.write_bytes(image_bytes)
                         file_size = len(image_bytes)
 
-                        # Print save information
-                        print(f"[Image Generation] Saved image {idx+1}/{len(image_data)}:")
-                        print(f"  - File: {file_path}")
-                        print(f"  - Size: {file_size:,} bytes")
-                        print(f"  - Prompt: {prompt[:50]}..." if len(prompt) > 50 else f"  - Prompt: {prompt}")
-                        print(f"  - Model: {model}")
-
                         saved_images.append(
                             {
                                 "file_path": str(file_path),
@@ -1216,14 +1201,167 @@ async def create_server() -> fastmcp.FastMCP:
                 }
 
         except Exception as e:
-            print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
                 "operation": "generate_and_store_image_no_input_images",
                 "error": f"Failed to generate or save image: {str(e)}",
             }
 
-    print("🚀 Workspace Copy MCP Server started and ready")
-    print(f"Allowed paths: {[str(p) for p in mcp.allowed_paths]}")
+    @mcp.tool()
+    def generate_and_store_video_no_input_images(
+        prompt: str,
+        model: str = "sora-2",
+        seconds: int = 4,
+        storage_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate a video from a text prompt using OpenAI's Sora-2 API.
+
+        This tool generates a video based on a text prompt using OpenAI's Sora-2 API
+        and saves it to the workspace with automatic organization.
+
+        Args:
+            prompt: Text description for the video to generate
+            model: Model to use (default: "sora-2")
+            storage_path: Directory path where to save the video (optional)
+                         - Relative path: Resolved relative to workspace
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "generate_and_store_video_no_input_images"
+            - video_path: Path to the saved video file
+            - model: Model used for generation
+            - prompt: The prompt used
+            - duration: Time taken for generation in seconds
+
+        Examples:
+            generate_and_store_video_no_input_images("A cool cat on a motorcycle in the night")
+            → Generates a video and saves to workspace root
+
+            generate_and_store_video_no_input_images("Dancing robot", storage_path="videos/")
+            → Generates a video and saves to videos/ directory
+
+        Security:
+            - Requires valid OpenAI API key with Sora-2 access
+            - Files are saved to specified path within workspace
+        """
+        import time
+        from datetime import datetime
+
+        try:
+            # Load environment variables
+            script_dir = Path(__file__).parent.parent.parent
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                load_dotenv()
+
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_video_no_input_images",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
+                }
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
+
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+
+            # Validate storage directory is within allowed paths
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+
+            # Create directory if it doesn't exist
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                start_time = time.time()
+
+                # Start video generation (no print statements to avoid MCP JSON parsing issues)
+                video = client.videos.create(
+                    model=model,
+                    prompt=prompt,
+                    seconds=str(seconds),
+                )
+
+                getattr(video, "progress", 0)
+
+                # Monitor progress (silently, no stdout writes)
+                while video.status in ("in_progress", "queued"):
+                    # Refresh status
+                    video = client.videos.retrieve(video.id)
+                    getattr(video, "progress", 0)
+                    time.sleep(2)
+
+                if video.status == "failed":
+                    message = getattr(
+                        getattr(video, "error", None),
+                        "message",
+                        "Video generation failed",
+                    )
+                    return {
+                        "success": False,
+                        "operation": "generate_and_store_video_no_input_images",
+                        "error": message,
+                    }
+
+                # Download video content
+                content = client.videos.download_content(video.id, variant="video")
+
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
+                clean_prompt = clean_prompt.replace(" ", "_")
+                filename = f"{timestamp}_{clean_prompt}.mp4"
+
+                # Full file path
+                file_path = storage_dir / filename
+
+                # Write video to file
+                content.write_to_file(str(file_path))
+
+                # Calculate duration
+                duration = time.time() - start_time
+
+                # Get file size
+                file_size = file_path.stat().st_size
+
+                return {
+                    "success": True,
+                    "operation": "generate_and_store_video_no_input_images",
+                    "video_path": str(file_path),
+                    "filename": filename,
+                    "size": file_size,
+                    "model": model,
+                    "prompt": prompt,
+                    "duration": duration,
+                }
+
+            except Exception as api_error:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_video_no_input_images",
+                    "error": f"OpenAI API error: {str(api_error)}",
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "operation": "generate_and_store_video_no_input_images",
+                "error": f"Failed to generate or save video: {str(e)}",
+            }
 
     return mcp
