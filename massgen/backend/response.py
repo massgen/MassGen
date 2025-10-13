@@ -7,7 +7,6 @@ Supports image input (URL and base64) and image generation via tools.
 from __future__ import annotations
 
 import asyncio
-import base64
 import os
 from datetime import datetime, timezone
 from io import BytesIO
@@ -242,6 +241,20 @@ class ResponseBackend(MCPBackend):
             # Execute only MCP function calls
             mcp_functions_executed = False
             updated_messages = current_messages.copy()
+
+            # Check if planning mode is enabled - block MCP tool execution during planning
+            if self.is_planning_mode_enabled():
+                logger.info("[MCP] Planning mode enabled - blocking all MCP tool execution")
+                yield StreamChunk(
+                    type="mcp_status",
+                    status="planning_mode_blocked",
+                    content="🚫 [MCP] Planning mode active - MCP tools blocked during coordination",
+                    source="planning_mode",
+                )
+                # Skip all MCP tool execution but still continue with workflow
+                yield StreamChunk(type="done")
+                return
+
             # Ensure every captured function call gets a result to prevent hanging
             processed_call_ids = set()
 
@@ -615,58 +628,58 @@ class ResponseBackend(MCPBackend):
         self._vector_store_ids.clear()
         self._uploaded_file_ids.clear()
 
-    def _save_image_sync(
-        self,
-        image_data: str,
-        prompt: str = None,
-        image_format: str = "png",
-    ) -> Optional[str]:
-        """
-        Save generated image directly to filesystem (synchronous version).
+    # def _save_image_sync(
+    #     self,
+    #     image_data: str,
+    #     prompt: str = None,
+    #     image_format: str = "png",
+    # ) -> Optional[str]:
+    #     """
+    #     Save generated image directly to filesystem (synchronous version).
 
-        Args:
-            image_data: Base64 encoded image data
-            prompt: Generation prompt (used for naming)
-            image_format: Image format (default png)
+    #     Args:
+    #         image_data: Base64 encoded image data
+    #         prompt: Generation prompt (used for naming)
+    #         image_format: Image format (default png)
 
-        Returns:
-            Saved file path, or None if failed
-        """
-        try:
-            # Use agent's filesystem workspace if available, otherwise use current working directory
-            if self.filesystem_manager:
-                workspace_path = self.filesystem_manager.get_current_workspace()
-            else:
-                workspace_path = Path.cwd()
+    #     Returns:
+    #         Saved file path, or None if failed
+    #     """
+    #     try:
+    #         # Use agent's filesystem workspace if available, otherwise use current working directory
+    #         if self.filesystem_manager:
+    #             workspace_path = self.filesystem_manager.get_current_workspace()
+    #         else:
+    #             workspace_path = Path.cwd()
 
-            # Create generated_images subdirectory path
-            images_dir = workspace_path
+    #         # Create generated_images subdirectory path
+    #         images_dir = workspace_path
 
-            # Create directory if it doesn't exist
-            images_dir.mkdir(parents=True, exist_ok=True)
+    #         # Create directory if it doesn't exist
+    #         images_dir.mkdir(parents=True, exist_ok=True)
 
-            # Generate filename
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            if prompt:
-                # Clean prompt for filename
-                clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
-                clean_prompt = clean_prompt.replace(" ", "_")
-                filename = f"{timestamp}_{clean_prompt}.{image_format}"
-            else:
-                filename = f"{timestamp}_generated.{image_format}"
+    #         # Generate filename
+    #         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #         if prompt:
+    #             # Clean prompt for filename
+    #             clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
+    #             clean_prompt = clean_prompt.replace(" ", "_")
+    #             filename = f"{timestamp}_{clean_prompt}.{image_format}"
+    #         else:
+    #             filename = f"{timestamp}_generated.{image_format}"
 
-            file_path = images_dir / filename
+    #         file_path = images_dir / filename
 
-            # Decode base64 and write to file
-            image_bytes = base64.b64decode(image_data)
-            file_path.write_bytes(image_bytes)
+    #         # Decode base64 and write to file
+    #         image_bytes = base64.b64decode(image_data)
+    #         file_path.write_bytes(image_bytes)
 
-            logger.info(f"Image saved to: {file_path}")
-            return str(file_path)
+    #         logger.info(f"Image saved to: {file_path}")
+    #         return str(file_path)
 
-        except Exception as e:
-            logger.error(f"Error saving image: {e}")
-            return None
+    #     except Exception as e:
+    #         logger.error(f"Error saving image: {e}")
+    #         return None
 
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
         """Convert MCP tools (stdio + streamable-http) to OpenAI function declarations."""
@@ -895,6 +908,39 @@ class ResponseBackend(MCPBackend):
                 content="\n✅ [Provider Tool: Code Interpreter] Execution completed",
                 source="response_api",
             )
+
+        # Image Generation events
+        elif chunk_type == "response.image_generation_call.in_progress":
+            log_stream_chunk("backend.response", "image_generation", "Starting image generation", agent_id)
+            return TextStreamChunk(
+                type=ChunkType.CONTENT,
+                content="\n🎨 [Provider Tool: Image Generation] Starting generation...",
+                source="response_api",
+            )
+        elif chunk_type == "response.image_generation_call.generating":
+            log_stream_chunk("backend.response", "image_generation", "Generating image", agent_id)
+            return TextStreamChunk(
+                type=ChunkType.CONTENT,
+                content="\n🎨 [Provider Tool: Image Generation] Generating image...",
+                source="response_api",
+            )
+        elif chunk_type == "response.image_generation_call.completed":
+            log_stream_chunk("backend.response", "image_generation", "Image generation completed", agent_id)
+            return TextStreamChunk(
+                type=ChunkType.CONTENT,
+                content="\n✅ [Provider Tool: Image Generation] Image generated successfully",
+                source="response_api",
+            )
+        elif chunk_type == "image_generation.completed":
+            # Handle the final image generation result
+            if hasattr(chunk, "b64_json"):
+                log_stream_chunk("backend.response", "image_generation", "Image data received", agent_id)
+                # The image is complete, return a status message
+                return TextStreamChunk(
+                    type=ChunkType.CONTENT,
+                    content="\n✅ [Image Generation] Image successfully created",
+                    source="response_api",
+                )
         elif chunk.type == "response.output_item.done":
             # Get search query or executed code details - show them right after completion
             if hasattr(chunk, "item") and chunk.item:
@@ -908,36 +954,6 @@ class ResponseBackend(MCPBackend):
                                 content=f"\n🔍 [Search Query] '{search_query}'\n",
                                 source="response_api",
                             )
-                elif hasattr(chunk.item, "type") and chunk.item.type == "image_generation_call":
-                    # Handle image generation completion details
-                    prompt = getattr(chunk.item, "revised_prompt", None)
-                    image_data = getattr(chunk.item, "result", None)
-
-                    content_parts = []
-                    if prompt:
-                        content_parts.append(f"🎨 [Image Prompt] '{prompt}'")
-                        log_stream_chunk("backend.response", "image_prompt", prompt, agent_id)
-
-                    # Save image immediately when generated (synchronously)
-                    if image_data:
-                        saved_path = self._save_image_sync(
-                            image_data,
-                            prompt,
-                            "png",
-                        )
-                        if saved_path:
-                            content_parts.append(f"💾 [Image Saved] {saved_path}")
-                            log_stream_chunk("backend.response", "image_saved", f"Image saved to {saved_path}", agent_id)
-                        else:
-                            content_parts.append("⚠️ [Warning] Failed to save image")
-                            log_stream_chunk("backend.response", "image_save_failed", "Failed to save image", agent_id)
-
-                    if content_parts:
-                        return TextStreamChunk(
-                            type=ChunkType.CONTENT,
-                            content="\n" + "\n".join(content_parts) + "\n",
-                            source="response_api",
-                        )
                 elif hasattr(chunk.item, "type") and chunk.item.type == "code_interpreter_call":
                     if hasattr(chunk.item, "code") and chunk.item.code:
                         # Format code as a proper code block - don't assume language
@@ -976,61 +992,18 @@ class ResponseBackend(MCPBackend):
                                     content=f"📊 [Result] {output_text.strip()}\n",
                                     source="response_api",
                                 )
-        # Image generation events
-        elif chunk_type == "response.image_generation_call.in_progress":
-            item_id = getattr(chunk, "item_id", None)
-            output_index = getattr(chunk, "output_index", None)
-            log_stream_chunk("backend.response", "image_generation", "Starting image generation", agent_id)
-            return TextStreamChunk(
-                type=ChunkType.CONTENT,
-                content="\n🎨 [Provider Tool: Image Generation] Starting generation...",
-                item_id=item_id,
-                content_index=output_index,
-                source="response_api",
-            )
-        elif chunk_type == "response.image_generation_call.generating":
-            item_id = getattr(chunk, "item_id", None)
-            output_index = getattr(chunk, "output_index", None)
-            sequence_number = getattr(chunk, "sequence_number", None)
-            log_stream_chunk("backend.response", "image_generation", "Generating image", agent_id)
-            return TextStreamChunk(
-                type=ChunkType.CONTENT,
-                content="\n🎨 [Provider Tool: Image Generation] Generating image...",
-                item_id=item_id,
-                content_index=output_index,
-                sequence_number=sequence_number,
-                source="response_api",
-            )
-        elif chunk_type == "response.image_generation_call.partial_image":
-            item_id = getattr(chunk, "item_id", None)
-            output_index = getattr(chunk, "output_index", None)
-            partial_image_index = getattr(chunk, "partial_image_index", None)
-            getattr(chunk, "partial_image_b64", None)
-            sequence_number = getattr(chunk, "sequence_number", None)
-            log_stream_chunk("backend.response", "image_generation", f"Partial image {partial_image_index}", agent_id)
-            # For partial images, we could potentially display them or just indicate progress
-            return TextStreamChunk(
-                type=ChunkType.CONTENT,
-                content=f"\n🎨 [Provider Tool: Image Generation] Generating... (frame {partial_image_index + 1})",
-                item_id=item_id,
-                content_index=output_index,
-                sequence_number=sequence_number,
-                source="response_api",
-            )
-        elif chunk_type == "response.image_generation_call.completed":
-            item_id = getattr(chunk, "item_id", None)
-            output_index = getattr(chunk, "output_index", None)
-            sequence_number = getattr(chunk, "sequence_number", None)
-            log_stream_chunk("backend.response", "image_generation", "Image generation completed", agent_id)
-            return TextStreamChunk(
-                type=ChunkType.CONTENT,
-                content="\n✅ [Provider Tool: Image Generation] Image generated successfully",
-                item_id=item_id,
-                content_index=output_index,
-                sequence_number=sequence_number,
-                source="response_api",
-            )
-
+                elif hasattr(chunk.item, "type") and chunk.item.type == "image_generation_call":
+                    # Image generation completed - show details
+                    if hasattr(chunk.item, "action") and chunk.item.action:
+                        prompt = chunk.item.action.get("prompt", "")
+                        size = chunk.item.action.get("size", "1024x1024")
+                        if prompt:
+                            log_stream_chunk("backend.response", "image_prompt", prompt, agent_id)
+                            return TextStreamChunk(
+                                type=ChunkType.CONTENT,
+                                content=f"\n🎨 [Image Generated] Prompt: '{prompt}' (Size: {size})\n",
+                                source="response_api",
+                            )
         # MCP events
         elif chunk_type == "response.mcp_list_tools.started":
             return TextStreamChunk(
@@ -1105,34 +1078,6 @@ class ResponseBackend(MCPBackend):
                                 content=content,
                                 source="response_api",
                             )
-                        elif item.get("type") == "image_generation_call":
-                            # Image generation result
-                            status = item.get("status", "unknown")
-                            prompt = item.get("revised_prompt", "")
-                            image_data = item.get("result", "")
-
-                            content = f"\n🔧 Image Generation [{status.title()}]"
-                            if prompt:
-                                content += f": {prompt}"
-
-                            # Queue for saving (both data and URL)
-                            if image_data:
-                                self._pending_image_saves.append(
-                                    {
-                                        "data": image_data,
-                                        "prompt": prompt,
-                                        "format": "png",
-                                    },
-                                )
-                                if image_data:
-                                    content += " → Image generated (queued for saving)"
-
-                            log_stream_chunk("backend.response", "image_generation_result", content, agent_id)
-                            return TextStreamChunk(
-                                type=ChunkType.CONTENT,
-                                content=content,
-                                source="response_api",
-                            )
                         elif item.get("type") == "web_search_call":
                             # Web search result
                             status = item.get("status", "unknown")
@@ -1146,6 +1091,21 @@ class ResponseBackend(MCPBackend):
                                 if results:
                                     content += f" → Found {len(results)} results"
                                 log_stream_chunk("backend.response", "web_search_result", content, agent_id)
+                                return TextStreamChunk(
+                                    type=ChunkType.CONTENT,
+                                    content=content,
+                                    source="response_api",
+                                )
+                        elif item.get("type") == "image_generation_call":
+                            # Image generation result in completed response
+                            status = item.get("status", "unknown")
+                            action = item.get("action", {})
+                            prompt = action.get("prompt", "")
+                            size = action.get("size", "1024x1024")
+
+                            if prompt:
+                                content = f"\n🔧 Image Generation [{status.title()}]: {prompt} (Size: {size})"
+                                log_stream_chunk("backend.response", "image_generation_result", content, agent_id)
                                 return TextStreamChunk(
                                     type=ChunkType.CONTENT,
                                     content=content,
@@ -1207,4 +1167,4 @@ class ResponseBackend(MCPBackend):
 
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by OpenAI."""
-        return ["web_search", "code_interpreter", "image_generation"]
+        return ["web_search", "code_interpreter"]

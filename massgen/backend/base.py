@@ -58,6 +58,10 @@ class LLMBackend(ABC):
 
         # Initialize utility classes
         self.token_usage = TokenUsage()
+
+        # Planning mode flag - when True, MCP tools should be blocked during coordination
+        self._planning_mode_enabled: bool = False
+
         self.token_calculator = TokenCostCalculator()
 
         # Filesystem manager integration
@@ -71,11 +75,13 @@ class LLMBackend(ABC):
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
                 context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
+                enable_image_generation = kwargs.get("enable_image_generation", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
                     context_write_access_enabled=context_write_access_enabled,
+                    enable_image_generation=enable_image_generation,
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -86,11 +92,13 @@ class LLMBackend(ABC):
                 # Extract context paths and write access from backend config
                 context_paths = kwargs.get("context_paths", [])
                 context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
+                enable_image_generation = kwargs.get("enable_image_generation", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
                     context_write_access_enabled=context_write_access_enabled,
+                    enable_image_generation=enable_image_generation,
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
@@ -383,6 +391,28 @@ class LLMBackend(ABC):
         For stateless backends, this is a no-op.
         For stateful backends, this clears conversation history and session state.
         """
+        pass  # Default implementation for stateless backends
+
+    def set_planning_mode(self, enabled: bool) -> None:
+        """
+        Enable or disable planning mode for this backend.
+
+        When planning mode is enabled, MCP tools should be blocked to prevent
+        execution during coordination phase.
+
+        Args:
+            enabled: True to enable planning mode (block MCP tools), False to disable
+        """
+        self._planning_mode_enabled = enabled
+
+    def is_planning_mode_enabled(self) -> bool:
+        """
+        Check if planning mode is currently enabled.
+
+        Returns:
+            True if planning mode is enabled (MCP tools should be blocked)
+        """
+        return self._planning_mode_enabled
 
     async def _cleanup_client(self, client: Any) -> None:
         """Clean up OpenAI client resources."""

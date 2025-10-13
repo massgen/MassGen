@@ -14,7 +14,14 @@ from ._formatter_base import FormatterBase
 class ClaudeFormatter(FormatterBase):
     """Formatter for Claude API format."""
 
-    def format_messages(self, messages: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], str]:
+    def format_messages(self, messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        formatted, _ = self.format_messages_and_system(messages)
+        return formatted
+
+    def format_messages_and_system(
+        self,
+        messages: List[Dict[str, Any]],
+    ) -> Tuple[List[Dict[str, Any]], str]:
         """
         Convert messages to Claude's expected format.
 
@@ -91,9 +98,74 @@ class ClaudeFormatter(FormatterBase):
                 if isinstance(converted_message.get("content"), str):
                     # Claude expects content to be text for simple messages
                     pass
+                elif isinstance(converted_message.get("content"), list):
+                    converted_message = self._convert_multimodal_content(converted_message)
                 converted_messages.append(converted_message)
 
         return converted_messages, system_message
+
+    def _convert_multimodal_content(self, message: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize multimodal content blocks to Claude's nested source structure."""
+
+        content = message.get("content")
+        if not isinstance(content, list):
+            return message
+
+        # Formatter handles generic multimodal content; upload_files-sourced items already preprocessed in backend.
+        converted_items: List[Dict[str, Any]] = []
+
+        for item in content:
+            if not isinstance(item, dict):
+                converted_items.append(item)
+                continue
+
+            item_type = item.get("type")
+
+            if item_type in {"tool_result", "tool_use", "text", "file_pending_upload"}:
+                converted_items.append(item)
+                continue
+
+            if item_type not in {"image", "document"}:
+                converted_items.append(item)
+                continue
+
+            if isinstance(item.get("source"), dict):
+                converted_items.append(item)
+                continue
+
+            if "file_id" in item:
+                normalized = {key: value for key, value in item.items() if key != "file_id"}
+                normalized["source"] = {
+                    "type": "file",
+                    "file_id": item["file_id"],
+                }
+                converted_items.append(normalized)
+                continue
+
+            if "base64" in item:
+                media_type = item.get("mime_type") or item.get("media_type")
+                normalized = {key: value for key, value in item.items() if key not in {"base64", "mime_type", "media_type"}}
+                normalized["source"] = {
+                    "type": "base64",
+                    "media_type": media_type,
+                    "data": item["base64"],
+                }
+                converted_items.append(normalized)
+                continue
+
+            if "url" in item:
+                normalized = {key: value for key, value in item.items() if key != "url"}
+                normalized["source"] = {
+                    "type": "url",
+                    "url": item["url"],
+                }
+                converted_items.append(normalized)
+                continue
+
+            converted_items.append(item)
+
+        message["content"] = converted_items
+        return message
 
     def format_tools(self, tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """

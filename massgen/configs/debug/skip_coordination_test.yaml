@@ -1,0 +1,27 @@
+# DEBUG config for testing final presentation mode
+# This skips all coordination/voting rounds and goes straight to final presentation
+# Useful for debugging final presentation logic without running full coordination
+
+agents:
+  - id: "test_agent"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      cwd: "workspace1"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  # Example: Add a context path with write access for testing file delivery in final presentation
+  context_paths:
+    - path: "massgen/configs/resources/v0.0.21-example"
+      permission: "write"
+
+  # DEBUG: Skip coordination rounds - go straight to final presentation
+  # When enabled, the first agent is selected as winner and immediately enters final presentation mode
+  skip_coordination_rounds: true
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

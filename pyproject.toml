@@ -28,7 +28,7 @@ dependencies = [
     "datasets==3.2.0",
     "openai==1.71.0",
     "xai-sdk==1.0.0",
-    "anthropic==0.49.0",
+    "anthropic>=0.61.0",
     "nest-asyncio==1.6.0",
     "cerebras-cloud-sdk==1.46.0",
     "lmstudio==1.4.1",
@@ -39,12 +39,14 @@ dependencies = [
     "rich==14.1.0",
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
-    "claude-code-sdk>=0.0.22",
+    "claude-agent-sdk>=0.0.22",
     "loguru>=0.7.0",
     "mcp>=1.12.0",
     "aiohttp>=3.8.0",
     "fastmcp>=2.12.3",
     "pillow>=11.3.0",
+    "ag2>=0.9.10",
+    "pyautogen>=0.10.0",
 ]
 
 [project.optional-dependencies]

@@ -88,6 +88,30 @@ class ConfigurationError(Exception):
     """Configuration error for CLI."""
 
 
+def _substitute_variables(obj: Any, variables: Dict[str, str]) -> Any:
+    """Recursively substitute ${var} references in config with actual values.
+
+    Args:
+        obj: Config object (dict, list, str, or other)
+        variables: Dict of variable names to values
+
+    Returns:
+        Config object with variables substituted
+    """
+    if isinstance(obj, dict):
+        return {k: _substitute_variables(v, variables) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_substitute_variables(item, variables) for item in obj]
+    elif isinstance(obj, str):
+        # Replace ${var} with value
+        result = obj
+        for var_name, var_value in variables.items():
+            result = result.replace(f"${{{var_name}}}", var_value)
+        return result
+    else:
+        return obj
+
+
 def load_config_file(config_path: str) -> Dict[str, Any]:
     """Load configuration from YAML or JSON file.
 
@@ -95,6 +119,8 @@ def load_config_file(config_path: str) -> Dict[str, Any]:
     1. Exact path as provided (absolute or relative to CWD)
     2. If just a filename, search in package's configs/ directory
     3. If a relative path, also try within package's configs/ directory
+
+    Supports variable substitution: ${cwd} in any string will be replaced with the agent's cwd value.
     """
     path = Path(config_path)
 
@@ -156,6 +182,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
     - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
     - POE (poe.com) -> POE_API_KEY
+    - Qwen (dashscope.aliyuncs.com) -> QWEN_API_KEY
 
     External agent frameworks are supported via the adapter registry.
     """
@@ -236,6 +263,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 api_key = os.getenv("POE_API_KEY")
                 if not api_key:
                     raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
+            elif base_url and "aliyuncs.com" in base_url:
+                api_key = os.getenv("QWEN_API_KEY")
+                if not api_key:
+                    raise ConfigurationError("Qwen API key not found. Set QWEN_API_KEY or provide in config.")
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -295,6 +326,11 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
 
     for i, agent_data in enumerate(agent_entries, start=1):
         backend_config = agent_data.get("backend", {})
+
+        # Substitute variables like ${cwd} in backend config
+        if "cwd" in backend_config:
+            variables = {"cwd": backend_config["cwd"]}
+            backend_config = _substitute_variables(backend_config, variables)
 
         # Infer backend type from model if not explicitly provided
         backend_type = backend_config.get("type") or (get_backend_type_from_model(backend_config["model"]) if "model" in backend_config else None)
@@ -661,10 +697,17 @@ async def run_question_with_history(
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
-        # Get context sharing parameters from kwargs (if present in config)
-        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
-        session_storage = kwargs.get("orchestrator", {}).get("session_storage", "sessions")  # Default to "sessions"
+        # Get orchestrator parameters from config
+        orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Get context sharing parameters
+        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+        session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
+
+        # Get debug/test parameters
+        if orchestrator_cfg.get("skip_coordination_rounds", False):
+            orchestrator_config.skip_coordination_rounds = True
 
         # Load previous turns from session storage for multi-turn conversations
         previous_turns = load_previous_turns(session_info, session_storage)
@@ -754,9 +797,16 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
-        # Get context sharing parameters from kwargs (if present in config)
-        snapshot_storage = kwargs.get("orchestrator", {}).get("snapshot_storage")
-        agent_temporary_workspace = kwargs.get("orchestrator", {}).get("agent_temporary_workspace")
+        # Get orchestrator parameters from config
+        orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Get context sharing parameters
+        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+
+        # Get debug/test parameters
+        if orchestrator_cfg.get("skip_coordination_rounds", False):
+            orchestrator_config.skip_coordination_rounds = True
 
         orchestrator = Orchestrator(
             agents=agents,
@@ -1163,6 +1213,7 @@ Environment Variables:
     NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
     OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
     POE_API_KEY         - For POE (poe.com)
+    QWEN_API_KEY        - For Qwen (dashscope.aliyuncs.com)
 
   Note: The chatcompletion backend auto-detects the provider from the base_url
         and uses the appropriate environment variable for API key.
