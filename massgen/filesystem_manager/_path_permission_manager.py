@@ -451,7 +451,7 @@ class PathPermissionManager:
             return self._validate_delete_tool(tool_name, tool_args)
 
         # Tools that can potentially modify through commands
-        command_tools = {"Bash", "bash", "shell", "exec"}
+        command_tools = {"Bash", "bash", "shell", "exec", "execute_command"}
 
         # Check command tools for dangerous operations
         if tool_name in command_tools:

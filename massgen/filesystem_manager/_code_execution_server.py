@@ -99,7 +99,7 @@ def _check_command_filters(command: str, allowed_patterns: Optional[List[str]], 
     if allowed_patterns:
         if not any(re.match(pattern, command) for pattern in allowed_patterns):
             raise ValueError(
-                f"Command not in allowed list. Allowed patterns: {', '.join(allowed_patterns)}"
+                f"Command not in allowed list. Allowed patterns: {', '.join(allowed_patterns)}",
             )
 
     # Check blacklist (command must NOT match any blocked pattern)
@@ -107,49 +107,38 @@ def _check_command_filters(command: str, allowed_patterns: Optional[List[str]], 
         for pattern in blocked_patterns:
             if re.match(pattern, command):
                 raise ValueError(
-                    f"Command matches blocked pattern: '{pattern}'"
+                    f"Command matches blocked pattern: '{pattern}'",
                 )
 
 
-def _prepare_environment(work_dir: Path, command_prefix: Optional[str], venv_path: Optional[Path]) -> tuple[str, Dict[str, str]]:
+def _prepare_environment(work_dir: Path) -> Dict[str, str]:
     """
-    Prepare command and environment based on virtual environment settings.
+    Prepare environment by auto-detecting .venv in work_dir.
 
-    Priority:
-    1. If command_prefix is set, return it (for wrapping commands)
-    2. If venv_path is set, modify PATH to use that venv
-    3. Auto-detect .venv in work_dir and modify PATH
-    4. Use system environment
+    This function checks for a .venv directory in the working directory and
+    automatically modifies PATH to use it if found. Each workspace manages
+    its own virtual environment independently.
 
     Args:
         work_dir: Working directory to check for .venv
-        command_prefix: Optional command prefix (e.g., "uv run", "conda run -n myenv")
-        venv_path: Optional custom venv path
 
     Returns:
-        Tuple of (command_prefix, env_dict)
-        - command_prefix: String to prepend to commands (or None)
-        - env_dict: Environment variables dict
+        Environment variables dict with PATH modified if .venv exists
     """
     env = os.environ.copy()
 
-    # Priority 1: Use explicit command prefix if provided
-    if command_prefix:
-        return command_prefix, env
-
-    # Priority 2 & 3: Modify PATH for venv (custom or auto-detected)
-    venv_to_use = venv_path if venv_path else (work_dir / ".venv" if (work_dir / ".venv").exists() else None)
-
-    if venv_to_use and venv_to_use.exists():
+    # Auto-detect .venv in work_dir
+    venv_dir = work_dir / ".venv"
+    if venv_dir.exists():
         # Determine bin directory based on platform
-        venv_bin = venv_to_use / ("Scripts" if WIN32 else "bin")
+        venv_bin = venv_dir / ("Scripts" if WIN32 else "bin")
         if venv_bin.exists():
             # Prepend venv bin to PATH
             env["PATH"] = f"{venv_bin}{os.pathsep}{env['PATH']}"
             # Set VIRTUAL_ENV for tools that check it
-            env["VIRTUAL_ENV"] = str(venv_to_use)
+            env["VIRTUAL_ENV"] = str(venv_dir)
 
-    return None, env
+    return env
 
 
 async def create_server() -> fastmcp.FastMCP:
@@ -189,18 +178,6 @@ async def create_server() -> fastmcp.FastMCP:
         default=None,
         help="Blacklist: Block commands matching these regex patterns (e.g., 'rm .*', 'sudo .*')",
     )
-    parser.add_argument(
-        "--command-prefix",
-        type=str,
-        default=None,
-        help="Command prefix to prepend (e.g., 'uv run', 'conda run -n myenv', 'poetry run')",
-    )
-    parser.add_argument(
-        "--venv-path",
-        type=str,
-        default=None,
-        help="Path to virtual environment (will modify PATH to use this venv)",
-    )
     args = parser.parse_args()
 
     # Create the FastMCP server
@@ -212,8 +189,6 @@ async def create_server() -> fastmcp.FastMCP:
     mcp.max_output_size = args.max_output_size
     mcp.allowed_commands = args.allowed_commands  # Whitelist patterns
     mcp.blocked_commands = args.blocked_commands  # Blacklist patterns
-    mcp.command_prefix = args.command_prefix  # Command prefix (e.g., "uv run")
-    mcp.venv_path = Path(args.venv_path).resolve() if args.venv_path else None  # Custom venv path
 
     @mcp.tool()
     def execute_command(
@@ -344,18 +319,15 @@ async def create_server() -> fastmcp.FastMCP:
                     "work_dir": str(work_path),
                 }
 
-            # Prepare environment and command prefix
-            cmd_prefix, env = _prepare_environment(work_path, mcp.command_prefix, mcp.venv_path)
-
-            # Apply command prefix if specified (e.g., "uv run", "conda run -n myenv")
-            final_command = f"{cmd_prefix} {command}" if cmd_prefix else command
+            # Prepare environment (auto-detects .venv in work_dir)
+            env = _prepare_environment(work_path)
 
             # Execute command
             start_time = time.time()
 
             try:
                 result = subprocess.run(
-                    final_command,
+                    command,
                     shell=True,
                     cwd=str(work_path),
                     timeout=timeout,
@@ -382,7 +354,7 @@ async def create_server() -> fastmcp.FastMCP:
                     "stdout": stdout,
                     "stderr": stderr,
                     "execution_time": execution_time,
-                    "command": final_command,
+                    "command": command,
                     "work_dir": str(work_path),
                 }
 

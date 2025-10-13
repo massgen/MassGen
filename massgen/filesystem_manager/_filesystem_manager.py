@@ -16,7 +16,6 @@ MCP tools configured.
 """
 
 import shutil
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -50,8 +49,6 @@ class FilesystemManager:
         enable_mcp_command_line: bool = False,
         command_line_allowed_commands: List[str] = None,
         command_line_blocked_commands: List[str] = None,
-        command_execution_prefix: str = None,
-        command_execution_venv_path: str = None,
     ):
         """
         Initialize FilesystemManager.
@@ -66,16 +63,12 @@ class FilesystemManager:
             enable_mcp_command_line: Whether to enable MCP command line execution tool
             command_line_allowed_commands: Whitelist of allowed command patterns (regex)
             command_line_blocked_commands: Blacklist of blocked command patterns (regex)
-            command_execution_prefix: Command prefix to prepend (e.g., "uv run", "conda run -n myenv")
-            command_execution_venv_path: Path to virtual environment (will modify PATH to use this venv)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation
         self.enable_mcp_command_line = enable_mcp_command_line
         self.command_line_allowed_commands = command_line_allowed_commands
         self.command_line_blocked_commands = command_line_blocked_commands
-        self.command_execution_prefix = command_execution_prefix
-        self.command_execution_venv_path = command_execution_venv_path
 
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
@@ -179,7 +172,6 @@ class FilesystemManager:
 
         return workspace
 
-
     def get_mcp_filesystem_config(self) -> Dict[str, Any]:
         """
         Generate MCP filesystem server configuration.
@@ -198,7 +190,8 @@ class FilesystemManager:
             "args": [
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
-            ] + paths,
+            ]
+            + paths,
             "cwd": str(self.cwd),  # Set working directory for filesystem server (important for relative paths)
             # Exclude read_media_file since we have our own implementation in workspace_tools
             # Note: Tool names here are unprefixed (before server name is added)
@@ -279,13 +272,6 @@ class FilesystemManager:
 
         if self.command_line_blocked_commands:
             config["args"].extend(["--blocked-commands"] + self.command_line_blocked_commands)
-
-        # Add command execution environment settings
-        if self.command_execution_prefix:
-            config["args"].extend(["--command-prefix", self.command_execution_prefix])
-
-        if self.command_execution_venv_path:
-            config["args"].extend(["--venv-path", self.command_execution_venv_path])
 
         return config
 

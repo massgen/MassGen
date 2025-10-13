@@ -408,6 +408,102 @@ def test_validate_command_tool():
         helper.teardown()
 
 
+def test_validate_execute_command_tool():
+    print("\n⚙️  Testing _validate_command_tool for execute_command...")
+
+    helper = TestHelper()
+    helper.setup()
+
+    try:
+        manager = helper.create_permission_manager()
+        print("  Testing dangerous command blocking for execute_command...")
+        dangerous_commands = [
+            "rm file.txt",
+            "rm -rf directory/",
+            "sudo apt install",
+            "su root",
+            "chmod 777 file.txt",
+            "chown user:group file.txt",
+            "format C:",
+            "fdisk /dev/sda",
+            "mkfs.ext4 /dev/sdb1",
+        ]
+
+        for cmd in dangerous_commands:
+            tool_args = {"command": cmd}
+            allowed, reason = manager._validate_command_tool("execute_command", tool_args)
+
+            if allowed:
+                print(f"❌ Failed: Dangerous command should be blocked for execute_command: {cmd}")
+                return False
+            if "Dangerous command pattern" not in reason:
+                print(f"❌ Failed: Expected 'Dangerous command pattern' for: {cmd}, got: {reason}")
+                return False
+        print("  Testing safe command allowance for execute_command...")
+        safe_commands = [
+            "python script.py",
+            "pytest tests/",
+            "npm run build",
+            "ls -la",
+            "cat file.txt",
+            "git status",
+            "node app.js",
+        ]
+
+        for cmd in safe_commands:
+            tool_args = {"command": cmd}
+            allowed, reason = manager._validate_command_tool("execute_command", tool_args)
+
+            if not allowed:
+                print(f"❌ Failed: Safe command should be allowed for execute_command: {cmd}. Reason: {reason}")
+                return False
+        print("  Testing write operations to readonly paths for execute_command...")
+        manager = helper.create_permission_manager(context_write_enabled=False)
+        readonly_file = str(helper.readonly_dir / "readonly_file.txt")
+
+        write_commands = [
+            f"echo 'content' > {readonly_file}",
+            f"echo 'content' >> {readonly_file}",
+            f"mv source.txt {readonly_file}",
+            f"cp source.txt {readonly_file}",
+            f"touch {readonly_file}",
+        ]
+
+        for cmd in write_commands:
+            tool_args = {"command": cmd}
+            allowed, reason = manager._validate_command_tool("execute_command", tool_args)
+
+            if allowed:
+                print(f"❌ Failed: Write to readonly should be blocked for execute_command: {cmd}")
+                return False
+            if "read-only context path" not in reason:
+                print(f"❌ Failed: Expected 'read-only context path' for: {cmd}, got: {reason}")
+                return False
+        print("  Testing write operations to workspace for execute_command...")
+        workspace_file = str(helper.workspace_dir / "workspace_file.txt")
+
+        write_commands = [
+            f"echo 'content' > {workspace_file}",
+            f"echo 'content' >> {workspace_file}",
+            f"mv source.txt {workspace_file}",
+            f"cp source.txt {workspace_file}",
+        ]
+
+        for cmd in write_commands:
+            tool_args = {"command": cmd}
+            allowed, reason = manager._validate_command_tool("execute_command", tool_args)
+
+            if not allowed:
+                print(f"❌ Failed: Write to workspace should be allowed for execute_command: {cmd}. Reason: {reason}")
+                return False
+
+        print("✅ _validate_command_tool works correctly for execute_command")
+        return True
+
+    finally:
+        helper.teardown()
+
+
 async def test_pre_tool_use_hook():
     print("\n🪝 Testing pre_tool_use_hook method...")
 
@@ -426,15 +522,43 @@ async def test_pre_tool_use_hook():
         if "read-only context path" not in reason:
             print(f"❌ Failed: Expected 'read-only context path' in reason, got: {reason}")
             return False
-        print("  Testing dangerous command...")
+        print("  Testing dangerous command with Bash...")
         tool_args = {"command": "rm -rf /"}
         allowed, reason = await manager.pre_tool_use_hook("Bash", tool_args)
 
         if allowed:
-            print("❌ Failed: Dangerous command should be blocked")
+            print("❌ Failed: Dangerous command should be blocked for Bash")
             return False
         if "Dangerous command pattern" not in reason:
             print(f"❌ Failed: Expected 'Dangerous command pattern' in reason, got: {reason}")
+            return False
+        print("  Testing dangerous command with execute_command...")
+        tool_args = {"command": "sudo apt install malware"}
+        allowed, reason = await manager.pre_tool_use_hook("execute_command", tool_args)
+
+        if allowed:
+            print("❌ Failed: Dangerous command should be blocked for execute_command")
+            return False
+        if "Dangerous command pattern" not in reason:
+            print(f"❌ Failed: Expected 'Dangerous command pattern' in reason for execute_command, got: {reason}")
+            return False
+        print("  Testing safe command with execute_command...")
+        tool_args = {"command": "python test.py"}
+        allowed, reason = await manager.pre_tool_use_hook("execute_command", tool_args)
+
+        if not allowed:
+            print(f"❌ Failed: Safe command should be allowed for execute_command. Reason: {reason}")
+            return False
+        print("  Testing write to readonly with execute_command...")
+        readonly_file = str(helper.readonly_dir / "readonly_file.txt")
+        tool_args = {"command": f"echo 'data' > {readonly_file}"}
+        allowed, reason = await manager.pre_tool_use_hook("execute_command", tool_args)
+
+        if allowed:
+            print("❌ Failed: Write to readonly should be blocked for execute_command")
+            return False
+        if "read-only context path" not in reason:
+            print(f"❌ Failed: Expected 'read-only context path' in reason for execute_command, got: {reason}")
             return False
         print("  Testing read tools...")
         read_tools = ["Read", "Glob", "Grep", "WebFetch", "WebSearch"]
@@ -1881,6 +2005,7 @@ async def main():
         test_is_write_tool,
         test_validate_write_tool,
         test_validate_command_tool,
+        test_validate_execute_command_tool,
         test_context_write_access_toggle,
         test_extract_file_from_command,
         test_workspace_tools,
