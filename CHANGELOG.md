@@ -68,7 +68,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Files Modified**: 39 files with 3,649 insertions and 154 deletions
 - **Major Features**: AG2 group chat, universal code execution via MCP, audio/video generation tools
 - **New Tests**: `test_ag2_adapter.py`, `test_ag2_utils.py`, `test_code_execution.py`
-- **Contributors**: @Eric-Shang @ncrispino @qidanrui @sonichi @Henry-811and the MassGen team
+- **Contributors**: @Eric-Shang @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
 
 ## [0.0.30] - 2025-10-10
 
