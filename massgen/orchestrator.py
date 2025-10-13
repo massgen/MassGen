@@ -43,6 +43,7 @@ from .logger_config import (
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
 from .utils import ActionType, AgentStatus
+from toolkits import get_workflow_tools
 
 
 @dataclass
@@ -137,7 +138,7 @@ class Orchestrator(ChatAgent):
         # Get message templates from config
         self.message_templates = self.config.message_templates or MessageTemplates()
         # Create workflow tools for agents (vote and new_answer)
-        self.workflow_tools = self.message_templates.get_standard_tools(list(agents.keys()))
+        self.workflow_tools = get_workflow_tools(valid_agent_ids=list(agents.keys()))
 
         # MassGen-specific state
         self.current_task: Optional[str] = None
