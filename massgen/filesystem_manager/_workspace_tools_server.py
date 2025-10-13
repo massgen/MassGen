@@ -1492,7 +1492,7 @@ async def create_server() -> fastmcp.FastMCP:
                         {
                             "file": str(audio_path),
                             "transcription": transcription,
-                        }
+                        },
                     )
 
                 except Exception as api_error:
