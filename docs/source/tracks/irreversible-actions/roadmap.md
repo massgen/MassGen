@@ -1,240 +1,79 @@
 # Irreversible Actions Track - Roadmap
 
-**Timeline:** Next 3-6 months
+**Lead:** Franklin | **Last Updated:** 2025-01-15
 
-**Last Updated:** 2024-10-08
-
----
-
-## 🎯 Current Focus (Weeks 1-4)
-
-### Rollback & Recovery
-- **Goal:** Enable safe experimentation with undo capability
-- **Deliverables:**
-  - File operation snapshots
-  - Rollback command/API
-  - Automated cleanup
-  - User documentation
-
-### User Confirmation Flow
-- **Goal:** Prevent accidental dangerous operations
-- **Deliverables:**
-  - Confirmation prompts for risky operations
-  - Batch approval option
-  - Whitelist/blacklist configuration
-  - Integration with all UI modes
+> **Quick Update Template:** Project leads can update this file in <5 minutes
 
 ---
 
-## 📈 Medium-Term Goals (Weeks 5-12)
+## 🎯 Current Sprint (v0.0.30)
 
-### Enhanced Permission System (Q1 2025)
-- **Goal:** More granular, flexible permissions
-- **Deliverables:**
-  - Per-operation permissions (read, write, delete, execute)
-  - Time-limited permissions
-  - Conditional permissions (e.g., if file size < 1MB)
-  - Permission templates
+**Target Date:** TBD
 
-### Workspace Quotas (Q1 2025)
-- **Goal:** Prevent resource exhaustion
-- **Deliverables:**
-  - File size limits
-  - File count limits
-  - Total workspace size limits
-  - Quota warnings and enforcement
+### Critical (P0)
+- [ ] Security audit of permission system
+- [ ] Test path traversal attack vectors
 
-### Secret Detection (Q2 2025)
-- **Goal:** Prevent credential leakage
-- **Deliverables:**
-  - Auto-detect API keys, passwords
-  - Block agent access to secrets
-  - Secure credential store integration
-  - Rotation recommendations
+### High Priority (P1)
+- [ ] Implement rollback for file operations
+- [ ] Add user confirmation for dangerous operations
+- [ ] Document security best practices
+
+### Nice to Have (P2)
+- [ ] Workspace quota enforcement
+- [ ] Enhanced audit logging
+- [ ] Permission inheritance rules
 
 ---
 
-## 🚀 Long-Term Vision (3-6 months)
-
-### Complete Sandboxing
-Isolate agent operations completely:
-- **Filesystem:** chroot/Docker container
-- **Network:** Isolated network namespace
-- **Process:** Resource limits (CPU, memory)
-- **System:** No system call access
-
-### Formal Verification
-Prove safety properties:
-- Mathematical proof of permission system
-- Automated test generation
-- Formal spec of safe operations
-- Verification of implementation
-
-### Trust & Reputation
-Agent behavior tracking:
-- Track agent reliability
-- Learn from past behavior
-- Adjust permissions dynamically
-- Community reputation system
-
----
-
-## 🔍 Research Areas
-
-### Security Architecture
-- Zero-trust security model
-- Capability-based security
-- Least privilege automation
-- Security by design patterns
-
-### Performance vs. Safety
-- Minimize security overhead
-- Efficient permission checking
-- Fast rollback mechanisms
-- Streaming safe operations
-
-### User Experience
-- Make safety non-intrusive
-- Smart confirmation prompts
-- Learn user preferences
-- Explainable safety decisions
-
----
-
-## 📊 Success Metrics
-
-### Short-Term (1-3 months)
-- ✅ 0 security incidents
-- ✅ FileOperationTracker (read-before-delete) implemented (v0.0.29)
-- ✅ Operation tracking enhanced (v0.0.29)
-- ⏳ Rollback snapshots implemented
-- ⏳ User confirmations working
-- ⏳ 100% audit coverage
-- ⏳ Security documentation complete
-
-### Medium-Term (3-6 months)
-- Full sandboxing option
-- Secret detection active
-- Workspace quotas enforced
-- External security audit completed
-- Community security contributions
-
-### Long-Term (6+ months)
-- Formally verified core components
-- Best-in-class AI safety system
-- Zero-trust architecture
-- Trusted by enterprise users
-
----
-
-## 🔗 Dependencies
-
-### Tracks
-- **Coding Agent:** Primary consumer of safety features
-- **Memory:** Secure context storage
-- **All Tracks:** Security is cross-cutting
-
-### External
-- OS security features
-- Container technologies (Docker, etc.)
-- Security research community
-- Compliance requirements (SOC 2, etc.)
-
----
-
-## 🤝 Community Involvement
-
-### How to Contribute
-1. **Security Testing:** Find vulnerabilities responsibly
-2. **Threat Modeling:** Identify new risks
-3. **Code Review:** Security-focused PR reviews
-4. **Documentation:** Best practices guides
-
-### Wanted: Contributors
-- Security engineers
-- Penetration testers
-- Compliance experts
-- Threat modeling specialists
-
----
-
-## 📅 Milestones
+## 📅 Upcoming Milestones
 
 | Milestone | Target | Status |
 |-----------|--------|--------|
-| Protected paths | v0.0.26 | ✅ Complete |
-| Permission system | v0.0.27 | ✅ Complete |
-| Operation tracking | v0.0.28 | ✅ Complete |
-| FileOperationTracker (read-before-delete) | v0.0.29 | ✅ Complete |
-| Path Permission Manager enhancements | v0.0.29 | ✅ Complete |
-| Rollback mechanisms (snapshots) | v0.0.30 | 🔄 In Progress |
-| User confirmations | v0.0.31 | 📋 Planned |
-| Workspace quotas | v0.0.32 | 📋 Planned |
-| Secret detection | v0.0.34 | 📋 Planned |
-| Full sandboxing | v0.1.0 | 🔮 Future |
+| Rollback mechanisms (snapshots) | 2025-10-31 | 🔄 In Progress |
+| User confirmations | 2025-11-15 | 📋 Planned |
+| Workspace quotas | 2025-11-30 | 📋 Planned |
+| Secret detection | 2025-12-31 | 📋 Planned |
+| Full sandboxing | 2026-02-28 | 🔮 Future |
 
 ---
 
-## 🛠️ Technical Debt
+## ✅ Recent Completions
 
-### High Priority
-- Security audit needed
-- Penetration testing
-- Threat model documentation
-
-### Medium Priority
-- Rollback implementation
-- Permission system refactoring
-- Test coverage for edge cases
-
-### Low Priority
-- Performance profiling
-- Error message improvements
-- Documentation polish
+- [x] FileOperationTracker implemented (v0.0.29 - read-before-delete safety)
+- [x] Path Permission Manager enhancements (v0.0.29)
+- [x] Protected paths implemented (v0.0.26)
+- [x] Permission system enhanced (v0.0.27)
+- [x] Operation tracking added (v0.0.28)
 
 ---
 
-## 🔄 Review Schedule
+## 🚧 Blocked Items
 
-- **Weekly:** Security issues, vulnerability reports
-- **Monthly:** Permission system review, audit log analysis
-- **Quarterly:** External security audit, threat model update
-- **Annually:** Major security assessment
+None currently
 
 ---
 
-## 🎓 Learning Resources
+## 💬 Quick Notes
 
-### For Contributors
-- OWASP guidelines
-- Secure coding practices
-- Threat modeling frameworks
-- Formal verification techniques
+**This Week:**
+- Working on parallel execution safety mechanisms
+- Addressing minority voting problem for dangerous actions
 
-### For Users
-- Security best practices guide
-- Configuration hardening
-- Incident response procedures
-- Responsible AI agent deployment
+**Next Week:**
+- Security audit planning
+- Rollback mechanism design review
 
----
+**Decisions Needed:**
+- Should rollback be automatic or manual?
+- How long to keep rollback snapshots?
+- User confirmation UX for dangerous operations
 
-## 🚨 Incident Response Plan
-
-### If Security Issue Found:
-1. **Contain:** Isolate affected systems
-2. **Assess:** Understand scope and impact
-3. **Fix:** Patch vulnerability immediately
-4. **Test:** Verify fix works
-5. **Disclose:** Coordinated disclosure
-6. **Learn:** Post-mortem, improve
-
-### Severity Levels:
-- **Critical:** Can cause data loss/exposure
-- **High:** Can bypass safety mechanisms
-- **Medium:** Could lead to issues under specific conditions
-- **Low:** Theoretical or difficult to exploit
+**Known Risks:**
+- **High:** Path traversal, credential leakage, data destruction
+- **Medium:** Resource exhaustion, infinite loops
+- **Low:** Log tampering, permission bypass
 
 ---
 
-*This roadmap is aspirational and subject to change based on security findings, community needs, and team capacity. Security is our highest priority.*
+*See [details.md](./details.md) for architecture, dependencies, and long-term vision*

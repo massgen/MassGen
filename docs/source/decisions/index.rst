@@ -49,10 +49,6 @@ Active Decisions
      - Use Sphinx for project documentation
      - 2024-10
      - Sphinx chosen for documentation system
-   * - :doc:`0002-pytorch-framework`
-     - Use PyTorch as ML framework
-     - 2024-06
-     - PyTorch selected over TensorFlow
    * - :doc:`0003-multi-agent-architecture`
      - Multi-agent collaborative architecture
      - 2024-06
@@ -78,6 +74,5 @@ None yet
    :hidden:
 
    0001-use-sphinx
-   0002-pytorch-framework
    0003-multi-agent-architecture
    0004-case-driven-development

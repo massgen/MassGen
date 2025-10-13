@@ -1,16 +1,26 @@
 Project Integration & Context Paths
 ====================================
 
-**NEW in v0.0.21**
+**NEW in v0.0.21** - Directory-level context paths
+**ENHANCED in v0.0.26** - File-level context paths
 
-Work directly with your existing projects! Context paths allow you to share specific directories with all agents while maintaining granular permission control.
+Work directly with your existing projects! Context paths allow you to share specific **directories or individual files** with all agents while maintaining granular permission control.
 
 Quick Start
 -----------
 
+**For coding projects** (recommended - auto-detects context from current directory):
+
 .. code-block:: bash
 
-   # Multi-agent collaboration on your website
+   # Run from your project directory - MassGen will offer to add it as context
+   cd /path/to/your-project
+   uv tool run massgen "Enhance the website with dark/light theme toggle and interactive features"
+
+**Using explicit config** (for predefined setups):
+
+.. code-block:: bash
+
    uv run python -m massgen.cli \
      --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml \
      "Enhance the website with dark/light theme toggle and interactive features"
@@ -21,7 +31,7 @@ Configuration
 Context Paths Setup
 ~~~~~~~~~~~~~~~~~~~
 
-Share directories with all agents using ``context_paths``:
+Share directories **or individual files** with all agents using ``context_paths``:
 
 .. code-block:: yaml
 
@@ -32,11 +42,18 @@ Share directories with all agents using ``context_paths``:
          cwd: "workspace"          # Agent's isolated work area
 
    orchestrator:
+     # Required for file operations
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
+     # Context paths - directories OR individual files
      context_paths:
-       - path: "/home/user/my-project/src"
-         permission: "read"        # Agents can analyze your code
-       - path: "/home/user/my-project/docs"
-         permission: "write"       # Final agent can update docs
+       - path: "/home/user/my-project/src"           # Directory access
+         permission: "read"                          # Agents can analyze your code
+       - path: "/home/user/my-project/docs"          # Directory access
+         permission: "write"                         # Final agent can update docs
+       - path: "/home/user/my-project/config.yaml"   # Single file access (v0.0.26+)
+         permission: "read"                          # Access only this file
 
 Configuration Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,17 +67,25 @@ Configuration Parameters
      - Description
    * - ``context_paths``
      - Yes
-     - List of shared directories for all agents
+     - List of shared directories or files for all agents
    * - ``path``
      - Yes
-     - **Absolute path to directory** (must be directory, not file)
+     - **Absolute path to directory OR file** (both supported as of v0.0.26)
    * - ``permission``
      - Yes
      - Access level: ``"read"`` or ``"write"``
+   * - ``snapshot_storage``
+     - Yes
+     - Directory for workspace snapshots (required for file operations)
+   * - ``agent_temporary_workspace``
+     - Yes
+     - Parent directory for temporary workspaces (required for file operations)
 
-.. warning::
+.. note::
 
-   Context paths must point to **directories**, not individual files. MassGen validates all paths during startup and will show clear error messages for missing or invalid paths.
+   **v0.0.26+**: Context paths can now point to **individual files** in addition to directories. This allows you to grant agents access to specific configuration files or reference documents without exposing the entire directory.
+
+   **File-level access**: When a file path is provided, agents can only access that specific file - sibling files in the same directory are blocked for security.
 
 Permissions Model
 -----------------
@@ -150,17 +175,25 @@ Advanced Example
          cwd: "implementation_workspace"
 
    orchestrator:
+     # Required for file operations
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
+     # Context paths - mix of directories and files
      context_paths:
-       - path: "/home/user/legacy-app/src"
-         permission: "read"           # Read existing codebase
-       - path: "/home/user/legacy-app/tests"
-         permission: "write"          # Write new tests
-       - path: "/home/user/modernized-app"
-         permission: "write"          # Create modernized version
+       - path: "/home/user/legacy-app/src"              # Directory access
+         permission: "read"                             # Read existing codebase
+       - path: "/home/user/legacy-app/.env.example"    # Single file access (v0.0.26+)
+         permission: "read"                             # Access only env template
+       - path: "/home/user/legacy-app/tests"            # Directory access
+         permission: "write"                            # Write new tests
+       - path: "/home/user/modernized-app"              # Directory access
+         permission: "write"                            # Create modernized version
 
 This configuration:
 
-* All agents can read the legacy codebase
+* All agents can read the legacy codebase directory
+* Agents can access the `.env.example` template but not other config files
 * All agents can discuss modernization approaches
 * Winning agent can write tests and create modernized version
 
@@ -213,13 +246,17 @@ You specify simple names, MassGen organizes under ``.massgen/``:
 .. code-block:: yaml
 
    orchestrator:
-     snapshot_storage: "snapshots"         # → .massgen/snapshots/
-     session_storage: "sessions"           # → .massgen/sessions/
-     agent_temporary_workspace: "temp"     # → .massgen/temp/
+     snapshot_storage: "snapshots"         # → .massgen/snapshots/ (REQUIRED)
+     session_storage: "sessions"           # → .massgen/sessions/ (optional)
+     agent_temporary_workspace: "temp"     # → .massgen/temp/ (REQUIRED)
 
    agents:
      - backend:
          cwd: "workspace1"                 # → .massgen/workspaces/workspace1/
+
+.. note::
+
+   ``snapshot_storage`` and ``agent_temporary_workspace`` are **required** when using file operations or context paths.
 
 Adding to .gitignore
 ~~~~~~~~~~~~~~~~~~~~
@@ -242,6 +279,9 @@ Agents analyze your source code and suggest improvements:
 .. code-block:: yaml
 
    orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
      context_paths:
        - path: "/home/user/project/src"
          permission: "read"
@@ -250,6 +290,11 @@ Agents analyze your source code and suggest improvements:
 
 .. code-block:: bash
 
+   # Run from project directory - recommended for coding
+   cd /home/user/project
+   uv tool run massgen "Review the authentication module for security issues and best practices"
+
+   # Or with explicit config
    uv run python -m massgen.cli \
      --config code_review.yaml \
      "Review the authentication module for security issues and best practices"
@@ -262,6 +307,9 @@ Agents read project code to understand context and generate/update documentation
 .. code-block:: yaml
 
    orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
      context_paths:
        - path: "/home/user/project/src"
          permission: "read"
@@ -270,6 +318,11 @@ Agents read project code to understand context and generate/update documentation
 
 .. code-block:: bash
 
+   # Run from project directory - recommended for coding
+   cd /home/user/project
+   uv tool run massgen "Update the API documentation to reflect recent changes in the auth module"
+
+   # Or with explicit config
    uv run python -m massgen.cli \
      --config doc_generator.yaml \
      "Update the API documentation to reflect recent changes in the auth module"
@@ -282,6 +335,9 @@ Agents access shared datasets and generate analysis reports:
 .. code-block:: yaml
 
    orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
      context_paths:
        - path: "/home/user/datasets"
          permission: "read"
@@ -290,6 +346,11 @@ Agents access shared datasets and generate analysis reports:
 
 .. code-block:: bash
 
+   # Run from project directory - recommended
+   cd /home/user
+   uv tool run massgen "Analyze the Q4 sales data and create a comprehensive report with visualizations"
+
+   # Or with explicit config
    uv run python -m massgen.cli \
      --config data_analysis.yaml \
      "Analyze the Q4 sales data and create a comprehensive report with visualizations"
@@ -302,6 +363,9 @@ Agents examine existing projects and create modernized versions:
 .. code-block:: yaml
 
    orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
      context_paths:
        - path: "/home/user/old-project"
          permission: "read"
@@ -310,6 +374,11 @@ Agents examine existing projects and create modernized versions:
 
 .. code-block:: bash
 
+   # Run from project directory - recommended for coding
+   cd /home/user/old-project
+   uv tool run massgen "Migrate the Flask 1.x application to Flask 3.x with modern best practices"
+
+   # Or with explicit config
    uv run python -m massgen.cli \
      --config migration.yaml \
      "Migrate the Flask 1.x application to Flask 3.x with modern best practices"
@@ -375,19 +444,23 @@ Example: Complete Project Setup
          cwd: "developer_workspace"
 
    orchestrator:
-     # Project integration
-     context_paths:
-       - path: "/Users/me/myproject/src"
-         permission: "read"           # Analyze existing code
-       - path: "/Users/me/myproject/tests"
-         permission: "write"          # Generate tests
-       - path: "/Users/me/myproject/docs"
-         permission: "write"          # Update documentation
-
-     # MassGen state (auto-organized under .massgen/)
+     # Required for file operations
      snapshot_storage: "snapshots"
-     session_storage: "sessions"
      agent_temporary_workspace: "temp"
+
+     # Optional: session management for multi-turn conversations
+     session_storage: "sessions"
+
+     # Project integration - mix of directories and files
+     context_paths:
+       - path: "/Users/me/myproject/src"                  # Directory: analyze existing code
+         permission: "read"
+       - path: "/Users/me/myproject/pytest.ini"           # File: read test config (v0.0.26+)
+         permission: "read"
+       - path: "/Users/me/myproject/tests"                # Directory: generate tests
+         permission: "write"
+       - path: "/Users/me/myproject/docs"                 # Directory: update documentation
+         permission: "write"
 
    ui:
      display_type: "rich_terminal"
@@ -410,10 +483,228 @@ Example: Complete Project Setup
    ├── docs/                        # Updated docs (write access)
    └── .gitignore                   # Contains .massgen/
 
+Protected Paths
+---------------
+
+Protected paths allow you to make specific files or directories **read-only** within writable context paths, preventing agents from modifying or deleting critical reference files while allowing them to edit other files.
+
+.. note::
+
+   **Use Case**: You want agents to modify some files in a directory but keep certain reference files, configurations, or templates untouched.
+
+Basic Configuration
+~~~~~~~~~~~~~~~~~~~
+
+Protect specific files within a writable context path:
+
+.. code-block:: yaml
+
+   orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
+     context_paths:
+       - path: "/absolute/path/to/directory"
+         permission: "write"
+         protected_paths:
+           - "important_file.txt"
+           - "config.json"
+
+**Result**:
+
+* Agents can read and modify all files **except** ``important_file.txt`` and ``config.json``
+* Protected files are readable but not writable
+
+Protected Paths Syntax
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Protected paths are **relative to the context path**:
+
+.. code-block:: yaml
+
+   orchestrator:
+     context_paths:
+       - path: "/Users/me/project"
+         permission: "write"
+         protected_paths:
+           - "src/config.py"          # Protects /Users/me/project/src/config.py
+           - "tests/fixtures/"        # Protects /Users/me/project/tests/fixtures/
+           - "README.md"              # File protection
+           - "docs/"                  # Directory protection
+
+Common Use Cases
+~~~~~~~~~~~~~~~~
+
+**1. Protect Reference Files**: Keep test fixtures unchanged while agents modify code
+
+.. code-block:: yaml
+
+   context_paths:
+     - path: "/project"
+       permission: "write"
+       protected_paths:
+         - "tests/fixtures/"
+         - "tests/expected_outputs/"
+
+**2. Protect Configuration**: Allow code changes but prevent config modifications
+
+.. code-block:: yaml
+
+   context_paths:
+     - path: "/app"
+       permission: "write"
+       protected_paths:
+         - "config.yaml"
+         - ".env.example"
+         - "docker-compose.yml"
+
+**3. Protect Templates**: Generate content without modifying templates
+
+.. code-block:: yaml
+
+   context_paths:
+     - path: "/website"
+       permission: "write"
+       protected_paths:
+         - "templates/"
+         - "layouts/"
+
+**4. Mixed Permissions**: Different protection levels across context paths
+
+.. code-block:: yaml
+
+   context_paths:
+     # Source code - most files writable, some protected
+     - path: "/project/src"
+       permission: "write"
+       protected_paths:
+         - "core/constants.py"
+         - "version.py"
+
+     # Docs - completely read-only (no protected_paths needed)
+     - path: "/project/docs"
+       permission: "read"
+
+     # Temp folder - fully writable
+     - path: "/project/temp"
+       permission: "write"
+
+How Protection Works
+~~~~~~~~~~~~~~~~~~~~
+
+Protected paths are enforced by the ``PathPermissionManager``:
+
+1. **Startup validation**: Checks that protected paths exist within their context path
+2. **Runtime enforcement**: Blocks write/delete operations on protected paths
+3. **Clear error messages**: Agents receive descriptive errors when blocked
+
+.. code-block:: text
+
+   Agent: Edit /project/config.json
+   Error: Cannot modify /project/config.json - path is protected
+
+**Read Operations**: Agents can always read protected files for reference:
+
+.. code-block:: python
+
+   Agent: Read config.json        # ✅ Allowed
+   Agent: Edit config.json         # ❌ Blocked
+   Agent: Delete config.json       # ❌ Blocked
+
+**Directory Protection**: Protecting a directory protects all contents recursively:
+
+.. code-block:: text
+
+   protected_paths: ["tests/fixtures/"]
+
+   ✅ Read tests/fixtures/data.json
+   ❌ Write tests/fixtures/data.json
+   ❌ Delete tests/fixtures/
+   ❌ Create tests/fixtures/new_file.txt
+
+Best Practices
+~~~~~~~~~~~~~~
+
+1. **Be explicit**: List all critical files rather than assuming default protection
+2. **Test first**: Run with a test directory to verify protection works
+3. **Document**: Add comments explaining why files are protected
+
+   .. code-block:: yaml
+
+      protected_paths:
+        - "schema.sql"        # Database schema - don't modify structure
+        - "LICENSE"           # Legal file - must not change
+
+4. **Use read-only when appropriate**: If entire directory should be read-only, use ``permission: "read"`` instead of protecting all paths
+
+   .. code-block:: yaml
+
+      # If everything should be read-only:
+      - path: "/reference_docs"
+        permission: "read"     # Simpler than listing all files
+
+      # If you want selective protection:
+      - path: "/working_dir"
+        permission: "write"
+        protected_paths: [...]  # Mixed permissions
+
+5. **Combine with planning mode**: Use protected paths with planning mode for maximum safety
+
+   .. code-block:: yaml
+
+      orchestrator:
+        context_paths:
+          - path: "/project"
+            permission: "write"
+            protected_paths: ["config.json"]
+        coordination:
+          enable_planning_mode: true  # Prevents modifications during coordination
+
+Troubleshooting
+~~~~~~~~~~~~~~~
+
+**Problem**: Agent is modifying a file you marked as protected.
+
+**Check**:
+
+1. **Verify relative path is correct**:
+
+   .. code-block:: yaml
+
+      context_paths:
+        - path: "/Users/me/project"
+          protected_paths:
+            - "config.json"         # ✅ Relative to /Users/me/project
+            # NOT: "/Users/me/project/config.json"  # ❌ Would be treated as relative
+
+2. **Check the file exists**: Protected paths must exist when MassGen starts
+3. **Verify write permission**: Protection only applies to writable context paths
+
+**Problem**: "Protected path 'file.txt' not found"
+
+**Solution**: Ensure the file exists before starting MassGen:
+
+.. code-block:: bash
+
+   ls /project/file.txt  # Check if file exists
+
+Security Note
+~~~~~~~~~~~~~
+
+.. warning::
+
+   Protected paths are a **convenience feature**, not a security boundary. For security-critical files:
+
+   * Use file system permissions (chmod)
+   * Run MassGen with limited user accounts
+   * Store sensitive data outside agent-accessible directories
+   * Review all agent operations before deploying
+
 Next Steps
 ----------
 
-* :doc:`file_operations` - Learn more about workspace management
+* :doc:`file_operations` - Learn more about workspace management and file operation safety
 * :doc:`mcp_integration` - Additional tools for project work
+* :doc:`planning_mode` - Combine with planning mode for safer coordination
 * :doc:`multi_turn_mode` - Iterative project development across turns
 * :doc:`../quickstart/running-massgen` - More examples

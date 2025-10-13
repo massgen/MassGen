@@ -21,7 +21,7 @@ File Naming and Location
 
 .. code-block:: text
 
-   {agent1}_{agent2}_{feature}.yaml
+   {agent_description}_{feature}.yaml
 
 **Examples:**
 

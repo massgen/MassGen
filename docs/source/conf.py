@@ -48,6 +48,11 @@ try:
 except ImportError:
     print("Warning: sphinx_design not installed. Grid support disabled.")
 
+try:
+    extensions.append("hoverxref.extension")
+except ImportError:
+    print("Warning: sphinx-hoverxref not installed. Glossary tooltips disabled.")
+
 # MyST parser configuration
 myst_enable_extensions = [
     "colon_fence",
@@ -126,3 +131,12 @@ intersphinx_mapping = {
 
 # Show todo notes
 todo_include_todos = True
+
+# Hoverxref configuration for glossary tooltips
+hoverxref_auto_ref = True
+hoverxref_domains = ["std"]
+hoverxref_role_types = {
+    "term": "tooltip",  # Show glossary terms as tooltips on hover
+}
+hoverxref_tooltip_maxwidth = 600
+hoverxref_tooltip_theme = "tooltipster-shadow"

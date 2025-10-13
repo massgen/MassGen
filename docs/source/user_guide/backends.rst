@@ -3,10 +3,6 @@ Backend Configuration
 
 Backends connect MassGen agents to AI model providers. Each backend is configured in YAML and provides specific capabilities like web search, code execution, and file operations.
 
-.. note::
-
-   Backends are not Python classes to import. They are configured in YAML files using the ``type`` field.
-
 Overview
 --------
 

@@ -6,7 +6,15 @@ MassGen provides comprehensive file system support, enabling agents to read, wri
 Quick Start
 -----------
 
-**Single agent with file operations:**
+**Single agent with file operations (using uv tool - recommended for coding):**
+
+.. code-block:: bash
+
+   # Run from your project directory
+   cd /path/to/your-project
+   uv tool run massgen "Create a Python web scraper and save results to CSV"
+
+**Or with explicit config:**
 
 .. code-block:: bash
 
@@ -21,6 +29,22 @@ Quick Start
    uv run python -m massgen.cli \
      --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
      "Generate a comprehensive project report with charts and analysis"
+
+.. warning::
+
+   **Model Selection for Filesystem Operations**
+
+   We **do not recommend** using weaker models like GPT-4o or GPT-4.1 for filesystem operations. These models do not handle file operations reliably and may produce unexpected behavior.
+
+   **Recommended models:**
+
+   * Claude Sonnet 4/4.5
+   * GPT-5
+   * Gemini 2.5 Pro
+   * Grok 4
+   * Other frontier models with strong tool-calling capabilities
+
+   Weaker models may struggle with complex file operations, error handling, and workspace management.
 
 Configuration
 -------------
@@ -292,6 +316,44 @@ Integrated operation tracking:
 * ``track_delete_operation()`` - Validates and records deletions
 * Enhanced delete validation for files and batch operations
 
+Protected Paths
+~~~~~~~~~~~~~~~
+
+Protected paths allow you to make specific files or directories **read-only** within writable context paths, preventing agents from modifying or deleting critical reference files while allowing them to edit other files.
+
+**Use Case**: You want agents to modify some files in a directory but keep certain reference files, configurations, or templates untouched.
+
+**Configuration Example:**
+
+.. code-block:: yaml
+
+   orchestrator:
+     snapshot_storage: "snapshots"
+     agent_temporary_workspace: "temp_workspaces"
+
+     context_paths:
+       - path: "/path/to/project"
+         permission: "write"
+         protected_paths:
+           - "config.json"      # Read-only
+           - "template.html"    # Read-only
+           - "tests/fixtures/"  # Entire directory read-only
+
+**What Agents Can Do:**
+
+* ✅ **Read** protected files for reference
+* ✅ **Write/Edit** non-protected files in the same directory
+* ❌ **Modify or Delete** protected files
+
+**Common Use Cases:**
+
+1. **Protect Reference Files**: Keep test fixtures unchanged while agents modify code
+2. **Protect Configuration**: Allow code changes but prevent config modifications
+3. **Protect Templates**: Let agents generate content without modifying templates
+4. **Protect Documentation Structure**: Allow content updates but preserve organization
+
+For complete protected paths documentation including examples, troubleshooting, and best practices, see the **Protected Paths** section in :doc:`project_integration`.
+
 Security Considerations
 -----------------------
 
@@ -303,6 +365,7 @@ Before running MassGen with filesystem access:
 
 * ✅ Only grant access to directories you're comfortable with agents modifying
 * ✅ Use permission system to restrict write access where needed
+* ✅ Use protected paths for critical files within writable directories
 * ✅ Test in an isolated directory first
 * ✅ Back up important files before granting write access
 * ✅ Review ``context_paths`` configuration carefully
@@ -414,9 +477,9 @@ Advanced Topics
 
    project_integration
 
-The sections above cover basic file operations and workspace management. For advanced project integration features including context paths and working with existing codebases, see:
+The sections above cover basic file operations and workspace management. For advanced features, see:
 
-* :doc:`project_integration` - Work with your existing codebase using context paths
+* :doc:`project_integration` - Work with your existing codebase using context paths with file-level and directory-level access control, plus protected paths for fine-grained permission control
 
 Next Steps
 ----------

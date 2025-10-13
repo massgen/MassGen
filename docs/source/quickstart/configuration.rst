@@ -89,12 +89,12 @@ A minimal MassGen configuration has these top-level keys:
 Single Agent Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For a single agent, use the ``agents`` field with one entry:
+For a single agent, use the ``agents`` field (plural) with one entry:
 
 .. code-block:: yaml
 
    # massgen/configs/basic/single/single_gpt5nano.yaml
-   agents:
+   agents:                # Note: plural 'agents' even for single agent
      - id: "gpt-5-nano"
        backend:
          type: "openai"
@@ -105,6 +105,12 @@ For a single agent, use the ``agents`` field with one entry:
    ui:
      display_type: "rich_terminal"
      logging_enabled: true
+
+.. warning::
+
+   **Common Mistake**: When converting a single-agent config to multi-agent, remember to keep ``agents:`` (plural).
+
+   While ``agent:`` (singular) is supported for single-agent configs, always use ``agents:`` (plural) for consistency - this prevents errors when adding more agents later.
 
 **Run this configuration:**
 

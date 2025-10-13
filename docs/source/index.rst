@@ -280,12 +280,10 @@ Documentation Sections
 
       * :doc:`user_guide/concepts`
       * :doc:`user_guide/multi_turn_mode`
-      * :doc:`user_guide/mcp_integration`
-      * :doc:`user_guide/planning_mode`
       * :doc:`user_guide/file_operations`
-      * :doc:`user_guide/protected_paths`
-      * :doc:`user_guide/logging`
+      * :doc:`user_guide/backends`
       * :doc:`user_guide/ag2_integration`
+      * :doc:`user_guide/mcp_integration`
 
    .. grid-item::
 
@@ -293,8 +291,8 @@ Documentation Sections
 
       * :doc:`reference/cli`
       * :doc:`reference/yaml_schema`
+      * :doc:`reference/configuration_examples`
       * :doc:`reference/supported_models`
-      * :doc:`reference/backend_comparison`
       * :doc:`reference/timeouts`
 
    .. grid-item::
@@ -328,16 +326,13 @@ Documentation Sections
 
    user_guide/concepts
    user_guide/multi_turn_mode
-   user_guide/mcp_integration
-   user_guide/planning_mode
    user_guide/file_operations
-   user_guide/protected_paths
-   user_guide/project_integration
-   user_guide/logging
-   user_guide/ag2_integration
-   user_guide/multimodal
    user_guide/backends
+   user_guide/ag2_integration
+   user_guide/mcp_integration
    user_guide/tools
+   user_guide/multimodal
+   user_guide/logging
    user_guide/advanced_usage
 
 .. toctree::
@@ -347,9 +342,9 @@ Documentation Sections
 
    reference/cli
    reference/yaml_schema
+   reference/configuration_examples
    reference/timeouts
    reference/supported_models
-   reference/backend_comparison
    glossary
 
 .. toctree::
@@ -383,18 +378,13 @@ Documentation Sections
    changelog
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :hidden:
    :caption: Project Coordination (For Contributors)
 
    decisions/index
    rfcs/index
-   tracks/multimodal/index
-   tracks/agentadapter-backends/index
-   tracks/coding-agent/index
-   tracks/web-ui/index
-   tracks/irreversible-actions/index
-   tracks/memory/index
+   tracks/index
 
 Community
 ---------

@@ -1,226 +1,71 @@
 # AgentAdapter Backends Track - Roadmap
 
-**Timeline:** Next 3-6 months
+**Lead:** Eric | **Last Updated:** 2025-01-15
 
-**Last Updated:** 2024-10-08
-
----
-
-## 🎯 Current Focus (Weeks 1-4)
-
-### Backend Stability & Testing
-- **Goal:** All backends pass comprehensive test suite
-- **Deliverables:**
-  - 95%+ test coverage for each backend
-  - Automated integration tests with real APIs
-  - Performance benchmarks for all backends
-  - Reliability metrics dashboard
-
-### Cost Tracking & Optimization
-- **Goal:** Help users understand and optimize API costs
-- **Deliverables:**
-  - Per-request cost tracking
-  - Token usage analytics
-  - Cost comparison across backends
-  - Optimization recommendations
+> **Quick Update Template:** Project leads can update this file in <5 minutes
 
 ---
 
-## 📈 Medium-Term Goals (Weeks 5-12)
+## 🎯 Current Sprint (v0.0.30)
 
-### New Backend Integrations (Q1 2025)
+**Target Date:** TBD
 
-**High Priority:**
-- DeepSeek (cost-effective reasoning models)
-- Cohere (enterprise-focused)
-- Mistral AI (European alternative)
+### Critical (P0)
+- None currently
 
-**Community Requested:**
-- Ollama (local models)
-- Together AI (hosted open source)
-- Perplexity AI (search-augmented)
+### High Priority (P1)
+- [ ] Test all backends with latest API versions
+- [ ] Document cost tracking for each backend
+- [ ] Standardize error messages across backends
 
-### Advanced Features (Q1-Q2 2025)
-
-**Caching:**
-- Anthropic prompt caching
-- OpenAI conversation caching
-- Local response caching
-
-**Smart Routing:**
-- Auto-select backend based on task
-- Cost-aware backend selection
-- Failover between providers
-
-**Observability:**
-- Request/response logging
-- Performance monitoring
-- Error tracking and alerting
+### Nice to Have (P2)
+- [ ] Add DeepSeek backend support
+- [ ] Improve streaming performance for Gemini
+- [ ] Create backend comparison matrix
 
 ---
 
-## 🚀 Long-Term Vision (3-6 months)
-
-### Universal Backend Adapter
-Any LLM provider, any format, any framework, seamless integration:
-- **Auto-Detection:** Automatically discover backend capabilities
-- **Format Translation:** Handle provider-specific formats transparently
-- **Framework Integration:** Support agents from any framework (AG2 ✅, LangChain, CrewAI planned)
-- **Quality Assurance:** Ensure consistent behavior across backends and frameworks
-
-### Backend Marketplace
-Community-contributed backends:
-- Template for new backends
-- Testing infrastructure
-- Documentation generator
-- Community ratings and reviews
-
-### Cost Intelligence
-Smart cost management:
-- Predictive cost modeling
-- Budget alerts and limits
-- Automatic cost optimization
-- Provider price comparison
-
----
-
-## 🔍 Research Areas
-
-### Model Capabilities
-- Fine-grained capability detection (vision, tools, reasoning)
-- Benchmark suite for comparing backends
-- Performance vs. cost tradeoff analysis
-
-### Reliability Engineering
-- Circuit breakers for failing backends
-- Automatic retry strategies
-- Graceful degradation patterns
-- Health monitoring dashboard
-
-### Developer Experience
-- Simplified backend configuration
-- Better error messages
-- Interactive backend selection tool
-- Backend migration guides
-
----
-
-## 📊 Success Metrics
-
-### Short-Term (1-3 months)
-- ✅ 10+ backends supported
-- ✅ AG2 framework integration (v0.0.28)
-- ✅ External agent backend architecture (v0.0.28)
-- ✅ Code execution support (via AG2)
-- ⏳ 95%+ test coverage per backend
-- ⏳ < 1% error rate for stable backends
-- ⏳ Comprehensive documentation
-
-### Medium-Term (3-6 months)
-- 15+ backends supported
-- Cost tracking for all backends
-- Smart routing implemented
-- Backend marketplace launched
-- Community contributions (3+ new backends)
-
-### Long-Term (6+ months)
-- 20+ backends supported
-- Best-in-class backend abstraction
-- Lowest total cost of ownership for users
-- Thriving contributor ecosystem
-
----
-
-## 🔗 Dependencies
-
-### Tracks
-- **Multimodal:** Vision and image generation APIs
-- **Coding Agent:** Tool calling formats
-- **Memory:** Context management per backend
-
-### External
-- Provider API updates and changes
-- New model releases
-- API pricing changes
-- SDK updates
-
----
-
-## 🤝 Community Involvement
-
-### How to Contribute
-1. **Add New Backend:** Follow the backend template
-2. **Improve Existing:** Fix bugs, add features
-3. **Test:** Try backends with your use cases
-4. **Document:** Write guides and examples
-
-### Wanted: Contributors
-- Experience with LLM APIs
-- Backend engineering skills
-- Interest in developer tools
-- Documentation writers
-
----
-
-## 📅 Milestones
+## 📅 Upcoming Milestones
 
 | Milestone | Target | Status |
 |-----------|--------|--------|
-| 10 backends supported | v0.0.25 | ✅ Complete |
-| AG2 Framework Integration | v0.0.28 | ✅ Complete |
-| External Agent Backend | v0.0.28 | ✅ Complete |
-| GPT-5 support | v0.0.28 | ✅ Complete |
-| Grok integration | v0.0.29 | ✅ Complete |
-| Cost tracking | v0.0.30 | 🔄 In Progress |
-| DeepSeek support | v0.0.31 | 📋 Planned |
-| LangChain integration | v0.0.32 | 📋 Planned |
-| Smart routing | v0.0.33 | 📋 Planned |
-| Backend marketplace | v0.1.0 | 🔮 Future |
+| Cost tracking | 2025-10-31 | 🔄 In Progress |
+| DeepSeek support | 2025-11-15 | 📋 Planned |
+| LangChain integration | 2025-11-30 | 📋 Planned |
+| Smart routing | 2025-12-15 | 📋 Planned |
+| Backend marketplace | 2026-02-28 | 🔮 Future |
 
 ---
 
-## 🛠️ Technical Debt
+## ✅ Recent Completions
 
-### High Priority
-- Refactor backend base class (getting complex)
-- Standardize configuration format
-- Improve test infrastructure
-
-### Medium Priority
-- Better streaming abstractions
-- Reduce code duplication across backends
-- Unified error handling
-
-### Low Priority
-- Performance profiling
-- Memory usage optimization
-- Code documentation
+- [x] GPT-5 nano/mini support added (v0.0.27)
+- [x] Grok 3/4 integration (v0.0.28)
+- [x] Enhanced MCP tools backend integration (v0.0.29)
+- [x] AG2 Framework Integration (PR #283)
 
 ---
 
-## 🔄 Review Schedule
+## 🚧 Blocked Items
 
-- **Weekly:** Bug triage, PR reviews
-- **Bi-weekly:** API updates check
-- **Monthly:** Roadmap review, metric assessment
-- **Quarterly:** Major feature planning
+None currently
 
 ---
 
-## 🎓 Learning Resources
+## 💬 Quick Notes
 
-### For Contributors
-- Backend implementation guide (TBD)
-- API integration patterns (TBD)
-- Testing best practices (TBD)
-- Provider API documentation links (TBD)
+**This Week:**
+- AG2 framework integration PR in review
+- Testing backend reliability improvements
 
-### For Users
-- Backend selection guide
-- Cost optimization tips
-- Configuration examples
-- Troubleshooting common issues
+**Next Week:**
+- Document cost tracking
+- Test latest API versions
+
+**Decisions Needed:**
+- Should we add DeepSeek backend for cost-effective options?
+- Best practices for handling provider-specific features
 
 ---
 
-*This roadmap is aspirational and subject to change based on community needs, API availability, and team capacity.*
+*See [details.md](./details.md) for architecture, dependencies, and long-term vision*
