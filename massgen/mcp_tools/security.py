@@ -4,12 +4,35 @@ Security utilities for MCP command validation and sanitization. These functions 
 """
 
 import ipaddress
+import os
 import re
 import shlex
 import socket
 import urllib.parse
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Union
+
+
+# Security validation constants
+MAX_COMMAND_LENGTH = 1000
+MAX_ARG_LENGTH = 500
+MAX_ARGS_COUNT = 50
+MAX_SERVER_NAME_LENGTH = 100
+MAX_URL_LENGTH = 2048
+MAX_ENV_KEY_LENGTH = 100
+MAX_ENV_VALUE_LENGTH = 1000
+MAX_HEADER_KEY_LENGTH = 100
+MAX_HEADER_VALUE_LENGTH = 1000
+MAX_TOOL_NAME_LENGTH = 100
+MAX_SERVER_NAME_FOR_TOOL_LENGTH = 50
+MAX_FINAL_TOOL_NAME_LENGTH = 200
+MAX_CWD_LENGTH = 500
+MAX_TIMEOUT_SECONDS = 300
+MAX_DICT_KEYS = 100
+MAX_LIST_ITEMS = 1000
+MAX_STRING_LENGTH = 10000
+MAX_TOOL_ARG_DEPTH = 5
+MAX_TOOL_ARG_SIZE = 10000
 
 
 def _normalize_security_level(level: str) -> str:
@@ -25,28 +48,124 @@ def _normalize_security_level(level: str) -> str:
     return level if level in {"strict", "moderate", "permissive"} else "strict"
 
 
+def _validate_non_empty_string(value: Any, field_name: str) -> None:
+    """Validate that value is a non-empty string."""
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} must be a non-empty string")
+
+
+def _validate_string_length(value: str, max_length: int, field_name: str) -> None:
+    """Validate string length."""
+    if len(value) > max_length:
+        raise ValueError(f"{field_name} too long: {len(value)} > {max_length} characters")
+
+
+def _get_set_from_config(config: dict, key: str, default: Optional[List] = None) -> Optional[Set[str]]:
+    """Extract a set from config, handling empty lists and None."""
+    value = config.get(key, default or [])
+    if not value:
+        return None
+    return set(value) if isinstance(value, (list, set, tuple)) else None
+
+
+def _get_dict_from_config(config: dict, key: str, default: Optional[dict] = None) -> dict:
+    """Safely extract dict from config with type checking."""
+    value = config.get(key, default or {})
+    return value if isinstance(value, dict) else {}
+
+
+def substitute_env_variables(text: str) -> str:
+    """Substitute environment variables in text using ${VAR_NAME} pattern.
+
+    Raises:
+        ValueError: If referenced environment variable is not set or empty
+    """
+    if not isinstance(text, str) or "${" not in text:
+        return text
+
+    def replace_env_var(match):
+        var_name = match.group(1)
+        env_value = os.environ.get(var_name)
+        if env_value is None or env_value.strip() == "":
+            raise ValueError(f"Required environment variable '{var_name}' is not set")
+        return env_value
+
+    return re.sub(r"\$\{([A-Z_][A-Z0-9_]*)\}", replace_env_var, text)
+
+
+def _get_default_allowed_executables(level: str) -> Set[str]:
+    """Get default allowed executables based on security level.
+
+    Args:
+        level: Security level string
+
+    Returns:
+        Set of allowed executable names (lowercase)
+    """
+    base_strict: Set[str] = {
+        # Python interpreters
+        "python",
+        "python3",
+        "python3.8",
+        "python3.9",
+        "python3.10",
+        "python3.11",
+        "python3.12",
+        "python3.13",
+        "python3.14",
+        "py",
+        # Python package managers
+        "uv",
+        "uvx",
+        "pipx",
+        "pip",
+        "pip3",
+        # Node.js ecosystem
+        "node",
+        "npm",
+        "npx",
+        "yarn",
+        "pnpm",
+        "bun",
+        # Other runtimes
+        "deno",
+        "java",
+        "ruby",
+        "go",
+        "rust",
+        "cargo",
+        "fastmcp",
+        # System utilities (limited set)
+        "sh",
+        "bash",
+        "zsh",
+        "fish",
+        "powershell",
+        "pwsh",
+        "cmd",
+    }
+    if level == "strict":
+        return base_strict
+    if level == "moderate":
+        # Extend with common tooling used legitimately
+        return base_strict | {"git", "nodejs"}
+    if level == "permissive":
+        # Still curated; not unbounded
+        return base_strict | {"git", "curl", "wget", "nodejs"}
+    # Unknown levels fall back to strict
+    return base_strict
+
+
 def prepare_command(
     command: str,
-    max_length: int = 1000,
+    max_length: int = MAX_COMMAND_LENGTH,
     *,
     security_level: str = "strict",
     allowed_executables: Optional[Set[str]] = None,
 ) -> List[str]:
     """
     Sanitize a command and split it into parts before using it to run an MCP server.
-
-    This function provides security by:
-    1. Blocking dangerous shell metacharacters
-    2. Whitelisting allowed executables (configurable by security level)
-    3. Properly parsing shell commands
-    4. Validating command length and arguments
-
-    Args:
-        command: Command string to sanitize
-        max_length: Maximum allowed command length
-        security_level: One of {"strict", "moderate", "permissive"}; controls executable allowlist
-        allowed_executables: Optional override for allowed executable base-names (case-insensitive)
-
+    
     Returns:
         List of command parts
 
@@ -61,21 +180,7 @@ def prepare_command(
         raise ValueError(f"MCP command too long: {len(command)} > {max_length} characters")
 
     # Block dangerous characters that could enable shell injection
-    dangerous_chars = [
-        "&",
-        "|",
-        ";",
-        "`",
-        "$",
-        "(",
-        ")",
-        "<",
-        ">",
-        "&&",
-        "||",
-        ">>",
-        "<<",
-    ]
+    dangerous_chars = ["&", "|", ";", "`", "$", "(", ")", "<", ">"]
     for char in dangerous_chars:
         if char in command:
             raise ValueError(f"MCP command cannot contain shell metacharacters: {char}")
@@ -103,71 +208,17 @@ def prepare_command(
         raise ValueError("MCP command cannot be empty after parsing")
 
     # Validate number of arguments
-    if len(parts) > 50:  # Reasonable limit
-        raise ValueError(f"Too many command arguments: {len(parts)} > 50")
+    if len(parts) > MAX_ARGS_COUNT:
+        raise ValueError(f"Too many command arguments: {len(parts)} > {MAX_ARGS_COUNT}")
 
     # Validate individual argument lengths
     for i, part in enumerate(parts):
-        if len(part) > 500:  # Reasonable limit per argument
-            raise ValueError(f"Command argument {i} too long: {len(part)} > 500 characters")
-
-    def _default_allowed(level: str) -> Set[str]:
-        base_strict: Set[str] = {
-            # Python interpreters
-            "python",
-            "python3",
-            "python3.8",
-            "python3.9",
-            "python3.10",
-            "python3.11",
-            "python3.12",
-            "python3.13",
-            "python3.14",
-            "py",
-            # Python package managers
-            "uv",
-            "uvx",
-            "pipx",
-            "pip",
-            "pip3",
-            # Node.js ecosystem
-            "node",
-            "npm",
-            "npx",
-            "yarn",
-            "pnpm",
-            "bun",
-            # Other runtimes
-            "deno",
-            "java",
-            "ruby",
-            "go",
-            "rust",
-            "cargo",
-            "fastmcp",
-            # System utilities (limited set)
-            "sh",
-            "bash",
-            "zsh",
-            "fish",
-            "powershell",
-            "pwsh",
-            "cmd",
-        }
-        if level == "strict":
-            return base_strict
-        if level == "moderate":
-            # Extend with common tooling used legitimately
-            return base_strict | {"git", "nodejs"}
-        if level == "permissive":
-            # Still curated; not unbounded
-            return base_strict | {"git", "curl", "wget", "nodejs"}
-        # Unknown levels fall back to strict
-        return base_strict
+        if len(part) > MAX_ARG_LENGTH:
+            raise ValueError(f"Command argument {i} too long: {len(part)} > {MAX_ARG_LENGTH} characters")
 
     # Normalize security level for consistency
     normalized_level = _normalize_security_level(security_level)
-    allowed = {name.lower() for name in (allowed_executables or _default_allowed(normalized_level))}
+    allowed = {name.lower() for name in (allowed_executables or _get_default_allowed_executables(normalized_level))}
 
     # Extract executable path and name robustly
     executable_path = Path(parts[0])
@@ -219,8 +270,8 @@ def validate_url(
     if not url or not isinstance(url, str):
         raise ValueError("URL must be a non-empty string")
 
-    if len(url) > 2048:  # Reasonable URL length limit
-        raise ValueError(f"URL too long: {len(url)} > 2048 characters")
+    if len(url) > MAX_URL_LENGTH:
+        raise ValueError(f"URL too long: {len(url)} > {MAX_URL_LENGTH} characters")
 
     try:
         parsed = urllib.parse.urlparse(url)
@@ -314,8 +365,8 @@ def validate_environment_variables(
     mode: str = "denylist",
     allowed_vars: Optional[Set[str]] = None,
     denied_vars: Optional[Set[str]] = None,
-    max_key_length: int = 100,
-    max_value_length: int = 1000,
+    max_key_length: int = MAX_ENV_KEY_LENGTH,
+    max_value_length: int = MAX_ENV_VALUE_LENGTH,
 ) -> Dict[str, str]:
     """
     Validate environment variables for security.
@@ -385,7 +436,7 @@ def validate_environment_variables(
                 raise ValueError(f"Environment variable '{key}' is not allowed for security reasons")
 
         # Check for dangerous patterns in values
-        dangerous_patterns = ["$(", "`", "||", "&&", ";", "|"]
+        dangerous_patterns = ["$(", "`", "&", ";", "|"]
         for pattern in dangerous_patterns:
             if pattern in value:
                 raise ValueError(f"Environment variable '{key}' contains dangerous pattern: {pattern}")
@@ -393,8 +444,6 @@ def validate_environment_variables(
         # Special check for ${...} - allow only simple environment variable references
         if "${" in value:
             # Allow patterns like ${VARIABLE_NAME} but block complex expressions
-            import re
-
             if not re.match(r"^[^$]*\$\{[A-Z_][A-Z0-9_]*\}[^$]*$", value):
                 raise ValueError(f"Environment variable '{key}' contains dangerous pattern: ${{")
 
@@ -428,11 +477,8 @@ def validate_server_security(config: dict) -> dict:
 
     # Validate server name
     server_name = validated_config["name"]
-    if not isinstance(server_name, str) or not server_name.strip():
-        raise ValueError("Server name must be a non-empty string")
-
-    if len(server_name) > 100:
-        raise ValueError(f"Server name too long: {len(server_name)} > 100 characters")
+    _validate_non_empty_string(server_name, "Server name")
+    _validate_string_length(server_name, MAX_SERVER_NAME_LENGTH, "Server name")
 
     # Sanitize server name
     if not re.match(r"^[a-zA-Z0-9_-]+$", server_name):
@@ -441,7 +487,7 @@ def validate_server_security(config: dict) -> dict:
     transport_type = validated_config.get("type", "stdio")
 
     # Optional security policy configuration
-    security_cfg = validated_config.get("security", {}) if isinstance(validated_config.get("security", {}), dict) else {}
+    security_cfg = _get_dict_from_config(validated_config, "security")
     security_level = security_cfg.get("level", "strict")
 
     if transport_type == "stdio":
@@ -456,7 +502,7 @@ def validate_server_security(config: dict) -> dict:
                 validated_config["command"] = prepare_command(
                     validated_config["command"],
                     security_level=security_level,
-                    allowed_executables=set(security_cfg.get("allowed_executables", []) or []) or None,
+                    allowed_executables=_get_set_from_config(security_cfg, "allowed_executables"),
                 )
             elif isinstance(validated_config["command"], list):
                 # Validate each part
@@ -467,7 +513,7 @@ def validate_server_security(config: dict) -> dict:
                 validated_config["command"] = prepare_command(
                     command_str,
                     security_level=security_level,
-                    allowed_executables=set(security_cfg.get("allowed_executables", []) or []) or None,
+                    allowed_executables=_get_set_from_config(security_cfg, "allowed_executables"),
                 )
             else:
                 raise ValueError("Command must be a string or list")
@@ -481,18 +527,18 @@ def validate_server_security(config: dict) -> dict:
             for i, arg in enumerate(args):
                 if not isinstance(arg, str):
                     raise ValueError(f"Argument {i} must be a string")
-                if len(arg) > 500:
-                    raise ValueError(f"Argument {i} too long: {len(arg)} > 500 characters")
+                if len(arg) > MAX_ARG_LENGTH:
+                    raise ValueError(f"Argument {i} too long: {len(arg)} > {MAX_ARG_LENGTH} characters")
 
         # Validate environment variables if present
         if "env" in validated_config:
-            env_policy = security_cfg.get("env", {}) if isinstance(security_cfg.get("env", {}), dict) else {}
+            env_policy = _get_dict_from_config(security_cfg, "env")
             validated_config["env"] = validate_environment_variables(
                 validated_config["env"],
                 level=env_policy.get("level", security_level),
                 mode=env_policy.get("mode", "denylist"),
-                allowed_vars=set(env_policy.get("allowed_vars", []) or []),
-                denied_vars=set(env_policy.get("denied_vars", []) or []),
+                allowed_vars=_get_set_from_config(env_policy, "allowed_vars") or set(),
+                denied_vars=_get_set_from_config(env_policy, "denied_vars"),
             )
 
         # Validate working directory if present
@@ -500,8 +546,7 @@ def validate_server_security(config: dict) -> dict:
             cwd = validated_config["cwd"]
             if not isinstance(cwd, str):
                 raise ValueError("Working directory must be a string")
-            if len(cwd) > 500:
-                raise ValueError(f"Working directory path too long: {len(cwd)} > 500 characters")
+            _validate_string_length(cwd, MAX_CWD_LENGTH, "Working directory path")
             cwd_path = Path(cwd)
             # Allow absolute or relative paths, but forbid parent traversal
             if any(part == ".." for part in cwd_path.parts):
@@ -536,26 +581,24 @@ def validate_server_security(config: dict) -> dict:
             for key, value in headers.items():
                 if not isinstance(key, str) or not isinstance(value, str):
                     raise ValueError("Header keys and values must be strings")
-                if len(key) > 100:
-                    raise ValueError(f"Header name too long: {len(key)} > 100")
-                if len(value) > 1000:
-                    raise ValueError(f"Header value too long: {len(value)} > 1000")
+                _validate_string_length(key, MAX_HEADER_KEY_LENGTH, "Header name")
+                _validate_string_length(value, MAX_HEADER_VALUE_LENGTH, "Header value")
 
         # Validate timeout if present
         if "timeout" in validated_config:
             timeout = validated_config["timeout"]
             if not isinstance(timeout, (int, float)) or timeout <= 0:
                 raise ValueError("Timeout must be a positive number")
-            if timeout > 300:  # 5 minutes max
-                raise ValueError(f"Timeout too large: {timeout} > 300 seconds")
+            if timeout > MAX_TIMEOUT_SECONDS:
+                raise ValueError(f"Timeout too large: {timeout} > {MAX_TIMEOUT_SECONDS} seconds")
 
         # Validate http_read_timeout if present
         if "http_read_timeout" in validated_config:
             http_read_timeout = validated_config["http_read_timeout"]
             if not isinstance(http_read_timeout, (int, float)) or http_read_timeout <= 0:
                 raise ValueError("http_read_timeout must be a positive number")
-            if http_read_timeout > 300:  # 5 minutes max
-                raise ValueError(f"http_read_timeout too large: {http_read_timeout} > 300 seconds")
+            if http_read_timeout > MAX_TIMEOUT_SECONDS:
+                raise ValueError(f"http_read_timeout too large: {http_read_timeout} > {MAX_TIMEOUT_SECONDS} seconds")
 
     else:
         # List supported transport types for better error messages
@@ -581,18 +624,12 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
     Raises:
         ValueError: If tool name or server name is invalid
     """
-    if not isinstance(tool_name, str) or not tool_name.strip():
-        raise ValueError("Tool name must be a non-empty string")
-
-    if not isinstance(server_name, str) or not server_name.strip():
-        raise ValueError("Server name must be a non-empty string")
+    _validate_non_empty_string(tool_name, "Tool name")
+    _validate_non_empty_string(server_name, "Server name")
 
     # Length limits
-    if len(tool_name) > 100:
-        raise ValueError(f"Tool name too long: {len(tool_name)} > 100 characters")
-
-    if len(server_name) > 50:
-        raise ValueError(f"Server name too long: {len(server_name)} > 50 characters")
+    _validate_string_length(tool_name, MAX_TOOL_NAME_LENGTH, "Tool name")
+    _validate_string_length(server_name, MAX_SERVER_NAME_FOR_TOOL_LENGTH, "Server name")
 
     # Remove any existing mcp__ prefix to avoid double-prefixing
     if tool_name.startswith("mcp__"):
@@ -635,13 +672,9 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
     if not re.match(r"^[a-zA-Z0-9_-]+$", server_name):
         raise ValueError(f"Server name '{server_name}' contains invalid characters. Only alphanumeric, underscore, and hyphen are allowed.")
 
-    # Sanitize names (additional safety)
-    safe_server_name = "".join(c for c in server_name if c.isalnum() or c in "_-")
-    safe_tool_name = "".join(c for c in tool_name if c.isalnum() or c in "_.-")
-
     # Ensure names don't start or end with special characters
-    safe_server_name = safe_server_name.strip("_-")
-    safe_tool_name = safe_tool_name.strip("_.-")
+    safe_server_name = server_name.strip("_-")
+    safe_tool_name = tool_name.strip("_.-")
 
     if not safe_server_name:
         raise ValueError(f"Server name '{server_name}' becomes empty after sanitization")
@@ -653,13 +686,12 @@ def sanitize_tool_name(tool_name: str, server_name: str) -> str:
     final_name = f"mcp__{safe_server_name}__{safe_tool_name}"
 
     # Final length check
-    if len(final_name) > 200:
-        raise ValueError(f"Final tool name too long: {len(final_name)} > 200 characters")
+    _validate_string_length(final_name, MAX_FINAL_TOOL_NAME_LENGTH, "Final tool name")
 
     return final_name
 
 
-def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_size: int = 10000) -> Dict[str, Any]:
+def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = MAX_TOOL_ARG_DEPTH, max_size: int = MAX_TOOL_ARG_SIZE) -> Dict[str, Any]:
     """
     Validate tool arguments for security and size limits.
 
@@ -703,8 +735,8 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             raise ValueError(f"Tool arguments nested too deeply: {depth} > {max_depth}")
 
         if isinstance(value, dict):
-            if len(value) > 100:
-                raise ValueError(f"Dictionary too large: {len(value)} > 100 keys")
+            if len(value) > MAX_DICT_KEYS:
+                raise ValueError(f"Dictionary too large: {len(value)} > {MAX_DICT_KEYS} keys")
             _add_size(2)
             validated: Dict[str, Any] = {}
             first = True
@@ -719,8 +751,8 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             return validated
 
         elif isinstance(value, list):
-            if len(value) > 1000:
-                raise ValueError(f"List too large: {len(value)} > 1000 items")
+            if len(value) > MAX_LIST_ITEMS:
+                raise ValueError(f"List too large: {len(value)} > {MAX_LIST_ITEMS} items")
             _add_size(2)
             validated_list = []
             for idx, item in enumerate(value):
@@ -730,8 +762,8 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
             return validated_list
 
         elif isinstance(value, str):
-            if len(value) > 10000:
-                raise ValueError(f"String too long: {len(value)} > 10000 characters")
+            if len(value) > MAX_STRING_LENGTH:
+                raise ValueError(f"String too long: {len(value)} > {MAX_STRING_LENGTH} characters")
             _add_size(_size_for_primitive(value))
             return value
 
@@ -741,8 +773,8 @@ def validate_tool_arguments(arguments: Dict[str, Any], max_depth: int = 5, max_s
 
         else:
             str_value = str(value)
-            if len(str_value) > 1000:
-                raise ValueError(f"Value too large when converted to string: {len(str_value)} > 1000")
+            if len(str_value) > MAX_STRING_LENGTH:
+                raise ValueError(f"Value too large when converted to string: {len(str_value)} > {MAX_STRING_LENGTH}")
             _add_size(_size_for_primitive(str_value))
             return str_value
 

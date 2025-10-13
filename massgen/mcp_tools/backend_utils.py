@@ -26,8 +26,7 @@ from ..logger_config import log_mcp_activity, logger
 # Import MCP exceptions
 try:
     from .circuit_breaker import CircuitBreakerConfig
-    from .client import MultiMCPClient
-    from .config_validator import MCPConfigValidator
+    from .client import MCPClient
     from .exceptions import (
         MCPAuthenticationError,
         MCPConfigurationError,
@@ -47,9 +46,8 @@ except ImportError:
     MCPAuthenticationError = Exception
     MCPResourceError = Exception
     MCPConfigurationError = Exception
-    MCPConfigValidator = None
     CircuitBreakerConfig = None
-    MultiMCPClient = None
+    MCPClient = None
 
 # Import hook system
 try:
@@ -395,41 +393,6 @@ class MCPConfigHelper:
     """MCP configuration management utilities."""
 
     @staticmethod
-    def validate_backend_config(
-        config: Dict[str, Any],
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Validate backend MCP configuration using existing MCPConfigValidator."""
-        if MCPConfigValidator is None:
-            log_mcp_activity(
-                backend_name,
-                "MCPConfigValidator unavailable",
-                {"action": "skipping_validation"},
-                agent_id=agent_id,
-            )
-            return config
-
-        try:
-            validator = MCPConfigValidator()
-            validated_config = validator.validate(config)
-            log_mcp_activity(
-                backend_name,
-                "configuration validation successful",
-                {},
-                agent_id=agent_id,
-            )
-            return validated_config
-        except Exception as e:
-            log_mcp_activity(
-                backend_name,
-                "configuration validation failed",
-                {"error": str(e)},
-                agent_id=agent_id,
-            )
-            raise
-
-    @staticmethod
     def extract_tool_filtering_params(config: Dict[str, Any]) -> Tuple[Optional[List], Optional[List]]:
         """Extract allowed_tools and exclude_tools from configuration."""
         allowed_tools = config.get("allowed_tools")
@@ -535,46 +498,6 @@ class MCPCircuitBreakerManager:
         return filtered_servers
 
     @staticmethod
-    async def record_success(
-        servers: List[Dict[str, Any]],
-        circuit_breaker,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> None:
-        """Record successful operation for circuit breaker."""
-        if not circuit_breaker:
-            return
-
-        for server in servers:
-            server_name = server.get("name", "unknown")
-            try:
-                circuit_breaker.record_success(server_name, agent_id=agent_id)
-                log_mcp_activity(
-                    backend_name,
-                    "recorded success for server",
-                    {"server_name": server_name},
-                    agent_id=agent_id,
-                )
-            except Exception as cb_error:
-                log_mcp_activity(
-                    backend_name,
-                    "circuit breaker record_success failed",
-                    {"server_name": server_name, "error": str(cb_error)},
-                    agent_id=agent_id,
-                )
-
-    @staticmethod
-    async def record_failure(
-        servers: List[Dict[str, Any]],
-        circuit_breaker,
-        error_message: str,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> None:
-        """Record failure for circuit breaker."""
-        await MCPCircuitBreakerManager.record_event(servers, circuit_breaker, "failure", error_message, backend_name, agent_id)
-
-    @staticmethod
     async def record_event(
         servers: List[Dict[str, Any]],
         circuit_breaker,
@@ -659,12 +582,12 @@ class MCPResourceManager:
             agent_id: Optional agent ID for logging context
 
         Returns:
-            Connected MultiMCPClient or None if setup failed
+            Connected MCPClient or None if setup failed
         """
-        if MultiMCPClient is None:
+        if MCPClient is None:
             log_mcp_activity(
                 backend_name,
-                "MultiMCPClient unavailable",
+                "MCPClient unavailable",
                 {"functionality": "disabled"},
                 agent_id=agent_id,
             )
@@ -716,7 +639,7 @@ class MCPResourceManager:
                     )
                     await asyncio.sleep(delay)
 
-                client = await MultiMCPClient.create_and_connect(
+                client = await MCPClient.create_and_connect(
                     filtered_servers,
                     timeout_seconds=timeout_seconds,
                     allowed_tools=allowed_tools,
@@ -781,7 +704,7 @@ class MCPResourceManager:
         """Convert MCP tools to Function objects with hook support.
 
         Args:
-            mcp_client: Connected MultiMCPClient instance
+            mcp_client: Connected MCPClient instance
             backend_name: Optional backend name for logging context
             agent_id: Optional agent ID for logging context
             hook_manager: Optional hook manager for function hooks
@@ -880,7 +803,7 @@ class MCPResourceManager:
         """Clean up MCP client connections.
 
         Args:
-            client: MultiMCPClient instance to clean up
+            client: MCPClient instance to clean up
             backend_name: Optional backend name for logging context
             agent_id: Optional agent ID for logging context
         """
@@ -903,17 +826,7 @@ class MCPResourceManager:
         agent_id: Optional[str] = None,
     ):
         """Setup MCP tools if configured during context manager entry."""
-        if hasattr(backend_instance, "_mcp_tools_servers") and backend_instance._mcp_tools_servers and not backend_instance._mcp_initialized:
-            try:
-                await backend_instance._setup_mcp_tools()
-            except Exception as e:
-                log_mcp_activity(
-                    backend_name,
-                    "setup failed during context entry",
-                    {"error": str(e)},
-                    agent_id=agent_id,
-                )
-        elif hasattr(backend_instance, "mcp_servers") and backend_instance.mcp_servers and not backend_instance._mcp_initialized:
+        if hasattr(backend_instance, "mcp_servers") and backend_instance.mcp_servers and not backend_instance._mcp_initialized:
             try:
                 await backend_instance._setup_mcp_tools()
             except Exception as e:
@@ -939,12 +852,6 @@ class MCPResourceManager:
         try:
             if hasattr(backend_instance, "cleanup_mcp"):
                 await backend_instance.cleanup_mcp()
-            elif hasattr(backend_instance, "_mcp_client"):
-                await MCPResourceManager.cleanup_mcp_client(backend_instance._mcp_client, backend_name, agent_id=agent_id)
-                backend_instance._mcp_client = None
-                backend_instance._mcp_initialized = False
-                if hasattr(backend_instance, "functions"):
-                    backend_instance.functions.clear()
         except Exception as e:
             log.error(f"Error during MCP cleanup for backend '{backend_name}': {e}")
             log_mcp_activity(
@@ -1023,49 +930,6 @@ class MCPSetupManager:
             normalized.append(server)
 
         return normalized
-
-    @staticmethod
-    def separate_servers_by_transport_type(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Separate servers to return only stdio and streamable-http servers.
-
-        Args:
-            servers: List of server configurations
-
-        Returns:
-            List containing only stdio and streamable-http servers
-        """
-        mcp_tools_servers = []
-
-        for server in servers:
-            transport_type = (server.get("type") or "").lower()
-            server_name = server.get("name", "unnamed")
-
-            if not transport_type:
-                logger.warning(
-                    "MCP server missing type field",
-                    extra={
-                        "server_name": server_name,
-                        "supported_types": ["stdio", "streamable-http"],
-                        "action": "skipping",
-                    },
-                )
-                continue
-
-            if transport_type in ["stdio", "streamable-http"]:
-                # Both stdio and streamable-http use MultiMCPClient
-                mcp_tools_servers.append(server)
-            elif transport_type == "http":
-                raise MCPConfigurationError(
-                    f"HTTP MCP transport type is not supported for server '{server_name}'. " f"Supported types: 'stdio', 'streamable-http'.",
-                    context="transport_validation",
-                )
-            else:
-                raise MCPConfigurationError(
-                    f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. " f"Supported types: 'stdio', 'streamable-http'.",
-                    context="transport_validation",
-                )
-
-        return mcp_tools_servers
 
     @staticmethod
     def separate_stdio_streamable_servers(

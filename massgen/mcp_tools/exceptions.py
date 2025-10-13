@@ -47,6 +47,21 @@ class MCPError(Exception):
 
         return sanitized
 
+    def _build_context_from_kwargs(self, base_context: Optional[Dict[str, Any]] = None, **kwargs: Any) -> Dict[str, Any]:
+        """
+        Merge base context with kwargs, ignoring None values.
+
+        Copies the provided base_context (or initializes an empty dict) and updates it
+        with key/value pairs from kwargs where the value is not None. Returns the
+        resulting context dict for use in specialized error classes.
+        """
+        context: Dict[str, Any] = dict(base_context or {})
+        for key, value in kwargs.items():
+            if value is None:
+                continue
+            context[key] = value
+        return context
+
     def __str__(self) -> str:
         parts = [self.original_message]
 
@@ -94,21 +109,16 @@ class MCPConnectionError(MCPError):
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
     ):
-        context = context or {}
+        ctx = self._build_context_from_kwargs(
+            context or {},
+            server_name=server_name,
+            transport_type=transport_type,
+            host=host,
+            port=port,
+            retry_count=retry_count,
+        )
 
-        # Add connection-specific context
-        if server_name:
-            context["server_name"] = server_name
-        if transport_type:
-            context["transport_type"] = transport_type
-        if host:
-            context["host"] = host
-        if port:
-            context["port"] = port
-        if retry_count is not None:
-            context["retry_count"] = retry_count
-
-        super().__init__(message, context, error_code)
+        super().__init__(message, ctx, error_code)
 
         # Store as instance attributes for easy access
         self.server_name = server_name
@@ -135,19 +145,15 @@ class MCPServerError(MCPError):
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
     ):
-        context = context or {}
+        ctx = self._build_context_from_kwargs(
+            context or {},
+            server_error_code=code,
+            server_name=server_name,
+            http_status=http_status,
+            response_data=response_data,
+        )
 
-        # Add server-specific context
-        if code is not None:
-            context["server_error_code"] = code
-        if server_name:
-            context["server_name"] = server_name
-        if http_status:
-            context["http_status"] = http_status
-        if response_data:
-            context["response_data"] = response_data
-
-        super().__init__(message, context, error_code)
+        super().__init__(message, ctx, error_code)
 
         # Store as instance attributes
         self.code = code
@@ -173,22 +179,24 @@ class MCPValidationError(MCPError):
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
     ):
-        context = context or {}
-
-        # Add validation-specific context
-        if field:
-            context["field"] = field
+        value_str: Optional[str] = None
         if value is not None:
             try:
-                context["value"] = str(value)[:100]  # Limit length
+                value_str = str(value)
             except Exception:
-                context["value"] = "[UNCONVERTIBLE]"
-        if expected_type:
-            context["expected_type"] = expected_type
-        if validation_rule:
-            context["validation_rule"] = validation_rule
+                value_str = "[UNCONVERTIBLE]"
+            if len(value_str) > 100:
+                value_str = value_str[:100]
 
-        super().__init__(message, context, error_code)
+        ctx = self._build_context_from_kwargs(
+            context or {},
+            field=field,
+            value=value_str,
+            expected_type=expected_type,
+            validation_rule=validation_rule,
+        )
+
+        super().__init__(message, ctx, error_code)
 
         # Store as instance attributes
         self.field = field
@@ -214,19 +222,15 @@ class MCPTimeoutError(MCPError):
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
     ):
-        context = context or {}
+        ctx = self._build_context_from_kwargs(
+            context or {},
+            timeout_seconds=timeout_seconds,
+            operation=operation,
+            elapsed_seconds=elapsed_seconds,
+            server_name=server_name,
+        )
 
-        # Add timeout-specific context
-        if timeout_seconds is not None:
-            context["timeout_seconds"] = timeout_seconds
-        if operation:
-            context["operation"] = operation
-        if elapsed_seconds is not None:
-            context["elapsed_seconds"] = elapsed_seconds
-        if server_name:
-            context["server_name"] = server_name
-
-        super().__init__(message, context, error_code)
+        super().__init__(message, ctx, error_code)
 
         # Store as instance attributes
         self.timeout_seconds = timeout_seconds
@@ -252,19 +256,15 @@ class MCPAuthenticationError(MCPError):
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
     ):
-        context = context or {}
+        ctx = self._build_context_from_kwargs(
+            context or {},
+            auth_type=auth_type,
+            username=username,
+            server_name=server_name,
+            permission_required=permission_required,
+        )
 
-        # Add authentication-specific context (no sensitive data)
-        if auth_type:
-            context["auth_type"] = auth_type
-        if username:
-            context["username"] = username
-        if server_name:
-            context["server_name"] = server_name
-        if permission_required:
-            context["permission_required"] = permission_required
-
-        super().__init__(message, context, error_code)
+        super().__init__(message, ctx, error_code)
 
         # Store as instance attributes
         self.auth_type = auth_type
@@ -289,17 +289,14 @@ class MCPConfigurationError(MCPError):
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
     ):
-        context = context or {}
+        ctx = self._build_context_from_kwargs(
+            context or {},
+            config_file=config_file,
+            config_section=config_section,
+            missing_keys=missing_keys,
+        )
 
-        # Add configuration-specific context
-        if config_file:
-            context["config_file"] = config_file
-        if config_section:
-            context["config_section"] = config_section
-        if missing_keys:
-            context["missing_keys"] = missing_keys
-
-        super().__init__(message, context, error_code)
+        super().__init__(message, ctx, error_code)
 
         # Store as instance attributes
         self.config_file = config_file
@@ -324,63 +321,18 @@ class MCPResourceError(MCPError):
         context: Optional[Dict[str, Any]] = None,
         error_code: Optional[str] = None,
     ):
-        context = context or {}
+        ctx = self._build_context_from_kwargs(
+            context or {},
+            resource_type=resource_type,
+            resource_id=resource_id,
+            operation=operation,
+            server_name=server_name,
+        )
 
-        # Add resource-specific context
-        if resource_type:
-            context["resource_type"] = resource_type
-        if resource_id:
-            context["resource_id"] = resource_id
-        if operation:
-            context["operation"] = operation
-        if server_name:
-            context["server_name"] = server_name
-
-        super().__init__(message, context, error_code)
+        super().__init__(message, ctx, error_code)
 
         # Store as instance attributes
         self.resource_type = resource_type
         self.resource_id = resource_id
         self.operation = operation
         self.server_name = server_name
-
-
-# Utility functions for exception handling
-def handle_mcp_error(func):
-    """
-    Decorator to automatically catch and log MCP errors.
-    """
-
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except MCPError as e:
-            e.log_error()
-            raise
-        except Exception as e:
-            # Convert unexpected exceptions to MCPError
-            mcp_error = MCPError(
-                f"Unexpected error in {func.__name__}: {str(e)}",
-                context={"function": func.__name__, "original_error": type(e).__name__},
-            )
-            mcp_error.log_error()
-            raise mcp_error from e
-
-    return wrapper
-
-
-def format_error_chain(exception: Exception) -> str:
-    """
-    Format exception chain for better error reporting.
-    """
-    errors = []
-    current = exception
-
-    while current:
-        if isinstance(current, MCPError):
-            errors.append(f"{current.__class__.__name__}: {current.original_message}")
-        else:
-            errors.append(f"{current.__class__.__name__}: {str(current)}")
-        current = current.__cause__ or current.__context__
-
-    return " -> ".join(errors)
