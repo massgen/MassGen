@@ -1250,6 +1250,13 @@ class Orchestrator(ChatAgent):
                 elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
                     enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
 
+                # Extract command execution parameters
+                enable_command_execution = False
+                if hasattr(agent, "config") and agent.config:
+                    enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+                elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+                    enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
+
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
                     temp_workspace=temp_workspace,
@@ -1258,6 +1265,7 @@ class Orchestrator(ChatAgent):
                     workspace_prepopulated=workspace_prepopulated,
                     enable_image_generation=enable_image_generation,
                     agent_answers=answers,
+                    enable_command_execution=enable_command_execution,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1943,6 +1951,12 @@ class Orchestrator(ChatAgent):
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
 
+        # Extract command execution parameters
+        enable_command_execution = False
+        if hasattr(agent, "config") and agent.config:
+            enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
         # Check if audio generation is enabled for this agent
         enable_audio_generation = False
         if hasattr(agent, "config") and agent.config:
@@ -1963,6 +1977,7 @@ class Orchestrator(ChatAgent):
             enable_image_generation,
             enable_audio_generation,
             has_irreversible_actions,
+            enable_command_execution,
         )
 
         # Change the status of all agents that were not selected to AgentStatus.COMPLETED
@@ -1998,6 +2013,7 @@ class Orchestrator(ChatAgent):
                     workspace_prepopulated=workspace_prepopulated,
                     enable_image_generation=enable_image_generation,
                     agent_answers=all_answers,
+                    enable_command_execution=enable_command_execution,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message

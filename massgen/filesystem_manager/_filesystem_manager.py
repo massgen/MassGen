@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional
 
 from ..logger_config import get_log_session_dir, logger
 from ..mcp_tools.client import HookType
+from . import _code_execution_server as ce_module
 from . import _workspace_tools_server as wc_module
 from ._base import Permission
 from ._path_permission_manager import PathPermissionManager
@@ -45,6 +46,9 @@ class FilesystemManager:
         context_write_access_enabled: bool = False,
         enforce_read_before_delete: bool = True,
         enable_image_generation: bool = False,
+        enable_mcp_command_line: bool = False,
+        command_line_allowed_commands: List[str] = None,
+        command_line_blocked_commands: List[str] = None,
         enable_audio_generation: bool = False,
     ):
         """
@@ -57,9 +61,15 @@ class FilesystemManager:
             context_write_access_enabled: Whether write access is enabled for context paths
             enforce_read_before_delete: Whether to enforce read-before-delete policy for workspace files
             enable_image_generation: Whether to enable image generation tools
+            enable_mcp_command_line: Whether to enable MCP command line execution tool
+            command_line_allowed_commands: Whitelist of allowed command patterns (regex)
+            command_line_blocked_commands: Blacklist of blocked command patterns (regex)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation
+        self.enable_mcp_command_line = enable_mcp_command_line
+        self.command_line_allowed_commands = command_line_allowed_commands
+        self.command_line_blocked_commands = command_line_blocked_commands
         self.enable_audio_generation = enable_audio_generation
 
         # Initialize path permission manager
@@ -171,6 +181,9 @@ class FilesystemManager:
         Returns:
             Dictionary with MCP server configuration for filesystem access
         """
+        # Get all managed paths
+        paths = self.path_permission_manager.get_mcp_filesystem_paths()
+
         # Build MCP server configuration with all managed paths
         config = {
             "name": "filesystem",
@@ -179,15 +192,13 @@ class FilesystemManager:
             "args": [
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
-            ],
+            ]
+            + paths,
             "cwd": str(self.cwd),  # Set working directory for filesystem server (important for relative paths)
             # Exclude read_media_file since we have our own implementation in workspace_tools
             # Note: Tool names here are unprefixed (before server name is added)
             "exclude_tools": ["read_media_file"],
         }
-
-        # Add all managed paths from path permission manager
-        config["args"].extend(self.path_permission_manager.get_mcp_filesystem_paths())
 
         return config
 
@@ -205,8 +216,9 @@ class FilesystemManager:
         # Get absolute path to the workspace tools server script
         script_path = Path(wc_module.__file__).resolve()
 
-        # Pass allowed paths via environment variable to avoid fastmcp argument parsing issues
+        # Pass allowed paths
         paths = self.path_permission_manager.get_mcp_filesystem_paths()
+
         env = {
             "FASTMCP_SHOW_CLI_BANNER": "false",
         }
@@ -235,6 +247,42 @@ class FilesystemManager:
                     "generate_and_store_audio_no_input_audios",
                 ],
             )
+
+        return config
+
+    def get_command_line_mcp_config(self) -> Dict[str, Any]:
+        """
+        Generate command line execution MCP server configuration.
+
+        Returns:
+            Dictionary with MCP server configuration for command execution
+            (supports bash on Unix/Mac, cmd/PowerShell on Windows)
+        """
+        # Get absolute path to the code execution server script
+        script_path = Path(ce_module.__file__).resolve()
+
+        # Pass allowed paths
+        paths = self.path_permission_manager.get_mcp_filesystem_paths()
+
+        env = {
+            "FASTMCP_SHOW_CLI_BANNER": "false",
+        }
+
+        config = {
+            "name": "command_line",
+            "type": "stdio",
+            "command": "fastmcp",
+            "args": ["run", f"{script_path}:create_server"] + ["--", "--allowed-paths"] + paths,
+            "env": env,
+            "cwd": str(self.cwd),
+        }
+
+        # Add command filters if specified
+        if self.command_line_allowed_commands:
+            config["args"].extend(["--allowed-commands"] + self.command_line_allowed_commands)
+
+        if self.command_line_blocked_commands:
+            config["args"].extend(["--blocked-commands"] + self.command_line_blocked_commands)
 
         return config
 
@@ -282,6 +330,12 @@ class FilesystemManager:
                 mcp_servers.append(self.get_workspace_tools_mcp_config())
             else:
                 logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom workspace_tools MCP server already present")
+
+            # Add command line server if enabled and missing
+            if self.enable_mcp_command_line and "command_line" not in existing_names:
+                mcp_servers.append(self.get_command_line_mcp_config())
+            elif self.enable_mcp_command_line:
+                logger.warning("[FilesystemManager.inject_filesystem_mcp] Custom command_line MCP server already present")
 
         except Exception as e:
             logger.warning(f"[FilesystemManager.inject_filesystem_mcp] Error checking existing MCP servers: {e}")
@@ -593,7 +647,7 @@ class FilesystemManager:
 
     def cleanup(self) -> None:
         """Cleanup temporary resources (not the main workspace)."""
-
+        # Cleanup temporary workspace
         p = self.agent_temporary_workspace
 
         # Aggressive path-checking for validity

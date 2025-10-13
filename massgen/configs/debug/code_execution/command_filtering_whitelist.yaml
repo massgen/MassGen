@@ -1,0 +1,28 @@
+# Command Execution with Whitelist Filtering (Python/Testing Only)
+# Run with: uv run python -m massgen.cli --config massgen/configs/debug/code_execution/command_filtering_whitelist.yaml "Write and test a sorting algorithm in a non-Python language"
+# Expected behavior: Agent can only run Python commands and pytest for testing, so will fail to run non-Python code. It will thus fail or timeout without completing the task.
+# Note this is a test; we would never ask for the conflicting task in practice.
+
+agent:
+  id: "python_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    command_line_allowed_commands:
+      - "python.*"
+      - "python3.*"
+      - "pytest.*"
+      - "pip.*"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 120   # 120 seconds max coordination
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

@@ -6,6 +6,7 @@ This module provides tracking of file operations to enforce read-before-delete p
 It ensures agents can only delete files they have read or understood first.
 """
 
+import fnmatch
 from pathlib import Path
 from typing import Set
 
@@ -20,6 +21,31 @@ class FileOperationTracker:
     allowing the system to prevent deletion of files that haven't been
     comprehended yet.
     """
+
+    # Auto-generated file patterns that don't need to be read before deletion
+    AUTO_GENERATED_PATTERNS = [
+        "__pycache__",
+        ".pyc",
+        ".pyo",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".coverage",
+        "*.egg-info",
+        ".tox",
+        ".nox",
+        "node_modules",
+        ".next",
+        ".nuxt",
+        "dist",
+        "build",
+        ".DS_Store",
+        "Thumbs.db",
+        "*.log",
+        "*.swp",
+        "*.swo",
+        "*~",
+    ]
 
     def __init__(self, enforce_read_before_delete: bool = True):
         """
@@ -80,9 +106,42 @@ class FileOperationTracker:
 
         return was_read or was_created
 
+    def _is_auto_generated(self, file_path: Path) -> bool:
+        """
+        Check if a file matches auto-generated patterns and is exempt from read-before-delete.
+
+        Args:
+            file_path: Path to check
+
+        Returns:
+            True if file is auto-generated and can be deleted without reading
+        """
+        path_str = str(file_path)
+        path_parts = file_path.parts
+
+        for pattern in self.AUTO_GENERATED_PATTERNS:
+            # Check if pattern appears in any part of the path
+            if pattern in path_parts:
+                return True
+
+            # Check file extensions (patterns starting with .)
+            if pattern.startswith(".") and not pattern.startswith(".*"):
+                if path_str.endswith(pattern):
+                    return True
+
+            # Check wildcard patterns (e.g., *.egg-info)
+            if "*" in pattern:
+                if fnmatch.fnmatch(file_path.name, pattern):
+                    return True
+
+        return False
+
     def can_delete(self, file_path: Path) -> tuple[bool, str | None]:
         """
         Check if a file can be deleted based on read-before-delete policy.
+
+        Auto-generated files (like __pycache__, .pyc, etc.) are exempt from
+        read-before-delete requirements.
 
         Args:
             file_path: Path to the file to check
@@ -101,6 +160,11 @@ class FileOperationTracker:
         if not resolved_path.exists():
             return (True, None)
 
+        # Auto-generated files can be deleted without reading
+        if self._is_auto_generated(resolved_path):
+            logger.debug(f"[FileOperationTracker] Allowing deletion of auto-generated file: {resolved_path}")
+            return (True, None)
+
         # Check if file was read or created
         if self.was_read(resolved_path):
             return (True, None)
@@ -115,6 +179,7 @@ class FileOperationTracker:
         Check if a directory can be deleted based on read-before-delete policy.
 
         For directories, we check if all files within have been read.
+        Auto-generated files are exempt from read-before-delete requirements.
 
         Args:
             dir_path: Path to the directory to check
@@ -133,11 +198,16 @@ class FileOperationTracker:
             # Not a directory or doesn't exist
             return (True, None)
 
-        # Check all files in directory
+        # Check all files in directory (excluding auto-generated files)
         unread_files = []
         for file_path in resolved_dir.rglob("*"):
-            if file_path.is_file() and not self.was_read(file_path):
-                unread_files.append(str(file_path.relative_to(resolved_dir)))
+            if file_path.is_file():
+                # Skip auto-generated files
+                if self._is_auto_generated(file_path):
+                    continue
+                # Skip files that were read
+                if not self.was_read(file_path):
+                    unread_files.append(str(file_path.relative_to(resolved_dir)))
 
         if unread_files:
             # Limit to first 3 unread files for readable error message
