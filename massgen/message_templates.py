@@ -623,11 +623,12 @@ Based on the coordination process above, present your final answer:"""
         #     )
         # else:
         # Not enabled for image generation tasks
-        parts.append(
-            "\n**New Answer**: When calling `new_answer`:\n"
-            "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
-            "- If providing a text response, include your analysis/explanation in the `content` field\n",
-        )
+        new_answer_guidance = "\n**New Answer**: When calling `new_answer`:\n"
+        if enable_command_execution:
+            new_answer_guidance += "- If you executed commands (e.g., running tests), explain the results in your answer (what passed, what failed, what the output shows)\n"
+        new_answer_guidance += "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
+        new_answer_guidance += "- If providing a text response, include your analysis/explanation in the `content` field\n"
+        parts.append(new_answer_guidance)
 
         # Add workspace cleanup guidance
         parts.append(

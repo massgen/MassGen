@@ -5,15 +5,9 @@ agent:
   id: "coder"
   backend:
     type: "openai"
-    model: "gpt-4.1"
+    model: "gpt-5-mini"
     cwd: "workspace"
     enable_mcp_command_line: true
-
-  system_message: |
-    You are a coding assistant with command line access.
-    You can execute commands using the execute_command tool.
-
-    Note: If the workspace has a .venv directory, it will be automatically used.
 
 orchestrator:
   snapshot_storage: "snapshots"

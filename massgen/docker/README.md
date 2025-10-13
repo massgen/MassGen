@@ -290,6 +290,34 @@ Quick summary:
     Status: running
 ```
 
+### Automatic Log Saving
+
+Container logs are automatically saved during cleanup for debugging purposes:
+
+**Log Location:**
+```
+massgen_logs/<session_id>/<agent_id>/docker_container.log
+```
+
+**What's Captured:**
+- All container stdout/stderr output with timestamps
+- Commands executed inside the container
+- Container lifecycle events (start, stop, errors)
+
+**When Logs are Saved:**
+- Automatically during agent cleanup
+- After execution completes (success or failure)
+- When container is stopped and removed
+
+**No configuration needed** - logs are always saved when Docker isolation is enabled.
+
+**Example - View saved logs:**
+```bash
+cat massgen_logs/log_20251012_132944/coder/docker_container.log
+```
+
+This is especially useful for debugging command execution failures or understanding what happened inside isolated containers.
+
 ## References
 
 - [Docker Best Practices](https://docs.docker.com/develop/dev-best-practices/)

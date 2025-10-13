@@ -205,7 +205,14 @@ class FilesystemManager:
         if self.enable_docker_isolation and self.docker_manager and self.agent_id:
             if self.docker_container_id and self.docker_early_container_name:
                 # Container was created early for MCP servers - reuse it
-                logger.info(f"[FilesystemManager] Reusing early Docker container {self.docker_container_id} for agent {self.agent_id}")
+                # Re-register the container with the real agent_id for proper cleanup
+                early_agent_id = self.docker_early_container_name.replace("massgen-", "")
+                container = self.docker_manager.get_container(early_agent_id)
+                if container:
+                    # Remove old registration and add new one with real agent_id
+                    del self.docker_manager.containers[early_agent_id]
+                    self.docker_manager.containers[self.agent_id] = container
+                    logger.info(f"[FilesystemManager] Reusing early Docker container {self.docker_container_id} for agent {self.agent_id}, re-registered for cleanup")
             else:
                 # Create new container for agent
                 try:
@@ -350,6 +357,53 @@ class FilesystemManager:
             logger.error(f"[FilesystemManager] Failed to create early Docker container: {e}")
             raise
 
+    def _create_early_container_for_commands(self) -> str:
+        """
+        Create Docker container early (before agent_id is known) for command execution only.
+
+        This is called when enable_docker_isolation=True but docker_run_mcp_inside=False,
+        meaning MCP servers run on host but commands execute inside Docker.
+
+        Unlike _create_early_container(), this does NOT mount the massgen package since
+        MCP servers run on the host.
+
+        Returns:
+            Container name that was created
+        """
+        if not self.enable_docker_isolation or not self.docker_manager:
+            raise RuntimeError("Cannot create early container - Docker isolation not enabled")
+
+        if self.docker_early_container_name:
+            # Container already created
+            return self.docker_early_container_name
+
+        # Generate a unique container name using UUID
+        container_name = f"massgen-early-{uuid.uuid4().hex[:8]}"
+
+        logger.info(f"[FilesystemManager] Creating early Docker container '{container_name}' for command execution")
+
+        try:
+            # Get context paths for volume mounting
+            context_paths = self.path_permission_manager.get_context_paths()
+
+            # Create container WITHOUT massgen package (since MCP servers run on host)
+            self.docker_container_id = self.docker_manager.create_container(
+                agent_id=container_name.replace("massgen-", ""),  # Remove prefix for agent_id
+                workspace_path=self.cwd,
+                temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
+                context_paths=context_paths,
+                massgen_package_path=None,  # Don't mount massgen - MCP servers on host
+            )
+
+            self.docker_early_container_name = container_name
+            logger.info(f"[FilesystemManager] Early container '{container_name}' created successfully for command execution")
+
+            return container_name
+
+        except Exception as e:
+            logger.error(f"[FilesystemManager] Failed to create early Docker container for commands: {e}")
+            raise
+
     def get_mcp_filesystem_config(self) -> Dict[str, Any]:
         """
         Generate MCP filesystem server configuration.
@@ -485,6 +539,32 @@ class FilesystemManager:
         if self.command_execution_venv_path:
             config["args"].extend(["--venv-path", self.command_execution_venv_path])
 
+        # If Docker isolation is enabled (but not full MCP-in-Docker), pass container name
+        # so the code execution server can use `docker exec` to run commands inside the container
+        if self.enable_docker_isolation and not self.docker_run_mcp_inside:
+            # Try to get container by agent_id (if set), or use early container name
+            container = None
+            if self.agent_id:
+                container = self.docker_manager.get_container(self.agent_id)
+            elif self.docker_early_container_name:
+                # Use early container (created before agent_id was known)
+                agent_id_for_early = self.docker_early_container_name.replace("massgen-", "")
+                container = self.docker_manager.get_container(agent_id_for_early)
+
+            if container:
+                config["args"].extend(["--docker-container", container.name])
+                logger.debug(f"[FilesystemManager] Code execution will run commands inside Docker container: {container.name}")
+            else:
+                # SECURITY: Do NOT silently fall back to host execution - this would be a security risk
+                # If Docker isolation is enabled, we MUST have a container
+                error_msg = (
+                    f"[FilesystemManager] Docker isolation enabled but no container found "
+                    f"(agent_id={self.agent_id}, early_name={self.docker_early_container_name}). "
+                    f"Cannot proceed - falling back to host execution would be a security risk."
+                )
+                logger.error(error_msg)
+                raise RuntimeError(error_msg)
+
         # Wrap with docker exec if MCP should run inside container
         if self.enable_docker_isolation and self.docker_run_mcp_inside:
             config = self._wrap_mcp_config_with_docker(config)
@@ -501,10 +581,17 @@ class FilesystemManager:
         Returns:
             Modified configuration with MCP servers added
         """
-        # Create Docker container early if MCP servers need to run inside it
-        if self.enable_docker_isolation and self.docker_run_mcp_inside:
-            self._create_early_container()
-            logger.info(f"[FilesystemManager] Docker container created early for MCP servers to run inside")
+        # Create Docker container early if Docker isolation is enabled
+        # This is needed so we can pass the container name to the code execution server
+        if self.enable_docker_isolation:
+            if self.docker_run_mcp_inside:
+                # MCP servers will run inside Docker - create container with massgen package mounted
+                self._create_early_container()
+                logger.info(f"[FilesystemManager] Docker container created early for MCP servers to run inside")
+            else:
+                # MCP servers on host, but commands run in Docker - create container without massgen package
+                self._create_early_container_for_commands()
+                logger.info(f"[FilesystemManager] Docker container created early for command execution")
 
         # Get existing mcp_servers configuration
         mcp_servers = backend_config.get("mcp_servers", [])
@@ -861,8 +948,20 @@ class FilesystemManager:
         # Cleanup Docker container if Docker isolation is enabled
         if self.enable_docker_isolation and self.docker_manager and self.agent_id:
             try:
+                # Print user-facing message so they know what's happening during the delay
+                print(f"\n🧹 Cleaning up Docker container for {self.agent_id}...")
                 logger.info(f"[FilesystemManager] Cleaning up Docker container for agent {self.agent_id}")
-                self.docker_manager.cleanup(self.agent_id)
+
+                # Only save container logs if MCP servers run inside Docker (docker_run_mcp_inside=True)
+                # When docker_run_mcp_inside=False, commands run via `docker exec` and their output
+                # is captured by the exec process itself, not written to container logs
+                log_path = None
+                if self.docker_run_mcp_inside:
+                    log_session_dir = get_log_session_dir()
+                    if log_session_dir:
+                        log_path = log_session_dir / self.agent_id / "docker_container.log"
+
+                self.docker_manager.cleanup(self.agent_id, save_logs_to=log_path)
                 self.docker_container_id = None
             except Exception as e:
                 logger.warning(f"[FilesystemManager] Docker cleanup failed for agent {self.agent_id}: {e}")

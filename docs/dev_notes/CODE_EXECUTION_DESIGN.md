@@ -330,17 +330,143 @@ def inject_filesystem_mcp(self, backend_config: Dict[str, Any]) -> Dict[str, Any
 10. ⏳ Test with OpenAI, Gemini, Grok backends
 
 ### Phase 2: Docker Support (Issue #304)
-1. Add Docker mode using AG2's `DockerCommandLineCodeExecutor`
-2. Add Docker configuration options
-3. Implement container lifecycle management
-4. Add integration tests for Docker mode
-5. Document Docker setup requirements
+1. ✅ Create Dockerfile for MCP runtime environment (massgen/docker/)
+2. ✅ Implement DockerManager class for container lifecycle (_docker_manager.py)
+3. ✅ Integrate Docker support into FilesystemManager (5 new parameters)
+4. ✅ Wire Docker parameters through backend (base.py, API params handler)
+5. ✅ Add runtime-aware system message integration
+6. ✅ Create Docker example configurations (3 examples)
+7. ✅ Update documentation (README.md, CODE_EXECUTION_DESIGN.md)
+8. ✅ Build and test Docker image (massgen/mcp-runtime:latest, 990MB)
+9. ✅ Add integration tests for Docker mode (9/9 tests passing)
+10. ✅ Add Docker container log saving for debugging
+11. ⏳ Test with real backends (OpenAI, Gemini)
 
 ### Phase 3: Polish & Documentation
-1. Error handling and edge cases
-2. Update user documentation
-3. Add example configurations
-4. Performance testing
+1. ✅ Auto-generated file exclusions (pycache, .pyc, etc.)
+2. Error handling and edge cases
+3. Update user documentation
+4. Add example configurations
+5. Performance testing
+
+## Auto-Generated File Handling
+
+When agents execute code (e.g., running pytest), they generate temporary files like `__pycache__`, `.pyc`, `.pytest_cache`, etc. These files:
+- Don't need to be read by agents (waste of tokens)
+- Should be deletable without read-before-delete enforcement
+- Are safe to ignore in most operations
+
+**Exempt Patterns** (from read-before-delete):
+- `__pycache__` - Python bytecode cache directories
+- `.pyc`, `.pyo` - Python bytecode files
+- `.pytest_cache`, `.mypy_cache`, `.ruff_cache` - Tool caches
+- `.coverage`, `*.egg-info` - Build/test artifacts
+- `.tox`, `.nox` - Test environment managers
+- `node_modules`, `.next`, `.nuxt` - JavaScript build outputs
+- `dist`, `build` - Build directories
+- `.DS_Store`, `Thumbs.db` - OS-generated files
+- `*.log`, `*.swp`, `*.swo`, `*~` - Editor/log files
+
+**Implementation:**
+```python
+# In FileOperationTracker._is_auto_generated()
+# Checks if file path matches any auto-generated pattern
+# Used in can_delete() and can_delete_directory()
+```
+
+This prevents permission errors when agents try to clean up after running tests or builds.
+
+## Docker Container Log Saving
+
+When Docker isolation is enabled, container logs are automatically saved during cleanup for debugging purposes.
+
+**Log Location:**
+```
+<log_session_dir>/<agent_id>/docker_container.log
+```
+
+**What's Captured:**
+- Container stdout/stderr output
+- Timestamps for all log entries
+- All commands executed within the container
+- Container lifecycle events (start, stop, errors)
+
+**Implementation:**
+- `DockerManager.save_container_logs()` (massgen/filesystem_manager/_docker_manager.py:349-371)
+  - Retrieves logs from Docker container using `container.logs(stdout=True, stderr=True, timestamps=True)`
+  - Writes logs to specified file path
+  - Creates parent directories if needed
+
+- `FilesystemManager.cleanup()` (massgen/filesystem_manager/_filesystem_manager.py:858-875)
+  - Constructs log path from log session directory
+  - Passes log path to `docker_manager.cleanup(agent_id, save_logs_to=log_path)`
+  - Automatically saves logs before stopping and removing containers
+
+**When Cleanup is Called:**
+Cleanup is explicitly called in two places:
+- **CLI exit** (cli.py:1406-1414): Finally block ensures cleanup on normal exit, error, or Ctrl+C
+- **Interactive mode agent recreation** (cli.py:1023-1029): Cleanup old agents before creating new ones
+
+**Usage:**
+No configuration needed - logs are automatically saved when:
+- Agent execution completes normally
+- Agent execution is interrupted (Ctrl+C)
+- Cleanup is triggered manually
+- CLI exits for any reason
+
+**User-Facing Feedback:**
+When cleanup happens, users see: `🧹 Cleaning up Docker container for <agent_id>...`
+
+This message explains the brief delay before returning to the terminal, so users know the system is still working.
+
+**Debugging Workflow:**
+1. Run agent with Docker isolation enabled
+2. Check logs after execution: `cat massgen_logs/<session>/coder/docker_container.log`
+3. See all commands executed and their outputs inside the container
+
+This feature is essential for understanding what happened inside isolated containers, especially when debugging command execution failures or unexpected behavior.
+
+## Code Execution Result Guidance
+
+When command execution is enabled, agents are instructed to explain code execution results in their answers via system message guidance.
+
+**Implementation:**
+- Location: `massgen/message_templates.py:626-631`
+- Adds guidance to agents when `enable_command_execution=True`
+- Instructions are injected into filesystem system messages
+
+**Guidance Given to Agents:**
+```
+**New Answer**: When calling `new_answer`:
+- If you executed commands (e.g., running tests), explain the results in your answer (what passed, what failed, what the output shows)
+- If you created files, list your cwd and file paths (but do NOT paste full file contents)
+- If providing a text response, include your analysis/explanation in the `content` field
+```
+
+**Purpose:**
+- Ensures agents explain what they learned from running tests/commands
+- Makes agent answers more informative and actionable
+- Helps users understand what was tested and what the results mean
+- Prevents agents from just running tests without explaining the outcome
+
+**Example Agent Behavior:**
+Without this guidance:
+```
+I ran the tests. Here are the files: test.py, main.py
+```
+
+With this guidance:
+```
+I created a factorial function in main.py and wrote comprehensive tests in test.py.
+When I ran `pytest test.py`, all 5 tests passed:
+- test_factorial_zero: ✓
+- test_factorial_positive: ✓
+- test_factorial_negative: ✓ (properly raises ValueError)
+- test_factorial_large: ✓ (handles n=20)
+- test_factorial_one: ✓
+
+The implementation correctly handles edge cases and validates input.
+```
 
 ## Virtual Environment Support
 
@@ -524,6 +650,47 @@ def test_execute_command_docker_mode():
 - ✅ Docker isolation prevents access outside workspace
 - ✅ Unit tests achieve >80% coverage
 - ✅ Documentation is complete
+
+## Future Enhancements
+
+### Custom Docker Image Workflows
+Make it easy for users to bring their own packages and containers:
+
+**Goals:**
+- Dockerfile templates for common stacks (data science, web dev, ML/AI)
+- Build scripts for easy custom image creation
+- Documentation for bringing your own containers
+- Example custom Dockerfiles in `massgen/docker/examples/`
+
+**Benefits:**
+- Pre-installed packages in base image (fast startup)
+- Fresh venv each turn (clean state, no conflicts)
+- Version-controlled dependencies (Dockerfile in git)
+- Docker layer caching (efficient builds)
+
+**Example workflow:**
+1. User creates `Dockerfile.custom` extending `massgen/mcp-runtime:latest`
+2. Adds their common packages (scikit-learn, transformers, etc.)
+3. Builds once: `docker build -t my-custom-image .`
+4. References in config: `docker_image: "my-custom-image"`
+5. Agents get those packages instantly each turn
+
+### Other Future Work
+
+1. **Full MCP-in-Docker without isolation breaking**
+   - Use official MCP filesystem server's Docker support
+   - Implement containerized custom MCP servers
+   - Provide extra layer of security for file operations
+
+2. **Additional Testing**
+   - Test with OpenAI, Gemini, Grok backends in production
+   - Performance benchmarking (local vs Docker)
+   - Stress testing with concurrent agents
+
+3. **Additional Enhancements**
+   - Advanced resource monitoring and limits
+   - Windows Docker support testing
+   - Multi-architecture Docker images (ARM support)
 
 ## References
 

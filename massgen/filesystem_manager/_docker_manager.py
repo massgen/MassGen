@@ -346,18 +346,47 @@ class DockerManager:
         except DockerException as e:
             logger.error(f"❌ [Docker] Failed to remove container for agent {agent_id}: {e}")
 
-    def cleanup(self, agent_id: Optional[str] = None) -> None:
+    def save_container_logs(self, agent_id: str, log_path: Path) -> None:
+        """
+        Save container logs to a file for debugging.
+
+        Args:
+            agent_id: Agent identifier
+            log_path: Path to save logs to
+        """
+        container = self.containers.get(agent_id)
+        if not container:
+            logger.warning(f"⚠️ [Docker] No container found for agent {agent_id} to save logs")
+            return
+
+        try:
+            logger.info(f"📝 [Docker] Saving container logs to {log_path}")
+            logs = container.logs(stdout=True, stderr=True, timestamps=True)
+
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            log_path.write_bytes(logs)
+
+            logger.info(f"✅ [Docker] Container logs saved successfully")
+        except DockerException as e:
+            logger.warning(f"⚠️ [Docker] Failed to save container logs for agent {agent_id}: {e}")
+
+    def cleanup(self, agent_id: Optional[str] = None, save_logs_to: Optional[Path] = None) -> None:
         """
         Clean up containers.
 
         Args:
             agent_id: If provided, cleanup specific agent. Otherwise cleanup all.
+            save_logs_to: Optional path to save container logs before cleanup
         """
         if agent_id:
             # Cleanup specific agent
             if agent_id in self.containers:
                 logger.info(f"🧹 [Docker] Cleaning up container for agent {agent_id}")
                 try:
+                    # Save logs if path provided
+                    if save_logs_to:
+                        self.save_container_logs(agent_id, save_logs_to)
+
                     self.stop_container(agent_id)
                     self.remove_container(agent_id, force=True)
                 except Exception as e:
@@ -368,6 +397,11 @@ class DockerManager:
                 logger.info(f"🧹 [Docker] Cleaning up {len(self.containers)} container(s)")
             for aid in list(self.containers.keys()):
                 try:
+                    # Save logs if path provided (construct agent-specific path)
+                    if save_logs_to:
+                        agent_log_path = save_logs_to.parent / f"{aid}_docker.log"
+                        self.save_container_logs(aid, agent_log_path)
+
                     self.stop_container(aid)
                     self.remove_container(aid, force=True)
                 except Exception as e:
