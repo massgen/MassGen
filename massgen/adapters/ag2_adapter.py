@@ -4,11 +4,9 @@ AG2 (AutoGen) adapter for MassGen.
 
 Supports both single agents and GroupChat configurations.
 """
+# Suppress autogen deprecation warnings
+import warnings
 from typing import Any, AsyncGenerator, Dict, List
-
-from autogen import ConversableAgent
-from autogen.agentchat import a_run_group_chat
-from autogen.agentchat.group.patterns import AutoPattern, RoundRobinPattern
 
 from massgen.logger_config import log_backend_activity, logger
 
@@ -19,12 +17,22 @@ from .utils.ag2_utils import (
     get_group_initial_message,
     get_user_agent_initial_system_message,
     postprocess_group_chat_results,
+    register_tools_for_agent,
     setup_agent_from_config,
     setup_api_keys,
+    unregister_tools_for_agent,
 )
 
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="autogen")
+warnings.filterwarnings("ignore", message=".*jsonschema.*")
+warnings.filterwarnings("ignore", message=".*Pydantic.*")
+
+from autogen import ConversableAgent  # noqa: E402
+from autogen.agentchat import a_run_group_chat  # noqa: E402
+from autogen.agentchat.group.patterns import AutoPattern  # noqa: E402
+
 DEFAULT_MAX_ROUNDS = 20
-SUPPORTED_GROUPCHAT_PATTERNS = ["auto", "round_robin"]
+SUPPORTED_GROUPCHAT_PATTERNS = ["auto"]
 
 
 class AG2Adapter(AgentAdapter):
@@ -77,6 +85,7 @@ class AG2Adapter(AgentAdapter):
             raise ValueError(
                 "Backend configuration must contain either 'agent_config' for single agent " "or 'group_config' for GroupChat.",
             )
+        self.agent_id = None
         # Initialize AG2 components
         self._setup_agents()
 
@@ -127,7 +136,7 @@ class AG2Adapter(AgentAdapter):
 
         if pattern_type not in SUPPORTED_GROUPCHAT_PATTERNS:
             raise NotImplementedError(
-                f"Pattern type '{pattern_type}' not supported. Supported types: 'auto', 'round_robin'",
+                f"Pattern type '{pattern_type}' not supported. Supported types: {', '.join(SUPPORTED_GROUPCHAT_PATTERNS)}",
             )
 
         # Set up user_agent
@@ -170,7 +179,7 @@ class AG2Adapter(AgentAdapter):
             # Validate name is "User"
             if user_agent.name != "User":
                 raise ValueError(
-                    f"user_agent name must be 'User', got '{user_agent.name}'. " "This is required for group chat termination condition.",
+                    f"user_agent name must be 'User', got '{user_agent.name}'. ",
                 )
             return user_agent
         else:
@@ -214,19 +223,20 @@ class AG2Adapter(AgentAdapter):
         agents: List[ConversableAgent],
         agent_name_map: Dict[str, ConversableAgent],
         group_manager_args: Dict[str, Any],
+        *args,
     ) -> Any:
         """
         Create AG2 pattern based on type.
 
         Args:
-            pattern_type: Type of pattern ("auto" or "round_robin")
+            pattern_type: Type of pattern (currently only "auto")
             pattern_config: Pattern configuration from YAML
             agents: List of expert agents
             agent_name_map: Mapping from agent names to agent objects
             group_manager_args: Group manager configuration
 
         Returns:
-            Pattern instance (AutoPattern or RoundRobinPattern)
+            Pattern instance (AutoPattern)
         """
         # Get initial agent
         initial_agent_name = pattern_config.get("initial_agent")
@@ -238,6 +248,9 @@ class AG2Adapter(AgentAdapter):
 
         initial_agent = agent_name_map[initial_agent_name]
 
+        # Extract extra pattern-specific arguments
+        extra_args = {k: v for k, v in pattern_config.items() if k not in ["type", "initial_agent", "group_manager_args"]}
+
         # Create pattern
         if pattern_type == "auto":
             return AutoPattern(
@@ -245,13 +258,7 @@ class AG2Adapter(AgentAdapter):
                 agents=agents,
                 user_agent=self.user_agent,
                 group_manager_args=group_manager_args,
-            )
-        elif pattern_type == "round_robin":
-            return RoundRobinPattern(
-                initial_agent=initial_agent,
-                agents=agents,
-                user_agent=self.user_agent,
-                group_manager_args=group_manager_args,
+                **extra_args,
             )
         else:
             raise NotImplementedError(f"Pattern type '{pattern_type}' not supported")
@@ -268,14 +275,6 @@ class AG2Adapter(AgentAdapter):
             Tuple of (content, tool_calls)
         """
         result = await agent.a_generate_reply(messages)
-
-        # # Log received response
-        # log_backend_activity(
-        #     "ag2",
-        #     "Received response from AG2",
-        #     {"response_type": type(result).__name__},
-        #     agent_id=self.agent_id,
-        # )
 
         # Extract content and tool_calls from AG2 response
         # MassGen and AG2 use same format for tool calls
@@ -348,10 +347,9 @@ class AG2Adapter(AgentAdapter):
             async for event_msg in self._execute_group_chat(messages):
                 yield StreamChunk(type="content", content=event_msg)
 
-            self._register_workflow_tools_to_user_agent()
-            self.user_agent.update_system_message(get_user_agent_initial_system_message())
-
             results = list(self.user_agent._oai_messages.values())[0]
+            self.user_agent.update_system_message(get_user_agent_initial_system_message())
+            register_tools_for_agent(self.workflow_tools, self.user_agent)
 
             messages_to_execute = postprocess_group_chat_results(results)
 
@@ -359,6 +357,7 @@ class AG2Adapter(AgentAdapter):
             messages_to_execute = messages
 
         elif self.coordination_stage == CoordinationStage.PRESENTATION:
+            unregister_tools_for_agent(self.workflow_tools, self.user_agent)
             self.user_agent.update_system_message(messages[0]["content"])
             messages_to_execute = [messages[1]]
 
@@ -395,7 +394,7 @@ class AG2Adapter(AgentAdapter):
                 async for chunk in self._execute_group_chat_with_user_agent(messages):
                     yield chunk
             else:
-                async for chunk in self._execute_single_agent(messages, self.user_agent):
+                async for chunk in self._execute_single_agent(messages, self.agent):
                     yield chunk
 
         except Exception as e:
@@ -434,12 +433,7 @@ class AG2Adapter(AgentAdapter):
         if self.is_group_chat:
             self._register_tools_for_group_chat(tools)
         else:
-            self._register_tools_for_single_agent(tools)
-
-    def _register_tools_for_single_agent(self, tools: List[Dict[str, Any]]) -> None:
-        """Register all tools to single agent."""
-        for tool in tools:
-            self.agent.update_tool_signature(tool_sig=tool, is_remove=False, silent_override=True)
+            register_tools_for_agent(tools, self.agent)
 
     def _register_tools_for_group_chat(self, tools: List[Dict[str, Any]]) -> None:
         """Register tools to group chat agents based on type."""
@@ -448,9 +442,11 @@ class AG2Adapter(AgentAdapter):
         # Register other tools to ALL expert agents (not user_agent)
         for agent in self.agents:
             for tool in other_tools:
-                agent.update_tool_signature(tool_sig=tool, is_remove=False)
+                register_tools_for_agent([tool], agent)
             if other_tools:
                 logger.info(f"[AG2Adapter] Registered {len(other_tools)} non-workflow tools to agent '{agent.name}'")
+
+        self.workflow_tools = workflow_tools
 
     def _separate_workflow_and_other_tools(self, tools: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
@@ -474,13 +470,5 @@ class AG2Adapter(AgentAdapter):
 
         if "new_answer" in workflow_tools and "vote" not in workflow_tools:
             raise ValueError("Both 'new_answer' and 'vote' workflow tools must be provided.")
-        self.workflow_tools = workflow_tools
 
         return workflow_tools, other_tools
-
-    def _register_workflow_tools_to_user_agent(self) -> None:
-        """Register workflow tools to user_agent."""
-        for tool in self.workflow_tools:
-            self.user_agent.update_tool_signature(tool_sig=tool, is_remove=False)
-
-        logger.info(f"[AG2Adapter] Registered {len(self.workflow_tools)} workflow tools to user_agent '{self.user_agent.name}'")

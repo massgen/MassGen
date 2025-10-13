@@ -30,13 +30,14 @@ agents:
 
           - type: assistant
             name: "Reviewer"
+            description: "Code reviewer who provides constructive feedback. Should be selected after Coder"
             system_message: |
               You are a code reviewer who provides constructive feedback. You role is to:
                 1. Review the code for correctness, efficiency, and style
                 2. Suggest improvements and optimizations
                 3. DO NOT write complete to address original request
                 4. DO NOT write test code
-#                5. When you think the code is good enough to submit, say "LGTM" (Looks Good To Me)
+                5. When you think the code is good enough to submit, say "LGTM" (Looks Good To Me)
             # Override with different model
             llm_config:
                 api_type: "google"
@@ -44,6 +45,7 @@ agents:
 
           - type: assistant
             name: "Tester"
+            description: "QA engineer who writes and runs tests. Should be selected if new code has not been validated."
             system_message: |
               You are a QA engineer. Your role is to:
               1. Write test code in Python that validates the provided function
@@ -67,16 +69,38 @@ agents:
                 work_dir: "./code_execution_workspace"
 
         # Pattern configuration (REQUIRED)
+        # Determines how agents are selected to speak in the group chat
         pattern:
-          type: "auto"  # Supported: "auto", "round_robin"
-          initial_agent: "Coder"  # Required for "auto" pattern
+          type: "auto"  # Currently supported: "auto" only
+          # Required: Name of the agent that starts the conversation
+          initial_agent: "Coder"
+
+          # Optional: Additional pattern-specific arguments
+          # For AutoPattern, supported arguments include:
+          #   - exclude_transit_message (bool): Hide transit messages
+          #   - summary_method (str): How to summarize conversation
+          # Any additional arguments are passed directly to the pattern constructor
+
+          # Group manager configuration
           group_manager_args:
-            # Optional: override llm_config for group manager
-            # If not provided, uses default from group_config
+            # Optional: override llm_config for the group manager
+            # If not provided, uses default llm_config from group_config
             llm_config:
                 api_type: "google"
                 model: "gemini-2.5-flash"
-        max_rounds: 2
+
+        # Optional: Override the default user agent behavior
+        # By default, a minimal user_agent is created automatically
+        # You can provide custom configuration here:
+        # user_agent:
+        #   name: "User"  # Must be "User" for termination to work
+        #   system_message: "Custom system message for user agent"
+        #   llm_config:  # Optional: override llm_config
+        #     api_type: "openai"
+        #     model: "gpt-4o"
+
+        # Maximum rounds of conversation before termination
+        max_rounds: 10
 
 #  # Optional: Mix with native MassGen agents
 #  - id: "claude_architect"

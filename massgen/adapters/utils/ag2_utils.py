@@ -4,15 +4,16 @@ Utility functions for AG2 (AutoGen) adapter.
 """
 import os
 import time
-from typing import Any, Dict, List
-import warnings
-
-from autogen import AssistantAgent, ConversableAgent, LLMConfig
 
 # Suppress autogen deprecation warnings
+import warnings
+from typing import Any, Dict, List
+
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="autogen")
 warnings.filterwarnings("ignore", message=".*jsonschema.*")
 warnings.filterwarnings("ignore", message=".*Pydantic.*")
+
+from autogen import AssistantAgent, ConversableAgent, LLMConfig  # noqa: E402
 
 
 def setup_api_keys() -> None:
@@ -201,3 +202,15 @@ def postprocess_group_chat_results(messages: List[Dict[str, Any]]) -> List[Dict[
         message["role"] = "assistant"
 
     return messages
+
+
+def unregister_tools_for_agent(tools: List[Dict[str, Any]], agent: ConversableAgent) -> None:
+    """Unregister all tools from single agent."""
+    for tool in tools:
+        agent.update_tool_signature(tool_sig=tool, is_remove=True, silent_override=True)
+
+
+def register_tools_for_agent(tools: List[Dict[str, Any]], agent: ConversableAgent) -> None:
+    """Register all tools to single agent."""
+    for tool in tools:
+        agent.update_tool_signature(tool_sig=tool, is_remove=False, silent_override=True)
