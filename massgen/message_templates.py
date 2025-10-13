@@ -298,7 +298,6 @@ Present the best possible coordinated answer by combining the strengths from all
 - MUST combine the strengths of all transcriptions into one final detailed transcription that captures the best elements from each.
 - MUST use the convert_text_to_audio tool to convert this final transcription to a new audio file and save it, then output the saved path.
 """
-        print(presentation_instructions)
 
         # Add irreversible actions reminder if needed
         # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
