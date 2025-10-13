@@ -201,12 +201,6 @@ async def create_server() -> fastmcp.FastMCP:
         default=None,
         help="Path to virtual environment (will modify PATH to use this venv)",
     )
-    parser.add_argument(
-        "--docker-container",
-        type=str,
-        default=None,
-        help="Docker container name to execute commands in (uses docker exec)",
-    )
     args = parser.parse_args()
 
     # Create the FastMCP server
@@ -220,7 +214,6 @@ async def create_server() -> fastmcp.FastMCP:
     mcp.blocked_commands = args.blocked_commands  # Blacklist patterns
     mcp.command_prefix = args.command_prefix  # Command prefix (e.g., "uv run")
     mcp.venv_path = Path(args.venv_path).resolve() if args.venv_path else None  # Custom venv path
-    mcp.docker_container = args.docker_container  # Docker container name for isolated execution
 
     @mcp.tool()
     def execute_command(
@@ -356,19 +349,6 @@ async def create_server() -> fastmcp.FastMCP:
 
             # Apply command prefix if specified (e.g., "uv run", "conda run -n myenv")
             final_command = f"{cmd_prefix} {command}" if cmd_prefix else command
-
-            # If Docker container is specified, wrap command with docker exec
-            if mcp.docker_container:
-                # Commands will run inside Docker container at /workspace
-                # We need to use sh -c to properly handle shell features (pipes, redirection, etc.)
-                # Use -w to set working directory inside container
-                docker_work_dir = "/workspace"  # Container working directory
-                escaped_command = final_command.replace('"', '\\"')  # Escape quotes for sh -c
-                final_command = f'docker exec -w {docker_work_dir} {mcp.docker_container} sh -c "{escaped_command}"'
-                # Use host's cwd for subprocess (docker command runs on host)
-                # but the actual command runs inside container at /workspace
-                work_path = Path.cwd()
-                env = os.environ.copy()  # Use host environment for docker command
 
             # Execute command
             start_time = time.time()

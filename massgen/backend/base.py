@@ -80,13 +80,6 @@ class LLMBackend(ABC):
                 command_line_blocked_commands = kwargs.get("command_line_blocked_commands")
                 command_execution_prefix = kwargs.get("command_execution_prefix")
                 command_execution_venv_path = kwargs.get("command_execution_venv_path")
-                # Extract Docker isolation parameters
-                enable_docker_isolation = kwargs.get("enable_docker_isolation", False)
-                docker_run_mcp_inside = kwargs.get("docker_run_mcp_inside")
-                docker_image = kwargs.get("docker_image", "massgen/mcp-runtime:latest")
-                docker_network_mode = kwargs.get("docker_network_mode", "none")
-                docker_memory_limit = kwargs.get("docker_memory_limit")
-                docker_cpu_limit = kwargs.get("docker_cpu_limit")
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
@@ -98,12 +91,6 @@ class LLMBackend(ABC):
                     command_line_blocked_commands=command_line_blocked_commands,
                     command_execution_prefix=command_execution_prefix,
                     command_execution_venv_path=command_execution_venv_path,
-                    enable_docker_isolation=enable_docker_isolation,
-                    docker_run_mcp_inside=docker_run_mcp_inside,
-                    docker_image=docker_image,
-                    docker_network_mode=docker_network_mode,
-                    docker_memory_limit=docker_memory_limit,
-                    docker_cpu_limit=docker_cpu_limit,
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -120,13 +107,6 @@ class LLMBackend(ABC):
                 command_line_blocked_commands = kwargs.get("command_line_blocked_commands")
                 command_execution_prefix = kwargs.get("command_execution_prefix")
                 command_execution_venv_path = kwargs.get("command_execution_venv_path")
-                # Extract Docker isolation parameters
-                enable_docker_isolation = kwargs.get("enable_docker_isolation", False)
-                docker_run_mcp_inside = kwargs.get("docker_run_mcp_inside")
-                docker_image = kwargs.get("docker_image", "massgen/mcp-runtime:latest")
-                docker_network_mode = kwargs.get("docker_network_mode", "none")
-                docker_memory_limit = kwargs.get("docker_memory_limit")
-                docker_cpu_limit = kwargs.get("docker_cpu_limit")
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
@@ -138,12 +118,6 @@ class LLMBackend(ABC):
                     command_line_blocked_commands=command_line_blocked_commands,
                     command_execution_prefix=command_execution_prefix,
                     command_execution_venv_path=command_execution_venv_path,
-                    enable_docker_isolation=enable_docker_isolation,
-                    docker_run_mcp_inside=docker_run_mcp_inside,
-                    docker_image=docker_image,
-                    docker_network_mode=docker_network_mode,
-                    docker_memory_limit=docker_memory_limit,
-                    docker_cpu_limit=docker_cpu_limit,
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
@@ -193,13 +167,6 @@ class LLMBackend(ABC):
             "command_line_blocked_commands",
             "command_execution_prefix",
             "command_execution_venv_path",
-            # Docker isolation parameters (handled by base class)
-            "enable_docker_isolation",
-            "docker_run_mcp_inside",
-            "docker_image",
-            "docker_network_mode",
-            "docker_memory_limit",
-            "docker_cpu_limit",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",

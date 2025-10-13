@@ -26,7 +26,6 @@ from ..mcp_tools.client import HookType
 from . import _code_execution_server as ce_module
 from . import _workspace_tools_server as wc_module
 from ._base import Permission
-from ._docker_manager import DOCKER_AVAILABLE, DockerManager
 from ._path_permission_manager import PathPermissionManager
 
 
@@ -53,12 +52,6 @@ class FilesystemManager:
         command_line_blocked_commands: List[str] = None,
         command_execution_prefix: str = None,
         command_execution_venv_path: str = None,
-        enable_docker_isolation: bool = False,
-        docker_run_mcp_inside: bool = None,
-        docker_image: str = "massgen/mcp-runtime:latest",
-        docker_network_mode: str = "none",
-        docker_memory_limit: str = None,
-        docker_cpu_limit: float = None,
     ):
         """
         Initialize FilesystemManager.
@@ -75,13 +68,6 @@ class FilesystemManager:
             command_line_blocked_commands: Blacklist of blocked command patterns (regex)
             command_execution_prefix: Command prefix to prepend (e.g., "uv run", "conda run -n myenv")
             command_execution_venv_path: Path to virtual environment (will modify PATH to use this venv)
-            enable_docker_isolation: Whether to run all MCP servers inside Docker containers
-            docker_run_mcp_inside: Whether to run MCP servers inside Docker (True) or just commands (False).
-                                   Defaults to False (recommended for better isolation).
-            docker_image: Docker image to use for containers (default: "massgen/mcp-runtime:latest")
-            docker_network_mode: Network mode for containers (none/bridge/host, default: "none")
-            docker_memory_limit: Memory limit for containers (e.g., "2g", "512m")
-            docker_cpu_limit: CPU limit for containers (e.g., 2.0 for 2 CPUs)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation
@@ -90,41 +76,6 @@ class FilesystemManager:
         self.command_line_blocked_commands = command_line_blocked_commands
         self.command_execution_prefix = command_execution_prefix
         self.command_execution_venv_path = command_execution_venv_path
-
-        # Docker isolation parameters
-        self.enable_docker_isolation = enable_docker_isolation
-        # Default docker_run_mcp_inside to False (MCP servers on host, commands in Docker)
-        # This provides isolation for code execution while keeping MCP server code outside the container
-        if docker_run_mcp_inside is None:
-            self.docker_run_mcp_inside = False
-        else:
-            self.docker_run_mcp_inside = docker_run_mcp_inside
-        self.docker_image = docker_image
-        self.docker_network_mode = docker_network_mode
-        self.docker_memory_limit = docker_memory_limit
-        self.docker_cpu_limit = docker_cpu_limit
-        self.docker_manager: Optional[DockerManager] = None
-        self.docker_container_id: Optional[str] = None
-        self.docker_early_container_name: Optional[str] = None  # For container created before agent_id is known
-
-        # Initialize Docker manager if isolation is enabled
-        if self.enable_docker_isolation:
-            if not DOCKER_AVAILABLE:
-                logger.error("[FilesystemManager] Docker isolation requested but Docker library not available. "
-                           "Install with: pip install docker")
-                raise RuntimeError("Docker isolation requires 'docker' Python package")
-
-            try:
-                self.docker_manager = DockerManager(
-                    image=docker_image,
-                    network_mode=docker_network_mode,
-                    memory_limit=docker_memory_limit,
-                    cpu_limit=docker_cpu_limit,
-                )
-                logger.info(f"[FilesystemManager] Docker isolation enabled with image '{docker_image}'")
-            except RuntimeError as e:
-                logger.error(f"[FilesystemManager] Failed to initialize Docker manager: {e}")
-                raise
 
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
@@ -201,37 +152,6 @@ class FilesystemManager:
                 agent_log_dir = log_session_dir / self.agent_id
                 agent_log_dir.mkdir(parents=True, exist_ok=True)
 
-        # Start Docker container if isolation is enabled (but only if not already created early for MCP)
-        if self.enable_docker_isolation and self.docker_manager and self.agent_id:
-            if self.docker_container_id and self.docker_early_container_name:
-                # Container was created early for MCP servers - reuse it
-                # Re-register the container with the real agent_id for proper cleanup
-                early_agent_id = self.docker_early_container_name.replace("massgen-", "")
-                container = self.docker_manager.get_container(early_agent_id)
-                if container:
-                    # Remove old registration and add new one with real agent_id
-                    del self.docker_manager.containers[early_agent_id]
-                    self.docker_manager.containers[self.agent_id] = container
-                    logger.info(f"[FilesystemManager] Reusing early Docker container {self.docker_container_id} for agent {self.agent_id}, re-registered for cleanup")
-            else:
-                # Create new container for agent
-                try:
-                    # Get context paths for volume mounting
-                    context_paths = self.path_permission_manager.get_context_paths()
-
-                    # Create Docker container with volume mounts
-                    self.docker_container_id = self.docker_manager.create_container(
-                        agent_id=self.agent_id,
-                        workspace_path=self.cwd,
-                        temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
-                        context_paths=context_paths,
-                    )
-
-                    logger.info(f"[FilesystemManager] Docker container {self.docker_container_id} started for agent {self.agent_id}")
-                except Exception as e:
-                    logger.error(f"[FilesystemManager] Failed to start Docker container: {e}")
-                    raise
-
     def _setup_workspace(self, cwd: str) -> Path:
         """Setup workspace directory, creating if needed and clearing existing files safely."""
         # Add parent directory prefix if not already present
@@ -259,150 +179,6 @@ class FilesystemManager:
 
         return workspace
 
-    def _wrap_mcp_config_with_docker(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Wrap an MCP server config to run inside Docker container using docker exec.
-
-        This modifies the command and args to use `docker exec` to run the MCP server
-        inside the container instead of on the host.
-
-        Args:
-            config: Original MCP server configuration
-
-        Returns:
-            Modified configuration that will run inside Docker container
-        """
-        if not self.docker_container_id:
-            raise RuntimeError("Cannot wrap MCP config with docker - no container created")
-
-        # Get the container object
-        container = self.docker_manager.get_container(
-            self.docker_early_container_name.replace("massgen-", "") if self.docker_early_container_name else self.agent_id
-        )
-        if not container:
-            raise RuntimeError("Cannot wrap MCP config - container not found")
-
-        # Build the original command that would have been run on host
-        original_command = [config["command"]] + config.get("args", [])
-
-        # Wrap with docker exec -i (interactive mode for stdio communication)
-        # Use container name instead of ID for better logging
-        container_name = container.name
-
-        # New config that uses docker exec
-        docker_config = {
-            "name": config["name"],
-            "type": "stdio",
-            "command": "docker",
-            "args": ["exec", "-i", "-w", "/workspace", container_name] + original_command,
-        }
-
-        # Copy over other settings
-        if "env" in config:
-            docker_config["env"] = config["env"]
-        if "exclude_tools" in config:
-            docker_config["exclude_tools"] = config["exclude_tools"]
-
-        # Note: cwd is not used for docker exec (we use -w flag instead)
-
-        logger.debug(f"[FilesystemManager] Wrapped MCP server '{config['name']}' to run inside Docker container '{container_name}'")
-
-        return docker_config
-
-    def _create_early_container(self) -> str:
-        """
-        Create Docker container early (before agent_id is known) for MCP servers to run inside.
-
-        This is called when docker_run_mcp_inside=True to create the container before
-        MCP configs are generated, so the MCP servers can run inside the container.
-
-        Returns:
-            Container name that was created
-        """
-        if not self.enable_docker_isolation or not self.docker_manager:
-            raise RuntimeError("Cannot create early container - Docker isolation not enabled")
-
-        if self.docker_early_container_name:
-            # Container already created
-            return self.docker_early_container_name
-
-        # Generate a unique container name using UUID
-        container_name = f"massgen-early-{uuid.uuid4().hex[:8]}"
-
-        logger.info(f"[FilesystemManager] Creating early Docker container '{container_name}' for MCP servers")
-
-        try:
-            # Get context paths for volume mounting
-            context_paths = self.path_permission_manager.get_context_paths()
-
-            # Get massgen package directory to mount for MCP server scripts
-            massgen_package_dir = Path(__file__).resolve().parent.parent  # Go up to massgen/ directory
-            logger.info(f"[FilesystemManager] Mounting massgen package from {massgen_package_dir}")
-
-            # Create container with volume mounts including massgen package
-            self.docker_container_id = self.docker_manager.create_container(
-                agent_id=container_name.replace("massgen-", ""),  # Remove prefix for agent_id
-                workspace_path=self.cwd,
-                temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
-                context_paths=context_paths,
-                massgen_package_path=massgen_package_dir,
-            )
-
-            self.docker_early_container_name = container_name
-            logger.info(f"[FilesystemManager] Early container '{container_name}' created successfully")
-
-            return container_name
-
-        except Exception as e:
-            logger.error(f"[FilesystemManager] Failed to create early Docker container: {e}")
-            raise
-
-    def _create_early_container_for_commands(self) -> str:
-        """
-        Create Docker container early (before agent_id is known) for command execution only.
-
-        This is called when enable_docker_isolation=True but docker_run_mcp_inside=False,
-        meaning MCP servers run on host but commands execute inside Docker.
-
-        Unlike _create_early_container(), this does NOT mount the massgen package since
-        MCP servers run on the host.
-
-        Returns:
-            Container name that was created
-        """
-        if not self.enable_docker_isolation or not self.docker_manager:
-            raise RuntimeError("Cannot create early container - Docker isolation not enabled")
-
-        if self.docker_early_container_name:
-            # Container already created
-            return self.docker_early_container_name
-
-        # Generate a unique container name using UUID
-        container_name = f"massgen-early-{uuid.uuid4().hex[:8]}"
-
-        logger.info(f"[FilesystemManager] Creating early Docker container '{container_name}' for command execution")
-
-        try:
-            # Get context paths for volume mounting
-            context_paths = self.path_permission_manager.get_context_paths()
-
-            # Create container WITHOUT massgen package (since MCP servers run on host)
-            self.docker_container_id = self.docker_manager.create_container(
-                agent_id=container_name.replace("massgen-", ""),  # Remove prefix for agent_id
-                workspace_path=self.cwd,
-                temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
-                context_paths=context_paths,
-                massgen_package_path=None,  # Don't mount massgen - MCP servers on host
-            )
-
-            self.docker_early_container_name = container_name
-            logger.info(f"[FilesystemManager] Early container '{container_name}' created successfully for command execution")
-
-            return container_name
-
-        except Exception as e:
-            logger.error(f"[FilesystemManager] Failed to create early Docker container for commands: {e}")
-            raise
 
     def get_mcp_filesystem_config(self) -> Dict[str, Any]:
         """
@@ -411,18 +187,8 @@ class FilesystemManager:
         Returns:
             Dictionary with MCP server configuration for filesystem access
         """
-        # Get all managed paths - need to translate to container paths if running inside Docker
+        # Get all managed paths
         paths = self.path_permission_manager.get_mcp_filesystem_paths()
-
-        # If running inside Docker, translate host paths to container paths
-        if self.enable_docker_isolation and self.docker_run_mcp_inside:
-            # Paths inside container are:
-            # - /workspace (for main workspace)
-            # - /temp_workspaces (for temp workspace)
-            # - /context/* (for context paths)
-            # For now, we'll use /workspace as the main path
-            # TODO: Implement proper path translation based on volume mounts
-            paths = ["/workspace"]
 
         # Build MCP server configuration with all managed paths
         config = {
@@ -438,10 +204,6 @@ class FilesystemManager:
             # Note: Tool names here are unprefixed (before server name is added)
             "exclude_tools": ["read_media_file"],
         }
-
-        # Wrap with docker exec if MCP should run inside container
-        if self.enable_docker_isolation and self.docker_run_mcp_inside:
-            config = self._wrap_mcp_config_with_docker(config)
 
         return config
 
@@ -459,13 +221,8 @@ class FilesystemManager:
         # Get absolute path to the workspace tools server script
         script_path = Path(wc_module.__file__).resolve()
 
-        # Pass allowed paths - translate to container paths if running inside Docker
+        # Pass allowed paths
         paths = self.path_permission_manager.get_mcp_filesystem_paths()
-        if self.enable_docker_isolation and self.docker_run_mcp_inside:
-            # Inside container, the script will be in /app/massgen/filesystem_manager/
-            script_path = Path("/app/massgen/filesystem_manager/_workspace_tools_server.py")
-            # Use container paths
-            paths = ["/workspace"]
 
         env = {
             "FASTMCP_SHOW_CLI_BANNER": "false",
@@ -487,10 +244,6 @@ class FilesystemManager:
                 "generate_and_store_image_no_input_images",
             ]
 
-        # Wrap with docker exec if MCP should run inside container
-        if self.enable_docker_isolation and self.docker_run_mcp_inside:
-            config = self._wrap_mcp_config_with_docker(config)
-
         return config
 
     def get_command_line_mcp_config(self) -> Dict[str, Any]:
@@ -504,13 +257,8 @@ class FilesystemManager:
         # Get absolute path to the code execution server script
         script_path = Path(ce_module.__file__).resolve()
 
-        # Pass allowed paths - translate to container paths if running inside Docker
+        # Pass allowed paths
         paths = self.path_permission_manager.get_mcp_filesystem_paths()
-        if self.enable_docker_isolation and self.docker_run_mcp_inside:
-            # Inside container, the script will be in /app/massgen/filesystem_manager/
-            script_path = Path("/app/massgen/filesystem_manager/_code_execution_server.py")
-            # Use container paths
-            paths = ["/workspace"]
 
         env = {
             "FASTMCP_SHOW_CLI_BANNER": "false",
@@ -539,36 +287,6 @@ class FilesystemManager:
         if self.command_execution_venv_path:
             config["args"].extend(["--venv-path", self.command_execution_venv_path])
 
-        # If Docker isolation is enabled (but not full MCP-in-Docker), pass container name
-        # so the code execution server can use `docker exec` to run commands inside the container
-        if self.enable_docker_isolation and not self.docker_run_mcp_inside:
-            # Try to get container by agent_id (if set), or use early container name
-            container = None
-            if self.agent_id:
-                container = self.docker_manager.get_container(self.agent_id)
-            elif self.docker_early_container_name:
-                # Use early container (created before agent_id was known)
-                agent_id_for_early = self.docker_early_container_name.replace("massgen-", "")
-                container = self.docker_manager.get_container(agent_id_for_early)
-
-            if container:
-                config["args"].extend(["--docker-container", container.name])
-                logger.debug(f"[FilesystemManager] Code execution will run commands inside Docker container: {container.name}")
-            else:
-                # SECURITY: Do NOT silently fall back to host execution - this would be a security risk
-                # If Docker isolation is enabled, we MUST have a container
-                error_msg = (
-                    f"[FilesystemManager] Docker isolation enabled but no container found "
-                    f"(agent_id={self.agent_id}, early_name={self.docker_early_container_name}). "
-                    f"Cannot proceed - falling back to host execution would be a security risk."
-                )
-                logger.error(error_msg)
-                raise RuntimeError(error_msg)
-
-        # Wrap with docker exec if MCP should run inside container
-        if self.enable_docker_isolation and self.docker_run_mcp_inside:
-            config = self._wrap_mcp_config_with_docker(config)
-
         return config
 
     def inject_filesystem_mcp(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
@@ -581,18 +299,6 @@ class FilesystemManager:
         Returns:
             Modified configuration with MCP servers added
         """
-        # Create Docker container early if Docker isolation is enabled
-        # This is needed so we can pass the container name to the code execution server
-        if self.enable_docker_isolation:
-            if self.docker_run_mcp_inside:
-                # MCP servers will run inside Docker - create container with massgen package mounted
-                self._create_early_container()
-                logger.info(f"[FilesystemManager] Docker container created early for MCP servers to run inside")
-            else:
-                # MCP servers on host, but commands run in Docker - create container without massgen package
-                self._create_early_container_for_commands()
-                logger.info(f"[FilesystemManager] Docker container created early for command execution")
-
         # Get existing mcp_servers configuration
         mcp_servers = backend_config.get("mcp_servers", [])
 
@@ -943,29 +649,7 @@ class FilesystemManager:
         return self.cwd
 
     def cleanup(self) -> None:
-        """Cleanup temporary resources (not the main workspace) and Docker containers."""
-
-        # Cleanup Docker container if Docker isolation is enabled
-        if self.enable_docker_isolation and self.docker_manager and self.agent_id:
-            try:
-                # Print user-facing message so they know what's happening during the delay
-                print(f"\n🧹 Cleaning up Docker container for {self.agent_id}...")
-                logger.info(f"[FilesystemManager] Cleaning up Docker container for agent {self.agent_id}")
-
-                # Only save container logs if MCP servers run inside Docker (docker_run_mcp_inside=True)
-                # When docker_run_mcp_inside=False, commands run via `docker exec` and their output
-                # is captured by the exec process itself, not written to container logs
-                log_path = None
-                if self.docker_run_mcp_inside:
-                    log_session_dir = get_log_session_dir()
-                    if log_session_dir:
-                        log_path = log_session_dir / self.agent_id / "docker_container.log"
-
-                self.docker_manager.cleanup(self.agent_id, save_logs_to=log_path)
-                self.docker_container_id = None
-            except Exception as e:
-                logger.warning(f"[FilesystemManager] Docker cleanup failed for agent {self.agent_id}: {e}")
-
+        """Cleanup temporary resources (not the main workspace)."""
         # Cleanup temporary workspace
         p = self.agent_temporary_workspace
 
