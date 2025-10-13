@@ -22,6 +22,7 @@ class ClaudeAPIParamsHandler(APIParamsHandlerBase):
                 "enable_code_execution",
                 "allowed_tools",
                 "exclude_tools",
+                "_has_files_api_files",
             },
         )
 
@@ -55,7 +56,7 @@ class ClaudeAPIParamsHandler(APIParamsHandlerBase):
     ) -> Dict[str, Any]:
         """Build Claude API parameters."""
         # Convert messages to Claude format and extract system message
-        converted_messages, system_message = self.formatter.format_messages(messages)
+        converted_messages, system_message = self.formatter.format_messages_and_system(messages)
 
         # Build base parameters
         api_params: Dict[str, Any] = {
@@ -73,8 +74,17 @@ class ClaudeAPIParamsHandler(APIParamsHandlerBase):
         if "max_tokens" not in api_params:
             api_params["max_tokens"] = 4096
 
+        # Handle multiple betas (code execution and files API)
+        betas_list = []
         if all_params.get("enable_code_execution"):
-            api_params["betas"] = ["code-execution-2025-05-22"]
+            betas_list.append("code-execution-2025-05-22")
+        if all_params.get("_has_files_api_files"):
+            betas_list.append("files-api-2025-04-14")
+        if betas_list:
+            api_params["betas"] = betas_list
+
+        # Remove internal flag so it doesn't leak
+        all_params.pop("_has_files_api_files", None)
 
         # Add system message if present
         if system_message:

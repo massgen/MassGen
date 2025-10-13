@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.29 Features](#-latest-features-v0029)
+- [v0.0.30 Features](#-latest-features-v0030)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.29](#recent-achievements-v0029)
-  - [v0.0.3 - v0.0.28](#previous-achievements-v003---v0028)
+  - [v0.0.30](#recent-achievements-v0030)
+  - [v0.0.3 - v0.0.29](#previous-achievements-v003---v0029)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.30 Roadmap](#v0030-roadmap)
+- [v0.0.31 Roadmap](#v0031-roadmap)
 </details>
 
 <details open>
@@ -129,31 +129,23 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.29)
+## 🆕 Latest Features (v0.0.30)
 
-**Experience v0.0.29 MCP Planning Mode:**
+**What's New in v0.0.30:**
+- **Multimodal Audio and Video** - Extended multimodal support from images to audio (WAV, MP3) and video (MP4, AVI, MOV, WEBM) across Chat Completions and Claude backends
+- **Qwen API Integration** - Added Qwen API provider support to Chat Completions backend for video understanding capabilities
 
-See the new MCP Planning Mode in action:
-
-[![MassGen v0.0.29 MCP Planning Mode Demo](https://img.youtube.com/vi/jLrMMEIr118/0.jpg)](https://youtu.be/jLrMMEIr118)
-
-**What's New in v0.0.29:**
-- **MCP Planning Mode** - New coordination strategy that plans MCP tool usage without execution, preventing irreversible actions during collaboration
-- **File Operation Safety** - Read-before-delete enforcement ensures agents review files before deletion
-- **Enhanced MCP Tool Filtering** - Multi-level filtering with backend-level and per-MCP-server control
-- **Gemini Planning Mode Support** - Extended planning mode compatibility to Gemini backend
-
-**Try v0.0.29 MCP Planning Mode:**
+**Try v0.0.30 Multimodal Features:**
 ```bash
-# Five agents collaborating with planning mode (no execution during coordination)
+# Audio understanding with OpenRouter
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
-  "Create a comprehensive project structure with documentation"
+  --config massgen/configs/basic/single/single_openrouter_audio_understanding.yaml \
+  "What is in this recording?"
 
-# Test MCP tools with multiple agents
+# Video understanding with Qwen API
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
-  "Compare weather forecasts for New York, London, and Tokyo"
+  --config massgen/configs/basic/single/single_qwen_video_understanding.yaml \
+  "Describe what happens in this video"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -324,15 +316,17 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
-|---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
-| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API**  | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ✅ | ✅ | Web search, **MCP integration** |
-| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
+| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal (Image/Audio/Video) | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------:|:----------:|:-----------------|
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
+| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code execution, **MCP integration**|
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | ❌ | Web search, **MCP integration** |
+| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code interpreter, **MCP integration** |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ❌ | **MCP integration** |
+
+**Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
 
 
 ### 4. 🏃 Run MassGen
@@ -931,32 +925,42 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.29)
+### Recent Achievements (v0.0.30)
 
-**🎉 Released: October 8, 2025**
+**🎉 Released: October 10, 2025**
 
-#### MCP Planning Mode
-- **Strategic Planning**: New `CoordinationConfig` class with `enable_planning_mode` flag for safer MCP tool usage
-- **Multi-Backend Support**: Planning mode available for Response API, Chat Completions, and Gemini backends
-- **Safer Collaboration**: Agents plan tool usage without execution during coordination phase, only the winning agent executes
+#### Multimodal Support Extension
+- **Audio Processing**: WAV and MP3 format support for Chat Completions and Claude backends
+- **Video Processing**: MP4, AVI, MOV, WEBM format support for Chat Completions and Claude backends
+- **Flexible Media Input**: Support for local file paths and HTTP/HTTPS URLs
+- **Extended Base64 Encoding**: Now supports audio and video files in addition to images
+- **Configurable Limits**: Media file size limits (default 64MB, configurable via `media_max_file_size_mb`)
 
-#### File Operation Safety
-- **Read-Before-Delete Enforcement**: New `FileOperationTracker` class prevents agents from deleting files they haven't read
-- **PathPermissionManager Integration**: Enhanced with read/write/delete operation tracking methods
+#### Claude Code Backend SDK Update
+- **Package Migration**: Updated from `claude-code-sdk>=0.0.19` to `claude-agent-sdk>=0.0.22`
+- **Internal Updates**: SDK class changes (`ClaudeCodeOptions` → `ClaudeAgentOptions`)
+- **Enhanced Security**: Improved bash tool permission validation
+- **System Message Handling**: Better SDK preset support
 
-#### Enhanced MCP Tool Filtering
-- **Multi-Level Control**: Combined backend-level and per-MCP-server tool filtering
-- **Server-Specific Overrides**: MCP-server `allowed_tools` can override backend-level settings
+#### Chat Completions Backend Enhancement
+- **Qwen API Integration**: Added Qwen API provider to Chat Completions ecosystem
+- **New Environment Variable**: `QWEN_API_KEY` support
+- **Video Understanding**: Qwen-specific configuration examples
 
-#### New Configuration Files
-- **Planning Mode Configs**: `five_agents_discord_mcp_planning_mode.yaml`, `five_agents_filesystem_mcp_planning_mode.yaml`, `five_agents_notion_mcp_planning_mode.yaml`, `five_agents_twitter_mcp_planning_mode.yaml`, `gpt5_mini_case_study_mcp_planning_mode.yaml`
-- **MCP Test Configs**: `five_agents_travel_mcp_test.yaml`, `five_agents_weather_mcp_test.yaml`
-- **Debug Config**: `skip_coordination_test.yaml`
+#### Bug Fixes
+- **Planning Mode Stability**: Fixed crash when configuration lacks `coordination_config`
+- **Message Handling**: Resolved Claude Code system message processing issues
+- **Import Organization**: Fixed AG2 adapter import ordering
 
-#### Testing
-- **New Test Suites**: `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
+#### Documentation and Configuration
+- **Case Studies**: `ag2-framework-integration.md`, `mcp-planning-mode.md`
+- **New Configuration Files**: `ag2_case_study.yaml`, `cc_gpt5_gemini_filesystem.yaml`, `single_gemini2.5pro.yaml`, `single_openrouter_audio_understanding.yaml`, `single_qwen_video_understanding.yaml`, `test_sdk_migration.yaml`
 
-### Previous Achievements (v0.0.3 - v0.0.28)
+### Previous Achievements (v0.0.3 - v0.0.29)
+
+✅ **MCP Planning Mode (v0.0.29)**: Strategic planning coordination strategy for safer MCP tool usage, multi-backend support (Response API, Chat Completions, Gemini), agents plan without execution during coordination, 5 planning mode configurations
+
+✅ **File Operation Safety (v0.0.29)**: Read-before-delete enforcement with `FileOperationTracker` class, `PathPermissionManager` integration with operation tracking methods, enhanced file operation safety mechanisms
 
 ✅ **AG2 Framework Integration (v0.0.28)**: Adapter system for external agent frameworks, AG2 ConversableAgent and AssistantAgent support with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), 4 ready-to-use AG2 configurations
 
@@ -1032,25 +1036,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.30 Roadmap
+### v0.0.31 Roadmap
 
-Version 0.0.30 focuses on fixing backend issues and extending multimodal support:
+Version 0.0.31 focuses on enhancing planning mode capabilities and AG2 group chat integration:
 
 #### Required Features
-- **Backend Issues & Organization**: Fix Claude Code backend reliability issues and reorganize configuration structure for better discoverability
-- **Multimodal Support Extension**: Enable image processing capabilities in Claude and Chat Completions backends
+- **Planning Mode Enhancements**: Tool whitelist/blacklist system, multi-turn integration, comprehensive testing
+- **AG2 Group Chat Integration**: User agent orchestration with AG2 group chat and streaming API
 
 #### Optional Features
-- **Group Chat Integration**: Complete AG2 group chat orchestration integration for multi-agent group conversations
 - **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
+- **Memory Framework**: Design and implement memory system for agent context persistence
 
 Key technical approach:
-- **Backend Stability**: Comprehensive error handling, fallback mechanisms, and test coverage for Claude Code
-- **Multimodal Extension**: Image input handling for Claude and Chat Completions backends with provider compatibility
-- **Configuration Cleanup**: Standardize naming conventions and improve documentation for easier navigation
-- **Extensible Architecture**: New tool registration system supporting dynamic discovery and plugin-based extensions
+- **Planning Mode**: Tool restriction system with whitelist/blacklist, multi-turn conversation support, planning mode persistence
+- **AG2 Integration**: Orchestrator-to-user-agent communication pattern, streaming API for group chat updates
+- **Tool Registry**: Improved dynamic tool discovery and loading with plugin-based extensions
+- **Memory System**: Storage and retrieval architecture with different memory types (short-term, long-term, episodic)
 
-For detailed milestones and technical specifications, see the [full v0.0.30 roadmap](ROADMAP_v0.0.30.md).
+For detailed milestones and technical specifications, see the [full v0.0.31 roadmap](ROADMAP_v0.0.31.md).
 
 ---
 
