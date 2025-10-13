@@ -5,6 +5,71 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.31] - 2025-10-14
+
+### Added
+- **Code Execution via MCP**: Universal command execution through MCP
+  - New `execute_command` MCP tool enabling bash/shell execution across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
+  - AG2-inspired security with multi-layer protection: dangerous command sanitization, command filtering (whitelist/blacklist), PathPermissionManager hooks, path validation, timeout enforcement
+  - Command filtering with regex patterns for whitelist/blacklist control
+  - New MCP server `_code_execution_server.py` with subprocess-based local execution
+  - Test coverage in `test_code_execution.py` covering basics, path validation, command sanitization, output handling, and virtual environment detection
+
+- **Audio Generation Tools**: Text-to-speech and audio transcription capabilities via OpenAI APIs
+  - New `generate_and_store_audio_no_input_audios` tool for generating audio from text using gpt-4o-audio-preview model
+  - New `generate_text_with_input_audio` tool for transcribing audio files using OpenAI's Transcription API
+  - New `convert_text_to_speech` tool for converting text to speech with gpt-4o-mini-tts model
+  - Support for multiple voices (alloy, echo, fable, onyx, nova, shimmer, coral, sage) and audio formats (wav, mp3, opus, aac, flac)
+  - Optional speaking instructions for tone and style control in TTS
+  - Automatic workspace organization with timestamp-based filenames
+
+- **Video Generation Tools**: Text-to-video generation via OpenAI's Sora-2 API
+  - New `generate_and_store_video_no_input_images` tool for generating videos from text prompts
+  - Support for Sora-2 model with configurable video duration
+  - Asynchronous video generation with progress monitoring
+  - Automatic MP4 format with workspace storage and organization
+
+### Changed
+- **AG2 Group Chat Support**: Enhanced AG2 adapter with native multi-agent group chat coordination
+  - New group chat manager integration with AG2's `GroupChat` and `GroupChatManager`
+  - Configurable speaker selection modes: auto (LLM-based), round_robin, manual
+  - Support for nested conversations and workflow tools within group chat sessions
+  - Automatic tool registration/unregistration for clean group chat lifecycle
+  - Enhanced adapter architecture with group chat state management
+  - Better agent reinitialization and termination logic for multi-turn group conversations
+  - Test coverage in `test_ag2_adapter.py` and `test_ag2_utils.py`
+
+- **File Operation Tracker**: Enhanced with auto-generated file exemptions
+  - New `_is_auto_generated()` method to identify build artifacts and cache files
+  - Prevents permission errors when agents clean up after running tests or builds
+
+- **Path Permission Manager**: Added execute_command tool validation
+  - Added `execute_command` to command_tools set for bash-like security validation
+  - PreToolUse hooks now validate execute_command calls for dangerous patterns and path restrictions
+  - Enhanced test coverage with 93 new test lines for command tool validation
+
+- **Message Templates**: Added code execution result guidance
+  - New system message guidance when `enable_command_execution=True` instructing agents to explain test results and command outputs in their answers
+  - Better agent behavior for explaining what was tested and what results mean
+
+### Documentations, Configurations and Resources
+
+- **Code Execution Design Documentation**: Comprehensive technical design document
+  - `CODE_EXECUTION_DESIGN.md`: Design doc covering architecture, security layers, implementation plan, virtual environment support, and future Docker enhancements
+
+- **New Configuration Files**: Added 8 new example configurations
+  - **AG2 Group Chat**: `ag2_groupchat.yaml`, `ag2_groupchat_gpt.yaml`
+  - **Code Execution**: `basic_command_execution.yaml`, `code_execution_use_case_simple.yaml`, `command_filtering_whitelist.yaml`, `command_filtering_blacklist.yaml`,
+  - **Audio Generation**: `single_gpt4o_audio_generation.yaml`, `gpt4o_audio_generation.yaml`
+  - **Video Generation**: `single_gpt4o_video_generation.yaml`
+
+### Technical Details
+- **Commits**: 29 commits including AG2 group chat, code execution, audio/video generation, and enhancements
+- **Files Modified**: 39 files with 3,649 insertions and 154 deletions
+- **Major Features**: AG2 group chat, universal code execution via MCP, audio/video generation tools
+- **New Tests**: `test_ag2_adapter.py`, `test_ag2_utils.py`, `test_code_execution.py`
+- **Contributors**: @Eric-Shang @qidanrui @sonichi @Leezekun and the MassGen team
+
 ## [0.0.30] - 2025-10-10
 
 ### Changed

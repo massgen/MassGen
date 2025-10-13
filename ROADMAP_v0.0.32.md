@@ -1,120 +1,138 @@
 
-# MassGen v0.0.31 Roadmap
+# MassGen v0.0.32 Roadmap
 
 ## Overview
 
-Version 0.0.31 focuses on enhancing MCP planning mode capabilities and AG2 group chat integration. Key priorities include:
+Version 0.0.32 focuses on enhancing code execution with Docker isolation and improving configuration management. Key priorities include:
 
-- **Planning Mode Enhancements** (Required): 🎯 Improve planning mode with tool restrictions, multi-backend support, and multi-turn integration
-- **AG2 Group Chat Integration** (Required): 👥 Implement user agent orchestration with AG2 group chat and streaming API
-- **Tool Registration Refactoring** (Optional): 🔧 Refactor tool registration system for better extensibility
-- **Memory Framework** (Optional): 🧠 Implement future memory capabilities for persistent agent context
+- **Docker Code Execution** (Required): 🐳 Extend code execution with Docker-based container isolation
+- **Configuration Builder CLI** (Required): 🛠️ Build command-line tool for generating and validating MassGen configurations
+- **MCP Tool Safety System** (Optional): 🔒 LLM-powered classification of irreversible MCP tools with human-in-the-loop
+- **MCP Framework Refactoring** (Optional): 🔧 Refactor MCP integration architecture for better maintainability
 
 ## Key Technical Priorities
 
-1. **Planning Mode Enhancements** (REQUIRED): Extend planning mode with tool whitelisting/blacklisting, full backend coverage, and multi-turn support
-2. **AG2 Group Chat Integration** (REQUIRED): Enable orchestrator-to-user-agent communication with AG2 group chat and streaming API
-3. **Tool Registration Refactoring** (OPTIONAL): Refactor tool registration architecture for scalability
-4. **Memory Framework** (OPTIONAL): Design and implement memory system for agent context persistence
+1. **Docker Code Execution** (REQUIRED): Extend code execution with Docker container isolation for enhanced security
+2. **Configuration Builder CLI** (REQUIRED): Create interactive CLI tool for configuration management
+3. **MCP Tool Safety System** (OPTIONAL): Implement intelligent tool safety classification with optional human review
+4. **MCP Framework Refactoring** (OPTIONAL): Refactor MCP integration for improved extensibility and maintainability
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Planning Mode Enhancements (REQUIRED)
+### 🎯 Milestone 1: Docker Code Execution (REQUIRED)
 
-**Goal**: Improve planning mode capabilities with tool restrictions, backend coverage, and multi-turn support
+**Goal**: Extend v0.0.31's code execution with Docker container isolation for enhanced security
 
-#### 1.1 Tool Restriction System
-- [ ] Design whitelist/blacklist system for planning vs. execution tools
-- [ ] Implement configuration format for tool restrictions
-- [ ] Support automatic tool labeling with human-in-the-loop option
-- [ ] Add validation for tool usage during planning and execution phases
+#### 1.1 Docker Integration Architecture
+- [ ] Design Docker-based code execution architecture
+- [ ] Implement container lifecycle management
+- [ ] Support custom Docker images and Dockerfiles
+- [ ] Handle workspace mounting and file permissions
 
-#### 1.2 Multi-turn Integration
-- [ ] Integrate planning mode with multi-turn conversation framework
-- [ ] Support planning mode persistence across conversation turns
-- [ ] Handle planning mode state transitions in multi-turn scenarios
-- [ ] Test planning mode behavior in extended conversations
+#### 1.2 Security and Isolation
+- [ ] Implement network isolation options
+- [ ] Configure resource limits (CPU, memory, disk)
+- [ ] Support read-only mounts for context paths
+- [ ] Handle container cleanup and error recovery
 
-#### 1.3 Testing and Documentation
-- [ ] Add comprehensive tests for tool restriction system
-- [ ] Create example configurations demonstrating planning mode features
-- [ ] Document planning mode best practices and limitations
-- [ ] Update case studies with new planning mode capabilities
+#### 1.3 Configuration and Workflow
+- [ ] Define Docker configuration format in agent configs
+- [ ] Support both pre-built images and custom Dockerfiles
+- [ ] Create template Dockerfiles for common stacks
+- [ ] Document Docker setup and usage patterns
 
-
-### 🎯 Milestone 2: AG2 Group Chat Integration (REQUIRED)
-
-**Goal**: Implement user agent orchestration with AG2 group chat and streaming API
-
-#### 2.1 User Agent Architecture
-- [ ] Design orchestrator-to-user-agent communication pattern
-- [ ] Implement user agent that initiates AG2 group chat
-- [ ] Support task delegation from orchestrator to user agent
-- [ ] Handle group chat results back to orchestrator
-
-#### 2.2 Streaming API Integration
-- [ ] Implement streaming API for user agent communication
-- [ ] Support real-time updates from group chat to orchestrator
-- [ ] Handle streaming message formatting and routing
-- [ ] Test streaming performance and reliability
-
-#### 2.3 Group Chat Configuration
-- [ ] Define configuration format for user agent and group chat
-- [ ] Support flexible group chat agent composition
-- [ ] Enable dynamic group chat member selection
-- [ ] Add validation for group chat configurations
-
-#### 2.4 Testing and Examples
-- [ ] Add test coverage for user agent orchestration
-- [ ] Test AG2 group chat integration end-to-end
-- [ ] Create example configurations for group chat scenarios
-- [ ] Document user agent setup and usage patterns
+#### 1.4 Testing and Examples
+- [ ] Add comprehensive tests for Docker execution
+- [ ] Create example configurations with Docker
+- [ ] Test with multiple Docker image types
+- [ ] Document troubleshooting and best practices
 
 
-### 🎯 Milestone 3: Tool Registration Refactoring (OPTIONAL)
+### 🎯 Milestone 2: Configuration Builder CLI (REQUIRED)
 
-**Goal**: Refactor tool registration system for better extensibility
+**Goal**: Create interactive CLI tool for configuration management
 
-#### 3.1 Tool Registry Architecture
-- [ ] Design new tool registration architecture
-- [ ] Refactor existing tool registration implementation
-- [ ] Improve dynamic tool discovery and loading
-- [ ] Simplify tool extension mechanism
+#### 2.1 CLI Architecture
+- [ ] Design configuration builder interface
+- [ ] Implement interactive prompts for configuration options
+- [ ] Support configuration templates and presets
+- [ ] Add validation and error checking
 
-#### 3.2 Backend Tool Integration
-- [ ] Standardize tool registration across backends
-- [ ] Improve tool configuration and management
-- [ ] Support plugin-based tool extensions
-- [ ] Add tool versioning support
+#### 2.2 Configuration Generation
+- [ ] Generate agent configurations interactively
+- [ ] Support multi-agent setup with different backends
+- [ ] Configure MCP servers and tools
+- [ ] Generate filesystem and permission configurations
 
-#### 3.3 Developer Experience
-- [ ] Create tool development documentation
-- [ ] Add tool templates and examples
-- [ ] Improve tool validation and error messages
-- [ ] Simplify custom tool creation process
+#### 2.3 Configuration Management
+- [ ] Validate existing configuration files
+- [ ] Update and migrate configurations
+- [ ] Export configurations in different formats
+- [ ] Support configuration versioning
+
+#### 2.4 User Experience
+- [ ] Create intuitive prompts and help messages
+- [ ] Add configuration preview and dry-run mode
+- [ ] Implement configuration testing utilities
+- [ ] Document CLI usage and examples
 
 
-### 🎯 Milestone 4: Memory Framework (OPTIONAL)
+### 🎯 Milestone 3: MCP Tool Safety System (OPTIONAL)
 
-**Goal**: Design and implement memory system for agent context persistence
+**Goal**: Implement intelligent tool safety classification with optional human review
 
-#### 4.1 Memory Architecture Design
-- [ ] Design memory storage and retrieval architecture
-- [ ] Define memory scope and lifecycle management
-- [ ] Support different memory types (short-term, long-term, episodic)
-- [ ] Plan integration with existing agent framework
+#### 3.1 LLM-Powered Tool Classification
+- [ ] Design LLM-based tool safety analysis
+- [ ] Classify MCP tools as reversible or irreversible
+- [ ] Generate safety recommendations per tool
+- [ ] Support automated tool labeling
 
-#### 4.2 Memory Implementation
-- [ ] Implement memory storage backend
-- [ ] Build memory indexing and search capabilities
-- [ ] Support memory sharing across agents
-- [ ] Handle memory persistence and cleanup
+#### 3.2 Human-in-the-Loop System
+- [ ] Implement optional human review workflow
+- [ ] Create interface for reviewing tool classifications
+- [ ] Allow manual overrides and custom classifications
+- [ ] Store user decisions for future reference
 
-#### 4.3 Integration and Testing
-- [ ] Integrate memory system with orchestrator
-- [ ] Add memory configuration options
-- [ ] Test memory performance and scalability
-- [ ] Create examples demonstrating memory usage
+#### 3.3 Per-User Configuration
+- [ ] Support user-specific tool safety preferences
+- [ ] Store per-user tool classifications
+- [ ] Allow workspace-specific overrides
+- [ ] Handle classification inheritance and defaults
+
+#### 3.4 Integration and Safety Enforcement
+- [ ] Integrate with planning mode tool restrictions
+- [ ] Add safety warnings for irreversible tools
+- [ ] Support confirmation prompts for dangerous operations
+- [ ] Document safety system configuration
+
+
+### 🎯 Milestone 4: MCP Framework Refactoring (OPTIONAL)
+
+**Goal**: Refactor MCP integration for improved extensibility and maintainability
+
+#### 4.1 Architecture Redesign
+- [ ] Analyze current MCP integration patterns
+- [ ] Design cleaner separation of concerns
+- [ ] Improve MCP client abstraction
+- [ ] Simplify MCP server management
+
+#### 4.2 Code Organization
+- [ ] Refactor MCP modules for better structure
+- [ ] Reduce code duplication across backends
+- [ ] Improve error handling and logging
+- [ ] Enhance type safety and documentation
+
+#### 4.3 Extensibility Improvements
+- [ ] Simplify adding new MCP server types
+- [ ] Improve plugin architecture for MCP tools
+- [ ] Support custom MCP transport protocols
+- [ ] Add hooks for MCP event handling
+
+#### 4.4 Testing and Migration
+- [ ] Ensure backward compatibility
+- [ ] Add comprehensive test coverage
+- [ ] Create migration guide for custom MCP integrations
+- [ ] Document new architecture and patterns
 
 
 
@@ -122,70 +140,71 @@ Version 0.0.31 focuses on enhancing MCP planning mode capabilities and AG2 group
 
 ### Functional Requirements (REQUIRED)
 
-**Planning Mode Enhancements:**
-- [ ] Tool whitelist/blacklist system fully functional
-- [ ] Planning mode works across all backends
-- [ ] Multi-turn planning mode support integrated
-- [ ] Comprehensive test coverage for planning mode features
-- [ ] Documentation and examples for new planning mode capabilities
+**Docker Code Execution:**
+- [ ] Docker-based code execution fully operational
+- [ ] Custom Docker images and Dockerfiles supported
+- [ ] Security isolation and resource limits working
+- [ ] Comprehensive test coverage for Docker execution
+- [ ] Documentation and examples for Docker usage
 
-**AG2 Group Chat Integration:**
-- [ ] User agent orchestration pattern implemented
-- [ ] AG2 group chat integration complete
-- [ ] Streaming API operational for user agent communication
-- [ ] Group chat configurations work correctly
-- [ ] Documentation for user agent and group chat setup
+**Configuration Builder CLI:**
+- [ ] Interactive configuration generation working
+- [ ] Configuration validation functional
+- [ ] Template and preset support implemented
+- [ ] User-friendly prompts and help messages
+- [ ] Documentation for CLI tool usage
 
 ### Functional Requirements (OPTIONAL)
 
-**Tool Registration Refactoring:**
-- [ ] New tool registration architecture implemented
+**MCP Tool Safety System:**
+- [ ] LLM-powered tool classification operational
+- [ ] Human-in-the-loop review workflow functional
+- [ ] Per-user configuration support working
+- [ ] Integration with existing safety mechanisms
+- [ ] Documentation for safety system
+
+**MCP Framework Refactoring:**
+- [ ] Refactored architecture implemented
 - [ ] Backward compatibility maintained
-- [ ] Simplified custom tool creation process
+- [ ] Code organization improved
 - [ ] Comprehensive developer documentation
 
-**Memory Framework:**
-- [ ] Memory architecture designed and documented
-- [ ] Basic memory storage and retrieval working
-- [ ] Memory integration with agents functional
-- [ ] Examples demonstrating memory usage
-
 ### Performance Requirements (REQUIRED)
-- [ ] Planning mode enhancements do not degrade performance
-- [ ] Streaming API responsive and efficient
-- [ ] Group chat coordination efficient
-- [ ] Memory operations (if implemented) have minimal overhead
+- [ ] Docker execution performance acceptable
+- [ ] Configuration builder responsive
+- [ ] Tool classification efficient (if implemented)
+- [ ] MCP refactoring maintains or improves performance
 
 ### Quality Requirements (REQUIRED)
-- [ ] Test coverage for planning mode enhancements
-- [ ] Test coverage for user agent and group chat features
+- [ ] Test coverage for Docker execution
+- [ ] Test coverage for configuration builder
 - [ ] Comprehensive integration tests
-- [ ] Tool registration tests (if implemented)
-- [ ] Memory framework tests (if implemented)
+- [ ] MCP safety system tests (if implemented)
+- [ ] MCP refactoring tests (if implemented)
 
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **MCP Framework**: Tool restriction capabilities in MCP servers
-- **AG2 Framework**: Group chat and streaming API capabilities
-- **All Backend APIs**: Planning mode support across different providers
-- **Memory Storage**: Database or storage backend for memory framework (if implemented)
+- **Docker**: Docker Engine for container-based execution
+- **Python Docker SDK**: Library for Docker container management
+- **LLM APIs**: For tool safety classification (if implemented)
+- **MCP Framework**: Core MCP protocol and server implementations
 
 ### Risks & Mitigations
-1. **Tool Restriction Complexity**: *Mitigation*: Clear configuration format, validation, comprehensive testing
-2. **Backend Compatibility**: *Mitigation*: Incremental rollout, fallback for unsupported backends
-3. **AG2 Integration Challenges**: *Mitigation*: Phased implementation, clear interface contracts
-4. **Streaming Performance**: *Mitigation*: Optimize streaming pipeline, add buffering mechanisms
-5. **Memory Scalability**: *Mitigation*: Efficient indexing, configurable retention policies
+1. **Docker Compatibility**: *Mitigation*: Support both Docker Desktop and Docker Engine, provide fallback to local execution
+2. **Container Performance**: *Mitigation*: Optimize container startup, support pre-built images, implement caching
+3. **CLI Usability**: *Mitigation*: User testing, iterative design, comprehensive help documentation
+4. **LLM Classification Accuracy**: *Mitigation*: Human-in-the-loop validation, user override capabilities
+5. **Refactoring Complexity**: *Mitigation*: Phased refactoring, maintain backward compatibility, extensive testing
 
 
-## Future Enhancements (Post-v0.0.31)
+## Future Enhancements (Post-v0.0.32)
 
-- **Advanced Planning Strategies**: Dynamic planning strategy selection based on task complexity
-- **Multi-Agent Memory Sharing**: Collaborative memory across multiple agents
-- **Enhanced Group Chat**: Support for hierarchical group chats and nested conversations
-- **Tool Marketplace**: Community-contributed tool registry and discovery
+- **Kubernetes Support**: Container orchestration for large-scale deployments
+- **Advanced Configuration Templates**: Industry-specific configuration presets
+- **Tool Safety Analytics**: Insights into tool usage patterns and safety metrics
+- **MCP Tool Marketplace**: Community-contributed MCP server registry
 
 
 ### Long-term Vision
@@ -198,10 +217,10 @@ Version 0.0.31 focuses on enhancing MCP planning mode capabilities and AG2 group
 
 | Phase | Focus | Key Deliverables | Priority |
 |-------|-------|------------------|----------|
-| Phase 1 | Planning Mode | Tool restrictions, backend support, multi-turn integration | **REQUIRED** |
-| Phase 2 | AG2 Group Chat | User agent orchestration, streaming API, group chat integration | **REQUIRED** |
-| Phase 3 | Tool Refactoring | New tool registration architecture | OPTIONAL |
-| Phase 4 | Memory Framework | Memory system design and implementation | OPTIONAL |
+| Phase 1 | Docker Execution | Container isolation, custom images, security features | **REQUIRED** |
+| Phase 2 | Configuration Builder | Interactive CLI, validation, templates | **REQUIRED** |
+| Phase 3 | Tool Safety | LLM classification, human review, per-user config | OPTIONAL |
+| Phase 4 | MCP Refactoring | Architecture redesign, code organization, extensibility | OPTIONAL |
 
 
 ## Getting Started
@@ -209,25 +228,24 @@ Version 0.0.31 focuses on enhancing MCP planning mode capabilities and AG2 group
 ### For Contributors
 
 **Required Work:**
-1. Implement tool whitelist/blacklist system for planning mode
-2. Verify and test planning mode across all backends
-3. Integrate planning mode with multi-turn framework
-4. Implement user agent orchestration pattern
-5. Build AG2 group chat integration with streaming API
-6. Test and document all changes thoroughly
+1. Implement Docker-based code execution with container management
+2. Build security isolation and resource limits for Docker
+3. Create interactive configuration builder CLI
+4. Add configuration validation and template system
+5. Test and document all changes thoroughly
 
 **Optional Work:**
-7. Refactor tool registration system for better extensibility
-8. Design and implement memory framework
+6. Build LLM-powered tool safety classification system
+7. Refactor MCP framework for better maintainability
 
 ### For Users
 
-- v0.0.31 will enhance planning mode with more control over tool execution
-- AG2 group chat integration enables complex multi-agent workflows
-- Planning mode will work seamlessly across all backends
-- Multi-turn support for planning mode enables extended workflows
-- Optional improvements: better tool registration and memory capabilities
+- v0.0.32 will add Docker support for secure code execution
+- Configuration builder CLI simplifies setup and management
+- Docker isolation provides stronger security for code execution
+- Configuration validation helps catch errors early
+- Optional improvements: intelligent tool safety and cleaner MCP architecture
 
 ---
 
-*This roadmap prioritizes planning mode improvements and AG2 integration while keeping tool refactoring and memory as optional enhancements.*
+*This roadmap prioritizes Docker execution and configuration management while keeping tool safety and MCP refactoring as optional enhancements.*
