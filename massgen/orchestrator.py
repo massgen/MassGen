@@ -1252,16 +1252,10 @@ class Orchestrator(ChatAgent):
 
                 # Extract command execution parameters
                 enable_command_execution = False
-                command_execution_prefix = None
-                command_execution_venv_path = None
                 if hasattr(agent, "config") and agent.config:
                     enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
-                    command_execution_prefix = agent.config.backend_params.get("command_execution_prefix")
-                    command_execution_venv_path = agent.config.backend_params.get("command_execution_venv_path")
                 elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
                     enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
-                    command_execution_prefix = agent.backend.backend_params.get("command_execution_prefix")
-                    command_execution_venv_path = agent.backend.backend_params.get("command_execution_venv_path")
 
                 filesystem_system_message = self.message_templates.filesystem_system_message(
                     main_workspace=main_workspace,
@@ -1272,8 +1266,6 @@ class Orchestrator(ChatAgent):
                     enable_image_generation=enable_image_generation,
                     agent_answers=answers,
                     enable_command_execution=enable_command_execution,
-                    command_execution_prefix=command_execution_prefix,
-                    command_execution_venv_path=command_execution_venv_path,
                 )
                 agent_system_message = f"{agent_system_message}\n\n{filesystem_system_message}" if agent_system_message else filesystem_system_message
 
@@ -1961,16 +1953,10 @@ class Orchestrator(ChatAgent):
 
         # Extract command execution parameters
         enable_command_execution = False
-        command_execution_prefix = None
-        command_execution_venv_path = None
         if hasattr(agent, "config") and agent.config:
             enable_command_execution = agent.config.backend_params.get("enable_mcp_command_line", False)
-            command_execution_prefix = agent.config.backend_params.get("command_execution_prefix")
-            command_execution_venv_path = agent.config.backend_params.get("command_execution_venv_path")
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_command_execution = agent.backend.backend_params.get("enable_mcp_command_line", False)
-            command_execution_prefix = agent.backend.backend_params.get("command_execution_prefix")
-            command_execution_venv_path = agent.backend.backend_params.get("command_execution_venv_path")
 
         # Check if agent has write access to context paths (requires file delivery)
         has_irreversible_actions = False
@@ -2021,8 +2007,6 @@ class Orchestrator(ChatAgent):
                     enable_image_generation=enable_image_generation,
                     agent_answers=all_answers,
                     enable_command_execution=enable_command_execution,
-                    command_execution_prefix=command_execution_prefix,
-                    command_execution_venv_path=command_execution_venv_path,
                 )
                 + "\n\n## Instructions\n"
                 + base_system_message

@@ -497,6 +497,28 @@ def test_validate_execute_command_tool():
                 print(f"❌ Failed: Write to workspace should be allowed for execute_command: {cmd}. Reason: {reason}")
                 return False
 
+        print("  Testing write operations to paths outside all managed directories...")
+        # Create a directory outside workspace, context, and readonly dirs
+        outside_dir = helper.temp_dir / "completely_outside"
+        outside_dir.mkdir(parents=True)
+        outside_file = str(outside_dir / "outside_file.txt")
+
+        # Commands writing to completely unmanaged paths
+        # These should be allowed since they're not in any context path
+        # (manager only restricts writes to read-only context paths)
+        outside_commands = [
+            f"echo 'content' > {outside_file}",
+            f"cp source.txt {outside_file}",
+        ]
+
+        for cmd in outside_commands:
+            tool_args = {"command": cmd}
+            allowed, reason = manager._validate_command_tool("execute_command", tool_args)
+
+            if not allowed:
+                print(f"❌ Failed: Write to unmanaged path should be allowed for execute_command: {cmd}. Reason: {reason}")
+                return False
+
         print("✅ _validate_command_tool works correctly for execute_command")
         return True
 

@@ -1021,7 +1021,7 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                         # Clean up existing agents' backends and filesystem managers
                         for agent_id, agent in agents.items():
                             # Cleanup filesystem manager (Docker containers, etc.)
-                            if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager'):
+                            if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager"):
                                 if agent.backend.filesystem_manager:
                                     try:
                                         agent.backend.filesystem_manager.cleanup()
@@ -1415,7 +1415,7 @@ Environment Variables:
         finally:
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():
-                if hasattr(agent, 'backend') and hasattr(agent.backend, 'filesystem_manager'):
+                if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager"):
                     if agent.backend.filesystem_manager:
                         try:
                             agent.backend.filesystem_manager.cleanup()
