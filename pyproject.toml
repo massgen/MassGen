@@ -47,6 +47,7 @@ dependencies = [
     "pillow>=11.3.0",
     "ag2>=0.9.10",
     "pyautogen>=0.10.0",
+    "vertexai>=1.71.1",
 ]
 
 [project.optional-dependencies]

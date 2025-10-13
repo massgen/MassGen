@@ -45,6 +45,7 @@ class FilesystemManager:
         context_write_access_enabled: bool = False,
         enforce_read_before_delete: bool = True,
         enable_image_generation: bool = False,
+        enable_audio_generation: bool = False,
     ):
         """
         Initialize FilesystemManager.
@@ -59,6 +60,7 @@ class FilesystemManager:
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation
+        self.enable_audio_generation = enable_audio_generation
 
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
@@ -224,6 +226,15 @@ class FilesystemManager:
                 "generate_and_store_image_with_input_images",
                 "generate_and_store_image_no_input_images",
             ]
+        if not self.enable_audio_generation:
+            if "exclude_tools" not in config:
+                config["exclude_tools"] = []
+            config["exclude_tools"].extend(
+                [
+                    "generate_and_store_audio_with_input_audios",
+                    "generate_and_store_audio_no_input_audios",
+                ],
+            )
 
         return config
 

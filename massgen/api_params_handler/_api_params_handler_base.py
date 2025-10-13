@@ -59,6 +59,7 @@ class APIParamsHandlerBase(ABC):
             "context_write_access_enabled",
             "enable_image_generation",
             # Backend identification (handled by orchestrator)
+            "enable_audio_generation",  # Audio generation parameter
             "type",
             "agent_id",
             "session_id",

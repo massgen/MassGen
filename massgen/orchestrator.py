@@ -1943,6 +1943,13 @@ class Orchestrator(ChatAgent):
         elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
             enable_image_generation = agent.backend.backend_params.get("enable_image_generation", False)
 
+        # Check if audio generation is enabled for this agent
+        enable_audio_generation = False
+        if hasattr(agent, "config") and agent.config:
+            enable_audio_generation = agent.config.backend_params.get("enable_audio_generation", False)
+        elif hasattr(agent, "backend") and hasattr(agent.backend, "backend_params"):
+            enable_audio_generation = agent.backend.backend_params.get("enable_audio_generation", False)
+
         # Check if agent has write access to context paths (requires file delivery)
         has_irreversible_actions = False
         if agent.backend.filesystem_manager:
@@ -1954,6 +1961,7 @@ class Orchestrator(ChatAgent):
         base_system_message = self.message_templates.final_presentation_system_message(
             agent_system_message,
             enable_image_generation,
+            enable_audio_generation,
             has_irreversible_actions,
         )
 
