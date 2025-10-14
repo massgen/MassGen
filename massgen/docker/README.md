@@ -23,8 +23,12 @@ Docker mode provides strong isolation for command execution by running commands 
   docker ps         # Should connect without errors
   ```
 
-- **Python docker library (optional, for development)**
+- **Python docker library (optional, for Docker mode)**
   ```bash
+  # Install via optional dependency group
+  uv pip install -e ".[docker]"
+
+  # Or install directly
   pip install docker>=7.0.0
   ```
 
@@ -79,22 +83,25 @@ agent:
     command_line_docker_network_mode: "bridge"               # Enable network
 ```
 
-### Multi-Agent with Mixed Modes
+### Multi-Agent Docker Execution
 
 ```yaml
 agents:
-  - id: "trusted_agent"
+  - id: "agent_a"
     backend:
+      type: "openai"
+      model: "gpt-5-mini"
       cwd: "workspace1"
       enable_mcp_command_line: true
-      command_line_execution_mode: "local"  # Fast, no isolation
+      command_line_execution_mode: "docker"
 
-  - id: "untrusted_agent"
+  - id: "agent_b"
     backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
       cwd: "workspace2"
       enable_mcp_command_line: true
-      command_line_execution_mode: "docker"  # Isolated
-      command_line_docker_network_mode: "none"
+      command_line_execution_mode: "docker"
 ```
 
 ## Configuration Parameters
@@ -116,22 +123,21 @@ Orchestration Start
     ↓
 FilesystemManager.setup_orchestration_paths()
     ├── Creates persistent container: massgen-{agent_id}
-    ├── Mounts workspace as /workspace (rw)
-    ├── Mounts context paths as /context/* (ro)
-    └── Mounts temp_workspace as /temp_workspaces (ro)
+    ├── Mounts workspace at SAME host path (rw) - path transparency
+    ├── Mounts context paths at SAME host paths (ro by default)
+    └── Mounts temp_workspace at SAME host path (ro)
     ↓
 Agent Turn 1
-    ├── execute_command("pip install pytest")
-    └── docker exec massgen-{agent_id} sh -c "pip install pytest"
+    ├── execute_command("pip install click")
+    └── docker exec massgen-{agent_id} sh -c "pip install click"
     ↓
 Agent Turn 2
-    ├── execute_command("pytest tests/")
-    └── docker exec massgen-{agent_id} sh -c "pytest tests/"
-        (pytest is available - container persisted!)
+    ├── execute_command("python -c 'import click; print(click.__version__)'")
+    └── docker exec massgen-{agent_id} sh -c "python -c 'import click; print(click.__version__)'"
+        (click is available - container persisted!)
     ↓
 Orchestration End
     ├── FilesystemManager.cleanup()
-    ├── Saves container logs to massgen_logs/{session}/{agent_id}/docker_container.log
     └── Stops and removes container
 ```
 
@@ -148,7 +154,8 @@ Orchestration End
    - Executes commands via `docker exec`
    - **Why:** Keeps MCP server source code secure, not exposed to agents
 
-3. **Volume Mounting**
+3. **Path Transparency (Volume Mounting)**
+   - Paths mounted at SAME location as host (Docker invisible to LLM)
    - Workspace: Read-write access to agent's workspace
    - Context paths: Read-only or read-write based on config
    - Temp workspace: Read-only access to other agents' outputs
@@ -371,13 +378,6 @@ RUN useradd -m -u $(id -u) -s /bin/bash massgen
 
 ## Debugging
 
-### View Container Logs
-
-Logs are automatically saved during cleanup:
-```bash
-cat massgen_logs/{session_id}/{agent_id}/docker_container.log
-```
-
 ### Inspect Running Container
 
 ```bash
@@ -436,8 +436,9 @@ docker container prune -f
 
 See `massgen/configs/debug/code_execution/` for example configurations:
 - `docker_simple.yaml` - Minimal Docker setup
-- `docker_with_resource_limits.yaml` - Memory/CPU limits, network
-- `docker_multi_agent.yaml` - Multiple agents, mixed modes
+- `docker_with_resource_limits.yaml` - Memory/CPU limits with network access
+- `docker_multi_agent.yaml` - Multi-agent execution with Docker isolation
+- `docker_verification.yaml` - Verify Docker isolation is working
 
 ## References
 
