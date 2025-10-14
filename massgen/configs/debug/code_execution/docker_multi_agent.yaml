@@ -1,0 +1,50 @@
+# Multi-Agent with Mixed Execution Modes
+# Run with: uv run python -m massgen.cli --config massgen/configs/debug/code_execution/docker_multi_agent.yaml
+# Expected behavior: Trusted agent uses local execution, untrusted agent uses Docker isolation
+# Prerequisites: Docker installed and running, massgen/mcp-runtime:latest image built
+
+agents:
+  - id: "trusted_local_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      cwd: "workspace_trusted"
+
+      # Local execution (fast, no isolation)
+      enable_mcp_command_line: true
+      command_line_execution_mode: "local"
+
+      # Whitelist for safety
+      command_line_allowed_commands:
+        - "python.*"
+        - "pytest.*"
+        - "pip.*"
+
+  - id: "untrusted_docker_agent"
+    backend:
+      type: "openai"
+      model: "gpt-4o-mini"
+      cwd: "workspace_untrusted"
+
+      # Docker execution (isolated, secure)
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+      command_line_docker_network_mode: "none"     # No network access
+      command_line_docker_memory_limit: "1g"       # Constrained resources
+      command_line_docker_cpu_limit: 1.0
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+  coordination:
+    mode: "sequential"
+    agent_ids:
+      - "trusted_local_agent"
+      - "untrusted_docker_agent"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 300
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

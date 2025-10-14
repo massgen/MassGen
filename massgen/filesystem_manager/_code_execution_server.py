@@ -26,6 +26,17 @@ import fastmcp
 # Platform detection
 WIN32 = sys.platform == "win32"
 
+# Docker integration (optional)
+try:
+    import docker
+    from docker.errors import DockerException
+
+    DOCKER_AVAILABLE = True
+except ImportError:
+    DOCKER_AVAILABLE = False
+    docker = None  # type: ignore
+    DockerException = Exception  # type: ignore
+
 
 def _validate_path_access(path: Path, allowed_paths: List[Path]) -> None:
     """
@@ -178,6 +189,19 @@ async def create_server() -> fastmcp.FastMCP:
         default=None,
         help="Blacklist: Block commands matching these regex patterns (e.g., 'rm .*', 'sudo .*')",
     )
+    parser.add_argument(
+        "--execution-mode",
+        type=str,
+        default="local",
+        choices=["local", "docker"],
+        help="Execution mode: local (subprocess) or docker (container isolation)",
+    )
+    parser.add_argument(
+        "--agent-id",
+        type=str,
+        default=None,
+        help="Agent ID (required for Docker mode to identify container)",
+    )
     args = parser.parse_args()
 
     # Create the FastMCP server
@@ -189,6 +213,23 @@ async def create_server() -> fastmcp.FastMCP:
     mcp.max_output_size = args.max_output_size
     mcp.allowed_commands = args.allowed_commands  # Whitelist patterns
     mcp.blocked_commands = args.blocked_commands  # Blacklist patterns
+    mcp.execution_mode = args.execution_mode
+    mcp.agent_id = args.agent_id
+
+    # Initialize Docker client if Docker mode
+    mcp.docker_client = None
+    if args.execution_mode == "docker":
+        if not DOCKER_AVAILABLE:
+            raise RuntimeError("Docker mode requested but docker library not available. Install with: pip install docker")
+        # Note: agent_id validation is deferred to first command execution
+        # This allows MCP server to start before agent_id is set by orchestrator
+
+        try:
+            mcp.docker_client = docker.from_env()
+            mcp.docker_client.ping()  # Test connection
+            print("✅ [Docker] Connected to Docker daemon")
+        except DockerException as e:
+            raise RuntimeError(f"Failed to connect to Docker: {e}")
 
     @mcp.tool()
     def execute_command(
@@ -319,68 +360,155 @@ async def create_server() -> fastmcp.FastMCP:
                     "work_dir": str(work_path),
                 }
 
-            # Prepare environment (auto-detects .venv in work_dir)
-            env = _prepare_environment(work_path)
+            # Execute command based on execution mode
+            if mcp.execution_mode == "docker":
+                # Docker mode: execute in container via Docker client
+                if not mcp.docker_client:
+                    return {
+                        "success": False,
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": "Docker mode enabled but docker_client not initialized",
+                        "execution_time": 0.0,
+                        "command": command,
+                        "work_dir": str(work_path),
+                    }
 
-            # Execute command
-            start_time = time.time()
+                # Validate agent_id is set before executing
+                if not mcp.agent_id:
+                    return {
+                        "success": False,
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": "Docker mode requires agent_id to be set. This should be configured by the orchestrator.",
+                        "execution_time": 0.0,
+                        "command": command,
+                        "work_dir": str(work_path),
+                    }
 
-            try:
-                result = subprocess.run(
-                    command,
-                    shell=True,
-                    cwd=str(work_path),
-                    timeout=timeout,
-                    capture_output=True,
-                    text=True,
-                    env=env,
-                )
+                try:
+                    # Get container by name
+                    container_name = f"massgen-{mcp.agent_id}"
+                    container = mcp.docker_client.containers.get(container_name)
 
-                execution_time = time.time() - start_time
+                    # IMPORTANT: Use host paths directly in container
+                    # Container mounts are configured to use the SAME paths as host
+                    # This makes Docker completely transparent to the LLM
 
-                # Truncate output if too large
-                stdout = result.stdout
-                stderr = result.stderr
+                    # Execute command via docker exec
+                    exec_config = {
+                        "cmd": ["/bin/sh", "-c", command],
+                        "workdir": str(work_path),  # Use host path directly
+                        "stdout": True,
+                        "stderr": True,
+                    }
 
-                if len(stdout) > mcp.max_output_size:
-                    stdout = stdout[: mcp.max_output_size] + f"\n... (truncated, exceeded {mcp.max_output_size} bytes)"
+                    start_time = time.time()
+                    exit_code, output = container.exec_run(**exec_config)
+                    execution_time = time.time() - start_time
 
-                if len(stderr) > mcp.max_output_size:
-                    stderr = stderr[: mcp.max_output_size] + f"\n... (truncated, exceeded {mcp.max_output_size} bytes)"
+                    # Docker exec_run combines stdout and stderr
+                    output_str = output.decode("utf-8") if isinstance(output, bytes) else output
 
-                return {
-                    "success": result.returncode == 0,
-                    "exit_code": result.returncode,
-                    "stdout": stdout,
-                    "stderr": stderr,
-                    "execution_time": execution_time,
-                    "command": command,
-                    "work_dir": str(work_path),
-                }
+                    # Truncate output if too large
+                    if len(output_str) > mcp.max_output_size:
+                        output_str = output_str[: mcp.max_output_size] + f"\n... (truncated, exceeded {mcp.max_output_size} bytes)"
 
-            except subprocess.TimeoutExpired:
-                execution_time = time.time() - start_time
-                return {
-                    "success": False,
-                    "exit_code": -1,
-                    "stdout": "",
-                    "stderr": f"Command timed out after {timeout} seconds",
-                    "execution_time": execution_time,
-                    "command": command,
-                    "work_dir": str(work_path),
-                }
+                    return {
+                        "success": exit_code == 0,
+                        "exit_code": exit_code,
+                        "stdout": output_str,
+                        "stderr": "",  # Docker exec_run combines stdout/stderr
+                        "execution_time": execution_time,
+                        "command": command,
+                        "work_dir": str(work_path),  # Return host path
+                    }
 
-            except Exception as e:
-                execution_time = time.time() - start_time
-                return {
-                    "success": False,
-                    "exit_code": -1,
-                    "stdout": "",
-                    "stderr": f"Execution error: {str(e)}",
-                    "execution_time": execution_time,
-                    "command": command,
-                    "work_dir": str(work_path),
-                }
+                except DockerException as e:
+                    return {
+                        "success": False,
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": f"Docker container error: {str(e)}",
+                        "execution_time": 0.0,
+                        "command": command,
+                        "work_dir": str(work_path),
+                    }
+                except Exception as e:
+                    return {
+                        "success": False,
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": f"Docker execution error: {str(e)}",
+                        "execution_time": 0.0,
+                        "command": command,
+                        "work_dir": str(work_path),
+                    }
+
+            else:
+                # Local mode: execute using subprocess (existing logic)
+                # Prepare environment (auto-detects .venv in work_dir)
+                env = _prepare_environment(work_path)
+
+                # Execute command
+                start_time = time.time()
+
+                try:
+                    result = subprocess.run(
+                        command,
+                        shell=True,
+                        cwd=str(work_path),
+                        timeout=timeout,
+                        capture_output=True,
+                        text=True,
+                        env=env,
+                    )
+
+                    execution_time = time.time() - start_time
+
+                    # Truncate output if too large
+                    stdout = result.stdout
+                    stderr = result.stderr
+
+                    if len(stdout) > mcp.max_output_size:
+                        stdout = stdout[: mcp.max_output_size] + f"\n... (truncated, exceeded {mcp.max_output_size} bytes)"
+
+                    if len(stderr) > mcp.max_output_size:
+                        stderr = stderr[: mcp.max_output_size] + f"\n... (truncated, exceeded {mcp.max_output_size} bytes)"
+
+                    return {
+                        "success": result.returncode == 0,
+                        "exit_code": result.returncode,
+                        "stdout": stdout,
+                        "stderr": stderr,
+                        "execution_time": execution_time,
+                        "command": command,
+                        "work_dir": str(work_path),
+                    }
+
+                except subprocess.TimeoutExpired:
+                    execution_time = time.time() - start_time
+                    return {
+                        "success": False,
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": f"Command timed out after {timeout} seconds",
+                        "execution_time": execution_time,
+                        "command": command,
+                        "work_dir": str(work_path),
+                    }
+
+                except Exception as e:
+                    execution_time = time.time() - start_time
+                    return {
+                        "success": False,
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": f"Execution error: {str(e)}",
+                        "execution_time": execution_time,
+                        "command": command,
+                        "work_dir": str(work_path),
+                    }
 
         except ValueError as e:
             # Path validation error
@@ -407,6 +535,9 @@ async def create_server() -> fastmcp.FastMCP:
             }
 
     print("🚀 Command Execution MCP Server started and ready")
+    print(f"Execution mode: {mcp.execution_mode}")
+    if mcp.execution_mode == "docker":
+        print(f"Agent ID: {mcp.agent_id}")
     print(f"Default timeout: {mcp.default_timeout}s")
     print(f"Max output size: {mcp.max_output_size} bytes")
     print(f"Allowed paths: {[str(p) for p in mcp.allowed_paths]}")

@@ -1,0 +1,29 @@
+# Simple Docker Isolation for Command Execution
+# Run with: uv run python -m massgen.cli --config massgen/configs/debug/code_execution/docker_simple.yaml "Write a factorial function and test it"
+# Expected behavior: Commands execute in isolated Docker container with persistent state (packages stay installed across turns)
+# Prerequisites: Docker installed and running, massgen/mcp-runtime:latest image built (run massgen/docker/build.sh)
+
+agent:
+  id: "docker_agent"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace1"
+
+    # Enable command execution with Docker isolation
+    enable_mcp_command_line: true
+    command_line_execution_mode: "docker"  # This is the key change!
+
+    # Optional: Specify custom image (default: massgen/mcp-runtime:latest)
+    # command_line_docker_image: "massgen/mcp-runtime:latest"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 180  # Docker startup adds ~5-10s overhead
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

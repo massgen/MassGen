@@ -49,6 +49,11 @@ class FilesystemManager:
         enable_mcp_command_line: bool = False,
         command_line_allowed_commands: List[str] = None,
         command_line_blocked_commands: List[str] = None,
+        command_line_execution_mode: str = "local",
+        command_line_docker_image: str = "massgen/mcp-runtime:latest",
+        command_line_docker_memory_limit: Optional[str] = None,
+        command_line_docker_cpu_limit: Optional[float] = None,
+        command_line_docker_network_mode: str = "none",
     ):
         """
         Initialize FilesystemManager.
@@ -63,12 +68,34 @@ class FilesystemManager:
             enable_mcp_command_line: Whether to enable MCP command line execution tool
             command_line_allowed_commands: Whitelist of allowed command patterns (regex)
             command_line_blocked_commands: Blacklist of blocked command patterns (regex)
+            command_line_execution_mode: Execution mode - "local" or "docker"
+            command_line_docker_image: Docker image to use for containers
+            command_line_docker_memory_limit: Memory limit for Docker containers (e.g., "2g")
+            command_line_docker_cpu_limit: CPU limit for Docker containers (e.g., 2.0 for 2 CPUs)
+            command_line_docker_network_mode: Network mode for Docker containers (none/bridge/host)
         """
         self.agent_id = None  # Will be set by orchestrator via setup_orchestration_paths
         self.enable_image_generation = enable_image_generation
         self.enable_mcp_command_line = enable_mcp_command_line
         self.command_line_allowed_commands = command_line_allowed_commands
         self.command_line_blocked_commands = command_line_blocked_commands
+        self.command_line_execution_mode = command_line_execution_mode
+        self.command_line_docker_image = command_line_docker_image
+        self.command_line_docker_memory_limit = command_line_docker_memory_limit
+        self.command_line_docker_cpu_limit = command_line_docker_cpu_limit
+        self.command_line_docker_network_mode = command_line_docker_network_mode
+
+        # Initialize Docker manager if Docker mode enabled
+        self.docker_manager = None
+        if enable_mcp_command_line and command_line_execution_mode == "docker":
+            from ._docker_manager import DockerManager
+
+            self.docker_manager = DockerManager(
+                image=command_line_docker_image,
+                network_mode=command_line_docker_network_mode,
+                memory_limit=command_line_docker_memory_limit,
+                cpu_limit=command_line_docker_cpu_limit,
+            )
 
         # Initialize path permission manager
         self.path_permission_manager = PathPermissionManager(
@@ -144,6 +171,50 @@ class FilesystemManager:
             if log_session_dir:
                 agent_log_dir = log_session_dir / self.agent_id
                 agent_log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create Docker container if Docker mode enabled
+        if self.docker_manager and self.agent_id:
+            context_paths = self.path_permission_manager.get_context_paths()
+            self.docker_manager.create_container(
+                agent_id=self.agent_id,
+                workspace_path=self.cwd,
+                temp_workspace_path=self.agent_temporary_workspace_parent if self.agent_temporary_workspace_parent else None,
+                context_paths=context_paths,
+            )
+            logger.info(f"[FilesystemManager] Docker container created for agent {self.agent_id}")
+
+    def update_backend_mcp_config(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Update MCP server configuration with agent_id after it's available.
+
+        This should be called by the backend after setup_orchestration_paths() sets agent_id.
+
+        Args:
+            backend_config: Backend configuration dict containing mcp_servers
+
+        Returns:
+            Updated backend configuration
+        """
+        if not self.enable_mcp_command_line or self.command_line_execution_mode != "docker":
+            return backend_config
+
+        if not self.agent_id:
+            logger.warning("[FilesystemManager] agent_id not set, cannot update MCP config for Docker mode")
+            return backend_config
+
+        # Update command_line MCP server config to include --agent-id
+        mcp_servers = backend_config.get("mcp_servers", [])
+        for server in mcp_servers:
+            if isinstance(server, dict) and server.get("name") == "command_line":
+                args = server.get("args", [])
+                # Check if --agent-id is already in args
+                if "--agent-id" not in args:
+                    args.extend(["--agent-id", self.agent_id])
+                    server["args"] = args
+                    logger.info(f"[FilesystemManager] Updated command_line MCP server config with agent_id: {self.agent_id}")
+                break
+
+        return backend_config
 
     def _setup_workspace(self, cwd: str) -> Path:
         """Setup workspace directory, creating if needed and clearing existing files safely."""
@@ -245,7 +316,7 @@ class FilesystemManager:
 
         Returns:
             Dictionary with MCP server configuration for command execution
-            (supports bash on Unix/Mac, cmd/PowerShell on Windows)
+            (supports bash on Unix/Mac, cmd/PowerShell on Windows, and Docker isolation)
         """
         # Get absolute path to the code execution server script
         script_path = Path(ce_module.__file__).resolve()
@@ -261,10 +332,17 @@ class FilesystemManager:
             "name": "command_line",
             "type": "stdio",
             "command": "fastmcp",
-            "args": ["run", f"{script_path}:create_server"] + ["--", "--allowed-paths"] + paths,
+            "args": ["run", f"{script_path}:create_server", "--", "--allowed-paths"] + paths,
             "env": env,
             "cwd": str(self.cwd),
         }
+
+        # Add execution mode
+        config["args"].extend(["--execution-mode", self.command_line_execution_mode])
+
+        # Add agent ID for Docker mode
+        if self.command_line_execution_mode == "docker" and self.agent_id:
+            config["args"].extend(["--agent-id", self.agent_id])
 
         # Add command filters if specified
         if self.command_line_allowed_commands:
@@ -635,7 +713,11 @@ class FilesystemManager:
         return self.cwd
 
     def cleanup(self) -> None:
-        """Cleanup temporary resources (not the main workspace)."""
+        """Cleanup temporary resources (not the main workspace) and Docker containers."""
+        # Cleanup Docker container if Docker mode enabled
+        if self.docker_manager and self.agent_id:
+            self.docker_manager.cleanup(self.agent_id)
+
         # Cleanup temporary workspace
         p = self.agent_temporary_workspace
 

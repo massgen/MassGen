@@ -1,0 +1,29 @@
+# Docker Isolation Verification Config
+# Run with: uv run python -m massgen.cli --config massgen/configs/debug/code_execution/docker_verification.yaml "Run these commands and save output to verification.txt: 1) hostname, 2) cat /etc/hostname, 3) whoami, 4) cat /proc/1/cgroup | head -5, 5) ls -la /. Then install numpy and pandas packages. Create a Python script that imports these packages and prints their versions and installation locations."
+
+# Expected behavior: Output proves execution is in Docker container (different hostname, container user, docker cgroups). Packages install in container, not on host.
+# The hostname should show a container ID (not your host), whoami should show 'massgen', and /proc/1/cgroup should show docker paths - this proves we're in a container!"
+# Verification: Check verification.txt - hostname should be a hex ID like 'a1b2c3d4e5f6', NOT your computer's hostname
+# Prerequisites: Docker installed and running, massgen/mcp-runtime:latest image built (run massgen/docker/build.sh)
+
+agent:
+  id: "agent_a"
+  backend:
+    type: "openai"
+    model: "gpt-5-mini"
+    cwd: "workspace1"
+
+    # Enable command execution with Docker isolation
+    enable_mcp_command_line: true
+    command_line_execution_mode: "docker"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 300  # More time for package installation
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
