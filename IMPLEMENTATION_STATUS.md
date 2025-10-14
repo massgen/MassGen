@@ -397,12 +397,14 @@ All tests must pass before marking complete:
 
 After all tests pass:
 
-1. Update version in `massgen/__init__.py` to 0.0.30
+1. Update version in `massgen/__init__.py` to 0.1.0 (or final version)
 2. Update CHANGELOG.md with release notes
-3. Create release branch: `git checkout -b release/v0.0.30`
+3. Create release branch: `git checkout -b release/v0.1.0`
 4. Merge to main
 5. Create GitHub release
 6. Upload to PyPI: `python -m build && twine upload dist/*`
+
+**Note:** Version is currently set to v0.1.0 but subject to change before final release.
 
 ## Known Issues / Notes
 

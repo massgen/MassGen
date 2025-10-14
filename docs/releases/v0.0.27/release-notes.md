@@ -36,13 +36,11 @@ The headline feature of v0.0.27 is **Multimodal Support** with image processing 
 Agents can now collaborate on image generation tasks:
 ```bash
 # Multi-agent image generation
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt4o_image_generation.yaml \
+massgen --config @examples/gpt4o_image_generation \
   "Create a landscape image of a sunset over mountains"
 
 # Single agent image generation
-uv run python -m massgen.cli \
-  --config massgen/configs/single_gpt4o_image_generation.yaml \
+massgen --config @examples/single_gpt4o_image_generation \
   "Generate an abstract art piece with vibrant colors"
 ```
 
@@ -50,13 +48,11 @@ uv run python -m massgen.cli \
 Agents can analyze and understand images:
 ```bash
 # Multi-agent image understanding
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt5nano_image_understanding.yaml \
+massgen --config @examples/gpt5nano_image_understanding \
   "Analyze this diagram and explain the architecture"
 
 # Single agent image understanding
-uv run python -m massgen.cli \
-  --config massgen/configs/single_gpt5nano_image_understanding.yaml \
+massgen --config @examples/single_gpt5nano_image_understanding \
   "Describe what's happening in this image"
 ```
 
@@ -86,8 +82,7 @@ New backend capabilities for working with documents and files.
 **Configuration Example:**
 ```bash
 # Single agent with file search
-uv run python -m massgen.cli \
-  --config massgen/configs/single_gpt5nano_file_search.yaml \
+massgen --config @examples/single_gpt5nano_file_search \
   "Summarize the key findings from the uploaded research papers"
 ```
 
@@ -299,16 +294,14 @@ StreamChunk (base)
 **Marketing Assets:**
 ```bash
 # Multiple agents create and refine marketing images
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt4o_image_generation.yaml \
+massgen --config @examples/gpt4o_image_generation \
   "Create a social media post image for our new AI feature"
 ```
 
 **Creative Design:**
 ```bash
 # Agents collaborate on visual concepts
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt4o_image_generation.yaml \
+massgen --config @examples/gpt4o_image_generation \
   "Design an infographic explaining machine learning concepts"
 ```
 
@@ -317,16 +310,14 @@ uv run python -m massgen.cli \
 **Document Analysis:**
 ```bash
 # Analyze diagrams and charts
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt5nano_image_understanding.yaml \
+massgen --config @examples/gpt5nano_image_understanding \
   "Analyze this system architecture diagram and explain the components"
 ```
 
 **Visual Q&A:**
 ```bash
 # Answer questions about images
-uv run python -m massgen.cli \
-  --config massgen/configs/single_gpt5nano_image_understanding.yaml \
+massgen --config @examples/single_gpt5nano_image_understanding \
   "What safety concerns do you see in this construction site photo?"
 ```
 
@@ -335,16 +326,14 @@ uv run python -m massgen.cli \
 **Research Analysis:**
 ```bash
 # Analyze multiple research papers
-uv run python -m massgen.cli \
-  --config massgen/configs/single_gpt5nano_file_search.yaml \
+massgen --config @examples/single_gpt5nano_file_search \
   "What are the common themes across these AI safety papers?"
 ```
 
 **Documentation Review:**
 ```bash
 # Review technical documentation
-uv run python -m massgen.cli \
-  --config massgen/configs/single_gpt5nano_file_search.yaml \
+massgen --config @examples/single_gpt5nano_file_search \
   "Find all mentions of authentication in the API docs"
 ```
 

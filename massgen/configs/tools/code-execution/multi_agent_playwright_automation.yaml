@@ -1,4 +1,4 @@
-# uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
+# massgen --config @examples/tools_code-execution_multi_agent_playwright_automation "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 agents:
   - id: "agent_a"
     backend:

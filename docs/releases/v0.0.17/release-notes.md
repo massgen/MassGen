@@ -41,18 +41,15 @@ agents:
 **Try It Out:**
 ```bash
 # OpenAI MCP test
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt5_mini_mcp_test.yaml \
+massgen --config @examples/gpt5_mini_mcp_test \
   "Test MCP integration"
 
 # OpenAI MCP example
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt5_mini_mcp_example.yaml \
+massgen --config @examples/gpt5_mini_mcp_example \
   "Weather service integration"
 
 # HTTP transport test
-uv run python -m massgen.cli \
-  --config massgen/configs/gpt5_mini_streamable_http_test.yaml \
+massgen --config @examples/gpt5_mini_streamable_http_test \
   "Test HTTP MCP"
 ```
 

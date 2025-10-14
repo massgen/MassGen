@@ -1330,196 +1330,13 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
         print("\n👋 Goodbye!")
 
 
-async def main():
-    """Main CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="MassGen - Multi-Agent Coordination CLI",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Use configuration file
-  python -m massgen.cli --config config.yaml "What is machine learning?"
-
-  # Quick single agent setup
-  python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
-  python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
-
-  # Use ChatCompletion backend with custom base URL
-  python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
-
-  # Interactive mode
-  python -m massgen.cli --config config.yaml
-
-  # Timeout control examples
-  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 "Complex task"
-
-  # Create sample configurations
-  python -m massgen.cli --create-samples
-
-Environment Variables:
-    OPENAI_API_KEY      - Required for OpenAI backend
-    XAI_API_KEY         - Required for Grok backend
-    ANTHROPIC_API_KEY   - Required for Claude backend
-    GOOGLE_API_KEY      - Required for Gemini backend (or GEMINI_API_KEY)
-    ZAI_API_KEY         - Required for ZAI backend
-
-    CEREBRAS_API_KEY    - For Cerebras AI (cerebras.ai)
-    TOGETHER_API_KEY    - For Together AI (together.ai, together.xyz)
-    FIREWORKS_API_KEY   - For Fireworks AI (fireworks.ai)
-    GROQ_API_KEY        - For Groq (groq.com)
-    NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
-    OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
-    POE_API_KEY         - For POE (poe.com)
-
-  Note: The chatcompletion backend auto-detects the provider from the base_url
-        and uses the appropriate environment variable for API key.
-        """,
-    )
-
-    # Question (optional for interactive mode)
-    parser.add_argument(
-        "question",
-        nargs="?",
-        help="Question to ask (optional - if not provided, enters interactive mode)",
-    )
-
-    # Configuration options
-    config_group = parser.add_mutually_exclusive_group()
-    config_group.add_argument("--config", type=str, help="Path to YAML/JSON configuration file or @examples/NAME")
-    config_group.add_argument(
-        "--backend",
-        type=str,
-        choices=[
-            "chatcompletion",
-            "claude",
-            "gemini",
-            "grok",
-            "openai",
-            "azure_openai",
-            "claude_code",
-            "zai",
-            "lmstudio",
-            "vllm",
-            "sglang",
-        ],
-        help="Backend type for quick setup",
-    )
-
-    # Quick setup options
-    parser.add_argument(
-        "--model",
-        type=str,
-        default="gpt-4o-mini",
-        help="Model name for quick setup (default: gpt-4o-mini)",
-    )
-    parser.add_argument("--system-message", type=str, help="System message for quick setup")
-    parser.add_argument(
-        "--base-url",
-        type=str,
-        help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)",
-    )
-
-    # UI options
-    parser.add_argument("--no-display", action="store_true", help="Disable visual coordination display")
-    parser.add_argument("--no-logs", action="store_true", help="Disable logging")
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
-    parser.add_argument(
-        "--init",
-        action="store_true",
-        help="Launch interactive configuration builder to create config file",
-    )
-    parser.add_argument(
-        "--list-examples",
-        action="store_true",
-        help="List available example configurations from package",
-    )
-    parser.add_argument(
-        "--example",
-        type=str,
-        help="Print example config to stdout (e.g., --example basic_multi)",
-    )
-
-    # Timeout options
-    timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
-    timeout_group.add_argument(
-        "--orchestrator-timeout",
-        type=int,
-        help="Maximum time for orchestrator coordination in seconds (default: 1800)",
-    )
-
-    args = parser.parse_args()
-
-    # Always setup logging (will save INFO to file, console output depends on debug flag)
-    setup_logging(debug=args.debug)
-
-    if args.debug:
-        logger.info("Debug mode enabled")
-        logger.debug(f"Command line arguments: {vars(args)}")
-
-    # Handle special commands first
-    if args.list_examples:
-        show_available_examples()
-        return
-
-    if args.example:
-        print_example_config(args.example)
-        return
-
-    # Launch interactive config builder if requested
-    if args.init:
-        from .config_builder import ConfigBuilder
-
-        builder = ConfigBuilder()
-        result = builder.run()
-
-        if result and len(result) == 2:
-            filepath, question = result
-            if filepath and question:
-                # Update args to use the newly created config
-                args.config = filepath
-                args.question = question
-            elif filepath:
-                # Config created but user chose not to run
-                print(f"\n✅ Configuration saved to: {filepath}")
-                print(f'Run with: python -m massgen.cli --config {filepath} "Your question"')
-                return
-            else:
-                # User cancelled
-                return
-        else:
-            # Builder returned None (cancelled or error)
-            return
-
-    # First-run detection: auto-trigger builder if no config specified and first run
-    if not args.question and not args.config and not args.model and not args.backend:
-        if should_run_builder():
-            print(f"\n{BRIGHT_CYAN}👋 Welcome to MassGen!{RESET}")
-            print("Let's set up your default configuration...\n")
-
-            from .config_builder import ConfigBuilder
-
-            builder = ConfigBuilder(default_mode=True)
-            result = builder.run()
-
-            if result and len(result) == 2:
-                filepath, question = result
-                if filepath:
-                    args.config = filepath
-                    if question:
-                        args.question = question
-                    else:
-                        print("\n✅ Configuration saved! You can now run queries.")
-                        print('Example: massgen "Your question here"')
-                        return
-                else:
-                    return
-            else:
-                return
-
+async def main(args):
+    """Main CLI entry point (async operations only)."""
     # Validate arguments
     if not args.backend:
         if not args.model and not args.config:
-            parser.error("If there is not --backend, either --config or --model must be specified")
+            print("❌ Configuration error: If there is not --backend, either --config or --model must be specified", flush=True)
+            sys.exit(1)
 
     try:
         # Load or create configuration
@@ -1657,7 +1474,192 @@ Environment Variables:
 
 def cli_main():
     """Synchronous wrapper for CLI entry point."""
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(
+        description="MassGen - Multi-Agent Coordination CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use configuration file
+  python -m massgen.cli --config config.yaml "What is machine learning?"
+
+  # Quick single agent setup
+  python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
+  python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
+
+  # Use ChatCompletion backend with custom base URL
+  python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
+
+  # Interactive mode
+  python -m massgen.cli --config config.yaml
+
+  # Timeout control examples
+  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 "Complex task"
+
+  # Create sample configurations
+  python -m massgen.cli --create-samples
+
+Environment Variables:
+    OPENAI_API_KEY      - Required for OpenAI backend
+    XAI_API_KEY         - Required for Grok backend
+    ANTHROPIC_API_KEY   - Required for Claude backend
+    GOOGLE_API_KEY      - Required for Gemini backend (or GEMINI_API_KEY)
+    ZAI_API_KEY         - Required for ZAI backend
+
+    CEREBRAS_API_KEY    - For Cerebras AI (cerebras.ai)
+    TOGETHER_API_KEY    - For Together AI (together.ai, together.xyz)
+    FIREWORKS_API_KEY   - For Fireworks AI (fireworks.ai)
+    GROQ_API_KEY        - For Groq (groq.com)
+    NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
+    OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
+    POE_API_KEY         - For POE (poe.com)
+
+  Note: The chatcompletion backend auto-detects the provider from the base_url
+        and uses the appropriate environment variable for API key.
+        """,
+    )
+
+    # Question (optional for interactive mode)
+    parser.add_argument(
+        "question",
+        nargs="?",
+        help="Question to ask (optional - if not provided, enters interactive mode)",
+    )
+
+    # Configuration options
+    config_group = parser.add_mutually_exclusive_group()
+    config_group.add_argument("--config", type=str, help="Path to YAML/JSON configuration file or @examples/NAME")
+    config_group.add_argument(
+        "--backend",
+        type=str,
+        choices=[
+            "chatcompletion",
+            "claude",
+            "gemini",
+            "grok",
+            "openai",
+            "azure_openai",
+            "claude_code",
+            "zai",
+            "lmstudio",
+            "vllm",
+            "sglang",
+        ],
+        help="Backend type for quick setup",
+    )
+
+    # Quick setup options
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model name for quick setup",
+    )
+    parser.add_argument("--system-message", type=str, help="System message for quick setup")
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)",
+    )
+
+    # UI options
+    parser.add_argument("--no-display", action="store_true", help="Disable visual coordination display")
+    parser.add_argument("--no-logs", action="store_true", help="Disable logging")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
+    parser.add_argument(
+        "--init",
+        action="store_true",
+        help="Launch interactive configuration builder to create config file",
+    )
+    parser.add_argument(
+        "--list-examples",
+        action="store_true",
+        help="List available example configurations from package",
+    )
+    parser.add_argument(
+        "--example",
+        type=str,
+        help="Print example config to stdout (e.g., --example basic_multi)",
+    )
+
+    # Timeout options
+    timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
+    timeout_group.add_argument(
+        "--orchestrator-timeout",
+        type=int,
+        help="Maximum time for orchestrator coordination in seconds (default: 1800)",
+    )
+
+    args = parser.parse_args()
+
+    # Always setup logging (will save INFO to file, console output depends on debug flag)
+    setup_logging(debug=args.debug)
+
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
+
+    # Handle special commands first
+    if args.list_examples:
+        show_available_examples()
+        return
+
+    if args.example:
+        print_example_config(args.example)
+        return
+
+    # Launch interactive config builder if requested
+    if args.init:
+        from .config_builder import ConfigBuilder
+
+        builder = ConfigBuilder()
+        result = builder.run()
+
+        if result and len(result) == 2:
+            filepath, question = result
+            if filepath and question:
+                # Update args to use the newly created config
+                args.config = filepath
+                args.question = question
+            elif filepath:
+                # Config created but user chose not to run
+                print(f"\n✅ Configuration saved to: {filepath}")
+                print(f'Run with: python -m massgen.cli --config {filepath} "Your question"')
+                return
+            else:
+                # User cancelled
+                return
+        else:
+            # Builder returned None (cancelled or error)
+            return
+
+    # First-run detection: auto-trigger builder if no config specified and first run
+    if not args.question and not args.config and not args.model and not args.backend:
+        if should_run_builder():
+            print(f"\n{BRIGHT_CYAN}👋 Welcome to MassGen!{RESET}")
+            print("Let's set up your default configuration...\n")
+
+            from .config_builder import ConfigBuilder
+
+            builder = ConfigBuilder(default_mode=True)
+            result = builder.run()
+
+            if result and len(result) == 2:
+                filepath, question = result
+                if filepath:
+                    args.config = filepath
+                    if question:
+                        args.question = question
+                    else:
+                        print("\n✅ Configuration saved! You can now run queries.")
+                        print('Example: massgen "Your question here"')
+                        return
+                else:
+                    return
+            else:
+                return
+
+    # Now call the async main with the parsed arguments
+    asyncio.run(main(args))
 
 
 if __name__ == "__main__":

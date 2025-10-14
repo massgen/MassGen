@@ -112,8 +112,7 @@ mcp_servers:
 
 **Example Usage:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
   "Check recent messages in our development channel and post a summary"
 ```
 
@@ -155,8 +154,7 @@ agents:
 
 **Example Usage:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gemini_notion_mcp.yaml \
+massgen --config @examples/tools_mcp_gemini_notion_mcp \
   "Create a structured todo list in Notion under 'LLM Agent Research'"
 ```
 
@@ -227,8 +225,7 @@ agents:
 
 **Example Usage:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test.yaml \
+massgen --config @examples/tools_mcp_gemini_mcp_filesystem_test \
   "Create a Python script with hello world in different languages"
 ```
 

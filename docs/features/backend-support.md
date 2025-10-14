@@ -497,17 +497,28 @@ agent:
 
 ## Feature Comparison
 
-| Feature | OpenAI | Claude | Claude Code | Gemini | Grok | AG2 | Local |
-|---------|--------|--------|-------------|--------|------|-----|-------|
-| Web Search | ✅ Built-in | ❌ | ❌ | ✅ Built-in | ✅ Built-in | ⚠️ Via backend | ❌ |
-| Code Execution | ✅ Interpreter | ❌ | ❌ | ✅ Built-in | ❌ | ✅ Full | ❌ |
-| Filesystem Tools | ❌ | ❌ | ✅ Native | ✅ Native MCP | ❌ | ⚠️ Via executor | ❌ |
-| MCP Integration | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Planning Mode | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Multi-turn | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Image Understanding | ✅ GPT-4o | ✅ | ❌ | ✅ | ❌ | ⚠️ Via backend | ⚠️ Vision models |
-| Image Generation | ✅ GPT-4o | ❌ | ❌ | ❌ | ❌ | ❌ | ⚠️ Flux, SD |
-| Reasoning Mode | ✅ GPT-5 | ✅ Strong | ✅ | ✅ | ✅ | ⚠️ Via backend | ⚠️ Model-dependent |
+<!-- AUTO-GENERATED TABLE - DO NOT EDIT MANUALLY -->
+<!-- Source: massgen/backend/capabilities.py -->
+<!-- To update: Run `python docs/scripts/generate_backend_tables.py` -->
+
+| Feature | OpenAI | Claude | Claude Code | Gemini | Grok | Azure OpenAI | Chat Completions (Generic) | LM Studio | Inference (vLLM/SGLang) | AG2 (AutoGen) |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Web Search** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Code Execution** | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **Bash/Shell** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Multimodal** | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **MCP Support** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Filesystem** | ✅ Via MCP | ✅ Via MCP | ✅ Native | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ❌ |
+
+**Legend:**
+- ✅ = Supported
+- ❌ = Not supported
+
+**Notes:**
+- "Via MCP" means the feature is available through Model Context Protocol integration
+- "Native" means the feature is built directly into the backend
+- Additional backend-specific features (Planning Mode, Multi-turn, etc.) are supported by all backends
+- **AG2 (AutoGen)** provides code execution with multiple executor types; MCP support is planned for future releases
 
 ## Choosing the Right Backend
 

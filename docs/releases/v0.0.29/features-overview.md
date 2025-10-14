@@ -71,18 +71,15 @@ orchestrator:
 
 ```bash
 # Discord planning mode
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
   "Check recent messages in #dev and post a summary"
 
 # Filesystem planning mode
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
   "Create a Python web app project structure"
 
 # Twitter planning mode
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_twitter_mcp_planning_mode \
   "Analyze our brand voice and draft an announcement"
 ```
 

@@ -6,33 +6,39 @@ MassGen provides comprehensive logging to help you understand agent coordination
 Logging Directory Structure
 ----------------------------
 
-All logs are stored in the ``massgen_logs/`` directory with timestamped subdirectories:
+All logs are stored in the ``.massgen/massgen_logs/`` directory with timestamped subdirectories:
 
 .. code-block:: text
 
-   massgen_logs/
-   └── log_YYYYMMDD_HHMMSS/           # Timestamped log directory
-       ├── agent_a/                    # Agent-specific coordination logs
-       │   └── YYYYMMDD_HHMMSS_NNNNNN/ # Timestamped coordination steps
-       │       ├── answer.txt          # Agent's answer at this step
-       │       └── context.txt         # Context available to agent
-       ├── agent_b/                    # Second agent's logs
-       │   └── ...
-       ├── agent_outputs/              # Consolidated output files
-       │   ├── agent_a.txt             # Complete output from agent_a
-       │   ├── agent_b.txt             # Complete output from agent_b
-       │   ├── final_presentation_agent_X.txt  # Winning agent's final answer
-       │   ├── final_presentation_agent_X_latest.txt  # Symlink to latest
-       │   └── system_status.txt       # System status and metadata
-       ├── final/                      # Final presentation phase
-       │   └── agent_X/                # Winning agent's final work
-       │       ├── answer.txt          # Final answer
-       │       └── context.txt         # Final context
-       ├── coordination_events.json    # Structured coordination events
-       ├── coordination_table.txt      # Human-readable coordination table
-       ├── vote.json                   # Final vote tallies and consensus data
-       ├── massgen.log                 # Complete debug log
-       └── snapshot_mappings.json      # Workspace snapshot metadata
+   .massgen/
+   └── massgen_logs/
+       └── log_YYYYMMDD_HHMMSS/           # Timestamped log directory
+           ├── agent_a/                    # Agent-specific coordination logs
+           │   └── YYYYMMDD_HHMMSS_NNNNNN/ # Timestamped coordination steps
+           │       ├── answer.txt          # Agent's answer at this step
+           │       ├── context.txt         # Context available to agent
+           │       └── workspace/          # Agent workspace (if filesystem tools used)
+           ├── agent_b/                    # Second agent's logs
+           │   └── ...
+           ├── agent_outputs/              # Consolidated output files
+           │   ├── agent_a.txt             # Complete output from agent_a
+           │   ├── agent_b.txt             # Complete output from agent_b
+           │   ├── final_presentation_agent_X.txt  # Winning agent's final answer
+           │   ├── final_presentation_agent_X_latest.txt  # Symlink to latest
+           │   └── system_status.txt       # System status and metadata
+           ├── final/                      # Final presentation phase
+           │   └── agent_X/                # Winning agent's final work
+           │       ├── answer.txt          # Final answer
+           │       └── context.txt         # Final context
+           ├── coordination_events.json    # Structured coordination events
+           ├── coordination_table.txt      # Human-readable coordination table
+           ├── vote.json                   # Final vote tallies and consensus data
+           ├── massgen.log                 # Complete debug log (or massgen_debug.log in debug mode)
+           ├── snapshot_mappings.json      # Workspace snapshot metadata
+           └── execution_metadata.yaml     # Query, config, and execution details
+
+.. note::
+   When agents use filesystem tools, each coordination step will also contain a ``workspace/`` directory showing the files the agent created or modified during that step.
 
 Log Files Explained
 -------------------
@@ -147,6 +153,40 @@ Complete debug log with all system operations:
 * Error messages and stack traces
 
 Enable with ``--debug`` flag for verbose logging.
+
+Execution Metadata
+~~~~~~~~~~~~~~~~~~
+
+**Location**: ``execution_metadata.yaml``
+
+This file captures the complete execution context for reproducibility:
+
+.. code-block:: yaml
+
+   query: "Your original question"
+   timestamp: "2025-10-13T14:30:22"
+   config_path: "@examples/basic_multi"
+   config:
+     agents:
+       - id: "agent1"
+         backend:
+           type: "gemini"
+           model: "gemini-2.5-flash"
+       # ... full config
+
+**Contents:**
+
+* ``query`` - The user's original query/prompt
+* ``timestamp`` - When the execution started
+* ``config_path`` - Path or description of config used
+* ``config`` - Complete configuration (if available)
+
+**Use cases:**
+
+* Reproduce the exact same run later
+* Debug configuration issues
+* Share execution details with team members
+* Create test cases from real runs
 
 Coordination Table
 ------------------
@@ -281,25 +321,25 @@ After Execution
 
 .. code-block:: bash
 
-   ls -t massgen_logs/ | head -1
+   ls -t .massgen/massgen_logs/ | head -1
 
 **View coordination table:**
 
 .. code-block:: bash
 
-   cat massgen_logs/log_20251008_013641/coordination_table.txt
+   cat .massgen/massgen_logs/log_20251008_013641/coordination_table.txt
 
 **View specific agent output:**
 
 .. code-block:: bash
 
-   cat massgen_logs/log_20251008_013641/agent_outputs/agent_a.txt
+   cat .massgen/massgen_logs/log_20251008_013641/agent_outputs/agent_a.txt
 
 **View final answer:**
 
 .. code-block:: bash
 
-   cat massgen_logs/log_20251008_013641/agent_outputs/final_presentation_*_latest.txt
+   cat .massgen/massgen_logs/log_20251008_013641/agent_outputs/final_presentation_*_latest.txt
 
 Debug Mode
 ----------
@@ -322,7 +362,7 @@ Enable detailed logging with the ``--debug`` flag:
 * ✅ MCP server communication
 * ✅ Error stack traces
 
-**Debug log location**: ``massgen_logs/log_YYYYMMDD_HHMMSS/massgen.log``
+**Debug log location**: ``.massgen/massgen_logs/log_YYYYMMDD_HHMMSS/massgen_debug.log``
 
 Common Debugging Scenarios
 ---------------------------
@@ -349,8 +389,8 @@ Agent Errors
 
 .. code-block:: bash
 
-   grep -i "error" massgen_logs/log_*/massgen.log
-   grep -i "exception" massgen_logs/log_*/massgen.log
+   grep -i "error" .massgen/massgen_logs/log_*/massgen.log
+   grep -i "exception" .massgen/massgen_logs/log_*/massgen.log
 
 Tool Failures
 ~~~~~~~~~~~~~
@@ -390,13 +430,13 @@ Logs are stored indefinitely by default.
 .. code-block:: bash
 
    # Remove logs older than 7 days
-   find massgen_logs/ -type d -name "log_*" -mtime +7 -exec rm -rf {} +
+   find .massgen/massgen_logs/ -type d -name "log_*" -mtime +7 -exec rm -rf {} +
 
 **Disk space check:**
 
 .. code-block:: bash
 
-   du -sh massgen_logs/
+   du -sh .massgen/massgen_logs/
 
 Best Practices
 --------------
@@ -417,11 +457,11 @@ Integration with CI/CD
    import json
 
    # Parse coordination events
-   with open("massgen_logs/log_latest/coordination_events.json") as f:
+   with open(".massgen/massgen_logs/log_latest/coordination_events.json") as f:
        events = json.load(f)
 
    # Extract final answer
-   with open("massgen_logs/log_latest/agent_outputs/final_presentation_*_latest.txt") as f:
+   with open(".massgen/massgen_logs/log_latest/agent_outputs/final_presentation_*_latest.txt") as f:
        final_answer = f.read()
 
 **Exit status:**
@@ -437,5 +477,4 @@ See Also
 
 * :doc:`multi_turn_mode` - Session logging for interactive mode
 * :doc:`file_operations` - Workspace and file operation logs
-* :doc:`advanced_usage` - Advanced debugging techniques
 * :doc:`../reference/cli` - CLI options for logging control

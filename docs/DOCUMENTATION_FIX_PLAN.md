@@ -159,8 +159,7 @@ Comment out broken links in index.rst toctree temporarily:
 
    .. code-block:: bash
 
-      uv run python -m massgen.cli \
-        --config massgen/configs/basic/multi/three_agents_default.yaml \
+      massgen --config @examples/basic_multi_three_agents_default \
         "Analyze pros and cons of renewable energy"
 
    This uses:

@@ -1,7 +1,7 @@
 # MassGen File Search Configuration
 # Demonstrates OpenAI File Search for document retrieval and Q&A
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
+#   massgen --config @examples/basic_single_single_gpt5nano_file_search "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
 
 agent:
   id: "file_search_agent"

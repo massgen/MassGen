@@ -146,13 +146,11 @@ See the new MCP Planning Mode in action:
 **Try v0.0.29 MCP Planning Mode:**
 ```bash
 # Five agents collaborating with planning mode (no execution during coordination)
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
   "Create a comprehensive project structure with documentation"
 
 # Test MCP tools with multiple agents
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+massgen --config @examples/tools_mcp_five_agents_weather_mcp_test \
   "Compare weather forecasts for New York, London, and Tokyo"
 ```
 
@@ -390,8 +388,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 
 ```bash
 # Three powerful agents working together - Gemini, GPT-5, and Grok
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml \
+massgen --config @examples/basic_multi_three_agents_default \
   "Analyze the pros and cons of renewable energy"
 ```
 
@@ -443,13 +440,11 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 
 ```bash
 # Weather service with GPT-5
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+massgen --config @examples/tools_mcp_gpt5_nano_mcp_example \
   "What's the weather forecast for New York this week?"
 
 # Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+massgen --config @examples/tools_mcp_multimcp_gemini \
   "Find the best restaurants in Paris and save the recommendations to a file"
 ```
 
@@ -521,13 +516,11 @@ MassGen provides comprehensive file system support through multiple backends, en
 
 ```bash
 # File operations with Claude Code
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+massgen --config @examples/tools_filesystem_claude_code_single \
   "Create a Python web scraper and save results to CSV"
 
 # Multi-agent file collaboration
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+massgen --config @examples/tools_filesystem_claude_code_context_sharing \
   "Generate a comprehensive project report with charts and analysis"
 ```
 
@@ -544,12 +537,12 @@ agents:
 
 # Multi-Agent Workspace Isolation:
 agents:
-  - id: "analyzer"
+  - id: "agent_a"
     backend:
       type: "claude_code"
       cwd: "workspace1"            # Agent-specific workspace
 
-  - id: "reviewer"
+  - id: "agent_b"
     backend:
       type: "gemini"
       cwd: "workspace2"            # Separate workspace
@@ -603,7 +596,7 @@ MassGen automatically organizes all its working files under a `.massgen/` direct
 
 ```bash
 # Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+massgen --config @examples/tools_filesystem_gpt5mini_cc_fs_context_path "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 **Configuration:**
@@ -710,24 +703,21 @@ agents:
 **Claude (Recursive MCP Execution - v0.0.20+)**
 ```bash
 # Claude with advanced tool chaining
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/claude_mcp_example.yaml \
+massgen --config @examples/tools_mcp_claude_mcp_example \
   "Research and compare weather in Beijing and Shanghai"
 ```
 
 **OpenAI (GPT-5 Series with MCP - v0.0.17+)**
 ```bash
 # GPT-5 with weather and external tools
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
+massgen --config @examples/tools_mcp_gpt5_mini_mcp_example \
   "What's the weather of Tokyo"
 ```
 
 **Gemini (Multi-Server MCP - v0.0.15+)**
 ```bash
 # Gemini with multiple MCP services
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+massgen --config @examples/tools_mcp_multimcp_gemini \
   "Find accommodations in Paris with neighborhood analysis"    # (requires BRAVE_API_KEY in .env)
 ```
 
@@ -748,8 +738,7 @@ uv run python -m massgen.cli \
 **Local Models (LM Studio - v0.0.7+)**
 ```bash
 # Run open-source models locally
-uv run python -m massgen.cli \
-  --config massgen/configs/providers/local/lmstudio.yaml \
+massgen --config @examples/providers_local_lmstudio \
   "Explain machine learning concepts"
 ```
 
@@ -760,29 +749,25 @@ uv run python -m massgen.cli \
 **Question Answering & Research:**
 ```bash
 # Complex research with multiple perspectives
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+massgen --config @examples/basic_multi_gemini_4o_claude \
   "What's best to do in Stockholm in October 2025"
 
 # Specific research requirements
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+massgen --config @examples/basic_multi_gemini_4o_claude \
   "Give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025"
 ```
 
 **Creative Writing:**
 ```bash
 # Story generation with multiple creative agents
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+massgen --config @examples/basic_multi_gemini_4o_claude \
   "Write a short story about a robot who discovers music"
 ```
 
 **Development & Coding:**
 ```bash
 # Full-stack development with file operations
-uv run python -m massgen.cli \
-  --config  massgen/configs/tools/filesystem/claude_code_single.yaml \
+massgen --config @examples/tools_filesystem_claude_code_single \
   "Create a Flask web app with authentication"
 ```
 
@@ -790,13 +775,11 @@ uv run python -m massgen.cli \
 ```bash
 # Browser automation with screenshots and reporting
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
+massgen --config @examples/tools_code-execution_multi_agent_playwright_automation \
   "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
+massgen --config @examples/tools_code-execution_multi_agent_playwright_automation \
   "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
 ```
 
@@ -807,12 +790,10 @@ uv run python -m massgen.cli \
 **Multi-Turn Conversations:**
 ```bash
 # Start interactive chat (no initial question)
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml
+massgen --config @examples/basic_multi_three_agents_default
 
 # Debug mode for troubleshooting
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml \
+massgen --config @examples/basic_multi_three_agents_default \
   --debug "Your question"
 ```
 

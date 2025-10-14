@@ -1,5 +1,5 @@
 # MassGen Multimodal GPT Configuration
-# uv run python -m massgen.cli --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml "Please summarize the content in this image."
+# massgen --config @examples/basic_multi_gpt5nano_image_understanding "Please summarize the content in this image."
 agents:
   - id: "response_agent1"
     backend:

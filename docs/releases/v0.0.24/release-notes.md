@@ -44,8 +44,7 @@ agents:
 **Try It Out:**
 ```bash
 # Three agents with vLLM backend
-uv run python -m massgen.cli \
-  --config massgen/configs/three_agents_vllm.yaml \
+massgen --config @examples/three_agents_vllm \
   "Your task"
 ```
 
@@ -278,8 +277,7 @@ python -m vllm.entrypoints.openai.api_server \
   --port 8000
 
 # Run MassGen with vLLM
-uv run python -m massgen.cli \
-  --config massgen/configs/three_agents_vllm.yaml \
+massgen --config @examples/three_agents_vllm \
   "Your sensitive task that requires on-premise processing"
 ```
 

@@ -37,6 +37,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "PyYAML>=6.0",
     "rich==14.1.0",
+    "questionary>=2.0.0",
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
     "claude-code-sdk>=0.0.22",

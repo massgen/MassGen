@@ -42,18 +42,15 @@ agents:
 **Try It Out:**
 ```bash
 # Claude MCP test
-uv run python -m massgen.cli \
-  --config massgen/configs/claude_mcp_test.yaml \
+massgen --config @examples/claude_mcp_test \
   "Create a file and read it back"
 
 # Claude MCP example
-uv run python -m massgen.cli \
-  --config massgen/configs/claude_mcp_example.yaml \
+massgen --config @examples/claude_mcp_example \
   "Build a website with multiple pages"
 
 # Claude streamable HTTP test
-uv run python -m massgen.cli \
-  --config massgen/configs/claude_streamable_http_test.yaml \
+massgen --config @examples/claude_streamable_http_test \
   "Test HTTP MCP transport"
 ```
 
@@ -130,8 +127,7 @@ Claude agents can now:
 **File Operations:**
 ```bash
 # Claude creates and manages files
-uv run python -m massgen.cli \
-  --config massgen/configs/claude_mcp_example.yaml \
+massgen --config @examples/claude_mcp_example \
   "Create a Python project with tests and documentation"
 ```
 
@@ -140,8 +136,7 @@ uv run python -m massgen.cli \
 **Multi-Step Workflows:**
 ```bash
 # Claude autonomously chains multiple operations
-uv run python -m massgen.cli \
-  --config massgen/configs/claude_mcp_test.yaml \
+massgen --config @examples/claude_mcp_test \
   "Read config, process data, write results, verify output"
 ```
 

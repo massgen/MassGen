@@ -34,7 +34,7 @@ Run via command line:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli --config config.yaml "Your question"
+   massgen --config config.yaml "Your question"
 
 This design makes MassGen:
 
@@ -55,20 +55,20 @@ MassGen is currently run via command line (a Python library API is planned for f
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli --model claude-3-5-sonnet-latest "Question"
+   massgen --model claude-3-5-sonnet-latest "Question"
 
 **Multi-agent with config:**
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli --config my_agents.yaml "Question"
+   massgen --config my_agents.yaml "Question"
 
 **Interactive mode:**
 
 .. code-block:: bash
 
    # Omit question for interactive chat
-   uv run python -m massgen.cli --config my_agents.yaml
+   massgen --config my_agents.yaml
 
 See :doc:`../reference/cli` for complete CLI reference.
 
@@ -277,7 +277,7 @@ Coordination ends when one of these conditions is met:
 
 .. code-block:: bash
 
-   uv run python -m massgen.cli --orchestrator-timeout 600 --config config.yaml
+   massgen --orchestrator-timeout 600 --config config.yaml
 
 See :doc:`../reference/timeouts` for complete timeout documentation.
 
@@ -428,10 +428,10 @@ Start MassGen without a question for interactive chat with context preservation 
 .. code-block:: bash
 
    # Single agent interactive
-   uv run python -m massgen.cli --model gemini-2.5-flash
+   massgen --model gemini-2.5-flash
 
    # Multi-agent interactive
-   uv run python -m massgen.cli --config my_agents.yaml
+   massgen --config my_agents.yaml
 
 **Key Features:**
 

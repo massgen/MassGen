@@ -217,7 +217,7 @@ pytest massgen/tests/test_specific.py
 pytest --cov=massgen massgen/tests/
 
 # Test with different configurations
-uv run python -m massgen.cli --config massgen/configs/single_4omini.yaml "Test question"
+massgen --config @examples/basic_single_single_agent "Test question"
 ```
 
 ### 5. Commit Your Changes

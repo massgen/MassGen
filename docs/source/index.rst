@@ -239,17 +239,17 @@ Supported Models
 Core Concepts
 -------------
 
-**Configuration-Driven**
-   MassGen uses YAML files to configure agents, models, tools, and coordination strategies. No code required!
-
-**CLI-Based**
-   Simple command-line interface: ``massgen``
+**Simple CLI Interface**
+   Get started with just ``massgen`` - install via pip, run the interactive setup wizard, and you're ready to go.
 
 **Multi-Agent Coordination**
-   Agents vote for solutions and reach consensus through natural collaboration with real-time visualization.
+   Multiple agents work in parallel, observe each other's progress, and reach consensus through natural collaboration with real-time visualization.
 
 **Interactive Multi-Turn Mode**
    Have ongoing conversations with your multi-agent team! Session history is preserved in the ``.massgen/sessions/`` directory, allowing you to continue conversations across multiple sessions with full context preservation.
+
+**Flexible Model Support**
+   Use Claude, Gemini, GPT, Grok, and more - each agent can use a different model. Mix and match models for optimal results.
 
 **MCP Tool Integration**
    Extend agent capabilities with Model Context Protocol (MCP) tools via simple YAML configuration. Supports planning mode to prevent irreversible actions during coordination.
@@ -326,15 +326,14 @@ Documentation Sections
    :caption: User Guide
 
    user_guide/concepts
-   user_guide/multi_turn_mode
-   user_guide/file_operations
    user_guide/backends
-   user_guide/ag2_integration
    user_guide/mcp_integration
+   user_guide/file_operations
+   user_guide/multi_turn_mode
    user_guide/tools
    user_guide/multimodal
    user_guide/logging
-   user_guide/advanced_usage
+   user_guide/ag2_integration
 
 .. toctree::
    :maxdepth: 2
@@ -348,16 +347,6 @@ Documentation Sections
    reference/timeouts
    reference/supported_models
    glossary
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: API Reference
-
-   api/index
-   api/agents
-   api/orchestrator
-   api/backends
 
 .. toctree::
    :maxdepth: 2
@@ -378,6 +367,7 @@ Documentation Sections
    development/architecture
    development/roadmap
    changelog
+   api/index
 
 .. toctree::
    :maxdepth: 2

@@ -56,6 +56,7 @@ class AgentConfig:
         agent_id: Optional agent identifier for this configuration
         custom_system_instruction: Additional system instruction prepended to evaluation message
         timeout_config: Timeout and resource limit configuration
+        coordination_config: Coordination behavior configuration (e.g., planning mode)
         skip_coordination_rounds: Debug/test mode - skip voting rounds and go straight to final presentation (default: False)
     """
 
@@ -71,6 +72,9 @@ class AgentConfig:
 
     # Timeout and resource limits
     timeout_config: TimeoutConfig = field(default_factory=TimeoutConfig)
+
+    # Coordination behavior configuration
+    coordination_config: CoordinationConfig = field(default_factory=CoordinationConfig)
 
     # Debug/test mode - skip coordination rounds and go straight to final presentation
     skip_coordination_rounds: bool = False
@@ -697,6 +701,12 @@ class AgentConfig:
             },
         }
 
+        # Handle coordination_config serialization
+        result["coordination_config"] = {
+            "enable_planning_mode": self.coordination_config.enable_planning_mode,
+            "planning_mode_instruction": self.coordination_config.planning_mode_instruction,
+        }
+
         # Handle message_templates serialization
         if self.message_templates is not None:
             try:
@@ -727,6 +737,12 @@ class AgentConfig:
         if timeout_data:
             timeout_config = TimeoutConfig(**timeout_data)
 
+        # Handle coordination_config
+        coordination_config = CoordinationConfig()
+        coordination_data = data.get("coordination_config", {})
+        if coordination_data:
+            coordination_config = CoordinationConfig(**coordination_data)
+
         # Handle message_templates
         message_templates = None
         template_data = data.get("message_templates")
@@ -741,6 +757,7 @@ class AgentConfig:
             agent_id=agent_id,
             custom_system_instruction=custom_system_instruction,
             timeout_config=timeout_config,
+            coordination_config=coordination_config,
         )
 
 

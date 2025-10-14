@@ -66,23 +66,19 @@ agents:
 **Try It Out:**
 ```bash
 # Gemini MCP test
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_mcp_test.yaml \
+massgen --config @examples/gemini_mcp_test \
   "Test MCP integration"
 
 # Weather service example
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_mcp_example.yaml \
+massgen --config @examples/gemini_mcp_example \
   "Get weather for San Francisco"
 
 # HTTP transport test
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_streamable_http_test.yaml \
+massgen --config @examples/gemini_streamable_http_test \
   "Test HTTP MCP"
 
 # Multi-server setup
-uv run python -m massgen.cli \
-  --config massgen/configs/multimcp_gemini.yaml \
+massgen --config @examples/multimcp_gemini \
   "Use multiple MCP servers"
 ```
 

@@ -131,8 +131,7 @@ If you're currently using MassGen via git clone, **nothing changes**:
 ```bash
 # Your existing commands work exactly as before
 cd /path/to/MassGen
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml \
+massgen --config @examples/basic_multi_three_agents_default \
   "Question"
 # ✓ Still works!
 
@@ -1229,8 +1228,7 @@ massgen --example basic_multi > my-config.yaml
 
 ```bash
 # Old style still works
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml \
+massgen --config @examples/basic_multi_three_agents_default \
   "Question"
 # ✓ Works (backwards compatible)
 

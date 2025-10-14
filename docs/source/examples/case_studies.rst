@@ -67,18 +67,10 @@ MassGen  Comprehensive Algorithm Enumeration
 **Case Study:** `fibonacci_number_algorithms.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/fibonacci_number_algorithms.md>`_
 
 
-Advanced Features
------------------
+Release Features
+----------------
 
-MassGen v0.0.12-0.0.14: Enhanced Logging and Workspace Management
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Case Study:** `claude-code-workspace-management.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/claude-code-workspace-management.md>`_
-
-MassGen v0.0.15: Gemini MCP Notion Integration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Case Study:** `gemini-mcp-notion-integration.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/gemini-mcp-notion-integration.md>`_
+Feature case studies organized by release version (newest first).
 
 MassGen v0.0.25: Multi-Turn Filesystem Support with Persistent Context
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -113,6 +105,16 @@ MassGen v0.0.16: Unified Filesystem Support with MCP Integration
      logging_enabled: true
 
 **Case Study:** `unified-filesystem-mcp-integration.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/unified-filesystem-mcp-integration.md>`_
+
+MassGen v0.0.15: Gemini MCP Notion Integration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Case Study:** `gemini-mcp-notion-integration.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/gemini-mcp-notion-integration.md>`_
+
+MassGen v0.0.12-0.0.14: Enhanced Logging and Workspace Management
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Case Study:** `claude-code-workspace-management.md <https://github.com/Leezekun/MassGen/blob/main/docs/case_studies/claude-code-workspace-management.md>`_
 
 MassGen  Advanced Filesystem with User Context Path Support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -156,11 +158,9 @@ We welcome new case studies! To contribute:
 * Provide clear highlights and insights
 * See `Contributing Guidelines <https://github.com/Leezekun/MassGen/blob/main/CONTRIBUTING.md>`_
 
-Next Steps
-----------
+See Also
+--------
 
-* :doc:`basic_examples` - Start with simpler examples
 * :doc:`../user_guide/multi_turn_mode` - Interactive sessions
 * :doc:`../user_guide/logging` - Understanding session logs
 * :doc:`../user_guide/mcp_integration` - External tool integration
-* :doc:`../reference/yaml_schema` - Complete configuration reference

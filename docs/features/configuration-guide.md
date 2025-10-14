@@ -119,6 +119,19 @@ orchestrator:
   snapshot_storage: "massgen_logs/snapshots"
   agent_temporary_workspace: "massgen_logs/temp_workspaces"
 
+  # Multi-turn session storage (enabled by default in config wizard)
+  session_storage: "sessions"
+
+  # Context paths - give agents access to your project files
+  context_paths:
+    - path: "."  # Current directory (absolute or relative)
+      permission: "write"  # "read" or "write" (final agent only)
+    - path: "src"  # Additional paths
+      permission: "write"
+      protected_paths:  # Optional: files immune from modification
+        - "config.json"
+        - "secrets.env"
+
   # Coordination settings (optional)
   coordination:
     enable_planning_mode: true
@@ -330,6 +343,31 @@ agent:
     Always provide code examples and clear explanations.
 ```
 
+#### Add Current Directory as Context Path (Multi-Turn Sessions)
+
+For multi-turn sessions with filesystem support, add the current directory so agents can work in your project:
+
+```yaml
+orchestrator:
+  session_storage: "sessions"  # Enable multi-turn sessions
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+  context_paths:
+    - path: "."  # Current directory where you run MassGen
+      permission: "write"  # Allow final agent to modify files
+```
+
+**Path Types:**
+- **Relative paths** (`.`, `src`, `docs`) - resolved against current working directory
+- **Absolute paths** (`/home/user/project`) - used as-is
+
+**Permission Levels:**
+- `read` - Agents can view files (all agents during coordination)
+- `write` - Final winning agent can create/modify files
+
+**Note:** During coordination, all context paths are read-only. Write permission only applies to the final agent during presentation phase.
+
 ## Environment Variables
 
 Many configs use environment variables for API keys and tokens:
@@ -429,7 +467,7 @@ uv run python -m massgen.cli --config my_config.yaml "query"
 
 **Solution:** Use full path or path relative to project root:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/basic/single/single_agent.yaml "query"
+massgen --config @examples/basic_single_single_agent "query"
 ```
 
 ### Invalid YAML Syntax

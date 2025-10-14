@@ -9,7 +9,7 @@
 #    OPENAI_API_KEY="your_openai_key"
 #
 # Example usage:
-# uv run python -m massgen.cli --config massgen/configs/tools/planning/gpt5_mini_case_study_mcp_planning_mode.yaml "Please read https://github.com/Leezekun/MassGen/issues/276 and send a message to the 'MassGen Testing Server' Discord server in the general channel with a summary and implementation next steps to notify the team of your approach. The guild ID is 1417773298309136445 and channel ID is 1417773298837880906"
+# massgen --config @examples/tools_planning_gpt5_mini_case_study_mcp_planning_mode "Please read https://github.com/Leezekun/MassGen/issues/276 and send a message to the 'MassGen Testing Server' Discord server in the general channel with a summary and implementation next steps to notify the team of your approach. The guild ID is 1417773298309136445 and channel ID is 1417773298837880906"
 
 agents:
   - id: "agent_a"

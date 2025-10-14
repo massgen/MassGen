@@ -39,8 +39,7 @@ The headline feature of v0.0.26 is **File Deletion** and enhanced workspace mana
 **Try It Out:**
 ```bash
 # Workspace cleanup example
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_gemini_workspace_cleanup.yaml \
+massgen --config @examples/gemini_gemini_workspace_cleanup \
   "Clean up temporary files and organize the workspace"
 ```
 
@@ -75,8 +74,7 @@ orchestrator:
 **Try It Out:**
 ```bash
 # File context path example
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_gpt5nano_file_context_path.yaml \
+massgen --config @examples/gemini_gpt5nano_file_context_path \
   "Read the configuration and suggest improvements"
 ```
 
@@ -111,8 +109,7 @@ orchestrator:
 **Try It Out:**
 ```bash
 # Protected paths example
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_gpt5nano_protected_paths.yaml \
+massgen --config @examples/gemini_gpt5nano_protected_paths \
   "Modify the project files but preserve the reference configuration"
 ```
 
@@ -279,16 +276,14 @@ Added v0.0.26 example resources for testing:
 **Cleanup After Processing:**
 ```bash
 # Agents clean up temporary files
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_gemini_workspace_cleanup.yaml \
+massgen --config @examples/gemini_gemini_workspace_cleanup \
   "Remove all .tmp files and organize remaining files into folders"
 ```
 
 **Multi-Turn Session Cleanup:**
 ```bash
 # Clean up between conversation turns
-uv run python -m massgen.cli \
-  --config massgen/configs/gemini_gemini_workspace_cleanup.yaml \
+massgen --config @examples/gemini_gemini_workspace_cleanup \
   "Delete outdated files from previous iterations"
 ```
 

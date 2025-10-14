@@ -840,8 +840,7 @@ coordination:
 
 **Quick Start:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
   "Create a comprehensive project structure with documentation"
 ```
 

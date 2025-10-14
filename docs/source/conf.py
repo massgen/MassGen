@@ -108,7 +108,8 @@ html_theme_options = {
 
 # Logo and favicon
 html_logo = "../../assets/logo.png"
-html_favicon = "../../assets/logo.png"
+# html_favicon = "../../assets/logo.png"
+html_favicon = "../../assets/favicon.ico"
 
 # Additional HTML context
 html_context = {

@@ -1,4 +1,19 @@
-# uv tool run massgen --config tools/filesystem/multiturn/two_claude_code_flash_filesystem_multiturn.yaml
+# Multi-Turn Filesystem Configuration Example
+#
+# This configuration enables agents to build upon previous work across multiple conversation turns.
+#
+# Key Features:
+# - session_storage: Saves conversation history and workspace state between turns
+# - context_paths: Gives agents access to your project files
+#   - Use "." for current directory to work directly in your project
+#   - Files are read-only during coordination, writable by final agent
+#
+# Example usage:
+# massgen --config @examples/tools_filesystem_multiturn_two_claude_code_filesystem_multiturn
+#
+# Or with uv tool:
+# uv tool run massgen --config tools/filesystem/multiturn/two_claude_code_filesystem_multiturn.yaml
+
 agents:
   - id: "agent_a"
     backend:
@@ -15,7 +30,17 @@ agents:
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots
     agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
-    session_storage: "sessions"  # Used for multi-turn conversations to store previous rounds.
+    session_storage: "sessions"  # Used for multi-turn conversations to store previous rounds
+
+    # Context paths - give agents access to your project files
+    # Tip: Use "." to automatically work in current directory
+    context_paths:
+      - path: "."  # Current directory (where you run massgen)
+        permission: "write"  # Allow final agent to create/modify files
+        # Optional: Add protected_paths to prevent accidental modifications
+        # protected_paths:
+        #   - ".env"
+        #   - "config.json"
 
 ui:
   display_type: "rich_terminal"

@@ -51,7 +51,6 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
         # Check if we're running from within the MassGen development directory
         # by looking for pyproject.toml with massgen package
         cwd = Path.cwd()
-        is_massgen_dev = False
 
         # Check if pyproject.toml exists and contains massgen package definition
         pyproject_file = cwd / "pyproject.toml"
@@ -59,16 +58,11 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
             try:
                 content = pyproject_file.read_text()
                 if 'name = "massgen"' in content:
-                    is_massgen_dev = True
+                    pass
             except Exception:
                 pass
 
-        # Use massgen_logs/ for dev, .massgen/logs/ for external usage
-        if is_massgen_dev:
-            log_base_dir = Path("massgen_logs")
-        else:
-            log_base_dir = Path(".massgen") / "massgen_logs"
-
+        log_base_dir = Path(".massgen") / "massgen_logs"
         log_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Create timestamped session directory
@@ -93,6 +87,41 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
         _LOG_SESSION_DIR.mkdir(parents=True, exist_ok=True)
 
     return _LOG_SESSION_DIR
+
+
+def save_execution_metadata(query: str, config_path: Optional[str] = None, config_content: Optional[dict] = None):
+    """Save the query and config metadata to the log directory.
+
+    This allows reconstructing what was executed in this session.
+
+    Args:
+        query: The user's query/prompt
+        config_path: Path to the config file that was used (optional)
+        config_content: The actual config dictionary (optional)
+    """
+    import yaml
+
+    log_dir = get_log_session_dir()
+
+    # Create a single metadata file with all execution info
+    metadata = {
+        "query": query,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    if config_path:
+        metadata["config_path"] = str(config_path)
+
+    if config_content:
+        metadata["config"] = config_content
+
+    metadata_file = log_dir / "execution_metadata.yaml"
+    try:
+        with open(metadata_file, "w", encoding="utf-8") as f:
+            yaml.dump(metadata, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        logger.info(f"Saved execution metadata to: {metadata_file}")
+    except Exception as e:
+        logger.warning(f"Failed to save execution metadata: {e}")
 
 
 def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Optional[int] = None):
@@ -561,6 +590,7 @@ __all__ = [
     "setup_logging",
     "get_logger",
     "get_log_session_dir",
+    "save_execution_metadata",
     "log_orchestrator_activity",
     "log_agent_message",
     "log_orchestrator_agent_message",

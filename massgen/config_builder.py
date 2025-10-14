@@ -16,13 +16,15 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+import questionary
 import yaml
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Confirm, IntPrompt, Prompt
-from rich.table import Table
+from rich.prompt import Confirm, Prompt
 from rich.theme import Theme
+
+from massgen.backend.capabilities import BACKEND_CAPABILITIES, get_capabilities
 
 # Load environment variables
 load_dotenv()
@@ -44,86 +46,34 @@ console = Console(theme=custom_theme)
 class ConfigBuilder:
     """Interactive configuration builder for MassGen."""
 
-    # Model provider configurations
-    PROVIDERS = {
-        "openai": {
-            "name": "OpenAI (GPT-5, GPT-4, etc.)",
-            "type": "openai",
-            "env_var": "OPENAI_API_KEY",
-            "models": ["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini", "o1", "o1-mini"],
-            "supports": ["web_search", "code_execution", "mcp", "multimodal"],
-        },
-        "claude": {
-            "name": "Anthropic Claude",
-            "type": "claude",
-            "env_var": "ANTHROPIC_API_KEY",
-            "models": ["claude-sonnet-4-20250514", "claude-opus-4", "claude-3-5-sonnet-latest"],
-            "supports": ["web_search", "code_execution", "mcp"],
-        },
-        "claude_code": {
-            "name": "Claude Code (Native SDK)",
-            "type": "claude_code",
-            "env_var": "ANTHROPIC_API_KEY",
-            "models": ["claude-sonnet-4", "claude-opus-4"],
-            "supports": ["filesystem", "mcp", "bash"],
-        },
-        "gemini": {
-            "name": "Google Gemini",
-            "type": "gemini",
-            "env_var": "GEMINI_API_KEY",
-            "models": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-1.5-pro"],
-            "supports": ["web_search", "code_execution", "mcp"],
-        },
-        "grok": {
-            "name": "xAI Grok",
-            "type": "grok",
-            "env_var": "XAI_API_KEY",
-            "models": ["grok-4", "grok-4-fast-reasoning", "grok-3", "grok-3-mini"],
-            "supports": ["web_search", "mcp"],
-        },
-        "azure": {
-            "name": "Azure OpenAI",
-            "type": "azure_openai",
-            "env_var": "AZURE_OPENAI_API_KEY",
-            "models": ["gpt-4", "gpt-4o", "gpt-35-turbo"],
-            "supports": ["web_search", "code_execution"],
-        },
-        "local": {
-            "name": "Local Models (LM Studio)",
-            "type": "lmstudio",
-            "env_var": None,
-            "models": ["lmstudio-community/Qwen2.5-7B-Instruct-GGUF", "custom"],
-            "supports": [],
-        },
-        "zai": {
-            "name": "ZAI (Zhipu.ai) GLM",
-            "type": "zai",
-            "env_var": "ZAI_API_KEY",
-            "models": ["glm-4-plus", "glm-4-air", "glm-4-flash"],
-            "supports": ["web_search"],
-        },
-        "vllm": {
-            "name": "vLLM (Local Inference Server)",
-            "type": "vllm",
-            "env_var": None,
-            "models": ["custom"],
-            "supports": [],
-        },
-        "sglang": {
-            "name": "SGLang (Local Inference Server)",
-            "type": "sglang",
-            "env_var": None,
-            "models": ["custom"],
-            "supports": [],
-        },
-        "chatcompletion": {
-            "name": "OpenAI-Compatible API (Generic)",
-            "type": "chatcompletion",
-            "env_var": None,  # Provider-specific
-            "models": ["custom"],
-            "supports": ["web_search", "code_execution"],
-        },
-    }
+    @property
+    def PROVIDERS(self) -> Dict[str, Dict]:
+        """Generate provider configurations from the capabilities registry (single source of truth).
+
+        This dynamically builds the PROVIDERS dict from massgen/backend/capabilities.py,
+        ensuring consistency between config builder, documentation, and backend implementations.
+        """
+        providers = {}
+
+        for backend_type, caps in BACKEND_CAPABILITIES.items():
+            # Build supports list, handling filesystem specially
+            supports = list(caps.supported_capabilities)
+
+            # Add "filesystem" to supports for ANY backend that supports it (native or MCP)
+            if caps.filesystem_support in ["native", "mcp"]:
+                supports = [s if s != "filesystem_native" else "filesystem" for s in supports]
+                if "filesystem" not in supports:
+                    supports.append("filesystem")
+
+            providers[backend_type] = {
+                "name": caps.provider_name,
+                "type": caps.backend_type,
+                "env_var": caps.env_var,
+                "models": caps.models,
+                "supports": supports,
+            }
+
+        return providers
 
     # Use case templates - all use cases support all agent types
     USE_CASES = {
@@ -185,34 +135,6 @@ class ConfigBuilder:
         },
     }
 
-    # MCP server templates
-    MCP_SERVERS = {
-        "weather": {
-            "name": "Weather Information",
-            "command": "npx",
-            "args": ["-y", "@fak111/weather-mcp"],
-            "env_vars": [],
-        },
-        "brave_search": {
-            "name": "Brave Web Search",
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-brave-search"],
-            "env_vars": ["BRAVE_API_KEY"],
-        },
-        "filesystem": {
-            "name": "Filesystem Operations",
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
-            "env_vars": [],
-        },
-        "notion": {
-            "name": "Notion Integration",
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-notion"],
-            "env_vars": ["NOTION_API_KEY"],
-        },
-    }
-
     def __init__(self, default_mode: bool = False) -> None:
         """Initialize the configuration builder with default config.
 
@@ -267,28 +189,49 @@ class ConfigBuilder:
         self,
         api_keys: Dict[str, bool],
     ) -> None:
-        """Display table of available providers with error handling."""
+        """Display providers in improved format with error handling."""
         try:
-            table = Table(title="Available Model Providers", show_header=True)
-            table.add_column("ID", style="cyan")
-            table.add_column("Provider", style="green")
-            table.add_column("API Key", style="yellow")
-            table.add_column("Capabilities", style="blue")
+            console.print()
+            console.print("╔" + "═" * 68 + "╗")
+            console.print("║  " + "[bold cyan]Available Providers[/bold cyan]".ljust(78) + "║")
+            console.print("╠" + "═" * 68 + "╣")
+            console.print("║" + " " * 68 + "║")
 
             for provider_id, provider_info in self.PROVIDERS.items():
                 try:
-                    has_key = "✅ Found" if api_keys.get(provider_id, False) else "❌ Missing"
-                    capabilities = ", ".join(provider_info.get("supports", []))
-                    table.add_row(
-                        provider_id,
-                        provider_info.get("name", "Unknown"),
-                        has_key,
-                        capabilities or "Basic",
-                    )
-                except Exception as e:
-                    console.print(f"[warning]⚠️  Could not display {provider_id}: {e}[/warning]")
+                    has_key = api_keys.get(provider_id, False)
+                    status = "✅" if has_key else "❌"
+                    name = provider_info.get("name", "Unknown")
 
-            console.print(table)
+                    # Main line with status and name
+                    console.print(f"║  {status} [bold]{name:<60}[/bold]  ║")
+
+                    # Models line
+                    models = provider_info.get("models", [])
+                    models_display = ", ".join(models[:3])
+                    if len(models) > 3:
+                        models_display += f" (+{len(models)-3} more)"
+                    console.print(f"║     [dim]{models_display:<62}[/dim]  ║")
+
+                    # Capabilities line
+                    if provider_info.get("supports"):
+                        caps = "Supports: " + ", ".join(provider_info["supports"])
+                        console.print(f"║     [dim cyan]{caps:<62}[/dim cyan]  ║")
+                    elif has_key:
+                        console.print("║     [dim]Basic text generation[/dim]" + " " * 40 + "  ║")
+
+                    # API key hint if missing
+                    if not has_key and provider_info.get("env_var"):
+                        console.print(f"║     [yellow]Need: {provider_info['env_var']:<54}[/yellow]  ║")
+
+                    console.print("║" + " " * 68 + "║")
+
+                except Exception as e:
+                    console.print(f"║  [warning]⚠️  Could not display {provider_id}: {e}[/warning]" + " " * (68 - len(f"⚠️  Could not display {provider_id}: {e}") - 4) + "║")
+
+            console.print("╚" + "═" * 68 + "╝")
+            console.print()
+            console.print("💡 [dim]Tip: Set API keys in ~/.config/massgen/.env[/dim]")
             console.print()
         except Exception as e:
             console.print(f"[error]❌ Error displaying providers: {e}[/error]")
@@ -297,31 +240,50 @@ class ConfigBuilder:
     def select_use_case(self) -> str:
         """Let user select a use case template with error handling."""
         try:
-            console.print(Panel("📋 Step 1: Select Your Use Case", style="bold blue"))
-            console.print("[italic]All agent types are supported for every use case[/italic]\n")
+            console.print()
+            console.print("━" * 70)
+            console.print("[bold cyan]Step 1 of 4: Select Your Use Case[/bold cyan]")
+            console.print("━" * 70)
+            console.print()
+            console.print("[italic dim]All agent types are supported for every use case[/italic dim]\n")
 
-            for i, (use_case_id, use_case_info) in enumerate(self.USE_CASES.items(), 1):
+            # Build choices for questionary
+            choices = []
+            for use_case_id, use_case_info in self.USE_CASES.items():
                 try:
-                    console.print(f"{i}. [bold cyan]{use_case_info.get('name', 'Unknown')}[/bold cyan]")
-                    console.print(f"   {use_case_info.get('description', '')}")
-                    console.print(f"   Recommended: {use_case_info.get('recommended_agents', 1)} agents")
+                    name = use_case_info.get("name", "Unknown")
+                    description = use_case_info.get("description", "")
+                    use_case_info.get("recommended_agents", 1)
 
-                    # Show recommended tools if any
-                    if use_case_info.get("recommended_tools"):
-                        tools_str = ", ".join(use_case_info["recommended_tools"])
-                        console.print(f"   Suggested tools: {tools_str}")
-                    console.print()
+                    # Create display string with name and brief description
+                    display = f"{name} - {description[:50]}..." if len(description) > 50 else f"{name} - {description}"
+
+                    choices.append(
+                        questionary.Choice(
+                            title=display,
+                            value=use_case_id,
+                        ),
+                    )
                 except Exception as e:
-                    console.print(f"[warning]⚠️  Could not display use case {i}: {e}[/warning]")
+                    console.print(f"[warning]⚠️  Could not display use case: {e}[/warning]")
 
-            choice = IntPrompt.ask(
-                "[prompt]Select use case[/prompt]",
-                choices=[str(i) for i in range(1, len(self.USE_CASES) + 1)],
-                default="1",
-            )
+            use_case_id = questionary.select(
+                "Select your use case:",
+                choices=choices,
+                style=questionary.Style(
+                    [
+                        ("selected", "fg:cyan bold"),
+                        ("pointer", "fg:cyan bold"),
+                        ("highlighted", "fg:cyan"),
+                    ],
+                ),
+                use_arrow_keys=True,
+            ).ask()
 
-            use_case_id = list(self.USE_CASES.keys())[choice - 1]
-            console.print(f"✅ Selected: [green]{self.USE_CASES[use_case_id].get('name', use_case_id)}[/green]\n")
+            if not use_case_id:
+                return "qa"  # Default if cancelled
+
+            console.print(f"\n✅ Selected: [green]{self.USE_CASES[use_case_id].get('name', use_case_id)}[/green]\n")
             return use_case_id
         except (KeyboardInterrupt, EOFError):
             raise  # Re-raise to be handled by run()
@@ -330,98 +292,539 @@ class ConfigBuilder:
             console.print("[info]Defaulting to 'qa' use case[/info]\n")
             return "qa"  # Safe default
 
-    def configure_agents(self, use_case: str, api_keys: Dict[str, bool]) -> List[Dict]:
-        """Configure agents with comprehensive error handling."""
+    def add_custom_mcp_server(self) -> Optional[Dict]:
+        """Interactive flow to configure a custom MCP server.
+
+        Returns:
+            MCP server configuration dict, or None if cancelled
+        """
         try:
-            console.print(Panel("🤖 Step 2: Configure Agents", style="bold blue"))
-            console.print("[italic]Choose any provider(s) - all types work for your selected use case[/italic]\n")
+            console.print("\n[bold cyan]Configure Custom MCP Server[/bold cyan]\n")
+
+            # Name
+            name = questionary.text(
+                "Server name (identifier):",
+                validate=lambda x: len(x) > 0,
+            ).ask()
+
+            if not name:
+                return None
+
+            # Type
+            server_type = questionary.select(
+                "Server type:",
+                choices=[
+                    questionary.Choice("stdio (standard input/output)", value="stdio"),
+                    questionary.Choice("sse (server-sent events)", value="sse"),
+                    questionary.Choice("Custom type", value="custom"),
+                ],
+                default="stdio",
+                style=questionary.Style(
+                    [
+                        ("selected", "fg:cyan bold"),
+                        ("pointer", "fg:cyan bold"),
+                        ("highlighted", "fg:cyan"),
+                    ],
+                ),
+                use_arrow_keys=True,
+            ).ask()
+
+            if server_type == "custom":
+                server_type = questionary.text("Enter custom type:").ask()
+
+            if not server_type:
+                server_type = "stdio"
+
+            # Command
+            command = questionary.text(
+                "Command:",
+                default="npx",
+            ).ask()
+
+            if not command:
+                command = "npx"
+
+            # Args
+            args_str = questionary.text(
+                "Arguments (space-separated, or empty for none):",
+                default="",
+            ).ask()
+
+            args = args_str.split() if args_str else []
+
+            # Environment variables
+            env_vars = {}
+            if questionary.confirm("Add environment variables?", default=False).ask():
+                console.print("\n[dim]Tip: Use ${VAR_NAME} to reference from .env file[/dim]\n")
+                while True:
+                    var_name = questionary.text(
+                        "Environment variable name (or press Enter to finish):",
+                    ).ask()
+
+                    if not var_name:
+                        break
+
+                    var_value = questionary.text(
+                        f"Value for {var_name}:",
+                        default=f"${{{var_name}}}",
+                    ).ask()
+
+                    if var_value:
+                        env_vars[var_name] = var_value
+
+            # Build server config
+            mcp_server = {
+                "name": name,
+                "type": server_type,
+                "command": command,
+                "args": args,
+            }
+
+            if env_vars:
+                mcp_server["env"] = env_vars
+
+            console.print(f"\n✅ Custom MCP server configured: {name}\n")
+            return mcp_server
+
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[info]Cancelled custom MCP configuration[/info]")
+            return None
+        except Exception as e:
+            console.print(f"[error]❌ Error configuring custom MCP: {e}[/error]")
+            return None
+
+    def batch_create_agents(self, count: int, provider_id: str) -> List[Dict]:
+        """Create multiple agents with the same provider.
+
+        Args:
+            count: Number of agents to create
+            provider_id: Provider ID (e.g., 'openai', 'claude')
+
+        Returns:
+            List of agent configurations with default models
+        """
+        agents = []
+        provider_info = self.PROVIDERS.get(provider_id, {})
+
+        # Generate agent IDs like agent_a, agent_b, agent_c...
+        for i in range(count):
+            # Convert index to letter (0->a, 1->b, 2->c, etc.)
+            agent_letter = chr(ord("a") + i)
+
+            agent = {
+                "id": f"agent_{agent_letter}",
+                "backend": {
+                    "type": provider_info.get("type", provider_id),
+                    "model": provider_info.get("models", ["default"])[0],  # Default to first model
+                },
+            }
+
+            # Add workspace for Claude Code (use numbers, not letters)
+            if provider_info.get("type") == "claude_code":
+                agent["backend"]["cwd"] = f"workspace{i + 1}"
+
+            agents.append(agent)
+
+        return agents
+
+    def customize_agent(self, agent: Dict, agent_num: int, total_agents: int) -> Dict:
+        """Customize a single agent with Panel UI.
+
+        Args:
+            agent: Agent configuration dict
+            agent_num: Agent number (1-indexed)
+            total_agents: Total number of agents
+
+        Returns:
+            Updated agent configuration
+        """
+        try:
+            backend_type = agent.get("backend", {}).get("type")
+            provider_info = None
+
+            # Find provider info
+            for pid, pinfo in self.PROVIDERS.items():
+                if pinfo.get("type") == backend_type:
+                    provider_info = pinfo
+                    break
+
+            if not provider_info:
+                console.print(f"[warning]⚠️  Could not find provider for {backend_type}[/warning]")
+                return agent
+
+            # Create Panel for this agent
+            panel_content = []
+            panel_content.append(f"[bold]Agent {agent_num} of {total_agents}: {agent['id']}[/bold]\n")
+
+            # Model selection
+            models = provider_info.get("models", [])
+            if models:
+                current_model = agent["backend"].get("model")
+                panel_content.append(f"[cyan]Current model:[/cyan] {current_model}")
+
+                console.print(Panel("\n".join(panel_content), border_style="cyan"))
+                console.print()
+
+                model_choices = [
+                    questionary.Choice(
+                        f"{model}" + (" (current)" if model == current_model else ""),
+                        value=model,
+                    )
+                    for model in models
+                ]
+
+                selected_model = questionary.select(
+                    f"Select model for {agent['id']}:",
+                    choices=model_choices,
+                    default=current_model,
+                    style=questionary.Style(
+                        [
+                            ("selected", "fg:cyan bold"),
+                            ("pointer", "fg:cyan bold"),
+                            ("highlighted", "fg:cyan"),
+                        ],
+                    ),
+                    use_arrow_keys=True,
+                ).ask()
+
+                if selected_model:
+                    agent["backend"]["model"] = selected_model
+            else:
+                console.print(Panel("\n".join(panel_content), border_style="cyan"))
+
+            # Filesystem access (native or via MCP)
+            if "filesystem" in provider_info.get("supports", []):
+                console.print()
+
+                # Get filesystem support type from capabilities
+                caps = get_capabilities(backend_type)
+                fs_type = caps.filesystem_support if caps else "mcp"
+
+                if fs_type == "native":
+                    console.print("[dim]This backend has native filesystem support[/dim]")
+                else:
+                    console.print("[dim]This backend supports filesystem operations via MCP[/dim]")
+
+                if questionary.confirm("Enable filesystem access for this agent?", default=True).ask():
+                    if backend_type == "claude_code":
+                        # cwd is already set during batch_create_agents
+                        # Optionally allow user to customize it
+                        current_cwd = agent["backend"].get("cwd", "workspace")
+                        console.print(f"[dim]Current workspace: {current_cwd}[/dim]")
+
+                        if questionary.confirm("Customize workspace directory?", default=False).ask():
+                            custom_cwd = questionary.text(
+                                "Enter workspace directory:",
+                                default=current_cwd,
+                            ).ask()
+                            if custom_cwd:
+                                agent["backend"]["cwd"] = custom_cwd
+
+                        console.print(f"✅ Filesystem access enabled (native): {agent['backend']['cwd']}")
+                    else:
+                        # For MCP-based filesystem, set cwd parameter
+                        # This will be used for MCP filesystem operations
+                        if not agent["backend"].get("cwd"):
+                            # Use agent index for workspace naming
+                            agent["backend"]["cwd"] = f"workspace{agent_num}"
+
+                        console.print(f"✅ Filesystem access enabled (via MCP): {agent['backend']['cwd']}")
+
+            # Built-in tools (backend-specific capabilities)
+            supports = provider_info.get("supports", [])
+            builtin_tools = [s for s in supports if s in ["web_search", "code_execution", "multimodal", "bash"]]
+
+            if builtin_tools:
+                console.print()
+                tool_choices = []
+
+                if "web_search" in builtin_tools:
+                    tool_choices.append(questionary.Choice("Web Search", value="web_search"))
+                if "code_execution" in builtin_tools:
+                    tool_choices.append(questionary.Choice("Code Execution", value="code_execution"))
+                if "bash" in builtin_tools:
+                    tool_choices.append(questionary.Choice("Bash/Shell", value="bash"))
+                if "multimodal" in builtin_tools:
+                    tool_choices.append(questionary.Choice("Multimodal (vision)", value="multimodal"))
+
+                if tool_choices:
+                    selected_tools = questionary.checkbox(
+                        "Enable built-in tools for this agent (Space to select, Enter to confirm):",
+                        choices=tool_choices,
+                        style=questionary.Style(
+                            [
+                                ("selected", "fg:cyan"),
+                                ("pointer", "fg:cyan bold"),
+                                ("highlighted", "fg:cyan"),
+                            ],
+                        ),
+                        use_arrow_keys=True,
+                    ).ask()
+
+                    if selected_tools:
+                        # Apply backend-specific configuration
+                        if "web_search" in selected_tools:
+                            if backend_type in ["openai", "claude", "gemini", "grok"]:
+                                agent["backend"]["enable_web_search"] = True
+
+                        if "code_execution" in selected_tools:
+                            if backend_type == "openai":
+                                agent["backend"]["enable_code_interpreter"] = True
+                            elif backend_type in ["claude", "gemini"]:
+                                agent["backend"]["enable_code_execution"] = True
+
+                        console.print(f"✅ Enabled {len(selected_tools)} built-in tool(s)")
+
+            # MCP servers (custom only)
+            # Note: Filesystem is handled internally above, NOT as external MCP
+            if "mcp" in provider_info.get("supports", []):
+                console.print()
+                console.print("[dim]MCP servers are external integrations. Filesystem is handled internally (configured above).[/dim]")
+
+                if questionary.confirm("Add custom MCP servers?", default=False).ask():
+                    mcp_servers = []
+                    while True:
+                        custom_server = self.add_custom_mcp_server()
+                        if custom_server:
+                            mcp_servers.append(custom_server)
+
+                            # Ask if they want to add another
+                            if not questionary.confirm("Add another custom MCP server?", default=False).ask():
+                                break
+                        else:
+                            break
+
+                    # Add to agent config if any MCPs were configured
+                    if mcp_servers:
+                        agent["backend"]["mcp_servers"] = mcp_servers
+                        console.print(f"\n✅ Total: {len(mcp_servers)} MCP server(s) configured for this agent\n")
+
+            console.print(f"✅ [green]Agent {agent_num} configured[/green]\n")
+            return agent
+
+        except (KeyboardInterrupt, EOFError):
+            raise
+        except Exception as e:
+            console.print(f"[error]❌ Error customizing agent: {e}[/error]")
+            return agent
+
+    def configure_agents(self, use_case: str, api_keys: Dict[str, bool]) -> List[Dict]:
+        """Configure agents with batch creation and individual customization."""
+        try:
+            console.print()
+            console.print("━" * 70)
+            console.print("[bold cyan]Step 2 of 4: Agent Setup[/bold cyan]")
+            console.print("━" * 70)
+            console.print()
+            console.print("[italic dim]Choose any provider(s) - all types work for your selected use case[/italic dim]\n")
 
             use_case_info = self.USE_CASES.get(use_case, {})
             recommended = use_case_info.get("recommended_agents", 1)
 
-            num_agents = IntPrompt.ask(
-                "[prompt]How many agents?[/prompt]",
-                default=recommended,
-                show_default=True,
-            )
+            # Step 2a: How many agents?
+            console.print(f"💡 [dim]Recommended for this use case: {recommended} agent(s)[/dim]\n")
+
+            # Build choices with proper default handling
+            num_choices = [
+                questionary.Choice("1 agent", value=1),
+                questionary.Choice("2 agents", value=2),
+                questionary.Choice("3 agents (recommended for diverse perspectives)", value=3),
+                questionary.Choice("4 agents", value=4),
+                questionary.Choice("5 agents", value=5),
+                questionary.Choice("Custom number", value="custom"),
+            ]
+
+            # Find the default choice by value
+            default_choice = None
+            for choice in num_choices:
+                if choice.value == recommended:
+                    default_choice = choice.value
+                    break
+
+            try:
+                num_agents_choice = questionary.select(
+                    "How many agents?",
+                    choices=num_choices,
+                    default=default_choice,
+                    style=questionary.Style(
+                        [
+                            ("selected", "fg:cyan bold"),
+                            ("pointer", "fg:cyan bold"),
+                            ("highlighted", "fg:cyan"),
+                        ],
+                    ),
+                    use_arrow_keys=True,
+                ).ask()
+
+                if num_agents_choice == "custom":
+                    num_agents_text = questionary.text(
+                        "Enter number of agents:",
+                        validate=lambda x: x.isdigit() and int(x) > 0,
+                    ).ask()
+                    num_agents = int(num_agents_text) if num_agents_text else recommended
+                else:
+                    num_agents = num_agents_choice
+            except Exception as e:
+                console.print(f"[warning]⚠️  Error with selection: {e}[/warning]")
+                console.print(f"[info]Using recommended: {recommended} agents[/info]")
+                num_agents = recommended
 
             if num_agents < 1:
                 console.print("[warning]⚠️  Number of agents must be at least 1. Setting to 1.[/warning]")
                 num_agents = 1
 
-            agents = []
             available_providers = [p for p, has_key in api_keys.items() if has_key]
 
             if not available_providers:
                 console.print("[error]❌ No providers with API keys found. Please set at least one API key.[/error]")
                 raise ValueError("No providers available")
 
-            for i in range(num_agents):
-                try:
-                    console.print(f"\n[bold cyan]Agent {i + 1} Configuration:[/bold cyan]")
+            # Step 2b: Same provider or mix?
+            agents = []
+            if num_agents == 1:
+                # Single agent - just pick provider directly
+                console.print()
 
-                    # Show available providers
-                    console.print("\nAvailable providers:")
-                    for j, provider_id in enumerate(available_providers, 1):
-                        provider_name = self.PROVIDERS.get(provider_id, {}).get("name", provider_id)
-                        console.print(f"{j}. {provider_name}")
-
-                    provider_choice = IntPrompt.ask(
-                        "[prompt]Select provider[/prompt]",
-                        choices=[str(j) for j in range(1, len(available_providers) + 1)],
-                        default="1",
+                provider_choices = [
+                    questionary.Choice(
+                        self.PROVIDERS.get(pid, {}).get("name", pid),
+                        value=pid,
                     )
+                    for pid in available_providers
+                ]
 
-                    provider_id = available_providers[provider_choice - 1]
-                    provider_info = self.PROVIDERS.get(provider_id, {})
+                provider_id = questionary.select(
+                    "Select provider:",
+                    choices=provider_choices,
+                    style=questionary.Style(
+                        [
+                            ("selected", "fg:cyan bold"),
+                            ("pointer", "fg:cyan bold"),
+                            ("highlighted", "fg:cyan"),
+                        ],
+                    ),
+                    use_arrow_keys=True,
+                ).ask()
 
-                    if not provider_info:
-                        console.print(f"[error]❌ Provider {provider_id} not found. Skipping agent {i + 1}.[/error]")
-                        continue
+                if not provider_id:
+                    provider_id = available_providers[0]
 
-                    # Select model
-                    models = provider_info.get("models", [])
-                    if not models:
-                        console.print(f"[error]❌ No models available for {provider_id}. Skipping agent {i + 1}.[/error]")
-                        continue
+                agents = self.batch_create_agents(1, provider_id)
+                provider_name = self.PROVIDERS.get(provider_id, {}).get("name", provider_id)
+                console.print(f"\n✅ Created 1 {provider_name} agent\n")
 
-                    console.print(f"\nAvailable models for {provider_info.get('name', provider_id)}:")
-                    for j, model in enumerate(models, 1):
-                        console.print(f"{j}. {model}")
+            else:
+                # Multiple agents - ask if same or different providers
+                console.print()
 
-                    model_choice = IntPrompt.ask(
-                        "[prompt]Select model[/prompt]",
-                        choices=[str(j) for j in range(1, len(models) + 1)],
-                        default="1",
-                    )
+                setup_mode = questionary.select(
+                    "Setup mode:",
+                    choices=[
+                        questionary.Choice("Same provider for all agents (quick setup)", value="same"),
+                        questionary.Choice("Mix different providers (advanced)", value="mix"),
+                    ],
+                    style=questionary.Style(
+                        [
+                            ("selected", "fg:cyan bold"),
+                            ("pointer", "fg:cyan bold"),
+                            ("highlighted", "fg:cyan"),
+                        ],
+                    ),
+                    use_arrow_keys=True,
+                ).ask()
 
-                    model = models[model_choice - 1]
+                if not setup_mode:
+                    setup_mode = "same"
 
-                    # Build agent config
-                    agent = {
-                        "id": f"{provider_id}_agent_{i + 1}",
-                        "backend": {
-                            "type": provider_info.get("type", provider_id),
-                            "model": model,
-                        },
-                    }
+                if setup_mode == "same":
+                    # Batch creation with same provider
+                    console.print()
 
-                    # Add workspace for Claude Code
-                    if provider_info.get("type") == "claude_code":
-                        agent["backend"]["cwd"] = f"workspace_{i + 1}"
+                    provider_choices = [
+                        questionary.Choice(
+                            self.PROVIDERS.get(pid, {}).get("name", pid),
+                            value=pid,
+                        )
+                        for pid in available_providers
+                    ]
 
-                    agents.append(agent)
-                    console.print(f"✅ Agent {i + 1} configured: [green]{provider_info.get('name', provider_id)} - {model}[/green]")
+                    provider_id = questionary.select(
+                        "Select provider:",
+                        choices=provider_choices,
+                        style=questionary.Style(
+                            [
+                                ("selected", "fg:cyan bold"),
+                                ("pointer", "fg:cyan bold"),
+                                ("highlighted", "fg:cyan"),
+                            ],
+                        ),
+                        use_arrow_keys=True,
+                    ).ask()
 
-                except (KeyboardInterrupt, EOFError):
-                    raise
-                except Exception as e:
-                    console.print(f"[error]❌ Error configuring agent {i + 1}: {e}[/error]")
-                    console.print("[info]Skipping this agent...[/info]")
+                    if not provider_id:
+                        provider_id = available_providers[0]
+
+                    agents = self.batch_create_agents(num_agents, provider_id)
+                    provider_name = self.PROVIDERS.get(provider_id, {}).get("name", provider_id)
+                    console.print(f"\n✅ Created {num_agents} {provider_name} agents\n")
+
+                else:
+                    # Advanced: mix providers
+                    console.print("\n[yellow]💡 Advanced mode: Configure each agent individually[/yellow]\n")
+                    for i in range(num_agents):
+                        try:
+                            console.print(f"[bold cyan]Agent {i + 1} of {num_agents}:[/bold cyan]")
+
+                            provider_choices = [
+                                questionary.Choice(
+                                    self.PROVIDERS.get(pid, {}).get("name", pid),
+                                    value=pid,
+                                )
+                                for pid in available_providers
+                            ]
+
+                            provider_id = questionary.select(
+                                f"Select provider for agent {i + 1}:",
+                                choices=provider_choices,
+                                style=questionary.Style(
+                                    [
+                                        ("selected", "fg:cyan bold"),
+                                        ("pointer", "fg:cyan bold"),
+                                        ("highlighted", "fg:cyan"),
+                                    ],
+                                ),
+                                use_arrow_keys=True,
+                            ).ask()
+
+                            if not provider_id:
+                                provider_id = available_providers[0]
+
+                            agent_batch = self.batch_create_agents(1, provider_id)
+                            agents.extend(agent_batch)
+
+                            provider_name = self.PROVIDERS.get(provider_id, {}).get("name", provider_id)
+                            console.print(f"✅ Agent {i + 1} created: {provider_name}\n")
+
+                        except (KeyboardInterrupt, EOFError):
+                            raise
+                        except Exception as e:
+                            console.print(f"[error]❌ Error configuring agent {i + 1}: {e}[/error]")
+                            console.print("[info]Skipping this agent...[/info]")
 
             if not agents:
                 console.print("[error]❌ No agents were successfully configured.[/error]")
                 raise ValueError("Failed to configure any agents")
+
+            # Step 2c: Customize each agent
+            console.print()
+            console.print("━" * 70)
+            console.print("[bold cyan]Step 3 of 4: Customize Each Agent[/bold cyan]")
+            console.print("━" * 70)
+            console.print()
+
+            for i, agent in enumerate(agents, 1):
+                agent = self.customize_agent(agent, i, len(agents))
+                agents[i - 1] = agent
 
             return agents
 
@@ -432,87 +835,42 @@ class ConfigBuilder:
             raise
 
     def configure_tools(self, use_case: str, agents: List[Dict]) -> Tuple[List[Dict], Dict]:
-        """Configure tools for agents with error handling."""
+        """Configure orchestrator-level settings (tools are configured per-agent)."""
         try:
-            console.print(Panel("🔧 Step 3: Configure Tools & Capabilities", style="bold blue"))
             console.print()
+            console.print("━" * 70)
+            console.print("[bold cyan]Step 4 of 4: Orchestrator Configuration[/bold cyan]")
+            console.print("━" * 70)
+            console.print()
+            console.print("[dim]Note: Tools and capabilities were configured per-agent in the previous step.[/dim]\n")
 
-            use_case_info = self.USE_CASES.get(use_case, {})
-            recommended_tools = use_case_info.get("recommended_tools", [])
-
-            # Show use case specific notes
-            if use_case_info.get("notes"):
-                console.print(f"[italic cyan]💡 {use_case_info['notes']}[/italic cyan]\n")
-
-            # Web Search - smart default based on recommendations
-            web_search_default = "web_search" in recommended_tools
-            web_search_prompt = "[prompt]Enable web search?[/prompt]"
-            if web_search_default:
-                web_search_prompt += " (recommended for this use case)"
-
-            if Confirm.ask(web_search_prompt, default=web_search_default):
-                enabled_count = 0
-                for agent in agents:
-                    backend_type = agent.get("backend", {}).get("type")
-                    if backend_type and "web_search" in self.PROVIDERS.get(backend_type, {}).get("supports", []):
-                        if backend_type in ["openai", "claude", "gemini", "grok"]:
-                            agent["backend"]["enable_web_search"] = True
-                            enabled_count += 1
-                if enabled_count > 0:
-                    console.print(f"✅ Web search enabled for {enabled_count} compatible agent(s)")
-                else:
-                    console.print("[yellow]⚠️  No agents support web search[/yellow]")
-
-            # Code Execution - smart default based on recommendations
-            code_exec_default = "code_execution" in recommended_tools
-            code_exec_prompt = "[prompt]Enable code execution?[/prompt]"
-            if code_exec_default:
-                code_exec_prompt += " (recommended for this use case)"
-
-            if Confirm.ask(code_exec_prompt, default=code_exec_default):
-                enabled_count = 0
-                for agent in agents:
-                    backend_type = agent.get("backend", {}).get("type")
-                    if backend_type and "code_execution" in self.PROVIDERS.get(backend_type, {}).get("supports", []):
-                        if backend_type == "openai":
-                            agent["backend"]["enable_code_interpreter"] = True
-                            enabled_count += 1
-                        elif backend_type in ["claude", "gemini"]:
-                            agent["backend"]["enable_code_execution"] = True
-                            enabled_count += 1
-                if enabled_count > 0:
-                    console.print(f"✅ Code execution enabled for {enabled_count} compatible agent(s)")
-                else:
-                    console.print("[yellow]⚠️  No agents support code execution[/yellow]")
-
-            # Filesystem Operations - smart default based on recommendations
             orchestrator_config = {}
-            filesystem_default = "filesystem" in recommended_tools
-            filesystem_prompt = "[prompt]Enable filesystem operations?[/prompt]"
-            if filesystem_default:
-                filesystem_prompt += " (recommended for this use case)"
 
-            if Confirm.ask(filesystem_prompt, default=filesystem_default):
+            # Check if any agents have filesystem enabled (Claude Code with cwd)
+            has_filesystem = any(a.get("backend", {}).get("cwd") or a.get("backend", {}).get("type") == "claude_code" for a in agents)
+
+            if has_filesystem:
+                console.print("[cyan]Filesystem-enabled agents detected[/cyan]\n")
                 orchestrator_config["snapshot_storage"] = "snapshots"
                 orchestrator_config["agent_temporary_workspace"] = "temp_workspaces"
 
-                # Check if any Claude Code agents
-                has_claude_code = any(a.get("backend", {}).get("type") == "claude_code" for a in agents)
-                if not has_claude_code:
-                    console.print("[yellow]Note: Filesystem works best with Claude Code agents[/yellow]")
-
                 # Context paths
-                if Confirm.ask("[prompt]Add context paths (access to your project files)?[/prompt]", default=False):
+                console.print("[dim]Context paths give agents access to your project files.[/dim]")
+                console.print("[dim]Paths can be absolute or relative (resolved against current directory).[/dim]")
+                console.print("[dim]Note: During coordination, all context paths are read-only.[/dim]")
+                console.print("[dim]      Write permission applies only to the final agent.[/dim]\n")
+
+                if Confirm.ask("[prompt]Add context paths?[/prompt]", default=False):
                     context_paths = []
                     while True:
-                        path = Prompt.ask("[prompt]Enter directory path (or press Enter to finish)[/prompt]")
+                        path = Prompt.ask("[prompt]Enter directory or file path (or press Enter to finish)[/prompt]")
                         if not path:
                             break
 
                         permission = Prompt.ask(
-                            "[prompt]Permission[/prompt]",
+                            "[prompt]Permission (write means final agent can modify)[/prompt]",
                             choices=["read", "write"],
-                            default="read",
+                            default="write",
                         )
 
                         context_paths.append(
@@ -526,85 +884,35 @@ class ConfigBuilder:
                     if context_paths:
                         orchestrator_config["context_paths"] = context_paths
 
-                console.print("✅ Filesystem operations configured")
-
-            # MCP Servers - smart default based on recommendations
-            mcp_default = "mcp" in recommended_tools
-            mcp_prompt = "[prompt]Add MCP servers?[/prompt]"
-            if mcp_default:
-                mcp_prompt += " (recommended for this use case)"
-
-            if Confirm.ask(mcp_prompt, default=mcp_default):
-                console.print("\nAvailable MCP servers:")
-                for i, (server_id, server_info) in enumerate(self.MCP_SERVERS.items(), 1):
-                    console.print(f"{i}. {server_info.get('name', server_id)}")
-                    if server_info.get("env_vars"):
-                        env_status = " & ".join([f"{var}: {'✅' if os.getenv(var) else '❌'}" for var in server_info["env_vars"]])
-                        console.print(f"   Requires: {env_status}")
-
-                mcp_choice = Prompt.ask(
-                    "[prompt]Select MCP servers (comma-separated numbers, or Enter to skip)[/prompt]",
-                    default="",
-                )
-
-                if mcp_choice:
-                    try:
-                        selected_servers = [int(x.strip()) - 1 for x in mcp_choice.split(",") if x.strip()]
-                        server_ids = list(self.MCP_SERVERS.keys())
-
-                        for agent in agents:
-                            backend_type = agent.get("backend", {}).get("type")
-                            if backend_type and "mcp" in self.PROVIDERS.get(backend_type, {}).get("supports", []):
-                                mcp_servers = []
-                                for idx in selected_servers:
-                                    if 0 <= idx < len(server_ids):
-                                        server_id = server_ids[idx]
-                                        server_info = self.MCP_SERVERS[server_id]
-
-                                        mcp_server = {
-                                            "name": server_id,
-                                            "type": "stdio",
-                                            "command": server_info["command"],
-                                            "args": server_info["args"],
-                                        }
-
-                                        if server_info.get("env_vars"):
-                                            mcp_server["env"] = {var: f"${{{var}}}" for var in server_info["env_vars"]}
-
-                                        mcp_servers.append(mcp_server)
-
-                                if mcp_servers:
-                                    agent["backend"]["mcp_servers"] = mcp_servers
-
-                        console.print("✅ MCP servers configured")
-                    except (ValueError, IndexError) as e:
-                        console.print(f"[warning]⚠️  Invalid MCP server selection: {e}[/warning]")
+            # Multi-turn sessions (always enabled)
+            if not orchestrator_config:
+                orchestrator_config = {}
+            orchestrator_config["session_storage"] = "sessions"
+            console.print("✅ Multi-turn sessions enabled (supports persistent conversations with memory)")
 
             # Planning Mode
-            if orchestrator_config and Confirm.ask("[prompt]Enable planning mode (safer for irreversible operations)?[/prompt]", default=False):
+            if Confirm.ask("[prompt]Enable planning mode (agents review plans before execution)?[/prompt]", default=False):
                 orchestrator_config["coordination"] = {
                     "enable_planning_mode": True,
                 }
                 console.print("✅ Planning mode enabled")
-
-            # Multi-turn sessions
-            if Confirm.ask("[prompt]Enable multi-turn sessions (persistent conversations)?[/prompt]", default=False):
-                orchestrator_config["session_storage"] = "sessions"
-                console.print("✅ Multi-turn sessions enabled")
 
             return agents, orchestrator_config
 
         except (KeyboardInterrupt, EOFError):
             raise
         except Exception as e:
-            console.print(f"[error]❌ Error configuring tools: {e}[/error]")
+            console.print(f"[error]❌ Error configuring orchestrator: {e}[/error]")
             console.print("[info]Returning agents with basic configuration...[/info]")
             return agents, {}
 
     def review_and_save(self, agents: List[Dict], orchestrator_config: Dict) -> Optional[str]:
         """Review configuration and save to file with error handling."""
         try:
-            console.print(Panel("📝 Step 4: Review & Save Configuration", style="bold blue"))
+            console.print()
+            console.print("━" * 70)
+            console.print("[bold green]✅ Review & Save Configuration[/bold green]")
+            console.print("━" * 70)
             console.print()
 
             # Build final config

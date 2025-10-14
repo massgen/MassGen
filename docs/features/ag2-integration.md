@@ -410,8 +410,7 @@ llm_config:
 
 **Task:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2_ag2_coder \
   "Create a factorial function and calculate the factorial of 8. Show the result?"
 ```
 
@@ -433,8 +432,7 @@ uv run python -m massgen.cli \
 
 **Task:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2_ag2_coder \
   "Load iris.csv dataset, perform statistical analysis, and create visualizations"
 ```
 
@@ -457,8 +455,7 @@ uv run python -m massgen.cli \
 
 **Task:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+massgen --config @examples/ag2_ag2_coder_case_study \
   "Compare AG2 and MassGen frameworks: fetch documentation, analyze differences"
 ```
 
@@ -492,8 +489,7 @@ uv run python -m massgen.cli \
 
 **Task:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_gemini.yaml \
+massgen --config @examples/ag2_ag2_gemini \
   "Explain quantum computing principles with code examples"
 ```
 
@@ -783,8 +779,7 @@ llm_config:
 
 4. **Test with simple query:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_single_agent.yaml \
+massgen --config @examples/ag2_ag2_single_agent \
   "Hello, are you working?"
 ```
 

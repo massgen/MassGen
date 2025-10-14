@@ -77,13 +77,11 @@ agents:
 **Try It Out:**
 ```bash
 # Single AG2 agent with code execution
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2_ag2_coder \
   "Write a Python script to analyze CSV data and create visualizations"
 
 # AG2 + Gemini hybrid collaboration
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+massgen --config @examples/ag2_ag2_coder_case_study \
   "Compare AG2 and MassGen frameworks, use code to fetch documentation"
 ```
 
@@ -195,18 +193,15 @@ Located in `massgen/configs/ag2/`:
 **Quick Start:**
 ```bash
 # Basic AG2 agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_single_agent.yaml \
+massgen --config @examples/ag2_ag2_single_agent \
   "Your task"
 
 # AG2 with code execution
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2_ag2_coder \
   "Write and execute a web scraping script"
 
 # AG2 + Gemini collaboration
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_gemini.yaml \
+massgen --config @examples/ag2_ag2_gemini \
   "Complex task requiring multiple capabilities"
 ```
 
@@ -311,8 +306,7 @@ The design doc provides:
 ```bash
 # AG2 agent fetches data, writes analysis code, executes it
 # Gemini agent interprets results and writes report
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+massgen --config @examples/ag2_ag2_coder_case_study \
   "Analyze NYC taxi data: fetch, process, visualize trends"
 ```
 
@@ -320,8 +314,7 @@ uv run python -m massgen.cli \
 ```bash
 # AG2 agent scrapes web, processes data with code
 # MassGen agents analyze and synthesize findings
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_gemini.yaml \
+massgen --config @examples/ag2_ag2_gemini \
   "Research AI safety papers from last 6 months, summarize key findings"
 ```
 

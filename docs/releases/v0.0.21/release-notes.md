@@ -36,8 +36,7 @@ orchestrator:
 
 **Try It Out:**
 ```bash
-uv run python -m massgen.cli \
-  --config massgen/configs/fs_permissions_test.yaml \
+massgen --config @examples/fs_permissions_test \
   "Read from shared data and write results to output"
 ```
 
@@ -107,13 +106,11 @@ agents:
 **Try It Out:**
 ```bash
 # Grok MCP test
-uv run python -m massgen.cli \
-  --config massgen/configs/grok3_mini_mcp_test.yaml \
+massgen --config @examples/grok3_mini_mcp_test \
   "Your task"
 
 # Grok streamable HTTP test
-uv run python -m massgen.cli \
-  --config massgen/configs/grok3_mini_streamable_http_test.yaml \
+massgen --config @examples/grok3_mini_streamable_http_test \
   "Your task"
 ```
 

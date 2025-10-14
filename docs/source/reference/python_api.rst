@@ -5,6 +5,9 @@ Python API
 MassGen provides a simple, async-first Python API for programmatic usage. This allows you to integrate MassGen's multi-agent capabilities directly into your Python applications.
 
 .. note::
+   **For Contributors:** Looking for internal API documentation? See :doc:`../api/index` for developer API reference of classes and modules.
+
+.. note::
    MassGen is inherently asynchronous, so the API is naturally async. Use ``asyncio`` for sync contexts.
 
 Quick Start

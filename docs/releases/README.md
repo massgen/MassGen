@@ -52,13 +52,11 @@ Complete documentation for all MassGen releases.
 ### Try It
 ```bash
 # Filesystem planning mode
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
   "Create a Python FastAPI project structure"
 
 # Discord planning mode
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
   "Check #support channel and post helpful guidance"
 ```
 
@@ -110,18 +108,15 @@ uv run python -m massgen.cli \
 pip install ag2
 
 # Basic AG2 agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_single_agent.yaml \
+massgen --config @examples/ag2_ag2_single_agent \
   "Explain quantum computing"
 
 # AG2 with code execution
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2_ag2_coder \
   "Analyze CSV data and create visualizations"
 
 # Hybrid: AG2 + Gemini
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+massgen --config @examples/ag2_ag2_coder_case_study \
   "Compare AG2 vs MassGen frameworks"
 ```
 

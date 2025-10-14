@@ -42,8 +42,7 @@ orchestrator:
 **Try It Out:**
 ```bash
 # Multi-turn filesystem session
-uv run python -m massgen.cli \
-  --config massgen/configs/two_gemini_flash_filesystem_multiturn.yaml \
+massgen --config @examples/two_gemini_flash_filesystem_multiturn \
   "Create a simple website"
 
 # Continue in next turn (workspace persists)
@@ -92,8 +91,7 @@ agents:
 **Try It Out:**
 ```bash
 # Mixed vLLM and SGLang deployment
-uv run python -m massgen.cli \
-  --config massgen/configs/two_qwen_vllm_sglang.yaml \
+massgen --config @examples/two_qwen_vllm_sglang \
   "Your task"
 ```
 
@@ -263,8 +261,7 @@ Improved path validation and exclusion patterns.
 **Progressive Enhancement:**
 ```bash
 # Turn 1: Create basic structure
-uv run python -m massgen.cli \
-  --config massgen/configs/two_gemini_flash_filesystem_multiturn.yaml \
+massgen --config @examples/two_gemini_flash_filesystem_multiturn \
   "Create a basic HTML website with home and about pages"
 
 # Turn 2: Add features (workspace persists)
@@ -279,8 +276,7 @@ uv run python -m massgen.cli \
 **Multi-Stage Development:**
 ```bash
 # Turn 1: Project setup
-uv run python -m massgen.cli \
-  --config massgen/configs/grok4_gpt5_gemini_filesystem_multiturn.yaml \
+massgen --config @examples/grok4_gpt5_gemini_filesystem_multiturn \
   "Set up a FastAPI project with database models"
 
 # Turn 2: Add endpoints
@@ -295,8 +291,7 @@ uv run python -m massgen.cli \
 **SGLang vs vLLM:**
 ```bash
 # Test with mixed deployment
-uv run python -m massgen.cli \
-  --config massgen/configs/two_qwen_vllm_sglang.yaml \
+massgen --config @examples/two_qwen_vllm_sglang \
   "Compare performance on code generation task"
 ```
 

@@ -50,13 +50,11 @@ orchestrator:
 **Try It Out:**
 ```bash
 # Five agents with filesystem MCP in planning mode
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
   "Create a project structure for a Python web app"
 
 # Five agents with Discord MCP in planning mode
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
   "Check recent messages and post a summary"
 ```
 
@@ -301,24 +299,21 @@ This release includes comprehensive release documentation:
 **Social Media Management:**
 ```bash
 # Five agents plan tweet strategy, winner posts
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_twitter_mcp_planning_mode \
   "Analyze our brand voice and create an engaging tweet about our new feature"
 ```
 
 **Team Communication:**
 ```bash
 # Agents analyze Discord, plan response, winner posts
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_discord_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
   "Check #support channel, summarize issues, post helpful guidance"
 ```
 
 **Project Management:**
 ```bash
 # Agents collaborate on file structure, winner implements
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
   "Create a FastAPI project with auth, database, and API endpoints"
 ```
 

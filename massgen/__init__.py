@@ -68,7 +68,7 @@ from .chat_agent import (
 from .message_templates import MessageTemplates, get_templates
 from .orchestrator import Orchestrator, create_orchestrator
 
-__version__ = "0.0.29"
+__version__ = "0.1.0"  # PyPI release (subject to change)
 __author__ = "MassGen Contributors"
 
 

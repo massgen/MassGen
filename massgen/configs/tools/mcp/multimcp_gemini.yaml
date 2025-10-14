@@ -5,7 +5,7 @@
 # Place it in your .env file, BRAVE_API_KEY="your_brave_key_here"
 #
 # Example usage - Travel Research:
-# uv run python -m massgen.cli --config massgen/configs/tools/mcp/multimcp_gemini.yaml "Find the best neighborhoods in New York, suggest safe and affordable Airbnb stays for 2 people from October 10–15, and give me a travel summary with highlights and costs"
+# massgen --config @examples/tools_mcp_multimcp_gemini "Find the best neighborhoods in New York, suggest safe and affordable Airbnb stays for 2 people from October 10–15, and give me a travel summary with highlights and costs"
 
 agents:
   - id: "travel_research_assistant"

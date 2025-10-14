@@ -19,17 +19,25 @@ Quick Start Installation
 **Method 1: PyPI Installation** (Recommended)
 ----------------------------------------------
 
-The easiest way to get started with MassGen is via pip:
+The easiest way to get started with MassGen is via pip or uv:
 
 .. code-block:: bash
 
-   # Install MassGen
+   # Install MassGen with uv (recommended - faster)
+   uv pip install massgen
+
+   # Or with pip
    pip install massgen
 
    # Run MassGen for the first time
    massgen
 
 That's it! On first run, MassGen will launch an interactive setup wizard to help you configure your agents.
+
+.. note::
+   **Why the setup wizard?**
+
+   MassGen's power comes from thoughtfully configured multi-agent teams. Rather than requiring you to learn YAML syntax or understand complex configuration options upfront, the wizard guides you through creating an effective setup in minutes. You choose your use case (Research, Coding, Q&A, etc.), select your preferred AI models, and enable tools—all through simple prompts. This ensures you start with a configuration optimized for your needs, which you can refine later as you learn more.
 
 First-Run Experience
 ~~~~~~~~~~~~~~~~~~~~
@@ -139,6 +147,32 @@ Development installation gives you:
 - 🔄 **Live changes**: Edits are immediately reflected
 - 🛠️ **Full source access**: Modify any part of MassGen
 - 📦 **All features**: Same as pip install, but with source code
+
+**Using uv tool for Multi-Turn Sessions**
+
+For the best experience with multi-turn conversations and working across different project directories, install MassGen as a uv tool:
+
+.. code-block:: bash
+
+   # Install as a global uv tool (from MassGen directory)
+   cd MassGen
+   uv tool install -e .
+
+   # Now you can use massgen from anywhere
+   cd ~/your-project
+   massgen  # Start interactive multi-turn session
+
+   # Sessions are saved to .massgen/sessions/ in your current directory
+   # Context is preserved across turns automatically
+
+**Benefits of uv tool for multi-turn:**
+
+- 🌍 **Global Access**: Run ``massgen`` from any directory
+- 💬 **Session Isolation**: Each project gets its own ``.massgen/sessions/`` directory
+- 📁 **Clean Workspaces**: Sessions and workspaces stay organized per-project
+- 🔄 **Live Updates**: Changes to MassGen source are immediately available (editable mode)
+
+See :doc:`../user_guide/multi_turn_mode` for complete multi-turn conversation documentation.
 
 Using MassGen After Installation
 =================================
@@ -250,13 +284,13 @@ To set up API keys manually:
    GOOGLE_API_KEY=your-gemini-key
    XAI_API_KEY=xai-your-key
 
-Multi-Turn Filesystem Setup
-============================
-
 Understanding the .massgen Directory
-------------------------------------
+=====================================
 
-When you work with MassGen using multi-turn conversations or file operations, MassGen automatically creates a clean, organized directory structure:
+Project Organization
+--------------------
+
+When you work with MassGen—whether in single queries, multi-turn conversations, or with file operations—MassGen automatically creates a clean, organized directory structure in your project:
 
 .. code-block:: text
 
@@ -275,8 +309,10 @@ When you work with MassGen using multi-turn conversations or file operations, Ma
    ├── your-project-files/
    └── ...
 
-Benefits of .massgen Organization
-----------------------------------
+Why .massgen?
+~~~~~~~~~~~~~
+
+MassGen uses this directory structure to keep all AI-related files organized and separate from your project:
 
 .. grid:: 2
    :gutter: 3
@@ -296,6 +332,17 @@ Benefits of .massgen Organization
    .. grid-item-card:: 💬 Session Persistence
 
       Multi-turn conversation history is preserved across sessions for continuity.
+
+**When is .massgen created?**
+
+The ``.massgen/`` directory is automatically created when:
+
+- You run multi-turn interactive sessions
+- Agents use file operations or workspaces
+- MassGen needs to store coordination snapshots
+- Session history needs to be preserved
+
+For simple single-agent queries without file operations, no directory is created.
 
 Optional Dependencies
 =====================
@@ -446,11 +493,11 @@ If you previously used MassGen via git clone, **all your existing workflows cont
 
 .. code-block:: bash
 
-   # Old commands still work
+   # Old command syntax still works
    cd /path/to/MassGen
-   uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
+   python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
 
-   # New commands also work in the same directory
+   # New command syntax (simpler)
    massgen --config @examples/basic_multi "Question"
 
 You can install MassGen globally via pip even if you have a git clone:
@@ -464,4 +511,8 @@ You can install MassGen globally via pip even if you have a git clone:
    cd ~/other-project
    massgen "Question"
 
-Both old paths (``massgen/configs/...``) and new paths (``@examples/...``) work interchangeably.
+**Command Compatibility:**
+
+* ✅ ``massgen`` - New simplified command (recommended)
+* ✅ ``python -m massgen.cli`` - Old command syntax (still works)
+* ✅ Old config paths (``massgen/configs/...``) work interchangeably with new paths (``@examples/...``)

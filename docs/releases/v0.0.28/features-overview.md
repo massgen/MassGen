@@ -216,18 +216,15 @@ Implements BaseAdapter for AG2 agents:
 pip install ag2
 
 # Basic AG2 agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_single_agent.yaml \
+massgen --config @examples/ag2_ag2_single_agent \
   "Your task"
 
 # AG2 with code execution
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2_ag2_coder \
   "Write a script to analyze CSV data"
 
 # Hybrid AG2 + Gemini
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+massgen --config @examples/ag2_ag2_coder_case_study \
   "Complex research task"
 ```
 
@@ -383,13 +380,11 @@ agents:
 
 ```bash
 # Single AG2 conversational agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_single_agent.yaml \
+massgen --config @examples/ag2_ag2_single_agent \
   "Explain quantum computing"
 
 # AG2 agent with code execution
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2_ag2_coder \
   "Analyze this CSV file and create visualizations"
 ```
 
@@ -397,8 +392,7 @@ uv run python -m massgen.cli \
 
 ```bash
 # AG2 coder + Gemini analyst
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+massgen --config @examples/ag2_ag2_coder_case_study \
   "Research AI safety papers, scrape data, analyze trends"
 
 # Custom hybrid workflow

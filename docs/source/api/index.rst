@@ -1,7 +1,12 @@
-API Reference
-=============
+Developer API Documentation
+============================
 
-Complete API reference for MassGen.
+Internal API reference for MassGen contributors and developers.
+
+.. note::
+   **For Users:** If you want to use MassGen from Python, see :doc:`../reference/python_api` for the simple ``massgen.run()`` API.
+
+   **For Contributors:** This section documents MassGen's internal classes, methods, and modules for those contributing to the codebase or building extensions.
 
 .. toctree::
    :maxdepth: 2

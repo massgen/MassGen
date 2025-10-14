@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config massgen/configs/gemini_mcp_filesystem_test.yaml "Please create a txt file with all the current directories you can read files from."
+# massgen --config @examples/tools_mcp_gemini_mcp_filesystem_test_sharing "Please create a txt file with all the current directories you can read files from."
 agents:
   - id: "gemini_agent1"
     backend:
