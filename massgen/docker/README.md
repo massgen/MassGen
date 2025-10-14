@@ -79,7 +79,7 @@ agent:
     # Docker configuration
     command_line_docker_image: "massgen/mcp-runtime:latest"  # Default
     command_line_docker_memory_limit: "2g"                   # Limit memory
-    command_line_docker_cpu_limit: 2.0                        # Limit CPU cores
+    command_line_docker_cpu_limit: 4.0                        # Limit CPU cores
     command_line_docker_network_mode: "bridge"               # Enable network
 ```
 
