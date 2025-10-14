@@ -339,7 +339,7 @@ class FilesystemManager:
         env = {
             "FASTMCP_SHOW_CLI_BANNER": "false",
         }
-        
+
         # Pass DOCKER_HOST environment variable if present
         if "DOCKER_HOST" in os.environ:
             env["DOCKER_HOST"] = os.environ["DOCKER_HOST"]
