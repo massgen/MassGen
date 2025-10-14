@@ -14,7 +14,24 @@ This design doc describes the PyPI release experience for MassGen users.
 ### The 5-Minute Journey
 
 **Minute 1: Installation**
+
+**Recommended (with uv):**
 ```bash
+# Create virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install MassGen
+uv pip install massgen
+```
+
+**Alternative (with python):**
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install MassGen
 pip install massgen
 ```
 
@@ -124,39 +141,60 @@ result = asyncio.run(massgen.run("Question", model="claude-sonnet-4"))
 
 **100% backwards compatible. All existing workflows continue to work.**
 
-### For Git Clone Users
+### For Git Clone Users (Development)
 
-If you're currently using MassGen via git clone, **nothing changes**:
+**Recommended approach** - Use virtual environment for clean CLI commands:
 
 ```bash
-# Your existing commands work exactly as before
 cd /path/to/MassGen
-massgen --config @examples/basic_multi_three_agents_default \
-  "Question"
-# ✓ Still works!
 
-# Your custom configs work
-uv run python -m massgen.cli \
-  --config my-custom-config.yaml \
-  "Question"
-# ✓ Still works!
+# Create virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install in editable mode
+uv pip install -e .
+
+# Now use clean commands (same as PyPI users!)
+massgen --config @examples/basic_multi "Question"
+massgen "Question"  # Works with your default config
+```
+
+**Alternative (backwards compatible)** - Use `uv run` without venv:
+
+```bash
+cd /path/to/MassGen
+
+# Your existing commands still work
+uv run massgen --config @examples/basic_multi "Question"
+
+# Or with full module path
+uv run python -m massgen.cli --config my-custom-config.yaml "Question"
 
 # All existing flags work
-uv run python -m massgen.cli \
-  --config config.yaml \
-  --no-display \
-  --debug \
-  "Question"
-# ✓ Still works!
+uv run python -m massgen.cli --config config.yaml --no-display --debug "Question"
 ```
+
+**Benefits of venv approach:**
+- ✅ Clean commands (`massgen` instead of `uv run massgen`)
+- ✅ Same experience as PyPI users
+- ✅ Easier to switch between projects
+- ✅ Better IDE integration
+
+**When to use `uv run`:**
+- Quick one-off commands
+- Testing without installing
+- Backwards compatibility with existing scripts
 
 ### Python API for Git Clone Users
 
-**Git clone users can also use the Python API!** Just install the local package in editable mode:
+**Install in editable mode for development:**
 
 ```bash
 cd /path/to/MassGen
-uv pip install -e .  # Editable install
+uv venv
+source .venv/bin/activate
+uv pip install -e .
 ```
 
 Then use the Python API from anywhere:
@@ -1204,8 +1242,10 @@ After implementation, these should all work:
 ### For New Users (pip install)
 
 ```bash
-# Install
-pip install massgen
+# Install with uv (recommended)
+uv venv
+source .venv/bin/activate
+uv pip install massgen
 
 # First run triggers wizard
 massgen "What is AI?"
@@ -1224,18 +1264,24 @@ massgen --example basic_multi > my-config.yaml
 # ✓ Outputs config to file
 ```
 
-### For Existing Users (git clone)
+### For Development Users (git clone)
 
 ```bash
-# Old style still works
-massgen --config @examples/basic_multi_three_agents_default \
-  "Question"
-# ✓ Works (backwards compatible)
+# Recommended: Install in venv
+cd /path/to/MassGen
+uv venv
+source .venv/bin/activate
+uv pip install -e .
 
-# New style works too
-uv run python -m massgen.cli \
-  --config @examples/basic_multi \
-  "Question"
+# Clean commands work
+massgen --config @examples/basic_multi "Question"
+# ✓ Works
+
+# Backwards compatible: uv run still works
+uv run massgen --config @examples/basic_multi "Question"
+# ✓ Works
+
+uv run python -m massgen.cli --config config.yaml "Question"
 # ✓ Works
 ```
 

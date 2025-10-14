@@ -81,6 +81,11 @@ project/
 
 Context paths provide agents with controlled access to specific files or directories outside their workspace.
 
+**Key Features:**
+- **Flexible Paths**: Use absolute paths (`/home/user/project`) or relative paths (`.`, `src/`, `../data`)
+- **Permission Control**: `read` or `write` (write permissions apply only to final agent)
+- **Multi-Agent Access**: All agents can access context paths, but write access is restricted during coordination
+
 ### Basic Context Path
 
 ```yaml
@@ -89,14 +94,16 @@ orchestrator:
   agent_temporary_workspace: "temp_workspaces"
 
   context_paths:
-    - path: "massgen/configs/resources/v0.0.21-example"
+    - path: "."  # Current directory (relative path)
       permission: "write"
+    - path: "/home/user/project/data"  # Absolute path
+      permission: "read"
 ```
 
 **What Happens:**
-- All agents can access files in `massgen/configs/resources/v0.0.21-example/`
-- During coordination: **read-only** access (agents can't modify yet)
-- During final presentation: **write** access (winning agent can modify if permission is "write")
+- All agents can access files in the specified paths
+- During coordination: **read-only** access (all agents, regardless of permission setting)
+- During final presentation: **write** access granted only if `permission: "write"` is set
 
 **Example Config**: [`fs_permissions_test.yaml`](../../massgen/configs/tools/filesystem/fs_permissions_test.yaml)
 
@@ -104,19 +111,24 @@ orchestrator:
 
 ```yaml
 context_paths:
-  - path: "reference_docs/"
-    permission: "read"    # Read-only access
+  - path: "reference_docs/"  # Can be absolute or relative
+    permission: "read"       # Always read-only
 
-  - path: "project_files/"
-    permission: "write"   # Read during coordination, write during final presentation
+  - path: "."                # Current directory
+    permission: "write"      # Read during coordination, write for final agent only
+    protected_paths:         # Optional: files immune from modification
+      - ".env"
+      - "config.json"
 ```
 
 **Permission Behavior:**
 
 | Phase | `permission: "read"` | `permission: "write"` |
 |-------|---------------------|----------------------|
-| Coordination | Read-only | Read-only |
-| Final Presentation | Read-only | Read & Write |
+| Coordination (all agents) | Read-only | Read-only |
+| Final Presentation (winning agent only) | Read-only | Read & Write |
+
+**Important:** Write permissions only apply to the **final agent** during the presentation phase, ensuring your files are protected during multi-agent coordination.
 
 ### File-Level Context Path
 
@@ -656,7 +668,8 @@ Build complexity incrementally across rounds instead of one large operation.
 **Solutions:**
 - Verify `path` is correct and exists
 - Check path doesn't have typos
-- Ensure path is absolute or relative to project root
+- Ensure path is absolute or relative (relative paths are resolved from current working directory)
+- For current directory, use `"."` instead of leaving blank
 
 ### Protected Path Modification Attempted
 

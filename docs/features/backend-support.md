@@ -190,8 +190,8 @@ agent:
 **✅ Supported Features:**
 - Native filesystem operations (Read, Write, LS, Bash)
 - MCP integration (dictionary format)
-- Workspace isolation
-- Permission system
+- Workspace isolation with `cwd`
+- Permission system with context paths
 - Planning mode
 - Multi-turn sessions
 
@@ -199,7 +199,15 @@ agent:
 - MCP servers use dictionary format instead of list
 - Native filesystem tools available
 - `permission_mode` setting controls file access
-- `cwd` sets working directory
+- `cwd` sets agent's working directory
+
+**Context Paths Support:**
+Claude Code agents can access additional directories via orchestrator `context_paths`:
+- Paths can be **absolute** or **relative** (resolved from current directory)
+- `permission: "read"` or `"write"` (write applies only to final agent)
+- `protected_paths` can mark specific files as read-only within writable directories
+
+→ [Learn more about context paths](./filesystem-tools.md#context-paths)
 
 ## Gemini Models
 
@@ -251,10 +259,24 @@ Gemini has native filesystem MCP support:
 backend:
   type: "gemini"
   model: "gemini-2.5-pro"
-  cwd: "workspace1"  # Each agent can have its own workspace
+  cwd: "workspace1"  # Each agent's isolated workspace
+
+# In orchestrator section, add context paths for project access
+orchestrator:
+  context_paths:
+    - path: "."              # Current directory (relative path)
+      permission: "write"    # Write for final agent only
+      protected_paths:       # Optional: protect specific files
+        - ".env"
 ```
 
 No MCP server installation needed - filesystem operations work out of the box!
+
+**Context Paths Support:**
+- Paths can be **absolute** (`/home/user/project`) or **relative** (`.`, `src/`)
+- Write permissions apply **only to final agent** during presentation phase
+- All agents have read access during coordination
+- `protected_paths` prevent modification of sensitive files
 
 **Example**: [`gemini_mcp_filesystem_test.yaml`](../../massgen/configs/tools/mcp/gemini_mcp_filesystem_test.yaml)
 
@@ -508,7 +530,9 @@ agent:
 | **Bash/Shell** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Multimodal** | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **MCP Support** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Filesystem** | ✅ Via MCP | ✅ Via MCP | ✅ Native | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ❌ |
+| **Filesystem** | ✅ Via MCP | ✅ Via MCP | ✅ Native | ✅ Native | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ❌ |
+| **Context Paths** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Protected Paths** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 **Legend:**
 - ✅ = Supported
@@ -516,7 +540,10 @@ agent:
 
 **Notes:**
 - "Via MCP" means the feature is available through Model Context Protocol integration
-- "Native" means the feature is built directly into the backend
+- "Native" means the feature is built directly into the backend (Gemini has native filesystem MCP)
+- **Context Paths**: All filesystem-capable backends support context paths (absolute/relative paths with read/write permissions)
+- **Protected Paths**: Specify files immune from modification within writable directories
+- **Write Permissions**: Apply only to the final agent during presentation phase, protecting files during coordination
 - Additional backend-specific features (Planning Mode, Multi-turn, etc.) are supported by all backends
 - **AG2 (AutoGen)** provides code execution with multiple executor types; MCP support is planned for future releases
 

@@ -205,19 +205,48 @@ This collaborative approach ensures that the final output leverages collective i
 
 ### 1. 📥 Installation
 
-**Core Installation** (requires Python 3.11+):
+**Recommended Installation** (requires Python 3.11+):
+
+```bash
+# Clone the repository
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+
+# Install uv (if not already installed)
+pip install uv
+
+# Create virtual environment
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install MassGen in editable mode
+uv pip install -e .
+
+# Optional: Install AG2 framework integration (only needed for AG2 configs)
+# uv pip install -e ".[external]"
+
+# Now use clean commands
+massgen --config @examples/basic_multi_three_agents_default "Your question"
+```
+
+**Alternative: Traditional Python venv**
+
 ```bash
 git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 
-pip install uv
-uv venv
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Optional: Install AG2 framework integration (only needed for AG2 configs)
-# uv pip install -e ".[external]"
+# Install MassGen
+pip install -e .
+
+# Use same clean commands
+massgen --config @examples/basic_multi_three_agents_default "Your question"
 ```
 
-**Global Installation using `uv tool` (Recommended for multi-directory usage):**
+**Alternative: Global Installation using `uv tool` (for multi-directory usage)**
 
 Install MassGen using `uv tool` for isolated, global access:
 
@@ -229,9 +258,6 @@ cd MassGen
 # Install MassGen as a global tool in editable mode
 uv tool install -e .
 
-# Optional: Install AG2 framework integration (only needed for AG2 configs)
-# uv pip install -e ".[external]"
-
 # Now run from any directory
 cd ~/projects/website
 uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
@@ -240,12 +266,23 @@ cd ~/documents/research
 uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
 ```
 
-**Benefits of `uv tool` installation:**
-- ✅ Isolated Python environment (no conflicts with system Python)
-- ✅ Available globally from any directory
-- ✅ Editable mode (`-e .`) allows live development
-- ✅ Easy updates with `git pull` (editable mode)
-- ✅ Clean uninstall with `uv tool uninstall massgen`
+**For backwards compatibility, `uv run` still works:**
+
+```bash
+# No venv needed, but commands are longer
+cd /path/to/MassGen
+uv run massgen --config @examples/basic_multi "Question"
+uv run python -m massgen.cli --config config.yaml "Question"
+```
+
+**Installation Method Comparison:**
+
+| Method | Command Style | Use When |
+|--------|--------------|----------|
+| **uv venv** (Recommended) | `massgen` | Development, clean commands |
+| **python venv** | `massgen` | Standard Python workflow |
+| **uv tool** | `uv tool run massgen` | Multiple projects, global access |
+| **uv run** | `uv run massgen` | Quick testing, backwards compatibility |
 
 **Optional Dependencies:**
 ```bash
@@ -586,10 +623,16 @@ MassGen automatically organizes all its working files under a `.massgen/` direct
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `context_paths` | list | **Yes** (for project integration) | Shared directories for all agents |
-| └─ `path` | string | Yes | Absolute path to your project directory (**must be directory, not file**) |
-| └─ `permission` | string | Yes | Access level: `"read"` or `"write"` |
+| └─ `path` | string | Yes | Absolute or relative path to your project directory (**must be directory, not file**) |
+| └─ `permission` | string | Yes | Access level: `"read"` or `"write"` (write applies only to final agent) |
+| └─ `protected_paths` | list | No | Files/directories immune from modification (relative to context path) |
 
-**⚠️ Important:** Context paths must point to **directories**, not individual files. MassGen validates all paths during startup and will show clear error messages for missing paths or file paths.
+**⚠️ Important Notes:**
+- Context paths must point to **directories**, not individual files
+- Paths can be **absolute** or **relative** (resolved against current working directory)
+- **Write permissions** apply only to the **final agent** during presentation phase
+- During coordination, all context paths are **read-only** to protect your files
+- MassGen validates all paths during startup and will show clear error messages for missing paths or file paths
 
 
 **Quick Start Commands:**
@@ -611,10 +654,13 @@ agents:
 
 orchestrator:
   context_paths:
-    - path: "/home/user/my-project/src"
+    - path: "."                    # Current directory (relative path)
+      permission: "write"          # Final agent can create/modify files
+      protected_paths:             # Optional: files immune from modification
+        - ".env"
+        - "config.json"
+    - path: "/home/user/my-project/src"  # Absolute path example
       permission: "read"           # Agents can analyze your code
-    - path: "/home/user/my-project/docs"
-      permission: "write"          # Final agent can update docs
 
 # Advanced: Multi-Agent Project Collaboration
 agents:
@@ -630,12 +676,14 @@ agents:
 
 orchestrator:
   context_paths:
-    - path: "/home/user/legacy-app/src"
+    - path: "../legacy-app/src"   # Relative path to existing codebase
       permission: "read"           # Read existing codebase
-    - path: "/home/user/legacy-app/tests"
-      permission: "write"          # Write new tests
-    - path: "/home/user/modernized-app"
-      permission: "write"          # Create modernized version
+    - path: "../legacy-app/tests"
+      permission: "write"          # Final agent can write new tests
+      protected_paths:             # Protect specific test files
+        - "integration_tests/production_data_test.py"
+    - path: "/home/user/modernized-app"  # Absolute path
+      permission: "write"          # Final agent can create modernized version
 ```
 
 **This showcases project integration:**

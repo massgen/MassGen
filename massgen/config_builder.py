@@ -873,12 +873,28 @@ class ConfigBuilder:
                             default="write",
                         )
 
-                        context_paths.append(
-                            {
-                                "path": path,
-                                "permission": permission,
-                            },
-                        )
+                        context_path_entry = {
+                            "path": path,
+                            "permission": permission,
+                        }
+
+                        # If write permission, offer to add protected paths
+                        if permission == "write":
+                            console.print("[dim]Protected paths are files/directories immune from modification[/dim]")
+                            if Confirm.ask("[prompt]Add protected paths (e.g., .env, config.json)?[/prompt]", default=False):
+                                protected_paths = []
+                                console.print("[dim]Enter paths relative to the context path (or press Enter to finish)[/dim]")
+                                while True:
+                                    protected_path = Prompt.ask("[prompt]Protected path[/prompt]")
+                                    if not protected_path:
+                                        break
+                                    protected_paths.append(protected_path)
+                                    console.print(f"🔒 Protected: {protected_path}")
+
+                                if protected_paths:
+                                    context_path_entry["protected_paths"] = protected_paths
+
+                        context_paths.append(context_path_entry)
                         console.print(f"✅ Added: {path} ({permission})")
 
                     if context_paths:
