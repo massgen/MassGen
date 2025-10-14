@@ -318,6 +318,17 @@ pip install docker>=7.0.0
    # Log out and back in for changes to take effect
    ```
 
+3. Custom Docker socket path
+   ```bash
+   # If Docker uses a non-standard socket path, set DOCKER_HOST
+   export DOCKER_HOST=unix:///path/to/your/docker.sock
+
+   # Or for TCP connections
+   export DOCKER_HOST=tcp://localhost:2375
+   ```
+
+   The Docker SDK auto-detects socket paths, but you can override with `DOCKER_HOST` if needed.
+
 ### Error: "Image not found"
 
 **Symptom:** `RuntimeError: Failed to pull Docker image ...`
