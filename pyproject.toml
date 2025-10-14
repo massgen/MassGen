@@ -69,6 +69,9 @@ docs = [
     "sphinx-rtd-theme>=1.2.0",
     "myst-parser>=1.0.0",
 ]
+docker = [
+    "docker>=7.0.0",
+]
 external = [
     "ag2>=0.9.10",
 ]

@@ -6,9 +6,9 @@
 agent:
   id: "resource_limited_agent"
   backend:
-    type: "openai"
-    model: "gpt-4o-mini"
-    cwd: "workspace"
+    type: "gemini"
+    model: "gemini-2.5-flash"
+    cwd: "workspace1"
 
     # Enable command execution with Docker isolation
     enable_mcp_command_line: true
@@ -19,11 +19,6 @@ agent:
     command_line_docker_memory_limit: "2g"         # Limit memory to 2GB
     command_line_docker_cpu_limit: 2.0              # Limit to 2 CPU cores
     command_line_docker_network_mode: "bridge"      # Enable network access (default: none)
-
-    # Command filtering (optional - additional safety)
-    command_line_blocked_commands:
-      - "rm -rf.*"
-      - "dd.*"
 
 orchestrator:
   snapshot_storage: "snapshots"

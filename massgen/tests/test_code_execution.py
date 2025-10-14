@@ -443,17 +443,17 @@ class TestDockerExecution:
             workspace_path=workspace,
         )
 
-        # Install a package
+        # Install a package that's NOT pre-installed (pytest, numpy, pandas, requests are in the image)
         result1 = manager.exec_command(
             agent_id="test_persist",
-            command="pip install --quiet pytest",
+            command="pip install --quiet click",
         )
         assert result1["success"] is True
 
         # Verify package is still installed (container persisted)
         result2 = manager.exec_command(
             agent_id="test_persist",
-            command="python -c 'import pytest; print(pytest.__version__)'",
+            command="python -c 'import click; print(click.__version__)'",
         )
         assert result2["success"] is True
         assert len(result2["stdout"].strip()) > 0  # Should have version output
@@ -625,7 +625,7 @@ class TestDockerExecution:
         manager.cleanup("test_timeout")
 
     def test_docker_context_path_mounting(self, tmp_path):
-        """Test that context paths are mounted correctly (with path transparency)."""
+        """Test that context paths are mounted correctly with proper read-only enforcement."""
         from massgen.filesystem_manager._docker_manager import DockerManager
 
         manager = DockerManager()
@@ -638,7 +638,7 @@ class TestDockerExecution:
         context_file = context_dir / "context.txt"
         context_file.write_text("Context data")
 
-        # Create container with context path
+        # Create container with READ-ONLY context path
         context_paths = [
             {"path": str(context_dir), "permission": "read", "name": "my_context"},
         ]
@@ -648,7 +648,7 @@ class TestDockerExecution:
             context_paths=context_paths,
         )
 
-        # Read context file from container using host path (path transparency)
+        # Test 1: Read should succeed (path transparency)
         result = manager.exec_command(
             agent_id="test_context",
             command=f"cat {context_dir}/context.txt",
@@ -656,6 +656,20 @@ class TestDockerExecution:
 
         assert result["success"] is True
         assert "Context data" in result["stdout"]
+
+        # Test 2: Write should FAIL (read-only mount)
+        result_write = manager.exec_command(
+            agent_id="test_context",
+            command=f"echo 'should fail' > {context_dir}/new_file.txt",
+        )
+
+        # Write should fail due to read-only mount
+        assert result_write["success"] is False
+        assert "Read-only file system" in result_write["stdout"]
+
+        # Verify file was NOT created on host
+        new_file = context_dir / "new_file.txt"
+        assert not new_file.exists()
 
         # Cleanup
         manager.cleanup("test_context")
