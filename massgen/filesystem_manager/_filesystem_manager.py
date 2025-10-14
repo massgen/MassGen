@@ -15,6 +15,7 @@ The manager is backend-agnostic and works with any backend that has filesystem
 MCP tools configured.
 """
 
+import os
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -338,6 +339,10 @@ class FilesystemManager:
         env = {
             "FASTMCP_SHOW_CLI_BANNER": "false",
         }
+        
+        # Pass DOCKER_HOST environment variable if present
+        if "DOCKER_HOST" in os.environ:
+            env["DOCKER_HOST"] = os.environ["DOCKER_HOST"]
 
         config = {
             "name": "command_line",
