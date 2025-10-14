@@ -14,8 +14,10 @@ Tools provided:
 - delete_files_batch: Delete multiple files with pattern matching
 - compare_directories: Compare two directories and show differences
 - compare_files: Compare two text files and show unified diff
-- generate_and_store_image_variation: Create variations of existing images using DALL-E 2
-- generate_and_store_image: Generate new images from text prompts using DALL-E
+- generate_and_store_image_with_input_images: Create variations of existing images using gpt-4.1
+- generate_and_store_image_no_input_images: Generate new images from text prompts using gpt-4.1
+- generate_and_store_audio_no_input_audios: Generate audio from text using OpenAI's gpt-4o-audio-preview model
+- generate_text_with_input_audio: Transcribe audio files to text using OpenAI's Transcription API
 """
 
 import argparse
@@ -997,13 +999,6 @@ async def create_server() -> fastmcp.FastMCP:
                         # Save image
                         file_path.write_bytes(image_bytes)
 
-                        # Print save information
-                        print(f"[Image Variation] Saved variation {idx+1}/{n}:")
-                        print(f"  - File: {file_path}")
-                        print(f"  - Size: {len(image_bytes):,} bytes")
-                        print(f"  - Model: {model}")
-                        print(f"  - Source images: {len(validated_paths)} file(s)")
-
                         all_variations.append(
                             {
                                 "source_images": [str(p) for p in validated_paths],
@@ -1025,7 +1020,6 @@ async def create_server() -> fastmcp.FastMCP:
                         }
 
             except Exception as api_error:
-                print(f"OpenAI API error: {api_error}")
                 return {
                     "success": False,
                     "operation": "generate_and_store_image_with_input_images",
@@ -1043,11 +1037,170 @@ async def create_server() -> fastmcp.FastMCP:
             }
 
         except Exception as e:
-            print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
                 "operation": "generate_and_store_image_with_input_images",
                 "error": f"Failed to generate variations: {str(e)}",
+            }
+
+    @mcp.tool()
+    def generate_and_store_audio_no_input_audios(
+        prompt: str,
+        model: str = "gpt-4o-audio-preview",
+        voice: str = "alloy",
+        audio_format: str = "wav",
+        storage_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate audio from text using OpenAI's gpt-4o-audio-preview model and store it in the workspace.
+
+        This tool generates audio speech from text prompts using OpenAI's audio generation API
+        and saves the audio files to the workspace with automatic organization.
+
+        Args:
+            prompt: Text content to convert to audio speech
+            model: Model to use for generation (default: "gpt-4o-audio-preview")
+            voice: Voice to use for audio generation (default: "alloy")
+                   Options: "alloy", "echo", "fable", "onyx", "nova", "shimmer"
+            audio_format: Audio format for output (default: "wav")
+                         Options: "wav", "mp3", "opus", "aac", "flac"
+            storage_path: Directory path where to save the audio (optional)
+                         - Relative path: Resolved relative to workspace (e.g., "audio/generated")
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "generate_and_store_audio_no_input_audios"
+            - audio_file: Generated audio file with path and metadata
+            - model: Model used for generation
+            - prompt: The prompt used for generation
+            - voice: Voice used for generation
+            - format: Audio format used
+
+        Examples:
+            generate_and_store_audio_no_input_audios("Is a golden retriever a good family dog?")
+            → Generates and saves to: 20240115_143022_audio.wav
+
+            generate_and_store_audio_no_input_audios("Hello world", voice="nova", audio_format="mp3")
+            → Generates with nova voice and saves as: 20240115_143022_audio.mp3
+
+        Security:
+            - Requires valid OpenAI API key (automatically detected from .env or environment)
+            - Files are saved to specified path within workspace
+            - Path must be within allowed directories
+        """
+        from datetime import datetime
+
+        try:
+            # Load environment variables
+            script_dir = Path(__file__).parent.parent.parent
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                load_dotenv()
+
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_audio_no_input_audios",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
+                }
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
+
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+
+            # Validate storage directory is within allowed paths
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+
+            # Create directory if it doesn't exist
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                # Generate audio using OpenAI API
+                completion = client.chat.completions.create(
+                    model=model,
+                    modalities=["text", "audio"],
+                    audio={"voice": voice, "format": audio_format},
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        },
+                    ],
+                )
+
+                # Check if audio data is available
+                if not completion.choices[0].message.audio or not completion.choices[0].message.audio.data:
+                    return {
+                        "success": False,
+                        "operation": "generate_and_store_audio_no_input_audios",
+                        "error": "No audio data received from API",
+                    }
+
+                # Decode audio data from base64
+                audio_bytes = base64.b64decode(completion.choices[0].message.audio.data)
+
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+                # Clean prompt for filename (first 30 chars)
+                clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
+                clean_prompt = clean_prompt.replace(" ", "_")
+
+                filename = f"{timestamp}_{clean_prompt}.{audio_format}"
+
+                # Full file path
+                file_path = storage_dir / filename
+
+                # Write audio to file
+                file_path.write_bytes(audio_bytes)
+                file_size = len(audio_bytes)
+
+                # Get text response if available
+                text_response = completion.choices[0].message.content if completion.choices[0].message.content else None
+
+                return {
+                    "success": True,
+                    "operation": "generate_and_store_audio_no_input_audios",
+                    "audio_file": {
+                        "file_path": str(file_path),
+                        "filename": filename,
+                        "size": file_size,
+                        "format": audio_format,
+                    },
+                    "model": model,
+                    "prompt": prompt,
+                    "voice": voice,
+                    "format": audio_format,
+                    "text_response": text_response,
+                }
+
+            except Exception as api_error:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_audio_no_input_audios",
+                    "error": f"OpenAI API error: {str(api_error)}",
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "operation": "generate_and_store_audio_no_input_audios",
+                "error": f"Failed to generate or save audio: {str(e)}",
             }
 
     @mcp.tool()
@@ -1179,13 +1332,6 @@ async def create_server() -> fastmcp.FastMCP:
                         file_path.write_bytes(image_bytes)
                         file_size = len(image_bytes)
 
-                        # Print save information
-                        print(f"[Image Generation] Saved image {idx+1}/{len(image_data)}:")
-                        print(f"  - File: {file_path}")
-                        print(f"  - Size: {file_size:,} bytes")
-                        print(f"  - Prompt: {prompt[:50]}..." if len(prompt) > 50 else f"  - Prompt: {prompt}")
-                        print(f"  - Model: {model}")
-
                         saved_images.append(
                             {
                                 "file_path": str(file_path),
@@ -1216,14 +1362,454 @@ async def create_server() -> fastmcp.FastMCP:
                 }
 
         except Exception as e:
-            print(f"Error generating or saving image: {str(e)}")
             return {
                 "success": False,
                 "operation": "generate_and_store_image_no_input_images",
                 "error": f"Failed to generate or save image: {str(e)}",
             }
 
-    print("🚀 Workspace Copy MCP Server started and ready")
-    print(f"Allowed paths: {[str(p) for p in mcp.allowed_paths]}")
+    @mcp.tool()
+    def generate_text_with_input_audio(
+        audio_paths: List[str],
+        model: str = "gpt-4o-transcribe",
+    ) -> Dict[str, Any]:
+        """
+        Transcribe audio file(s) to text using OpenAI's Transcription API.
+
+        This tool processes one or more audio files through OpenAI's Transcription API
+        to extract the text content from the audio. Each file is processed separately.
+
+        Args:
+            audio_paths: List of paths to input audio files (WAV, MP3, M4A, etc.)
+                        - Relative path: Resolved relative to workspace
+                        - Absolute path: Must be within allowed directories
+            model: Model to use (default: "gpt-4o-transcribe")
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "generate_text_with_input_audio"
+            - transcriptions: List of transcription results for each file
+            - audio_files: List of paths to the input audio files
+            - model: Model used
+
+        Examples:
+            generate_text_with_input_audio(["recording.wav"])
+            → Returns transcription for recording.wav
+
+            generate_text_with_input_audio(["interview1.mp3", "interview2.mp3"])
+            → Returns separate transcriptions for each file
+
+        Security:
+            - Requires valid OpenAI API key
+            - All input audio files must exist and be readable
+        """
+        try:
+            # Load environment variables
+            script_dir = Path(__file__).parent.parent.parent
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                load_dotenv()
+
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "generate_text_with_input_audio",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
+                }
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
+
+            # Validate and process input audio files
+            validated_audio_paths = []
+            audio_extensions = [".wav", ".mp3", ".m4a", ".mp4", ".ogg", ".flac", ".aac", ".wma", ".opus"]
+
+            for audio_path_str in audio_paths:
+                # Resolve audio path
+                if Path(audio_path_str).is_absolute():
+                    audio_path = Path(audio_path_str).resolve()
+                else:
+                    audio_path = (Path.cwd() / audio_path_str).resolve()
+
+                # Validate audio path
+                _validate_path_access(audio_path, mcp.allowed_paths)
+
+                if not audio_path.exists():
+                    return {
+                        "success": False,
+                        "operation": "generate_text_with_input_audio",
+                        "error": f"Audio file does not exist: {audio_path}",
+                    }
+
+                # Check if file is an audio file
+                if audio_path.suffix.lower() not in audio_extensions:
+                    return {
+                        "success": False,
+                        "operation": "generate_text_with_input_audio",
+                        "error": f"File does not appear to be an audio file: {audio_path}",
+                    }
+
+                validated_audio_paths.append(audio_path)
+
+            # Process each audio file separately using OpenAI Transcription API
+            transcriptions = []
+
+            for audio_path in validated_audio_paths:
+                try:
+                    # Open audio file
+                    with open(audio_path, "rb") as audio_file:
+                        # Basic transcription without prompt
+                        transcription = client.audio.transcriptions.create(
+                            model=model,
+                            file=audio_file,
+                            response_format="text",
+                        )
+
+                    # Add transcription to list
+                    transcriptions.append(
+                        {
+                            "file": str(audio_path),
+                            "transcription": transcription,
+                        },
+                    )
+
+                except Exception as api_error:
+                    return {
+                        "success": False,
+                        "operation": "generate_text_with_input_audio",
+                        "error": f"Transcription API error for file {audio_path}: {str(api_error)}",
+                    }
+
+            return {
+                "success": True,
+                "operation": "generate_text_with_input_audio",
+                "transcriptions": transcriptions,
+                "audio_files": [str(p) for p in validated_audio_paths],
+                "model": model,
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "operation": "generate_text_with_input_audio",
+                "error": f"Failed to transcribe audio: {str(e)}",
+            }
+
+    @mcp.tool()
+    def convert_text_to_speech(
+        input_text: str,
+        model: str = "gpt-4o-mini-tts",
+        voice: str = "alloy",
+        instructions: Optional[str] = None,
+        storage_path: Optional[str] = None,
+        audio_format: str = "mp3",
+    ) -> Dict[str, Any]:
+        """
+        Convert text (transcription) directly to speech using OpenAI's TTS API with streaming response.
+
+        This tool converts text directly to speech audio using OpenAI's Text-to-Speech API,
+        designed specifically for converting transcriptions or any text content to spoken audio.
+        Uses streaming response for efficient file handling.
+
+        Args:
+            input_text: The text content to convert to speech (e.g., transcription text)
+            model: TTS model to use (default: "gpt-4o-mini-tts")
+                   Options: "gpt-4o-mini-tts", "tts-1", "tts-1-hd"
+            voice: Voice to use for speech synthesis (default: "alloy")
+                   Options: "alloy", "echo", "fable", "onyx", "nova", "shimmer", "coral", "sage"
+            instructions: Optional speaking instructions for tone and style (e.g., "Speak in a cheerful tone")
+            storage_path: Directory path where to save the audio file (optional)
+                         - Relative path: Resolved relative to workspace
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
+            audio_format: Output audio format (default: "mp3")
+                         Options: "mp3", "opus", "aac", "flac", "wav", "pcm"
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "convert_text_to_speech"
+            - audio_file: Generated audio file with path and metadata
+            - model: TTS model used
+            - voice: Voice used
+            - format: Audio format used
+            - text_length: Length of input text
+            - instructions: Speaking instructions if provided
+
+        Examples:
+            convert_text_to_speech("Hello world, this is a test.")
+            → Converts text to speech and saves as MP3
+
+            convert_text_to_speech(
+                "Today is a wonderful day to build something people love!",
+                voice="coral",
+                instructions="Speak in a cheerful and positive tone."
+            )
+            → Converts with specific voice and speaking instructions
+
+        Security:
+            - Requires valid OpenAI API key
+            - Files are saved to specified path within workspace
+            - Path must be within allowed directories
+        """
+        from datetime import datetime
+
+        try:
+            # Load environment variables
+            script_dir = Path(__file__).parent.parent.parent
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                load_dotenv()
+
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "convert_text_to_speech",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
+                }
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
+
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+
+            # Validate storage directory is within allowed paths
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+
+            # Create directory if it doesn't exist
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            # Clean text for filename (first 30 chars)
+            clean_text = "".join(c for c in input_text[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
+            clean_text = clean_text.replace(" ", "_")
+
+            filename = f"speech_{timestamp}_{clean_text}.{audio_format}"
+            file_path = storage_dir / filename
+
+            try:
+                # Prepare request parameters
+                request_params = {
+                    "model": model,
+                    "voice": voice,
+                    "input": input_text,
+                }
+
+                # Add instructions if provided (only for models that support it)
+                if instructions and model in ["gpt-4o-mini-tts"]:
+                    request_params["instructions"] = instructions
+
+                # Use streaming response for efficient file handling
+                with client.audio.speech.with_streaming_response.create(**request_params) as response:
+                    # Stream directly to file
+                    response.stream_to_file(file_path)
+
+                # Get file size
+                file_size = file_path.stat().st_size
+
+                return {
+                    "success": True,
+                    "operation": "convert_text_to_speech",
+                    "audio_file": {
+                        "file_path": str(file_path),
+                        "filename": filename,
+                        "size": file_size,
+                        "format": audio_format,
+                    },
+                    "model": model,
+                    "voice": voice,
+                    "format": audio_format,
+                    "text_length": len(input_text),
+                    "instructions": instructions if instructions else None,
+                }
+
+            except Exception as api_error:
+                return {
+                    "success": False,
+                    "operation": "convert_text_to_speech",
+                    "error": f"OpenAI TTS API error: {str(api_error)}",
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "operation": "convert_text_to_speech",
+                "error": f"Failed to convert text to speech: {str(e)}",
+            }
+
+    @mcp.tool()
+    def generate_and_store_video_no_input_images(
+        prompt: str,
+        model: str = "sora-2",
+        seconds: int = 4,
+        storage_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate a video from a text prompt using OpenAI's Sora-2 API.
+
+        This tool generates a video based on a text prompt using OpenAI's Sora-2 API
+        and saves it to the workspace with automatic organization.
+
+        Args:
+            prompt: Text description for the video to generate
+            model: Model to use (default: "sora-2")
+            storage_path: Directory path where to save the video (optional)
+                         - Relative path: Resolved relative to workspace
+                         - Absolute path: Must be within allowed directories
+                         - None/empty: Saves to workspace root
+
+        Returns:
+            Dictionary containing:
+            - success: Whether operation succeeded
+            - operation: "generate_and_store_video_no_input_images"
+            - video_path: Path to the saved video file
+            - model: Model used for generation
+            - prompt: The prompt used
+            - duration: Time taken for generation in seconds
+
+        Examples:
+            generate_and_store_video_no_input_images("A cool cat on a motorcycle in the night")
+            → Generates a video and saves to workspace root
+
+            generate_and_store_video_no_input_images("Dancing robot", storage_path="videos/")
+            → Generates a video and saves to videos/ directory
+
+        Security:
+            - Requires valid OpenAI API key with Sora-2 access
+            - Files are saved to specified path within workspace
+        """
+        import time
+        from datetime import datetime
+
+        try:
+            # Load environment variables
+            script_dir = Path(__file__).parent.parent.parent
+            env_path = script_dir / ".env"
+            if env_path.exists():
+                load_dotenv(env_path)
+            else:
+                load_dotenv()
+
+            openai_api_key = os.getenv("OPENAI_API_KEY")
+
+            if not openai_api_key:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_video_no_input_images",
+                    "error": "OpenAI API key not found. Please set OPENAI_API_KEY in .env file or environment variable.",
+                }
+
+            # Initialize OpenAI client
+            client = OpenAI(api_key=openai_api_key)
+
+            # Determine storage directory
+            if storage_path:
+                if Path(storage_path).is_absolute():
+                    storage_dir = Path(storage_path).resolve()
+                else:
+                    storage_dir = (Path.cwd() / storage_path).resolve()
+            else:
+                storage_dir = Path.cwd()
+
+            # Validate storage directory is within allowed paths
+            _validate_path_access(storage_dir, mcp.allowed_paths)
+
+            # Create directory if it doesn't exist
+            storage_dir.mkdir(parents=True, exist_ok=True)
+
+            try:
+                start_time = time.time()
+
+                # Start video generation (no print statements to avoid MCP JSON parsing issues)
+                video = client.videos.create(
+                    model=model,
+                    prompt=prompt,
+                    seconds=str(seconds),
+                )
+
+                getattr(video, "progress", 0)
+
+                # Monitor progress (silently, no stdout writes)
+                while video.status in ("in_progress", "queued"):
+                    # Refresh status
+                    video = client.videos.retrieve(video.id)
+                    getattr(video, "progress", 0)
+                    time.sleep(2)
+
+                if video.status == "failed":
+                    message = getattr(
+                        getattr(video, "error", None),
+                        "message",
+                        "Video generation failed",
+                    )
+                    return {
+                        "success": False,
+                        "operation": "generate_and_store_video_no_input_images",
+                        "error": message,
+                    }
+
+                # Download video content
+                content = client.videos.download_content(video.id, variant="video")
+
+                # Generate filename with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
+                clean_prompt = clean_prompt.replace(" ", "_")
+                filename = f"{timestamp}_{clean_prompt}.mp4"
+
+                # Full file path
+                file_path = storage_dir / filename
+
+                # Write video to file
+                content.write_to_file(str(file_path))
+
+                # Calculate duration
+                duration = time.time() - start_time
+
+                # Get file size
+                file_size = file_path.stat().st_size
+
+                return {
+                    "success": True,
+                    "operation": "generate_and_store_video_no_input_images",
+                    "video_path": str(file_path),
+                    "filename": filename,
+                    "size": file_size,
+                    "model": model,
+                    "prompt": prompt,
+                    "duration": duration,
+                }
+
+            except Exception as api_error:
+                return {
+                    "success": False,
+                    "operation": "generate_and_store_video_no_input_images",
+                    "error": f"OpenAI API error: {str(api_error)}",
+                }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "operation": "generate_and_store_video_no_input_images",
+                "error": f"Failed to generate or save video: {str(e)}",
+            }
 
     return mcp

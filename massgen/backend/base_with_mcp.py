@@ -227,7 +227,7 @@ class MCPBackend(LLMBackend):
                 allowed_tools=self.allowed_tools,
                 exclude_tools=self.exclude_tools,
                 circuit_breaker=self._mcp_tools_circuit_breaker,
-                timeout_seconds=120,  # Increased timeout for image generation tools
+                timeout_seconds=400,  # Increased timeout for image generation tools
                 backend_name=self.backend_name,
                 agent_id=self.agent_id,
             )

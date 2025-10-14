@@ -311,3 +311,129 @@ def test_setup_agent_missing_executor_type():
         setup_agent_from_config(config)
 
     assert "must include 'type' field" in str(exc_info.value)
+
+
+@patch("massgen.adapters.ag2_adapter.ConversableAgent")
+@patch("massgen.adapters.ag2_adapter.setup_agent_from_config")
+@patch("massgen.adapters.ag2_adapter.AutoPattern")
+def test_adapter_init_group_chat(mock_pattern, mock_setup, mock_conversable):
+    """Test adapter initialization with group chat config."""
+    mock_agent1 = MagicMock()
+    mock_agent1.name = "Agent1"
+    mock_agent2 = MagicMock()
+    mock_agent2.name = "Agent2"
+    mock_user_agent = MagicMock()
+    mock_user_agent.name = "User"
+
+    mock_setup.side_effect = [mock_agent1, mock_agent2]
+    mock_conversable.return_value = mock_user_agent
+
+    group_config = {
+        "llm_config": {"api_type": "openai", "model": "gpt-4o"},
+        "agents": [
+            {"type": "assistant", "name": "Agent1", "llm_config": {"api_type": "openai", "model": "gpt-4o"}},
+            {"type": "assistant", "name": "Agent2", "llm_config": {"api_type": "openai", "model": "gpt-4o"}},
+        ],
+        "pattern": {
+            "type": "auto",
+            "initial_agent": "Agent1",
+            "group_manager_args": {"llm_config": {"api_type": "openai", "model": "gpt-4o"}},
+        },
+    }
+
+    adapter = AG2Adapter(group_config=group_config)
+
+    # Verify group chat setup
+    assert adapter.is_group_chat is True
+    assert len(adapter.agents) == 2
+    assert adapter.user_agent is not None
+    mock_pattern.assert_called_once()
+
+
+@patch("massgen.adapters.ag2_adapter.setup_agent_from_config")
+def test_adapter_separate_workflow_and_other_tools(mock_setup):
+    """Test separation of workflow and other tools."""
+    mock_agent = MagicMock()
+    mock_setup.return_value = mock_agent
+
+    agent_config = {
+        "type": "assistant",
+        "name": "test",
+        "llm_config": {"api_type": "openai", "model": "gpt-4o"},
+    }
+    adapter = AG2Adapter(agent_config=agent_config)
+
+    # Test tools with workflow and other tools
+    tools = [
+        {"type": "function", "function": {"name": "new_answer", "description": "Submit answer"}},
+        {"type": "function", "function": {"name": "vote", "description": "Vote for answer"}},
+        {"type": "function", "function": {"name": "search", "description": "Search tool"}},
+    ]
+
+    workflow_tools, other_tools = adapter._separate_workflow_and_other_tools(tools)
+
+    # Verify separation
+    assert len(workflow_tools) == 2
+    assert len(other_tools) == 1
+    assert any(t["function"]["name"] == "new_answer" for t in workflow_tools)
+    assert any(t["function"]["name"] == "vote" for t in workflow_tools)
+    assert other_tools[0]["function"]["name"] == "search"
+
+
+@patch("massgen.adapters.ag2_adapter.ConversableAgent")
+@patch("massgen.adapters.ag2_adapter.setup_agent_from_config")
+@patch("massgen.adapters.ag2_adapter.AutoPattern")
+def test_adapter_setup_user_agent_custom(mock_pattern, mock_setup, mock_conversable):
+    """Test setting up custom user agent."""
+    mock_user_agent = MagicMock()
+    mock_user_agent.name = "User"
+    mock_agent = MagicMock()
+    mock_agent.name = "TestAgent"
+
+    # First call for expert agent, second for user agent
+    mock_setup.side_effect = [mock_agent, mock_user_agent]
+
+    group_config = {
+        "llm_config": {"api_type": "openai", "model": "gpt-4o"},
+        "agents": [{"type": "assistant", "name": "TestAgent", "llm_config": {"api_type": "openai", "model": "gpt-4o"}}],
+        "pattern": {
+            "type": "auto",
+            "initial_agent": "TestAgent",
+            "group_manager_args": {"llm_config": {"api_type": "openai", "model": "gpt-4o"}},
+        },
+        "user_agent": {
+            "name": "User",
+            "system_message": "Custom user agent",
+            "llm_config": {"api_type": "openai", "model": "gpt-4o"},
+        },
+    }
+
+    adapter = AG2Adapter(group_config=group_config)
+
+    # Verify custom user agent was set up
+    assert adapter.user_agent.name == "User"
+    # setup_agent_from_config should be called twice: once for expert agent, once for user agent
+    assert mock_setup.call_count == 2
+
+
+@patch("massgen.adapters.ag2_adapter.setup_agent_from_config")
+@patch("massgen.adapters.ag2_adapter.AutoPattern")
+def test_adapter_invalid_pattern_type(mock_pattern, mock_setup):
+    """Test that invalid pattern type raises error."""
+    mock_agent = MagicMock()
+    mock_agent.name = "Agent1"
+    mock_setup.return_value = mock_agent
+
+    group_config = {
+        "llm_config": {"api_type": "openai", "model": "gpt-4o"},
+        "agents": [{"type": "assistant", "name": "Agent1", "llm_config": {"api_type": "openai", "model": "gpt-4o"}}],
+        "pattern": {
+            "type": "invalid_pattern",
+            "initial_agent": "Agent1",
+        },
+    }
+
+    with pytest.raises(NotImplementedError) as exc_info:
+        AG2Adapter(group_config=group_config)
+
+    assert "invalid_pattern" in str(exc_info.value)

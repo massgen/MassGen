@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.30 Features](#-latest-features-v0030)
+- [v0.0.31 Features](#-latest-features-v0031)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.30](#recent-achievements-v0030)
-  - [v0.0.3 - v0.0.29](#previous-achievements-v003---v0029)
+  - [v0.0.31](#recent-achievements-v0031)
+  - [v0.0.3 - v0.0.30](#previous-achievements-v003---v0030)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.31 Roadmap](#v0031-roadmap)
+- [v0.0.32 Roadmap](#v0032-roadmap)
 </details>
 
 <details open>
@@ -129,23 +129,40 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.30)
+## 🆕 Latest Features (v0.0.31)
 
-**What's New in v0.0.30:**
-- **Multimodal Audio and Video** - Extended multimodal support from images to audio (WAV, MP3) and video (MP4, AVI, MOV, WEBM) across Chat Completions and Claude backends
-- **Qwen API Integration** - Added Qwen API provider support to Chat Completions backend for video understanding capabilities
+**Experience v0.0.31 New Features:**
 
-**Try v0.0.30 Multimodal Features:**
+See local code execution support in action:
+
+[![MassGen v0.0.31 Local Code Execution Demo](https://img.youtube.com/vi/Sy-CFNPvLAQ/0.jpg)](https://www.youtube.com/watch?v=Sy-CFNPvLAQ)
+
+**What's New in v0.0.31:**
+- **Universal Code Execution** - Run bash commands across all backends through new MCP-based `execute_command` tool
+- **AG2 Group Chat** - Native multi-agent conversations using AG2's group chat framework with LLM-based speaker selection
+- **Audio & Video Generation** - Create audio with text-to-speech and transcription, generate videos from text prompts
+
+**Try v0.0.31 Features:**
 ```bash
-# Audio understanding with OpenRouter
+# Universal code execution - run tests across any backend
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_openrouter_audio_understanding.yaml \
-  "What is in this recording?"
+  --config massgen/configs/tools/code-execution/basic_command_execution.yaml \
+  "Write a Python function to calculate factorial and test it"
 
-# Video understanding with Qwen API
+# Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_qwen_video_understanding.yaml \
-  "Describe what happens in this video"
+  --config massgen/configs/ag2/ag2_groupchat_gpt.yaml \
+  "Write a Python function to calculate factorial."
+
+# Audio generation - create speech from text
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt4o_audio_generation.yaml \
+  "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
+
+# Video generation - create videos from prompts
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml \
+  "Generate a 4 seconds video for 'Cherry blossom petals falling in the spring breeze, sunlight filtering through the pink petals creating a soft halo, slow motion capture, aesthetically beautiful and romantic, depth of field effect.'"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -925,38 +942,43 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.30)
+### Recent Achievements (v0.0.31)
 
-**🎉 Released: October 10, 2025**
+**🎉 Released: October 14, 2025**
 
-#### Multimodal Support Extension
-- **Audio Processing**: WAV and MP3 format support for Chat Completions and Claude backends
-- **Video Processing**: MP4, AVI, MOV, WEBM format support for Chat Completions and Claude backends
-- **Flexible Media Input**: Support for local file paths and HTTP/HTTPS URLs
-- **Extended Base64 Encoding**: Now supports audio and video files in addition to images
-- **Configurable Limits**: Media file size limits (default 64MB, configurable via `media_max_file_size_mb`)
+#### Universal Command Execution
+- **MCP-Based Code Execution**: Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
+- **AG2-Inspired Security**: Permission management, command filtering, and virtual environment auto-detection
+- **Code Execution in Planning Mode**: Safe code execution during agent coordination with planning mode integration
+- **Auto-Generated Exemptions**: System-generated file exemptions for Python cache files, temporary files, and system directories
 
-#### Claude Code Backend SDK Update
-- **Package Migration**: Updated from `claude-code-sdk>=0.0.19` to `claude-agent-sdk>=0.0.22`
-- **Internal Updates**: SDK class changes (`ClaudeCodeOptions` → `ClaudeAgentOptions`)
-- **Enhanced Security**: Improved bash tool permission validation
-- **System Message Handling**: Better SDK preset support
+#### Native Multi-Agent Conversations
+- **AG2 Group Chat**: Multi-agent conversations using AG2's `GroupChat` and `GroupChatManager` frameworks
+- **Smart Speaker Selection**: Automatic, round-robin, and manual speaker selection modes powered by LLMs
+- **Enhanced AG2 Adapter**: Improved integration supporting native AG2 group chat coordination patterns
 
-#### Chat Completions Backend Enhancement
-- **Qwen API Integration**: Added Qwen API provider to Chat Completions ecosystem
-- **New Environment Variable**: `QWEN_API_KEY` support
-- **Video Understanding**: Qwen-specific configuration examples
+#### Audio & Video Generation
+- **Audio Tools**: `generate_and_store_audio_no_input_audios`, `generate_text_with_input_audio`, `convert_text_to_speech`
+- **Video Tools**: `generate_and_store_video_no_input_images` for text-to-video generation using OpenAI's Sora-2 API
+- **Multimodal Expansion**: Expanded content generation capabilities beyond text and images
 
-#### Bug Fixes
-- **Planning Mode Stability**: Fixed crash when configuration lacks `coordination_config`
-- **Message Handling**: Resolved Claude Code system message processing issues
-- **Import Organization**: Fixed AG2 adapter import ordering
+#### Enhanced Safety & Developer Experience
+- **File Operation Tracker**: Enhanced tracking and protection for safer file operations in multi-agent environments
+- **PathPermissionManager**: Integration with execute_command tool for comprehensive workspace validation
+- **Message Templates**: Execution result guidance for better agent interpretation of command outputs
+- **Comprehensive Testing**: Test coverage for code execution, MCP integration, and multi-agent scenarios
 
-#### Documentation and Configuration
-- **Case Studies**: `ag2-framework-integration.md`, `mcp-planning-mode.md`
-- **New Configuration Files**: `ag2_case_study.yaml`, `cc_gpt5_gemini_filesystem.yaml`, `single_gemini2.5pro.yaml`, `single_openrouter_audio_understanding.yaml`, `single_qwen_video_understanding.yaml`, `test_sdk_migration.yaml`
+#### Documentation
+- **Technical Design**: `CODE_EXECUTION_DESIGN.md`
+- **Configuration Examples**: 9 new example configurations including `basic_command_execution.yaml`, `ag2_groupchat.yaml`, audio/video generation examples, multi-agent scenarios
 
-### Previous Achievements (v0.0.3 - v0.0.29)
+### Previous Achievements (v0.0.3 - v0.0.30)
+
+✅ **Multimodal Support Extension (v0.0.30)**: Audio and video processing for Chat Completions and Claude backends (WAV, MP3, MP4, AVI, MOV, WEBM formats), flexible media input via local paths or URLs, extended base64 encoding for audio/video files, configurable file size limits
+
+✅ **Claude Agent SDK Migration (v0.0.30)**: Package migration from `claude-code-sdk` to `claude-agent-sdk>=0.0.22`, improved bash tool permission validation, enhanced system message handling
+
+✅ **Qwen API Integration (v0.0.30)**: Added Qwen API provider to Chat Completions ecosystem with `QWEN_API_KEY` support, video understanding configuration examples
 
 ✅ **MCP Planning Mode (v0.0.29)**: Strategic planning coordination strategy for safer MCP tool usage, multi-backend support (Response API, Chat Completions, Gemini), agents plan without execution during coordination, 5 planning mode configurations
 
@@ -1036,25 +1058,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.31 Roadmap
+### v0.0.32 Roadmap
 
-Version 0.0.31 focuses on enhancing planning mode capabilities and AG2 group chat integration:
+Version 0.0.32 focuses on Docker-based code execution and configuration management:
 
 #### Required Features
-- **Planning Mode Enhancements**: Tool whitelist/blacklist system, multi-turn integration, comprehensive testing
-- **AG2 Group Chat Integration**: User agent orchestration with AG2 group chat and streaming API
+- **Docker Code Execution**: Extend v0.0.31's code execution with Docker container isolation for enhanced security
+- **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
 
 #### Optional Features
-- **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
-- **Memory Framework**: Design and implement memory system for agent context persistence
+- **MCP Tool Safety System**: LLM-powered classification of irreversible MCP tools with human-in-the-loop validation
+- **MCP Framework Refactoring**: Refactor MCP integration architecture for better maintainability and extensibility
 
 Key technical approach:
-- **Planning Mode**: Tool restriction system with whitelist/blacklist, multi-turn conversation support, planning mode persistence
-- **AG2 Integration**: Orchestrator-to-user-agent communication pattern, streaming API for group chat updates
-- **Tool Registry**: Improved dynamic tool discovery and loading with plugin-based extensions
-- **Memory System**: Storage and retrieval architecture with different memory types (short-term, long-term, episodic)
+- **Docker Execution**: Container lifecycle management, custom Docker images/Dockerfiles, resource limits, security isolation
+- **Config Builder**: Interactive prompts, configuration templates, validation and error checking, preset support
+- **Tool Safety**: LLM-based tool classification, optional human review workflow, per-user safety preferences
+- **MCP Refactoring**: Cleaner separation of concerns, reduced code duplication, improved error handling
 
-For detailed milestones and technical specifications, see the [full v0.0.31 roadmap](ROADMAP_v0.0.31.md).
+For detailed milestones and technical specifications, see the [full v0.0.32 roadmap](ROADMAP_v0.0.32.md).
 
 ---
 

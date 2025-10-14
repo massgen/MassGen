@@ -23,7 +23,6 @@ class ResponseAPIParamsHandler(APIParamsHandlerBase):
                 "allowed_tools",
                 "exclude_tools",
                 "_has_file_search_files",  # Internal flag for file search tracking
-                "_file_search_vector_store_ids",  # Internal vector store IDs from uploads
             },
         )
 

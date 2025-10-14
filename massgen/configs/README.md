@@ -226,7 +226,57 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.30 - Latest
+### v0.0.31 - Latest
+**New Features:** Universal Code Execution, AG2 Group Chat Integration, Audio & Video Generation Tools
+
+**Configuration Files:**
+- `massgen/configs/tools/code-execution/basic_command_execution.yaml` - Universal command execution across all backends
+- `massgen/configs/debug/code_execution/command_filtering_whitelist.yaml` - Command execution with whitelist filtering
+- `massgen/configs/debug/code_execution/command_filtering_blacklist.yaml` - Command execution with blacklist filtering
+- `massgen/configs/tools/code-execution/code_execution_use_case_simple.yaml` - Multi-agent web automation with code execution
+- `massgen/configs/ag2/ag2_groupchat.yaml` - Native AG2 group chat with multi-agent conversations
+- `massgen/configs/ag2/ag2_groupchat_gpt.yaml` - Mixed MassGen and AG2 agents (GPT-5-nano + AG2 team)
+- `massgen/configs/basic/single/single_gpt4o_audio_generation.yaml` - Single agent audio generation with GPT-4o
+- `massgen/configs/basic/multi/gpt4o_audio_generation.yaml` - Multi-agent audio generation with GPT-4o
+- `massgen/configs/basic/single/single_gpt4o_video_generation.yaml` - Video generation with OpenAI Sora-2
+
+**Key Features:**
+- Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
+- AG2 group chat integration with speaker selection modes (auto, round-robin, manual)
+- Audio tools: text-to-speech, audio transcription, audio generation
+- Video tools: text-to-video generation via Sora-2 API
+- Code execution in planning mode for safer coordination
+- Enhanced file operation tracking and path permission management
+
+**Try it:**
+```bash
+# Universal code execution - works with any backend
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/basic_command_execution.yaml \
+  "Write a Python function to calculate factorial and test it"
+
+# AG2 group chat - multi-agent conversations
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_groupchat.yaml \
+  "Write a Python function to calculate factorial."
+
+# Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
+uv run python -m massgen.cli \
+  --config massgen/configs/ag2/ag2_groupchat_gpt.yaml \
+  "Write a Python function to calculate factorial."
+
+# Audio generation
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt4o_audio_generation.yaml \
+  "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
+
+# Video generation with Sora-2
+uv run python -m massgen.cli \
+  --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml \
+  "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
+```
+
+### v0.0.30
 **New Features:** Multimodal Audio and Video Support, Claude Agent SDK Update, Qwen API Integration
 - `massgen/configs/basic/single/single_openrouter_audio_understanding.yaml` - Audio understanding with OpenRouter
 - `massgen/configs/basic/single/single_qwen_video_understanding.yaml` - Video understanding with Qwen API

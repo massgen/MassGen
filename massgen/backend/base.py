@@ -13,6 +13,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from ..filesystem_manager import FilesystemManager, PathPermissionManagerHook
 from ..mcp_tools.hooks import FunctionHookManager, HookType
 from ..token_manager import TokenCostCalculator, TokenUsage
+from ..utils import CoordinationStage
 
 
 class FilesystemSupport(Enum):
@@ -83,6 +84,7 @@ class LLMBackend(ABC):
                 command_line_docker_memory_limit = kwargs.get("command_line_docker_memory_limit")
                 command_line_docker_cpu_limit = kwargs.get("command_line_docker_cpu_limit")
                 command_line_docker_network_mode = kwargs.get("command_line_docker_network_mode", "none")
+                enable_audio_generation = kwargs.get("enable_audio_generation", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
@@ -97,6 +99,7 @@ class LLMBackend(ABC):
                     command_line_docker_memory_limit=command_line_docker_memory_limit,
                     command_line_docker_cpu_limit=command_line_docker_cpu_limit,
                     command_line_docker_network_mode=command_line_docker_network_mode,
+                    enable_audio_generation=enable_audio_generation,
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -143,6 +146,7 @@ class LLMBackend(ABC):
 
         self.formatter = None
         self.api_params_handler = None
+        self.coordination_stage = None
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""
@@ -460,3 +464,12 @@ class LLMBackend(ABC):
                 await client.aclose()
         except Exception:
             pass
+
+    def set_stage(self, stage: CoordinationStage) -> None:
+        """
+        Set the current coordination stage for the backend.
+
+        Args:
+            stage: CoordinationStage enum value
+        """
+        self.coordination_stage = stage

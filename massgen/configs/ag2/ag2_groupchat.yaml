@@ -1,0 +1,108 @@
+# Example configuration for using AG2 GroupChat with MassGen
+# The entire GroupChat acts as a single agent in MassGen's orchestration
+ # uv run python -m massgen.cli --config ag2/ag2_groupchat.yaml "Write a Python function to calculate factorial."
+agents:
+  - id: "ag2_team"
+    backend:
+      type: ag2
+      group_config:
+        # Default llm_config for all agents (REQUIRED)
+        # Individual agents can override this if needed
+        llm_config:
+            api_type: "openai"
+            model: "gpt-5"
+
+        agents:
+          - type: assistant
+            name: "Coder"
+            system_message: "You are an expert programmer who writes clean, efficient code."
+            # Uses default llm_config from group_config
+
+          - type: assistant
+            name: "Reviewer"
+            description: "Code reviewer who provides constructive feedback. Should be selected after Coder"
+            system_message: |
+              You are a code reviewer who provides constructive feedback. You role is to:
+                1. Review the code for correctness, efficiency, and style
+                2. Suggest improvements and optimizations
+                3. DO NOT write complete to address original request
+                4. DO NOT write test code
+                5. When you think the code is good enough to submit, say "LGTM" (Looks Good To Me)
+            # Override with different model
+            llm_config:
+                api_type: "google"
+                model: "gemini-2.5-flash"
+
+          - type: assistant
+            name: "Tester"
+            description: "QA engineer who writes and runs tests. Should be selected if new code has not been validated."
+            system_message: |
+              You are a QA engineer. Your role is to:
+              1. Write test code in Python that validates the provided function
+              2. Test edge cases (empty input, negative numbers, large values, etc.)
+              3. Execute the tests using code blocks
+              4. Report results and any failures
+
+              IMPORTANT: Always write executable Python code in markdown code blocks like:
+              ```python
+              # your test code here
+              ```
+
+              Do NOT just repeat the function code. Write NEW test code that calls the function.
+            llm_config:
+                api_type: "google"
+                model: "gemini-2.5-flash"
+            code_execution_config:
+              executor:
+                type: "LocalCommandLineCodeExecutor"
+                timeout: 60
+                work_dir: "./code_execution_workspace"
+
+        # Pattern configuration (REQUIRED)
+        # Determines how agents are selected to speak in the group chat
+        pattern:
+          type: "auto"  # Currently supported: "auto" only
+          # Required: Name of the agent that starts the conversation
+          initial_agent: "Coder"
+
+          # Optional: Additional pattern-specific arguments
+          # For AutoPattern, supported arguments include:
+          #   - exclude_transit_message (bool): Hide transit messages
+          #   - summary_method (str): How to summarize conversation
+          # Any additional arguments are passed directly to the pattern constructor
+
+          # Group manager configuration
+          group_manager_args:
+            # Optional: override llm_config for the group manager
+            # If not provided, uses default llm_config from group_config
+            llm_config:
+                api_type: "google"
+                model: "gemini-2.5-flash"
+
+        # Optional: Override the default user agent behavior. Not recommended to change.
+        # By default, a minimal user_agent is created automatically
+        # You can provide custom configuration here.
+        # However, it plays an important role in terminating the chat, so it shouldn't be changed ideally.
+        # user_agent:
+        #   name: "User"  # Must be "User" for termination to work
+        #   system_message: "MUST say 'TERMINATE' when the original request is well answered. Do NOT do anything else."
+        #   description: "MUST ONLY be selected when the original request is well answered and the conversation should terminate."
+        #   llm_config:  # Optional: override llm_config
+        #     api_type: "openai"
+        #     model: "gpt-4o"
+
+        # Maximum rounds of conversation before termination
+        max_rounds: 10
+
+#  # Optional: Mix with native MassGen agents
+#  - id: "claude_architect"
+#    backend:
+#      type: claude
+#      model: claude-3-opus-20240229
+#      temperature: 0.7
+#      system_message: "You are a software architect who designs scalable systems."
+
+# UI Configuration
+ui:
+  type: "rich_terminal"
+  logging_enabled: true

@@ -1,0 +1,41 @@
+# Simple Code Execution Use Case: Add a Real Test Case
+#
+# Run with:
+# uv run python -m massgen.cli --config massgen/configs/examples/code_execution_use_case_simple.yaml "Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing."
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      command_line_allowed_commands:
+        - "uv run python.*"
+        - "uv run pytest.*"
+        - "python.*"
+        - "pytest.*"
+
+  - id: "agent_b"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      command_line_allowed_commands:
+        - "uv run python.*"
+        - "uv run pytest.*"
+        - "python.*"
+        - "pytest.*"
+
+orchestrator:
+  agent_temporary_workspace: "temp_workspaces"
+  snapshot_storage: "snapshots"
+  context_paths:
+    - path: "massgen"
+      permission: "read"
+
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
