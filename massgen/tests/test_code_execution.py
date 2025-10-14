@@ -462,7 +462,7 @@ class TestDockerExecution:
         manager.cleanup("test_persist")
 
     def test_docker_workspace_mounting(self, tmp_path):
-        """Test that workspace is mounted correctly."""
+        """Test that workspace is mounted correctly (with path transparency)."""
         from massgen.filesystem_manager._docker_manager import DockerManager
 
         manager = DockerManager()
@@ -480,19 +480,19 @@ class TestDockerExecution:
             workspace_path=workspace,
         )
 
-        # Read file from inside container
+        # Read file from inside container using host path (path transparency)
         result = manager.exec_command(
             agent_id="test_mount",
-            command="cat /workspace/test.txt",
+            command=f"cat {workspace}/test.txt",
         )
 
         assert result["success"] is True
         assert "Hello from host" in result["stdout"]
 
-        # Write file from container
+        # Write file from container using host path
         result2 = manager.exec_command(
             agent_id="test_mount",
-            command="echo 'Hello from container' > /workspace/from_container.txt",
+            command=f"echo 'Hello from container' > {workspace}/from_container.txt",
         )
         assert result2["success"] is True
 
@@ -519,17 +519,17 @@ class TestDockerExecution:
         manager.create_container(agent_id="agent1", workspace_path=workspace1)
         manager.create_container(agent_id="agent2", workspace_path=workspace2)
 
-        # Create file in agent1's workspace
+        # Create file in agent1's workspace using host path
         result1 = manager.exec_command(
             agent_id="agent1",
-            command="echo 'agent1 data' > /workspace/data.txt",
+            command=f"echo 'agent1 data' > {workspace1}/data.txt",
         )
         assert result1["success"] is True
 
-        # Agent2 should not see agent1's file
+        # Agent2 should not see agent1's file (isolated workspaces)
         result2 = manager.exec_command(
             agent_id="agent2",
-            command="ls /workspace/",
+            command=f"ls {workspace2}/",
         )
         assert result2["success"] is True
         assert "data.txt" not in result2["stdout"]  # Isolated
@@ -593,8 +593,8 @@ class TestDockerExecution:
         # Cleanup
         manager.cleanup("test_network")
 
-    def test_docker_cleanup_and_log_saving(self, tmp_path):
-        """Test that cleanup saves logs correctly."""
+    def test_docker_command_timeout(self, tmp_path):
+        """Test that Docker commands can timeout."""
         from massgen.filesystem_manager._docker_manager import DockerManager
 
         manager = DockerManager()
@@ -604,29 +604,28 @@ class TestDockerExecution:
 
         # Create container
         manager.create_container(
-            agent_id="test_cleanup",
+            agent_id="test_timeout",
             workspace_path=workspace,
         )
 
-        # Execute some commands to generate logs
-        manager.exec_command(agent_id="test_cleanup", command="echo 'test log 1'")
-        manager.exec_command(agent_id="test_cleanup", command="echo 'test log 2'")
+        # Execute command that sleeps longer than timeout
+        result = manager.exec_command(
+            agent_id="test_timeout",
+            command="sleep 10",
+            timeout=1,  # 1 second timeout
+        )
 
-        # Cleanup with log saving
-        log_path = tmp_path / "container.log"
-        manager.cleanup("test_cleanup", save_logs_to=log_path)
+        # Should timeout
+        assert result["success"] is False
+        assert result["exit_code"] == -1
+        assert "timed out" in result["stderr"].lower()
+        assert result["execution_time"] >= 1.0  # Should have waited at least 1 second
 
-        # Verify logs were saved
-        assert log_path.exists()
-        log_content = log_path.read_text()
-        # Logs should contain timestamps and output
-        assert len(log_content) > 0
-
-        # Container should be removed
-        assert "test_cleanup" not in manager.containers
+        # Cleanup
+        manager.cleanup("test_timeout")
 
     def test_docker_context_path_mounting(self, tmp_path):
-        """Test that context paths are mounted correctly."""
+        """Test that context paths are mounted correctly (with path transparency)."""
         from massgen.filesystem_manager._docker_manager import DockerManager
 
         manager = DockerManager()
@@ -649,10 +648,10 @@ class TestDockerExecution:
             context_paths=context_paths,
         )
 
-        # Read context file from container
+        # Read context file from container using host path (path transparency)
         result = manager.exec_command(
             agent_id="test_context",
-            command="cat /context/my_context/context.txt",
+            command=f"cat {context_dir}/context.txt",
         )
 
         assert result["success"] is True

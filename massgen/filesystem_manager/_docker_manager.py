@@ -8,6 +8,7 @@ while keeping MCP servers on the host.
 """
 
 import logging
+import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -268,7 +269,7 @@ class DockerManager:
             agent_id: Agent identifier
             command: Command to execute (as string, will be run in shell)
             workdir: Working directory (uses host path - same path is mounted in container)
-            timeout: Command timeout in seconds (Note: Docker SDK doesn't support exec timeout directly)
+            timeout: Command timeout in seconds (implemented using threading)
 
         Returns:
             Dictionary with:
@@ -305,8 +306,46 @@ class DockerManager:
             logger.debug(f"🔧 [Docker] Executing in container {container.short_id}: {command}")
 
             start_time = time.time()
-            exit_code, output = container.exec_run(**exec_config)
-            execution_time = time.time() - start_time
+
+            # Handle timeout using threading
+            if timeout:
+                result_container = {}
+                exception_container = {}
+
+                def run_exec():
+                    try:
+                        result_container["data"] = container.exec_run(**exec_config)
+                    except Exception as e:
+                        exception_container["error"] = e
+
+                thread = threading.Thread(target=run_exec)
+                thread.daemon = True
+                thread.start()
+                thread.join(timeout=timeout)
+
+                execution_time = time.time() - start_time
+
+                if thread.is_alive():
+                    # Timeout occurred
+                    logger.warning(f"⚠️ [Docker] Command timed out after {timeout}s: {command}")
+                    return {
+                        "success": False,
+                        "exit_code": -1,
+                        "stdout": "",
+                        "stderr": f"Command timed out after {timeout} seconds",
+                        "execution_time": execution_time,
+                        "command": command,
+                        "work_dir": effective_workdir or "(container default)",
+                    }
+
+                if "error" in exception_container:
+                    raise exception_container["error"]
+
+                exit_code, output = result_container["data"]
+            else:
+                # No timeout - execute directly
+                exit_code, output = container.exec_run(**exec_config)
+                execution_time = time.time() - start_time
 
             # Docker exec_run combines stdout and stderr
             output_str = output.decode("utf-8") if isinstance(output, bytes) else output
