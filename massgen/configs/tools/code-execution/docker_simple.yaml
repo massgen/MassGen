@@ -1,5 +1,5 @@
 # Simple Docker Isolation for Command Execution
-# Run with: uv run python -m massgen.cli --config massgen/configs/debug/code_execution/docker_simple.yaml "Write a factorial function and test it"
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/docker_simple.yaml "Write a factorial function and test it"
 # Expected behavior: Commands execute in isolated Docker container with persistent state (packages stay installed across turns)
 # Prerequisites: Docker installed and running, massgen/mcp-runtime:latest image built (run massgen/docker/build.sh)
 

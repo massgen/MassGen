@@ -1,0 +1,32 @@
+# Multi-Agent with Mixed Execution Modes
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/docker_multi_agent.yaml "Build a Flask website about Bob Dylan"
+# Expected behavior: Trusted agent uses local execution, untrusted agent uses Docker isolation
+# Prerequisites: Docker installed and running, massgen/mcp-runtime:latest image built (run massgen/docker/build.sh)
+
+agents:
+  - id: "agent_a"
+    backend:
+      type: "openai"
+      model: "gpt-5-mini"
+      cwd: "workspace1"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+
+  - id: "agent_b"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-pro"
+      cwd: "workspace2"
+      enable_mcp_command_line: true
+      command_line_execution_mode: "docker"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 300  # Docker startup adds ~5-10s overhead
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

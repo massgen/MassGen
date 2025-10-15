@@ -1,5 +1,5 @@
 # Docker Isolation with Resource Limits and Network Access
-# Run with: uv run python -m massgen.cli --config massgen/configs/debug/code_execution/docker_with_resource_limits.yaml "Fetch data from an API and analyze it"
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml "Fetch data from an API and analyze it"
 # Expected behavior: Agent can make network requests, but constrained by memory/CPU limits
 # Prerequisites: Docker installed and running, massgen/mcp-runtime:latest image built
 
