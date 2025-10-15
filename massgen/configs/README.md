@@ -226,7 +226,48 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.31 - Latest
+### v0.0.32 - Latest
+**New Features:** Docker Execution Mode, MCP Architecture Refactoring, Claude Code Docker Integration
+
+**Configuration Files:**
+- `massgen/configs/tools/code-execution/docker_simple.yaml` - Basic single-agent Docker execution
+- `massgen/configs/tools/code-execution/docker_multi_agent.yaml` - Multi-agent Docker deployment with isolated containers
+- `massgen/configs/tools/code-execution/docker_with_resource_limits.yaml` - Resource-constrained Docker setup with CPU/memory limits
+- `massgen/configs/tools/code-execution/docker_claude_code.yaml` - Claude Code with Docker execution and automatic tool management
+- `massgen/configs/debug/code_execution/docker_verification.yaml` - Docker setup verification configuration
+
+**Key Features:**
+- Docker-based command execution with container isolation preventing host filesystem access
+- Persistent state across conversation turns (packages stay installed)
+- Multi-agent support with dedicated containers per agent
+- Resource limits (CPU, memory) and network isolation modes (none/bridge/host)
+- Simplified MCP architecture with MCPClient (renamed from MultiMCPClient)
+- Claude Code automatic Bash tool disablement in Docker mode
+
+**Try it:**
+```bash
+# Docker isolated execution - secure command execution in containers
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_simple.yaml \
+  "Write a factorial function and test it"
+
+# Multi-agent Docker deployment - each agent in isolated container
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_multi_agent.yaml \
+  "Build a Flask website about Bob Dylan"
+
+# Claude Code with Docker - automatic tool management
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_claude_code.yaml \
+  "Build a Flask website about Bob Dylan"
+
+# Resource-limited Docker execution - production-ready setup
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml \
+  "Fetch data from an API and analyze it"
+```
+
+### v0.0.31
 **New Features:** Universal Code Execution, AG2 Group Chat Integration, Audio & Video Generation Tools
 
 **Configuration Files:**

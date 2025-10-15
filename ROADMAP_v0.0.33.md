@@ -1,138 +1,138 @@
 
-# MassGen v0.0.32 Roadmap
+# MassGen v0.0.33 Roadmap
 
 ## Overview
 
-Version 0.0.32 focuses on enhancing code execution with Docker isolation and improving configuration management. Key priorities include:
+Version 0.0.33 focuses on improving developer experience and expanding framework integrations. Key priorities include:
 
-- **Docker Code Execution** (Required): 🐳 Extend code execution with Docker-based container isolation
 - **Configuration Builder CLI** (Required): 🛠️ Build command-line tool for generating and validating MassGen configurations
-- **MCP Tool Safety System** (Optional): 🔒 LLM-powered classification of irreversible MCP tools with human-in-the-loop
-- **MCP Framework Refactoring** (Optional): 🔧 Refactor MCP integration architecture for better maintainability
+- **PyPI Package Release v0.1.0** (Required): 📦 Prepare and publish official PyPI package representing new usage paradigm
+- **Nested Chat Integration** (Optional): 🔄 Complete AG2 nested chat pattern support for hierarchical agent conversations
+- **DSPy Integration** (Optional): 🧠 Integrate DSPy framework for prompt optimization and systematic agent improvement
 
 ## Key Technical Priorities
 
-1. **Docker Code Execution** (REQUIRED): Extend code execution with Docker container isolation for enhanced security
-2. **Configuration Builder CLI** (REQUIRED): Create interactive CLI tool for configuration management
-3. **MCP Tool Safety System** (OPTIONAL): Implement intelligent tool safety classification with optional human review
-4. **MCP Framework Refactoring** (OPTIONAL): Refactor MCP integration for improved extensibility and maintainability
+1. **Configuration Builder CLI** (REQUIRED): Create interactive CLI tool for configuration management and validation
+2. **PyPI Package Release v0.1.0** (REQUIRED): Prepare production-ready PyPI distribution with improved installation experience
+3. **Nested Chat Integration** (OPTIONAL): Complete AG2 nested chat support for complex multi-agent workflows
+4. **DSPy Integration** (OPTIONAL): Add DSPy framework support for prompt optimization and agent performance tuning
 
 ## Key Milestones
 
-### 🎯 Milestone 1: Docker Code Execution (REQUIRED)
+### 🎯 Milestone 1: Configuration Builder CLI (REQUIRED)
 
-**Goal**: Extend v0.0.31's code execution with Docker container isolation for enhanced security
+**Goal**: Create interactive CLI tool simplifying configuration creation, validation, and management
 
-#### 1.1 Docker Integration Architecture
-- [ ] Design Docker-based code execution architecture
-- [ ] Implement container lifecycle management
-- [ ] Support custom Docker images and Dockerfiles
-- [ ] Handle workspace mounting and file permissions
+#### 1.1 CLI Architecture
+- [ ] Design configuration builder interface with intuitive command structure
+- [ ] Implement interactive prompts guiding users through configuration options
+- [ ] Support configuration templates and presets for common use cases
+- [ ] Add comprehensive validation with clear error messages
 
-#### 1.2 Security and Isolation
-- [ ] Implement network isolation options
-- [ ] Configure resource limits (CPU, memory, disk)
-- [ ] Support read-only mounts for context paths
-- [ ] Handle container cleanup and error recovery
+#### 1.2 Configuration Generation
+- [ ] Generate agent configurations interactively with backend selection
+- [ ] Support multi-agent setup with different model providers
+- [ ] Configure MCP servers and tools with automatic discovery
+- [ ] Generate filesystem and permission configurations with security defaults
 
-#### 1.3 Configuration and Workflow
-- [ ] Define Docker configuration format in agent configs
-- [ ] Support both pre-built images and custom Dockerfiles
-- [ ] Create template Dockerfiles for common stacks
-- [ ] Document Docker setup and usage patterns
+#### 1.3 Configuration Management
+- [ ] Validate existing configuration files against schema
+- [ ] Update and migrate configurations between versions
+- [ ] Export configurations in YAML and JSON formats
+- [ ] Support configuration versioning and compatibility checks
 
-#### 1.4 Testing and Examples
-- [ ] Add comprehensive tests for Docker execution
-- [ ] Create example configurations with Docker
-- [ ] Test with multiple Docker image types
-- [ ] Document troubleshooting and best practices
-
-
-### 🎯 Milestone 2: Configuration Builder CLI (REQUIRED)
-
-**Goal**: Create interactive CLI tool for configuration management
-
-#### 2.1 CLI Architecture
-- [ ] Design configuration builder interface
-- [ ] Implement interactive prompts for configuration options
-- [ ] Support configuration templates and presets
-- [ ] Add validation and error checking
-
-#### 2.2 Configuration Generation
-- [ ] Generate agent configurations interactively
-- [ ] Support multi-agent setup with different backends
-- [ ] Configure MCP servers and tools
-- [ ] Generate filesystem and permission configurations
-
-#### 2.3 Configuration Management
-- [ ] Validate existing configuration files
-- [ ] Update and migrate configurations
-- [ ] Export configurations in different formats
-- [ ] Support configuration versioning
-
-#### 2.4 User Experience
-- [ ] Create intuitive prompts and help messages
-- [ ] Add configuration preview and dry-run mode
-- [ ] Implement configuration testing utilities
-- [ ] Document CLI usage and examples
+#### 1.4 User Experience
+- [ ] Create intuitive prompts with contextual help messages
+- [ ] Add configuration preview and dry-run mode before execution
+- [ ] Implement configuration testing utilities validating API keys and connections
+- [ ] Document CLI usage with comprehensive examples
 
 
-### 🎯 Milestone 3: MCP Tool Safety System (OPTIONAL)
+### 🎯 Milestone 2: PyPI Package Release v0.1.0 (REQUIRED)
 
-**Goal**: Implement intelligent tool safety classification with optional human review
+**Goal**: Publish production-ready PyPI package representing departure in intended usage patterns
 
-#### 3.1 LLM-Powered Tool Classification
-- [ ] Design LLM-based tool safety analysis
-- [ ] Classify MCP tools as reversible or irreversible
-- [ ] Generate safety recommendations per tool
-- [ ] Support automated tool labeling
+#### 2.1 Package Preparation
+- [ ] Audit and clean up package dependencies with version pinning
+- [ ] Update package metadata for v0.1.0 milestone
+- [ ] Create comprehensive installation documentation
+- [ ] Prepare migration guide from local installation to PyPI package
 
-#### 3.2 Human-in-the-Loop System
-- [ ] Implement optional human review workflow
-- [ ] Create interface for reviewing tool classifications
-- [ ] Allow manual overrides and custom classifications
-- [ ] Store user decisions for future reference
+#### 2.2 Distribution Setup
+- [ ] Configure PyPI release workflow automation
+- [ ] Set up test PyPI deployment for validation
+- [ ] Create release checklist ensuring quality standards
+- [ ] Prepare announcement materials and changelog
 
-#### 3.3 Per-User Configuration
-- [ ] Support user-specific tool safety preferences
-- [ ] Store per-user tool classifications
-- [ ] Allow workspace-specific overrides
-- [ ] Handle classification inheritance and defaults
+#### 2.3 Documentation Updates
+- [ ] Update README with pip installation instructions
+- [ ] Create quickstart guide for PyPI users
+- [ ] Document dependency management and optional features
+- [ ] Add troubleshooting guide for common installation issues
 
-#### 3.4 Integration and Safety Enforcement
-- [ ] Integrate with planning mode tool restrictions
-- [ ] Add safety warnings for irreversible tools
-- [ ] Support confirmation prompts for dangerous operations
-- [ ] Document safety system configuration
+#### 2.4 Quality Assurance
+- [ ] Test installation across Python versions and platforms
+- [ ] Validate all optional dependencies install correctly
+- [ ] Ensure backward compatibility with existing configurations
+- [ ] Verify documentation accuracy and completeness
 
 
-### 🎯 Milestone 4: MCP Framework Refactoring (OPTIONAL)
+### 🎯 Milestone 3: Nested Chat Integration (OPTIONAL)
 
-**Goal**: Refactor MCP integration for improved extensibility and maintainability
+**Goal**: Complete AG2 nested chat pattern support enabling hierarchical agent conversations
 
-#### 4.1 Architecture Redesign
-- [ ] Analyze current MCP integration patterns
-- [ ] Design cleaner separation of concerns
-- [ ] Improve MCP client abstraction
-- [ ] Simplify MCP server management
+#### 3.1 Nested Chat Architecture
+- [ ] Design nested chat integration with AG2 framework
+- [ ] Implement parent-child agent relationship management
+- [ ] Support multiple nesting levels with clear hierarchy
+- [ ] Handle message routing between nested conversations
 
-#### 4.2 Code Organization
-- [ ] Refactor MCP modules for better structure
-- [ ] Reduce code duplication across backends
-- [ ] Improve error handling and logging
-- [ ] Enhance type safety and documentation
+#### 3.2 Conversation Management
+- [ ] Implement nested conversation context tracking
+- [ ] Support independent tool access per nesting level
+- [ ] Handle conversation state transitions and resumption
+- [ ] Add conversation history management for nested chats
 
-#### 4.3 Extensibility Improvements
-- [ ] Simplify adding new MCP server types
-- [ ] Improve plugin architecture for MCP tools
-- [ ] Support custom MCP transport protocols
-- [ ] Add hooks for MCP event handling
+#### 3.3 Tool and Workflow Integration
+- [ ] Enable workflow tools within nested conversations
+- [ ] Support MCP tool access in nested contexts
+- [ ] Implement permission inheritance for nested agents
+- [ ] Add resource management for nested execution
 
-#### 4.4 Testing and Migration
-- [ ] Ensure backward compatibility
-- [ ] Add comprehensive test coverage
-- [ ] Create migration guide for custom MCP integrations
-- [ ] Document new architecture and patterns
+#### 3.4 Testing and Examples
+- [ ] Create comprehensive nested chat tests
+- [ ] Add example configurations demonstrating nested patterns
+- [ ] Document nested chat use cases and best practices
+- [ ] Test with various AG2 agent configurations
+
+
+### 🎯 Milestone 4: DSPy Integration (OPTIONAL)
+
+**Goal**: Integrate DSPy framework enabling systematic prompt optimization and agent improvement
+
+#### 4.1 DSPy Framework Integration
+- [ ] Design DSPy integration architecture with MassGen
+- [ ] Implement DSPy module wrappers for agent components
+- [ ] Support DSPy signature definitions for agent interactions
+- [ ] Enable DSPy optimizer integration with agent workflows
+
+#### 4.2 Prompt Optimization
+- [ ] Integrate DSPy prompt optimization for agent templates
+- [ ] Support automatic prompt tuning based on performance metrics
+- [ ] Enable few-shot example generation and selection
+- [ ] Implement prompt caching and version management
+
+#### 4.3 Agent Performance Tuning
+- [ ] Add DSPy-based agent evaluation metrics
+- [ ] Support systematic agent improvement workflows
+- [ ] Enable A/B testing for different prompt strategies
+- [ ] Implement performance tracking and analytics
+
+#### 4.4 Documentation and Examples
+- [ ] Create DSPy integration documentation
+- [ ] Add example configurations using DSPy optimization
+- [ ] Document best practices for prompt tuning
+- [ ] Provide case studies showing performance improvements
 
 
 
@@ -140,71 +140,72 @@ Version 0.0.32 focuses on enhancing code execution with Docker isolation and imp
 
 ### Functional Requirements (REQUIRED)
 
-**Docker Code Execution:**
-- [ ] Docker-based code execution fully operational
-- [ ] Custom Docker images and Dockerfiles supported
-- [ ] Security isolation and resource limits working
-- [ ] Comprehensive test coverage for Docker execution
-- [ ] Documentation and examples for Docker usage
-
 **Configuration Builder CLI:**
-- [ ] Interactive configuration generation working
-- [ ] Configuration validation functional
-- [ ] Template and preset support implemented
-- [ ] User-friendly prompts and help messages
-- [ ] Documentation for CLI tool usage
+- [ ] Interactive configuration generation functional with intuitive prompts
+- [ ] Configuration validation working with comprehensive error messages
+- [ ] Template and preset support implemented covering common scenarios
+- [ ] User-friendly help system with contextual guidance
+- [ ] Documentation complete with examples and tutorials
+
+**PyPI Package Release v0.1.0:**
+- [ ] Package successfully published to PyPI
+- [ ] Installation working across supported Python versions and platforms
+- [ ] All optional dependencies installable and functional
+- [ ] Documentation updated with pip installation instructions
+- [ ] Migration guide available for existing users
 
 ### Functional Requirements (OPTIONAL)
 
-**MCP Tool Safety System:**
-- [ ] LLM-powered tool classification operational
-- [ ] Human-in-the-loop review workflow functional
-- [ ] Per-user configuration support working
-- [ ] Integration with existing safety mechanisms
-- [ ] Documentation for safety system
+**Nested Chat Integration:**
+- [ ] Nested chat patterns working with AG2 framework
+- [ ] Multi-level nesting supported with clear hierarchy
+- [ ] Message routing functional between nested conversations
+- [ ] Tool access working within nested contexts
+- [ ] Documentation and examples available
 
-**MCP Framework Refactoring:**
-- [ ] Refactored architecture implemented
-- [ ] Backward compatibility maintained
-- [ ] Code organization improved
-- [ ] Comprehensive developer documentation
+**DSPy Integration:**
+- [ ] DSPy framework integrated with agent workflows
+- [ ] Prompt optimization functional for agent templates
+- [ ] Performance tuning working with measurable improvements
+- [ ] Evaluation metrics tracking agent performance
+- [ ] Documentation with optimization examples
 
 ### Performance Requirements (REQUIRED)
-- [ ] Docker execution performance acceptable
-- [ ] Configuration builder responsive
-- [ ] Tool classification efficient (if implemented)
-- [ ] MCP refactoring maintains or improves performance
+- [ ] Configuration builder responsive with instant feedback
+- [ ] Package installation completes within reasonable time
+- [ ] Nested chat performance acceptable for production use (if implemented)
+- [ ] DSPy optimization completes efficiently (if implemented)
 
 ### Quality Requirements (REQUIRED)
-- [ ] Test coverage for Docker execution
-- [ ] Test coverage for configuration builder
-- [ ] Comprehensive integration tests
-- [ ] MCP safety system tests (if implemented)
-- [ ] MCP refactoring tests (if implemented)
+- [ ] Test coverage for configuration builder functionality
+- [ ] Test coverage for package installation and dependencies
+- [ ] Integration tests for nested chat (if implemented)
+- [ ] Integration tests for DSPy optimization (if implemented)
+- [ ] Comprehensive documentation for all features
 
 
 ## Dependencies & Risks
 
 ### Dependencies
-- **Docker**: Docker Engine for container-based execution
-- **Python Docker SDK**: Library for Docker container management
-- **LLM APIs**: For tool safety classification (if implemented)
-- **MCP Framework**: Core MCP protocol and server implementations
+- **Python Packaging Tools**: setuptools, wheel, twine for PyPI distribution
+- **AG2 Framework**: For nested chat integration (if implemented)
+- **DSPy Framework**: For prompt optimization features (if implemented)
+- **Configuration Schema**: JSON schema for validation logic
 
 ### Risks & Mitigations
-1. **Docker Compatibility**: *Mitigation*: Support both Docker Desktop and Docker Engine, provide fallback to local execution
-2. **Container Performance**: *Mitigation*: Optimize container startup, support pre-built images, implement caching
-3. **CLI Usability**: *Mitigation*: User testing, iterative design, comprehensive help documentation
-4. **LLM Classification Accuracy**: *Mitigation*: Human-in-the-loop validation, user override capabilities
-5. **Refactoring Complexity**: *Mitigation*: Phased refactoring, maintain backward compatibility, extensive testing
+1. **PyPI Package Dependencies**: *Mitigation*: Thorough dependency testing, optional dependency groups, fallback mechanisms
+2. **Configuration Complexity**: *Mitigation*: Intuitive CLI design, comprehensive templates, contextual help
+3. **AG2 API Stability**: *Mitigation*: Version pinning, compatibility testing, graceful degradation
+4. **DSPy Learning Curve**: *Mitigation*: Comprehensive documentation, starter examples, best practices guide
+5. **Cross-Platform Compatibility**: *Mitigation*: Multi-platform testing, platform-specific documentation
 
 
-## Future Enhancements (Post-v0.0.32)
+## Future Enhancements (Post-v0.0.33)
 
-- **Kubernetes Support**: Container orchestration for large-scale deployments
-- **Advanced Configuration Templates**: Industry-specific configuration presets
-- **Tool Safety Analytics**: Insights into tool usage patterns and safety metrics
-- **MCP Tool Marketplace**: Community-contributed MCP server registry
+- **LLM-Generated Tool Classification**: Automatically identify irreversible MCP tools using LLM analysis with optional human-in-the-loop review
+- **Per-User Tool Preferences**: Store user-specific tool safety classifications and permissions
+- **Advanced Configuration Templates**: Industry-specific and use-case-driven configuration presets
+- **Configuration Version Control**: Track configuration changes and enable rollback capabilities
 
 
 ### Long-term Vision
@@ -217,10 +218,10 @@ Version 0.0.32 focuses on enhancing code execution with Docker isolation and imp
 
 | Phase | Focus | Key Deliverables | Priority |
 |-------|-------|------------------|----------|
-| Phase 1 | Docker Execution | Container isolation, custom images, security features | **REQUIRED** |
-| Phase 2 | Configuration Builder | Interactive CLI, validation, templates | **REQUIRED** |
-| Phase 3 | Tool Safety | LLM classification, human review, per-user config | OPTIONAL |
-| Phase 4 | MCP Refactoring | Architecture redesign, code organization, extensibility | OPTIONAL |
+| Phase 1 | Configuration Builder | Interactive CLI, validation, templates, help system | **REQUIRED** |
+| Phase 2 | PyPI Package | v0.1.0 release, documentation, migration guide | **REQUIRED** |
+| Phase 3 | Nested Chat | AG2 integration, hierarchical conversations, examples | OPTIONAL |
+| Phase 4 | DSPy Integration | Prompt optimization, performance tuning, evaluation | OPTIONAL |
 
 
 ## Getting Started
@@ -228,24 +229,24 @@ Version 0.0.32 focuses on enhancing code execution with Docker isolation and imp
 ### For Contributors
 
 **Required Work:**
-1. Implement Docker-based code execution with container management
-2. Build security isolation and resource limits for Docker
-3. Create interactive configuration builder CLI
-4. Add configuration validation and template system
-5. Test and document all changes thoroughly
+1. Implement configuration builder CLI with interactive prompts
+2. Add configuration validation and template system
+3. Prepare PyPI package with proper dependencies
+4. Update documentation for pip installation
+5. Test across platforms and Python versions
 
 **Optional Work:**
-6. Build LLM-powered tool safety classification system
-7. Refactor MCP framework for better maintainability
+6. Complete AG2 nested chat integration
+7. Integrate DSPy framework for prompt optimization
 
 ### For Users
 
-- v0.0.32 will add Docker support for secure code execution
-- Configuration builder CLI simplifies setup and management
-- Docker isolation provides stronger security for code execution
-- Configuration validation helps catch errors early
-- Optional improvements: intelligent tool safety and cleaner MCP architecture
+- v0.0.33 will simplify configuration with interactive CLI tool
+- PyPI package v0.1.0 enables easy installation via pip
+- Configuration builder reduces setup time and prevents errors
+- Validation catches configuration issues before runtime
+- Optional improvements: nested conversations and prompt optimization
 
 ---
 
-*This roadmap prioritizes Docker execution and configuration management while keeping tool safety and MCP refactoring as optional enhancements.*
+*This roadmap prioritizes developer experience improvements and PyPI distribution while keeping nested chat and DSPy integration as optional enhancements.*
