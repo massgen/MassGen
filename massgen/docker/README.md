@@ -19,9 +19,11 @@ Docker mode provides strong isolation for command execution by running commands 
 
 - **Docker installed and running**
   ```bash
-  docker --version  # Should show Docker 20.x or later
+  docker --version  # Should show Docker Engine >= 28.0.0
   docker ps         # Should connect without errors
   ```
+
+  **Recommended:** Docker Engine 28.0.0+ ([release notes](https://docs.docker.com/engine/release-notes/28/))
 
 - **Python docker library (optional, for Docker mode)**
   ```bash
