@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.31 Features](#-latest-features-v0031)
+- [v0.0.32 Features](#-latest-features-v0032)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.31](#recent-achievements-v0031)
-  - [v0.0.3 - v0.0.30](#previous-achievements-v003---v0030)
+  - [v0.0.32](#recent-achievements-v0032)
+  - [v0.0.3 - v0.0.31](#previous-achievements-v003---v0031)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.32 Roadmap](#v0032-roadmap)
+- [v0.0.33 Roadmap](#v0033-roadmap)
 </details>
 
 <details open>
@@ -129,40 +129,34 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.31)
+## 🆕 Latest Features (v0.0.32)
 
-**Experience v0.0.31 New Features:**
+**What's New in v0.0.32:**
+- **Docker Execution Mode** - Run agent commands in isolated Docker containers for enhanced security
+- **MCP Architecture Refactoring** - Simplified and streamlined MCP integration with cleaner codebase
+- **Claude Code Docker Integration** - Automatic Bash tool management and seamless Docker support
 
-See local code execution support in action:
-
-[![MassGen v0.0.31 Local Code Execution Demo](https://img.youtube.com/vi/Sy-CFNPvLAQ/0.jpg)](https://www.youtube.com/watch?v=Sy-CFNPvLAQ)
-
-**What's New in v0.0.31:**
-- **Universal Code Execution** - Run bash commands across all backends through new MCP-based `execute_command` tool
-- **AG2 Group Chat** - Native multi-agent conversations using AG2's group chat framework with LLM-based speaker selection
-- **Audio & Video Generation** - Create audio with text-to-speech and transcription, generate videos from text prompts
-
-**Try v0.0.31 Features:**
+**Try v0.0.32 Features:**
 ```bash
-# Universal code execution - run tests across any backend
+# Docker isolated execution - secure command execution in containers
 uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/basic_command_execution.yaml \
-  "Write a Python function to calculate factorial and test it"
+  --config massgen/configs/tools/code-execution/docker_simple.yaml \
+  "Write a factorial function and test it"
 
-# Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
+# Multi-agent Docker deployment - each agent in isolated container
 uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_groupchat_gpt.yaml \
-  "Write a Python function to calculate factorial."
+  --config massgen/configs/tools/code-execution/docker_multi_agent.yaml \
+  "Build a Flask website about Bob Dylan"
 
-# Audio generation - create speech from text
+# Claude Code with Docker - automatic tool management
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt4o_audio_generation.yaml \
-  "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
+  --config massgen/configs/tools/code-execution/docker_claude_code.yaml \
+  "Build a Flask website about Bob Dylan"
 
-# Video generation - create videos from prompts
+# Resource-limited Docker execution - production-ready setup
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml \
-  "Generate a 4 seconds video for 'Cherry blossom petals falling in the spring breeze, sunlight filtering through the pink petals creating a soft halo, slow motion capture, aesthetically beautiful and romantic, depth of field effect.'"
+  --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml \
+  "Fetch data from an API and analyze it"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -942,37 +936,40 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.31)
+### Recent Achievements (v0.0.32)
 
-**🎉 Released: October 14, 2025**
+**🎉 Released: October 15, 2025**
 
-#### Universal Command Execution
-- **MCP-Based Code Execution**: Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
-- **AG2-Inspired Security**: Permission management, command filtering, and virtual environment auto-detection
-- **Code Execution in Planning Mode**: Safe code execution during agent coordination with planning mode integration
-- **Auto-Generated Exemptions**: System-generated file exemptions for Python cache files, temporary files, and system directories
+#### Docker Execution Mode
+- **Container-Based Isolation**: Secure command execution in isolated Docker containers preventing host filesystem access
+- **Persistent State Management**: Packages and dependencies persist across conversation turns eliminating redundant setup
+- **Multi-Agent Support**: Each agent receives dedicated isolated container enabling safe parallel execution
+- **Configurable Security**: Resource limits (CPU, memory), network isolation modes, and read-only volume mounts
 
-#### Native Multi-Agent Conversations
-- **AG2 Group Chat**: Multi-agent conversations using AG2's `GroupChat` and `GroupChatManager` frameworks
-- **Smart Speaker Selection**: Automatic, round-robin, and manual speaker selection modes powered by LLMs
-- **Enhanced AG2 Adapter**: Improved integration supporting native AG2 group chat coordination patterns
+#### MCP Architecture Refactoring
+- **Simplified Client**: Renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture
+- **Code Consolidation**: Removed deprecated modules and consolidated duplicate MCP protocol handling
+- **Improved Maintainability**: Standardized type hints, enhanced error handling, cleaner code organization
 
-#### Audio & Video Generation
-- **Audio Tools**: `generate_and_store_audio_no_input_audios`, `generate_text_with_input_audio`, `convert_text_to_speech`
-- **Video Tools**: `generate_and_store_video_no_input_images` for text-to-video generation using OpenAI's Sora-2 API
-- **Multimodal Expansion**: Expanded content generation capabilities beyond text and images
+#### Claude Code Docker Integration
+- **Automatic Tool Management**: Bash tool automatically disabled in Docker mode routing commands through execute_command
+- **MCP Auto-Permissions**: Automatic approval for MCP tools while preserving security validation
+- **Enhanced Guidance**: System messages prevent git repository confusion between host and container environments
 
-#### Enhanced Safety & Developer Experience
-- **File Operation Tracker**: Enhanced tracking and protection for safer file operations in multi-agent environments
-- **PathPermissionManager**: Integration with execute_command tool for comprehensive workspace validation
-- **Message Templates**: Execution result guidance for better agent interpretation of command outputs
-- **Comprehensive Testing**: Test coverage for code execution, MCP integration, and multi-agent scenarios
+#### Configuration and Testing
+- **Docker Documentation**: `massgen/docker/README.md` with setup guide and build scripts
+- **Example Configurations**: `docker_simple.yaml`, `docker_multi_agent.yaml`, `docker_with_resource_limits.yaml`, `docker_claude_code.yaml`, `docker_verification.yaml`
+- **Testing**: Comprehensive test suite validating Docker and local execution modes
 
-#### Documentation
-- **Technical Design**: `CODE_EXECUTION_DESIGN.md`
-- **Configuration Examples**: 9 new example configurations including `basic_command_execution.yaml`, `ag2_groupchat.yaml`, audio/video generation examples, multi-agent scenarios
+### Previous Achievements (v0.0.3 - v0.0.31)
 
-### Previous Achievements (v0.0.3 - v0.0.30)
+<div style="max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease;">
+
+✅ **Universal Command Execution (v0.0.31)**: MCP-based execute_command tool works across Claude, Gemini, OpenAI, and Chat Completions providers, AG2-inspired security with permission management and command filtering, code execution in planning mode for safer coordination
+
+✅ **AG2 Group Chat Integration (v0.0.31)**: Multi-agent conversations using AG2's GroupChat and GroupChatManager frameworks, smart speaker selection (automatic, round-robin, manual) powered by LLMs, enhanced AG2 adapter supporting native group chat coordination
+
+✅ **Audio & Video Generation (v0.0.31)**: Audio tools for text-to-speech and transcription, video generation using OpenAI's Sora-2 API, multimodal expansion beyond text and images
 
 ✅ **Multimodal Support Extension (v0.0.30)**: Audio and video processing for Chat Completions and Claude backends (WAV, MP3, MP4, AVI, MOV, WEBM formats), flexible media input via local paths or URLs, extended base64 encoding for audio/video files, configurable file size limits
 
@@ -1048,6 +1045,8 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
 
+</div>
+
 ### Key Future Enhancements
 
 -   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
@@ -1058,25 +1057,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.32 Roadmap
+### v0.0.33 Roadmap
 
-Version 0.0.32 focuses on Docker-based code execution and configuration management:
+Version 0.0.33 focuses on developer experience improvements and PyPI distribution:
 
 #### Required Features
-- **Docker Code Execution**: Extend v0.0.31's code execution with Docker container isolation for enhanced security
 - **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
+- **PyPI Package Release v0.1.0**: Official PyPI package representing new usage paradigm with easy pip installation
 
 #### Optional Features
-- **MCP Tool Safety System**: LLM-powered classification of irreversible MCP tools with human-in-the-loop validation
-- **MCP Framework Refactoring**: Refactor MCP integration architecture for better maintainability and extensibility
+- **Nested Chat Integration**: Complete AG2 nested chat pattern support for hierarchical agent conversations
+- **DSPy Integration**: Framework integration for prompt optimization and systematic agent improvement
 
 Key technical approach:
-- **Docker Execution**: Container lifecycle management, custom Docker images/Dockerfiles, resource limits, security isolation
 - **Config Builder**: Interactive prompts, configuration templates, validation and error checking, preset support
-- **Tool Safety**: LLM-based tool classification, optional human review workflow, per-user safety preferences
-- **MCP Refactoring**: Cleaner separation of concerns, reduced code duplication, improved error handling
+- **PyPI Package**: Production-ready distribution with proper dependencies, documentation, and migration guide
+- **Nested Chat**: AG2 integration for hierarchical conversations with parent-child agent relationships
+- **DSPy**: Prompt optimization, performance tuning, and systematic agent improvement workflows
 
-For detailed milestones and technical specifications, see the [full v0.0.32 roadmap](ROADMAP_v0.0.32.md).
+For detailed milestones and technical specifications, see the [full v0.0.33 roadmap](ROADMAP_v0.0.33.md).
 
 ---
 

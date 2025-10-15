@@ -104,7 +104,7 @@ async def test_mcp_relative_paths():
         # Test filesystem MCP server
         print("\n📡 Testing filesystem MCP server...")
         try:
-            async with MCPClient(filesystem_config, timeout_seconds=10) as client:
+            async with MCPClient([filesystem_config], timeout_seconds=10) as client:
                 print("✅ Filesystem MCP server connected successfully")
                 tools = client.get_available_tools()
                 print(f"🔧 Available tools: {tools}")
@@ -134,7 +134,7 @@ async def test_mcp_relative_paths():
         # Test workspace tools MCP server
         print("\n📦 Testing workspace tools MCP server...")
         try:
-            async with MCPClient(workspace_tools_config, timeout_seconds=10) as client:
+            async with MCPClient([workspace_tools_config], timeout_seconds=10) as client:
                 print("✅ Workspace tools MCP server connected successfully")
                 tools = client.get_available_tools()
                 print(f"🔧 Available tools: {tools}")
