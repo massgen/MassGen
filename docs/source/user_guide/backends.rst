@@ -66,70 +66,131 @@ Different backends support different built-in tools:
 
 .. list-table:: Backend Tool Support
    :header-rows: 1
-   :widths: 20 15 15 15 15 20
+   :widths: 15 10 10 10 10 12 12 12 10
 
    * - Backend
      - Web Search
      - Code Execution
-     - File Operations
+     - Bash/Shell
+     - Image
+     - Audio
+     - Video
      - MCP Support
-     - Special Features
+     - Filesystem
    * - ``openai``
      - ✅
      - ✅
+     - ❌
+     - ✅ Both
+     - ✅ Both
+     - ✅ Generation
      - ✅
-     - ✅
-     - Reasoning, function calling
+     - ✅ Via MCP
    * - ``claude``
      - ✅
      - ✅
+     - ❌
+     - ❌
+     - ✅ Understanding
+     - ✅ Understanding
      - ✅
-     - ✅
-     - Long context, vision
+     - ✅ Via MCP
    * - ``claude_code``
      - ✅
+     - ❌
      - ✅
+     - ✅ Understanding
+     - ❌
+     - ❌
      - ✅
-     - ✅
-     - **Native dev tools, workspace**
+     - ✅ Native
    * - ``gemini``
      - ✅
      - ✅
+     - ❌
+     - ✅ Understanding
+     - ❌
+     - ❌
      - ✅
-     - ✅
-     - Multimodal, fast
+     - ✅ Via MCP
    * - ``grok``
      - ✅
      - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ❌
      - ✅
-     - ✅
-     - Real-time data
+     - ✅ Via MCP
    * - ``azure_openai``
+     - ✅
+     - ✅
      - ❌
-     - ❌
-     - ❌
-     - ❌
-     - Code interpreter
-   * - ``zai``
+     - ✅ Both
      - ❌
      - ❌
      - ✅
+     - ✅ Via MCP
+   * - ``chatcompletion``
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ✅ Understanding
+     - ✅ Understanding
      - ✅
-     - GLM models
-   * - ``ag2``
-     - Varies
-     - ✅
-     - Varies
-     - Varies
-     - External framework
+     - ✅ Via MCP
    * - ``lmstudio``
      - ❌
      - ❌
      - ❌
      - ❌
-     - Local, private
+     - ❌
+     - ❌
+     - ✅
+     - ✅ Via MCP
+   * - ``inference``
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅ Via MCP
+   * - ``ag2``
+     - ❌
+     - ✅
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ❌
 
-Source: `README.md Tools Table <https://github.com/Leezekun/MassGen/blob/main/README.md#tools>`_
+**Notes:**
+
+* **Multimodal Capabilities:**
+
+  * **Both**: The backend supports BOTH understanding (analyze existing content) AND generation (create new content)
+
+    * **Image Both** (e.g., ``openai``, ``azure_openai``): Can analyze images you provide AND create new images from text prompts
+    * **Audio Both** (e.g., ``openai``): Can transcribe/analyze audio files AND generate speech from text (text-to-speech)
+
+  * **Understanding Only**: Can only analyze or process existing content, not create new content
+
+    * **Image Understanding** (e.g., ``claude``, ``gemini``, ``claude_code``): Can analyze images but cannot create new ones
+    * **Audio Understanding** (e.g., ``claude``, ``chatcompletion``): Can process audio files but cannot generate speech
+    * **Video Understanding** (e.g., ``claude``, ``chatcompletion``): Can analyze video files but cannot create new videos
+
+  * **Generation Only**: Can only create new content, not analyze existing content
+
+    * **Video Generation** (e.g., ``openai`` with Sora-2 API, v0.1.0): Can create videos from text prompts but cannot analyze existing videos
+
+* **Via MCP**: Feature available through Model Context Protocol integration
+* **Native**: Built directly into the backend (e.g., ``claude_code`` filesystem tools)
+
+See :doc:`../features/backend-support` for the complete and authoritative backend capabilities reference.
 
 Configuring Backends
 --------------------

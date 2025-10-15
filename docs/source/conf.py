@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.abspath("../.."))
 project = "MassGen"
 copyright = f"{datetime.now().year}, MassGen Team"
 author = "MassGen Team"
-release = "0.0.23"
-version = "0.0.23"
+release = "0.1.0"
+version = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

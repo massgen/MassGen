@@ -96,59 +96,67 @@ Key Features
 
       Work directly with your codebase using context paths with granular read/write permissions.
 
-Latest Features (v0.0.29)
+Latest Features (v0.1.0)
 --------------------------
 
-**What's New in v0.0.29:**
+**What's New in v0.1.0:**
 
 .. grid:: 2
    :gutter: 3
 
-   .. grid-item-card:: 🎯 MCP Planning Mode
+   .. grid-item-card:: 🔧 Universal Code Execution
 
-      New coordination strategy that plans MCP tool usage without execution, preventing irreversible actions during collaboration.
+      Run bash commands across all backends through new MCP-based ``execute_command`` tool.
 
       .. code-block:: bash
 
          massgen \
-           --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
-           "Create a comprehensive project structure"
+           --config @examples/tools/code-execution/basic_command_execution.yaml \
+           "Write a Python function to calculate factorial and test it"
 
-   .. grid-item-card:: 🛡️ File Operation Safety
+   .. grid-item-card:: 💬 AG2 Group Chat
 
-      Read-before-delete enforcement ensures agents review files before deletion - no more accidental deletions!
+      Native multi-agent conversations using AG2's group chat framework with LLM-based speaker selection.
 
-   .. grid-item-card:: 🔧 Enhanced MCP Tool Filtering
+      .. code-block:: bash
 
-      Multi-level filtering with backend-level and per-MCP-server control for precise tool management.
+         massgen \
+           --config @examples/ag2/ag2_groupchat_gpt.yaml \
+           "Write a Python function to calculate factorial."
 
-   .. grid-item-card:: 🌟 Gemini Planning Mode Support
+   .. grid-item-card:: 🎵 Audio & Video Generation
 
-      Extended planning mode compatibility to Gemini backend for safer multi-agent collaboration.
+      Create audio with text-to-speech and transcription, generate videos from text prompts.
 
-**Experience v0.0.29 MCP Planning Mode:**
+      .. code-block:: bash
+
+         massgen \
+           --config @examples/basic/single/single_gpt4o_audio_generation.yaml \
+           "Tell me a very short introduction about Sherlock Holmes and read it aloud."
+
+**Experience v0.1.0 Code Execution:**
 
 .. raw:: html
 
    <p align="center">
-     <a href="https://youtu.be/jLrMMEIr118">
-       <img src="https://img.youtube.com/vi/jLrMMEIr118/0.jpg" alt="MassGen v0.0.29 MCP Planning Mode Demo" width="600">
+     <a href="https://www.youtube.com/watch?v=Sy-CFNPvLAQ">
+       <img src="https://img.youtube.com/vi/Sy-CFNPvLAQ/0.jpg" alt="MassGen v0.1.0 Local Code Execution Demo" width="600">
      </a>
    </p>
 
-**Try v0.0.29:**
+**Try v0.1.0:**
 
 .. code-block:: bash
 
-   # Five agents collaborating with planning mode (no execution during coordination)
+   # Universal code execution - run tests across any backend
    massgen \
-     --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
-     "Create a comprehensive project structure with documentation"
+     --config @examples/tools/code-execution/basic_command_execution.yaml \
+     "Write a Python function to calculate factorial and test it"
 
-   # Test MCP tools with multiple agents
+   # Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
    massgen \
-     --config @examples/tools/mcp/five_agents_weather_mcp_test.yaml \
-     "Compare weather forecasts for New York, London, and Tokyo"
+     --config @examples/ag2/ag2_groupchat_gpt.yaml \
+     "Write a Python function to calculate factorial."
 
 See all release examples in `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md#release-history--examples>`_.
 

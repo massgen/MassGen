@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.0 Features](#-latest-features-v0031)
+- [v0.1.0 Features](#-latest-features-v010)
 </details>
 
 <details open>
@@ -96,7 +96,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.0](#recent-achievements-v0031)
+  - [v0.1.0](#recent-achievements-v010)
   - [v0.0.3 - v0.0.30](#previous-achievements-v003---v0030)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
