@@ -131,14 +131,14 @@ class LLMBackend(ABC):
         
         for tool_name in tool_names:
             try:
-                # Try to import from tool._basic module
-                module = importlib.import_module("massgen.tool._basic")
+                # Try to import from tool module
+                module = importlib.import_module("massgen.tool")
                 if hasattr(module, tool_name):
                     tool_func = getattr(module, tool_name)
                     self.tool_manager.add_tool_function(tool_func)
                     print(f"Successfully registered custom tool: {tool_name}")
                 else:
-                    print(f"Warning: Tool '{tool_name}' not found in massgen.tool._basic")
+                    print(f"Warning: Tool '{tool_name}' not found in massgen.tool")
             except ImportError as e:
                 print(f"Warning: Could not import tool module: {e}")
             except Exception as e:
