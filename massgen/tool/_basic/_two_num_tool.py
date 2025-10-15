@@ -6,7 +6,7 @@ Sample math tool for testing purposes.
 from .._result import ExecutionResult, TextContent
 
 
-async def sample_math_tool(x: int, y: int) -> ExecutionResult:
+async def two_num_tool(x: int, y: int) -> ExecutionResult:
     """Add two numbers together.
     
     Args:

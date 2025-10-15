@@ -2,6 +2,7 @@
 """Tool module for MassGen framework."""
 
 from ._result import ExecutionResult
+from ._basic import _two_num_tool
 from ._code_executors import (
     run_python_script,
     run_shell_script,
@@ -34,6 +35,7 @@ from .workflow_toolkits import (
 __all__ = [
     "ToolManager",
     "ExecutionResult",
+    "two_num_tool",
     "run_python_script",
     "run_shell_script",
     "read_file_content",
