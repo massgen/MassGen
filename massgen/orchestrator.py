@@ -40,6 +40,8 @@ from .logger_config import (
     log_stream_chunk,
     log_tool_call,
 )
+# Import workflow toolkits from new location
+from .tool.workflow_toolkits import get_workflow_tools
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
 from .utils import ActionType, AgentStatus
@@ -136,20 +138,6 @@ class Orchestrator(ChatAgent):
 
         # Get message templates from config
         self.message_templates = self.config.message_templates or MessageTemplates()
-
-        # Import workflow toolkits and register them
-        from .toolkits.workflow_toolkits import (
-            get_workflow_tools,
-            register_workflow_toolkits,
-        )
-
-        # Register workflow toolkits for all agent providers
-        agent_providers = set()
-        for agent in agents.values():
-            if hasattr(agent, "get_provider_name"):
-                agent_providers.add(agent.get_provider_name())
-        if agent_providers:
-            register_workflow_toolkits(list(agent_providers))
 
         # Create workflow tools for agents (vote and new_answer) using new toolkit system
         self.workflow_tools = get_workflow_tools(

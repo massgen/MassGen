@@ -12,7 +12,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 from ..filesystem_manager import FilesystemManager, PathPermissionManagerHook
 from ..mcp_tools.hooks import FunctionHookManager, HookType
-from ..toolkits import BaseToolkit, ToolkitManager, toolkit_registry
 from ..token_manager import TokenCostCalculator, TokenUsage
 
 
@@ -63,9 +62,6 @@ class LLMBackend(ABC):
         self._planning_mode_enabled: bool = False
 
         self.token_calculator = TokenCostCalculator()
-
-        # Initialize toolkit support
-        self._setup_toolkit_support()
 
         # Filesystem manager integration
         self.filesystem_manager = None
@@ -252,76 +248,6 @@ class LLMBackend(ABC):
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by this provider."""
         return []
-
-    def _setup_toolkit_support(self):
-        """Setup toolkit support for this backend."""
-        # Auto-register provider-specific toolkits
-        self._auto_register_provider_toolkits()
-
-        # Process custom toolkits from configuration
-        custom_toolkits = self.config.get("custom_toolkits", [])
-        for toolkit_config in custom_toolkits:
-            self._register_custom_toolkit(toolkit_config)
-
-    def _auto_register_provider_toolkits(self):
-        """Auto-register provider-specific builtin toolkits."""
-        provider_name = self.get_provider_name()
-
-        # Get list of supported tools
-        supported_tools = self.get_supported_builtin_tools()
-
-        # Import here to avoid circular dependency
-        from ..toolkits.builtin_toolkits import get_toolkit_by_name
-
-        for tool_name in supported_tools:
-            toolkit = get_toolkit_by_name(tool_name)
-            if toolkit:
-                # Check if already registered
-                if not toolkit_registry.is_registered(toolkit.toolkit_id):
-                    toolkit_registry.register(toolkit, providers=[provider_name])
-                else:
-                    # Add provider support if not already added
-                    toolkit_registry.add_provider_support(toolkit.toolkit_id, provider_name)
-
-    def _register_custom_toolkit(self, toolkit_config: Dict[str, Any]):
-        """Register a custom toolkit from configuration."""
-        try:
-            ToolkitManager.register_from_config(toolkit_config, default_provider=self.get_provider_name())
-        except Exception as e:
-            # Log error but don't fail initialization
-            import logging
-
-            logging.error(f"Failed to register custom toolkit: {e}")
-
-    def register_toolkit(self, toolkit: BaseToolkit):
-        """
-        Manually register a toolkit for this backend.
-
-        Args:
-            toolkit: The toolkit instance to register.
-        """
-        provider_name = self.get_provider_name()
-        toolkit_registry.register(toolkit, providers=[provider_name])
-
-    def unregister_toolkit(self, toolkit_id: str):
-        """
-        Unregister a toolkit from this backend.
-
-        Args:
-            toolkit_id: ID of the toolkit to unregister.
-        """
-        provider_name = self.get_provider_name()
-        toolkit_registry.remove_provider_support(toolkit_id, provider_name)
-
-    def get_available_toolkits(self) -> List[str]:
-        """
-        Get list of all toolkits available for this backend.
-
-        Returns:
-            List of toolkit IDs.
-        """
-        provider_name = self.get_provider_name()
-        return toolkit_registry.get_provider_toolkits(provider_name)
 
     def extract_tool_name(self, tool_call: Dict[str, Any]) -> str:
         """

@@ -5,46 +5,17 @@ Workflow toolkits for MassGen coordination.
 
 from typing import Dict, List, Optional
 
-from ..registry import toolkit_registry
+from .base import BaseToolkit, ToolType
 from .new_answer import NewAnswerToolkit
 from .vote import VoteToolkit
 
 __all__ = [
+    "BaseToolkit",
+    "ToolType",
     "NewAnswerToolkit",
     "VoteToolkit",
-    "register_workflow_toolkits",
     "get_workflow_tools",
 ]
-
-
-def register_workflow_toolkits(providers: Optional[List[str]] = None):
-    """
-    Register workflow toolkits with specified providers.
-
-    Args:
-        providers: List of provider names that support workflow tools.
-                  If None, registers for common providers.
-    """
-    if providers is None:
-        # Default providers that commonly use workflow tools
-        providers = [
-            "openai",
-            "azure_openai",
-            "claude",
-            "gemini",
-            "grok",
-            "chat_completions",
-            "response",
-        ]
-
-    # Register new_answer toolkit
-    new_answer_toolkit = NewAnswerToolkit()
-    toolkit_registry.register(new_answer_toolkit, providers=providers)
-
-    # Register vote toolkit (without specific agent IDs initially)
-    vote_toolkit = VoteToolkit()
-    toolkit_registry.register(vote_toolkit, providers=providers)
-
 
 def get_workflow_tools(
     valid_agent_ids: Optional[List[str]] = None,

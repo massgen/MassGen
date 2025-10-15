@@ -7,36 +7,30 @@ Test script for workflow toolkits implementation.
 import os
 import sys
 
-from massgen.toolkits import toolkit_registry
-from massgen.toolkits.workflow_toolkits import (
+from massgen.tool.workflow_toolkits import (
     NewAnswerToolkit,
     VoteToolkit,
     get_workflow_tools,
-    register_workflow_toolkits,
 )
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
-def test_workflow_toolkit_registration():
-    """Test workflow toolkit registration and retrieval."""
+def test_workflow_toolkit_basic():
+    """Test basic workflow toolkit functionality."""
     print("=" * 60)
     print("Testing Workflow Toolkit System")
     print("=" * 60)
 
-    # 1. Register workflow toolkits
-    print("\n1. Registering workflow toolkits...")
-    register_workflow_toolkits()
-
-    # Check registration
-    all_toolkits = toolkit_registry.list_all_toolkits()
-    print(f"   All registered toolkits: {list(all_toolkits.keys())}")
-
-    # Verify workflow toolkits are registered
-    assert "new_answer" in all_toolkits, "new_answer toolkit not registered"
-    assert "vote" in all_toolkits, "vote toolkit not registered"
-    print("   ✓ Workflow toolkits registered successfully")
+    # 1. Test creating toolkits
+    print("\n1. Creating workflow toolkits...")
+    new_answer_toolkit = NewAnswerToolkit()
+    vote_toolkit = VoteToolkit(valid_agent_ids=["agent1", "agent2"])
+    
+    print(f"   NewAnswerToolkit ID: {new_answer_toolkit.toolkit_id}")
+    print(f"   VoteToolkit ID: {vote_toolkit.toolkit_id}")
+    print("   ✓ Toolkits created successfully")
 
     # 2. Test getting workflow tools with different formats
     print("\n2. Testing workflow tools with different API formats...")
@@ -84,58 +78,110 @@ def test_workflow_toolkit_registration():
         assert agent_id_param["enum"] == ["agent1", "agent2"], "Incorrect enum values"
         print("   ✓ Agent ID constraints working correctly")
 
-    # 4. Test provider associations
-    print("\n4. Testing provider associations...")
-    openai_toolkits = toolkit_registry.get_provider_toolkits("openai")
-    print(f"   OpenAI provider toolkits: {openai_toolkits}")
+    # 4. Test is_enabled functionality
+    print("\n4. Testing is_enabled functionality...")
+    
+    config_enabled = {"enable_workflow_tools": True}
+    config_disabled = {"enable_workflow_tools": False}
+    
+    assert new_answer_toolkit.is_enabled(config_enabled), "Should be enabled"
+    assert not new_answer_toolkit.is_enabled(config_disabled), "Should be disabled"
+    assert vote_toolkit.is_enabled(config_enabled), "Should be enabled"
+    assert not vote_toolkit.is_enabled(config_disabled), "Should be disabled"
+    print("   ✓ is_enabled working correctly")
 
-    claude_toolkits = toolkit_registry.get_provider_toolkits("claude")
-    print(f"   Claude provider toolkits: {claude_toolkits}")
-
-    # Both should have workflow tools
-    assert "new_answer" in openai_toolkits, "OpenAI missing new_answer"
-    assert "vote" in openai_toolkits, "OpenAI missing vote"
-    assert "new_answer" in claude_toolkits, "Claude missing new_answer"
-    assert "vote" in claude_toolkits, "Claude missing vote"
-    print("   ✓ Provider associations correct")
-
-    # 5. Test getting provider tools with config
-    print("\n5. Testing provider tools retrieval with config...")
-    config = {
-        "enable_workflow_tools": True,
-        "api_format": "chat_completions",
-        "valid_agent_ids": ["agent1", "agent2", "agent3"],
+    # 5. Test template overrides
+    print("\n5. Testing template overrides...")
+    
+    custom_tool = {
+        "type": "function",
+        "function": {
+            "name": "custom_new_answer",
+            "description": "Custom description",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "custom_field": {"type": "string"}
+                },
+                "required": ["custom_field"]
+            }
+        }
     }
-
-    provider_tools = toolkit_registry.get_provider_tools("openai", config)
-    workflow_tool_names = []
-    for tool in provider_tools:
-        if "function" in tool:
-            name = tool["function"]["name"]
-            if name in ["new_answer", "vote"]:
-                workflow_tool_names.append(name)
-
-    print(f"   Found workflow tools: {workflow_tool_names}")
-    assert "new_answer" in workflow_tool_names, "new_answer not in provider tools"
-    assert "vote" in workflow_tool_names, "vote not in provider tools"
-    print("   ✓ Provider tools retrieval working")
-
-    # 6. Test disabling workflow tools
-    print("\n6. Testing workflow tools can be disabled...")
-    disabled_config = {
-        "enable_workflow_tools": False,
-        "api_format": "chat_completions",
+    
+    template_overrides = {
+        "new_answer_tool": custom_tool
     }
+    
+    custom_toolkit = NewAnswerToolkit(template_overrides=template_overrides)
+    custom_tools = custom_toolkit.get_tools({"api_format": "chat_completions"})
+    
+    assert len(custom_tools) == 1, "Should have one tool"
+    assert custom_tools[0]["function"]["name"] == "custom_new_answer", "Should use custom template"
+    print("   ✓ Template overrides working correctly")
 
-    new_answer_toolkit = NewAnswerToolkit()
-    assert new_answer_toolkit.is_enabled(config) is True, "Should be enabled"
-    assert new_answer_toolkit.is_enabled(disabled_config) is False, "Should be disabled"
-    print("   ✓ Workflow tools can be disabled")
+    print("\n✅ All tests passed!")
 
+
+def test_workflow_tools_integration():
+    """Test workflow tools integration."""
     print("\n" + "=" * 60)
-    print("All workflow toolkit tests passed!")
+    print("Testing Workflow Tools Integration")
     print("=" * 60)
+
+    # Test that all formats produce valid tool definitions
+    print("\n1. Testing tool definition validity...")
+    
+    agent_ids = ["agent1", "agent2"]
+    
+    for api_format in ["chat_completions", "claude", "response"]:
+        tools = get_workflow_tools(
+            valid_agent_ids=agent_ids,
+            api_format=api_format
+        )
+        
+        assert len(tools) == 2, f"Should have 2 tools for {api_format}"
+        
+        for tool in tools:
+            if api_format == "claude":
+                assert "name" in tool, f"Claude tool missing name"
+                assert "description" in tool, f"Claude tool missing description"
+                assert "input_schema" in tool, f"Claude tool missing input_schema"
+            else:
+                assert "type" in tool, f"{api_format} tool missing type"
+                assert "function" in tool, f"{api_format} tool missing function"
+                assert "name" in tool["function"], f"{api_format} tool missing function name"
+                assert "parameters" in tool["function"], f"{api_format} tool missing parameters"
+        
+        print(f"   ✓ {api_format} format produces valid tools")
+
+    # Test dynamic agent ID updates
+    print("\n2. Testing dynamic agent ID updates...")
+    
+    vote_toolkit = VoteToolkit()
+    
+    # Initially no agent IDs
+    tools = vote_toolkit.get_tools({"api_format": "chat_completions"})
+    vote_tool = tools[0]
+    agent_param = vote_tool["function"]["parameters"]["properties"]["agent_id"]
+    assert "enum" not in agent_param, "Should not have enum without agent IDs"
+    
+    # Set agent IDs
+    vote_toolkit.set_valid_agent_ids(["agent1", "agent2", "agent3"])
+    tools = vote_toolkit.get_tools({"api_format": "chat_completions"})
+    vote_tool = tools[0]
+    agent_param = vote_tool["function"]["parameters"]["properties"]["agent_id"]
+    assert "enum" in agent_param, "Should have enum with agent IDs"
+    assert agent_param["enum"] == ["agent1", "agent2", "agent3"], "Should have correct agent IDs"
+    
+    print("   ✓ Dynamic agent ID updates working correctly")
+
+    print("\n✅ Integration tests passed!")
 
 
 if __name__ == "__main__":
-    test_workflow_toolkit_registration()
+    test_workflow_toolkit_basic()
+    test_workflow_tools_integration()
+    
+    print("\n" + "=" * 60)
+    print("ALL TESTS COMPLETED SUCCESSFULLY!")
+    print("=" * 60)

@@ -9,8 +9,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Set
 
-from ....toolkits import toolkit_registry
-
 
 class APIParamsHandlerBase(ABC):
     """Abstract base class for API parameter handlers."""
@@ -47,27 +45,8 @@ class APIParamsHandlerBase(ABC):
         """Get backend-specific parameters to exclude from API calls."""
 
     @abstractmethod
-    def get_api_format(self) -> str:
-        """Get the API format for this handler (e.g., 'chat_completions', 'response', 'claude')."""
-
     def get_provider_tools(self, all_params: Dict[str, Any]) -> List[Dict[str, Any]]:
-        """
-        Get provider-specific tools based on parameters using the toolkit registry.
-
-        Args:
-            all_params: All parameters including config and runtime params.
-
-        Returns:
-            List of tool definitions from enabled toolkits.
-        """
-        provider = self.backend.get_provider_name()
-
-        # Add API format to config for toolkit formatting
-        config = dict(all_params)
-        config["api_format"] = self.get_api_format()
-
-        # Get tools from registry
-        return toolkit_registry.get_provider_tools(provider, config)
+        """Get provider-specific tools based on parameters."""
 
     def get_base_excluded_params(self) -> Set[str]:
         """Get common parameters to exclude across all backends."""
@@ -79,7 +58,16 @@ class APIParamsHandlerBase(ABC):
             "context_paths",
             "context_write_access_enabled",
             "enable_image_generation",
+            "enable_mcp_command_line",
+            "command_line_allowed_commands",
+            "command_line_blocked_commands",
+            "command_line_execution_mode",
+            "command_line_docker_image",
+            "command_line_docker_memory_limit",
+            "command_line_docker_cpu_limit",
+            "command_line_docker_network_mode",
             # Backend identification (handled by orchestrator)
+            "enable_audio_generation",  # Audio generation parameter
             "type",
             "agent_id",
             "session_id",
