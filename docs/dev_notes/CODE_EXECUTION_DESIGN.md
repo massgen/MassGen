@@ -1,9 +1,9 @@
 # Code Execution System Design
 
-**Issues:** #295
+**Issues:** #295, #304
 **Author:** MassGen Team
-**Date:** 2025-10-12
-**Status:** Complete (Local Execution)
+**Date:** 2025-10-13
+**Status:** Complete (Local + Docker Execution)
 
 ## Overview
 
@@ -340,11 +340,15 @@ def inject_filesystem_mcp(self, backend_config: Dict[str, Any]) -> Dict[str, Any
 14. ✅ Code execution result guidance in system messages
 15. ⏳ Test with OpenAI, Gemini, Grok backends in production
 
-### Phase 2: Docker Support (Issue #304) - 🔮 FUTURE
-- Deferred for future release
-- Local execution provides baseline security
-- Docker would add container isolation layer
-- See "Future Enhancements" section below
+### Phase 2: Docker Support (Issue #304) - ✅ COMPLETE
+1. ✅ Design document created (DOCKER_CODE_EXECUTION_DESIGN.md)
+2. ✅ DockerManager implemented (410 lines, simplified from 505)
+3. ✅ Code execution server updated for Docker mode
+4. ✅ FilesystemManager integrated with Docker
+5. ✅ Backend parameters added (5 Docker config params)
+6. ✅ Dockerfile and build scripts created
+7. ✅ Configuration examples (3 Docker configs)
+8. ⏳ Tests and production validation pending
 
 ## Auto-Generated File Handling
 
@@ -598,34 +602,93 @@ async def test_pre_tool_use_hook():
 - ✅ Documentation is complete
 - ⏳ Production testing with OpenAI, Gemini, Grok backends
 
+## Docker Mode (Phase 2 - ✅ COMPLETE)
+
+Docker mode provides container-based isolation for command execution while keeping MCP servers on the host for security.
+
+### Configuration
+
+**Minimal Docker Setup:**
+```yaml
+agent:
+  backend:
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    command_line_execution_mode: "docker"  # Enable Docker mode
+```
+
+**Full Docker Configuration:**
+```yaml
+agent:
+  backend:
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    command_line_execution_mode: "docker"
+
+    # Docker settings
+    command_line_docker_image: "massgen/mcp-runtime:latest"
+    command_line_docker_memory_limit: "2g"
+    command_line_docker_cpu_limit: 2.0
+    command_line_docker_network_mode: "none"  # or "bridge", "host"
+```
+
+### Key Features
+
+1. **Persistent Containers:** One container per agent that lives for entire orchestration
+   - Packages stay installed across turns (`pip install` persists)
+   - Container state maintained between command executions
+   - Destroyed at orchestration end
+
+2. **Volume Mounting:**
+   - Workspace: `/workspace` (read-write)
+   - Context paths: `/context/*` (read-only or read-write based on config)
+   - Temp workspace: `/temp_workspaces` (read-only)
+
+3. **Security:**
+   - Commands isolated in container
+   - No access to host filesystem outside volumes
+   - Optional network isolation (default: none)
+   - Configurable resource limits (memory, CPU)
+
+4. **Self-Contained MCP Server:**
+   - Code execution MCP server runs on host
+   - Creates own Docker client connection
+   - Executes commands via `docker exec` in persistent containers
+
+### Architecture
+
+```
+Code Execution MCP Server (Host)
+         ↓
+    Docker Client Connection
+         ↓
+docker exec massgen-{agent_id} {command}
+         ↓
+    Persistent Container
+    ├── Workspace volume mounted
+    ├── Context paths mounted (ro)
+    └── State persists across turns
+```
+
+### Setup
+
+1. **Build Docker image:**
+   ```bash
+   bash massgen/docker/build.sh
+   ```
+
+2. **Enable in config:**
+   ```yaml
+   command_line_execution_mode: "docker"
+   ```
+
+3. **Run normally:** Container created automatically at orchestration start
+
+For more details, see `docs/dev_notes/DOCKER_CODE_EXECUTION_DESIGN.md`
+
 ## Future Enhancements
 
-### 1. Docker Isolation (Issue #304)
-Full container isolation for enhanced security:
-
-**Goals:**
-- Place workspaces within Docker containers
-- Read-only mounts for context paths
-- Network isolation (optional)
-- Memory and CPU limits
-- Auto-cleanup after execution
-
-**Benefits:**
-- Stronger isolation than local execution
-- Pre-installed packages in base image (fast startup)
-- Fresh environment each turn (clean state)
-- Version-controlled dependencies (Dockerfile in git)
-
-**Architecture:**
-```
-FilesystemManager → DockerManager → Docker API → Container
-                      ↓
-               MCP servers run inside container
-                      ↓
-               Workspace mounted as volume
-```
-
-### 2. Custom Docker Image Workflows
+### 1. Custom Docker Image Workflows
 Make it easy for users to bring their own packages and containers:
 
 **Goals:**
@@ -652,5 +715,11 @@ Make it easy for users to bring their own packages and containers:
 - [AG2 Code Execution](https://ag2ai.github.io/ag2/docs/topics/code-execution)
 - [AG2 LocalCommandLineCodeExecutor](https://ag2ai.github.io/ag2/docs/reference/coding/local_commandline_code_executor)
 - [FastMCP Documentation](https://github.com/jlowin/fastmcp)
+- [Docker Documentation](https://docs.docker.com/)
+- [Docker Python SDK](https://docker-py.readthedocs.io/)
 - Issue #295: https://github.com/Leezekun/MassGen/issues/295
+- Issue #304: https://github.com/Leezekun/MassGen/issues/304
+- Design Documents:
+  - CODE_EXECUTION_DESIGN.md (this document): Local execution
+  - DOCKER_CODE_EXECUTION_DESIGN.md: Docker isolation details
 - PathPermissionManager: `massgen/filesystem_manager/_path_permission_manager.py`
