@@ -1,7 +1,7 @@
 # Filesystem Tools & Safety
 
 **Introduced in:** v0.0.16 (September 2025)
-**Enhanced in:** v0.0.21, v0.0.22, v0.0.25, v0.0.26, v0.0.29
+**Enhanced in:** v0.0.21, v0.0.22, v0.0.25, v0.0.26, v0.0.29, v0.0.30, v0.1.0
 
 MassGen provides comprehensive filesystem capabilities with built-in safety features to prevent accidental data loss and ensure secure multi-agent collaboration. This guide covers workspace isolation, permission systems, and all filesystem operations.
 
@@ -15,6 +15,8 @@ MassGen provides comprehensive filesystem capabilities with built-in safety feat
 | v0.0.25 | Sept 29, 2025 | **Multi-Turn Support** - Persistent filesystem context across conversation rounds, session management |
 | v0.0.26 | Oct 1, 2025 | **Enhanced Operations** - File deletion tools, file-based context paths, protected paths, workspace cleanup |
 | v0.0.29 | Oct 8, 2025 | **File Operation Tracker** - Read-before-delete enforcement, agent-created file tracking, enhanced safety |
+| v0.0.30 | Oct 12, 2025 | **Multimodal Extensions** - Audio/video file support, enhanced media handling |
+| v0.1.0 | Oct 14, 2025 | **Universal Code Execution** - MCP-based `execute_command` tool with PathPermissionManager integration |
 
 ## Overview
 
@@ -707,7 +709,8 @@ Build complexity incrementally across rounds instead of one large operation.
 - **Protected Paths**: v0.0.26+ (October 2025)
 - **File Operation Tracker**: v0.0.29 (October 2025)
 - **Multi-Turn Sessions**: v0.0.25+ (September 2025)
+- **Code Execution**: v0.1.0 (October 2025) - Universal `execute_command` tool
 
 ---
 
-**Last Updated:** October 2025 | **MassGen Version:** v0.0.29+
+**Last Updated:** October 2025 | **MassGen Version:** v0.1.0+

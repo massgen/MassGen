@@ -1,0 +1,16 @@
+# Single Gemini 2.5 Pro configuration for MassGen
+# Usage: uv run python -m massgen.cli --config basic/single/single_gemini2.5pro.yaml "Your question here"
+
+# Single agent configuration
+agent:
+  id: "gemini2.5pro"
+  backend:
+    type: "gemini"
+    model: "gemini-2.5-pro"
+    enable_web_search: true
+  system_message: "You are a helpful assistant"
+
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

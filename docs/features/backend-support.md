@@ -18,6 +18,9 @@ MassGen supports a wide range of AI models and backends, from frontier commercia
 | SGLang | v0.0.25 | Sept 2025 | Unified with vLLM as InferenceBackend |
 | Claude Sonnet 4.5 | v0.0.27 | Oct 2025 | Latest Claude model |
 | AG2 Framework | v0.0.28 | Oct 2025 | External framework integration |
+| Multimodal Extensions | v0.0.30 | Oct 2025 | Audio/video support for Chat Completions & Claude |
+| Universal Code Execution | v0.1.0 | Oct 2025 | MCP-based execute_command tool for all backends |
+| AG2 Group Chat | v0.1.0 | Oct 2025 | Native multi-agent conversations |
 
 ## Supported Backends Overview
 
@@ -74,6 +77,7 @@ agent:
 **✅ Supported Features:**
 - Web search (built-in)
 - Code interpreter (sandbox execution)
+- **Universal code execution** (v0.1.0) - MCP-based `execute_command` tool
 - Reasoning mode with configurable effort
 - MCP integration
 - Planning mode
@@ -81,6 +85,8 @@ agent:
 - File upload/search (GPT-5 Nano)
 - Image understanding (GPT-4o)
 - Image generation (GPT-4o with DALL-E)
+- Audio generation & understanding (v0.0.30+)
+- Video generation (v0.1.0) - Sora-2 API
 
 ### Reasoning Models
 
@@ -147,10 +153,12 @@ agent:
 - Multi-turn sessions
 - Tool calling
 - Long context windows
+- **Universal code execution** (v0.1.0) - Via MCP `execute_command` tool
+- Audio/video understanding (v0.0.30+)
 
 **❌ Not Available:**
 - Native web search (use MCP or external tools)
-- Native code execution (use MCP or AG2)
+- Built-in code interpreter (use universal code execution or AG2)
 
 ## Claude Code
 
@@ -245,6 +253,7 @@ agent:
 - **Native filesystem MCP** - Built-in file operations
 - Web search (Google Search integration)
 - Code execution (sandboxed Python)
+- **Universal code execution** (v0.1.0) - MCP-based `execute_command` tool
 - MCP integration
 - Planning mode
 - Multi-turn sessions
@@ -315,6 +324,7 @@ agent:
 
 **✅ Supported Features:**
 - **Web search with citations** - Built-in with source attribution
+- **Universal code execution** (v0.1.0) - MCP-based `execute_command` tool
 - MCP integration
 - Planning mode
 - Multi-turn sessions
@@ -528,11 +538,11 @@ agent:
 | **Web Search** | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Code Execution** | ✅ | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ✅ |
 | **Bash/Shell** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Multimodal** | ✅ | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Image** | ✅ Both | ❌ | ✅ Understanding | ✅ Understanding | ❌ | ✅ Both | ❌ | ❌ | ❌ | ❌ |
+| **Audio** | ✅ Both | ✅ Understanding | ❌ | ❌ | ❌ | ❌ | ✅ Understanding | ❌ | ❌ | ❌ |
+| **Video** | ✅ Generation | ✅ Understanding | ❌ | ❌ | ❌ | ❌ | ✅ Understanding | ❌ | ❌ | ❌ |
 | **MCP Support** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 | **Filesystem** | ✅ Via MCP | ✅ Via MCP | ✅ Native | ✅ Native | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ✅ Via MCP | ❌ |
-| **Context Paths** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Protected Paths** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 **Legend:**
 - ✅ = Supported
@@ -540,7 +550,10 @@ agent:
 
 **Notes:**
 - "Via MCP" means the feature is available through Model Context Protocol integration
-- "Native" means the feature is built directly into the backend (Gemini has native filesystem MCP)
+- "Native" means the feature is built directly into the backend
+- **Image**: "Both" = understanding + generation, "Understanding" = can analyze images, "Generation" = can create images
+- **Audio**: "Both" = understanding + generation (v0.0.30+), "Understanding" = can analyze audio files
+- **Video**: "Generation" = can create videos (OpenAI Sora-2 API v0.1.0), "Understanding" = can analyze video files (v0.0.30+)
 - **Context Paths**: All filesystem-capable backends support context paths (absolute/relative paths with read/write permissions)
 - **Protected Paths**: Specify files immune from modification within writable directories
 - **Write Permissions**: Apply only to the final agent during presentation phase, protecting files during coordination
@@ -755,4 +768,4 @@ Browse configs by backend:
 
 ---
 
-**Last Updated:** October 2025 | **MassGen Version:** v0.0.29+
+**Last Updated:** October 2025 | **MassGen Version:** v0.1.0+

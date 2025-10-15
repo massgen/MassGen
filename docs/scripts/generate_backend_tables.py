@@ -32,7 +32,9 @@ def generate_feature_comparison_table() -> str:
         ("Web Search", "web_search"),
         ("Code Execution", "code_execution"),
         ("Bash/Shell", "bash"),
-        ("Multimodal", "multimodal"),
+        ("Image", "image"),  # Combined understanding + generation
+        ("Audio", "audio"),  # Combined understanding + generation
+        ("Video", "video"),  # Combined understanding + generation
         ("MCP Support", "mcp"),
         ("Filesystem", "filesystem_support"),
     ]
@@ -57,6 +59,42 @@ def generate_feature_comparison_table() -> str:
                     row += " ✅ Native |"
                 elif caps.filesystem_support == "mcp":
                     row += " ✅ Via MCP |"
+                else:
+                    row += " ❌ |"
+            elif feature_key == "image":
+                # Check for image understanding or generation
+                has_understanding = "image_understanding" in caps.supported_capabilities
+                has_generation = "image_generation" in caps.supported_capabilities
+                if has_understanding and has_generation:
+                    row += " ✅ Both |"
+                elif has_understanding:
+                    row += " ✅ Understanding |"
+                elif has_generation:
+                    row += " ✅ Generation |"
+                else:
+                    row += " ❌ |"
+            elif feature_key == "audio":
+                # Check for audio understanding or generation
+                has_understanding = "audio_understanding" in caps.supported_capabilities
+                has_generation = "audio_generation" in caps.supported_capabilities
+                if has_understanding and has_generation:
+                    row += " ✅ Both |"
+                elif has_understanding:
+                    row += " ✅ Understanding |"
+                elif has_generation:
+                    row += " ✅ Generation |"
+                else:
+                    row += " ❌ |"
+            elif feature_key == "video":
+                # Check for video understanding or generation
+                has_understanding = "video_understanding" in caps.supported_capabilities
+                has_generation = "video_generation" in caps.supported_capabilities
+                if has_understanding and has_generation:
+                    row += " ✅ Both |"
+                elif has_understanding:
+                    row += " ✅ Understanding |"
+                elif has_generation:
+                    row += " ✅ Generation |"
                 else:
                     row += " ❌ |"
             else:

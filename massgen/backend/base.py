@@ -13,6 +13,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from ..filesystem_manager import FilesystemManager, PathPermissionManagerHook
 from ..mcp_tools.hooks import FunctionHookManager, HookType
 from ..token_manager import TokenCostCalculator, TokenUsage
+from ..utils import CoordinationStage
 
 
 class FilesystemSupport(Enum):
@@ -75,12 +76,20 @@ class LLMBackend(ABC):
                 context_paths = kwargs.get("context_paths", [])
                 context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 enable_image_generation = kwargs.get("enable_image_generation", False)
+                enable_mcp_command_line = kwargs.get("enable_mcp_command_line", False)
+                command_line_allowed_commands = kwargs.get("command_line_allowed_commands")
+                command_line_blocked_commands = kwargs.get("command_line_blocked_commands")
+                enable_audio_generation = kwargs.get("enable_audio_generation", False)
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
                     context_write_access_enabled=context_write_access_enabled,
                     enable_image_generation=enable_image_generation,
+                    enable_mcp_command_line=enable_mcp_command_line,
+                    command_line_allowed_commands=command_line_allowed_commands,
+                    command_line_blocked_commands=command_line_blocked_commands,
+                    enable_audio_generation=enable_audio_generation,
                 )
 
                 # Inject filesystem MCP server into configuration
@@ -92,12 +101,18 @@ class LLMBackend(ABC):
                 context_paths = kwargs.get("context_paths", [])
                 context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
                 enable_image_generation = kwargs.get("enable_image_generation", False)
+                enable_mcp_command_line = kwargs.get("enable_mcp_command_line", False)
+                command_line_allowed_commands = kwargs.get("command_line_allowed_commands")
+                command_line_blocked_commands = kwargs.get("command_line_blocked_commands")
                 self.filesystem_manager = FilesystemManager(
                     cwd=cwd,
                     agent_temporary_workspace_parent=temp_workspace_parent,
                     context_paths=context_paths,
                     context_write_access_enabled=context_write_access_enabled,
                     enable_image_generation=enable_image_generation,
+                    enable_mcp_command_line=enable_mcp_command_line,
+                    command_line_allowed_commands=command_line_allowed_commands,
+                    command_line_blocked_commands=command_line_blocked_commands,
                 )
                 # Don't inject MCP - native backend handles filesystem tools itself
             elif filesystem_support == FilesystemSupport.NONE:
@@ -111,6 +126,7 @@ class LLMBackend(ABC):
 
         self.formatter = None
         self.api_params_handler = None
+        self.coordination_stage = None
 
     def _setup_permission_hooks(self):
         """Setup permission hooks for function-based backends (default behavior)."""
@@ -141,6 +157,10 @@ class LLMBackend(ABC):
             "agent_temporary_workspace",
             "context_paths",
             "context_write_access_enabled",
+            "enable_image_generation",
+            "enable_mcp_command_line",
+            "command_line_allowed_commands",
+            "command_line_blocked_commands",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",
@@ -419,3 +439,12 @@ class LLMBackend(ABC):
                 await client.aclose()
         except Exception:
             pass
+
+    def set_stage(self, stage: CoordinationStage) -> None:
+        """
+        Set the current coordination stage for the backend.
+
+        Args:
+            stage: CoordinationStage enum value
+        """
+        self.coordination_stage = stage

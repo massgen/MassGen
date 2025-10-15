@@ -258,6 +258,7 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     - Nebius AI Studio (studio.nebius.ai) -> NEBIUS_API_KEY
     - OpenRouter (openrouter.ai) -> OPENROUTER_API_KEY
     - POE (poe.com) -> POE_API_KEY
+    - Qwen (dashscope.aliyuncs.com) -> QWEN_API_KEY
 
     External agent frameworks are supported via the adapter registry.
     """
@@ -338,6 +339,10 @@ def create_backend(backend_type: str, **kwargs) -> Any:
                 api_key = os.getenv("POE_API_KEY")
                 if not api_key:
                     raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
+            elif base_url and "aliyuncs.com" in base_url:
+                api_key = os.getenv("QWEN_API_KEY")
+                if not api_key:
+                    raise ConfigurationError("Qwen API key not found. Set QWEN_API_KEY or provide in config.")
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -1180,8 +1185,17 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                     if latest_turn_workspace.exists():
                         logger.info(f"[CLI] Recreating agents with turn {current_turn} workspace as read-only context path")
 
-                        # Clean up existing agents' backends
+                        # Clean up existing agents' backends and filesystem managers
                         for agent_id, agent in agents.items():
+                            # Cleanup filesystem manager (Docker containers, etc.)
+                            if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager"):
+                                if agent.backend.filesystem_manager:
+                                    try:
+                                        agent.backend.filesystem_manager.cleanup()
+                                    except Exception as e:
+                                        logger.warning(f"[CLI] Cleanup failed for agent {agent_id}: {e}")
+
+                            # Cleanup backend itself
                             if hasattr(agent.backend, "__aexit__"):
                                 await agent.backend.__aexit__(None, None, None)
 
@@ -1454,13 +1468,23 @@ async def main(args):
             kwargs["orchestrator"] = config["orchestrator"]
 
         # Run mode based on whether question was provided
-        if args.question:
-            await run_single_question(args.question, agents, ui_config, **kwargs)
-            # if response:
-            #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
-            #     print(f"{response}", flush=True)
-        else:
-            await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, **kwargs)
+        try:
+            if args.question:
+                await run_single_question(args.question, agents, ui_config, **kwargs)
+                # if response:
+                #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
+                #     print(f"{response}", flush=True)
+            else:
+                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, **kwargs)
+        finally:
+            # Cleanup all agents' filesystem managers (including Docker containers)
+            for agent_id, agent in agents.items():
+                if hasattr(agent, "backend") and hasattr(agent.backend, "filesystem_manager"):
+                    if agent.backend.filesystem_manager:
+                        try:
+                            agent.backend.filesystem_manager.cleanup()
+                        except Exception as e:
+                            logger.warning(f"[CLI] Cleanup failed for agent {agent_id}: {e}")
 
     except ConfigurationError as e:
         print(f"❌ Configuration error: {e}", flush=True)

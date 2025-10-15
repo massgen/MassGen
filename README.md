@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.29 Features](#-latest-features-v0029)
+- [v0.1.0 Features](#-latest-features-v0031)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.29](#recent-achievements-v0029)
-  - [v0.0.3 - v0.0.28](#previous-achievements-v003---v0028)
+  - [v0.1.0](#recent-achievements-v0031)
+  - [v0.0.3 - v0.0.30](#previous-achievements-v003---v0030)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.30 Roadmap](#v0030-roadmap)
+- [v0.0.32 Roadmap](#v0032-roadmap)
 </details>
 
 <details open>
@@ -129,29 +129,36 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.29)
+## 🆕 Latest Features (v0.1.0)
 
-**Experience v0.0.29 MCP Planning Mode:**
+**Experience v0.1.0 New Features:**
 
-See the new MCP Planning Mode in action:
+See local code execution support in action:
 
-[![MassGen v0.0.29 MCP Planning Mode Demo](https://img.youtube.com/vi/jLrMMEIr118/0.jpg)](https://youtu.be/jLrMMEIr118)
+[![MassGen v0.1.0 Local Code Execution Demo](https://img.youtube.com/vi/Sy-CFNPvLAQ/0.jpg)](https://www.youtube.com/watch?v=Sy-CFNPvLAQ)
 
-**What's New in v0.0.29:**
-- **MCP Planning Mode** - New coordination strategy that plans MCP tool usage without execution, preventing irreversible actions during collaboration
-- **File Operation Safety** - Read-before-delete enforcement ensures agents review files before deletion
-- **Enhanced MCP Tool Filtering** - Multi-level filtering with backend-level and per-MCP-server control
-- **Gemini Planning Mode Support** - Extended planning mode compatibility to Gemini backend
+**What's New in v0.1.0:**
+- **Universal Code Execution** - Run bash commands across all backends through new MCP-based `execute_command` tool
+- **AG2 Group Chat** - Native multi-agent conversations using AG2's group chat framework with LLM-based speaker selection
+- **Audio & Video Generation** - Create audio with text-to-speech and transcription, generate videos from text prompts
 
-**Try v0.0.29 MCP Planning Mode:**
+**Try v0.1.0 Features:**
 ```bash
-# Five agents collaborating with planning mode (no execution during coordination)
-massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
-  "Create a comprehensive project structure with documentation"
+# Universal code execution - run tests across any backend
+massgen --config @examples/tools_code-execution_basic_command_execution \
+  "Write a Python function to calculate factorial and test it"
 
-# Test MCP tools with multiple agents
-massgen --config @examples/tools_mcp_five_agents_weather_mcp_test \
-  "Compare weather forecasts for New York, London, and Tokyo"
+# Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
+massgen --config @examples/ag2_ag2_groupchat_gpt \
+  "Write a Python function to calculate factorial."
+
+# Audio generation - create speech from text
+massgen --config @examples/basic_single_single_gpt4o_audio_generation \
+  "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
+
+# Video generation - create videos from prompts
+massgen --config @examples/basic_single_single_gpt4o_video_generation \
+  "Generate a 4 seconds video for 'Cherry blossom petals falling in the spring breeze, sunlight filtering through the pink petals creating a soft halo, slow motion capture, aesthetically beautiful and romantic, depth of field effect.'"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -359,15 +366,17 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Supported Built-in Tools by Backend:**
 
-| Backend | Live Search | Code Execution | File Operations | MCP Support | Advanced Features |
-|---------|:-----------:|:--------------:|:---------------:|:-----------:|:-----------------|
-| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
-| **Claude API**  | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **Claude Code** | ✅ | ✅ | ✅ | ✅ | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
-| **Gemini API** | ✅ | ✅ | ✅ | ✅ | Web search, code execution, **MCP integration**|
-| **Grok API** | ✅ | ❌ | ✅ | ✅ | Web search, **MCP integration** |
-| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
-| **ZAI API** | ❌ | ❌ | ✅ | ✅ | **MCP integration** |
+| Backend | Live Search | Code Execution | File Operations | MCP Support | Multimodal (Image/Audio/Video) | Advanced Features |
+|---------|:-----------:|:--------------:|:---------------:|:-----------:|:----------:|:-----------------|
+| **Azure OpenAI** (NEW in v0.0.10) | ❌ | ❌ | ❌ | ❌ | ❌ | Code interpreter, Azure deployment management |
+| **Claude API**  | ✅ | ✅ | ✅ | ✅ | ✅ | Web search, code interpreter, **MCP integration** |
+| **Claude Code** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | **Native Claude Code SDK, comprehensive dev tools, MCP integration** |
+| **Gemini API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code execution, **MCP integration**|
+| **Grok API** | ✅ | ❌ | ✅ | ✅ | ❌ | Web search, **MCP integration** |
+| **OpenAI API** | ✅ | ✅ | ✅ | ✅ | ✅<br/>*Image* | Web search, code interpreter, **MCP integration** |
+| **ZAI API** | ❌ | ❌ | ✅ | ✅ | ❌ | **MCP integration** |
+
+**Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
 
 
 ### 4. 🏃 Run MassGen
@@ -960,32 +969,47 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.29)
+### Recent Achievements (v0.1.0)
 
-**🎉 Released: October 8, 2025**
+**🎉 Released: October 14, 2025**
 
-#### MCP Planning Mode
-- **Strategic Planning**: New `CoordinationConfig` class with `enable_planning_mode` flag for safer MCP tool usage
-- **Multi-Backend Support**: Planning mode available for Response API, Chat Completions, and Gemini backends
-- **Safer Collaboration**: Agents plan tool usage without execution during coordination phase, only the winning agent executes
+#### Universal Command Execution
+- **MCP-Based Code Execution**: Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
+- **AG2-Inspired Security**: Permission management, command filtering, and virtual environment auto-detection
+- **Code Execution in Planning Mode**: Safe code execution during agent coordination with planning mode integration
+- **Auto-Generated Exemptions**: System-generated file exemptions for Python cache files, temporary files, and system directories
 
-#### File Operation Safety
-- **Read-Before-Delete Enforcement**: New `FileOperationTracker` class prevents agents from deleting files they haven't read
-- **PathPermissionManager Integration**: Enhanced with read/write/delete operation tracking methods
+#### Native Multi-Agent Conversations
+- **AG2 Group Chat**: Multi-agent conversations using AG2's `GroupChat` and `GroupChatManager` frameworks
+- **Smart Speaker Selection**: Automatic, round-robin, and manual speaker selection modes powered by LLMs
+- **Enhanced AG2 Adapter**: Improved integration supporting native AG2 group chat coordination patterns
 
-#### Enhanced MCP Tool Filtering
-- **Multi-Level Control**: Combined backend-level and per-MCP-server tool filtering
-- **Server-Specific Overrides**: MCP-server `allowed_tools` can override backend-level settings
+#### Audio & Video Generation
+- **Audio Tools**: `generate_and_store_audio_no_input_audios`, `generate_text_with_input_audio`, `convert_text_to_speech`
+- **Video Tools**: `generate_and_store_video_no_input_images` for text-to-video generation using OpenAI's Sora-2 API
+- **Multimodal Expansion**: Expanded content generation capabilities beyond text and images
 
-#### New Configuration Files
-- **Planning Mode Configs**: `five_agents_discord_mcp_planning_mode.yaml`, `five_agents_filesystem_mcp_planning_mode.yaml`, `five_agents_notion_mcp_planning_mode.yaml`, `five_agents_twitter_mcp_planning_mode.yaml`, `gpt5_mini_case_study_mcp_planning_mode.yaml`
-- **MCP Test Configs**: `five_agents_travel_mcp_test.yaml`, `five_agents_weather_mcp_test.yaml`
-- **Debug Config**: `skip_coordination_test.yaml`
+#### Enhanced Safety & Developer Experience
+- **File Operation Tracker**: Enhanced tracking and protection for safer file operations in multi-agent environments
+- **PathPermissionManager**: Integration with execute_command tool for comprehensive workspace validation
+- **Message Templates**: Execution result guidance for better agent interpretation of command outputs
+- **Comprehensive Testing**: Test coverage for code execution, MCP integration, and multi-agent scenarios
 
-#### Testing
-- **New Test Suites**: `test_mcp_blocking.py` and `test_gemini_planning_mode.py`
+#### Documentation
+- **Technical Design**: `CODE_EXECUTION_DESIGN.md`
+- **Configuration Examples**: 9 new example configurations including `basic_command_execution.yaml`, `ag2_groupchat.yaml`, audio/video generation examples, multi-agent scenarios
 
-### Previous Achievements (v0.0.3 - v0.0.28)
+### Previous Achievements (v0.0.3 - v0.0.30)
+
+✅ **Multimodal Support Extension (v0.0.30)**: Audio and video processing for Chat Completions and Claude backends (WAV, MP3, MP4, AVI, MOV, WEBM formats), flexible media input via local paths or URLs, extended base64 encoding for audio/video files, configurable file size limits
+
+✅ **Claude Agent SDK Migration (v0.0.30)**: Package migration from `claude-code-sdk` to `claude-agent-sdk>=0.0.22`, improved bash tool permission validation, enhanced system message handling
+
+✅ **Qwen API Integration (v0.0.30)**: Added Qwen API provider to Chat Completions ecosystem with `QWEN_API_KEY` support, video understanding configuration examples
+
+✅ **MCP Planning Mode (v0.0.29)**: Strategic planning coordination strategy for safer MCP tool usage, multi-backend support (Response API, Chat Completions, Gemini), agents plan without execution during coordination, 5 planning mode configurations
+
+✅ **File Operation Safety (v0.0.29)**: Read-before-delete enforcement with `FileOperationTracker` class, `PathPermissionManager` integration with operation tracking methods, enhanced file operation safety mechanisms
 
 ✅ **AG2 Framework Integration (v0.0.28)**: Adapter system for external agent frameworks, AG2 ConversableAgent and AssistantAgent support with async execution, code execution in multiple environments (Local, Docker, Jupyter, YepCode), 4 ready-to-use AG2 configurations
 
@@ -1061,25 +1085,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.30 Roadmap
+### v0.0.32 Roadmap
 
-Version 0.0.30 focuses on fixing backend issues and extending multimodal support:
+Version 0.0.32 focuses on Docker-based code execution and configuration management:
 
 #### Required Features
-- **Backend Issues & Organization**: Fix Claude Code backend reliability issues and reorganize configuration structure for better discoverability
-- **Multimodal Support Extension**: Enable image processing capabilities in Claude and Chat Completions backends
+- **Docker Code Execution**: Extend v0.1.0's code execution with Docker container isolation for enhanced security
+- **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
 
 #### Optional Features
-- **Group Chat Integration**: Complete AG2 group chat orchestration integration for multi-agent group conversations
-- **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
+- **MCP Tool Safety System**: LLM-powered classification of irreversible MCP tools with human-in-the-loop validation
+- **MCP Framework Refactoring**: Refactor MCP integration architecture for better maintainability and extensibility
 
 Key technical approach:
-- **Backend Stability**: Comprehensive error handling, fallback mechanisms, and test coverage for Claude Code
-- **Multimodal Extension**: Image input handling for Claude and Chat Completions backends with provider compatibility
-- **Configuration Cleanup**: Standardize naming conventions and improve documentation for easier navigation
-- **Extensible Architecture**: New tool registration system supporting dynamic discovery and plugin-based extensions
+- **Docker Execution**: Container lifecycle management, custom Docker images/Dockerfiles, resource limits, security isolation
+- **Config Builder**: Interactive prompts, configuration templates, validation and error checking, preset support
+- **Tool Safety**: LLM-based tool classification, optional human review workflow, per-user safety preferences
+- **MCP Refactoring**: Cleaner separation of concerns, reduced code duplication, improved error handling
 
-For detailed milestones, technical specifications, and long-term vision, see the [complete roadmap](ROADMAP.md).
+For detailed milestones and technical specifications, see the [full v0.0.32 roadmap](ROADMAP_v0.0.32.md).
 
 ---
 

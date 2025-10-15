@@ -522,4 +522,4 @@ Browse by category:
 
 ---
 
-**Last Updated:** October 2025 | **MassGen Version:** v0.0.29+
+**Last Updated:** October 2025 | **MassGen Version:** v0.1.0+

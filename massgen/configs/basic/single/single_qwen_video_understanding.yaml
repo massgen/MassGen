@@ -1,0 +1,15 @@
+# MassGen Qwen Multimodal Configuration
+# uv run python -m massgen.cli --config massgen/configs/basic/single/single_qwen_video_understanding.yaml "What is in the video, summarise it ?"
+agent:
+  id: "qwen_agent"
+  backend:
+    type: "chatcompletion"
+    base_url: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
+    model: "qwen3-vl-30b-a3b-thinking"
+    upload_files:
+      - video_path: "path-here"
+  system_message: "You are a helpful assistant"
+# Display configuration
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

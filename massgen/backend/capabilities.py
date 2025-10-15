@@ -64,13 +64,18 @@ class Capability(Enum):
     WEB_SEARCH = "web_search"
     CODE_EXECUTION = "code_execution"
     BASH = "bash"
-    MULTIMODAL = "multimodal"
-    VISION = "vision"
+    MULTIMODAL = "multimodal"  # Legacy - being phased out
+    VISION = "vision"  # Legacy - use image_understanding
     MCP = "mcp"
     FILESYSTEM_NATIVE = "filesystem_native"
     FILESYSTEM_MCP = "filesystem_mcp"
     REASONING = "reasoning"
     IMAGE_GENERATION = "image_generation"
+    IMAGE_UNDERSTANDING = "image_understanding"
+    AUDIO_GENERATION = "audio_generation"
+    AUDIO_UNDERSTANDING = "audio_understanding"
+    VIDEO_GENERATION = "video_generation"
+    VIDEO_UNDERSTANDING = "video_understanding"
 
 
 @dataclass
@@ -97,9 +102,12 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
             "web_search",
             "code_execution",
             "mcp",
-            "multimodal",
             "reasoning",
             "image_generation",
+            "image_understanding",
+            "audio_generation",
+            "audio_understanding",
+            "video_generation",
         },
         builtin_tools=["web_search", "code_interpreter"],
         filesystem_support="mcp",
@@ -114,7 +122,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         ],
         default_model="gpt-4o",
         env_var="OPENAI_API_KEY",
-        notes="Reasoning support in GPT-5 and o-series models. Code interpreter includes Python execution sandbox.",
+        notes="Reasoning support in GPT-5 and o-series models. Audio/video generation (v0.0.30+). Video generation via Sora-2 API (v0.0.31).",
     ),
     "claude": BackendCapabilities(
         backend_type="claude",
@@ -123,6 +131,8 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
             "web_search",
             "code_execution",
             "mcp",
+            "audio_understanding",
+            "video_understanding",
         },
         builtin_tools=["web_search", "code_execution"],
         filesystem_support="mcp",
@@ -134,7 +144,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         ],
         default_model="claude-sonnet-4-20250514",
         env_var="ANTHROPIC_API_KEY",
-        notes="Web search and code execution are built-in tools via Claude's API.",
+        notes="Web search and code execution are built-in tools. Audio/video understanding support (v0.0.30+).",
     ),
     "claude_code": BackendCapabilities(
         backend_type="claude_code",
@@ -143,6 +153,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
             "bash",
             "mcp",
             "filesystem_native",
+            "image_understanding",
         },
         builtin_tools=[
             "Read",
@@ -164,7 +175,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         models=["claude-sonnet-4-5-20250929", "claude-opus-4-20250514"],
         default_model="claude-sonnet-4-5-20250929",
         env_var="ANTHROPIC_API_KEY",
-        notes="Native filesystem access via SDK. Extensive built-in tooling for code operations.",
+        notes="Native filesystem access via SDK. Extensive built-in tooling for code operations. Image understanding support.",
     ),
     "gemini": BackendCapabilities(
         backend_type="gemini",
@@ -173,7 +184,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
             "web_search",
             "code_execution",
             "mcp",
-            "multimodal",
+            "image_understanding",
         },
         builtin_tools=["google_search_retrieval", "code_execution"],
         filesystem_support="mcp",
@@ -185,7 +196,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         ],
         default_model="gemini-2.5-flash",
         env_var="GOOGLE_API_KEY",
-        notes="Google Search Retrieval provides web search. Multimodal includes vision capabilities.",
+        notes="Google Search Retrieval provides web search. Image understanding capabilities.",
     ),
     "grok": BackendCapabilities(
         backend_type="grok",
@@ -211,27 +222,30 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
             "web_search",
             "code_execution",
             "mcp",
-            "multimodal",
+            "image_generation",
+            "image_understanding",
         },
         builtin_tools=["web_search", "code_execution"],
         filesystem_support="mcp",
         models=["gpt-4", "gpt-4o", "gpt-35-turbo"],
         default_model="gpt-4o",
         env_var="AZURE_OPENAI_API_KEY",
-        notes="Capabilities depend on Azure deployment configuration. MCP support via ChatCompletions base.",
+        notes="Capabilities depend on Azure deployment configuration. Image understanding and generation via gpt-4o.",
     ),
     "chatcompletion": BackendCapabilities(
         backend_type="chatcompletion",
         provider_name="Chat Completions (Generic)",
         supported_capabilities={
             "mcp",
+            "audio_understanding",
+            "video_understanding",
         },
         builtin_tools=[],
         filesystem_support="mcp",
         models=["custom"],
         default_model="custom",
         env_var=None,
-        notes="Generic OpenAI-compatible API. Capabilities vary by provider. Use for LiteLLM, custom endpoints, etc.",
+        notes="Generic OpenAI-compatible API. Audio/video understanding via providers like OpenRouter, Qwen (v0.0.30+). Capabilities vary by provider.",
     ),
     "lmstudio": BackendCapabilities(
         backend_type="lmstudio",
