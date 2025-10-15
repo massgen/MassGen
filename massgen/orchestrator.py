@@ -43,7 +43,7 @@ from .logger_config import (
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
 from .utils import ActionType, AgentStatus
-from toolkits import get_workflow_tools
+from .tool import get_workflow_tools
 
 
 @dataclass
@@ -137,8 +137,12 @@ class Orchestrator(ChatAgent):
 
         # Get message templates from config
         self.message_templates = self.config.message_templates or MessageTemplates()
-        # Create workflow tools for agents (vote and new_answer)
-        self.workflow_tools = get_workflow_tools(valid_agent_ids=list(agents.keys()))
+        # Create workflow tools for agents (vote and new_answer) using new toolkit system
+        self.workflow_tools = get_workflow_tools(
+            valid_agent_ids=list(agents.keys()),
+            template_overrides=getattr(self.message_templates, "_template_overrides", {}),
+            api_format="chat_completions",  # Default format, will be overridden per backend
+        )
 
         # MassGen-specific state
         self.current_task: Optional[str] = None

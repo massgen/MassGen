@@ -5,7 +5,7 @@ Vote toolkit for MassGen workflow coordination.
 
 from typing import Any, Dict, List, Optional
 
-from ..registry import BaseToolkit, ToolType
+from .base import BaseToolkit, ToolType
 
 
 class VoteToolkit(BaseToolkit):
