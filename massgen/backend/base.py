@@ -108,7 +108,9 @@ class LLMBackend(ABC):
                 # Inject MCP filesystem server for MCP backends only
                 if filesystem_support == FilesystemSupport.MCP:
                     self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
-                # NATIVE backends handle filesystem tools themselves, no MCP injection needed
+                # NATIVE backends handle filesystem tools themselves, but need command_line MCP for docker mode
+                elif filesystem_support == FilesystemSupport.NATIVE and execution_mode == "docker" and kwargs.get("enable_mcp_command_line", False):
+                    self.config = self.filesystem_manager.inject_command_line_mcp(kwargs)
 
             elif filesystem_support == FilesystemSupport.NONE:
                 raise ValueError(f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration.")

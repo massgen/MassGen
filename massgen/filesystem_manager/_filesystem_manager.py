@@ -428,6 +428,57 @@ class FilesystemManager:
 
         return backend_config
 
+    def inject_command_line_mcp(self, backend_config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Inject only the command_line MCP server into backend configuration.
+
+        Used for NATIVE backends (like Claude Code) that have built-in filesystem tools
+        but need the execute_command MCP tool when using docker mode for code execution.
+
+        Args:
+            backend_config: Original backend configuration
+
+        Returns:
+            Modified configuration with command_line MCP server added
+        """
+        # Get existing mcp_servers configuration
+        mcp_servers = backend_config.get("mcp_servers", [])
+
+        # Handle both list format and Claude Code dict format
+        if isinstance(mcp_servers, dict):
+            # Claude Code format: {"playwright": {...}, "command_line": {...}}
+            existing_names = list(mcp_servers.keys())
+            # Convert to list format for append operations
+            converted_servers = []
+            for name, server_config in mcp_servers.items():
+                if isinstance(server_config, dict):
+                    server = server_config.copy()
+                    server["name"] = name
+                    converted_servers.append(server)
+            mcp_servers = converted_servers
+        elif isinstance(mcp_servers, list):
+            # List format: [{"name": "playwright", ...}, ...]
+            existing_names = [server.get("name") for server in mcp_servers if isinstance(server, dict)]
+        else:
+            existing_names = []
+            mcp_servers = []
+
+        try:
+            # Add command line server if missing (only called for docker mode)
+            if "command_line" not in existing_names:
+                mcp_servers.append(self.get_command_line_mcp_config())
+                logger.info("[FilesystemManager.inject_command_line_mcp] Added command_line MCP server for docker mode")
+            else:
+                logger.warning("[FilesystemManager.inject_command_line_mcp] Custom command_line MCP server already present")
+
+        except Exception as e:
+            logger.warning(f"[FilesystemManager.inject_command_line_mcp] Error adding command_line MCP server: {e}")
+
+        # Update backend config
+        backend_config["mcp_servers"] = mcp_servers
+
+        return backend_config
+
     def get_pre_tool_hooks(self) -> Dict[str, List]:
         """
         Get pre-tool hooks configuration for MCP clients.
