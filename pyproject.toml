@@ -82,6 +82,9 @@ docs = [
     "sphinx-inline-tabs>=2023.4.21",
     "sphinxcontrib-lunrsearch>=0.4",
 ]
+docker = [
+    "docker>=7.0.0",
+]
 external = [
     "ag2>=0.9.10",
 ]

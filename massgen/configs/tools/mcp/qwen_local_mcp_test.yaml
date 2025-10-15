@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# massgen --config @examples/tools_mcp_qwen_local_mcp_test "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
+# massgen --config @examples/tools/mcp/qwen_local_mcp_test "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
 agents:
   - id: "qwen_mcp_weather"
     backend:

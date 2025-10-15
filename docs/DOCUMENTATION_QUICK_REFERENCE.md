@@ -49,7 +49,7 @@ It is **NOT** a Python library. There are no importable `Agent`, `Orchestrator`,
 uv run python -m massgen.cli --model gemini-2.5-flash "Your question"
 
 # Multi-agent with config file
-massgen --config @examples/basic_multi_three_agents_default \
+massgen --config @examples/basic/multi/three_agents_default \
   "Your question"
 
 # Interactive mode
@@ -307,7 +307,7 @@ cd /Users/ncrispin/GitHubProjects/MassGen
 uv run python -m massgen.cli --model gemini-2.5-flash "Test question"
 
 # Test multi-agent
-massgen --config @examples/basic_multi_three_agents_default \
+massgen --config @examples/basic/multi/three_agents_default \
   "Test question"
 
 # Validate YAML

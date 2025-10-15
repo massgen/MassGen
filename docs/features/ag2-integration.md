@@ -410,7 +410,7 @@ llm_config:
 
 **Task:**
 ```bash
-massgen --config @examples/ag2_ag2_coder \
+massgen --config @examples/ag2/ag2_coder \
   "Create a factorial function and calculate the factorial of 8. Show the result?"
 ```
 
@@ -432,7 +432,7 @@ massgen --config @examples/ag2_ag2_coder \
 
 **Task:**
 ```bash
-massgen --config @examples/ag2_ag2_coder \
+massgen --config @examples/ag2/ag2_coder \
   "Load iris.csv dataset, perform statistical analysis, and create visualizations"
 ```
 
@@ -455,7 +455,7 @@ massgen --config @examples/ag2_ag2_coder \
 
 **Task:**
 ```bash
-massgen --config @examples/ag2_ag2_coder_case_study \
+massgen --config @examples/ag2/ag2_coder_case_study \
   "Compare AG2 and MassGen frameworks: fetch documentation, analyze differences"
 ```
 
@@ -489,7 +489,7 @@ massgen --config @examples/ag2_ag2_coder_case_study \
 
 **Task:**
 ```bash
-massgen --config @examples/ag2_ag2_gemini \
+massgen --config @examples/ag2/ag2_gemini \
   "Explain quantum computing principles with code examples"
 ```
 
@@ -779,7 +779,7 @@ llm_config:
 
 4. **Test with simple query:**
 ```bash
-massgen --config @examples/ag2_ag2_single_agent \
+massgen --config @examples/ag2/ag2_single_agent \
   "Hello, are you working?"
 ```
 

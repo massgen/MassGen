@@ -7,7 +7,7 @@ Provides unified failure tracking and circuit breaker functionality across all M
 
 import time
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from ..logger_config import log_mcp_activity
 
@@ -160,62 +160,6 @@ class MCPCircuitBreaker:
                     agent_id=self.agent_id or agent_id,
                 )
             self._reset_server(server_name)
-
-    def get_server_status(self, server_name: str) -> Tuple[int, float, bool]:
-        """
-        Get detailed status for a server.
-
-        Args:
-            server_name: Name of the server
-
-        Returns:
-            Tuple of (failure_count, last_failure_time, is_circuit_open)
-        """
-        if server_name not in self._server_status:
-            return (0, 0.0, False)
-
-        status = self._server_status[server_name]
-        is_circuit_open = status.failure_count >= self.config.max_failures and self.should_skip_server(server_name)
-
-        return (status.failure_count, status.last_failure_time, is_circuit_open)
-
-    def get_all_failing_servers(self) -> Dict[str, Dict[str, any]]:
-        """
-        Get status of all servers with failures.
-
-        Returns:
-            Dictionary mapping server names to status information
-        """
-        failing_servers = {}
-        current_time = time.monotonic()
-
-        for server_name, status in self._server_status.items():
-            if status.is_failing:
-                backoff_time = self._calculate_backoff_time(status.failure_count)
-                time_since_failure = current_time - status.last_failure_time
-                time_remaining = max(0, backoff_time - time_since_failure)
-
-                failing_servers[server_name] = {
-                    "failure_count": status.failure_count,
-                    "last_failure_time": status.last_failure_time,
-                    "backoff_time": backoff_time,
-                    "time_remaining": time_remaining,
-                    "is_circuit_open": time_remaining > 0 and status.failure_count >= self.config.max_failures,
-                }
-
-        return failing_servers
-
-    def reset_all_servers(self, agent_id: Optional[str] = None) -> None:
-        """Reset circuit breaker state for all servers."""
-        reset_count = len([s for s in self._server_status.values() if s.is_failing])
-        if reset_count > 0:
-            log_mcp_activity(
-                self.backend_name,
-                "Resetting circuit breaker for all servers",
-                {"server_count": reset_count},
-                agent_id=self.agent_id or agent_id,
-            )
-        self._server_status.clear()
 
     def _reset_server(self, server_name: str) -> None:
         """Reset circuit breaker state for a specific server."""

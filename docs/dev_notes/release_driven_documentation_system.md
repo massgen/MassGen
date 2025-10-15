@@ -840,7 +840,7 @@ coordination:
 
 **Quick Start:**
 ```bash
-massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode \
   "Create a comprehensive project structure with documentation"
 ```
 

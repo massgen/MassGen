@@ -77,11 +77,11 @@ agents:
 **Try It Out:**
 ```bash
 # Single AG2 agent with code execution
-massgen --config @examples/ag2_ag2_coder \
+massgen --config @examples/ag2/ag2_coder \
   "Write a Python script to analyze CSV data and create visualizations"
 
 # AG2 + Gemini hybrid collaboration
-massgen --config @examples/ag2_ag2_coder_case_study \
+massgen --config @examples/ag2/ag2_coder_case_study \
   "Compare AG2 and MassGen frameworks, use code to fetch documentation"
 ```
 
@@ -193,15 +193,15 @@ Located in `massgen/configs/ag2/`:
 **Quick Start:**
 ```bash
 # Basic AG2 agent
-massgen --config @examples/ag2_ag2_single_agent \
+massgen --config @examples/ag2/ag2_single_agent \
   "Your task"
 
 # AG2 with code execution
-massgen --config @examples/ag2_ag2_coder \
+massgen --config @examples/ag2/ag2_coder \
   "Write and execute a web scraping script"
 
 # AG2 + Gemini collaboration
-massgen --config @examples/ag2_ag2_gemini \
+massgen --config @examples/ag2/ag2_gemini \
   "Complex task requiring multiple capabilities"
 ```
 
@@ -306,7 +306,7 @@ The design doc provides:
 ```bash
 # AG2 agent fetches data, writes analysis code, executes it
 # Gemini agent interprets results and writes report
-massgen --config @examples/ag2_ag2_coder_case_study \
+massgen --config @examples/ag2/ag2_coder_case_study \
   "Analyze NYC taxi data: fetch, process, visualize trends"
 ```
 
@@ -314,7 +314,7 @@ massgen --config @examples/ag2_ag2_coder_case_study \
 ```bash
 # AG2 agent scrapes web, processes data with code
 # MassGen agents analyze and synthesize findings
-massgen --config @examples/ag2_ag2_gemini \
+massgen --config @examples/ag2/ag2_gemini \
   "Research AI safety papers from last 6 months, summarize key findings"
 ```
 

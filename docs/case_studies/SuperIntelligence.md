@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to tackle complex philosophical a
 
 ## Command:
 ```bash
-massgen --config @examples/providers_openai_gpt5_nano "What's the right approach to super intelligence"
+massgen --config @examples/providers/openai/gpt5_nano "What's the right approach to super intelligence"
 ```
 
 **Prompt:** What's the right approach to super intelligence

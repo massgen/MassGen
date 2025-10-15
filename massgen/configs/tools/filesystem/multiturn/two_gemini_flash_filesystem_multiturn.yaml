@@ -9,7 +9,7 @@
 #   - Files are read-only during coordination, writable by final agent
 #
 # Example usage:
-# massgen --config @examples/tools_filesystem_multiturn_two_gemini_flash_filesystem_multiturn
+# massgen --config @examples/tools/filesystem/multiturn_two_gemini_flash_filesystem_multiturn
 #
 # Or with uv tool:
 # uv tool run massgen --config tools/filesystem/multiturn/two_gemini_flash_filesystem_multiturn.yaml

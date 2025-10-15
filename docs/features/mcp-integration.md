@@ -112,7 +112,7 @@ mcp_servers:
 
 **Example Usage:**
 ```bash
-massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
   "Check recent messages in our development channel and post a summary"
 ```
 
@@ -154,7 +154,7 @@ agents:
 
 **Example Usage:**
 ```bash
-massgen --config @examples/tools_mcp_gemini_notion_mcp \
+massgen --config @examples/tools/mcp/gemini_notion_mcp \
   "Create a structured todo list in Notion under 'LLM Agent Research'"
 ```
 
@@ -225,7 +225,7 @@ agents:
 
 **Example Usage:**
 ```bash
-massgen --config @examples/tools_mcp_gemini_mcp_filesystem_test \
+massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test \
   "Create a Python script with hello world in different languages"
 ```
 

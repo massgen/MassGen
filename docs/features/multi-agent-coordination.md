@@ -77,7 +77,7 @@ ui:
 
 **Usage:**
 ```bash
-massgen --config @examples/basic_multi_two_agents_gemini \
+massgen --config @examples/basic/multi/two_agents_gemini \
   "Research the best practices for Python async programming"
 ```
 
@@ -121,7 +121,7 @@ ui:
 
 **Usage:**
 ```bash
-massgen --config @examples/basic_multi_three_agents_default \
+massgen --config @examples/basic/multi/three_agents_default \
   "Analyze the pros and cons of renewable energy"
 ```
 
@@ -166,7 +166,7 @@ agents:
 
 **Usage:**
 ```bash
-massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
   "Check recent Discord messages and post a summary"
 ```
 

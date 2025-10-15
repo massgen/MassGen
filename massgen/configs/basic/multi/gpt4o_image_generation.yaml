@@ -1,6 +1,6 @@
 # Example configuration demonstrating context_paths filesystem access control
 # This config shows how agents can access user-specified files with permission control
-# massgen --config @examples/basic_multi_gpt4o_image_generation "Generate an image of gray tabby cat hugging an otter with an orange scarf."
+# massgen --config @examples/basic/multi/gpt4o_image_generation "Generate an image of gray tabby cat hugging an otter with an orange scarf."
 
 agents:
   - id: "gpt4o_1"

@@ -52,11 +52,11 @@ Complete documentation for all MassGen releases.
 ### Try It
 ```bash
 # Filesystem planning mode
-massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode \
   "Create a Python FastAPI project structure"
 
 # Discord planning mode
-massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
   "Check #support channel and post helpful guidance"
 ```
 
@@ -108,15 +108,15 @@ massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode 
 pip install ag2
 
 # Basic AG2 agent
-massgen --config @examples/ag2_ag2_single_agent \
+massgen --config @examples/ag2/ag2_single_agent \
   "Explain quantum computing"
 
 # AG2 with code execution
-massgen --config @examples/ag2_ag2_coder \
+massgen --config @examples/ag2/ag2_coder \
   "Analyze CSV data and create visualizations"
 
 # Hybrid: AG2 + Gemini
-massgen --config @examples/ag2_ag2_coder_case_study \
+massgen --config @examples/ag2/ag2_coder_case_study \
   "Compare AG2 vs MassGen frameworks"
 ```
 

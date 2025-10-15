@@ -1,4 +1,4 @@
-# massgen --config @examples/tools_filesystem_gemini_gpt5_filesystem_casestudy "Build a game where users see a diverse set of up-to-date small, static coding puzzles related to common coding bugs. Then, award them points if they can clearly spot the error in the code. Use Vite with a package.json with minimal dependencies."
+# massgen --config @examples/tools/filesystem/gemini_gpt5_filesystem_casestudy "Build a game where users see a diverse set of up-to-date small, static coding puzzles related to common coding bugs. Then, award them points if they can clearly spot the error in the code. Use Vite with a package.json with minimal dependencies."
 # please do `npm install && npm run dev` to run the Vite projects
 agents:
   - id: "gemini"

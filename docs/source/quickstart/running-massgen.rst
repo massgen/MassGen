@@ -3,8 +3,8 @@ Running MassGen
 
 This guide shows you how to run MassGen with different configurations.
 
-.. important::
-   **Configuration File Paths:** Example commands show paths like ``@examples/...`` These are **relative paths** that only work when you're in the MassGen repository directory. See `Using Config Files from Anywhere`_ below for how to run from other directories.
+.. tip::
+   **Configuration File Paths:** Example commands use ``@examples/...`` paths which work from **any directory** because they're part of MassGen's installed package. See `Using Config Files from Anywhere`_ below for all path options.
 
 CLI Parameters
 --------------
@@ -229,117 +229,179 @@ Debug logs saved to ``agent_outputs/log_{timestamp}/massgen_debug.log`` with det
 Using Config Files from Anywhere
 ---------------------------------
 
-Understanding Path Resolution
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Understanding Configuration Paths
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-MassGen configuration paths work differently depending on your installation method:
+MassGen supports multiple ways to specify configuration files, with different path resolution behaviors:
 
-**When Running from MassGen Directory:**
+**1. Package Configs with @examples/ (Recommended)**
+
+Configs prefixed with ``@examples/`` are **built into MassGen's package** and work from any directory:
+
+.. code-block:: bash
+
+   # Works from any directory!
+   cd ~/my-project
+   massgen --config @examples/basic/multi/three_agents_default "Your question"
+
+   cd ~/Documents
+   massgen --config @examples/tools/mcp/gpt5_nano_mcp_example "Another question"
+
+The ``@examples/`` prefix tells MassGen to search in its installed package configs. Use slashes (``/``) to match the actual directory structure:
+
+* ✅ ``@examples/basic/single/single_gpt5nano``
+* ✅ ``@examples/tools/mcp/multimcp_gemini``
+* ✅ ``@examples/providers/claude/claude``
+
+**List all available package configs:**
+
+.. code-block:: bash
+
+   massgen --list-examples
+
+**2. Relative and Absolute Paths**
+
+Standard filesystem paths work as expected:
+
+.. code-block:: bash
+
+   # Relative to current directory
+   massgen --config ./my-config.yaml "Question"
+   massgen --config ../configs/custom.yaml "Question"
+
+   # Absolute paths
+   massgen --config /Users/you/configs/my-setup.yaml "Question"
+
+**3. User Config Directory (Coming Soon)**
+
+Save frequently-used configs to ``~/.config/massgen/agents/`` for easy access:
+
+.. code-block:: bash
+
+   # Save your config
+   mkdir -p ~/.config/massgen/agents
+   cp my-config.yaml ~/.config/massgen/agents/my-setup.yaml
+
+   # Access by name (planned feature)
+   massgen --config my-setup "Question"
+
+Path Resolution Priority
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+When you specify ``--config``, MassGen searches in this order:
+
+1. **Package configs** - If path starts with ``@examples/``, search installed package
+2. **Filesystem paths** - Check if file exists at the given path (relative or absolute)
+3. **User configs** - Search ``~/.config/massgen/agents/`` (if basename provided)
+4. **Error** - Config not found
+
+Examples:
+
+.. code-block:: bash
+
+   # Package config - searches MassGen's installed configs
+   --config @examples/basic/multi/three_agents_default
+
+   # Relative path - looks in current directory
+   --config ./my-config.yaml
+
+   # Absolute path - exact file location
+   --config /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml
+
+Working with GitHub Repository Configs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note::
+   **For GitHub Users:** If you're working directly with the MassGen repository (not using the installed package), configs are located in ``massgen/configs/`` directory.
+
+**From within repository:**
 
 .. code-block:: bash
 
    # You're in /Users/you/MassGen/
-   massgen \
-     --config @examples/basic/multi/three_agents_default.yaml \
-     "Your question"
+   massgen --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
 
-This works because ``@examples/...`` is a **relative path** from the current directory.
+   # Or use the package syntax (if installed in editable mode)
+   massgen --config @examples/basic/multi/three_agents_default "Question"
 
-**When Running from Other Directories:**
-
-If you're in a different directory (like ``~/my-project/``), relative paths won't work:
+**From outside repository:**
 
 .. code-block:: bash
 
-   # You're in /Users/you/my-project/
+   # Use absolute path
    massgen \
-     --config @examples/basic/multi/three_agents_default.yaml  # ❌ Won't work!
-     "Your question"
+     --config /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml \
+     "Question"
 
-**Solutions:**
+   # Or copy the config to your project
+   cp /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml ./my-config.yaml
+   massgen --config ./my-config.yaml "Question"
 
-1. **Use absolute paths:**
+Common Issues and Solutions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-   .. code-block:: bash
+**Issue: "Config not found" error with @examples/ path**
 
-      massgen \
-        --config /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml \
-        "Your question"
-
-2. **Copy config to your project:**
-
-   .. code-block:: bash
-
-      # Copy the config you want to use
-      cp /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml ./my-config.yaml
-
-      # Run with local config
-      massgen --config ./my-config.yaml "Your question"
-
-3. **Use uv tool installation (recommended for multi-directory usage):**
-
-   .. code-block:: bash
-
-      # Install once (from MassGen directory)
-      cd /Users/you/MassGen
-      uv tool install -e .
-
-      # Now configs are accessible from anywhere
-      cd ~/my-project
-      uv tool run massgen --config my-config.yaml "Your question"
-
-See :doc:`installation` for more on ``uv tool`` installation.
-
-Common Path Errors
-~~~~~~~~~~~~~~~~~~
-
-**Error: "FileNotFoundError: Configuration file not found"**
-
-This means MassGen can't find the config file at the path you specified.
+This means MassGen isn't installed properly or you're using an old version.
 
 **Solution:**
 
-1. Check your current directory: ``pwd``
-2. Use an absolute path, or
-3. Copy the config to your current directory
+.. code-block:: bash
 
-**Example of fixing path error:**
+   # Reinstall MassGen
+   cd /path/to/MassGen
+   uv pip install -e .
+
+   # Verify installation
+   massgen --list-examples
+
+**Issue: Relative path works in one directory but not another**
+
+Relative paths like ``./config.yaml`` depend on your current working directory.
+
+**Solution:**
+
+Use ``@examples/`` for package configs, or absolute paths for custom configs:
 
 .. code-block:: bash
 
-   # Check where you are
-   pwd
-   # Output: /Users/you/my-project
+   # Package config - works anywhere
+   massgen --config @examples/basic/multi/three_agents_default "Question"
 
-   # This won't work (relative path from MassGen repo)
-   massgen --config @examples/basic/multi/three_agents_default.yaml
-
-   # Solution 1: Use absolute path
-   massgen \
-     --config /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml \
-     "Your question"
-
-   # Solution 2: Copy config locally
-   cp /Users/you/MassGen/@examples/basic/multi/three_agents_default.yaml ./agents.yaml
-   massgen --config ./agents.yaml "Your question"
+   # Absolute path - always works
+   massgen --config /Users/you/configs/my-setup.yaml "Question"
 
 Quick Reference
 ~~~~~~~~~~~~~~~
 
 .. list-table::
    :header-rows: 1
-   :widths: 40 60
+   :widths: 35 65
 
-   * - Situation
-     - Solution
-   * - Running from MassGen repo directory
-     - Use relative paths: ``@examples/...``
-   * - Running from another directory
-     - Use absolute paths or copy config locally
-   * - Want to run from any directory easily
-     - Install with ``uv tool install -e .``
-   * - Config file not found error
-     - Check ``pwd``, then use absolute path or copy config
+   * - Config Path Type
+     - Example & Behavior
+   * - **Package Config** (Recommended)
+     - ``@examples/basic/multi/three_agents_default``
+
+       ✅ Works from any directory
+
+       ✅ Always available after installation
+   * - **Relative Path**
+     - ``./my-config.yaml`` or ``../configs/setup.yaml``
+
+       📂 Relative to current directory
+   * - **Absolute Path**
+     - ``/Users/you/configs/my-setup.yaml``
+
+       ✅ Always works from any location
+   * - **User Config**
+     - ``~/.config/massgen/agents/my-setup.yaml``
+
+       🏠 Personal config storage
+   * - **Repository Path** (GitHub)
+     - ``massgen/configs/basic/multi/three_agents_default.yaml``
+
+       📦 Direct repository access (for development)
 
 Next Steps
 ----------

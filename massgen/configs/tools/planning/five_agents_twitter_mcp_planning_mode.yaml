@@ -11,7 +11,7 @@
 #    XAI_API_KEY="your_grok_key"
 #
 # Example usage:
-# massgen --config @examples/tools_planning_five_agents_twitter_mcp_planning_mode "Research the latest trends in AI development, draft an engaging tweet about it with relevant hashtags, and post it to Twitter"
+# massgen --config @examples/tools/planning/five_agents_twitter_mcp_planning_mode "Research the latest trends in AI development, draft an engaging tweet about it with relevant hashtags, and post it to Twitter"
 
 agents:
   - id: "gemini_twitter_agent"

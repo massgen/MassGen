@@ -5,7 +5,106 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2025-10-14 (PyPI Release)
+## Recent Releases
+
+**v0.1.0 (October 2025)** - PyPI Package & Documentation
+Official PyPI release with enhanced documentation and installation via `pip install massgen`.
+
+**v0.0.32 (October 2025)** - Docker Execution Mode
+Isolated command execution in Docker containers with resource limits and multi-agent support.
+
+**v0.0.31 (October 2025)** - Code Execution, AG2 Integration, Multimodal
+MCP-based command execution across all backends, AG2 framework integration, and audio/video generation.
+
+---
+
+## [0.1.0] - 2025-10-15 (PyPI Release)
+
+### Added
+- **PyPI Package Release**: Official MassGen package available on PyPI for easy installation via pip
+- **Enhanced Documentation**: Comprehensive Sphinx documentation with improved structure and clarity
+  - Rebuilt documentation with v0.1.0 version numbers
+  - Improved backend capabilities table with split multimodal columns
+  - Enhanced explanations for multimodal capabilities (Both, Understanding, Generation)
+  - Updated homepage with v0.1.0 features
+
+### Changed
+- **Documentation Updates**: Major documentation improvements for PyPI release
+  - Updated version numbers across all documentation files
+  - Clarified multimodal capability terminology
+  - Enhanced backend configuration guides
+
+### Technical Details
+- **Major Focus**: PyPI distribution and documentation improvements
+- **Contributors**: @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.0.32] - 2025-10-15
+
+### Added
+- **Docker Execution Mode**: Isolated command execution via Docker containers
+  - New `DockerManager` class for persistent container lifecycle management
+  - Container-based isolation with volume mounts for workspace and context paths
+  - Configurable resource limits (CPU, memory) and network isolation modes (none/bridge/host)
+  - Multi-agent support with dedicated containers per agent
+  - Build script and comprehensive Dockerfile for massgen/mcp-runtime image
+  - Enable via `command_line_execution_mode: "docker"` in agent configuration
+  - Test suite in `test_code_execution.py` covering Docker and local execution modes
+
+### Changed
+- **Code Execution via MCP**: Extended v0.0.31's execute_command tool with Docker execution mode
+  - Docker environment detection for automatic image verification
+  - Local command execution remains available via `command_line_execution_mode: "local"`
+  - Enhanced security layers for both local and Docker modes
+
+- **Claude Code Backend**: Docker mode integration and MCP tool handling improvements
+  - Automatic Bash tool disablement when Docker mode is enabled
+  - MCP tool auto-permission support via `can_use_tool` hook
+  - MCP server configuration format conversion (list to dict format)
+  - System message enhancements to prevent git repository confusion in Docker
+
+- **MCP Tools Architecture**: Major refactoring for simplicity and maintainability
+  - Renamed `MultiMCPClient` to `MCPClient` reflecting simplified architecture
+  - Removed deprecated `converters.py` module (275 lines removed)
+  - Streamlined `client.py` with 1,029 lines removed through consolidation
+  - Standardized type hints and module-level constants in `backend_utils.py`
+  - Simplified exception handling in `exceptions.py` and security validation in `security.py`
+
+### Fixed
+- **Configuration Examples**: Improved configuration organization and usability
+  - Renamed configuration files for better discoverability
+  - Fixed CPU limits in example configurations to be runnable
+  - Reverted gemini_mcp_test.yaml for consistency
+
+- **Orchestrator Timeout and Cleanup**: Enhanced timeout handling and resource management
+  - Improved timeout mechanisms for better reliability
+  - Better cleanup of resources after orchestration sessions
+
+### Documentations, Configurations and Resources
+
+- **Docker Documentation**: New comprehensive Docker mode guide in `massgen/docker/README.md`
+  - Complete Docker setup and usage documentation
+  - Build scripts and Dockerfile with detailed comments
+  - Security considerations for container-based execution
+  - Resource management and isolation strategies
+
+- **Code Execution Design**: Updated `CODE_EXECUTION_DESIGN.md` with Docker architecture details
+
+- **New Configuration Files**: Added 5 Docker-specific example configurations
+  - `docker_simple.yaml`: Basic single-agent Docker execution
+  - `docker_multi_agent.yaml`: Multi-agent Docker deployment
+  - `docker_with_resource_limits.yaml`: Resource-constrained Docker setup
+  - `docker_claude_code.yaml`: Claude Code with Docker execution
+  - `docker_verification.yaml`: Docker setup verification configuration
+
+### Technical Details
+- **Commits**: 17 commits including Docker execution, MCP refactoring, and Claude Code enhancements
+- **Files Modified**: 32 files across backend, filesystem manager, MCP tools, and configurations
+- **Major Features**: Docker execution mode, MCP architecture simplification, Claude Code Docker integration
+- **New Module**: `_docker_manager.py` with DockerManager class (438 lines)
+- **Dependencies Updated**: `docker>=7.0.0` added as optional dependency
+- **Contributors**: @ncrispino @praneeth999 @qidanrui @sonichi @Henry-811 and the MassGen team
+
+## [0.0.31] - 2025-10-14
 
 ### Added
 - **Code Execution via MCP**: Universal command execution through MCP

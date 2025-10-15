@@ -188,6 +188,8 @@ class Orchestrator(ChatAgent):
                     snapshot_storage=self._snapshot_storage,
                     agent_temporary_workspace=self._agent_temporary_workspace,
                 )
+                # Update MCP config with agent_id for Docker mode (must be after setup_orchestration_paths)
+                agent.backend.filesystem_manager.update_backend_mcp_config(agent.backend.config)
 
     @staticmethod
     def _get_chunk_type_value(chunk) -> str:

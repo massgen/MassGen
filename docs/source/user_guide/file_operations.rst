@@ -476,14 +476,17 @@ Advanced Topics
    :maxdepth: 1
 
    project_integration
+   code_execution
 
 The sections above cover basic file operations and workspace management. For advanced features, see:
 
 * :doc:`project_integration` - Work with your existing codebase using context paths with file-level and directory-level access control, plus protected paths for fine-grained permission control
+* :doc:`code_execution` - Execute bash commands and scripts with MCP-based code execution, supporting both local and Docker isolation modes
 
 Next Steps
 ----------
 
+* :doc:`code_execution` - Execute commands and scripts with local or Docker isolation
 * :doc:`mcp_integration` - Additional MCP tools beyond filesystem
 * :doc:`multi_turn_mode` - File operations across multiple conversation turns
 * :doc:`../quickstart/running-massgen` - More examples

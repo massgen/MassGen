@@ -1,6 +1,6 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   massgen --config @examples/tools_mcp_grok3_mini_mcp_example "whats the weather of Tokyo"
+#   massgen --config @examples/tools/mcp/grok3_mini_mcp_example "whats the weather of Tokyo"
 agents:
   - id: "grok3_mini_mcp_weather"
     backend:

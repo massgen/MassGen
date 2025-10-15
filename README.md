@@ -97,14 +97,14 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 - Recent Achievements
   - [v0.1.0](#recent-achievements-v010)
-  - [v0.0.3 - v0.0.30](#previous-achievements-v003---v0030)
+  - [v0.0.3 - v0.0.32](#previous-achievements-v003---v0032)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.32 Roadmap](#v0032-roadmap)
+- [v0.0.33 Roadmap](#v0033-roadmap)
 </details>
 
 <details open>
@@ -145,19 +145,19 @@ See local code execution support in action:
 **Try v0.1.0 Features:**
 ```bash
 # Universal code execution - run tests across any backend
-massgen --config @examples/tools_code-execution_basic_command_execution \
+massgen --config @examples/tools/code-execution/basic_command_execution \
   "Write a Python function to calculate factorial and test it"
 
 # Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
-massgen --config @examples/ag2_ag2_groupchat_gpt \
+massgen --config @examples/ag2/ag2_groupchat_gpt \
   "Write a Python function to calculate factorial."
 
 # Audio generation - create speech from text
-massgen --config @examples/basic_single_single_gpt4o_audio_generation \
+massgen --config @examples/basic/single/single_gpt4o_audio_generation \
   "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
 
 # Video generation - create videos from prompts
-massgen --config @examples/basic_single_single_gpt4o_video_generation \
+massgen --config @examples/basic/single/single_gpt4o_video_generation \
   "Generate a 4 seconds video for 'Cherry blossom petals falling in the spring breeze, sunlight filtering through the pink petals creating a soft halo, slow motion capture, aesthetically beautiful and romantic, depth of field effect.'"
 ```
 
@@ -233,7 +233,7 @@ uv pip install -e .
 # uv pip install -e ".[external]"
 
 # Now use clean commands
-massgen --config @examples/basic_multi_three_agents_default "Your question"
+massgen --config @examples/basic/multi/three_agents_default "Your question"
 ```
 
 **Alternative: Traditional Python venv**
@@ -250,7 +250,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -e .
 
 # Use same clean commands
-massgen --config @examples/basic_multi_three_agents_default "Your question"
+massgen --config @examples/basic/multi/three_agents_default "Your question"
 ```
 
 **Alternative: Global Installation using `uv tool` (for multi-directory usage)**
@@ -434,7 +434,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 
 ```bash
 # Three powerful agents working together - Gemini, GPT-5, and Grok
-massgen --config @examples/basic_multi_three_agents_default \
+massgen --config @examples/basic/multi/three_agents_default \
   "Analyze the pros and cons of renewable energy"
 ```
 
@@ -486,11 +486,11 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 
 ```bash
 # Weather service with GPT-5
-massgen --config @examples/tools_mcp_gpt5_nano_mcp_example \
+massgen --config @examples/tools/mcp/gpt5_nano_mcp_example \
   "What's the weather forecast for New York this week?"
 
 # Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
-massgen --config @examples/tools_mcp_multimcp_gemini \
+massgen --config @examples/tools/mcp/multimcp_gemini \
   "Find the best restaurants in Paris and save the recommendations to a file"
 ```
 
@@ -562,11 +562,11 @@ MassGen provides comprehensive file system support through multiple backends, en
 
 ```bash
 # File operations with Claude Code
-massgen --config @examples/tools_filesystem_claude_code_single \
+massgen --config @examples/tools/filesystem/claude_code_single \
   "Create a Python web scraper and save results to CSV"
 
 # Multi-agent file collaboration
-massgen --config @examples/tools_filesystem_claude_code_context_sharing \
+massgen --config @examples/tools/filesystem/claude_code_context_sharing \
   "Generate a comprehensive project report with charts and analysis"
 ```
 
@@ -648,7 +648,7 @@ MassGen automatically organizes all its working files under a `.massgen/` direct
 
 ```bash
 # Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
-massgen --config @examples/tools_filesystem_gpt5mini_cc_fs_context_path "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+massgen --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 **Configuration:**
@@ -760,21 +760,21 @@ agents:
 **Claude (Recursive MCP Execution - v0.0.20+)**
 ```bash
 # Claude with advanced tool chaining
-massgen --config @examples/tools_mcp_claude_mcp_example \
+massgen --config @examples/tools/mcp/claude_mcp_example \
   "Research and compare weather in Beijing and Shanghai"
 ```
 
 **OpenAI (GPT-5 Series with MCP - v0.0.17+)**
 ```bash
 # GPT-5 with weather and external tools
-massgen --config @examples/tools_mcp_gpt5_mini_mcp_example \
+massgen --config @examples/tools/mcp/gpt5_mini_mcp_example \
   "What's the weather of Tokyo"
 ```
 
 **Gemini (Multi-Server MCP - v0.0.15+)**
 ```bash
 # Gemini with multiple MCP services
-massgen --config @examples/tools_mcp_multimcp_gemini \
+massgen --config @examples/tools/mcp/multimcp_gemini \
   "Find accommodations in Paris with neighborhood analysis"    # (requires BRAVE_API_KEY in .env)
 ```
 
@@ -795,7 +795,7 @@ uv run python -m massgen.cli \
 **Local Models (LM Studio - v0.0.7+)**
 ```bash
 # Run open-source models locally
-massgen --config @examples/providers_local_lmstudio \
+massgen --config @examples/providers/local/lmstudio \
   "Explain machine learning concepts"
 ```
 
@@ -806,25 +806,25 @@ massgen --config @examples/providers_local_lmstudio \
 **Question Answering & Research:**
 ```bash
 # Complex research with multiple perspectives
-massgen --config @examples/basic_multi_gemini_4o_claude \
+massgen --config @examples/basic/multi/gemini_4o_claude \
   "What's best to do in Stockholm in October 2025"
 
 # Specific research requirements
-massgen --config @examples/basic_multi_gemini_4o_claude \
+massgen --config @examples/basic/multi/gemini_4o_claude \
   "Give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025"
 ```
 
 **Creative Writing:**
 ```bash
 # Story generation with multiple creative agents
-massgen --config @examples/basic_multi_gemini_4o_claude \
+massgen --config @examples/basic/multi/gemini_4o_claude \
   "Write a short story about a robot who discovers music"
 ```
 
 **Development & Coding:**
 ```bash
 # Full-stack development with file operations
-massgen --config @examples/tools_filesystem_claude_code_single \
+massgen --config @examples/tools/filesystem/claude_code_single \
   "Create a Flask web app with authentication"
 ```
 
@@ -832,11 +832,11 @@ massgen --config @examples/tools_filesystem_claude_code_single \
 ```bash
 # Browser automation with screenshots and reporting
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
-massgen --config @examples/tools_code-execution_multi_agent_playwright_automation \
+massgen --config @examples/tools/code-execution/multi_agent_playwright_automation \
   "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
-massgen --config @examples/tools_code-execution_multi_agent_playwright_automation \
+massgen --config @examples/tools/code-execution/multi_agent_playwright_automation \
   "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
 ```
 
@@ -847,10 +847,10 @@ massgen --config @examples/tools_code-execution_multi_agent_playwright_automatio
 **Multi-Turn Conversations:**
 ```bash
 # Start interactive chat (no initial question)
-massgen --config @examples/basic_multi_three_agents_default
+massgen --config @examples/basic/multi/three_agents_default
 
 # Debug mode for troubleshooting
-massgen --config @examples/basic_multi_three_agents_default \
+massgen --config @examples/basic/multi/three_agents_default \
   --debug "Your question"
 ```
 
@@ -971,35 +971,57 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ### Recent Achievements (v0.1.0)
 
-**🎉 Released: October 14, 2025**
+**🎉 Released: October 15, 2025**
 
-#### Universal Command Execution
-- **MCP-Based Code Execution**: Universal `execute_command` tool works across Claude, Gemini, OpenAI (Response API), and Chat Completions providers (Grok, ZAI, etc.)
-- **AG2-Inspired Security**: Permission management, command filtering, and virtual environment auto-detection
-- **Code Execution in Planning Mode**: Safe code execution during agent coordination with planning mode integration
-- **Auto-Generated Exemptions**: System-generated file exemptions for Python cache files, temporary files, and system directories
+#### Universal Code Execution
+- **MCP-Based Tool**: New `execute_command` tool works across Claude, Gemini, OpenAI, and Chat Completions backends
+- **AG2-Inspired Security**: Permission management and command filtering (whitelist/blacklist patterns)
+- **Planning Mode Support**: Code execution in planning mode for safer coordination
 
-#### Native Multi-Agent Conversations
-- **AG2 Group Chat**: Multi-agent conversations using AG2's `GroupChat` and `GroupChatManager` frameworks
-- **Smart Speaker Selection**: Automatic, round-robin, and manual speaker selection modes powered by LLMs
-- **Enhanced AG2 Adapter**: Improved integration supporting native AG2 group chat coordination patterns
+#### AG2 Group Chat Integration
+- **Multi-Agent Conversations**: Native support using AG2's GroupChat and GroupChatManager frameworks
+- **Smart Speaker Selection**: Automatic, round-robin, or manual selection powered by LLMs
+- **Enhanced Adapter**: AG2 adapter supporting native group chat coordination
 
 #### Audio & Video Generation
-- **Audio Tools**: `generate_and_store_audio_no_input_audios`, `generate_text_with_input_audio`, `convert_text_to_speech`
-- **Video Tools**: `generate_and_store_video_no_input_images` for text-to-video generation using OpenAI's Sora-2 API
-- **Multimodal Expansion**: Expanded content generation capabilities beyond text and images
+- **Audio Tools**: Text-to-speech and transcription capabilities
+- **Video Generation**: Integration with OpenAI's Sora-2 API for video creation
+- **Multimodal Expansion**: Extended capabilities beyond text and images
 
-#### Enhanced Safety & Developer Experience
-- **File Operation Tracker**: Enhanced tracking and protection for safer file operations in multi-agent environments
-- **PathPermissionManager**: Integration with execute_command tool for comprehensive workspace validation
-- **Message Templates**: Execution result guidance for better agent interpretation of command outputs
-- **Comprehensive Testing**: Test coverage for code execution, MCP integration, and multi-agent scenarios
+### Previous Achievements (v0.0.32)
 
-#### Documentation
-- **Technical Design**: `CODE_EXECUTION_DESIGN.md`
-- **Configuration Examples**: 9 new example configurations including `basic_command_execution.yaml`, `ag2_groupchat.yaml`, audio/video generation examples, multi-agent scenarios
+**🎉 Released: October 15, 2025**
 
-### Previous Achievements (v0.0.3 - v0.0.30)
+#### Docker Execution Mode (v0.0.32)
+- **Container-Based Isolation**: Secure command execution in isolated Docker containers preventing host filesystem access
+- **Persistent State Management**: Packages and dependencies persist across conversation turns eliminating redundant setup
+- **Multi-Agent Support**: Each agent receives dedicated isolated container enabling safe parallel execution
+- **Configurable Security**: Resource limits (CPU, memory), network isolation modes, and read-only volume mounts
+
+#### MCP Architecture Refactoring (v0.0.32)
+- **Simplified Client**: Renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture
+- **Code Consolidation**: Removed deprecated modules and consolidated duplicate MCP protocol handling
+- **Improved Maintainability**: Standardized type hints, enhanced error handling, cleaner code organization
+
+#### Claude Code Docker Integration (v0.0.32)
+- **Automatic Tool Management**: Bash tool automatically disabled in Docker mode routing commands through execute_command
+- **MCP Auto-Permissions**: Automatic approval for MCP tools while preserving security validation
+- **Enhanced Guidance**: System messages prevent git repository confusion between host and container environments
+
+#### Configuration and Testing (v0.0.32)
+- **Docker Documentation**: `massgen/docker/README.md` with setup guide and build scripts
+- **Example Configurations**: `docker_simple.yaml`, `docker_multi_agent.yaml`, `docker_with_resource_limits.yaml`, `docker_claude_code.yaml`, `docker_verification.yaml`
+- **Testing**: Comprehensive test suite validating Docker and local execution modes
+
+### Previous Achievements (v0.0.3 - v0.0.32)
+
+<div style="max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease;">
+
+✅ **Universal Command Execution (v0.0.31)**: MCP-based execute_command tool works across Claude, Gemini, OpenAI, and Chat Completions providers, AG2-inspired security with permission management and command filtering, code execution in planning mode for safer coordination
+
+✅ **AG2 Group Chat Integration (v0.0.31)**: Multi-agent conversations using AG2's GroupChat and GroupChatManager frameworks, smart speaker selection (automatic, round-robin, manual) powered by LLMs, enhanced AG2 adapter supporting native group chat coordination
+
+✅ **Audio & Video Generation (v0.0.31)**: Audio tools for text-to-speech and transcription, video generation using OpenAI's Sora-2 API, multimodal expansion beyond text and images
 
 ✅ **Multimodal Support Extension (v0.0.30)**: Audio and video processing for Chat Completions and Claude backends (WAV, MP3, MP4, AVI, MOV, WEBM formats), flexible media input via local paths or URLs, extended base64 encoding for audio/video files, configurable file size limits
 
@@ -1075,6 +1097,8 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
 
+</div>
+
 ### Key Future Enhancements
 
 -   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
@@ -1085,25 +1109,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.32 Roadmap
+### v0.0.33 Roadmap
 
-Version 0.0.32 focuses on Docker-based code execution and configuration management:
+Version 0.0.33 focuses on developer experience improvements and PyPI distribution:
 
 #### Required Features
-- **Docker Code Execution**: Extend v0.1.0's code execution with Docker container isolation for enhanced security
 - **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
+- **PyPI Package Release v0.1.0**: Official PyPI package representing new usage paradigm with easy pip installation
 
 #### Optional Features
-- **MCP Tool Safety System**: LLM-powered classification of irreversible MCP tools with human-in-the-loop validation
-- **MCP Framework Refactoring**: Refactor MCP integration architecture for better maintainability and extensibility
+- **Nested Chat Integration**: Complete AG2 nested chat pattern support for hierarchical agent conversations
+- **DSPy Integration**: Framework integration for prompt optimization and systematic agent improvement
 
 Key technical approach:
-- **Docker Execution**: Container lifecycle management, custom Docker images/Dockerfiles, resource limits, security isolation
 - **Config Builder**: Interactive prompts, configuration templates, validation and error checking, preset support
-- **Tool Safety**: LLM-based tool classification, optional human review workflow, per-user safety preferences
-- **MCP Refactoring**: Cleaner separation of concerns, reduced code duplication, improved error handling
+- **PyPI Package**: Production-ready distribution with proper dependencies, documentation, and migration guide
+- **Nested Chat**: AG2 integration for hierarchical conversations with parent-child agent relationships
+- **DSPy**: Prompt optimization, performance tuning, and systematic agent improvement workflows
 
-For detailed milestones and technical specifications, see the [full v0.0.32 roadmap](ROADMAP_v0.0.32.md).
+For detailed milestones and technical specifications, see the [full v0.0.33 roadmap](ROADMAP_v0.0.33.md).
 
 ---
 

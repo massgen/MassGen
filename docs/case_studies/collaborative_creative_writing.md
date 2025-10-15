@@ -7,7 +7,7 @@ This case study demonstrates **MassGen**'s ability to achieve unanimous consensu
 ## Command
 
 ```bash
-massgen --config @examples/basic_multi_gemini_4o_claude "Write a short story about a robot who discovers music."
+massgen --config @examples/basic/multi/gemini_4o_claude "Write a short story about a robot who discovers music."
 ```
 
 **Prompt:**

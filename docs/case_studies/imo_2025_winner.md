@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to achieve unanimous consensus th
 
 **Command:**
 ```
-massgen --config @examples/basic_multi_gemini_4o_claude "Which AI won IMO 2025?"
+massgen --config @examples/basic/multi/gemini_4o_claude "Which AI won IMO 2025?"
 ```
 
 **Prompt:** Which AI won IMO 2025?

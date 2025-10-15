@@ -17,32 +17,32 @@ Quick Reference: Backend Support Matrix
      - MCP
      - Setup Requirements
    * - **Claude API**
-     - ✅
-     - ✅
+     - ⭐
+     - ⭐
      - ✅
      - ✅
      - ``ANTHROPIC_API_KEY``
    * - **Claude Code**
-     - ✅ (native)
-     - ✅ (native)
-     - ✅ (native)
+     - ⭐
+     - ⭐
+     - ⭐
      - ✅
      - ``ANTHROPIC_API_KEY`` + Native: Read, Write, Edit, Bash, Grep, Glob, TodoWrite
    * - **Gemini API**
-     - ✅
-     - ✅
+     - ⭐
+     - ⭐
      - ✅
      - ✅
      - ``GEMINI_API_KEY``
    * - **OpenAI API**
-     - ✅
-     - ✅ (interpreter)
+     - ⭐
+     - ⭐
      - ✅
      - ✅
      - ``OPENAI_API_KEY``
    * - **Grok API**
+     - ⭐
      - ✅
-     - ❌
      - ✅
      - ✅
      - ``XAI_API_KEY``
@@ -54,7 +54,7 @@ Quick Reference: Backend Support Matrix
      - Azure deployment config
    * - **Z AI**
      - ❌
-     - ❌
+     - ✅
      - ✅
      - ✅
      - ``ZAI_API_KEY``
@@ -66,22 +66,47 @@ Quick Reference: Backend Support Matrix
      - ``base_url`` + provider API key
    * - **LM Studio**
      - ❌
-     - ❌
+     - ✅
      - ✅
      - Limited
      - Local LM Studio server
    * - **vLLM/SGLang**
      - ❌
-     - ❌
+     - ✅
      - ✅
      - ✅
      - Local server on port 8000/30000
    * - **AG2 Framework**
      - Varies
-     - ✅
+     - ⭐
      - Varies
      - ❌
      - AG2 config + LLM API keys
+
+**Legend:**
+
+* ⭐ **Built-in** - Native backend feature (e.g., Anthropic API, Google Search, OpenAI code interpreter, Claude Code Bash tool)
+* ✅ **MCP-based** - Available via MCP integration (e.g., ``enable_mcp_command_line: true`` for universal bash/shell execution)
+* ❌ **Not available** - Feature not supported
+* **Varies** - Depends on provider capabilities
+
+**Code Execution Details:**
+
+* **Built-in (⭐)**: Backend provider's native code execution tool
+
+  - Claude API: Anthropic's code execution tool
+  - Gemini API: Google's code execution tool
+  - OpenAI API: Code interpreter for calculations
+  - Claude Code: Native Bash tool
+  - AG2 Framework: AG2 code executors (Local, Docker, Jupyter, Cloud)
+
+* **MCP-based (✅)**: Universal bash/shell execution via ``enable_mcp_command_line: true``
+
+  - Available for **all backends** with MCP support (✅ in MCP column)
+  - Supports both local and Docker execution modes
+  - See :doc:`../user_guide/code_execution` for setup and comparison
+
+**Note:** Backends can use **both** built-in and MCP-based code execution simultaneously. The agent will choose the most appropriate tool for each task.
 
 API-Based Models
 ----------------

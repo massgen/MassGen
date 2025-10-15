@@ -1,0 +1,28 @@
+/* Theme-aware images for Sphinx Book Theme */
+
+/* Hide dark images by default (light mode) */
+.theme-image-dark {
+    display: none !important;
+}
+
+.theme-image-light {
+    display: block !important;
+    margin: 0 auto;
+}
+
+/* Show dark images when dark mode is active */
+html[data-theme="dark"] .theme-image-dark {
+    display: block !important;
+    margin: 0 auto;
+}
+
+html[data-theme="dark"] .theme-image-light {
+    display: none !important;
+}
+
+/* Center images */
+.theme-image-light,
+.theme-image-dark {
+    max-width: 100%;
+    height: auto;
+}

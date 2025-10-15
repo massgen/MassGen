@@ -1,6 +1,6 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   massgen --config @examples/tools_mcp_claude_mcp_example "whats the weather of Tokyo"
+#   massgen --config @examples/tools/mcp/claude_mcp_example "whats the weather of Tokyo"
 agents:
   - id: "claude_mcp_weather"
     backend:

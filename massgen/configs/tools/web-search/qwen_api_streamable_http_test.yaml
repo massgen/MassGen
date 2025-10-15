@@ -3,7 +3,7 @@
 # Prerequisites:
 # 1. Start the test MCP server: python massgen/tests/test_http_mcp_server.py
 # 2. Verify server is running at http://localhost:8000/mcp
-# 3. Run: massgen --config @examples/tools_web-search_qwen_api_streamable_http_test "Run a complete system check - events, birthdays, random data, and server status"
+# 3. Run: massgen --config @examples/tools/web-search/qwen_api_streamable_http_test "Run a complete system check - events, birthdays, random data, and server status"
 
 agents:
   - id: "qwen_mcp_weather"

@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# massgen --config @examples/tools_mcp_gemini_mcp_filesystem_test_single_agent "Please create a Python script with a hello world function in various fictional languages and save it directly into a file in your workspace."
+# massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_single_agent "Please create a Python script with a hello world function in various fictional languages and save it directly into a file in your workspace."
 agents:
   - id: "gemini_agent1"
     backend:

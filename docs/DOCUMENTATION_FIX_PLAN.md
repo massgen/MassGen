@@ -159,7 +159,7 @@ Comment out broken links in index.rst toctree temporarily:
 
    .. code-block:: bash
 
-      massgen --config @examples/basic_multi_three_agents_default \
+      massgen --config @examples/basic/multi/three_agents_default \
         "Analyze pros and cons of renewable energy"
 
    This uses:

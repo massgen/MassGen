@@ -116,7 +116,7 @@ orchestrator:
 
 **Usage:**
 ```bash
-massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
   "Check recent messages in #dev channel and post a summary"
 ```
 
@@ -149,7 +149,7 @@ orchestrator:
 
 **Usage:**
 ```bash
-massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode \
   "Create a Python web app project structure with src, tests, and docs directories"
 ```
 
@@ -235,7 +235,7 @@ Planning Mode works across all major backends:
 Five agents collaborate on tweet strategy, winning agent posts:
 
 ```bash
-massgen --config @examples/tools_planning_five_agents_twitter_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_twitter_mcp_planning_mode \
   "Analyze our brand voice and create an engaging tweet about our new feature"
 ```
 
@@ -249,7 +249,7 @@ massgen --config @examples/tools_planning_five_agents_twitter_mcp_planning_mode 
 Agents analyze Discord messages and coordinate response:
 
 ```bash
-massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode \
   "Check #support channel, summarize issues, post helpful guidance"
 ```
 
@@ -263,7 +263,7 @@ massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode 
 Agents collaborate on project structure before creating files:
 
 ```bash
-massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode \
+massgen --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode \
   "Create a FastAPI project with auth, database, and API endpoints"
 ```
 

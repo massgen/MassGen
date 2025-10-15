@@ -4,7 +4,7 @@ This case study demonstrates MassGen's sophisticated ability to synthesize curre
 
 **Command:**
 ```
-massgen --config @examples/basic_multi_gemini_4o_claude "find big AI news this week"
+massgen --config @examples/basic/multi/gemini_4o_claude "find big AI news this week"
 ```
 
 **Prompt:** find big AI news this week

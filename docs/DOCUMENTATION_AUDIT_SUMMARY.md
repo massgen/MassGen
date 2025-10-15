@@ -40,7 +40,7 @@ orchestrator = Orchestrator(agents=[agent])
 
 **Reality:**
 ```bash
-massgen --config @examples/basic_multi_three_agents_default \
+massgen --config @examples/basic/multi/three_agents_default \
   "Your question"
 ```
 

@@ -216,15 +216,15 @@ Implements BaseAdapter for AG2 agents:
 pip install ag2
 
 # Basic AG2 agent
-massgen --config @examples/ag2_ag2_single_agent \
+massgen --config @examples/ag2/ag2_single_agent \
   "Your task"
 
 # AG2 with code execution
-massgen --config @examples/ag2_ag2_coder \
+massgen --config @examples/ag2/ag2_coder \
   "Write a script to analyze CSV data"
 
 # Hybrid AG2 + Gemini
-massgen --config @examples/ag2_ag2_coder_case_study \
+massgen --config @examples/ag2/ag2_coder_case_study \
   "Complex research task"
 ```
 
@@ -380,11 +380,11 @@ agents:
 
 ```bash
 # Single AG2 conversational agent
-massgen --config @examples/ag2_ag2_single_agent \
+massgen --config @examples/ag2/ag2_single_agent \
   "Explain quantum computing"
 
 # AG2 agent with code execution
-massgen --config @examples/ag2_ag2_coder \
+massgen --config @examples/ag2/ag2_coder \
   "Analyze this CSV file and create visualizations"
 ```
 
@@ -392,7 +392,7 @@ massgen --config @examples/ag2_ag2_coder \
 
 ```bash
 # AG2 coder + Gemini analyst
-massgen --config @examples/ag2_ag2_coder_case_study \
+massgen --config @examples/ag2/ag2_coder_case_study \
   "Research AI safety papers, scrape data, analyze trends"
 
 # Custom hybrid workflow

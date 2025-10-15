@@ -44,7 +44,7 @@ Prior to v0.0.12, for multiple Claude Code agents to collaborate, they need to u
 
 ### Baseline Command
 ```bash
-massgen --config @examples/tools_filesystem_claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
 ### Expected Result
@@ -98,7 +98,7 @@ agents:
 
 ### Command
 ```bash
-massgen --config @examples/tools_filesystem_claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
 <h2 id="agents">🤖 Agents</h2>

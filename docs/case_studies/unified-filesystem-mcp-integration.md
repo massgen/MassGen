@@ -67,7 +67,7 @@ ui:
 
 ### Baseline Command
 ```bash
-massgen --config @examples/tools_mcp_gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
+massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 ```
 
 <h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
@@ -131,7 +131,7 @@ orchestrator:
 
 ### Command
 ```bash
-massgen --config @examples/tools_mcp_gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
+massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm, and output it in LaTeX Beamer format. No figures are required."
 ```
 
 <h2 id="agents">🤖 Agents</h2>

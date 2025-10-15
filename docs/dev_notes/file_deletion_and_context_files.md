@@ -12,7 +12,7 @@ This document describes the implementation of file/directory deletion capabiliti
 
 **Command**:
 ```bash
-massgen --config @examples/tools_filesystem_gemini_gpt5nano_protected_paths "Review the HTML and CSS files, then improve the styling"
+massgen --config @examples/tools/filesystem/gemini_gpt5nano_protected_paths "Review the HTML and CSS files, then improve the styling"
 ```
 
 **Result**:
@@ -28,7 +28,7 @@ massgen --config @examples/tools_filesystem_gemini_gpt5nano_protected_paths "Rev
 
 **Command**:
 ```bash
-massgen --config @examples/tools_filesystem_gemini_gpt5nano_file_context_path "Analyze the CSS file and make modern improvements"
+massgen --config @examples/tools/filesystem/gemini_gpt5nano_file_context_path "Analyze the CSS file and make modern improvements"
 ```
 
 **Result**:
@@ -44,7 +44,7 @@ massgen --config @examples/tools_filesystem_gemini_gpt5nano_file_context_path "A
 
 **Command**:
 ```bash
-massgen --config @examples/tools_filesystem_gemini_gemini_workspace_cleanup "Please improve the website to reference Jimi Hendrix then remove the other files and directories that aren't being used"
+massgen --config @examples/tools/filesystem/gemini_gemini_workspace_cleanup "Please improve the website to reference Jimi Hendrix then remove the other files and directories that aren't being used"
 ```
 
 **What happens**:

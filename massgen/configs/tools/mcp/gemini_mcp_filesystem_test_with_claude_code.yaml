@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# massgen --config @examples/tools_mcp_gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
+# massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 agents:
   - id: "gemini_agent"
     backend:

@@ -6,7 +6,7 @@
 # access to a single file, preventing agents from accessing sibling files in the same directory.
 #
 # Run with:
-#   massgen --config @examples/tools_filesystem_gemini_gpt5nano_file_context_path "Analyze the CSS file and make modern improvements"
+#   massgen --config @examples/tools/filesystem/gemini_gpt5nano_file_context_path "Analyze the CSS file and make modern improvements"
 
 agents:
   - id: "agent_a"

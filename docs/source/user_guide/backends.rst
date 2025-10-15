@@ -78,89 +78,89 @@ Different backends support different built-in tools:
      - MCP Support
      - Filesystem
    * - ``openai``
+     - ⭐
+     - ⭐
      - ✅
-     - ✅
-     - ❌
      - ✅ Both
      - ✅ Both
      - ✅ Generation
      - ✅
-     - ✅ Via MCP
+     - ✅
    * - ``claude``
+     - ⭐
+     - ⭐
      - ✅
-     - ✅
-     - ❌
      - ❌
      - ✅ Understanding
      - ✅ Understanding
      - ✅
-     - ✅ Via MCP
+     - ✅
    * - ``claude_code``
-     - ✅
+     - ⭐
      - ❌
-     - ✅
+     - ⭐
      - ✅ Understanding
      - ❌
      - ❌
      - ✅
-     - ✅ Native
+     - ⭐
    * - ``gemini``
+     - ⭐
+     - ⭐
      - ✅
-     - ✅
-     - ❌
      - ✅ Understanding
      - ❌
      - ❌
      - ✅
-     - ✅ Via MCP
+     - ✅
    * - ``grok``
-     - ✅
-     - ❌
-     - ❌
-     - ❌
-     - ❌
+     - ⭐
      - ❌
      - ✅
-     - ✅ Via MCP
+     - ❌
+     - ❌
+     - ❌
+     - ✅
+     - ✅
    * - ``azure_openai``
+     - ⭐
+     - ⭐
      - ✅
-     - ✅
-     - ❌
      - ✅ Both
      - ❌
      - ❌
      - ✅
-     - ✅ Via MCP
+     - ✅
    * - ``chatcompletion``
      - ❌
      - ❌
-     - ❌
+     - ✅
      - ❌
      - ✅ Understanding
      - ✅ Understanding
      - ✅
-     - ✅ Via MCP
+     - ✅
    * - ``lmstudio``
      - ❌
      - ❌
-     - ❌
+     - ✅
      - ❌
      - ❌
      - ❌
      - ✅
-     - ✅ Via MCP
+     - ✅
    * - ``inference``
      - ❌
      - ❌
-     - ❌
+     - ✅
      - ❌
      - ❌
      - ❌
      - ✅
-     - ✅ Via MCP
+     - ✅
    * - ``ag2``
      - ❌
-     - ✅
+     - ⭐
      - ❌
      - ❌
      - ❌
@@ -169,6 +169,36 @@ Different backends support different built-in tools:
      - ❌
 
 **Notes:**
+
+* **Symbol Legend:**
+
+  * ⭐ **Built-in** - Native backend feature (e.g., Anthropic's web search, OpenAI code interpreter, Claude Code's Bash tool)
+  * ✅ **MCP-based or Available** - Feature available via MCP integration or standard capability
+  * ❌ **Not available** - Feature not supported
+
+* **Code Execution vs Bash/Shell:**
+
+  * **Code Execution (⭐)**: Backend provider's native code execution tool
+
+    * ``openai``: OpenAI code interpreter for calculations and data analysis
+    * ``claude``: Anthropic's code execution tool
+    * ``gemini``: Google's code execution tool
+    * ``azure_openai``: Azure OpenAI code interpreter
+    * ``ag2``: AG2 framework code executors (Local, Docker, Jupyter, Cloud)
+
+  * **Bash/Shell**:
+
+    * ⭐ (``claude_code`` only): Native Bash tool built into Claude Code
+    * ✅ (all MCP-enabled backends): Universal bash/shell via ``enable_mcp_command_line: true``
+    * See :doc:`code_execution` for detailed setup and comparison
+
+  * **You can use both**: Backends can use built-in code execution AND MCP-based bash/shell simultaneously
+
+* **Filesystem:**
+
+  * ⭐ (``claude_code`` only): Native filesystem tools (Read, Write, Edit, Bash, Grep, Glob)
+  * ✅ (all MCP-enabled backends): Filesystem operations via MCP servers (e.g., ``@modelcontextprotocol/server-filesystem``)
+  * See :doc:`file_operations` for detailed filesystem configuration
 
 * **Multimodal Capabilities:**
 
@@ -186,9 +216,6 @@ Different backends support different built-in tools:
   * **Generation Only**: Can only create new content, not analyze existing content
 
     * **Video Generation** (e.g., ``openai`` with Sora-2 API, v0.1.0): Can create videos from text prompts but cannot analyze existing videos
-
-* **Via MCP**: Feature available through Model Context Protocol integration
-* **Native**: Built directly into the backend (e.g., ``claude_code`` filesystem tools)
 
 See :doc:`../features/backend-support` for the complete and authoritative backend capabilities reference.
 

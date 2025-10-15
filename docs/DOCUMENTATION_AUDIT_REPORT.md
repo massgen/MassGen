@@ -53,7 +53,7 @@ MassGen is a **CLI tool** with **YAML configuration**:
 
 ```bash
 # ACTUAL - How MassGen works
-massgen --config @examples/basic_multi_three_agents_default \
+massgen --config @examples/basic/multi/three_agents_default \
   "Your question here"
 ```
 

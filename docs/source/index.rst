@@ -2,10 +2,10 @@
 MassGen: Multi-Agent Scaling System for GenAI
 =================================================
 
-.. image:: ../../assets/logo.png
-   :width: 360
-   :align: center
-   :alt: MassGen Logo
+.. raw:: html
+
+   <img src="_static/images/logo.png" width="360" alt="MassGen Logo" class="theme-image-light">
+   <img src="_static/images/logo-dark.png" width="360" alt="MassGen Logo" class="theme-image-dark">
 
 |
 
@@ -31,11 +31,12 @@ MassGen: Multi-Agent Scaling System for GenAI
      <i>Multi-agent scaling through intelligent collaboration</i>
    </p>
 
-.. image:: ../../assets/massgen-demo.gif
-   :width: 800
-   :align: center
-   :alt: MassGen Demo - Multi-agent collaboration in action
-   :target: https://www.youtube.com/watch?v=Dp2oldJJImw
+.. raw:: html
+
+   <a href="https://www.youtube.com/watch?v=Dp2oldJJImw" style="display: block; text-align: center;">
+     <img src="_static/images/massgen-demo-light.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-light">
+     <img src="_static/images/massgen-demo.gif" width="800" alt="MassGen Demo - Multi-agent collaboration in action" class="theme-image-dark">
+   </a>
 
 |
 
@@ -96,69 +97,37 @@ Key Features
 
       Work directly with your codebase using context paths with granular read/write permissions.
 
-Latest Features (v0.1.0)
---------------------------
+Recent Releases
+---------------
 
-**What's New in v0.1.0:**
+**v0.1.0 (October 2025)** - PyPI Package & Documentation
 
-.. grid:: 2
-   :gutter: 3
+Official PyPI release with enhanced documentation and installation via ``pip install massgen``.
 
-   .. grid-item-card:: 🔧 Universal Code Execution
+**v0.0.32 (October 2025)** - Docker Execution Mode
 
-      Run bash commands across all backends through new MCP-based ``execute_command`` tool.
+Isolated command execution in Docker containers with resource limits and multi-agent support.
 
-      .. code-block:: bash
+**v0.0.31 (October 2025)** - Code Execution, AG2 Integration, Multimodal
 
-         massgen \
-           --config @examples/tools/code-execution/basic_command_execution.yaml \
-           "Write a Python function to calculate factorial and test it"
+MCP-based command execution across all backends, AG2 framework integration, and audio/video generation.
 
-   .. grid-item-card:: 💬 AG2 Group Chat
-
-      Native multi-agent conversations using AG2's group chat framework with LLM-based speaker selection.
-
-      .. code-block:: bash
-
-         massgen \
-           --config @examples/ag2/ag2_groupchat_gpt.yaml \
-           "Write a Python function to calculate factorial."
-
-   .. grid-item-card:: 🎵 Audio & Video Generation
-
-      Create audio with text-to-speech and transcription, generate videos from text prompts.
-
-      .. code-block:: bash
-
-         massgen \
-           --config @examples/basic/single/single_gpt4o_audio_generation.yaml \
-           "Tell me a very short introduction about Sherlock Holmes and read it aloud."
-
-**Experience v0.1.0 Code Execution:**
-
-.. raw:: html
-
-   <p align="center">
-     <a href="https://www.youtube.com/watch?v=Sy-CFNPvLAQ">
-       <img src="https://img.youtube.com/vi/Sy-CFNPvLAQ/0.jpg" alt="MassGen v0.1.0 Local Code Execution Demo" width="600">
-     </a>
-   </p>
-
-**Try v0.1.0:**
+**Quick Start:**
 
 .. code-block:: bash
 
-   # Universal code execution - run tests across any backend
-   massgen \
-     --config @examples/tools/code-execution/basic_command_execution.yaml \
-     "Write a Python function to calculate factorial and test it"
+   # Install from PyPI
+   pip install massgen
 
-   # Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
-   massgen \
-     --config @examples/ag2/ag2_groupchat_gpt.yaml \
-     "Write a Python function to calculate factorial."
+   # Single-agent test (works from any directory)
+   massgen --model gemini-2.5-flash "What is 2+2?"
 
-See all release examples in `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md#release-history--examples>`_.
+   # Multi-agent collaboration (works from any directory)
+   massgen --config @examples/basic/multi/three_agents_default \
+     "What are the pros and cons of renewable energy?"
+
+.. note::
+   **Using @examples configs:** The ``@examples/`` prefix works from **any directory** - you don't need to be in the MassGen repo. MassGen automatically finds package configurations. See :doc:`examples/available_configs` for the complete list.
 
 Quick Start
 -----------
@@ -362,6 +331,7 @@ Documentation Sections
    :caption: Examples
 
    examples/index
+   examples/available_configs
    examples/basic_examples
    examples/case_studies
 

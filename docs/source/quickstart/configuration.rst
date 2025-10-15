@@ -523,9 +523,9 @@ All configuration examples are in ``@examples/``:
 
 * ``@examples/basic_single`` - Single agent configuration
 * ``@examples/basic_multi`` - Multi-agent collaboration
-* ``@examples/tools_mcp_*`` - MCP integration examples
-* ``@examples/tools_filesystem_*`` - File operation examples
-* ``@examples/ag2_*`` - AG2 framework integration
+* ``@examples/tools/mcp/*`` - MCP integration examples
+* ``@examples/tools/filesystem/*`` - File operation examples
+* ``@examples/ag2/*`` - AG2 framework integration
 
 See the `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_ for the complete catalog.
 

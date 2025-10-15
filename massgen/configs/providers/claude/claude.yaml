@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# massgen --config @examples/providers_claude_claude "add_numbers with 46 and 52"
+# massgen --config @examples/providers/claude/claude "add_numbers with 46 and 52"
 agents:
   - id: "claude"
     backend:

@@ -11,7 +11,7 @@
 #    XAI_API_KEY="your_grok_key" (for Grok agent)
 #
 # Example usage:
-# massgen --config @examples/tools_planning_five_agents_filesystem_mcp_planning_mode "Create a project structure for a Python web app with directories for src, tests, docs, and config. Add some example files and then analyze the structure."
+# massgen --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode "Create a project structure for a Python web app with directories for src, tests, docs, and config. Add some example files and then analyze the structure."
 
 agents:
   - id: "gemini_filesystem_agent"

@@ -7,7 +7,7 @@ This case study demonstrates **MassGen**'s ability to handle specialized researc
 ## Command
 
 ```bash
-massgen --config @examples/basic_multi_gemini_4o_claude "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
+massgen --config @examples/basic/multi/gemini_4o_claude "give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025, note, the sources must include the word Berkeley, don't include talks from any other agentic AI summits"
 ```
 
 **Prompt:**

@@ -53,7 +53,7 @@ Without the new permission system, agents would have unrestricted file access, p
 
 ### Baseline Command
 ```bash
-massgen --config @examples/tools_filesystem_gpt5mini_cc_fs_context_path \
+massgen --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path \
   "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
@@ -126,7 +126,7 @@ orchestrator:
 
 ### Command
 ```bash
-massgen --config @examples/tools_filesystem_gpt5mini_cc_fs_context_path \
+massgen --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path \
   "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 

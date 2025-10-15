@@ -91,8 +91,17 @@ except ImportError:
     print("Warning: sphinx_book_theme not installed. Using alabaster theme.")
 html_static_path = ["_static"]
 
+# Custom CSS files
+html_css_files = [
+    "css/theme-images.css",
+]
+
 # Theme options
 html_theme_options = {
+    "logo": {
+        "image_light": "_static/images/logo.png",
+        "image_dark": "_static/images/logo-dark.png",
+    },
     "logo_only": False,
     "display_version": True,
     "prev_next_buttons_location": "bottom",
@@ -106,8 +115,8 @@ html_theme_options = {
     "titles_only": False,
 }
 
-# Logo and favicon
-html_logo = "../../assets/logo.png"
+# Logo and favicon (fallback if theme doesn't support logo dict)
+# html_logo = "../../assets/logo.png"
 # html_favicon = "../../assets/logo.png"
 html_favicon = "../../assets/favicon.ico"
 

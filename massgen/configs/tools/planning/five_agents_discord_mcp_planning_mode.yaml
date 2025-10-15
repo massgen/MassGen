@@ -12,7 +12,7 @@
 #    XAI_API_KEY="your_grok_key"
 #
 # Example usage:
-# massgen --config @examples/tools_planning_five_agents_discord_mcp_planning_mode "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
+# massgen --config @examples/tools/planning/five_agents_discord_mcp_planning_mode "Check recent messages in our development channel, summarize the discussion, and post a helpful response about the current topic."
 
 agents:
   - id: "gemini_discord_agent"

@@ -1,0 +1,32 @@
+# Docker Isolation with Resource Limits and Network Access
+# Run with: uv run python -m massgen.cli --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml "Fetch data from an API and analyze it"
+# Expected behavior: Agent can make network requests, but constrained by memory/CPU limits
+# Prerequisites: Docker installed and running, massgen/mcp-runtime:latest image built
+
+agent:
+  id: "resource_limited_agent"
+  backend:
+    type: "gemini"
+    model: "gemini-2.5-flash"
+    cwd: "workspace1"
+
+    # Enable command execution with Docker isolation
+    enable_mcp_command_line: true
+    command_line_execution_mode: "docker"
+
+    # Docker configuration
+    command_line_docker_image: "massgen/mcp-runtime:latest"
+    command_line_docker_memory_limit: "2g"         # Limit memory to 2GB
+    command_line_docker_cpu_limit: 4.0              # Limit to 4 CPU cores
+    command_line_docker_network_mode: "bridge"      # Enable network access (default: none)
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 180
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

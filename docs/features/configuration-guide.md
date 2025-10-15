@@ -467,7 +467,7 @@ uv run python -m massgen.cli --config my_config.yaml "query"
 
 **Solution:** Use full path or path relative to project root:
 ```bash
-massgen --config @examples/basic_single_single_agent "query"
+massgen --config @examples/basic/single/single_agent "query"
 ```
 
 ### Invalid YAML Syntax
