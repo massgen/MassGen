@@ -7,7 +7,7 @@ and integrate external tools and resources into the MassGen workflow.
 
 Features:
 - Official MCP library integration
-- Multi-server support via MultiMCPClient
+- Multi-server support via MCPClient
 - Enhanced security with command sanitization
 - Modern transport methods (stdio, streamable-http)
 """
@@ -27,9 +27,8 @@ from .backend_utils import (
     MCPSetupManager,
 )
 from .circuit_breaker import CircuitBreakerConfig, MCPCircuitBreaker
-from .client import MCPClient, MultiMCPClient
-from .config_validator import MCPConfigValidator, validate_mcp_integration
-from .converters import MCPConverters, MCPFormatValidator
+from .client import MCPClient
+from .config_validator import MCPConfigValidator
 from .exceptions import (
     MCPAuthenticationError,
     MCPConfigurationError,
@@ -39,8 +38,6 @@ from .exceptions import (
     MCPServerError,
     MCPTimeoutError,
     MCPValidationError,
-    format_error_chain,
-    handle_mcp_error,
 )
 
 # Hook system for function call interception
@@ -52,12 +49,18 @@ from .hooks import (
     PermissionClientSession,
     convert_sessions_to_permission_sessions,
 )
-from .security import prepare_command, sanitize_tool_name, validate_url
+from .security import (
+    prepare_command,
+    sanitize_tool_name,
+    substitute_env_variables,
+    validate_server_security,
+    validate_tool_arguments,
+    validate_url,
+)
 
 __all__ = [
     # Core client classes
     "MCPClient",
-    "MultiMCPClient",
     # Circuit breaker
     "MCPCircuitBreaker",
     "CircuitBreakerConfig",
@@ -73,15 +76,15 @@ __all__ = [
     "MCPConfigurationError",
     "MCPResourceError",
     # Utility functions
-    "handle_mcp_error",
-    "format_error_chain",
     # Security utilities
     "prepare_command",
     "sanitize_tool_name",
+    "substitute_env_variables",
     "validate_url",
+    "validate_tool_arguments",
+    "validate_server_security",
     # Configuration validation
     "MCPConfigValidator",
-    "validate_mcp_integration",
     # shared utilities for backend integration
     "Function",
     "MCPErrorHandler",
@@ -92,8 +95,6 @@ __all__ = [
     "MCPResourceManager",
     "MCPSetupManager",
     "MCPExecutionManager",
-    "MCPConverters",
-    "MCPFormatValidator",
     # Hook system
     "HookType",
     "FunctionHook",
