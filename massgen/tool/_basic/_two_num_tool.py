@@ -3,7 +3,7 @@
 Sample math tool for testing purposes.
 """
 
-from .._result import ExecutionResult, TextContent
+from massgen.tool._result import ExecutionResult, TextContent
 
 
 async def two_num_tool(x: int, y: int) -> ExecutionResult:

@@ -240,6 +240,61 @@ class ResponseFormatter(FormatterBase):
                 converted_tools.append(tool)
 
         return converted_tools
+    
+    def format_custom_tools(self, custom_tools: List[Any]) -> List[Dict[str, Any]]:
+        """
+        Convert custom tools from RegisteredToolEntry format to Response API format.
+        
+        Custom tools are provided as RegisteredToolEntry objects or as a list of tool entries.
+        Each RegisteredToolEntry has:
+        - tool_name: str
+        - schema_def: dict with structure {"type": "function", "function": {...}}
+        - get_extended_schema: property that returns the schema with extensions
+        
+        Response API expects: {"type": "function", "name": ..., "description": ..., "parameters": ...}
+        
+        Args:
+            custom_tools: List of RegisteredToolEntry objects or tool dictionaries
+            
+        Returns:
+            List of tools in Response API format
+        """
+        if not custom_tools:
+            return []
+        
+        converted_tools = []
+        
+        for tool in custom_tools:
+            # Check if it's a RegisteredToolEntry object
+            if hasattr(tool, 'get_extended_schema'):
+                # Get the extended schema from the property
+                tool_schema = tool.get_extended_schema
+                
+                # Extract function details from Chat Completions format
+                if tool_schema.get("type") == "function" and "function" in tool_schema:
+                    func = tool_schema["function"]
+                    converted_tools.append({
+                        "type": "function",
+                        "name": func.get("name", tool.tool_name),
+                        "description": func.get("description", ""),
+                        "parameters": func.get("parameters", {}),
+                    })
+            # Check if it's already a dictionary with tool schema
+            elif isinstance(tool, dict):
+                if tool.get("type") == "function" and "function" in tool:
+                    # Chat Completions format - convert to Response API format
+                    func = tool["function"]
+                    converted_tools.append({
+                        "type": "function",
+                        "name": func["name"],
+                        "description": func.get("description", ""),
+                        "parameters": func.get("parameters", {}),
+                    })
+                elif tool.get("type") == "function" and "name" in tool:
+                    # Already in Response API format
+                    converted_tools.append(tool)
+        
+        return converted_tools
 
     def format_mcp_tools(self, mcp_functions: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Convert MCP tools to Response API format (OpenAI function declarations)."""

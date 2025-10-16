@@ -1,12 +1,16 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml "whats the weather of Tokyo"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt5_nano_custom_tool_example.yaml "whats the sum of 123 and 456?"
 agents:
   - id: "gpt5_nano_mcp_weather"
     backend:
       type: "openai"
       model: "gpt-5-nano"
-      custom_tools: ["two_num_tool"]  # Example of adding a basic tool
+      custom_tools: 
+        - name: "two_num_tool"
+          category: "math"
+          path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git22/MassGen/massgen/tool/_basic/_two_num_tool.py"
+          function: "two_num_tool"
     system_message: |
       You are an AI assistant with access to a custom math calculation tool.
 

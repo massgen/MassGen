@@ -2,10 +2,15 @@
 """Tool management system for MassGen."""
 
 import asyncio
+import importlib
+import importlib.util
 import inspect
+import os
+import sys
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
+from pathlib import Path
 from typing import (
     AsyncGenerator,
     Literal,
@@ -132,7 +137,8 @@ class ToolManager:
     
     def add_tool_function(
         self,
-        func: Callable,
+        path: Optional[str] = None,
+        func: Optional[Callable] = None,
         category: str = "default",
         preset_args: Optional[Dict[str, Any]] = None,
         description: Optional[str] = None,
@@ -145,7 +151,8 @@ class ToolManager:
         """Register a tool function.
         
         Args:
-            func: The tool function to register
+            path: Optional path to Python file or module. If None, use func parameter
+            func: The tool function to register (required if path is None)
             category: Category for the tool
             preset_args: Arguments to preset (hidden from schema)
             description: Optional function description
@@ -157,6 +164,32 @@ class ToolManager:
         """
         if category not in self.tool_categories and category != "default":
             raise ValueError(f"Category '{category}' not found.")
+        
+        # Handle function loading
+        if isinstance(func, str):
+            # func is a string - treat it as function name to load
+            func_name = func
+            if path is not None:
+                # Load from specified path
+                func = self._load_function_from_path(path, func_name)
+                if func is None:
+                    raise ValueError(f"Could not load function '{func_name}' from path: {path}")
+            else:
+                # No path specified - try to find in tool folder
+                func = self._load_builtin_function(func_name)
+                if func is None:
+                    raise ValueError(f"Could not find built-in function: {func_name}")
+        elif func is None:
+            # No func provided at all
+            if path is not None:
+                # Try to load from path (will auto-detect function)
+                func = self._load_function_from_path(path, None)
+                if func is None:
+                    raise ValueError(f"Could not load function from path: {path}")
+            else:
+                raise ValueError("Either 'path' or 'func' must be provided")
+        elif not callable(func):
+            raise ValueError("'func' must be a callable or a string (function name)")
         
         # Validate schema if provided
         if tool_schema:
@@ -367,6 +400,148 @@ class ToolManager:
         """Clear all registered tools and categories."""
         self.registered_tools.clear()
         self.tool_categories.clear()
+    
+    def _load_builtin_function(self, func_name: str) -> Optional[Callable]:
+        """Load a built-in function from the tool folder.
+        
+        Args:
+            func_name: Name of the function to load
+            
+        Returns:
+            The loaded function or None if not found
+        """
+        # Try to import from tool module submodules
+        tool_modules = [
+            "_basic",
+            "_code_executors", 
+            "_file_handlers",
+            "_multimedia_processors",
+            "workflow_toolkits",
+        ]
+        
+        for module_name in tool_modules:
+            try:
+                full_module_name = f"massgen.tool.{module_name}"
+                module = importlib.import_module(full_module_name)
+                if hasattr(module, func_name):
+                    return getattr(module, func_name)
+            except ImportError:
+                continue
+        
+        # Try to find in __init__.py exports
+        try:
+            tool_module = importlib.import_module("massgen.tool")
+            if hasattr(tool_module, func_name):
+                return getattr(tool_module, func_name)
+        except ImportError:
+            pass
+        
+        # Search in all Python files in tool folder
+        tool_folder = Path(__file__).parent
+        for py_file in tool_folder.glob("*.py"):
+            if py_file.stem == "__init__" or py_file.stem == "_manager":
+                continue
+                
+            try:
+                spec = importlib.util.spec_from_file_location(py_file.stem, py_file)
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    if hasattr(module, func_name):
+                        return getattr(module, func_name)
+            except Exception:
+                continue
+        
+        return None
+    
+    def _load_function_from_path(
+        self, 
+        path: str, 
+        func_name: Optional[str] = None
+    ) -> Optional[Callable]:
+        """Load a function from a given path.
+        
+        Args:
+            path: Path to Python file or module name
+            func_name: Optional specific function name to load
+            
+        Returns:
+            The loaded function or None if not found
+        """
+        # If path doesn't contain file extension, try to find it in tool folder
+        if not path.endswith('.py'):
+            # Try to import from tool module
+            try:
+                # First try as a submodule of tool
+                module_name = f"massgen.tool.{path}"
+                module = importlib.import_module(module_name)
+            except ImportError:
+                # Try to find in tool folder's Python files
+                tool_folder = Path(__file__).parent
+                possible_files = [
+                    tool_folder / f"{path}.py",
+                    tool_folder / f"_{path}.py",
+                ]
+                
+                for file_path in possible_files:
+                    if file_path.exists():
+                        path = str(file_path)
+                        break
+                else:
+                    # If still not found, try as a direct module import
+                    try:
+                        module = importlib.import_module(path)
+                    except ImportError:
+                        return None
+        
+        # If path is a file path, load it dynamically
+        if path.endswith('.py'):
+            path_obj = Path(path)
+            
+            # If path is not absolute, check relative to tool folder
+            if not path_obj.is_absolute():
+                tool_folder = Path(__file__).parent
+                path_obj = tool_folder / path
+            
+            if not path_obj.exists():
+                return None
+            
+            # Load module from file
+            module_name = path_obj.stem
+            spec = importlib.util.spec_from_file_location(module_name, path_obj)
+            if spec is None or spec.loader is None:
+                return None
+                
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module
+            spec.loader.exec_module(module)
+        
+        # Extract function from module
+        if func_name:
+            # If specific function name provided
+            if hasattr(module, func_name):
+                return getattr(module, func_name)
+        else:
+            # Try to find a main function or the first callable
+            # Priority order: main -> first public function -> first function
+            if hasattr(module, 'main'):
+                return getattr(module, 'main')
+            
+            # Find all callables in the module
+            callables = []
+            for name in dir(module):
+                attr = getattr(module, name)
+                if callable(attr) and not name.startswith('_'):
+                    # Skip imported functions
+                    if hasattr(attr, '__module__') and attr.__module__ != module.__name__:
+                        continue
+                    callables.append((name, attr))
+            
+            # Return the first public function found
+            if callables:
+                return callables[0][1]
+        
+        return None
     
     @staticmethod
     def _extract_tool_schema(

@@ -22,6 +22,7 @@ from ..api_params_handler import ResponseAPIParamsHandler
 from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk
+from ..tool import ToolManager
 from .base import FilesystemSupport, StreamChunk
 from .base_with_mcp import MCPBackend, UploadFileError
 
@@ -33,6 +34,12 @@ class ResponseBackend(MCPBackend):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.formatter = ResponseFormatter()
+        
+        # Custom tools support - initialize before api_params_handler
+        self.custom_tool_manager = ToolManager()
+        self._custom_tool_names: set[str] = set()
+        
+        # Initialize API params handler after custom_tool_manager
         self.api_params_handler = ResponseAPIParamsHandler(self)
 
         # Queue for pending image saves
@@ -41,6 +48,11 @@ class ResponseBackend(MCPBackend):
         # File Search tracking for cleanup
         self._vector_store_ids: List[str] = []
         self._uploaded_file_ids: List[str] = []
+        
+        # Register custom tools if provided
+        custom_tools = kwargs.get('custom_tools', [])
+        if custom_tools:
+            self._register_custom_tools(custom_tools)
 
     def supports_upload_files(self) -> bool:
         return True
@@ -218,16 +230,93 @@ class ResponseBackend(MCPBackend):
 
         # Execute any captured function calls
         if captured_function_calls and response_completed:
-            # Check if any of the function calls are NOT MCP functions
-            non_mcp_functions = [call for call in captured_function_calls if call["name"] not in self._mcp_functions]
-
-            if non_mcp_functions:
-                logger.info(f"Non-MCP function calls detected: {[call['name'] for call in non_mcp_functions]}. Ending MCP processing.")
+            # Categorize function calls
+            mcp_calls = []
+            custom_calls = []
+            provider_calls = []
+            
+            for call in captured_function_calls:
+                if call["name"] in self._mcp_functions:
+                    mcp_calls.append(call)
+                elif call["name"] in self._custom_tool_names:
+                    custom_calls.append(call)
+                else:
+                    provider_calls.append(call)
+            
+            # If there are provider calls (non-MCP, non-custom), let API handle them
+            if provider_calls:
+                logger.info(f"Provider function calls detected: {[call['name'] for call in provider_calls]}. Ending local processing.")
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
+            # Initialize for execution
+            functions_executed = False
+            updated_messages = current_messages.copy()
+            
+            # Execute custom tools first
+            for call in custom_calls:
+                try:
+                    # Yield custom tool call status
+                    yield TextStreamChunk(
+                        type=ChunkType.MCP_STATUS,
+                        status="custom_tool_called",
+                        content=f"🔧 [Custom Tool] Calling {call['name']}...",
+                        source=f"custom_{call['name']}",
+                    )
+                    
+                    # Execute custom tool
+                    result = await self._execute_custom_tool(call)
+                    
+                    # Add function call and result to messages
+                    function_call_msg = {
+                        "type": "function_call",
+                        "call_id": call["call_id"],
+                        "name": call["name"],
+                        "arguments": call["arguments"],
+                    }
+                    updated_messages.append(function_call_msg)
+                    
+                    function_output_msg = {
+                        "type": "function_call_output",
+                        "call_id": call["call_id"],
+                        "output": str(result),
+                    }
+                    updated_messages.append(function_output_msg)
+                    
+                    # Yield custom tool response status
+                    yield TextStreamChunk(
+                        type=ChunkType.MCP_STATUS,
+                        status="custom_tool_response",
+                        content=f"✅ [Custom Tool] {call['name']} completed",
+                        source=f"custom_{call['name']}",
+                    )
+                    
+                    functions_executed = True
+                    logger.info(f"Executed custom tool: {call['name']}")
+                    
+                except Exception as e:
+                    logger.error(f"Error executing custom tool {call['name']}: {e}")
+                    error_msg = f"Error executing {call['name']}: {str(e)}"
+                    
+                    # Add error result to messages
+                    function_call_msg = {
+                        "type": "function_call",
+                        "call_id": call["call_id"],
+                        "name": call["name"],
+                        "arguments": call["arguments"],
+                    }
+                    updated_messages.append(function_call_msg)
+                    
+                    error_output_msg = {
+                        "type": "function_call_output",
+                        "call_id": call["call_id"],
+                        "output": error_msg,
+                    }
+                    updated_messages.append(error_output_msg)
+                    functions_executed = True
+            
             # Check circuit breaker status before executing MCP functions
-            if not await super()._check_circuit_breaker_before_execution():
+            if mcp_calls and not await super()._check_circuit_breaker_before_execution():
                 logger.warning("All MCP servers blocked by circuit breaker")
                 yield TextStreamChunk(
                     type=ChunkType.MCP_STATUS,
@@ -238,9 +327,8 @@ class ResponseBackend(MCPBackend):
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
-            # Execute only MCP function calls
+            # Execute MCP function calls
             mcp_functions_executed = False
-            updated_messages = current_messages.copy()
 
             # Check if planning mode is enabled - block MCP tool execution during planning
             if self.is_planning_mode_enabled():
@@ -367,6 +455,7 @@ class ResponseBackend(MCPBackend):
                     )
 
                     mcp_functions_executed = True
+                    functions_executed = True
 
             # Ensure all captured function calls have results to prevent hanging
             for call in captured_function_calls:
@@ -391,15 +480,14 @@ class ResponseBackend(MCPBackend):
                     mcp_functions_executed = True
 
             # Trim history after function executions to bound memory usage
-            if mcp_functions_executed:
+            if functions_executed or mcp_functions_executed:
                 updated_messages = super()._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
                 async for chunk in self._stream_with_mcp_tools(updated_messages, tools, client, **kwargs):
                     yield chunk
             else:
-                # No MCP functions were executed, we're done
-
+                # No functions were executed, we're done
                 yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                 return
 
@@ -694,6 +782,10 @@ class ResponseBackend(MCPBackend):
             f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format",
         )
         return converted_tools
+    
+    def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
+        """Get OpenAI-formatted schemas for all registered custom tools."""
+        return self.custom_tool_manager.fetch_tool_schemas()
 
     async def _process_stream(self, stream, all_params, agent_id=None):
         async for chunk in stream:
@@ -1168,3 +1260,94 @@ class ResponseBackend(MCPBackend):
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by OpenAI."""
         return ["web_search", "code_interpreter"]
+    
+    def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
+        """Register custom tools with the tool manager.
+        
+        Args:
+            custom_tools: List of custom tool configurations
+        """
+        # Collect unique categories and create them if needed
+        categories = set()
+        for tool_config in custom_tools:
+            if isinstance(tool_config, dict):
+                category = tool_config.get('category', 'default')
+                if category != 'default':
+                    categories.add(category)
+        
+        # Create categories that don't exist
+        for category in categories:
+            if category not in self.custom_tool_manager.tool_categories:
+                self.custom_tool_manager.setup_category(
+                    category_name=category,
+                    description=f"Custom {category} tools",
+                    enabled=True
+                )
+        
+        for tool_config in custom_tools:
+            try:
+                if isinstance(tool_config, dict):
+                    # Extract tool configuration
+                    path = tool_config.get('path')
+                    func = tool_config.get('func')
+                    category = tool_config.get('category', 'default')
+                    preset_args = tool_config.get('preset_args')
+                    description = tool_config.get('description')
+                    
+                    
+                    # Register the tool
+                    self.custom_tool_manager.add_tool_function(
+                        path=path,
+                        func=func,
+                        category=category,
+                        preset_args=preset_args,
+                        description=description,
+                    )
+                    
+                    # Track tool name for categorization
+                    if isinstance(func, str):
+                        self._custom_tool_names.add(func)
+                    elif callable(func):
+                        self._custom_tool_names.add(func.__name__)
+                    
+                    
+                    logger.info(f"Registered custom tool: {func}")
+                    
+            except Exception as e:
+                logger.error(f"Failed to register custom tool: {e}")
+    
+    async def _execute_custom_tool(self, call: Dict[str, Any]) -> str:
+        """Execute a custom tool and return the result.
+        
+        Args:
+            call: Function call dictionary with name and arguments
+            
+        Returns:
+            The execution result as a string
+        """
+        import json
+        
+        tool_request = {
+            "name": call["name"],
+            "input": json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"]
+        }
+        
+        result_text = ""
+        try:
+            async for result in self.custom_tool_manager.execute_tool(tool_request):
+                # Accumulate results
+                if hasattr(result, 'output_blocks'):
+                    for block in result.output_blocks:
+                        if hasattr(block, 'data'):
+                            result_text += str(block.data)
+                        elif hasattr(block, 'content'):
+                            result_text += str(block.content)
+                elif hasattr(result, 'content'):
+                    result_text += str(result.content)
+                else:
+                    result_text += str(result)
+        except Exception as e:
+            logger.error(f"Error in custom tool execution: {e}")
+            result_text = f"Error: {str(e)}"
+        
+        return result_text or "Tool executed successfully"

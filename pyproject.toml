@@ -47,6 +47,7 @@ dependencies = [
     "pillow>=11.3.0",
     "ag2>=0.9.10",
     "pyautogen>=0.10.0",
+    "pytest>=8.4.2",
 ]
 
 [project.optional-dependencies]
@@ -171,8 +172,12 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "asyncio: mark test as requiring asyncio",
 ]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pytest.PytestAssertRewriteWarning:_pytest.config",
+]
 
 # Coverage configuration
 [tool.coverage.run]
@@ -208,4 +213,5 @@ dev = [
     "astroid>=3.0.0",
     "pre-commit>=4.3.0",
     "pylint>=3.0.0",
+    "pytest-asyncio>=1.2.0",
 ]

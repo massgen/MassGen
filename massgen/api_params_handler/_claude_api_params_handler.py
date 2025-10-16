@@ -22,6 +22,7 @@ class ClaudeAPIParamsHandler(APIParamsHandlerBase):
                 "enable_code_execution",
                 "allowed_tools",
                 "exclude_tools",
+                "custom_tools",  # Custom tools configuration (processed separately)
                 "_has_files_api_files",
             },
         )
@@ -97,7 +98,7 @@ class ClaudeAPIParamsHandler(APIParamsHandlerBase):
         if provider_tools:
             combined_tools.extend(provider_tools)
 
-        # User-defined tools
+        # Workflow tools
         if tools:
             converted_tools = self.formatter.format_tools(tools)
             combined_tools.extend(converted_tools)
