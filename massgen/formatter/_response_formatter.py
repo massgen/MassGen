@@ -281,7 +281,7 @@ class ResponseFormatter(FormatterBase):
                                 "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
                                 "description": func.get("description", ""),
                                 "parameters": func.get("parameters", {}),
-                            }
+                            },
                         )
                 # Check if it has get_extended_schema property
                 elif hasattr(tool_entry, "get_extended_schema"):
@@ -295,7 +295,7 @@ class ResponseFormatter(FormatterBase):
                                 "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
                                 "description": func.get("description", ""),
                                 "parameters": func.get("parameters", {}),
-                            }
+                            },
                         )
         # Handle list format for backward compatibility
         elif isinstance(custom_tools, list):
@@ -311,7 +311,7 @@ class ResponseFormatter(FormatterBase):
                                 "name": func.get("name", tool.tool_name),
                                 "description": func.get("description", ""),
                                 "parameters": func.get("parameters", {}),
-                            }
+                            },
                         )
                 elif hasattr(tool, "get_extended_schema"):
                     tool_schema = tool.get_extended_schema
@@ -324,7 +324,7 @@ class ResponseFormatter(FormatterBase):
                                 "name": func.get("name", tool.tool_name),
                                 "description": func.get("description", ""),
                                 "parameters": func.get("parameters", {}),
-                            }
+                            },
                         )
 
         return converted_tools

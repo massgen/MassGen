@@ -254,7 +254,7 @@ async def dashscope_analyze_image(
                     {"image": f"data:image/jpeg;base64,{image_data}"},
                     {"text": analysis_prompt},
                 ],
-            }
+            },
         ]
 
         response = MultiModalConversation.call(

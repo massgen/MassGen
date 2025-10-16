@@ -15,9 +15,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from massgen.backend.response import ResponseBackend
-from massgen.tool import ExecutionResult, ToolManager
-from massgen.tool._result import TextContent
+from massgen.backend.response import ResponseBackend  # noqa: E402
+from massgen.tool import ExecutionResult, ToolManager  # noqa: E402
+from massgen.tool._result import TextContent  # noqa: E402
 
 # ============================================================================
 # Sample custom tool functions for testing
@@ -127,7 +127,7 @@ class TestToolManager:
             """
 def custom_function(x: int) -> str:
     return f"Value: {x}"
-"""
+""",
         )
 
         try:

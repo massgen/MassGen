@@ -13,9 +13,9 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from massgen.backend.response import ResponseBackend
-from massgen.tool import ExecutionResult
-from massgen.tool._result import TextContent
+from massgen.backend.response import ResponseBackend  # noqa: E402
+from massgen.tool import ExecutionResult  # noqa: E402
+from massgen.tool._result import TextContent  # noqa: E402
 
 # ============================================================================
 # Define custom tool functions
@@ -283,7 +283,7 @@ def list_processor(items: list, action: str = "join") -> str:
     return ExecutionResult(
         output_blocks=[TextContent(data=f"Result: {result}")]
     )
-'''
+''',
     )
 
     try:

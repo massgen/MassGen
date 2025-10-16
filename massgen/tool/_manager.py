@@ -9,16 +9,7 @@ import sys
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import (
-    Any,
-    AsyncGenerator,
-    Callable,
-    Dict,
-    Generator,
-    List,
-    Optional,
-    Type,
-)
+from typing import Any, AsyncGenerator, Callable, Dict, Generator, List, Optional, Type
 
 from docstring_parser import parse
 from pydantic import BaseModel, ConfigDict, Field, create_model
