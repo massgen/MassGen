@@ -132,7 +132,7 @@ def test_tool_call_parsing():
             call = tool_calls[0]
             assert call["function"]["name"] == expected_name
             assert call["function"]["arguments"] == expected_args
-            assert call.get("is_custom") == True
+            assert call.get("is_custom") is True
             print(f"✅ Correctly parsed: {expected_name}")
         else:
             print(f"❌ Failed to parse tool call for: {expected_name}")
