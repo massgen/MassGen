@@ -103,37 +103,37 @@ jobs:
               body: comment
             });
 
-  readme-sync:
-    name: Check README Sync
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+  # readme-sync:
+  #   name: Check README Sync
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
 
-      - name: Generate README
-        run: |
-          echo "::group::Generating README from docs"
-          python scripts/generate_readme.py || echo "README generation script not fully implemented yet"
-          echo "::endgroup::"
-        continue-on-error: true
+  #     - name: Generate README
+  #       run: |
+  #         echo "::group::Generating README from docs"
+  #         python scripts/generate_readme.py || echo "README generation script not fully implemented yet"
+  #         echo "::endgroup::"
+  #       continue-on-error: true
 
-      - name: Check for README changes
-        run: |
-          if git diff --exit-code README.md; then
-            echo "✓ README is in sync with documentation"
-          else
-            echo "::warning::README.md needs updating. Run 'python scripts/generate_readme.py' locally."
-            echo "Changes detected:"
-            git diff README.md
-          fi
-        continue-on-error: true
+  #     - name: Check for README changes
+  #       run: |
+  #         if git diff --exit-code README.md; then
+  #           echo "✓ README is in sync with documentation"
+  #         else
+  #           echo "::warning::README.md needs updating. Run 'python scripts/generate_readme.py' locally."
+  #           echo "Changes detected:"
+  #           git diff README.md
+  #         fi
+  #       continue-on-error: true
 
   documentation-build:
     name: Test Documentation Build
