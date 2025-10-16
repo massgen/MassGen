@@ -1967,7 +1967,7 @@ Make your decision and include the JSON at the very end of your response."""
                                 "name": call["name"],
                                 "arguments": call["arguments"],
                             },
-                        }
+                        },
                     )
                 log_backend_activity(
                     "gemini",
