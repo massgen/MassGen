@@ -197,7 +197,7 @@ Different backends support different built-in tools:
 * **Filesystem:**
 
   * ⭐ (``claude_code`` only): Native filesystem tools (Read, Write, Edit, Bash, Grep, Glob)
-  * ✅ (all MCP-enabled backends): Filesystem operations via MCP servers (e.g., ``@modelcontextprotocol/server-filesystem``)
+  * ✅ (all backends with ``cwd`` parameter): Filesystem operations handled automatically through workspace configuration
   * See :doc:`file_operations` for detailed filesystem configuration
 
 * **Multimodal Capabilities:**

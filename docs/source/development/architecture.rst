@@ -369,9 +369,9 @@ Adding MCP Servers
       backend:
         type: "claude"
         mcp_servers:
-          - name: "filesystem"
+          - name: "weather"
             command: "npx"
-            args: ["-y", "@modelcontextprotocol/server-filesystem"]
+            args: ["-y", "@modelcontextprotocol/server-weather"]
 
 2. Servers auto-start when backend initializes
 3. Tools automatically discovered and presented to agent

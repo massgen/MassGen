@@ -183,17 +183,18 @@ Combine AG2 and native MassGen agents:
        backend:
          type: "claude"
          model: "claude-sonnet-4"
+         cwd: "claude_workspace"  # File operations handled via cwd
          mcp_servers:
-           - name: "filesystem"
+           - name: "weather"
              type: "stdio"
              command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+             args: ["-y", "@modelcontextprotocol/server-weather"]
 
 This setup enables:
 
 * **AG2 agent** executes Python code for analysis
 * **Gemini agent** researches information with web search
-* **Claude agent** manages files and documentation
+* **Claude agent** provides weather data and additional analysis
 * All three collaborate through MassGen's coordination system
 
 How It Works

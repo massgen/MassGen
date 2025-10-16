@@ -124,11 +124,7 @@ Five agents collaborating on filesystem tasks with planning mode:
        backend:
          type: "gemini"
          model: "gemini-2.5-flash"
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+         cwd: "workspace"  # File operations handled via cwd
 
      # ... (4 more agents with filesystem access)
 
@@ -325,12 +321,6 @@ Combine multiple external tools:
              command: "npx"
              args: ["-y", "@fak111/weather-mcp"]
 
-           # Filesystem access
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "./data"]
-
            # Custom HTTP API
            - name: "custom_api"
              type: "streamable-http"
@@ -340,7 +330,6 @@ Combine multiple external tools:
          allowed_tools:
            - "mcp__search__brave_web_search"
            - "mcp__weather__get_forecast"
-           - "mcp__filesystem__read_file"
            - "mcp__custom_api__query_data"
 
 **Run:**
@@ -560,8 +549,8 @@ Verify MCP server installation:
 
 .. code-block:: bash
 
-   # Test MCP server
-   npx -y @modelcontextprotocol/server-filesystem "."
+   # Test MCP server (example with weather)
+   npx -y @modelcontextprotocol/server-weather
 
 **Planning mode not activating:**
 

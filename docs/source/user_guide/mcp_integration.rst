@@ -163,17 +163,6 @@ Requires ``BRAVE_API_KEY`` in your ``.env`` file:
        env:
          BRAVE_API_KEY: "${BRAVE_API_KEY}"
 
-Filesystem
-~~~~~~~~~~
-
-.. code-block:: yaml
-
-   mcp_servers:
-     - name: "filesystem"
-       type: "stdio"
-       command: "npx"
-       args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-
 Discord
 ~~~~~~~
 
@@ -232,13 +221,10 @@ Agents can use multiple MCP servers simultaneously:
              command: "npx"
              args: ["-y", "@modelcontextprotocol/server-weather"]
 
-           # File operations
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+The agent can use all tools together. For example: "Search for weather apps and check the weather in Paris"
 
-The agent can use all three tools together. For example: "Search for weather apps, check the weather in Paris, and save recommendations to a file"
+.. note::
+   **File operations** are handled automatically via the ``cwd`` parameter in your backend configuration. You don't need to add a filesystem MCP server manually.
 
 Tool Filtering
 --------------
@@ -349,11 +335,8 @@ Example Configuration
        backend:
          type: "gemini"
          model: "gemini-2.5-flash"
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+         # MCP servers can be added here (e.g., weather, search)
+         # File operations are handled via cwd parameter
 
    orchestrator:
      coordination:
@@ -416,23 +399,11 @@ Full configuration with multiple MCP servers and planning mode:
              command: "npx"
              args: ["-y", "@modelcontextprotocol/server-weather"]
 
-           # Filesystem
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-
      - id: "analyst_agent"
        backend:
          type: "openai"
          model: "gpt-5-nano"
-         exclude_tools:
-           - mcp__filesystem__delete_file  # Prevent deletions
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+         # File operations handled via cwd parameter
 
    orchestrator:
      coordination:

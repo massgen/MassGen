@@ -165,13 +165,7 @@ Multi-turn mode supports full filesystem integration for working with your codeb
 
          # Agent-specific workspace for modifications
          cwd: "workspace_a"
-
-         # MCP filesystem tools
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+         # File operations handled automatically via cwd parameter
 
 **Key Features:**
 

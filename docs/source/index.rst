@@ -329,15 +329,6 @@ Documentation Sections
    changelog
    api/index
 
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Project Coordination (For Contributors)
-
-   decisions/index
-   rfcs/index
-   tracks/index
-
 Community
 ---------
 

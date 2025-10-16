@@ -4,7 +4,7 @@ Running MassGen
 This guide shows you how to run MassGen with different configurations.
 
 .. tip::
-   **Configuration File Paths:** Example commands use ``@examples/...`` paths which work from **any directory** because they're part of MassGen's installed package. See `Using Config Files from Anywhere`_ below for all path options.
+   **Configuration File Paths:** Example commands use ``@examples/...`` paths which work from **any directory** because they're part of MassGen's installed package. See `Configuration File Paths`_ below for all path options.
 
 Basic Usage
 -----------
@@ -277,7 +277,7 @@ Store frequently-used configs in ``~/.config/massgen/agents/`` for easy access:
    cp my-config.yaml ~/.config/massgen/agents/my-setup.yaml
 
 .. seealso::
-   For detailed information on path resolution, troubleshooting, and working with the GitHub repository, see :doc:`../reference/configuration_paths`
+   For detailed information on configuration files and examples, see :doc:`../reference/configuration_examples`
 
 Next Steps
 ----------

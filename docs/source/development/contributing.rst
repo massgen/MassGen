@@ -12,7 +12,7 @@ Quick Start
 
 1. Fork the repository on GitHub
 2. Clone your fork locally
-3. Create a feature branch from ``dev/v0.0.30``
+3. Create a feature branch from the main development branch
 4. Make your changes following our guidelines
 5. Submit a pull request
 
@@ -38,7 +38,7 @@ Key Sections
 
 **Development Workflow**
 
-- Create feature branches from ``dev/v0.0.30``
+- Create feature branches from the main development branch
 - Follow code quality standards
 - Run tests before committing
 - Write descriptive commit messages
@@ -47,7 +47,6 @@ Key Sections
 
 - Update user guides for new features
 - Write design docs for complex implementations
-- Create ADRs for architectural decisions
 - Add examples and tests
 - Follow :doc:`writing_configs` when creating configuration files
 
@@ -55,7 +54,7 @@ Key Sections
 
 - Ensure all checks pass
 - Update CHANGELOG.md
-- Target ``dev/v0.0.30`` branch
+- Target the appropriate branch (check repository for current development branch)
 - Include clear description and context
 
 See Also

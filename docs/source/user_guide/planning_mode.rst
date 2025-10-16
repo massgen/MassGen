@@ -166,25 +166,13 @@ Full configuration with planning mode for filesystem operations:
        backend:
          type: "gemini"
          model: "gemini-2.5-flash"
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-             security:
-               level: "high"
+         cwd: "workspace_a"  # File operations handled via cwd
 
      - id: "agent_b"
        backend:
          type: "openai"
          model: "gpt-5-nano"
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-             security:
-               level: "high"
+         cwd: "workspace_b"  # File operations handled via cwd
 
    orchestrator:
      snapshot_storage: "snapshots"

@@ -430,13 +430,13 @@ These parameters are specific to the Claude Code backend only.
    backend:
      type: "gemini"  # or claude, openai, grok, etc.
      model: "gemini-2.5-flash"
-     cwd: "my_project"
-     disallowed_tools: ["write_file", "create_directory"]
+     cwd: "my_project"  # File operations handled via cwd
+     disallowed_tools: ["mcp__weather__set_location"]
      mcp_servers:
-       - name: "filesystem"
+       - name: "weather"
          type: "stdio"
          command: "npx"
-         args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+         args: ["-y", "@modelcontextprotocol/server-weather"]
 
 **Example Claude Code Configuration:**
 

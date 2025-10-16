@@ -374,14 +374,7 @@ Full multi-agent configuration demonstrating all 6 configuration levels:
            - "Bash(sudo*)"
            - "WebSearch"                    # Block web access
 
-         mcp_servers:
-           filesystem:
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-             security:
-               level: "high"
-               allow_localhost: true
+         # File operations handled via cwd parameter
 
      # Agent 3: OpenAI with code interpreter
      - id: "analyst"
@@ -394,16 +387,7 @@ Full multi-agent configuration demonstrating all 6 configuration levels:
          enable_web_search: true            # OpenAI web search
          enable_code_interpreter: true      # Code interpreter tool
 
-         exclude_tools:
-           - mcp__filesystem__delete_file   # Safety: prevent deletions
-
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-             security:
-               level: "high"
+         cwd: "analyst_workspace"  # File operations handled via cwd
 
    # ========================================
    # LEVEL 5: ORCHESTRATOR LEVEL - Coordination

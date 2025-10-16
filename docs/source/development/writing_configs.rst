@@ -197,14 +197,8 @@ Here's a fully annotated config template showing all conventions:
          cwd: "workspace1"
 
          # Optional: MCP servers (backend-level)
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-             security:
-               level: "high"
-               allow_localhost: true
+         # File operations are handled via cwd parameter
+         # Add other MCP servers here (e.g., weather, search)
 
      - id: "agent_b"
        system_message: |
@@ -496,12 +490,13 @@ Agents with MCP Tools
          type: "claude"
          model: "claude-sonnet-4"
          mcp_servers:
-           - name: "filesystem"
+           - name: "weather"
              type: "stdio"
              command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
-             security:
-               level: "high"
+             args: ["-y", "@modelcontextprotocol/server-weather"]
+
+.. note::
+   File operations are handled via the ``cwd`` parameter. Don't add a filesystem MCP server manually.
 
 Planning Mode Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -156,11 +156,6 @@ All backends can use the MCP Filesystem Server for file operations:
        backend:
          type: "gemini"
          model: "gemini-2.5-flash"
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
 
 **MCP Filesystem Operations:**
 
@@ -395,13 +390,8 @@ Use MCP server configurations to restrict access:
 
 .. code-block:: yaml
 
-   mcp_servers:
-     - name: "filesystem"
-       type: "stdio"
-       command: "npx"
-       args: ["-y", "@modelcontextprotocol/server-filesystem", "/safe/directory"]
-       security:
-         level: "high"
+   # Filesystem operations handled via cwd parameter
+   # No need to add filesystem MCP server manually
 
 Workspace Organization
 ----------------------
