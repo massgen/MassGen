@@ -491,7 +491,7 @@ class GeminiBackend(LLMBackend):
 
         # Initialize agent_id for use throughout the class
         self.agent_id = kwargs.get("agent_id", None)
-        
+
         # Initialize functions dict for MCP execution (required by MCPExecutionManager)
         self.functions: Dict[str, Any] = {}
 
@@ -1489,14 +1489,14 @@ Make your decision and include the JSON at the very end of your response."""
             if not using_sdk_mcp:
                 # Add builtin tools
                 all_tools.extend(builtin_tools)
-                
+
                 # Add custom tools if available and no builtin tools conflict
                 # Note: Gemini API doesn't support mixing builtin tools with function_declarations
                 if self.custom_tool_manager and self.custom_tool_manager.registered_tools:
                     if not builtin_tools:  # Only add custom tools if no builtin tools
                         try:
                             from google.genai import types
-                            
+
                             # Get custom tool schemas
                             custom_schemas = self._get_custom_tools_schemas()
                             if custom_schemas:
@@ -1525,7 +1525,7 @@ Make your decision and include the JSON at the very end of your response."""
                             {"builtin_count": len(builtin_tools)},
                             agent_id=agent_id,
                         )
-                
+
                 if all_tools:
                     config["tools"] = all_tools
 
@@ -1864,7 +1864,7 @@ Make your decision and include the JSON at the very end of your response."""
 
                 # Track custom tool calls
                 custom_tool_calls = []
-                
+
                 async for chunk in stream:
                     # ============================================
                     # 1. Process custom function calls if present
@@ -1878,7 +1878,7 @@ Make your decision and include the JSON at the very end of your response."""
                                         func_call = part.function_call
                                         tool_name = getattr(func_call, "name", None)
                                         tool_args = getattr(func_call, "args", {})
-                                        
+
                                         if tool_name and tool_name.startswith("custom_tool__"):
                                             # Track custom tool call
                                             call_data = {
@@ -1886,7 +1886,7 @@ Make your decision and include the JSON at the very end of your response."""
                                                 "arguments": tool_args,
                                             }
                                             custom_tool_calls.append(call_data)
-                                            
+
                                             # Log custom tool call
                                             log_tool_call(
                                                 agent_id,
@@ -1894,7 +1894,7 @@ Make your decision and include the JSON at the very end of your response."""
                                                 tool_args,
                                                 backend_name="gemini",
                                             )
-                                            
+
                                             # Yield status about custom tool call
                                             yield StreamChunk(
                                                 type="custom_tool_status",
@@ -1902,11 +1902,11 @@ Make your decision and include the JSON at the very end of your response."""
                                                 content=f"🔧 Custom Tool Called: {tool_name} with args: {json.dumps(tool_args, indent=2)}",
                                                 source="custom_tools",
                                             )
-                                            
+
                                             # Execute the custom tool
                                             try:
                                                 result = await self._execute_custom_tool(call_data)
-                                                
+
                                                 # Yield the result
                                                 yield StreamChunk(
                                                     type="custom_tool_status",
@@ -1914,10 +1914,10 @@ Make your decision and include the JSON at the very end of your response."""
                                                     content=f"✅ Custom Tool Response: {result}",
                                                     source="custom_tools",
                                                 )
-                                                
+
                                                 # Add result to content for context
                                                 full_content_text += f"\n[Tool: {tool_name}]\n{result}\n"
-                                                
+
                                             except Exception as e:
                                                 error_msg = f"Error executing {tool_name}: {str(e)}"
                                                 log_backend_activity(
@@ -1932,7 +1932,7 @@ Make your decision and include the JSON at the very end of your response."""
                                                     content=f"❌ {error_msg}",
                                                     source="custom_tools",
                                                 )
-                    
+
                     # ============================================
                     # 2. Process text content
                     # ============================================
@@ -1955,18 +1955,20 @@ Make your decision and include the JSON at the very end of your response."""
 
             # Process tool calls - coordination and custom tool calls
             tool_calls_detected: List[Dict[str, Any]] = []
-            
+
             # Add custom tool calls to detected tool calls if any
             if custom_tool_calls:
                 for call in custom_tool_calls:
-                    tool_calls_detected.append({
-                        "id": f"custom_{abs(hash(str(call))) % 10000 + 1}",
-                        "type": "function",
-                        "function": {
-                            "name": call["name"],
-                            "arguments": call["arguments"],
-                        },
-                    })
+                    tool_calls_detected.append(
+                        {
+                            "id": f"custom_{abs(hash(str(call))) % 10000 + 1}",
+                            "type": "function",
+                            "function": {
+                                "name": call["name"],
+                                "arguments": call["arguments"],
+                            },
+                        }
+                    )
                 log_backend_activity(
                     "gemini",
                     "Custom tool calls detected",
@@ -2469,29 +2471,29 @@ Make your decision and include the JSON at the very end of your response."""
     def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
         """Get OpenAI-formatted schemas for all registered custom tools."""
         return self.custom_tool_manager.fetch_tool_schemas()
-    
+
     def _convert_schemas_to_function_declarations(self, schemas: List[Dict[str, Any]]) -> List:
         """Convert OpenAI-formatted schemas to Gemini FunctionDeclaration format.
-        
+
         Args:
             schemas: List of OpenAI-formatted function schemas
-            
+
         Returns:
             List of Gemini FunctionDeclaration objects
         """
         try:
             from google.genai import types
-            
+
             function_declarations = []
             for schema in schemas:
                 if schema.get("type") == "function":
                     func_def = schema.get("function", {})
-                    
+
                     # Extract function details
                     name = func_def.get("name")
                     description = func_def.get("description", "")
                     parameters = func_def.get("parameters", {})
-                    
+
                     if name:
                         # Create FunctionDeclaration
                         # The parameters should be in OpenAPI schema format
@@ -2501,9 +2503,9 @@ Make your decision and include the JSON at the very end of your response."""
                             parameters=parameters,
                         )
                         function_declarations.append(func_declaration)
-                        
+
             return function_declarations
-            
+
         except Exception as e:
             logger.error(f"Failed to convert schemas to function declarations: {e}")
             return []

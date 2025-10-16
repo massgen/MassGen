@@ -20,10 +20,10 @@ agents:
           description: "Add two numbers together"
     system_message: |
       You are an AI assistant with access to custom calculation tools in addition to your built-in Claude Code tools.
-      
+
       When users ask about calculations or math operations, check if a custom tool is available and use it.
       The custom tools will be described in your system prompt, and you should call them using the JSON format specified.
-      
+
       Remember to use your built-in tools (Read, Write, Bash, etc.) for file operations and system tasks,
       but use custom tools for specialized calculations when appropriate.
 
