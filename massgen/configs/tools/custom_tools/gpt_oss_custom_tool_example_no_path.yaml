@@ -1,6 +1,6 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_custom_tool_example.yaml "whats the sum of 123 and 456?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_custom_tool_example_no_path.yaml "whats the sum of 123 and 456?"
 agents:
   - id: "gpt-oss-custom_tool" # Cerebras AI GPT-OSS
     backend:
@@ -9,8 +9,6 @@ agents:
       base_url: "https://api.cerebras.ai/v1"
       custom_tools:
         - name: "two_num_tool"
-          # category: "math"
-          # path: "massgen/tool/_basic/_two_num_tool.py"
           function: "two_num_tool"
     system_message: |
       You are an AI assistant with access to a custom math calculation tool.
