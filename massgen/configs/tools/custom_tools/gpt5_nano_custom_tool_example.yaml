@@ -6,7 +6,7 @@ agents:
     backend:
       type: "openai"
       model: "gpt-5-nano"
-      custom_tools: 
+      custom_tools:
         - name: "two_num_tool"
           category: "math"
           path: "/Users/danruiqi/Desktop/Danrui/Research/MassGen/git22/MassGen/massgen/tool/_basic/_two_num_tool.py"

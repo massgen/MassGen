@@ -244,81 +244,89 @@ class ResponseFormatter(FormatterBase):
     def format_custom_tools(self, custom_tools: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Convert custom tools from RegisteredToolEntry format to Response API format.
-        
+
         Custom tools are provided as a dictionary where:
         - Keys are tool names (str)
         - Values are RegisteredToolEntry objects with:
           - tool_name: str
           - schema_def: dict with structure {"type": "function", "function": {...}}
           - get_extended_schema: property that returns the schema with extensions
-        
+
         Response API expects: {"type": "function", "name": ..., "description": ..., "parameters": ...}
-        
+
         Args:
             custom_tools: Dictionary of tool_name -> RegisteredToolEntry objects
-            
+
         Returns:
             List of tools in Response API format
         """
         if not custom_tools:
             return []
-        
+
         converted_tools = []
-        
+
         # Handle dictionary format: {tool_name: RegisteredToolEntry, ...}
         if isinstance(custom_tools, dict):
             for tool_name, tool_entry in custom_tools.items():
                 # Check if it's a RegisteredToolEntry object with schema_def
-                if hasattr(tool_entry, 'schema_def'):
+                if hasattr(tool_entry, "schema_def"):
                     tool_schema = tool_entry.schema_def
-                    
+
                     # Extract function details from Chat Completions format
                     if tool_schema.get("type") == "function" and "function" in tool_schema:
                         func = tool_schema["function"]
-                        converted_tools.append({
-                            "type": "function",
-                            "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, 'tool_name') else tool_name),
-                            "description": func.get("description", ""),
-                            "parameters": func.get("parameters", {}),
-                        })
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                "description": func.get("description", ""),
+                                "parameters": func.get("parameters", {}),
+                            }
+                        )
                 # Check if it has get_extended_schema property
-                elif hasattr(tool_entry, 'get_extended_schema'):
+                elif hasattr(tool_entry, "get_extended_schema"):
                     tool_schema = tool_entry.get_extended_schema
-                    
+
                     if tool_schema.get("type") == "function" and "function" in tool_schema:
                         func = tool_schema["function"]
-                        converted_tools.append({
-                            "type": "function",
-                            "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, 'tool_name') else tool_name),
-                            "description": func.get("description", ""),
-                            "parameters": func.get("parameters", {}),
-                        })
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                "description": func.get("description", ""),
+                                "parameters": func.get("parameters", {}),
+                            }
+                        )
         # Handle list format for backward compatibility
         elif isinstance(custom_tools, list):
             for tool in custom_tools:
-                if hasattr(tool, 'schema_def'):
+                if hasattr(tool, "schema_def"):
                     tool_schema = tool.schema_def
-                    
+
                     if tool_schema.get("type") == "function" and "function" in tool_schema:
                         func = tool_schema["function"]
-                        converted_tools.append({
-                            "type": "function",
-                            "name": func.get("name", tool.tool_name),
-                            "description": func.get("description", ""),
-                            "parameters": func.get("parameters", {}),
-                        })
-                elif hasattr(tool, 'get_extended_schema'):
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "name": func.get("name", tool.tool_name),
+                                "description": func.get("description", ""),
+                                "parameters": func.get("parameters", {}),
+                            }
+                        )
+                elif hasattr(tool, "get_extended_schema"):
                     tool_schema = tool.get_extended_schema
-                    
+
                     if tool_schema.get("type") == "function" and "function" in tool_schema:
                         func = tool_schema["function"]
-                        converted_tools.append({
-                            "type": "function",
-                            "name": func.get("name", tool.tool_name),
-                            "description": func.get("description", ""),
-                            "parameters": func.get("parameters", {}),
-                        })
-        
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "name": func.get("name", tool.tool_name),
+                                "description": func.get("description", ""),
+                                "parameters": func.get("parameters", {}),
+                            }
+                        )
+
         return converted_tools
 
     def format_mcp_tools(self, mcp_functions: Dict[str, Any]) -> List[Dict[str, Any]]:

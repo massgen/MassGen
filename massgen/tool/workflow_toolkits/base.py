@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 class ToolType(Enum):
     """Types of tools available in the system."""
+
     BUILTIN = "builtin"
     WORKFLOW = "workflow"
     MCP = "mcp"

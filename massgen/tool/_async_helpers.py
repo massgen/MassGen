@@ -2,7 +2,7 @@
 """Async utility functions for wrapping different return types."""
 
 import asyncio
-from typing import AsyncGenerator, Generator, Callable, Optional
+from typing import AsyncGenerator, Callable, Generator, Optional
 
 from ._result import ExecutionResult, TextContent
 
@@ -41,19 +41,19 @@ async def wrap_as_async_generator(
     processor: Optional[Callable[[ExecutionResult], Optional[ExecutionResult]]],
 ) -> AsyncGenerator[ExecutionResult, None]:
     """Wrap async generator with interruption handling."""
-    
+
     previous_chunk = None
     try:
         async for chunk in async_gen:
             processed = await _apply_post_processing(chunk, processor)
             yield processed
             previous_chunk = processed
-    
+
     except asyncio.CancelledError:
         interrupt_msg = TextContent(
-            data="<system>Execution interrupted by user request</system>"
+            data="<system>Execution interrupted by user request</system>",
         )
-        
+
         if previous_chunk:
             previous_chunk.output_blocks.append(interrupt_msg)
             previous_chunk.was_interrupted = True

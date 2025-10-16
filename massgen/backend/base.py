@@ -13,7 +13,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from ..filesystem_manager import FilesystemManager, PathPermissionManagerHook
 from ..mcp_tools.hooks import FunctionHookManager, HookType
 from ..token_manager import TokenCostCalculator, TokenUsage
-from ..tool import ToolManager
 
 
 class FilesystemSupport(Enum):
@@ -61,7 +60,7 @@ class LLMBackend(ABC):
 
         # # Initialize tool manager
         # self.custom_tool_manager = ToolManager()
-        
+
         # # Register custom tools if specified
         # custom_tools = kwargs.get("custom_tools", [])
         # if custom_tools:
@@ -123,12 +122,12 @@ class LLMBackend(ABC):
 
     # def _register_custom_tools(self, tool_names: list[str]) -> None:
     #     """Register custom tool functions.
-        
+
     #     Args:
     #         tool_names: List of tool names to register
     #     """
     #     import importlib
-        
+
     #     for tool_name in tool_names:
     #         try:
     #             # Try to import from tool module
