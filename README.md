@@ -998,6 +998,13 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Multi-Agent Support**: Each agent receives dedicated isolated container enabling safe parallel execution
 - **Configurable Security**: Resource limits (CPU, memory), network isolation modes, and read-only volume mounts
 
+**⚠️ Docker Setup Required:**
+To use Docker execution mode, complete these steps before running:
+1. **Docker Engine 28.0.0+** installed and running (`docker ps` should work)
+2. **Python docker library**: `uv pip install -e ".[docker]"` or `pip install docker>=7.0.0`
+3. **Build Docker image**: `bash massgen/docker/build.sh` (from repository root)
+4. **📚 Full setup guide**: See `massgen/docker/README.md` for complete instructions
+
 #### MCP Architecture Refactoring (v0.0.32)
 - **Simplified Client**: Renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture
 - **Code Consolidation**: Removed deprecated modules and consolidated duplicate MCP protocol handling

@@ -496,6 +496,7 @@ def create_simple_config(
     model: str,
     system_message: Optional[str] = None,
     base_url: Optional[str] = None,
+    ui_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Create a simple single-agent configuration."""
     backend_config = {"type": backend_type, "model": model}
@@ -506,13 +507,17 @@ def create_simple_config(
     if backend_type == "claude_code":
         backend_config["cwd"] = "workspace1"
 
+    # Use provided UI config or default to rich_terminal for CLI usage
+    if ui_config is None:
+        ui_config = {"display_type": "rich_terminal", "logging_enabled": True}
+
     config = {
         "agent": {
             "id": "agent1",
             "backend": backend_config,
             "system_message": system_message or "You are a helpful AI assistant.",
         },
-        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
+        "ui": ui_config,
     }
 
     # Add orchestrator config with .massgen/ structure for Claude Code

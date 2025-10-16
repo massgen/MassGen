@@ -141,11 +141,17 @@ async def run(
     elif model:
         # Quick single-agent mode
         backend_type = get_backend_type_from_model(model)
+        # Create headless UI config for programmatic API usage
+        headless_ui_config = {
+            "display_type": "simple",
+            "logging_enabled": False,
+        }
         config_dict = create_simple_config(
             backend_type=backend_type,
             model=model,
             system_message=kwargs.get("system_message"),
             base_url=kwargs.get("base_url"),
+            ui_config=headless_ui_config,
         )
         config_path_used = f"single-agent:{model}"
     else:
@@ -167,14 +173,12 @@ async def run(
     if not agents:
         raise ValueError("No agents configured")
 
-    # Get UI config
-    ui_config = config_dict.get(
-        "ui",
-        {
-            "display_type": "rich_terminal",
-            "logging_enabled": False,  # Quiet for API usage
-        },
-    )
+    # Force headless UI config for programmatic API usage
+    # Override any UI settings from the config file to ensure non-interactive operation
+    ui_config = {
+        "display_type": "simple",  # Headless mode for API usage
+        "logging_enabled": False,  # Quiet for API usage
+    }
 
     # Run the query
     answer = await run_single_question(

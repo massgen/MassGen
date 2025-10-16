@@ -77,37 +77,59 @@ class ConfigBuilder:
 
     # Use case templates - all use cases support all agent types
     USE_CASES = {
-        "qa": {
-            "name": "Simple Q&A",
-            "description": "Basic question answering with single or multiple agents",
+        "custom": {
+            "name": "Custom Configuration",
+            "description": "Full flexibility - choose any agents, tools, and settings",
             "recommended_agents": 1,
             "recommended_tools": [],
-            "agent_types": "all",  # Any agent type works
-            "notes": "Start simple with 1 agent, add more for diverse perspectives",
-        },
-        "research": {
-            "name": "Research & Analysis",
-            "description": "Multi-agent research with web search and diverse perspectives",
-            "recommended_agents": 3,
-            "recommended_tools": ["web_search"],
             "agent_types": "all",
-            "notes": "Works best with web search enabled for current information",
+            "notes": "Choose any combination of agents and tools",
+            "info": "Manual setup: You'll configure each agent, model, and tool individually. Best for advanced users or specific requirements.",
         },
         "coding": {
-            "name": "Code Generation & Development",
-            "description": "Generate code with file operations and code execution",
+            "name": "Filesystem + Code Execution",
+            "description": "Generate, test, and modify code with file operations",
             "recommended_agents": 2,
             "recommended_tools": ["code_execution", "filesystem"],
             "agent_types": "all",
             "notes": "Claude Code recommended for best filesystem support",
+            "info": "Automatically enables: File read/write operations, code execution in isolated workspace, and agent collaboration on code projects.",
+        },
+        "coding_docker": {
+            "name": "Filesystem + Code Execution (Docker)",
+            "description": "Secure isolated code execution in Docker containers (requires setup)",
+            "recommended_agents": 2,
+            "recommended_tools": ["code_execution", "filesystem"],
+            "agent_types": "all",
+            "notes": "⚠️ SETUP REQUIRED: Docker Engine 28+, Python docker library, and image build (see massgen/docker/README.md)",
+            "info": "Automatically enables: File operations, code execution in Docker containers (fully isolated), persistent package installations, and network/resource controls.",
+        },
+        "qa": {
+            "name": "Simple Q&A",
+            "description": "Basic question answering",
+            "recommended_agents": 1,
+            "recommended_tools": [],
+            "agent_types": "all",  # Any agent type works
+            "notes": "Start simple with 1 agent, add more for diverse perspectives",
+            "info": "Minimal setup: Just text-based conversations with AI agents. No special tools enabled by default.",
+        },
+        "research": {
+            "name": "Research & Analysis",
+            "description": "Multi-agent research with web search",
+            "recommended_agents": 3,
+            "recommended_tools": ["web_search"],
+            "agent_types": "all",
+            "notes": "Works best with web search enabled for current information",
+            "info": "Automatically enables: Real-time web search for current information, multiple agents for diverse perspectives and fact-checking.",
         },
         "creative": {
             "name": "Creative Writing",
-            "description": "Collaborative creative writing with multiple perspectives",
+            "description": "Collaborative creative content generation",
             "recommended_agents": 3,
             "recommended_tools": [],
             "agent_types": "all",
             "notes": "Multiple agents provide diverse creative perspectives",
+            "info": "Multiple agents collaborate to provide diverse creative ideas, styles, and perspectives. No special tools - pure creativity.",
         },
         "data_analysis": {
             "name": "Data Analysis",
@@ -116,22 +138,16 @@ class ConfigBuilder:
             "recommended_tools": ["code_execution", "filesystem"],
             "agent_types": "all",
             "notes": "Code execution helps with data processing and visualization",
+            "info": "Automatically enables: Code execution for data processing, file operations to read/write data files, and visualization generation.",
         },
         "web_automation": {
             "name": "Web Automation",
-            "description": "Browser automation and web scraping",
+            "description": "Browser automation and web scraping with MCP",
             "recommended_agents": 2,
             "recommended_tools": ["mcp", "filesystem"],
             "agent_types": "all",
             "notes": "MCP servers provide browser automation capabilities",
-        },
-        "custom": {
-            "name": "Custom Configuration",
-            "description": "Build your own custom setup - full flexibility",
-            "recommended_agents": 1,
-            "recommended_tools": [],
-            "agent_types": "all",
-            "notes": "Choose any combination of agents and tools",
+            "info": "Requires manual MCP server setup. Enables: Browser automation via Playwright MCP, web scraping, screenshot capture, and file saving.",
         },
     }
 
@@ -191,11 +207,14 @@ class ConfigBuilder:
     ) -> None:
         """Display providers in improved format with error handling."""
         try:
+            # Use full terminal width
+            width = console.width - 4  # Leave some margin
+
             console.print()
-            console.print("╔" + "═" * 68 + "╗")
-            console.print("║  " + "[bold cyan]Available Providers[/bold cyan]".ljust(78) + "║")
-            console.print("╠" + "═" * 68 + "╣")
-            console.print("║" + " " * 68 + "║")
+            console.print("╔" + "═" * width + "╗")
+            console.print("║  " + "[bold cyan]Available Providers[/bold cyan]".ljust(width + 10) + "║")
+            console.print("╠" + "═" * width + "╣")
+            console.print("║" + " " * width + "║")
 
             for provider_id, provider_info in self.PROVIDERS.items():
                 try:
@@ -211,25 +230,33 @@ class ConfigBuilder:
                     models_display = ", ".join(models[:3])
                     if len(models) > 3:
                         models_display += f" (+{len(models)-3} more)"
-                    console.print(f"║     [dim]{models_display:<62}[/dim]  ║")
+                    # Trim models display if too long
+                    max_model_width = width - 10
+                    if len(models_display) > max_model_width:
+                        models_display = models_display[: max_model_width - 3] + "..."
+                    console.print(f"║     [dim]{models_display}[/dim]")
 
                     # Capabilities line
                     if provider_info.get("supports"):
                         caps = "Supports: " + ", ".join(provider_info["supports"])
-                        console.print(f"║     [dim cyan]{caps:<62}[/dim cyan]  ║")
+                        # Trim caps if too long
+                        max_caps_width = width - 10
+                        if len(caps) > max_caps_width:
+                            caps = caps[: max_caps_width - 3] + "..."
+                        console.print(f"║     [dim cyan]{caps}[/dim cyan]")
                     elif has_key:
-                        console.print("║     [dim]Basic text generation[/dim]" + " " * 40 + "  ║")
+                        console.print("║     [dim]Basic text generation[/dim]")
 
                     # API key hint if missing
                     if not has_key and provider_info.get("env_var"):
-                        console.print(f"║     [yellow]Need: {provider_info['env_var']:<54}[/yellow]  ║")
+                        console.print(f"║     [yellow]Need: {provider_info['env_var']}[/yellow]")
 
-                    console.print("║" + " " * 68 + "║")
+                    console.print("║" + " " * width + "║")
 
                 except Exception as e:
-                    console.print(f"║  [warning]⚠️  Could not display {provider_id}: {e}[/warning]" + " " * (68 - len(f"⚠️  Could not display {provider_id}: {e}") - 4) + "║")
+                    console.print(f"║  [warning]⚠️  Could not display {provider_id}: {e}[/warning]")
 
-            console.print("╚" + "═" * 68 + "╝")
+            console.print("╚" + "═" * width + "╝")
             console.print()
             console.print("💡 [dim]Tip: Set API keys in ~/.config/massgen/.env[/dim]")
             console.print()
@@ -241,9 +268,10 @@ class ConfigBuilder:
         """Let user select a use case template with error handling."""
         try:
             console.print()
-            console.print("━" * 70)
+            sep_width = console.width - 4
+            console.print("━" * sep_width)
             console.print("[bold cyan]Step 1 of 4: Select Your Use Case[/bold cyan]")
-            console.print("━" * 70)
+            console.print("━" * sep_width)
             console.print()
             console.print("[italic dim]All agent types are supported for every use case[/italic dim]\n")
 
@@ -255,8 +283,8 @@ class ConfigBuilder:
                     description = use_case_info.get("description", "")
                     use_case_info.get("recommended_agents", 1)
 
-                    # Create display string with name and brief description
-                    display = f"{name} - {description[:50]}..." if len(description) > 50 else f"{name} - {description}"
+                    # Create display string with name and description (no truncation)
+                    display = f"{name} - {description}"
 
                     choices.append(
                         questionary.Choice(
@@ -284,6 +312,27 @@ class ConfigBuilder:
                 return "qa"  # Default if cancelled
 
             console.print(f"\n✅ Selected: [green]{self.USE_CASES[use_case_id].get('name', use_case_id)}[/green]\n")
+
+            # Show preset information
+            use_case_details = self.USE_CASES[use_case_id]
+            if use_case_details.get("info"):
+                console.print(
+                    Panel(
+                        f"[cyan]ℹ️  What this preset does:[/cyan]\n\n{use_case_details['info']}",
+                        border_style="cyan",
+                        title="Preset Information",
+                    ),
+                )
+                console.print()
+
+            # Show Docker setup warning if Docker preset is selected
+            if use_case_id == "coding_docker":
+                console.print("[yellow]⚠️  Docker Setup Required:[/yellow]")
+                console.print("   1. Docker Engine 28.0.0+ installed and running")
+                console.print('   2. Python docker library: [cyan]uv pip install -e ".[docker]"[/cyan]')
+                console.print("   3. Build Docker image: [cyan]bash massgen/docker/build.sh[/cyan]")
+                console.print("   📚 Full guide: [cyan]massgen/docker/README.md[/cyan]\n")
+
             return use_case_id
         except (KeyboardInterrupt, EOFError):
             raise  # Re-raise to be handled by run()
@@ -427,13 +476,66 @@ class ConfigBuilder:
 
         return agents
 
-    def customize_agent(self, agent: Dict, agent_num: int, total_agents: int) -> Dict:
+    def apply_preset_to_agent(self, agent: Dict, use_case: str) -> Dict:
+        """Auto-apply preset configuration to an agent.
+
+        Args:
+            agent: Agent configuration dict
+            use_case: Use case ID for preset configuration
+
+        Returns:
+            Updated agent configuration with preset applied
+        """
+        if use_case == "custom":
+            return agent
+
+        use_case_info = self.USE_CASES.get(use_case, {})
+        recommended_tools = use_case_info.get("recommended_tools", [])
+
+        backend_type = agent.get("backend", {}).get("type")
+        provider_info = None
+
+        # Find provider info
+        for pid, pinfo in self.PROVIDERS.items():
+            if pinfo.get("type") == backend_type:
+                provider_info = pinfo
+                break
+
+        if not provider_info:
+            return agent
+
+        # Auto-enable filesystem if recommended
+        if "filesystem" in recommended_tools and "filesystem" in provider_info.get("supports", []):
+            if not agent["backend"].get("cwd"):
+                agent["backend"]["cwd"] = "workspace"
+
+        # Auto-enable web search if recommended
+        if "web_search" in recommended_tools:
+            if backend_type in ["openai", "claude", "gemini", "grok"]:
+                agent["backend"]["enable_web_search"] = True
+
+        # Auto-enable code execution if recommended
+        if "code_execution" in recommended_tools:
+            if backend_type == "openai":
+                agent["backend"]["enable_code_interpreter"] = True
+            elif backend_type in ["claude", "gemini"]:
+                agent["backend"]["enable_code_execution"] = True
+
+        # Auto-enable Docker for Docker preset
+        if use_case == "coding_docker" and agent["backend"].get("cwd"):
+            agent["backend"]["enable_mcp_command_line"] = True
+            agent["backend"]["command_line_execution_mode"] = "docker"
+
+        return agent
+
+    def customize_agent(self, agent: Dict, agent_num: int, total_agents: int, use_case: Optional[str] = None) -> Dict:
         """Customize a single agent with Panel UI.
 
         Args:
             agent: Agent configuration dict
             agent_num: Agent number (1-indexed)
             total_agents: Total number of agents
+            use_case: Use case ID for preset recommendations
 
         Returns:
             Updated agent configuration
@@ -500,12 +602,26 @@ class ConfigBuilder:
                 caps = get_capabilities(backend_type)
                 fs_type = caps.filesystem_support if caps else "mcp"
 
+                # Check if filesystem is recommended in the preset
+                filesystem_recommended = False
+                if use_case and use_case != "custom":
+                    use_case_info = self.USE_CASES.get(use_case, {})
+                    filesystem_recommended = "filesystem" in use_case_info.get("recommended_tools", [])
+
                 if fs_type == "native":
                     console.print("[dim]This backend has native filesystem support[/dim]")
                 else:
                     console.print("[dim]This backend supports filesystem operations via MCP[/dim]")
 
-                if questionary.confirm("Enable filesystem access for this agent?", default=True).ask():
+                if filesystem_recommended:
+                    console.print("[dim]💡 Filesystem access recommended for this preset[/dim]")
+
+                # Auto-enable for Docker preset
+                enable_filesystem = filesystem_recommended
+                if not filesystem_recommended:
+                    enable_filesystem = questionary.confirm("Enable filesystem access for this agent?", default=True).ask()
+
+                if enable_filesystem:
                     if backend_type == "claude_code":
                         # cwd is already set during batch_create_agents
                         # Optionally allow user to customize it
@@ -530,22 +646,39 @@ class ConfigBuilder:
 
                         console.print(f"✅ Filesystem access enabled (via MCP): {agent['backend']['cwd']}")
 
+            # Enable Docker execution mode for Docker preset
+            if use_case == "coding_docker" and agent["backend"].get("cwd"):
+                agent["backend"]["enable_mcp_command_line"] = True
+                agent["backend"]["command_line_execution_mode"] = "docker"
+                console.print("🐳 Docker execution mode enabled for isolated code execution")
+
             # Built-in tools (backend-specific capabilities)
             supports = provider_info.get("supports", [])
             builtin_tools = [s for s in supports if s in ["web_search", "code_execution", "multimodal", "bash"]]
 
+            # Get recommended tools from use case
+            recommended_tools = []
+            if use_case:
+                use_case_info = self.USE_CASES.get(use_case, {})
+                recommended_tools = use_case_info.get("recommended_tools", [])
+
             if builtin_tools:
                 console.print()
+
+                # Show preset info if this is a preset use case
+                if recommended_tools and use_case != "custom":
+                    console.print(f"[dim]💡 Preset recommendation: {', '.join(recommended_tools)}[/dim]")
+
                 tool_choices = []
 
                 if "web_search" in builtin_tools:
-                    tool_choices.append(questionary.Choice("Web Search", value="web_search"))
+                    tool_choices.append(questionary.Choice("Web Search", value="web_search", checked="web_search" in recommended_tools))
                 if "code_execution" in builtin_tools:
-                    tool_choices.append(questionary.Choice("Code Execution", value="code_execution"))
+                    tool_choices.append(questionary.Choice("Code Execution", value="code_execution", checked="code_execution" in recommended_tools))
                 if "bash" in builtin_tools:
-                    tool_choices.append(questionary.Choice("Bash/Shell", value="bash"))
+                    tool_choices.append(questionary.Choice("Bash/Shell", value="bash", checked="bash" in recommended_tools))
                 if "multimodal" in builtin_tools:
-                    tool_choices.append(questionary.Choice("Multimodal (vision)", value="multimodal"))
+                    tool_choices.append(questionary.Choice("Multimodal (vision)", value="multimodal", checked="multimodal" in recommended_tools))
 
                 if tool_choices:
                     selected_tools = questionary.checkbox(
@@ -612,9 +745,10 @@ class ConfigBuilder:
         """Configure agents with batch creation and individual customization."""
         try:
             console.print()
-            console.print("━" * 70)
+            sep_width = console.width - 4
+            console.print("━" * sep_width)
             console.print("[bold cyan]Step 2 of 4: Agent Setup[/bold cyan]")
-            console.print("━" * 70)
+            console.print("━" * sep_width)
             console.print()
             console.print("[italic dim]Choose any provider(s) - all types work for your selected use case[/italic dim]\n")
 
@@ -815,16 +949,101 @@ class ConfigBuilder:
                 console.print("[error]❌ No agents were successfully configured.[/error]")
                 raise ValueError("Failed to configure any agents")
 
-            # Step 2c: Customize each agent
+            # Step 2c: Model selection and preset application
             console.print()
-            console.print("━" * 70)
-            console.print("[bold cyan]Step 3 of 4: Customize Each Agent[/bold cyan]")
-            console.print("━" * 70)
+            sep_width = console.width - 4
+            console.print("━" * sep_width)
+            console.print("[bold cyan]Step 3 of 4: Agent Configuration[/bold cyan]")
+            console.print("━" * sep_width)
             console.print()
 
-            for i, agent in enumerate(agents, 1):
-                agent = self.customize_agent(agent, i, len(agents))
-                agents[i - 1] = agent
+            # For non-custom presets, show info and configure models
+            if use_case != "custom":
+                use_case_info = self.USE_CASES.get(use_case, {})
+                recommended_tools = use_case_info.get("recommended_tools", [])
+
+                console.print(f"[bold green]✓ Preset Selected:[/bold green] {use_case_info.get('name', use_case)}")
+                console.print(f"[dim]{use_case_info.get('description', '')}[/dim]\n")
+
+                if recommended_tools:
+                    console.print("[cyan]This preset will auto-configure:[/cyan]")
+                    for tool in recommended_tools:
+                        tool_display = {
+                            "filesystem": "📁 Filesystem access",
+                            "code_execution": "💻 Code execution",
+                            "web_search": "🔍 Web search",
+                            "mcp": "🔌 MCP servers",
+                        }.get(tool, tool)
+                        console.print(f"  • {tool_display}")
+
+                    if use_case == "coding_docker":
+                        console.print("  • 🐳 Docker isolated execution")
+
+                    console.print()
+
+                # Let users select models for each agent
+                console.print("[cyan]Select models for your agents:[/cyan]\n")
+                for i, agent in enumerate(agents, 1):
+                    backend_type = agent.get("backend", {}).get("type")
+                    provider_info = None
+
+                    # Find provider info
+                    for pid, pinfo in self.PROVIDERS.items():
+                        if pinfo.get("type") == backend_type:
+                            provider_info = pinfo
+                            break
+
+                    if provider_info:
+                        models = provider_info.get("models", [])
+                        if models and len(models) > 1:
+                            current_model = agent["backend"].get("model")
+                            console.print(f"[bold]Agent {i} ({agent['id']}) - {provider_info.get('name')}:[/bold]")
+
+                            model_choices = [
+                                questionary.Choice(
+                                    f"{model}" + (" (default)" if model == current_model else ""),
+                                    value=model,
+                                )
+                                for model in models
+                            ]
+
+                            selected_model = questionary.select(
+                                "Select model:",
+                                choices=model_choices,
+                                default=current_model,
+                                style=questionary.Style(
+                                    [
+                                        ("selected", "fg:cyan bold"),
+                                        ("pointer", "fg:cyan bold"),
+                                        ("highlighted", "fg:cyan"),
+                                    ],
+                                ),
+                                use_arrow_keys=True,
+                            ).ask()
+
+                            if selected_model:
+                                agent["backend"]["model"] = selected_model
+                            console.print(f"  ✓ {selected_model}\n")
+
+                # Auto-apply preset to all agents
+                console.print("[cyan]Applying preset configuration to all agents...[/cyan]")
+                for i, agent in enumerate(agents):
+                    agents[i] = self.apply_preset_to_agent(agent, use_case)
+
+                console.print(f"[green]✅ {len(agents)} agent(s) configured with preset[/green]\n")
+
+                # Ask if user wants additional customization
+                if Confirm.ask("[prompt]Further customize agent settings (advanced)?[/prompt]", default=False):
+                    console.print("\n[cyan]Entering advanced customization...[/cyan]\n")
+                    for i, agent in enumerate(agents, 1):
+                        agent = self.customize_agent(agent, i, len(agents), use_case=use_case)
+                        agents[i - 1] = agent
+            else:
+                # Custom configuration - always customize
+                console.print("[cyan]Custom configuration - configuring each agent...[/cyan]\n")
+                for i, agent in enumerate(agents, 1):
+                    agent = self.customize_agent(agent, i, len(agents), use_case=use_case)
+                    agents[i - 1] = agent
 
             return agents
 
@@ -838,9 +1057,10 @@ class ConfigBuilder:
         """Configure orchestrator-level settings (tools are configured per-agent)."""
         try:
             console.print()
-            console.print("━" * 70)
+            sep_width = console.width - 4
+            console.print("━" * sep_width)
             console.print("[bold cyan]Step 4 of 4: Orchestrator Configuration[/bold cyan]")
-            console.print("━" * 70)
+            console.print("━" * sep_width)
             console.print()
             console.print("[dim]Note: Tools and capabilities were configured per-agent in the previous step.[/dim]\n")
 
@@ -906,12 +1126,13 @@ class ConfigBuilder:
             orchestrator_config["session_storage"] = "sessions"
             console.print("✅ Multi-turn sessions enabled (supports persistent conversations with memory)")
 
-            # Planning Mode
-            if Confirm.ask("[prompt]Enable planning mode (agents review plans before execution)?[/prompt]", default=False):
+            # Planning Mode (for MCP irreversible actions)
+            console.print("\n[dim]Planning Mode: Prevents MCP tool execution during coordination (for irreversible actions like Discord/Twitter posts)[/dim]")
+            if Confirm.ask("[prompt]Enable planning mode for MCP tools?[/prompt]", default=False):
                 orchestrator_config["coordination"] = {
                     "enable_planning_mode": True,
                 }
-                console.print("✅ Planning mode enabled")
+                console.print("✅ Planning mode enabled - MCP tools will plan without executing during coordination")
 
             return agents, orchestrator_config
 
@@ -926,9 +1147,10 @@ class ConfigBuilder:
         """Review configuration and save to file with error handling."""
         try:
             console.print()
-            console.print("━" * 70)
+            sep_width = console.width - 4
+            console.print("━" * sep_width)
             console.print("[bold green]✅ Review & Save Configuration[/bold green]")
-            console.print("━" * 70)
+            console.print("━" * sep_width)
             console.print()
 
             # Build final config
