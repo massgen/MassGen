@@ -18,6 +18,7 @@ import httpx
 
 from ..logger_config import log_backend_activity, logger
 from .base import LLMBackend, StreamChunk
+from ..tool import ToolManager
 
 
 class UploadFileError(Exception):
@@ -107,12 +108,21 @@ SUPPORTED_AUDIO_MIME_TYPES = {
 }
 
 
-class MCPBackend(LLMBackend):
+class CustomToolAndMCPBackend(LLMBackend):
     """Base backend class with MCP (Model Context Protocol) support."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         """Initialize backend with MCP support."""
         super().__init__(api_key, **kwargs)
+
+        # Custom tools support - initialize before api_params_handler
+        self.custom_tool_manager = ToolManager()
+        self._custom_tool_names: set[str] = set()
+
+         # Register custom tools if provided
+        custom_tools = kwargs.get("custom_tools", [])
+        if custom_tools:
+            self._register_custom_tools(custom_tools)
 
         # MCP integration (filesystem MCP server may have been injected by base class)
         self.mcp_servers = self.config.get("mcp_servers", [])
@@ -169,6 +179,107 @@ class MCPBackend(LLMBackend):
     async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
         """Process stream."""
 
+    ## Custom tools support
+    def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
+        """Register custom tools with the tool manager.
+
+        Args:
+            custom_tools: List of custom tool configurations
+        """
+        # Collect unique categories and create them if needed
+        categories = set()
+        for tool_config in custom_tools:
+            if isinstance(tool_config, dict):
+                category = tool_config.get("category", "default")
+                if category != "default":
+                    categories.add(category)
+
+        # Create categories that don't exist
+        for category in categories:
+            if category not in self.custom_tool_manager.tool_categories:
+                self.custom_tool_manager.setup_category(
+                    category_name=category,
+                    description=f"Custom {category} tools",
+                    enabled=True,
+                )
+
+        for tool_config in custom_tools:
+            try:
+                if isinstance(tool_config, dict):
+                    # Extract tool configuration
+                    path = tool_config.get("path")
+                    func = tool_config.get("function")
+                    category = tool_config.get("category", "default")
+                    preset_args = tool_config.get("preset_args")
+                    description = tool_config.get("description")
+
+                    # Register the tool
+                    self.custom_tool_manager.add_tool_function(
+                        path=path,
+                        func=func,
+                        category=category,
+                        preset_args=preset_args,
+                        description=description,
+                    )
+
+                    # Track tool name for categorization
+                    if isinstance(func, str):
+                        if func.startswith("custom_tool__"):
+                            self._custom_tool_names.add(func)
+                        else:
+                            self._custom_tool_names.add(f"custom_tool__{func}")
+                    elif callable(func):
+                        if func.__name__.startswith("custom_tool__"):
+                            self._custom_tool_names.add(func.__name__)
+                        else:
+                            self._custom_tool_names.add(f"custom_tool__{func.__name__}")
+
+                    logger.info(f"Registered custom tool: {func}")
+
+            except Exception as e:
+                logger.error(f"Failed to register custom tool: {e}")
+
+    async def _execute_custom_tool(self, call: Dict[str, Any]) -> str:
+        """Execute a custom tool and return the result.
+
+        Args:
+            call: Function call dictionary with name and arguments
+
+        Returns:
+            The execution result as a string
+        """
+        import json
+
+        tool_request = {
+            "name": call["name"],
+            "input": json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"],
+        }
+
+        result_text = ""
+        try:
+            async for result in self.custom_tool_manager.execute_tool(tool_request):
+                # Accumulate results
+                if hasattr(result, "output_blocks"):
+                    for block in result.output_blocks:
+                        if hasattr(block, "data"):
+                            result_text += str(block.data)
+                        elif hasattr(block, "content"):
+                            result_text += str(block.content)
+                elif hasattr(result, "content"):
+                    result_text += str(result.content)
+                else:
+                    result_text += str(result)
+        except Exception as e:
+            logger.error(f"Error in custom tool execution: {e}")
+            result_text = f"Error: {str(e)}"
+
+        return result_text or "Tool executed successfully"
+    
+    def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
+        """Get OpenAI-formatted schemas for all registered custom tools."""
+        return self.custom_tool_manager.fetch_tool_schemas()
+    
+    # MCP support methods
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
         if not self.mcp_servers or self._mcp_initialized:
@@ -792,7 +903,7 @@ class MCPBackend(LLMBackend):
                         current_messages = self._trim_message_history(messages.copy())
 
                         # Start recursive MCP streaming
-                        async for chunk in self._stream_with_mcp_tools(current_messages, tools, client, **kwargs):
+                        async for chunk in self._stream_with_custom_and_mcp_tools(current_messages, tools, client, **kwargs):
                             yield chunk
 
                     else:
@@ -800,7 +911,7 @@ class MCPBackend(LLMBackend):
                         logger.info("Using no-MCP mode")
 
                         # Start non-MCP streaming
-                        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                        async for chunk in self._stream_without_custom_and_mcp_tools(messages, tools, client, **kwargs):
                             yield chunk
 
                 except Exception as e:
@@ -810,7 +921,7 @@ class MCPBackend(LLMBackend):
                         await self._record_mcp_circuit_breaker_failure(e, agent_id)
 
                         # Handle MCP exceptions with fallback
-                        async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                        async for chunk in self._stream_handle_custom_and_mcp_exceptions(e, messages, tools, client, **kwargs):
                             yield chunk
                     else:
                         logger.error(f"Streaming error: {e}")
@@ -826,7 +937,7 @@ class MCPBackend(LLMBackend):
 
                 if isinstance(e, (MCPConnectionError, MCPTimeoutError, MCPServerError, MCPError)):
                     # Handle MCP exceptions with fallback
-                    async for chunk in self._stream_handle_mcp_exceptions(e, messages, tools, client, **kwargs):
+                    async for chunk in self._stream_handle_custom_and_mcp_exceptions(e, messages, tools, client, **kwargs):
                         yield chunk
                 else:
                     # Generic setup error: still notify if MCP was configured
@@ -839,7 +950,7 @@ class MCPBackend(LLMBackend):
                         )
 
                     # Proceed with non-MCP streaming
-                    async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+                    async for chunk in self._stream_without_custom_and_mcp_tools(messages, tools, client, **kwargs):
                         yield chunk
             except Exception as inner_e:
                 logger.error(f"Streaming error during MCP setup fallback: {inner_e}")
@@ -847,7 +958,7 @@ class MCPBackend(LLMBackend):
             finally:
                 await self._cleanup_client(client)
 
-    async def _stream_without_mcp_tools(
+    async def _stream_without_custom_and_mcp_tools(
         self,
         messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -887,7 +998,7 @@ class MCPBackend(LLMBackend):
         async for chunk in self._process_stream(stream, all_params, agent_id):
             yield chunk
 
-    async def _stream_handle_mcp_exceptions(
+    async def _stream_handle_custom_and_mcp_exceptions(
         self,
         error: Exception,
         messages: List[Dict[str, Any]],
@@ -923,7 +1034,7 @@ class MCPBackend(LLMBackend):
             content=f"\n⚠️  {user_message} ({error}); continuing without MCP tools\n",
         )
 
-        async for chunk in self._stream_without_mcp_tools(messages, tools, client, **kwargs):
+        async for chunk in self._stream_without_custom_and_mcp_tools(messages, tools, client, **kwargs):
             yield chunk
 
     def _track_mcp_function_names(self, tools: List[Dict[str, Any]]) -> None:
@@ -1012,7 +1123,7 @@ class MCPBackend(LLMBackend):
             self._mcp_functions.clear()
             self._mcp_function_names.clear()
 
-    async def __aenter__(self) -> "MCPBackend":
+    async def __aenter__(self) -> "CustomToolAndMCPBackend":
         """Async context manager entry."""
         # Initialize MCP tools if configured
         if MCPResourceManager:

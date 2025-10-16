@@ -22,22 +22,17 @@ from ..api_params_handler import ResponseAPIParamsHandler
 from ..formatter import ResponseFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..stream_chunk import ChunkType, TextStreamChunk
-from ..tool import ToolManager
 from .base import FilesystemSupport, StreamChunk
-from .base_with_mcp import MCPBackend, UploadFileError
+from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, UploadFileError
 
 
-class ResponseBackend(MCPBackend):
+class ResponseBackend(CustomToolAndMCPBackend):
     """Backend using the standard Response API format with multimodal support."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         self.formatter = ResponseFormatter()
-
-        # Custom tools support - initialize before api_params_handler
-        self.custom_tool_manager = ToolManager()
-        self._custom_tool_names: set[str] = set()
 
         # Initialize API params handler after custom_tool_manager
         self.api_params_handler = ResponseAPIParamsHandler(self)
@@ -48,11 +43,6 @@ class ResponseBackend(MCPBackend):
         # File Search tracking for cleanup
         self._vector_store_ids: List[str] = []
         self._uploaded_file_ids: List[str] = []
-
-        # Register custom tools if provided
-        custom_tools = kwargs.get("custom_tools", [])
-        if custom_tools:
-            self._register_custom_tools(custom_tools)
 
     def supports_upload_files(self) -> bool:
         return True
@@ -100,7 +90,7 @@ class ResponseBackend(MCPBackend):
                 except Exception:
                     pass
 
-    async def _stream_without_mcp_tools(
+    async def _stream_without_custom_and_mcp_tools(
         self,
         messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -147,7 +137,7 @@ class ResponseBackend(MCPBackend):
         async for chunk in self._process_stream(stream, all_params, agent_id):
             yield chunk
 
-    async def _stream_with_mcp_tools(
+    async def _stream_with_custom_and_mcp_tools(
         self,
         current_messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -518,7 +508,7 @@ class ResponseBackend(MCPBackend):
                 updated_messages = super()._trim_message_history(updated_messages)
 
                 # Recursive call with updated messages
-                async for chunk in self._stream_with_mcp_tools(updated_messages, tools, client, **kwargs):
+                async for chunk in self._stream_with_custom_and_mcp_tools(updated_messages, tools, client, **kwargs):
                     yield chunk
             else:
                 # No functions were executed, we're done
@@ -750,59 +740,6 @@ class ResponseBackend(MCPBackend):
         self._vector_store_ids.clear()
         self._uploaded_file_ids.clear()
 
-    # def _save_image_sync(
-    #     self,
-    #     image_data: str,
-    #     prompt: str = None,
-    #     image_format: str = "png",
-    # ) -> Optional[str]:
-    #     """
-    #     Save generated image directly to filesystem (synchronous version).
-
-    #     Args:
-    #         image_data: Base64 encoded image data
-    #         prompt: Generation prompt (used for naming)
-    #         image_format: Image format (default png)
-
-    #     Returns:
-    #         Saved file path, or None if failed
-    #     """
-    #     try:
-    #         # Use agent's filesystem workspace if available, otherwise use current working directory
-    #         if self.filesystem_manager:
-    #             workspace_path = self.filesystem_manager.get_current_workspace()
-    #         else:
-    #             workspace_path = Path.cwd()
-
-    #         # Create generated_images subdirectory path
-    #         images_dir = workspace_path
-
-    #         # Create directory if it doesn't exist
-    #         images_dir.mkdir(parents=True, exist_ok=True)
-
-    #         # Generate filename
-    #         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    #         if prompt:
-    #             # Clean prompt for filename
-    #             clean_prompt = "".join(c for c in prompt[:30] if c.isalnum() or c in (" ", "-", "_")).strip()
-    #             clean_prompt = clean_prompt.replace(" ", "_")
-    #             filename = f"{timestamp}_{clean_prompt}.{image_format}"
-    #         else:
-    #             filename = f"{timestamp}_generated.{image_format}"
-
-    #         file_path = images_dir / filename
-
-    #         # Decode base64 and write to file
-    #         image_bytes = base64.b64decode(image_data)
-    #         file_path.write_bytes(image_bytes)
-
-    #         logger.info(f"Image saved to: {file_path}")
-    #         return str(file_path)
-
-    #     except Exception as e:
-    #         logger.error(f"Error saving image: {e}")
-    #         return None
-
     def _convert_mcp_tools_to_openai_format(self) -> List[Dict[str, Any]]:
         """Convert MCP tools (stdio + streamable-http) to OpenAI function declarations."""
         if not self._mcp_functions:
@@ -816,10 +753,6 @@ class ResponseBackend(MCPBackend):
             f"Converted {len(converted_tools)} MCP tools (stdio + streamable-http) to OpenAI format",
         )
         return converted_tools
-
-    def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
-        """Get OpenAI-formatted schemas for all registered custom tools."""
-        return self.custom_tool_manager.fetch_tool_schemas()
 
     async def _process_stream(self, stream, all_params, agent_id=None):
         async for chunk in stream:
@@ -1294,98 +1227,3 @@ class ResponseBackend(MCPBackend):
     def get_supported_builtin_tools(self) -> List[str]:
         """Get list of builtin tools supported by OpenAI."""
         return ["web_search", "code_interpreter"]
-
-    def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
-        """Register custom tools with the tool manager.
-
-        Args:
-            custom_tools: List of custom tool configurations
-        """
-        # Collect unique categories and create them if needed
-        categories = set()
-        for tool_config in custom_tools:
-            if isinstance(tool_config, dict):
-                category = tool_config.get("category", "default")
-                if category != "default":
-                    categories.add(category)
-
-        # Create categories that don't exist
-        for category in categories:
-            if category not in self.custom_tool_manager.tool_categories:
-                self.custom_tool_manager.setup_category(
-                    category_name=category,
-                    description=f"Custom {category} tools",
-                    enabled=True,
-                )
-
-        for tool_config in custom_tools:
-            try:
-                if isinstance(tool_config, dict):
-                    # Extract tool configuration
-                    path = tool_config.get("path")
-                    func = tool_config.get("function")
-                    category = tool_config.get("category", "default")
-                    preset_args = tool_config.get("preset_args")
-                    description = tool_config.get("description")
-
-                    # Register the tool
-                    self.custom_tool_manager.add_tool_function(
-                        path=path,
-                        func=func,
-                        category=category,
-                        preset_args=preset_args,
-                        description=description,
-                    )
-
-                    # Track tool name for categorization
-                    if isinstance(func, str):
-                        if func.startswith("custom_tool__"):
-                            self._custom_tool_names.add(func)
-                        else:
-                            self._custom_tool_names.add(f"custom_tool__{func}")
-                    elif callable(func):
-                        if func.__name__.startswith("custom_tool__"):
-                            self._custom_tool_names.add(func.__name__)
-                        else:
-                            self._custom_tool_names.add(f"custom_tool__{func.__name__}")
-
-                    logger.info(f"Registered custom tool: {func}")
-
-            except Exception as e:
-                logger.error(f"Failed to register custom tool: {e}")
-
-    async def _execute_custom_tool(self, call: Dict[str, Any]) -> str:
-        """Execute a custom tool and return the result.
-
-        Args:
-            call: Function call dictionary with name and arguments
-
-        Returns:
-            The execution result as a string
-        """
-        import json
-
-        tool_request = {
-            "name": call["name"],
-            "input": json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"],
-        }
-
-        result_text = ""
-        try:
-            async for result in self.custom_tool_manager.execute_tool(tool_request):
-                # Accumulate results
-                if hasattr(result, "output_blocks"):
-                    for block in result.output_blocks:
-                        if hasattr(block, "data"):
-                            result_text += str(block.data)
-                        elif hasattr(block, "content"):
-                            result_text += str(block.content)
-                elif hasattr(result, "content"):
-                    result_text += str(result.content)
-                else:
-                    result_text += str(result)
-        except Exception as e:
-            logger.error(f"Error in custom tool execution: {e}")
-            result_text = f"Error: {str(e)}"
-
-        return result_text or "Tool executed successfully"

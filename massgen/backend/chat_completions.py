@@ -31,10 +31,10 @@ from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 
 # Local imports
 from .base import FilesystemSupport, StreamChunk
-from .base_with_mcp import MCPBackend
+from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend
 
 
-class ChatCompletionsBackend(MCPBackend):
+class ChatCompletionsBackend(CustomToolAndMCPBackend):
     """Complete OpenAI-compatible Chat Completions API backend.
 
     Can be used directly with any OpenAI-compatible provider by setting provider name.

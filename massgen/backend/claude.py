@@ -37,10 +37,10 @@ from ..formatter import ClaudeFormatter
 from ..logger_config import log_backend_agent_message, log_stream_chunk, logger
 from ..mcp_tools.backend_utils import MCPErrorHandler
 from .base import FilesystemSupport, StreamChunk
-from .base_with_mcp import MCPBackend, UploadFileError
+from .base_with_custom_tool_and_mcp import CustomToolAndMCPBackend, UploadFileError
 
 
-class ClaudeBackend(MCPBackend):
+class ClaudeBackend(CustomToolAndMCPBackend):
     """Claude backend using Anthropic's Messages API with full multi-tool support."""
 
     def __init__(self, api_key: Optional[str] = None, **kwargs):
