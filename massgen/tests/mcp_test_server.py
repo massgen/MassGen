@@ -10,7 +10,7 @@ It implements the MCP protocol over stdio transport.
 import asyncio
 import json
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 
 class SimpleMCPServer:
@@ -86,11 +86,20 @@ class SimpleMCPServer:
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
 
-    async def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle incoming JSON-RPC request."""
+    async def handle_request(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Handle incoming JSON-RPC request or notification."""
         method = request.get("method")
         params = request.get("params", {})
         request_id = request.get("id")
+        
+        # If no id, this is a notification - don't send response
+        if request_id is None:
+            # Handle notifications silently (no response needed)
+            if method == "notifications/initialized":
+                # Client has finished initialization - no action needed
+                pass
+            # Add other notification handlers here if needed
+            return None
 
         try:
             if method == "initialize":
@@ -126,10 +135,11 @@ class SimpleMCPServer:
                 # Handle request
                 response = await self.handle_request(request)
 
-                # Send response to stdout
-                json.dump(response, sys.stdout)
-                sys.stdout.write("\n")
-                sys.stdout.flush()
+                # Send response to stdout (only if not a notification)
+                if response is not None:
+                    json.dump(response, sys.stdout)
+                    sys.stdout.write("\n")
+                    sys.stdout.flush()
 
             except KeyboardInterrupt:
                 break
