@@ -197,7 +197,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
             mcp_calls = []
             custom_calls = []
             provider_calls = []
-            
+
             for call in captured_function_calls:
                 if call["name"] in self._mcp_functions:
                     mcp_calls.append(call)
@@ -205,13 +205,13 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                     custom_calls.append(call)
                 else:
                     provider_calls.append(call)
-            
+
             # If there are provider calls (non-MCP, non-custom), let API handle them
             if provider_calls:
                 logger.info(f"Provider function calls detected: {[call['name'] for call in provider_calls]}. Ending local processing.")
                 yield StreamChunk(type="done")
                 return
-            
+
             # Check circuit breaker status before executing MCP functions
             if mcp_calls and not await self._check_circuit_breaker_before_execution():
                 logger.warning("All MCP servers blocked by circuit breaker")
@@ -277,7 +277,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         content=f"🔧 [Custom Tool] Calling {call['name']}...",
                         source=f"custom_{call['name']}",
                     )
-                    
+
                     # Yield custom tool arguments
                     yield StreamChunk(
                         type="custom_tool_status",
@@ -285,10 +285,10 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         content=f"Arguments for Calling {call['name']}: {call['arguments']}",
                         source=f"custom_{call['name']}",
                     )
-                    
+
                     # Execute custom tool
                     result = await self._execute_custom_tool(call)
-                    
+
                     # Add function result to messages
                     function_output_msg = {
                         "role": "tool",
@@ -296,7 +296,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         "content": str(result),
                     }
                     updated_messages.append(function_output_msg)
-                    
+
                     # Yield custom tool results
                     yield StreamChunk(
                         type="custom_tool_status",
@@ -304,7 +304,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         content=f"Results for Calling {call['name']}: {str(result)}",
                         source=f"custom_{call['name']}",
                     )
-                    
+
                     # Yield custom tool response status
                     yield StreamChunk(
                         type="custom_tool_status",
@@ -312,15 +312,15 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         content=f"✅ [Custom Tool] {call['name']} completed",
                         source=f"custom_{call['name']}",
                     )
-                    
+
                     processed_call_ids.add(call["call_id"])
                     functions_executed = True
                     logger.info(f"Executed custom tool: {call['name']}")
-                    
+
                 except Exception as e:
                     logger.error(f"Error executing custom tool {call['name']}: {e}")
                     error_msg = f"Error executing {call['name']}: {str(e)}"
-                    
+
                     # Yield error with arguments shown
                     yield StreamChunk(
                         type="custom_tool_status",
@@ -328,14 +328,14 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         content=f"Arguments for Calling {call['name']}: {call['arguments']}",
                         source=f"custom_{call['name']}",
                     )
-                    
+
                     yield StreamChunk(
                         type="custom_tool_status",
                         status="custom_tool_error",
                         content=f"❌ [Custom Tool Error] {error_msg}",
                         source=f"custom_{call['name']}",
                     )
-                    
+
                     # Add error result to messages
                     error_output_msg = {
                         "role": "tool",
@@ -375,7 +375,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         if isinstance(result_str, str) and result_str.startswith("Error:"):
                             # Log failure but still create tool response
                             logger.warning(f"MCP function {function_name} failed after retries: {result_str}")
-                            
+
                             # Add error result to messages
                             function_output_msg = {
                                 "role": "tool",
@@ -383,7 +383,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                                 "content": result_str,
                             }
                             updated_messages.append(function_output_msg)
-                            
+
                             processed_call_ids.add(call["call_id"])
                             mcp_functions_executed = True
                             continue
@@ -392,7 +392,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         # Only catch unexpected non-MCP system errors
                         logger.error(f"Unexpected error in MCP function execution: {e}")
                         error_msg = f"Error executing {function_name}: {str(e)}"
-                        
+
                         # Add error result to messages
                         function_output_msg = {
                             "role": "tool",
@@ -400,7 +400,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                             "content": error_msg,
                         }
                         updated_messages.append(function_output_msg)
-                        
+
                         processed_call_ids.add(call["call_id"])
                         mcp_functions_executed = True
                         continue
@@ -420,7 +420,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         "content": str(result_str),
                     }
                     updated_messages.append(function_output_msg)
-                    
+
                     # Yield function_call_output status with preview
                     result_text = str(result_str)
                     if hasattr(result_obj, "content") and result_obj.content:
@@ -428,7 +428,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                             first_item = result_obj.content[0]
                             if hasattr(first_item, "text"):
                                 result_text = first_item.text
-                    
+
                     yield StreamChunk(
                         type="mcp_status",
                         status="function_call_output",
@@ -438,7 +438,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
 
                     logger.info(f"Executed MCP function {function_name} (stdio/streamable-http)")
                     processed_call_ids.add(call["call_id"])
-                    
+
                     # Yield MCP tool response status
                     yield StreamChunk(
                         type="mcp_status",
@@ -446,7 +446,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
                         content=f"✅ [MCP Tool] {function_name} completed",
                         source=f"mcp_{function_name}",
                     )
-                    
+
                     mcp_functions_executed = True
                     functions_executed = True
 
@@ -454,7 +454,7 @@ class ChatCompletionsBackend(CustomToolAndMCPBackend):
             for call in captured_function_calls:
                 if call["call_id"] not in processed_call_ids:
                     logger.warning(f"Tool call {call['call_id']} for function {call['name']} was not processed - adding error result")
-                    
+
                     # Add missing function call and error result to messages
                     error_output_msg = {
                         "role": "tool",

@@ -295,14 +295,16 @@ class ChatCompletionsFormatter(FormatterBase):
                         converted_tools.append(tool_schema)
                     elif tool_schema.get("type") == "function":
                         # Response API format, need to wrap in function object
-                        converted_tools.append({
-                            "type": "function",
-                            "function": {
-                                "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
-                                "description": tool_schema.get("description", ""),
-                                "parameters": tool_schema.get("parameters", {}),
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
                             }
-                        })
+                        )
                 # Check if it has get_extended_schema property
                 elif hasattr(tool_entry, "get_extended_schema"):
                     tool_schema = tool_entry.get_extended_schema
@@ -312,14 +314,16 @@ class ChatCompletionsFormatter(FormatterBase):
                         converted_tools.append(tool_schema)
                     elif tool_schema.get("type") == "function":
                         # Response API format, need to wrap
-                        converted_tools.append({
-                            "type": "function",
-                            "function": {
-                                "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
-                                "description": tool_schema.get("description", ""),
-                                "parameters": tool_schema.get("parameters", {}),
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
                             }
-                        })
+                        )
         # Handle list format for backward compatibility
         elif isinstance(custom_tools, list):
             for tool in custom_tools:
@@ -329,28 +333,32 @@ class ChatCompletionsFormatter(FormatterBase):
                     if tool_schema.get("type") == "function" and "function" in tool_schema:
                         converted_tools.append(tool_schema)
                     elif tool_schema.get("type") == "function":
-                        converted_tools.append({
-                            "type": "function",
-                            "function": {
-                                "name": tool_schema.get("name", tool.tool_name),
-                                "description": tool_schema.get("description", ""),
-                                "parameters": tool_schema.get("parameters", {}),
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool.tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
                             }
-                        })
+                        )
                 elif hasattr(tool, "get_extended_schema"):
                     tool_schema = tool.get_extended_schema
 
                     if tool_schema.get("type") == "function" and "function" in tool_schema:
                         converted_tools.append(tool_schema)
                     elif tool_schema.get("type") == "function":
-                        converted_tools.append({
-                            "type": "function",
-                            "function": {
-                                "name": tool_schema.get("name", tool.tool_name),
-                                "description": tool_schema.get("description", ""),
-                                "parameters": tool_schema.get("parameters", {}),
+                        converted_tools.append(
+                            {
+                                "type": "function",
+                                "function": {
+                                    "name": tool_schema.get("name", tool.tool_name),
+                                    "description": tool_schema.get("description", ""),
+                                    "parameters": tool_schema.get("parameters", {}),
+                                },
                             }
-                        })
+                        )
 
         return converted_tools
 
