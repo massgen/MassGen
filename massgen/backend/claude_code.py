@@ -14,6 +14,7 @@ Key Features:
 - ✅ MassGen workflow tool integration (new_answer, vote via system prompts)
 - ✅ Single persistent client with automatic session ID tracking
 - ✅ Cost tracking from server-side usage data
+- ✅ Docker execution mode: Bash tool disabled, execute_command MCP used instead
 
 Architecture:
 - Uses ClaudeSDKClient with minimal functionality overlay
@@ -59,6 +60,7 @@ from claude_agent_sdk import (  # type: ignore
     AssistantMessage,
     ClaudeAgentOptions,
     ClaudeSDKClient,
+    PermissionResultAllow,
     ResultMessage,
     SystemMessage,
     TextBlock,
@@ -422,6 +424,20 @@ class ClaudeCodeBackend(LLMBackend):
         if base_system:
             system_parts.append(base_system)
 
+        # Add docker mode instruction if enabled
+        command_line_execution_mode = self.config.get("command_line_execution_mode", "local")
+        if command_line_execution_mode == "docker":
+            system_parts.append("\n--- Code Execution Environment ---")
+            system_parts.append("- Use the execute_command MCP tool for all command execution")
+            system_parts.append("- The Bash tool is disabled in this mode")
+            # Below is necessary bc Claude Code is automatically loaded with knowledge of the current git repo;
+            # this prompt is a temporary workaround before running fully within docker
+            system_parts.append(
+                "- Do NOT use any git repository information you may see as part of a broader directory. "
+                "All git information must come from the execute_command tool and be focused solely on the "
+                "directories you were told to work in, not any parent directories.",
+            )
+
         # Add workflow tools information if present
         if tools:
             workflow_tools = [t for t in tools if t.get("function", {}).get("name") in ["new_answer", "vote"]]
@@ -670,6 +686,9 @@ class ClaudeCodeBackend(LLMBackend):
         v0.0.x behavior. In claude-agent-sdk v0.1.0+, system prompts default to empty,
         so we explicitly request the claude_code preset.
 
+        When command_line_execution_mode is set to "docker", the Bash tool is disabled
+        since execute_command provides all necessary command execution capabilities.
+
         Returns:
             ClaudeAgentOptions configured with provided parameters and
             security restrictions
@@ -693,6 +712,22 @@ class ClaudeCodeBackend(LLMBackend):
         # Get hooks configuration from filesystem manager
         hooks_config = self.filesystem_manager.get_claude_code_hooks_config()
 
+        # Convert mcp_servers from list format to dict format for ClaudeAgentOptions
+        # List format: [{"name": "server1", "type": "stdio", ...}, ...]
+        # Dict format: {"server1": {"type": "stdio", ...}, ...}
+        mcp_servers_dict = {}
+        if "mcp_servers" in options_kwargs:
+            mcp_servers = options_kwargs["mcp_servers"]
+            if isinstance(mcp_servers, list):
+                for server in mcp_servers:
+                    if isinstance(server, dict) and "name" in server:
+                        # Create a copy and remove "name" key
+                        server_config = {k: v for k, v in server.items() if k != "name"}
+                        mcp_servers_dict[server["name"]] = server_config
+            elif isinstance(mcp_servers, dict):
+                # Already in dict format
+                mcp_servers_dict = mcp_servers
+
         options = {
             "cwd": cwd_option,
             "resume": self.get_current_session_id(),
@@ -700,6 +735,10 @@ class ClaudeCodeBackend(LLMBackend):
             "allowed_tools": allowed_tools,
             **{k: v for k, v in options_kwargs.items() if k not in excluded_params},
         }
+
+        # Add converted mcp_servers if present
+        if mcp_servers_dict:
+            options["mcp_servers"] = mcp_servers_dict
 
         # Set Claude Code preset as default system prompt (migration from v0.0.x to v0.1.0+)
         # This ensures we get Claude Code's default behavior instead of empty system prompt
@@ -709,6 +748,18 @@ class ClaudeCodeBackend(LLMBackend):
         # Add hooks if available
         if hooks_config:
             options["hooks"] = hooks_config
+
+        # Add can_use_tool hook to auto-grant MCP tools
+        async def can_use_tool(tool_name: str, tool_args: dict, context):
+            """Auto-grant permissions for MCP tools."""
+            # Auto-approve all MCP tools (they start with mcp__)
+            if tool_name.startswith("mcp__"):
+                return PermissionResultAllow(updated_input=tool_args)
+            # For non-MCP tools, use default permission behavior
+            # Return None to use default permission mode
+            return None
+
+        options["can_use_tool"] = can_use_tool
 
         return ClaudeAgentOptions(**options)
 
@@ -767,6 +818,17 @@ class ClaudeCodeBackend(LLMBackend):
                     "Bash(chmod*)",
                     "Bash(chown*)",
                 ]
+
+            # Disable Bash tool entirely when docker mode is enabled
+            # In docker mode, execute_command MCP tool provides all command execution
+            command_line_execution_mode = all_params.get("command_line_execution_mode", "local")
+            if command_line_execution_mode == "docker":
+                disallowed_tools = list(all_params.get("disallowed_tools", []))
+                bash_related_tools = ["Bash", "BashOutput", "KillShell"]
+                for tool in bash_related_tools:
+                    if tool not in disallowed_tools:
+                        disallowed_tools.append(tool)
+                all_params["disallowed_tools"] = disallowed_tools
 
             # Extract system message from messages for append mode (always do this)
             system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
