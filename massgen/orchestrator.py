@@ -1436,6 +1436,10 @@ class Orchestrator(ChatAgent):
                         # Forward MCP status messages with proper formatting
                         mcp_content = f"🔧 MCP: {chunk.content}"
                         yield ("content", mcp_content)
+                    elif chunk_type == "custom_tool_status":
+                        # Forward custom tool status messages with proper formatting
+                        custom_tool_content = f"🔧 Custom Tool: {chunk.content}"
+                        yield ("content", custom_tool_content)
                     elif chunk_type == "debug":
                         # Forward debug chunks
                         yield ("debug", chunk.content)
@@ -1687,6 +1691,9 @@ class Orchestrator(ChatAgent):
                             yield ("done", None)
                             return
                         elif tool_name.startswith("mcp"):
+                            pass
+                        elif tool_name.startswith("custom_tool"):
+                            # Custom tools are handled by the backend and their results are streamed separately
                             pass
                         else:
                             # Non-workflow tools not yet implemented

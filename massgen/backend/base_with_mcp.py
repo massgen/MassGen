@@ -783,7 +783,9 @@ class MCPBackend(LLMBackend):
                     async for chunk in self.yield_mcp_status_chunks(use_mcp):
                         yield chunk
 
-                    if use_mcp:
+                    use_custom_tools = bool(self._custom_tool_names)
+
+                    if use_mcp or use_custom_tools:
                         # MCP MODE: Recursive function call detection and execution
                         logger.info("Using recursive MCP execution mode")
 

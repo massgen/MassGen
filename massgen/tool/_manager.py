@@ -227,6 +227,12 @@ class ToolManager:
                 allow_var_kwargs,
             )
         
+        # Add prefix for custom tools (not built-in ones)
+        if category != 'builtin' and not tool_name.startswith('custom_tool__'):
+            tool_name = f'custom_tool__{tool_name}'
+            # Update the schema to reflect the new name
+            tool_schema["function"]["name"] = tool_name
+        
         # Check for duplicate names
         if tool_name in self.registered_tools:
             raise ValueError(f"Tool '{tool_name}' is already registered.")

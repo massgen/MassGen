@@ -135,6 +135,8 @@ class ResponseBackend(MCPBackend):
                     name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
                     if name and name in self._mcp_function_names:
                         continue
+                    if name and name in self._custom_tool_names:
+                        continue
                 elif tool.get("type") == "mcp":
                     continue
                 non_mcp_tools.append(tool)
@@ -227,7 +229,7 @@ class ResponseBackend(MCPBackend):
                         # No function calls, we're done (base case)
                         yield TextStreamChunk(type=ChunkType.DONE, source="response_api")
                         return
-
+        
         # Execute any captured function calls
         if captured_function_calls and response_completed:
             # Categorize function calls
@@ -252,15 +254,24 @@ class ResponseBackend(MCPBackend):
             # Initialize for execution
             functions_executed = False
             updated_messages = current_messages.copy()
+            processed_call_ids = set()  # Initialize processed_call_ids here
             
             # Execute custom tools first
             for call in custom_calls:
                 try:
                     # Yield custom tool call status
                     yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
                         status="custom_tool_called",
                         content=f"🔧 [Custom Tool] Calling {call['name']}...",
+                        source=f"custom_{call['name']}",
+                    )
+                    
+                    # Yield custom tool arguments (like MCP tools)
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="function_call",
+                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
                         source=f"custom_{call['name']}",
                     )
                     
@@ -283,20 +294,44 @@ class ResponseBackend(MCPBackend):
                     }
                     updated_messages.append(function_output_msg)
                     
+                    # Yield custom tool results (like MCP tools)
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="function_call_output",
+                        content=f"Results for Calling {call['name']}: {str(result)}",
+                        source=f"custom_{call['name']}",
+                    )
+                    
                     # Yield custom tool response status
                     yield TextStreamChunk(
-                        type=ChunkType.MCP_STATUS,
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
                         status="custom_tool_response",
                         content=f"✅ [Custom Tool] {call['name']} completed",
                         source=f"custom_{call['name']}",
                     )
                     
+                    processed_call_ids.add(call["call_id"])
                     functions_executed = True
                     logger.info(f"Executed custom tool: {call['name']}")
                     
                 except Exception as e:
                     logger.error(f"Error executing custom tool {call['name']}: {e}")
                     error_msg = f"Error executing {call['name']}: {str(e)}"
+                    
+                    # Yield error with arguments shown
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="function_call",
+                        content=f"Arguments for Calling {call['name']}: {call['arguments']}",
+                        source=f"custom_{call['name']}",
+                    )
+                    
+                    yield TextStreamChunk(
+                        type=ChunkType.CUSTOM_TOOL_STATUS,
+                        status="custom_tool_error",
+                        content=f"❌ [Custom Tool Error] {error_msg}",
+                        source=f"custom_{call['name']}",
+                    )
                     
                     # Add error result to messages
                     function_call_msg = {
@@ -313,6 +348,7 @@ class ResponseBackend(MCPBackend):
                         "output": error_msg,
                     }
                     updated_messages.append(error_output_msg)
+                    processed_call_ids.add(call["call_id"])
                     functions_executed = True
             
             # Check circuit breaker status before executing MCP functions
@@ -344,8 +380,6 @@ class ResponseBackend(MCPBackend):
                 return
 
             # Ensure every captured function call gets a result to prevent hanging
-            processed_call_ids = set()
-
             for call in captured_function_calls:
                 function_name = call["name"]
                 if function_name in self._mcp_functions:
@@ -1289,7 +1323,7 @@ class ResponseBackend(MCPBackend):
                 if isinstance(tool_config, dict):
                     # Extract tool configuration
                     path = tool_config.get('path')
-                    func = tool_config.get('func')
+                    func = tool_config.get('function')
                     category = tool_config.get('category', 'default')
                     preset_args = tool_config.get('preset_args')
                     description = tool_config.get('description')
@@ -1306,11 +1340,16 @@ class ResponseBackend(MCPBackend):
                     
                     # Track tool name for categorization
                     if isinstance(func, str):
-                        self._custom_tool_names.add(func)
+                        if func.startswith('custom_tool__'):
+                            self._custom_tool_names.add(func)
+                        else:
+                            self._custom_tool_names.add(f'custom_tool__{func}')
                     elif callable(func):
-                        self._custom_tool_names.add(func.__name__)
-                    
-                    
+                        if func.__name__.startswith('custom_tool__'):
+                            self._custom_tool_names.add(func.__name__)
+                        else:
+                            self._custom_tool_names.add(f'custom_tool__{func.__name__}')
+
                     logger.info(f"Registered custom tool: {func}")
                     
             except Exception as e:
