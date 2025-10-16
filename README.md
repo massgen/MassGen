@@ -51,7 +51,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.30 Features](#-latest-features-v0030)
+- [v0.0.32 Features](#-latest-features-v0032)
 </details>
 
 <details open>
@@ -96,15 +96,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.30](#recent-achievements-v0030)
-  - [v0.0.3 - v0.0.29](#previous-achievements-v003---v0029)
+  - [v0.0.32](#recent-achievements-v0032)
+  - [v0.0.3 - v0.0.31](#previous-achievements-v003---v0031)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.31 Roadmap](#v0031-roadmap)
+- [v0.0.33 Roadmap](#v0033-roadmap)
 </details>
 
 <details open>
@@ -129,23 +129,34 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.30)
+## 🆕 Latest Features (v0.0.32)
 
-**What's New in v0.0.30:**
-- **Multimodal Audio and Video** - Extended multimodal support from images to audio (WAV, MP3) and video (MP4, AVI, MOV, WEBM) across Chat Completions and Claude backends
-- **Qwen API Integration** - Added Qwen API provider support to Chat Completions backend for video understanding capabilities
+**What's New in v0.0.32:**
+- **Docker Execution Mode** - Run agent commands in isolated Docker containers for enhanced security
+- **MCP Architecture Refactoring** - Simplified and streamlined MCP integration with cleaner codebase
+- **Claude Code Docker Integration** - Automatic Bash tool management and seamless Docker support
 
-**Try v0.0.30 Multimodal Features:**
+**Try v0.0.32 Features:**
 ```bash
-# Audio understanding with OpenRouter
+# Docker isolated execution - secure command execution in containers
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_openrouter_audio_understanding.yaml \
-  "What is in this recording?"
+  --config massgen/configs/tools/code-execution/docker_simple.yaml \
+  "Write a factorial function and test it"
 
-# Video understanding with Qwen API
+# Multi-agent Docker deployment - each agent in isolated container
 uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_qwen_video_understanding.yaml \
-  "Describe what happens in this video"
+  --config massgen/configs/tools/code-execution/docker_multi_agent.yaml \
+  "Build a Flask website about Bob Dylan"
+
+# Claude Code with Docker - automatic tool management
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_claude_code.yaml \
+  "Build a Flask website about Bob Dylan"
+
+# Resource-limited Docker execution - production-ready setup
+uv run python -m massgen.cli \
+  --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml \
+  "Fetch data from an API and analyze it"
 ```
 
 → [See all release examples](massgen/configs/README.md#release-history--examples)
@@ -925,38 +936,46 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.30)
+### Recent Achievements (v0.0.32)
 
-**🎉 Released: October 10, 2025**
+**🎉 Released: October 15, 2025**
 
-#### Multimodal Support Extension
-- **Audio Processing**: WAV and MP3 format support for Chat Completions and Claude backends
-- **Video Processing**: MP4, AVI, MOV, WEBM format support for Chat Completions and Claude backends
-- **Flexible Media Input**: Support for local file paths and HTTP/HTTPS URLs
-- **Extended Base64 Encoding**: Now supports audio and video files in addition to images
-- **Configurable Limits**: Media file size limits (default 64MB, configurable via `media_max_file_size_mb`)
+#### Docker Execution Mode
+- **Container-Based Isolation**: Secure command execution in isolated Docker containers preventing host filesystem access
+- **Persistent State Management**: Packages and dependencies persist across conversation turns eliminating redundant setup
+- **Multi-Agent Support**: Each agent receives dedicated isolated container enabling safe parallel execution
+- **Configurable Security**: Resource limits (CPU, memory), network isolation modes, and read-only volume mounts
 
-#### Claude Code Backend SDK Update
-- **Package Migration**: Updated from `claude-code-sdk>=0.0.19` to `claude-agent-sdk>=0.0.22`
-- **Internal Updates**: SDK class changes (`ClaudeCodeOptions` → `ClaudeAgentOptions`)
-- **Enhanced Security**: Improved bash tool permission validation
-- **System Message Handling**: Better SDK preset support
+#### MCP Architecture Refactoring
+- **Simplified Client**: Renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture
+- **Code Consolidation**: Removed deprecated modules and consolidated duplicate MCP protocol handling
+- **Improved Maintainability**: Standardized type hints, enhanced error handling, cleaner code organization
 
-#### Chat Completions Backend Enhancement
-- **Qwen API Integration**: Added Qwen API provider to Chat Completions ecosystem
-- **New Environment Variable**: `QWEN_API_KEY` support
-- **Video Understanding**: Qwen-specific configuration examples
+#### Claude Code Docker Integration
+- **Automatic Tool Management**: Bash tool automatically disabled in Docker mode routing commands through execute_command
+- **MCP Auto-Permissions**: Automatic approval for MCP tools while preserving security validation
+- **Enhanced Guidance**: System messages prevent git repository confusion between host and container environments
 
-#### Bug Fixes
-- **Planning Mode Stability**: Fixed crash when configuration lacks `coordination_config`
-- **Message Handling**: Resolved Claude Code system message processing issues
-- **Import Organization**: Fixed AG2 adapter import ordering
+#### Configuration and Testing
+- **Docker Documentation**: `massgen/docker/README.md` with setup guide and build scripts
+- **Example Configurations**: `docker_simple.yaml`, `docker_multi_agent.yaml`, `docker_with_resource_limits.yaml`, `docker_claude_code.yaml`, `docker_verification.yaml`
+- **Testing**: Comprehensive test suite validating Docker and local execution modes
 
-#### Documentation and Configuration
-- **Case Studies**: `ag2-framework-integration.md`, `mcp-planning-mode.md`
-- **New Configuration Files**: `ag2_case_study.yaml`, `cc_gpt5_gemini_filesystem.yaml`, `single_gemini2.5pro.yaml`, `single_openrouter_audio_understanding.yaml`, `single_qwen_video_understanding.yaml`, `test_sdk_migration.yaml`
+### Previous Achievements (v0.0.3 - v0.0.31)
 
-### Previous Achievements (v0.0.3 - v0.0.29)
+<div style="max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease;">
+
+✅ **Universal Command Execution (v0.0.31)**: MCP-based execute_command tool works across Claude, Gemini, OpenAI, and Chat Completions providers, AG2-inspired security with permission management and command filtering, code execution in planning mode for safer coordination
+
+✅ **AG2 Group Chat Integration (v0.0.31)**: Multi-agent conversations using AG2's GroupChat and GroupChatManager frameworks, smart speaker selection (automatic, round-robin, manual) powered by LLMs, enhanced AG2 adapter supporting native group chat coordination
+
+✅ **Audio & Video Generation (v0.0.31)**: Audio tools for text-to-speech and transcription, video generation using OpenAI's Sora-2 API, multimodal expansion beyond text and images
+
+✅ **Multimodal Support Extension (v0.0.30)**: Audio and video processing for Chat Completions and Claude backends (WAV, MP3, MP4, AVI, MOV, WEBM formats), flexible media input via local paths or URLs, extended base64 encoding for audio/video files, configurable file size limits
+
+✅ **Claude Agent SDK Migration (v0.0.30)**: Package migration from `claude-code-sdk` to `claude-agent-sdk>=0.0.22`, improved bash tool permission validation, enhanced system message handling
+
+✅ **Qwen API Integration (v0.0.30)**: Added Qwen API provider to Chat Completions ecosystem with `QWEN_API_KEY` support, video understanding configuration examples
 
 ✅ **MCP Planning Mode (v0.0.29)**: Strategic planning coordination strategy for safer MCP tool usage, multi-backend support (Response API, Chat Completions, Gemini), agents plan without execution during coordination, 5 planning mode configurations
 
@@ -1026,6 +1045,8 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
 
+</div>
+
 ### Key Future Enhancements
 
 -   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
@@ -1036,25 +1057,25 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.31 Roadmap
+### v0.0.33 Roadmap
 
-Version 0.0.31 focuses on enhancing planning mode capabilities and AG2 group chat integration:
+Version 0.0.33 focuses on developer experience improvements and PyPI distribution:
 
 #### Required Features
-- **Planning Mode Enhancements**: Tool whitelist/blacklist system, multi-turn integration, comprehensive testing
-- **AG2 Group Chat Integration**: User agent orchestration with AG2 group chat and streaming API
+- **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
+- **PyPI Package Release v0.1.0**: Official PyPI package representing new usage paradigm with easy pip installation
 
 #### Optional Features
-- **Tool Registration Refactoring**: Refactor tool registration architecture for better extensibility and plugin support
-- **Memory Framework**: Design and implement memory system for agent context persistence
+- **Nested Chat Integration**: Complete AG2 nested chat pattern support for hierarchical agent conversations
+- **DSPy Integration**: Framework integration for prompt optimization and systematic agent improvement
 
 Key technical approach:
-- **Planning Mode**: Tool restriction system with whitelist/blacklist, multi-turn conversation support, planning mode persistence
-- **AG2 Integration**: Orchestrator-to-user-agent communication pattern, streaming API for group chat updates
-- **Tool Registry**: Improved dynamic tool discovery and loading with plugin-based extensions
-- **Memory System**: Storage and retrieval architecture with different memory types (short-term, long-term, episodic)
+- **Config Builder**: Interactive prompts, configuration templates, validation and error checking, preset support
+- **PyPI Package**: Production-ready distribution with proper dependencies, documentation, and migration guide
+- **Nested Chat**: AG2 integration for hierarchical conversations with parent-child agent relationships
+- **DSPy**: Prompt optimization, performance tuning, and systematic agent improvement workflows
 
-For detailed milestones and technical specifications, see the [full v0.0.31 roadmap](ROADMAP_v0.0.31.md).
+For detailed milestones and technical specifications, see the [full v0.0.33 roadmap](ROADMAP_v0.0.33.md).
 
 ---
 

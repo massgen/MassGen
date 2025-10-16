@@ -35,6 +35,7 @@ try:
         Function,
         MCPCircuitBreaker,
         MCPCircuitBreakerManager,
+        MCPClient,
         MCPConfigHelper,
         MCPConnectionError,
         MCPError,
@@ -45,12 +46,11 @@ try:
         MCPServerError,
         MCPSetupManager,
         MCPTimeoutError,
-        MultiMCPClient,
     )
 except ImportError as e:
     logger.warning(f"MCP import failed: {e}")
     # Create fallback assignments for all MCP imports
-    MultiMCPClient = None
+    MCPClient = None
     MCPCircuitBreaker = None
     Function = None
     MCPErrorHandler = None
@@ -128,7 +128,7 @@ class CustomToolAndMCPBackend(LLMBackend):
         self.mcp_servers = self.config.get("mcp_servers", [])
         self.allowed_tools = kwargs.pop("allowed_tools", None)
         self.exclude_tools = kwargs.pop("exclude_tools", None)
-        self._mcp_client: Optional[MultiMCPClient] = None
+        self._mcp_client: Optional[MCPClient] = None
         self._mcp_initialized = False
 
         # MCP tool execution monitoring
@@ -338,7 +338,7 @@ class CustomToolAndMCPBackend(LLMBackend):
                 allowed_tools=self.allowed_tools,
                 exclude_tools=self.exclude_tools,
                 circuit_breaker=self._mcp_tools_circuit_breaker,
-                timeout_seconds=120,  # Increased timeout for image generation tools
+                timeout_seconds=400,  # Increased timeout for image generation tools
                 backend_name=self.backend_name,
                 agent_id=self.agent_id,
             )
@@ -1077,10 +1077,11 @@ class CustomToolAndMCPBackend(LLMBackend):
                 normalized_servers = MCPSetupManager.normalize_mcp_servers(self.mcp_servers)
                 mcp_tools_servers = MCPSetupManager.separate_stdio_streamable_servers(normalized_servers)
 
-                await MCPCircuitBreakerManager.record_failure(
+                await MCPCircuitBreakerManager.record_event(
                     mcp_tools_servers,
                     self._mcp_tools_circuit_breaker,
-                    str(error),
+                    "failure",
+                    error_message=str(error),
                     backend_name=self.backend_name,
                     agent_id=agent_id,
                 )
@@ -1095,9 +1096,10 @@ class CustomToolAndMCPBackend(LLMBackend):
                 if connected_server_names:
                     connected_server_configs = [server for server in servers_to_use if server.get("name") in connected_server_names]
                     if connected_server_configs:
-                        await MCPCircuitBreakerManager.record_success(
+                        await MCPCircuitBreakerManager.record_event(
                             connected_server_configs,
                             self._mcp_tools_circuit_breaker,
+                            "success",
                             backend_name=self.backend_name,
                             agent_id=self.agent_id,
                         )

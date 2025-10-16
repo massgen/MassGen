@@ -59,7 +59,16 @@ class APIParamsHandlerBase(ABC):
             "context_paths",
             "context_write_access_enabled",
             "enable_image_generation",
+            "enable_mcp_command_line",
+            "command_line_allowed_commands",
+            "command_line_blocked_commands",
+            "command_line_execution_mode",
+            "command_line_docker_image",
+            "command_line_docker_memory_limit",
+            "command_line_docker_cpu_limit",
+            "command_line_docker_network_mode",
             # Backend identification (handled by orchestrator)
+            "enable_audio_generation",  # Audio generation parameter
             "type",
             "agent_id",
             "session_id",

@@ -13,6 +13,7 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 from ..filesystem_manager import FilesystemManager, PathPermissionManagerHook
 from ..mcp_tools.hooks import FunctionHookManager, HookType
 from ..token_manager import TokenCostCalculator, TokenUsage
+from ..utils import CoordinationStage
 
 
 class FilesystemSupport(Enum):
@@ -76,38 +77,49 @@ class LLMBackend(ABC):
         cwd = kwargs.get("cwd")
         if cwd:
             filesystem_support = self.get_filesystem_support()
-            if filesystem_support == FilesystemSupport.MCP:
-                # Get temporary workspace parent from kwargs if available
-                temp_workspace_parent = kwargs.get("agent_temporary_workspace")
-                # Extract context paths and write access from backend config
-                context_paths = kwargs.get("context_paths", [])
-                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
-                enable_image_generation = kwargs.get("enable_image_generation", False)
-                self.filesystem_manager = FilesystemManager(
-                    cwd=cwd,
-                    agent_temporary_workspace_parent=temp_workspace_parent,
-                    context_paths=context_paths,
-                    context_write_access_enabled=context_write_access_enabled,
-                    enable_image_generation=enable_image_generation,
-                )
+            if filesystem_support in (FilesystemSupport.MCP, FilesystemSupport.NATIVE):
+                # Validate execution mode
+                execution_mode = kwargs.get("command_line_execution_mode", "local")
+                if execution_mode not in ["local", "docker"]:
+                    raise ValueError(
+                        f"Invalid command_line_execution_mode: '{execution_mode}'. Must be 'local' or 'docker'.",
+                    )
 
-                # Inject filesystem MCP server into configuration
-                self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
-            elif filesystem_support == FilesystemSupport.NATIVE:
-                # Get temporary workspace parent from kwargs if available
-                temp_workspace_parent = kwargs.get("agent_temporary_workspace")
-                # Extract context paths and write access from backend config
-                context_paths = kwargs.get("context_paths", [])
-                context_write_access_enabled = kwargs.get("context_write_access_enabled", False)
-                enable_image_generation = kwargs.get("enable_image_generation", False)
-                self.filesystem_manager = FilesystemManager(
-                    cwd=cwd,
-                    agent_temporary_workspace_parent=temp_workspace_parent,
-                    context_paths=context_paths,
-                    context_write_access_enabled=context_write_access_enabled,
-                    enable_image_generation=enable_image_generation,
-                )
-                # Don't inject MCP - native backend handles filesystem tools itself
+                # Validate network mode
+                network_mode = kwargs.get("command_line_docker_network_mode", "none")
+                if network_mode not in ["none", "bridge", "host"]:
+                    raise ValueError(
+                        f"Invalid command_line_docker_network_mode: '{network_mode}'. Must be 'none', 'bridge', or 'host'.",
+                    )
+
+                # Extract all FilesystemManager parameters from kwargs
+                filesystem_params = {
+                    "cwd": cwd,
+                    "agent_temporary_workspace_parent": kwargs.get("agent_temporary_workspace"),
+                    "context_paths": kwargs.get("context_paths", []),
+                    "context_write_access_enabled": kwargs.get("context_write_access_enabled", False),
+                    "enable_image_generation": kwargs.get("enable_image_generation", False),
+                    "enable_mcp_command_line": kwargs.get("enable_mcp_command_line", False),
+                    "command_line_allowed_commands": kwargs.get("command_line_allowed_commands"),
+                    "command_line_blocked_commands": kwargs.get("command_line_blocked_commands"),
+                    "command_line_execution_mode": execution_mode,
+                    "command_line_docker_image": kwargs.get("command_line_docker_image", "massgen/mcp-runtime:latest"),
+                    "command_line_docker_memory_limit": kwargs.get("command_line_docker_memory_limit"),
+                    "command_line_docker_cpu_limit": kwargs.get("command_line_docker_cpu_limit"),
+                    "command_line_docker_network_mode": network_mode,
+                    "enable_audio_generation": kwargs.get("enable_audio_generation", False),
+                }
+
+                # Create FilesystemManager
+                self.filesystem_manager = FilesystemManager(**filesystem_params)
+
+                # Inject MCP filesystem server for MCP backends only
+                if filesystem_support == FilesystemSupport.MCP:
+                    self.config = self.filesystem_manager.inject_filesystem_mcp(kwargs)
+                # NATIVE backends handle filesystem tools themselves, but need command_line MCP for docker mode
+                elif filesystem_support == FilesystemSupport.NATIVE and execution_mode == "docker" and kwargs.get("enable_mcp_command_line", False):
+                    self.config = self.filesystem_manager.inject_command_line_mcp(kwargs)
+
             elif filesystem_support == FilesystemSupport.NONE:
                 raise ValueError(f"Backend {self.get_provider_name()} does not support filesystem operations. Remove 'cwd' from configuration.")
 
@@ -119,6 +131,7 @@ class LLMBackend(ABC):
 
         self.formatter = None
         self.api_params_handler = None
+        self.coordination_stage = None
 
     # def _register_custom_tools(self, tool_names: list[str]) -> None:
     #     """Register custom tool functions.
@@ -172,6 +185,15 @@ class LLMBackend(ABC):
             "agent_temporary_workspace",
             "context_paths",
             "context_write_access_enabled",
+            "enable_image_generation",
+            "enable_mcp_command_line",
+            "command_line_allowed_commands",
+            "command_line_blocked_commands",
+            "command_line_execution_mode",
+            "command_line_docker_image",
+            "command_line_docker_memory_limit",
+            "command_line_docker_cpu_limit",
+            "command_line_docker_network_mode",
             # Backend identification (handled by orchestrator)
             "type",
             "agent_id",
@@ -450,3 +472,12 @@ class LLMBackend(ABC):
                 await client.aclose()
         except Exception:
             pass
+
+    def set_stage(self, stage: CoordinationStage) -> None:
+        """
+        Set the current coordination stage for the backend.
+
+        Args:
+            stage: CoordinationStage enum value
+        """
+        self.coordination_stage = stage

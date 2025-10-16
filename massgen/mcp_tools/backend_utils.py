@@ -9,25 +9,26 @@ import asyncio
 import json
 import random
 import time
-from typing import (
-    Any,
-    AsyncGenerator,
-    Awaitable,
-    Callable,
-    Dict,
-    List,
-    Literal,
-    Optional,
-    Tuple,
-)
+from typing import Any, AsyncGenerator, Awaitable, Callable, Literal
 
 from ..logger_config import log_mcp_activity, logger
+
+# Module-level constants
+DEFAULT_MAX_RETRIES = 3
+DEFAULT_RETRY_BASE_DELAY = 0.5
+DEFAULT_RETRY_JITTER_MIN = 0.1
+DEFAULT_RETRY_JITTER_MAX = 0.3
+DEFAULT_MESSAGE_HISTORY_LIMIT = 200
+DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_CIRCUIT_BREAKER_MAX_FAILURES = 3
+DEFAULT_CIRCUIT_BREAKER_RESET_TIME = 30
+DEFAULT_CIRCUIT_BREAKER_BACKOFF_MULTIPLIER = 2
+DEFAULT_CIRCUIT_BREAKER_MAX_BACKOFF_MULTIPLIER = 8
 
 # Import MCP exceptions
 try:
     from .circuit_breaker import CircuitBreakerConfig
-    from .client import MultiMCPClient
-    from .config_validator import MCPConfigValidator
+    from .client import MCPClient
     from .exceptions import (
         MCPAuthenticationError,
         MCPConfigurationError,
@@ -47,9 +48,8 @@ except ImportError:
     MCPAuthenticationError = Exception
     MCPResourceError = Exception
     MCPConfigurationError = Exception
-    MCPConfigValidator = None
     CircuitBreakerConfig = None
-    MultiMCPClient = None
+    MCPClient = None
 
 # Import hook system
 try:
@@ -66,9 +66,9 @@ class Function:
         self,
         name: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         entrypoint: Callable[[str], Awaitable[Any]],
-        hooks: Optional[Dict] = None,
+        hooks: dict | None = None,
     ) -> None:
         # Validate and sanitize inputs
         self.name = name if name else "unknown_function"
@@ -124,7 +124,7 @@ class Function:
         # Execute the actual function
         return await self.entrypoint(modified_args)
 
-    def to_openai_format(self) -> Dict[str, Any]:
+    def to_openai_format(self) -> dict[str, Any]:
         """Convert function to OpenAI Response API format."""
         return {
             "type": "function",
@@ -133,7 +133,7 @@ class Function:
             "parameters": self.parameters,
         }
 
-    def to_chat_completions_format(self) -> Dict[str, Any]:
+    def to_chat_completions_format(self) -> dict[str, Any]:
         """Convert to Chat Completions API format."""
         return {
             "type": "function",
@@ -144,7 +144,7 @@ class Function:
             },
         }
 
-    def to_claude_format(self) -> Dict[str, Any]:
+    def to_claude_format(self) -> dict[str, Any]:
         """Convert to Claude API format."""
         return {
             "name": self.name,
@@ -161,7 +161,7 @@ class MCPErrorHandler:
     """Standardized MCP error handling utilities."""
 
     @staticmethod
-    def get_error_details(error: Exception, context: Optional[str] = None, *, log: bool = False) -> Tuple[str, str, str]:
+    def get_error_details(error: Exception, context: str | None = None, *, log: bool = False) -> tuple[str, str, str]:
         """Return standardized MCP error info and optionally log.
 
         Returns:
@@ -223,58 +223,33 @@ class MCPErrorHandler:
         error: Exception,
         context: str,
         level: str = "auto",
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
+        backend_name: str | None = None,
+        agent_id: str | None = None,
     ) -> None:
         """Log MCP error with appropriate level and context."""
         log_type, user_message, error_category = MCPErrorHandler.get_error_details(error)
-        if level == "auto":
-            if error_category in ["connection", "timeout", "resource"]:
-                level = "warning"
-            elif error_category in ["server", "validation", "auth"]:
-                level = "error"
-            else:
-                level = "error"
 
-        # Log with appropriate level
+        # Auto-determine level
+        if level == "auto":
+            level = "warning" if error_category in ["connection", "timeout", "resource"] else "error"
+
+        # Single log call with level suffix
         log_message = f"MCP {log_type} during {context}: {error}"
-        if level == "debug":
-            log_mcp_activity(
-                backend_name,
-                "error (debug)",
-                {"message": log_message},
-                agent_id=agent_id,
-            )
-        elif level == "info":
-            log_mcp_activity(
-                backend_name,
-                "error (info)",
-                {"message": log_message},
-                agent_id=agent_id,
-            )
-        elif level == "warning":
-            log_mcp_activity(
-                backend_name,
-                "error (warning)",
-                {"message": log_message},
-                agent_id=agent_id,
-            )
-        else:
-            log_mcp_activity(
-                backend_name,
-                "error (error)",
-                {"message": log_message},
-                agent_id=agent_id,
-            )
+        log_mcp_activity(
+            backend_name,
+            f"error ({level})",
+            {"message": log_message},
+            agent_id=agent_id,
+        )
 
     @staticmethod
-    def get_retry_delay(attempt: int, base_delay: float = 0.5) -> float:
+    def get_retry_delay(attempt: int, base_delay: float = DEFAULT_RETRY_BASE_DELAY) -> float:
         """Calculate retry delay with exponential backoff and jitter."""
         # Exponential backoff
         backoff_delay = base_delay * (2**attempt)
 
-        # Add jitter (10-30% of backoff delay)
-        jitter = random.uniform(0.1, 0.3) * backoff_delay
+        # Add jitter
+        jitter = random.uniform(DEFAULT_RETRY_JITTER_MIN, DEFAULT_RETRY_JITTER_MAX) * backoff_delay
 
         return backoff_delay + jitter
 
@@ -293,9 +268,9 @@ class MCPRetryHandler:
         retry_count: int,
         max_retries: int,
         stream_chunk_class,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> Tuple[bool, AsyncGenerator]:
+        backend_name: str | None = None,
+        agent_id: str | None = None,
+    ) -> tuple[bool, AsyncGenerator]:
         """Handle MCP retry errors with specific messaging and fallback logic."""
         log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
 
@@ -330,8 +305,8 @@ class MCPRetryHandler:
         error: Exception,
         tool_call_count: int,
         stream_chunk_class,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
+        backend_name: str | None = None,
+        agent_id: str | None = None,
     ) -> AsyncGenerator:
         """Handle MCP errors with specific messaging and fallback to non-MCP tools."""
         log_type, user_message, _ = MCPErrorHandler.get_error_details(error)
@@ -359,7 +334,7 @@ class MCPMessageManager:
     """Message history management utilities for MCP integration."""
 
     @staticmethod
-    def trim_message_history(messages: List[Dict[str, Any]], max_items: int = 200) -> List[Dict[str, Any]]:
+    def trim_message_history(messages: list[dict[str, Any]], max_items: int = DEFAULT_MESSAGE_HISTORY_LIMIT) -> list[dict[str, Any]]:
         """Trim message history to prevent unbounded growth in MCP execution loop."""
         if max_items <= 0 or len(messages) <= max_items:
             return messages
@@ -395,42 +370,7 @@ class MCPConfigHelper:
     """MCP configuration management utilities."""
 
     @staticmethod
-    def validate_backend_config(
-        config: Dict[str, Any],
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Validate backend MCP configuration using existing MCPConfigValidator."""
-        if MCPConfigValidator is None:
-            log_mcp_activity(
-                backend_name,
-                "MCPConfigValidator unavailable",
-                {"action": "skipping_validation"},
-                agent_id=agent_id,
-            )
-            return config
-
-        try:
-            validator = MCPConfigValidator()
-            validated_config = validator.validate(config)
-            log_mcp_activity(
-                backend_name,
-                "configuration validation successful",
-                {},
-                agent_id=agent_id,
-            )
-            return validated_config
-        except Exception as e:
-            log_mcp_activity(
-                backend_name,
-                "configuration validation failed",
-                {"error": str(e)},
-                agent_id=agent_id,
-            )
-            raise
-
-    @staticmethod
-    def extract_tool_filtering_params(config: Dict[str, Any]) -> Tuple[Optional[List], Optional[List]]:
+    def extract_tool_filtering_params(config: dict[str, Any]) -> tuple[list | None, list | None]:
         """Extract allowed_tools and exclude_tools from configuration."""
         allowed_tools = config.get("allowed_tools")
         exclude_tools = config.get("exclude_tools")
@@ -461,9 +401,9 @@ class MCPConfigHelper:
     @staticmethod
     def build_circuit_breaker_config(
         transport_type: str = "mcp_tools",
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> Optional[Any]:
+        backend_name: str | None = None,
+        agent_id: str | None = None,
+    ) -> Any | None:
         """Build circuit breaker configuration for transport type."""
         if CircuitBreakerConfig is None:
             log_mcp_activity(backend_name, "CircuitBreakerConfig unavailable", {}, agent_id=agent_id)
@@ -472,10 +412,10 @@ class MCPConfigHelper:
         try:
             # Standard configuration for MCP tools (stdio/streamable-http)
             config = CircuitBreakerConfig(
-                max_failures=3,
-                reset_time_seconds=30,
-                backoff_multiplier=2,
-                max_backoff_multiplier=8,
+                max_failures=DEFAULT_CIRCUIT_BREAKER_MAX_FAILURES,
+                reset_time_seconds=DEFAULT_CIRCUIT_BREAKER_RESET_TIME,
+                backoff_multiplier=DEFAULT_CIRCUIT_BREAKER_BACKOFF_MULTIPLIER,
+                max_backoff_multiplier=DEFAULT_CIRCUIT_BREAKER_MAX_BACKOFF_MULTIPLIER,
             )
 
             log_mcp_activity(
@@ -500,11 +440,11 @@ class MCPCircuitBreakerManager:
 
     @staticmethod
     def apply_circuit_breaker_filtering(
-        servers: List[Dict[str, Any]],
+        servers: list[dict[str, Any]],
         circuit_breaker,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        backend_name: str | None = None,
+        agent_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Apply circuit breaker filtering to servers.
 
         Args:
@@ -535,53 +475,13 @@ class MCPCircuitBreakerManager:
         return filtered_servers
 
     @staticmethod
-    async def record_success(
-        servers: List[Dict[str, Any]],
-        circuit_breaker,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> None:
-        """Record successful operation for circuit breaker."""
-        if not circuit_breaker:
-            return
-
-        for server in servers:
-            server_name = server.get("name", "unknown")
-            try:
-                circuit_breaker.record_success(server_name, agent_id=agent_id)
-                log_mcp_activity(
-                    backend_name,
-                    "recorded success for server",
-                    {"server_name": server_name},
-                    agent_id=agent_id,
-                )
-            except Exception as cb_error:
-                log_mcp_activity(
-                    backend_name,
-                    "circuit breaker record_success failed",
-                    {"server_name": server_name, "error": str(cb_error)},
-                    agent_id=agent_id,
-                )
-
-    @staticmethod
-    async def record_failure(
-        servers: List[Dict[str, Any]],
-        circuit_breaker,
-        error_message: str,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> None:
-        """Record failure for circuit breaker."""
-        await MCPCircuitBreakerManager.record_event(servers, circuit_breaker, "failure", error_message, backend_name, agent_id)
-
-    @staticmethod
     async def record_event(
-        servers: List[Dict[str, Any]],
+        servers: list[dict[str, Any]],
         circuit_breaker,
         event: Literal["success", "failure"],
-        error_message: Optional[str] = None,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
+        error_message: str | None = None,
+        backend_name: str | None = None,
+        agent_id: str | None = None,
     ) -> None:
         """Record circuit breaker events for servers.
 
@@ -639,14 +539,14 @@ class MCPResourceManager:
 
     @staticmethod
     async def setup_mcp_client(
-        servers: List[Dict[str, Any]],
-        allowed_tools: Optional[List[str]],
-        exclude_tools: Optional[List[str]],
+        servers: list[dict[str, Any]],
+        allowed_tools: list[str] | None,
+        exclude_tools: list[str] | None,
         circuit_breaker=None,
-        timeout_seconds: int = 30,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> Optional[Any]:
+        timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+        backend_name: str | None = None,
+        agent_id: str | None = None,
+    ) -> Any | None:
         """Setup MCP client for stdio/streamable-http servers with circuit breaker protection.
 
         Args:
@@ -659,12 +559,12 @@ class MCPResourceManager:
             agent_id: Optional agent ID for logging context
 
         Returns:
-            Connected MultiMCPClient or None if setup failed
+            Connected MCPClient or None if setup failed
         """
-        if MultiMCPClient is None:
+        if MCPClient is None:
             log_mcp_activity(
                 backend_name,
-                "MultiMCPClient unavailable",
+                "MCPClient unavailable",
                 {"functionality": "disabled"},
                 agent_id=agent_id,
             )
@@ -699,7 +599,7 @@ class MCPResourceManager:
             return None
 
         # Retry logic with exponential backoff
-        max_retries = 3
+        max_retries = DEFAULT_MAX_RETRIES
         for retry in range(max_retries):
             try:
                 if retry > 0:
@@ -716,7 +616,7 @@ class MCPResourceManager:
                     )
                     await asyncio.sleep(delay)
 
-                client = await MultiMCPClient.create_and_connect(
+                client = await MCPClient.create_and_connect(
                     filtered_servers,
                     timeout_seconds=timeout_seconds,
                     allowed_tools=allowed_tools,
@@ -777,11 +677,11 @@ class MCPResourceManager:
         return None
 
     @staticmethod
-    def convert_tools_to_functions(mcp_client, backend_name: Optional[str] = None, agent_id: Optional[str] = None, hook_manager=None) -> Dict[str, Function]:
+    def convert_tools_to_functions(mcp_client, backend_name: str | None = None, agent_id: str | None = None, hook_manager=None) -> dict[str, Function]:
         """Convert MCP tools to Function objects with hook support.
 
         Args:
-            mcp_client: Connected MultiMCPClient instance
+            mcp_client: Connected MCPClient instance
             backend_name: Optional backend name for logging context
             agent_id: Optional agent ID for logging context
             hook_manager: Optional hook manager for function hooks
@@ -876,11 +776,11 @@ class MCPResourceManager:
         return functions
 
     @staticmethod
-    async def cleanup_mcp_client(client, backend_name: Optional[str] = None, agent_id: Optional[str] = None) -> None:
+    async def cleanup_mcp_client(client, backend_name: str | None = None, agent_id: str | None = None) -> None:
         """Clean up MCP client connections.
 
         Args:
-            client: MultiMCPClient instance to clean up
+            client: MCPClient instance to clean up
             backend_name: Optional backend name for logging context
             agent_id: Optional agent ID for logging context
         """
@@ -899,21 +799,11 @@ class MCPResourceManager:
     @staticmethod
     async def setup_mcp_context_manager(
         backend_instance,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
+        backend_name: str | None = None,
+        agent_id: str | None = None,
     ):
         """Setup MCP tools if configured during context manager entry."""
-        if hasattr(backend_instance, "_mcp_tools_servers") and backend_instance._mcp_tools_servers and not backend_instance._mcp_initialized:
-            try:
-                await backend_instance._setup_mcp_tools()
-            except Exception as e:
-                log_mcp_activity(
-                    backend_name,
-                    "setup failed during context entry",
-                    {"error": str(e)},
-                    agent_id=agent_id,
-                )
-        elif hasattr(backend_instance, "mcp_servers") and backend_instance.mcp_servers and not backend_instance._mcp_initialized:
+        if hasattr(backend_instance, "mcp_servers") and backend_instance.mcp_servers and not backend_instance._mcp_initialized:
             try:
                 await backend_instance._setup_mcp_tools()
             except Exception as e:
@@ -930,8 +820,8 @@ class MCPResourceManager:
     async def cleanup_mcp_context_manager(
         backend_instance,
         logger_instance=None,
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
+        backend_name: str | None = None,
+        agent_id: str | None = None,
     ) -> None:
         """Clean up MCP resources during context manager exit."""
         log = logger_instance or logger
@@ -939,12 +829,6 @@ class MCPResourceManager:
         try:
             if hasattr(backend_instance, "cleanup_mcp"):
                 await backend_instance.cleanup_mcp()
-            elif hasattr(backend_instance, "_mcp_client"):
-                await MCPResourceManager.cleanup_mcp_client(backend_instance._mcp_client, backend_name, agent_id=agent_id)
-                backend_instance._mcp_client = None
-                backend_instance._mcp_initialized = False
-                if hasattr(backend_instance, "functions"):
-                    backend_instance.functions.clear()
         except Exception as e:
             log.error(f"Error during MCP cleanup for backend '{backend_name}': {e}")
             log_mcp_activity(
@@ -959,7 +843,7 @@ class MCPSetupManager:
     """MCP setup and initialization utilities."""
 
     @staticmethod
-    def normalize_mcp_servers(servers: Any, backend_name: Optional[str] = None, agent_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def normalize_mcp_servers(servers: Any, backend_name: str | None = None, agent_id: str | None = None) -> list[dict[str, Any]]:
         """Validate and normalize mcp_servers into a list of dicts.
 
         Args:
@@ -1025,54 +909,11 @@ class MCPSetupManager:
         return normalized
 
     @staticmethod
-    def separate_servers_by_transport_type(servers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Separate servers to return only stdio and streamable-http servers.
-
-        Args:
-            servers: List of server configurations
-
-        Returns:
-            List containing only stdio and streamable-http servers
-        """
-        mcp_tools_servers = []
-
-        for server in servers:
-            transport_type = (server.get("type") or "").lower()
-            server_name = server.get("name", "unnamed")
-
-            if not transport_type:
-                logger.warning(
-                    "MCP server missing type field",
-                    extra={
-                        "server_name": server_name,
-                        "supported_types": ["stdio", "streamable-http"],
-                        "action": "skipping",
-                    },
-                )
-                continue
-
-            if transport_type in ["stdio", "streamable-http"]:
-                # Both stdio and streamable-http use MultiMCPClient
-                mcp_tools_servers.append(server)
-            elif transport_type == "http":
-                raise MCPConfigurationError(
-                    f"HTTP MCP transport type is not supported for server '{server_name}'. " f"Supported types: 'stdio', 'streamable-http'.",
-                    context="transport_validation",
-                )
-            else:
-                raise MCPConfigurationError(
-                    f"Unknown MCP transport type '{transport_type}' for server '{server_name}'. " f"Supported types: 'stdio', 'streamable-http'.",
-                    context="transport_validation",
-                )
-
-        return mcp_tools_servers
-
-    @staticmethod
     def separate_stdio_streamable_servers(
-        servers: List[Dict[str, Any]],
-        backend_name: Optional[str] = None,
-        agent_id: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        servers: list[dict[str, Any]],
+        backend_name: str | None = None,
+        agent_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Extract only stdio and streamable-http servers.
 
         Args:
@@ -1099,11 +940,11 @@ class MCPExecutionManager:
     @staticmethod
     async def execute_function_with_retry(
         function_name: str,
-        args: Dict[str, Any],
-        functions: Dict[str, Function],
-        max_retries: int = 3,
-        stats_callback: Optional[Callable] = None,
-        circuit_breaker_callback: Optional[Callable] = None,
+        args: dict[str, Any],
+        functions: dict[str, Function],
+        max_retries: int = DEFAULT_MAX_RETRIES,
+        stats_callback: Callable | None = None,
+        circuit_breaker_callback: Callable | None = None,
         logger_instance=None,
     ) -> Any:
         """Execute MCP function with exponential backoff retry logic.

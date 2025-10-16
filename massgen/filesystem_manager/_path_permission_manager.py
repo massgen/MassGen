@@ -90,7 +90,11 @@ class PathPermissionManager:
         "massgen_logs",
     ]
 
-    def __init__(self, context_write_access_enabled: bool = False, enforce_read_before_delete: bool = True):
+    def __init__(
+        self,
+        context_write_access_enabled: bool = False,
+        enforce_read_before_delete: bool = True,
+    ):
         """
         Initialize path permission manager.
 
@@ -110,7 +114,9 @@ class PathPermissionManager:
         # File operation tracker for read-before-delete enforcement
         self.file_operation_tracker = FileOperationTracker(enforce_read_before_delete=enforce_read_before_delete)
 
-        logger.info(f"[PathPermissionManager] Initialized with context_write_access_enabled={context_write_access_enabled}, enforce_read_before_delete={enforce_read_before_delete}")
+        logger.info(
+            f"[PathPermissionManager] Initialized with context_write_access_enabled={context_write_access_enabled}, " f"enforce_read_before_delete={enforce_read_before_delete}",
+        )
 
     def add_path(self, path: Path, permission: Permission, path_type: str) -> None:
         """
@@ -451,7 +457,7 @@ class PathPermissionManager:
             return self._validate_delete_tool(tool_name, tool_args)
 
         # Tools that can potentially modify through commands
-        command_tools = {"Bash", "bash", "shell", "exec"}
+        command_tools = {"Bash", "bash", "shell", "exec", "execute_command"}
 
         # Check command tools for dangerous operations
         if tool_name in command_tools:

@@ -251,14 +251,18 @@ IMPORTANT: You are responding to the latest message in an ongoing conversation. 
         self,
         original_system_message: Optional[str] = None,
         enable_image_generation: bool = False,
+        enable_audio_generation: bool = False,
         has_irreversible_actions: bool = False,
+        enable_command_execution: bool = False,
     ) -> str:
         """System message for final answer presentation by winning agent.
 
         Args:
             original_system_message: The agent's original system message to preserve
             enable_image_generation: Whether image generation is enabled
+            enable_audio_generation: Whether audio generation is enabled
             has_irreversible_actions: Whether agent has write access to context paths (requires actual file delivery)
+            enable_command_execution: Whether command execution is enabled for this agent
         """
         if "final_presentation_system_message" in self._template_overrides:
             return str(self._template_overrides["final_presentation_system_message"])
@@ -286,6 +290,16 @@ Present the best possible coordinated answer by combining the strengths from all
 - MUST call the generate-image tool with these input images to synthesize one final image combining their strengths.
 - MUST save the final outputand output the saved path.
 """
+        # Add audio generation instructions only if enabled
+        if enable_audio_generation:
+            presentation_instructions += """For audio generation tasks:
+- Extract audio paths from the existing answer and resolve them in the shared reference.
+- Gather ALL audio files produced by EVERY agent (ignore non-existent files).
+  IMPORTANT: You MUST call the generate_text_with_input_audio tool to obtain transcriptions
+  for EACH AND EVERY audio file from ALL agents - no audio should be skipped or overlooked.
+- MUST combine the strengths of all transcriptions into one final detailed transcription that captures the best elements from each.
+- MUST use the convert_text_to_audio tool to convert this final transcription to a new audio file and save it, then output the saved path.
+"""
 
         # Add irreversible actions reminder if needed
         # TODO: Integrate more general irreversible actions handling in future (i.e., not just for context file delivery)
@@ -296,6 +310,14 @@ Present the best possible coordinated answer by combining the strengths from all
                 "However, note your workspace is NOT the final destination. You MUST copy/write files to the Target Path using FULL ABSOLUTE PATHS. "
                 "Then, clean up this Target Path by deleting any outdated or unused files. "
                 "Then, you must ALWAYS verify that the Target Path contains the correct final files, as no other agents were allowed to write to this path.\n"
+            )
+
+        # Add requirements.txt guidance if command execution is enabled
+        if enable_command_execution:
+            presentation_instructions += (
+                "### Package Dependencies:\n\n"
+                "Create a `requirements.txt` file listing all Python packages needed to run your code. "
+                "This helps users reproduce your work later. Include only the packages you actually used in your solution.\n"
             )
 
         # Combine with original system message if provided
@@ -437,6 +459,14 @@ Based on the coordination process above, present your final answer:"""
         messages.append({"role": "user", "content": self.enforcement_message()})
         return messages
 
+    def command_execution_system_message(self) -> str:
+        """Generate concise command execution instructions when command line execution is enabled."""
+        parts = ["## Command Execution"]
+        parts.append("You can run command line commands using the `execute_command` tool.\n")
+        parts.append("If a `.venv` directory exists in your workspace, it will be automatically used.")
+
+        return "\n".join(parts)
+
     def filesystem_system_message(
         self,
         main_workspace: Optional[str] = None,
@@ -446,6 +476,7 @@ Based on the coordination process above, present your final answer:"""
         workspace_prepopulated: bool = False,
         enable_image_generation: bool = False,
         agent_answers: Optional[Dict[str, str]] = None,
+        enable_command_execution: bool = False,
     ) -> str:
         """Generate filesystem access instructions for agents with filesystem support.
 
@@ -457,6 +488,7 @@ Based on the coordination process above, present your final answer:"""
             workspace_prepopulated: Whether workspace is pre-populated
             enable_image_generation: Whether image generation is enabled
             agent_answers: Dict of agent answers (keys are agent IDs) to show workspace structure
+            enable_command_execution: Whether command line execution is enabled
         """
         if "filesystem_system_message" in self._template_overrides:
             return str(self._template_overrides["filesystem_system_message"])
@@ -580,11 +612,12 @@ Based on the coordination process above, present your final answer:"""
         #     )
         # else:
         # Not enabled for image generation tasks
-        parts.append(
-            "\n**New Answer**: When calling `new_answer`:\n"
-            "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
-            "- If providing a text response, include your analysis/explanation in the `content` field\n",
-        )
+        new_answer_guidance = "\n**New Answer**: When calling `new_answer`:\n"
+        if enable_command_execution:
+            new_answer_guidance += "- If you executed commands (e.g., running tests), explain the results in your answer (what passed, what failed, what the output shows)\n"
+        new_answer_guidance += "- If you created files, list your cwd and file paths (but do NOT paste full file contents)\n"
+        new_answer_guidance += "- If providing a text response, include your analysis/explanation in the `content` field\n"
+        parts.append(new_answer_guidance)
 
         # Add workspace cleanup guidance
         parts.append(
@@ -618,6 +651,11 @@ Based on the coordination process above, present your final answer:"""
             "**Evaluation**: When evaluating agents' answers, do NOT base your decision solely on the answer text. "
             "Instead, read and verify the actual files in their workspaces (via Shared Reference) to ensure the work matches their claims.\n",
         )
+
+        # Add command execution instructions if enabled
+        if enable_command_execution:
+            command_exec_message = self.command_execution_system_message()
+            parts.append(f"\n{command_exec_message}")
 
         return "\n".join(parts)
 

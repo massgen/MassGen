@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
     "datasets==3.2.0",
-    "openai==1.71.0",
+    "openai==2.2.0",
     "xai-sdk==1.0.0",
     "anthropic>=0.61.0",
     "nest-asyncio==1.6.0",
@@ -47,6 +47,7 @@ dependencies = [
     "pillow>=11.3.0",
     "ag2>=0.9.10",
     "pyautogen>=0.10.0",
+    "vertexai>=1.71.1",
     "pytest>=8.4.2",
 ]
 
@@ -68,6 +69,9 @@ docs = [
     "sphinx>=5.0.0",
     "sphinx-rtd-theme>=1.2.0",
     "myst-parser>=1.0.0",
+]
+docker = [
+    "docker>=7.0.0",
 ]
 external = [
     "ag2>=0.9.10",

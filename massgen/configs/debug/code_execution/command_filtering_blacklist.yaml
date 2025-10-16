@@ -1,0 +1,29 @@
+# Command Execution with Additional Blacklist Filtering
+# Blocks commands beyond the default safety checks
+# Run with: uv run python -m massgen.cli --config massgen/configs/debug/code_execution/command_filtering_blacklist.yaml "Write and test a sorting algorithm in Python"
+# Expected behavior: Agent cannot run Python commands or install packages, so will fail to complete the task and end or timeout.
+# Note this is a test; we would never ask for the conflicting task in practice.
+
+agent:
+  id: "agent_a"
+  backend:
+    type: "gemini"
+    model: "gemini-2.5-pro"
+    cwd: "workspace"
+    enable_mcp_command_line: true
+    command_line_blocked_commands:
+      - "python.*"  # Matches python with or without args
+      - "python3.*"
+      - "pytest.*"
+      - "pip.*"
+
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+timeout_settings:
+  orchestrator_timeout_seconds: 120   # 120 seconds max coordination
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true
