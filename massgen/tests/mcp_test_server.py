@@ -91,7 +91,7 @@ class SimpleMCPServer:
         method = request.get("method")
         params = request.get("params", {})
         request_id = request.get("id")
-        
+
         # If no id, this is a notification - don't send response
         if request_id is None:
             # Handle notifications silently (no response needed)
