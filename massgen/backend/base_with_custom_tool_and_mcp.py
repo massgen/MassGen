@@ -17,8 +17,8 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 import httpx
 
 from ..logger_config import log_backend_activity, logger
-from .base import LLMBackend, StreamChunk
 from ..tool import ToolManager
+from .base import LLMBackend, StreamChunk
 
 
 class UploadFileError(Exception):
@@ -119,7 +119,7 @@ class CustomToolAndMCPBackend(LLMBackend):
         self.custom_tool_manager = ToolManager()
         self._custom_tool_names: set[str] = set()
 
-         # Register custom tools if provided
+        # Register custom tools if provided
         custom_tools = kwargs.get("custom_tools", [])
         if custom_tools:
             self._register_custom_tools(custom_tools)
@@ -274,11 +274,11 @@ class CustomToolAndMCPBackend(LLMBackend):
             result_text = f"Error: {str(e)}"
 
         return result_text or "Tool executed successfully"
-    
+
     def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
         """Get OpenAI-formatted schemas for all registered custom tools."""
         return self.custom_tool_manager.fetch_tool_schemas()
-    
+
     # MCP support methods
     async def _setup_mcp_tools(self) -> None:
         """Initialize MCP client for mcp_tools-based servers (stdio + streamable-http)."""
