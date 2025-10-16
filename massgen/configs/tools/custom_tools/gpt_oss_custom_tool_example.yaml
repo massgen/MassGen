@@ -1,8 +1,8 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_mcp_example.yaml "whats the sum of 123 and 456?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_custom_tool_example.yaml "whats the sum of 123 and 456?"
 agents:
-  - id: "gpt-oss-mcp_weather" # Cerebras AI
+  - id: "gpt-oss-custom_tool" # Cerebras AI GPT-OSS
     backend:
       type: "chatcompletion"
       model: "gpt-oss-120b"
