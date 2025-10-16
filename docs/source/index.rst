@@ -291,8 +291,8 @@ Documentation Sections
    user_guide/multi_turn_mode
    user_guide/tools
    user_guide/multimodal
-   user_guide/logging
    user_guide/ag2_integration
+   user_guide/logging
 
 .. toctree::
    :maxdepth: 2

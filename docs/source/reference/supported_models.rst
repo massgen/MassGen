@@ -3,110 +3,39 @@ Supported Models & Backends
 
 MassGen supports a wide range of LLM providers and models. This page provides comprehensive information about backend types, model support, and setup requirements.
 
-Quick Reference: Backend Support Matrix
-----------------------------------------
+Quick Reference: Backend Setup
+--------------------------------
 
 .. list-table::
    :header-rows: 1
-   :widths: 18 12 12 12 12 34
+   :widths: 30 70
 
    * - Backend Type
-     - Web Search
-     - Code Exec
-     - File Ops
-     - MCP
      - Setup Requirements
    * - **Claude API**
-     - ⭐
-     - ⭐
-     - ✅
-     - ✅
      - ``ANTHROPIC_API_KEY``
    * - **Claude Code**
-     - ⭐
-     - ⭐
-     - ⭐
-     - ✅
-     - ``ANTHROPIC_API_KEY`` + Native: Read, Write, Edit, Bash, Grep, Glob, TodoWrite
+     - ``ANTHROPIC_API_KEY`` + Native tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite
    * - **Gemini API**
-     - ⭐
-     - ⭐
-     - ✅
-     - ✅
      - ``GEMINI_API_KEY``
    * - **OpenAI API**
-     - ⭐
-     - ⭐
-     - ✅
-     - ✅
      - ``OPENAI_API_KEY``
    * - **Grok API**
-     - ⭐
-     - ✅
-     - ✅
-     - ✅
      - ``XAI_API_KEY``
    * - **Azure OpenAI**
-     - ❌
-     - ❌
-     - ❌
-     - ❌
-     - Azure deployment config
+     - Azure deployment config: ``AZURE_OPENAI_API_KEY``, ``AZURE_OPENAI_ENDPOINT``, ``AZURE_OPENAI_API_VERSION``
    * - **Z AI**
-     - ❌
-     - ✅
-     - ✅
-     - ✅
      - ``ZAI_API_KEY``
    * - **ChatCompletion**
-     - Varies
-     - Varies
-     - ✅
-     - ✅
-     - ``base_url`` + provider API key
+     - ``base_url`` + provider-specific API key (e.g., ``CEREBRAS_API_KEY``, ``TOGETHER_API_KEY``)
    * - **LM Studio**
-     - ❌
-     - ✅
-     - ✅
-     - Limited
-     - Local LM Studio server
+     - Local LM Studio server running
    * - **vLLM/SGLang**
-     - ❌
-     - ✅
-     - ✅
-     - ✅
-     - Local server on port 8000/30000
+     - Local inference server on port 8000 (vLLM) or 30000 (SGLang)
    * - **AG2 Framework**
-     - Varies
-     - ⭐
-     - Varies
-     - ❌
-     - AG2 config + LLM API keys
+     - AG2 installation + LLM API keys for chosen provider
 
-**Legend:**
-
-* ⭐ **Built-in** - Native backend feature (e.g., Anthropic API, Google Search, OpenAI code interpreter, Claude Code Bash tool)
-* ✅ **MCP-based** - Available via MCP integration (e.g., ``enable_mcp_command_line: true`` for universal bash/shell execution)
-* ❌ **Not available** - Feature not supported
-* **Varies** - Depends on provider capabilities
-
-**Code Execution Details:**
-
-* **Built-in (⭐)**: Backend provider's native code execution tool
-
-  - Claude API: Anthropic's code execution tool
-  - Gemini API: Google's code execution tool
-  - OpenAI API: Code interpreter for calculations
-  - Claude Code: Native Bash tool
-  - AG2 Framework: AG2 code executors (Local, Docker, Jupyter, Cloud)
-
-* **MCP-based (✅)**: Universal bash/shell execution via ``enable_mcp_command_line: true``
-
-  - Available for **all backends** with MCP support (✅ in MCP column)
-  - Supports both local and Docker execution modes
-  - See :doc:`../user_guide/code_execution` for setup and comparison
-
-**Note:** Backends can use **both** built-in and MCP-based code execution simultaneously. The agent will choose the most appropriate tool for each task.
+**For detailed backend capabilities (web search, code execution, MCP support), see:** :doc:`../user_guide/backends`
 
 API-Based Models
 ----------------
@@ -390,13 +319,13 @@ These parameters are available for all backends with MCP support (Claude, Gemini
      - Working directory for MCP filesystem operations. Relative or absolute path. Available for all MCP-enabled backends.
    * - ``allowed_tools``
      - list
-     - **Legacy approach (not recommended).** Whitelist specific MCP tools. Example: ``["read_file", "write_file", "list_directory"]``. Use ``disallowed_tools`` instead for better security.
+     - Whitelist specific tools. Only listed tools will be available. Example: ``["read_file", "write_file", "list_directory"]``
    * - ``disallowed_tools``
      - list
-     - **Recommended approach.** Blacklist dangerous MCP tools. Example to block filesystem modifications: ``["write_file", "create_directory", "move_file"]``
+     - Blacklist specific tools. All tools available except those listed. Example: ``["write_file", "create_directory", "move_file"]``
    * - ``exclude_tools``
      - list
-     - Alternative to ``disallowed_tools``. Exclude specific MCP tools from being available to the agent.
+     - Exclude specific MCP tools from being available to the agent. Similar to ``disallowed_tools`` for MCP servers.
 
 Claude Code Additional Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -500,23 +429,6 @@ AG2
      - Code execution (Local, Docker, Jupyter, Cloud)
    * - **LLM Support**
      - OpenAI, Azure, Anthropic, Google via AG2 config
-
-Quick Setup Examples
---------------------
-
-.. code-block:: bash
-
-   # Claude
-   uv run python -m massgen.cli --model claude-3-5-sonnet-latest "Question"
-
-   # Gemini
-   uv run python -m massgen.cli --model gemini-2.5-flash "Question"
-
-   # GPT-5
-   uv run python -m massgen.cli --model gpt-5-nano "Question"
-
-   # Grok
-   uv run python -m massgen.cli --backend grok --model grok-3-mini "Question"
 
 See Also
 --------

@@ -217,7 +217,7 @@ Different backends support different built-in tools:
 
     * **Video Generation** (e.g., ``openai`` with Sora-2 API, v0.1.0): Can create videos from text prompts but cannot analyze existing videos
 
-See :doc:`../features/backend-support` for the complete and authoritative backend capabilities reference.
+See :doc:`../reference/supported_models` for the complete backend capabilities reference.
 
 Configuring Backends
 --------------------

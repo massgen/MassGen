@@ -1,310 +1,185 @@
 # MassGen Roadmap
 
-**Current Version:** v0.0.29
-**Next Release:** v0.0.30
+**Current Version:** v0.1.0
+**Release Schedule:** Mondays, Wednesdays, Fridays @ 9am PT
 **Last Updated:** October 2025
 
-This roadmap outlines MassGen's development priorities organized by timeframe. Short-term goals address immediate issues, medium-term goals introduce optional enhancements, and long-term goals define our strategic vision.
+This roadmap outlines MassGen's development priorities for upcoming releases. Each release focuses on specific capabilities with real-world use cases.
 
 ---
 
-## 🎯 Track Status Overview
+## 🚀 Upcoming Releases
 
-| Track | Lead | Status | Sprint Focus | Progress |
-|-------|------|--------|--------------|----------|
-| [AgentAdapter Backends](docs/source/tracks/agentadapter-backends/index.md) | TBD | 🟢 | Test all backends with latest API versions | 0/6 |
-| [Coding Agent](docs/source/tracks/coding-agent/index.md) | TBD | 🟢 | Document all filesystem configuration options | 0/6 |
-| [Irreversible Actions](docs/source/tracks/irreversible-actions/index.md) | TBD | 🟢 | Security audit of permission system | 0/8 |
-| [Memory](docs/source/tracks/memory/index.md) | TBD | 🟢 | Implement context window management (truncation) | 0/8 |
-| [Multimodal](docs/source/tracks/multimodal/index.md) | TBD | 🟢 | Implement Claude backend multimodal support | 0/7 |
-| [Web UI](docs/source/tracks/web-ui/index.md) | TBD | 🟢 | Test displays with all terminal types | 0/6 |
+| Release | Target | Feature | Owner | Use Case |
+|---------|--------|---------|-------|----------|
+| **v0.1.1** | 10/20/25 | Tool System Refactoring | Danrui | Unified tool system for web scraping, data processing, and API integration |
+| | | Nested Chat Integration | Danrui | Hierarchical agent coordination and specialized sub-task delegation |
+| | | Memory Module (Phase 1) | Karthik | Long-term memory for reasoning tasks and document understanding |
+| **v0.1.2** | 10/22/25 | AG2 Group Chat Patterns | Eric | Complex research workflows with specialized agent roles |
+| | | Final Agent Submit/Restart Tools | Nick | Multi-step task verification and intelligent restart decisions |
+| | | Memory Module (Phase 2) | Karthik | Advanced memory capabilities for multi-turn conversations |
+| **v0.1.3** | 10/24/25 | DSPy Integration | Ram | Automated prompt optimization for domain-specific tasks |
+| | | Irreversible Actions Safety | Franklin | Safety controls for production deployments with dangerous operations |
 
-**Status Legend:** 🟢 Active | 🟡 Planning | 🔴 Blocked | ⚪ Paused
-
-*This table is auto-generated from track files. Run `python scripts/generate_roadmap_overview.py` to update.*
-
----
-
-## 🎯 Short-Term Goals (Next 2-4 weeks) - v0.0.30
-
-**Focus:** Critical bug fixes and required features for stability and feature parity.
-
-### 1. Backend Issues & Organization (CRITICAL - REQUIRED)
-
-**Status:** 🚧 In Progress
-**Goal:** Fix Claude Code backend reliability and improve configuration discoverability
-
-**Tasks:**
-- [ ] Fix Claude Code backend reliability issues
-- [ ] Improve Claude Code error handling and recovery
-- [ ] Resolve configuration compatibility problems
-- [ ] Enhance Claude Code streaming stability
-- [ ] Reorganize configuration file structure for better discoverability
-- [ ] Improve configuration documentation and examples
-- [ ] Standardize configuration naming conventions
-- [ ] Clean up deprecated or redundant configurations
-
-**Success Criteria:**
-- ✅ Claude Code backend operates reliably without critical errors
-- ✅ Configuration structure is intuitive and well-documented
-- ✅ All existing configurations continue to work
-- ✅ Comprehensive test coverage for Claude Code backend
-
-### 2. Multimodal Support Extension (CRITICAL - REQUIRED)
-
-**Status:** 🚧 In Progress
-**Goal:** Enable image processing in Claude and Chat Completions backends
-
-**Tasks:**
-
-**Claude Backend:**
-- [ ] Implement image input handling for Claude backend
-- [ ] Support image understanding in Claude conversations
-- [ ] Handle multimodal message formatting
-- [ ] Add configuration options for Claude multimodal features
-
-**Chat Completions Backend:**
-- [ ] Implement image input handling for Chat Completions backend
-- [ ] Support multimodal content across all Chat Completions providers
-- [ ] Ensure compatibility with OpenAI, Cerebras, Fireworks, and other providers
-- [ ] Handle provider-specific multimodal limitations gracefully
-
-**Testing & Documentation:**
-- [ ] Test multimodal support with various image types and sizes
-- [ ] Verify compatibility with existing workflows
-- [ ] Create examples demonstrating multimodal usage
-- [ ] Document limitations and best practices for each backend
-
-**Success Criteria:**
-- ✅ Claude backend supports image input and understanding
-- ✅ Chat Completions backend supports multimodal content
-- ✅ Multimodal message formatting correctly handled across backends
-- ✅ Documentation and examples for multimodal usage
+*All releases ship on MWF @ 9am PT when ready*
 
 ---
 
-## 📊 Medium-Term Goals (1-2 months) - v0.0.31+
+## 📋 v0.1.1 - Tool System & Infrastructure
 
-**Focus:** Optional enhancements that improve developer experience and extend capabilities.
+### Features
 
-### 3. AG2 Group Chat Integration (MEDIUM - OPTIONAL)
+**1. Tool System Refactoring** (Danrui)
+- Migrate workflow tools into unified tool system
+- Migrate provider tools (web search, code execution) into tool system
+- Migrate multimodal tools into tool system
+- **Use Case**: Simplify adding new tools; enable custom tool plugins for domain-specific workflows
 
-**Status:** 📋 Planned
-**Goal:** Complete AG2 group chat orchestration feature
+**2. Nested Chat Integration** (Danrui)
+- Issue: [#281](https://github.com/Leezekun/MassGen/issues/281)
+- Enhanced nested chat capabilities for complex multi-agent interactions
+- **Use Case**: Hierarchical agent coordination and specialized sub-task delegation
 
-**Tasks:**
-- [ ] Complete AG2 group chat orchestration integration
-- [ ] Support multi-agent group conversations
-- [ ] Implement group chat configuration format
-- [ ] Handle group chat message routing
-- [ ] Add test coverage for group chat scenarios
-- [ ] Create example configurations for group chat use cases
-- [ ] Document group chat setup and usage patterns
-- [ ] Validate integration with existing AG2 adapter
+**3. Memory Module - Phase 1** (Karthik)
+- Long-term memory implementation using mem0 inspired by agentscope.
+- **Use Case**: Reasoning tasks, large document/code understanding, ensuring quality of many-turn conversations
 
-**Success Criteria:**
-- ✅ AG2 group chat feature fully integrated
-- ✅ Group chat configurations work correctly
-- ✅ Documentation for group chat setup
-- ✅ Examples demonstrating group chat use cases
-
-### 4. Tool Registration Refactoring (MEDIUM - OPTIONAL)
-
-**Status:** 📋 Planned
-**Goal:** Refactor tool registration system for better extensibility
-
-**Tasks:**
-
-**Architecture:**
-- [ ] Design new tool registration architecture
-- [ ] Refactor existing tool registration implementation
-- [ ] Improve dynamic tool discovery and loading
-- [ ] Simplify tool extension mechanism
-
-**Backend Integration:**
-- [ ] Standardize tool registration across backends
-- [ ] Improve tool configuration and management
-- [ ] Support plugin-based tool extensions
-- [ ] Add tool versioning support
-
-**Developer Experience:**
-- [ ] Create tool development documentation
-- [ ] Add tool templates and examples
-- [ ] Improve tool validation and error messages
-- [ ] Simplify custom tool creation process
-
-**Success Criteria:**
-- ✅ New tool registration architecture implemented
-- ✅ Backward compatibility maintained
-- ✅ Simplified custom tool creation process
-- ✅ Comprehensive developer documentation
-
-### 5. Context Window Management (MEDIUM)
-
-**Status:** 💡 Proposed
-**Goal:** Intelligent context management for long conversations
-
-**Tasks:**
-- [ ] Session compression and cleanup utilities
-- [ ] Enhanced summarization capabilities
-- [ ] Cross-session context support
-- [ ] Automatic context pruning based on relevance
+### Success Criteria
+- ✅ All tools migrated to unified system
+- ✅ Memory module handles basic context management
 
 ---
 
-## 🚀 Long-Term Goals (3-6 months) - Future Vision
+## 📋 v0.1.2 - Enterprise Collaboration
 
-**Focus:** Strategic capabilities that position MassGen as an enterprise-grade multi-agent platform.
+### Features
 
-### Visual Workflow Designer
+**1. Finish AG2 Group Chat Integration** (Eric)
+- Group chat orchestration patterns:
+  - Summarization method
+  - AutoPattern
+  - Round robin pattern
+  - Nested chat
+- **Use Case**: Complex research workflows requiring specialized agent roles (researcher, analyst, critic, synthesizer) in already-proven AG2 patterns
 
-**Goal:** No-code multi-agent workflow creation
+**2. Final Agent Submit/Restart Tools** (Nick)
+- Issue: [#325](https://github.com/Leezekun/MassGen/issues/325)
+- Enable final agent to decide whether to submit answer or restart orchestration
+- Agent can access previous agents' responses and workspaces when restarting
+- **Use Case**: Multi-step tasks where completion requires verification (repository cloning + issue resolution, planning-mode scenarios)
 
-- Web-based drag-and-drop interface
-- Visual agent coordination patterns
-- Configuration export to YAML
-- Real-time workflow testing
-
-### Enterprise Features
-
-**Goal:** Production-ready enterprise capabilities
-
-- **Advanced Permissions**: Role-based access control (RBAC)
-- **Audit Logs**: Complete audit trail for all agent operations
-- **Team Collaboration**: Multi-user editing and review workflows
-- **Advanced Analytics**: Deep insights into agent performance and costs
-
-### Additional Framework Adapters
-
-**Goal:** Support for major AI frameworks
-
-- **LangChain Integration**: Full LangChain agent support
-- **CrewAI Integration**: CrewAI agent compatibility
-- **Framework Abstraction Layer**: Unified interface across frameworks
-
-### Complete Multimodal Support
-
-**Goal:** Full media type coverage
-
-- **Audio Processing**: Speech-to-text and text-to-speech
-- **Video Processing**: Video understanding and generation
-- **Document Processing**: Advanced PDF, Word, Excel handling
-
-### Advanced Coding Agent
-
-**Goal:** Specialized coding assistance
-
-- Sophisticated code generation with learning capabilities
-- Advanced workspace management for coding tasks
-- Context-aware code suggestions
-- Automated testing and debugging
-
-### Real-Time Collaboration
-
-**Goal:** Multi-user concurrent workflows
-
-- Multi-user file editing and collaboration features
-- Real-time agent coordination visibility
-- Conflict resolution mechanisms
-- Shared workspace management
-
-### Distributed Orchestration
-
-**Goal:** Scale to hundreds of agents
-
-- Distributed agent execution across multiple machines
-- Load balancing and resource optimization
-- Fault tolerance and recovery mechanisms
-- Horizontal scaling support
+### Success Criteria
+- ✅ Final agent can intelligently decide to restart when task is incomplete
+- ✅ Documentation with use case examples
 
 ---
 
-## 📍 Track-Specific Roadmaps
+## 📋 v0.1.3 - Intelligent Optimization & Safety
 
-For detailed track-specific plans, see:
+### Features
 
-- [Multimodal Track](docs/source/tracks/multimodal/roadmap.md)
-- [Memory Track](docs/source/tracks/memory/roadmap.md)
-- [Coding Agent Track](docs/source/tracks/coding-agent/roadmap.md)
-- [Web UI Track](docs/source/tracks/web-ui/roadmap.md)
-- [AgentAdapter Backends Track](docs/source/tracks/agentadapter-backends/roadmap.md)
-- [Irreversible Actions Track](docs/source/tracks/irreversible-actions/roadmap.md)
+**1. DSPy Integration** (Ram)
+- Automated system prompt optimization for case studies
+- Question rephrasing for increased diversity and clarity
+- Issue: [#316](https://github.com/Leezekun/MassGen/issues/316)
+- **Use Case**: Improve agent performance on domain-specific tasks through automated prompt tuning
+
+**2. Irreversible Actions Safety** (Franklin)
+- LLM-generated detection of irreversible MCP tools
+- Optional human-in-the-loop approval
+- Per-user customizable tool lists
+- **Use Case**: Writing to real-world documents, database operations, production deployments where safety is critical
+
+### Success Criteria
+- ✅ DSPy-optimized prompts outperform manual prompts on benchmarks
+- ✅ Safety controls prevent accidental irreversible operations
+
+---
+
+## 🔨 Ongoing Work & Continuous Releases
+
+These features are being actively developed on **separate parallel tracks** and will ship incrementally on the MWF release schedule:
+
+### Track: Agent Adapter System (Eric)
+- PR: [#283](https://github.com/Leezekun/MassGen/pull/283)
+- Unified agent interface for easier backend integration
+- **Shipping:** Continuous improvements
+
+### Track: Irreversible Actions Safety (Franklin)
+- Human-in-the-loop approval system for dangerous operations
+- LLM-based tool risk detection
+- **Target:** v0.1.3 and beyond
+
+### Track: Multimodal Support (Danrui)
+- PR: [#252](https://github.com/Leezekun/MassGen/pull/252)
+- Image, audio, video processing across backends
+- **Shipping:** Incremental improvements each release
+
+### Track: Memory Module (Karthik)
+- PR: TODO
+- Long-term memory implementation using mem0
+- **Target:** v0.1.1 (Phase 1), v0.1.2 (Phase 2)
+
+### Track: Coding Agent Enhancements (Nick)
+- PR: [#251](https://github.com/Leezekun/MassGen/pull/251)
+- Enhanced file operations and workspace management
+- **Shipping:** Continuous improvement
+
+### Track: Web UI (Justin)
+- PR: [#257](https://github.com/Leezekun/MassGen/pull/257)
+- Visual multi-agent coordination interface
+- **Target:** ~v0.1.10
+
+---
+
+## 🎯 Long-Term Vision (v0.2.0+)
+
+**Advanced Orchestration Patterns**
+- Task/subtask decomposition and parallel coordination
+- Assignment of agents to specific tasks and increasing of diversity
+- Improvement in voting as tasks continue
+
+**Visual Workflow Designer**
+- No-code multi-agent workflow creation
+- Drag-and-drop agent configuration
+- Real-time testing and debugging
+
+**Enterprise Features**
+- Role-based access control (RBAC)
+- Audit logs and compliance reporting
+- Multi-user collaboration
+- Advanced analytics and cost tracking
+
+**Additional Framework Integrations**
+- LangChain agent support
+- CrewAI compatibility
+- Custom framework adapters
+
+**Complete Multimodal Pipeline**
+- End-to-end audio processing (speech-to-text, text-to-speech)
+- Video understanding and generation
+- Advanced document processing (PDF, Word, Excel)
 
 ---
 
 ## 🔗 GitHub Integration
 
-**Short-term goals are tracked via GitHub Issues:**
-
-- Search issues tagged with `v0.0.30` milestone
-- View project board: [MassGen v0.0.30 Board](https://github.com/Leezekun/MassGen/projects)
-- Report bugs and feature requests: [GitHub Issues](https://github.com/Leezekun/MassGen/issues)
-
----
-
-## 📦 Dependencies & Risks
-
-### External Dependencies
-
-- **Claude API**: Multimodal support required for Claude backend
-- **OpenAI API**: Multimodal support for Chat Completions
-- **AG2 Framework**: Group chat capabilities (for group chat integration)
-- **Image Processing**: Pillow library for image handling and validation
-
-### Known Risks & Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Claude Code Stability | High | Comprehensive error handling, fallback mechanisms |
-| Claude API Multimodal Limitations | Medium | Feature flags, graceful degradation |
-| Configuration Migration | Medium | Backward compatibility, migration guide |
-| Group Chat Complexity | Low | Phased implementation, clear documentation |
-
----
-
-## 🎯 Release Timeline
-
-| Phase | Timeframe | Focus | Key Deliverables | Priority |
-|-------|-----------|-------|------------------|----------|
-| **v0.0.30** | 2-4 weeks | Backend Stability | Fix Claude Code, multimodal support | **REQUIRED** |
-| **v0.0.31** | 4-6 weeks | Optional Enhancements | Group chat, tool refactoring | OPTIONAL |
-| **v0.1.0** | 3 months | Major Features | Visual designer, enterprise features | STRATEGIC |
-| **v1.0.0** | 6 months | Production Ready | Full enterprise support, distributed orchestration | STRATEGIC |
+Track development progress:
+- [Active Issues](https://github.com/Leezekun/MassGen/issues)
+- [Pull Requests](https://github.com/Leezekun/MassGen/pulls)
+- [Project Boards](https://github.com/Leezekun/MassGen/projects) (TODO)
 
 ---
 
 ## 🤝 Contributing
 
-### For Contributors
-
-**Want to help with v0.0.30? Start here:**
-
-1. **Required Work:**
-   - Fix Claude Code backend reliability issues
-   - Reorganize and improve configuration structure
-   - Implement multimodal support for Claude backend
-   - Implement multimodal support for Chat Completions backend
-   - Test and document all changes thoroughly
-
-2. **Optional Work:**
-   - Complete AG2 group chat integration
-   - Refactor tool registration system
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for:
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Development setup instructions
 - Code quality standards
 - Pull request process
-- **Documentation guidelines** (when to write ADRs, RFCs, design docs)
+- Documentation guidelines
 
-### For Users
-
-**What to expect in v0.0.30:**
-
-- ✅ More reliable Claude Code backend workflows
-- ✅ Multimodal capabilities for Claude and Chat Completions
-- ✅ Improved configuration organization for easier navigation
-- ✅ Full backward compatibility with v0.0.29 configurations
-- ⚠️ Optional: Group chat support and enhanced tool registration (if time permits)
+Please reach out via the #massgen channel on [Discord](https://discord.gg/VVrT2rQaz5) if you want to get further involved in research and development.
 
 ---
 
@@ -312,12 +187,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 
 - [CHANGELOG.md](CHANGELOG.md) - Complete release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
-- [docs/releases/](docs/releases/) - Detailed release notes
-- [Architecture Decisions](docs/source/decisions/) - ADRs documenting key choices
+- [Documentation](https://massgen.readthedocs.io/) - Full user guide
 
 ---
 
-*This roadmap prioritizes backend stability and feature parity while keeping extensibility improvements as optional enhancements. Community feedback is welcome—open an issue to suggest priorities!*
+*This roadmap is community-driven. Releases ship on **Mondays, Wednesdays, Fridays @ 9am PT**. Timelines may shift based on priorities and feedback. Open an issue to suggest changes!*
 
-**Last Updated:** October 2025
+**Last Updated:** October 16, 2025
 **Maintained By:** MassGen Team
