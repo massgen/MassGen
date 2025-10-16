@@ -35,7 +35,6 @@ from ..logger_config import (
     log_tool_call,
     logger,
 )
-from ..tool import ToolManager
 from .base import FilesystemSupport, LLMBackend, StreamChunk
 
 try:
@@ -457,15 +456,6 @@ class GeminiBackend(LLMBackend):
         self.search_count = 0
         self.code_execution_count = 0
 
-        # Custom tools support - initialize before api_params_handler
-        self.custom_tool_manager = ToolManager()
-        self._custom_tool_names: set[str] = set()
-
-        # Register custom tools if provided
-        custom_tools = kwargs.get("custom_tools", [])
-        if custom_tools:
-            self._register_custom_tools(custom_tools)
-
         # MCP integration (filesystem MCP server may have been injected by base class)
         self.mcp_servers = self.config.get("mcp_servers", [])
         self.allowed_tools = kwargs.pop("allowed_tools", None)
@@ -491,9 +481,6 @@ class GeminiBackend(LLMBackend):
 
         # Initialize agent_id for use throughout the class
         self.agent_id = kwargs.get("agent_id", None)
-
-        # Initialize functions dict for MCP execution (required by MCPExecutionManager)
-        self.functions: Dict[str, Any] = {}
 
         # Initialize circuit breaker if enabled
         if self._circuit_breakers_enabled:
@@ -1197,7 +1184,7 @@ Make your decision and include the JSON at the very end of your response."""
         )
 
     async def stream_with_tools(self, messages: List[Dict[str, Any]], tools: List[Dict[str, Any]], **kwargs) -> AsyncGenerator[StreamChunk, None]:
-        """Stream response using Gemini API with structured output for coordination, MCP and custom tool support."""
+        """Stream response using Gemini API with structured output for coordination and MCP tool support."""
         # Use instance agent_id (from __init__) or get from kwargs if not set
         agent_id = self.agent_id or kwargs.get("agent_id", None)
         client = None
@@ -1331,7 +1318,6 @@ Make your decision and include the JSON at the very end of your response."""
                 "mcp_sdk_auto",
                 "allowed_tools",
                 "exclude_tools",
-                "custom_tools",
             }
             for key, value in all_params.items():
                 if key not in excluded_params and value is not None:
@@ -1343,9 +1329,8 @@ Make your decision and include the JSON at the very end of your response."""
                     else:
                         config[key] = value
 
-            # Setup tools configuration (builtins and custom tools when not using sessions)
+            # Setup tools configuration (builtins only when not using sessions)
             all_tools = []
-            custom_function_declarations = None
 
             # Branch 1: SDK auto-calling via MCP sessions (reuse existing MCPClient sessions)
             if using_sdk_mcp and self.mcp_servers:
@@ -1487,45 +1472,7 @@ Make your decision and include the JSON at the very end of your response."""
                         self._mcp_client = None
 
             if not using_sdk_mcp:
-                # Add builtin tools
                 all_tools.extend(builtin_tools)
-
-                # Add custom tools if available and no builtin tools conflict
-                # Note: Gemini API doesn't support mixing builtin tools with function_declarations
-                if self.custom_tool_manager and self.custom_tool_manager.registered_tools:
-                    if not builtin_tools:  # Only add custom tools if no builtin tools
-                        try:
-                            from google.genai import types
-
-                            # Get custom tool schemas
-                            custom_schemas = self._get_custom_tools_schemas()
-                            if custom_schemas:
-                                # Convert to Gemini FunctionDeclaration format
-                                custom_function_declarations = self._convert_schemas_to_function_declarations(custom_schemas)
-                                if custom_function_declarations:
-                                    custom_tool = types.Tool(function_declarations=custom_function_declarations)
-                                    all_tools.append(custom_tool)
-                                    log_backend_activity(
-                                        "gemini",
-                                        "Custom tools added",
-                                        {"tool_count": len(custom_function_declarations)},
-                                        agent_id=agent_id,
-                                    )
-                        except ImportError as e:
-                            log_backend_activity(
-                                "gemini",
-                                "Failed to import types for custom tools",
-                                {"error": str(e)},
-                                agent_id=agent_id,
-                            )
-                    else:
-                        log_backend_activity(
-                            "gemini",
-                            "Custom tools skipped due to builtin tools",
-                            {"builtin_count": len(builtin_tools)},
-                            agent_id=agent_id,
-                        )
-
                 if all_tools:
                     config["tools"] = all_tools
 
@@ -1552,7 +1499,6 @@ Make your decision and include the JSON at the very end of your response."""
             # Use streaming for real-time response
             full_content_text = ""
             final_response = None
-            custom_tool_calls = []  # Initialize for all paths
             if using_sdk_mcp and self.mcp_servers:
                 # Reuse active sessions from MCPClient
                 try:
@@ -1862,79 +1808,9 @@ Make your decision and include the JSON at the very end of your response."""
                 # Create stream for non-MCP path
                 stream = await client.aio.models.generate_content_stream(model=model_name, contents=full_content, config=config)
 
-                # Track custom tool calls
-                custom_tool_calls = []
-
                 async for chunk in stream:
                     # ============================================
-                    # 1. Process custom function calls if present
-                    # ============================================
-                    if custom_function_declarations and hasattr(chunk, "candidates") and chunk.candidates:
-                        for candidate in chunk.candidates:
-                            if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
-                                for part in candidate.content.parts:
-                                    # Check for function_call part (custom tools)
-                                    if hasattr(part, "function_call") and part.function_call:
-                                        func_call = part.function_call
-                                        tool_name = getattr(func_call, "name", None)
-                                        tool_args = getattr(func_call, "args", {})
-
-                                        if tool_name and tool_name.startswith("custom_tool__"):
-                                            # Track custom tool call
-                                            call_data = {
-                                                "name": tool_name,
-                                                "arguments": tool_args,
-                                            }
-                                            custom_tool_calls.append(call_data)
-
-                                            # Log custom tool call
-                                            log_tool_call(
-                                                agent_id,
-                                                tool_name,
-                                                tool_args,
-                                                backend_name="gemini",
-                                            )
-
-                                            # Yield status about custom tool call
-                                            yield StreamChunk(
-                                                type="custom_tool_status",
-                                                status="custom_tool_called",
-                                                content=f"🔧 Custom Tool Called: {tool_name} with args: {json.dumps(tool_args, indent=2)}",
-                                                source="custom_tools",
-                                            )
-
-                                            # Execute the custom tool
-                                            try:
-                                                result = await self._execute_custom_tool(call_data)
-
-                                                # Yield the result
-                                                yield StreamChunk(
-                                                    type="custom_tool_status",
-                                                    status="custom_tool_response",
-                                                    content=f"✅ Custom Tool Response: {result}",
-                                                    source="custom_tools",
-                                                )
-
-                                                # Add result to content for context
-                                                full_content_text += f"\n[Tool: {tool_name}]\n{result}\n"
-
-                                            except Exception as e:
-                                                error_msg = f"Error executing {tool_name}: {str(e)}"
-                                                log_backend_activity(
-                                                    "gemini",
-                                                    "Custom tool execution failed",
-                                                    {"tool": tool_name, "error": str(e)},
-                                                    agent_id=agent_id,
-                                                )
-                                                yield StreamChunk(
-                                                    type="custom_tool_status",
-                                                    status="custom_tool_error",
-                                                    content=f"❌ {error_msg}",
-                                                    source="custom_tools",
-                                                )
-
-                    # ============================================
-                    # 2. Process text content
+                    # 1. Process text content
                     # ============================================
                     if hasattr(chunk, "text") and chunk.text:
                         chunk_text = chunk.text
@@ -1953,28 +1829,8 @@ Make your decision and include the JSON at the very end of your response."""
 
             content = full_content_text
 
-            # Process tool calls - coordination and custom tool calls
+            # Process tool calls - only coordination tool calls (MCP manual mode removed)
             tool_calls_detected: List[Dict[str, Any]] = []
-
-            # Add custom tool calls to detected tool calls if any
-            if custom_tool_calls:
-                for call in custom_tool_calls:
-                    tool_calls_detected.append(
-                        {
-                            "id": f"custom_{abs(hash(str(call))) % 10000 + 1}",
-                            "type": "function",
-                            "function": {
-                                "name": call["name"],
-                                "arguments": call["arguments"],
-                            },
-                        },
-                    )
-                log_backend_activity(
-                    "gemini",
-                    "Custom tool calls detected",
-                    {"count": len(custom_tool_calls)},
-                    agent_id=agent_id,
-                )
 
             # Then, process coordination tools if present
             if is_coordination and content.strip() and not tool_calls_detected:
@@ -2371,144 +2227,6 @@ Make your decision and include the JSON at the very end of your response."""
                 {"error": str(e)},
                 agent_id=self.agent_id,
             )
-
-    # Custom tools support
-    def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
-        """Register custom tools with the tool manager.
-
-        Args:
-            custom_tools: List of custom tool configurations
-        """
-        # Collect unique categories and create them if needed
-        categories = set()
-        for tool_config in custom_tools:
-            if isinstance(tool_config, dict):
-                category = tool_config.get("category", "default")
-                if category != "default":
-                    categories.add(category)
-
-        # Create categories that don't exist
-        for category in categories:
-            if category not in self.custom_tool_manager.tool_categories:
-                self.custom_tool_manager.setup_category(
-                    category_name=category,
-                    description=f"Custom {category} tools",
-                    enabled=True,
-                )
-
-        for tool_config in custom_tools:
-            try:
-                if isinstance(tool_config, dict):
-                    # Extract tool configuration
-                    path = tool_config.get("path")
-                    func = tool_config.get("function")
-                    category = tool_config.get("category", "default")
-                    preset_args = tool_config.get("preset_args")
-                    description = tool_config.get("description")
-
-                    # Register the tool
-                    self.custom_tool_manager.add_tool_function(
-                        path=path,
-                        func=func,
-                        category=category,
-                        preset_args=preset_args,
-                        description=description,
-                    )
-
-                    # Track tool name for categorization
-                    if isinstance(func, str):
-                        if func.startswith("custom_tool__"):
-                            self._custom_tool_names.add(func)
-                        else:
-                            self._custom_tool_names.add(f"custom_tool__{func}")
-                    elif callable(func):
-                        if func.__name__.startswith("custom_tool__"):
-                            self._custom_tool_names.add(func.__name__)
-                        else:
-                            self._custom_tool_names.add(f"custom_tool__{func.__name__}")
-
-                    logger.info(f"Registered custom tool: {func}")
-
-            except Exception as e:
-                logger.error(f"Failed to register custom tool: {e}")
-
-    async def _execute_custom_tool(self, call: Dict[str, Any]) -> str:
-        """Execute a custom tool and return the result.
-
-        Args:
-            call: Function call dictionary with name and arguments
-
-        Returns:
-            The execution result as a string
-        """
-        import json
-
-        tool_request = {
-            "name": call["name"],
-            "input": json.loads(call["arguments"]) if isinstance(call["arguments"], str) else call["arguments"],
-        }
-
-        result_text = ""
-        try:
-            async for result in self.custom_tool_manager.execute_tool(tool_request):
-                # Accumulate results
-                if hasattr(result, "output_blocks"):
-                    for block in result.output_blocks:
-                        if hasattr(block, "data"):
-                            result_text += str(block.data)
-                        elif hasattr(block, "content"):
-                            result_text += str(block.content)
-                elif hasattr(result, "content"):
-                    result_text += str(result.content)
-                else:
-                    result_text += str(result)
-        except Exception as e:
-            logger.error(f"Error in custom tool execution: {e}")
-            result_text = f"Error: {str(e)}"
-
-        return result_text or "Tool executed successfully"
-
-    def _get_custom_tools_schemas(self) -> List[Dict[str, Any]]:
-        """Get OpenAI-formatted schemas for all registered custom tools."""
-        return self.custom_tool_manager.fetch_tool_schemas()
-
-    def _convert_schemas_to_function_declarations(self, schemas: List[Dict[str, Any]]) -> List:
-        """Convert OpenAI-formatted schemas to Gemini FunctionDeclaration format.
-
-        Args:
-            schemas: List of OpenAI-formatted function schemas
-
-        Returns:
-            List of Gemini FunctionDeclaration objects
-        """
-        try:
-            from google.genai import types
-
-            function_declarations = []
-            for schema in schemas:
-                if schema.get("type") == "function":
-                    func_def = schema.get("function", {})
-
-                    # Extract function details
-                    name = func_def.get("name")
-                    description = func_def.get("description", "")
-                    parameters = func_def.get("parameters", {})
-
-                    if name:
-                        # Create FunctionDeclaration
-                        # The parameters should be in OpenAPI schema format
-                        func_declaration = types.FunctionDeclaration(
-                            name=name,
-                            description=description,
-                            parameters=parameters,
-                        )
-                        function_declarations.append(func_declaration)
-
-            return function_declarations
-
-        except Exception as e:
-            logger.error(f"Failed to convert schemas to function declarations: {e}")
-            return []
 
     async def __aenter__(self) -> "GeminiBackend":
         """Async context manager entry."""
