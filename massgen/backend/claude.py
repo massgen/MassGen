@@ -790,9 +790,11 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                     result_str = await self._execute_custom_tool(
                         {
                             "name": function_name,
-                            "arguments": json.dumps(tool_call["function"]["arguments"]) if isinstance(tool_call["function"].get("arguments"), (dict, list)) else tool_call["function"].get("arguments", "{}"),
+                            "arguments": json.dumps(tool_call["function"]["arguments"])
+                            if isinstance(tool_call["function"].get("arguments"), (dict, list))
+                            else tool_call["function"].get("arguments", "{}"),
                             "call_id": tool_call["id"],
-                        }
+                        },
                     )
                     if not result_str or result_str.startswith("Error:"):
                         logger.warning(f"Custom function {function_name} failed: {result_str or 'unknown error'}")

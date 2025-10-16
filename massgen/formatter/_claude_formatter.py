@@ -274,7 +274,7 @@ class ClaudeFormatter(FormatterBase):
                                 "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
                                 "description": func.get("description", ""),
                                 "input_schema": func.get("parameters", {}),
-                            }
+                            },
                         )
                     elif tool_schema.get("type") == "function":
                         # Response API format - already has name, description, parameters at top level
@@ -284,7 +284,7 @@ class ClaudeFormatter(FormatterBase):
                                 "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
                                 "description": tool_schema.get("description", ""),
                                 "input_schema": tool_schema.get("parameters", {}),
-                            }
+                            },
                         )
                     else:
                         # Unknown format, try to extract what we can
@@ -294,7 +294,7 @@ class ClaudeFormatter(FormatterBase):
                                 "name": tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name,
                                 "description": tool_schema.get("description", ""),
                                 "input_schema": tool_schema.get("parameters", {}),
-                            }
+                            },
                         )
                 # Handle direct schema format (for backward compatibility)
                 elif isinstance(tool_entry, dict):
@@ -307,7 +307,7 @@ class ClaudeFormatter(FormatterBase):
                                 "name": func.get("name", tool_name),
                                 "description": func.get("description", ""),
                                 "input_schema": func.get("parameters", {}),
-                            }
+                            },
                         )
                     elif tool_entry.get("type") == "function":
                         # Response API format
@@ -317,7 +317,7 @@ class ClaudeFormatter(FormatterBase):
                                 "name": tool_entry.get("name", tool_name),
                                 "description": tool_entry.get("description", ""),
                                 "input_schema": tool_entry.get("parameters", {}),
-                            }
+                            },
                         )
                     else:
                         # Already in Claude format or unknown
@@ -336,7 +336,7 @@ class ClaudeFormatter(FormatterBase):
                                 "name": func.get("name", ""),
                                 "description": func.get("description", ""),
                                 "input_schema": func.get("parameters", {}),
-                            }
+                            },
                         )
                     elif tool.get("type") == "function":
                         # Response API format
@@ -346,7 +346,7 @@ class ClaudeFormatter(FormatterBase):
                                 "name": tool.get("name", ""),
                                 "description": tool.get("description", ""),
                                 "input_schema": tool.get("parameters", {}),
-                            }
+                            },
                         )
                     else:
                         # Already in Claude format or unknown

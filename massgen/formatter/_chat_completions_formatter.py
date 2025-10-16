@@ -303,7 +303,7 @@ class ChatCompletionsFormatter(FormatterBase):
                                     "description": tool_schema.get("description", ""),
                                     "parameters": tool_schema.get("parameters", {}),
                                 },
-                            }
+                            },
                         )
                 # Check if it has get_extended_schema property
                 elif hasattr(tool_entry, "get_extended_schema"):
@@ -322,7 +322,7 @@ class ChatCompletionsFormatter(FormatterBase):
                                     "description": tool_schema.get("description", ""),
                                     "parameters": tool_schema.get("parameters", {}),
                                 },
-                            }
+                            },
                         )
         # Handle list format for backward compatibility
         elif isinstance(custom_tools, list):
@@ -341,7 +341,7 @@ class ChatCompletionsFormatter(FormatterBase):
                                     "description": tool_schema.get("description", ""),
                                     "parameters": tool_schema.get("parameters", {}),
                                 },
-                            }
+                            },
                         )
                 elif hasattr(tool, "get_extended_schema"):
                     tool_schema = tool.get_extended_schema
@@ -357,7 +357,7 @@ class ChatCompletionsFormatter(FormatterBase):
                                     "description": tool_schema.get("description", ""),
                                     "parameters": tool_schema.get("parameters", {}),
                                 },
-                            }
+                            },
                         )
 
         return converted_tools
