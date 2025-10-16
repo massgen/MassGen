@@ -233,3 +233,123 @@ class ClaudeFormatter(FormatterBase):
             converted_tools.append(tool)
 
         return converted_tools
+
+    def format_custom_tools(self, custom_tools: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Convert custom tools from RegisteredToolEntry format to Claude's custom tool format.
+
+        Custom tools are provided as a dictionary where:
+        - Keys are tool names (str)
+        - Values are RegisteredToolEntry objects with:
+          - tool_name: str
+          - schema_def: dict with structure {"type": "function", "function": {...}}
+          - get_extended_schema: property that returns the schema with extensions
+
+        Claude expects: {"type": "custom", "name": ..., "description": ..., "input_schema": ...}
+
+        Args:
+            custom_tools: Dictionary of tool_name -> RegisteredToolEntry objects
+
+        Returns:
+            List of tools in Claude's custom tool format
+        """
+        if not custom_tools:
+            return []
+
+        converted_tools = []
+
+        # Handle dictionary format: {tool_name: RegisteredToolEntry, ...}
+        if isinstance(custom_tools, dict):
+            for tool_name, tool_entry in custom_tools.items():
+                # Check if it's a RegisteredToolEntry object with schema_def
+                if hasattr(tool_entry, "schema_def"):
+                    tool_schema = tool_entry.schema_def
+
+                    # Extract function details from Chat Completions format
+                    if tool_schema.get("type") == "function" and "function" in tool_schema:
+                        func = tool_schema["function"]
+                        converted_tools.append(
+                            {
+                                "type": "custom",
+                                "name": func.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                "description": func.get("description", ""),
+                                "input_schema": func.get("parameters", {}),
+                            }
+                        )
+                    elif tool_schema.get("type") == "function":
+                        # Response API format - already has name, description, parameters at top level
+                        converted_tools.append(
+                            {
+                                "type": "custom",
+                                "name": tool_schema.get("name", tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name),
+                                "description": tool_schema.get("description", ""),
+                                "input_schema": tool_schema.get("parameters", {}),
+                            }
+                        )
+                    else:
+                        # Unknown format, try to extract what we can
+                        converted_tools.append(
+                            {
+                                "type": "custom",
+                                "name": tool_entry.tool_name if hasattr(tool_entry, "tool_name") else tool_name,
+                                "description": tool_schema.get("description", ""),
+                                "input_schema": tool_schema.get("parameters", {}),
+                            }
+                        )
+                # Handle direct schema format (for backward compatibility)
+                elif isinstance(tool_entry, dict):
+                    if tool_entry.get("type") == "function" and "function" in tool_entry:
+                        # Chat Completions format
+                        func = tool_entry["function"]
+                        converted_tools.append(
+                            {
+                                "type": "custom",
+                                "name": func.get("name", tool_name),
+                                "description": func.get("description", ""),
+                                "input_schema": func.get("parameters", {}),
+                            }
+                        )
+                    elif tool_entry.get("type") == "function":
+                        # Response API format
+                        converted_tools.append(
+                            {
+                                "type": "custom",
+                                "name": tool_entry.get("name", tool_name),
+                                "description": tool_entry.get("description", ""),
+                                "input_schema": tool_entry.get("parameters", {}),
+                            }
+                        )
+                    else:
+                        # Already in Claude format or unknown
+                        converted_tools.append(tool_entry)
+
+        # Handle list format (if custom_tools is already a list)
+        elif isinstance(custom_tools, list):
+            for tool in custom_tools:
+                if isinstance(tool, dict):
+                    if tool.get("type") == "function" and "function" in tool:
+                        # Chat Completions format
+                        func = tool["function"]
+                        converted_tools.append(
+                            {
+                                "type": "custom",
+                                "name": func.get("name", ""),
+                                "description": func.get("description", ""),
+                                "input_schema": func.get("parameters", {}),
+                            }
+                        )
+                    elif tool.get("type") == "function":
+                        # Response API format
+                        converted_tools.append(
+                            {
+                                "type": "custom",
+                                "name": tool.get("name", ""),
+                                "description": tool.get("description", ""),
+                                "input_schema": tool.get("parameters", {}),
+                            }
+                        )
+                    else:
+                        # Already in Claude format or unknown
+                        converted_tools.append(tool)
+
+        return converted_tools

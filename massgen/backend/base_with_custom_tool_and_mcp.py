@@ -1198,6 +1198,10 @@ class CustomToolAndMCPBackend(LLMBackend):
         """Check if a tool call is an MCP function."""
         return tool_name in self._mcp_functions
 
+    def is_custom_tool_call(self, tool_name: str) -> bool:
+        """Check if a tool call is a custom tool function."""
+        return tool_name in self._custom_tool_names
+
     def get_mcp_tools_formatted(self) -> List[Dict[str, Any]]:
         """Get MCP tools formatted for specific API format."""
         if not self._mcp_functions:

@@ -103,6 +103,12 @@ class ClaudeAPIParamsHandler(APIParamsHandlerBase):
             converted_tools = self.formatter.format_tools(tools)
             combined_tools.extend(converted_tools)
 
+        # Add custom tools
+        custom_tools = self.custom_tool_manager.registered_tools
+        if custom_tools:
+            converted_custom_tools = self.formatter.format_custom_tools(custom_tools)
+            combined_tools.extend(converted_custom_tools)
+
         # MCP tools
         mcp_tools = self.get_mcp_tools()
         if mcp_tools:

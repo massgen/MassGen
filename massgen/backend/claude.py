@@ -469,7 +469,7 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                         "Claude Files API upload left unresolved file_pending_upload marker " f"(message {msg_idx}, item {item_idx}, source {identifier}).",
                     )
 
-    async def _stream_without_mcp_tools(
+    async def _stream_without_custom_and_mcp_tools(
         self,
         messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
@@ -501,6 +501,8 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                     name = tool.get("function", {}).get("name") if "function" in tool else tool.get("name")
                     if name and name in self._mcp_function_names:
                         continue
+                    if name and name in self._custom_tool_names:
+                        continue
                 elif tool.get("type") == "mcp":
                     continue
                 non_mcp_tools.append(tool)
@@ -519,14 +521,14 @@ class ClaudeBackend(CustomToolAndMCPBackend):
         async for chunk in self._process_stream(stream, all_params, agent_id):
             yield chunk
 
-    async def _stream_with_mcp_tools(
+    async def _stream_with_custom_and_mcp_tools(
         self,
         current_messages: List[Dict[str, Any]],
         tools: List[Dict[str, Any]],
         client,
         **kwargs,
     ) -> AsyncGenerator[StreamChunk, None]:
-        """Recursively stream responses, executing MCP function calls when detected."""
+        """Recursively stream responses, executing MCP and custom tool function calls when detected."""
 
         # Build API params for this iteration
         all_params = {**self.config, **kwargs}
@@ -554,6 +556,7 @@ class ClaudeBackend(CustomToolAndMCPBackend):
         content = ""
         current_tool_uses: Dict[str, Dict[str, Any]] = {}
         mcp_tool_calls: List[Dict[str, Any]] = []
+        custom_tool_calls: List[Dict[str, Any]] = []
         response_completed = False
 
         async for event in stream:
@@ -657,8 +660,8 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                 elif event.type == "message_delta":
                     pass
                 elif event.type == "message_stop":
-                    # Identify MCP and non-MCP tool calls among current_tool_uses
-                    non_mcp_tool_calls = []
+                    # Identify MCP, custom, and non-MCP/non-custom tool calls among current_tool_uses
+                    non_mcp_non_custom_tool_calls = []
                     if current_tool_uses:
                         for tool_use in current_tool_uses.values():
                             tool_name = tool_use.get("name", "")
@@ -683,8 +686,8 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                                         },
                                     },
                                 )
-                            else:
-                                non_mcp_tool_calls.append(
+                            elif self.is_custom_tool_call(tool_name):
+                                custom_tool_calls.append(
                                     {
                                         "id": tool_use["id"],
                                         "type": "function",
@@ -694,10 +697,21 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                                         },
                                     },
                                 )
-                    # Emit non-MCP tool calls for the caller to execute
-                    if non_mcp_tool_calls:
-                        log_stream_chunk("backend.claude", "tool_calls", non_mcp_tool_calls, agent_id)
-                        yield StreamChunk(type="tool_calls", tool_calls=non_mcp_tool_calls)
+                            else:
+                                non_mcp_non_custom_tool_calls.append(
+                                    {
+                                        "id": tool_use["id"],
+                                        "type": "function",
+                                        "function": {
+                                            "name": tool_name,
+                                            "arguments": parsed_input,
+                                        },
+                                    },
+                                )
+                    # Emit non-MCP/non-custom tool calls for the caller to execute
+                    if non_mcp_non_custom_tool_calls:
+                        log_stream_chunk("backend.claude", "tool_calls", non_mcp_non_custom_tool_calls, agent_id)
+                        yield StreamChunk(type="tool_calls", tool_calls=non_mcp_non_custom_tool_calls)
                     response_completed = True
                     break
             except Exception as event_error:
@@ -706,8 +720,8 @@ class ClaudeBackend(CustomToolAndMCPBackend):
                 yield StreamChunk(type="error", error=error_msg)
                 continue
 
-        # If we captured MCP tool calls, execute them and recurse
-        if response_completed and mcp_tool_calls:
+        # If we captured MCP or custom tool calls, execute them and recurse
+        if response_completed and (mcp_tool_calls or custom_tool_calls):
             # Circuit breaker pre-execution check using base class method
             if not await self._check_circuit_breaker_before_execution():
                 yield StreamChunk(
@@ -721,12 +735,28 @@ class ClaudeBackend(CustomToolAndMCPBackend):
 
             updated_messages = current_messages.copy()
 
-            # Build assistant message with tool_use blocks for all MCP tool calls
+            # Build assistant message with tool_use blocks for all MCP and custom tool calls
             assistant_content = []
             if content:  # Add text content if any
                 assistant_content.append({"type": "text", "text": content})
 
+            # Add tool_use blocks for MCP tools
             for tool_call in mcp_tool_calls:
+                tool_name = tool_call["function"]["name"]
+                tool_args = tool_call["function"]["arguments"]
+                tool_id = tool_call["id"]
+
+                assistant_content.append(
+                    {
+                        "type": "tool_use",
+                        "id": tool_id,
+                        "name": tool_name,
+                        "input": tool_args,
+                    },
+                )
+
+            # Add tool_use blocks for custom tools
+            for tool_call in custom_tool_calls:
                 tool_name = tool_call["function"]["name"]
                 tool_args = tool_call["function"]["arguments"]
                 tool_id = tool_call["id"]
@@ -743,7 +773,72 @@ class ClaudeBackend(CustomToolAndMCPBackend):
             # Append the assistant message with tool uses
             updated_messages.append({"role": "assistant", "content": assistant_content})
 
-            # Now execute the MCP tool calls and append results
+            # First execute custom tool calls and append results
+            for tool_call in custom_tool_calls:
+                function_name = tool_call["function"]["name"]
+
+                # Yield custom tool call status
+                yield StreamChunk(
+                    type="custom_tool_status",
+                    status="custom_tool_called",
+                    content=f"🔧 [Custom Tool] Calling {function_name}...",
+                    source=f"custom_{function_name}",
+                )
+
+                try:
+                    # Execute custom function
+                    result_str = await self._execute_custom_tool(
+                        {
+                            "name": function_name,
+                            "arguments": json.dumps(tool_call["function"]["arguments"]) if isinstance(tool_call["function"].get("arguments"), (dict, list)) else tool_call["function"].get("arguments", "{}"),
+                            "call_id": tool_call["id"],
+                        }
+                    )
+                    if not result_str or result_str.startswith("Error:"):
+                        logger.warning(f"Custom function {function_name} failed: {result_str or 'unknown error'}")
+                        result_str = result_str or "Tool execution failed"
+                except Exception as e:
+                    logger.error(f"Unexpected error in custom function execution: {e}")
+                    result_str = f"Error executing custom tool: {str(e)}"
+
+                # Build tool result message
+                tool_result_msg = {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": tool_call["id"],
+                            "content": result_str,
+                        },
+                    ],
+                }
+
+                # Append to updated_messages
+                updated_messages.append(tool_result_msg)
+
+                yield StreamChunk(
+                    type="custom_tool_status",
+                    status="function_call",
+                    content=f"Arguments for Calling {function_name}: {json.dumps(tool_call['function'].get('arguments', {}))}",
+                    source=f"custom_{function_name}",
+                )
+
+                yield StreamChunk(
+                    type="custom_tool_status",
+                    status="function_call_output",
+                    content=f"Results for Calling {function_name}: {result_str}",
+                    source=f"custom_{function_name}",
+                )
+
+                logger.info(f"Executed custom function {function_name}")
+                yield StreamChunk(
+                    type="custom_tool_status",
+                    status="custom_tool_response",
+                    content=f"✅ [Custom Tool] {function_name} completed",
+                    source=f"custom_{function_name}",
+                )
+
+            # Then execute MCP tool calls and append results
             for tool_call in mcp_tool_calls:
                 function_name = tool_call["function"]["name"]
 
@@ -825,8 +920,8 @@ class ClaudeBackend(CustomToolAndMCPBackend):
             # Trim updated_messages using base class method
             updated_messages = self._trim_message_history(updated_messages)
 
-            # After processing all MCP calls, recurse: async for chunk in self._stream_mcp_recursive(updated_messages, tools, client, **kwargs): yield chunk
-            async for chunk in self._stream_with_mcp_tools(updated_messages, tools, client, **kwargs):
+            # After processing all tool calls, recurse
+            async for chunk in self._stream_with_custom_and_mcp_tools(updated_messages, tools, client, **kwargs):
                 yield chunk
             return
         else:

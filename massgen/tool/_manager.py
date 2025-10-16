@@ -483,10 +483,27 @@ class ToolManager:
         if path.endswith(".py"):
             path_obj = Path(path)
 
-            # If path is not absolute, check relative to tool folder
+            # If path is not absolute, try multiple resolution strategies
             if not path_obj.is_absolute():
-                tool_folder = Path(__file__).parent
-                path_obj = tool_folder / path
+                # First try as relative to current working directory
+                cwd_path = Path.cwd() / path
+                if cwd_path.exists():
+                    path_obj = cwd_path
+                else:
+                    # Then try relative to tool folder
+                    tool_folder = Path(__file__).parent
+                    tool_path = tool_folder / path
+                    if tool_path.exists():
+                        path_obj = tool_path
+                    else:
+                        # Finally try resolving from tool folder's parent (massgen/)
+                        # in case path starts with "massgen/"
+                        if path.startswith("massgen/"):
+                            # Get the massgen package root
+                            massgen_root = tool_folder.parent.parent
+                            full_path = massgen_root / path
+                            if full_path.exists():
+                                path_obj = full_path
 
             if not path_obj.exists():
                 return None

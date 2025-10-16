@@ -1,12 +1,11 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_custom_tool_example.yaml "whats the sum of 123 and 456?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/claude_custom_tool_example.yaml "whats the sum of 123 and 456?"
 agents:
-  - id: "gpt-oss-custom_tool" # Cerebras AI GPT-OSS
+  - id: "claude_custom_tool" # Anthropic Claude
     backend:
-      type: "chatcompletion"
-      model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1"
+      type: "claude"
+      model: "claude-sonnet-4-20250514"  # Model name
       custom_tools:
         - name: "two_num_tool"
           category: "math"
