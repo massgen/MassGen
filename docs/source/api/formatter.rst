@@ -11,26 +11,34 @@ Module Overview
    :undoc-members:
    :show-inheritance:
 
-Message Formatter
------------------
-
-.. automodule:: massgen.formatter.message_formatter
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Tool Formatter
---------------
-
-.. automodule:: massgen.formatter.tool_formatter
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-MCP Tool Formatter
+Response Formatter
 ------------------
 
-.. automodule:: massgen.formatter.mcp_tool_formatter
+.. automodule:: massgen.formatter._response_formatter
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Claude Formatter
+----------------
+
+.. automodule:: massgen.formatter._claude_formatter
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Chat Completions Formatter
+---------------------------
+
+.. automodule:: massgen.formatter._chat_completions_formatter
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Base Formatter
+--------------
+
+.. automodule:: massgen.formatter._formatter_base
    :members:
    :undoc-members:
    :show-inheritance:

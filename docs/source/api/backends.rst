@@ -68,18 +68,18 @@ ClaudeCodeBackend
 Base Classes
 ------------
 
-BaseBackend
-~~~~~~~~~~~
+LLMBackend
+~~~~~~~~~~
 
-.. autoclass:: massgen.backend.base.BaseBackend
+.. autoclass:: massgen.backend.base.LLMBackend
    :members:
    :undoc-members:
    :show-inheritance:
 
-BaseMCPBackend
-~~~~~~~~~~~~~~
+MCPBackend
+~~~~~~~~~~
 
-.. autoclass:: massgen.backend.base_with_mcp.BaseWithMCPBackend
+.. autoclass:: massgen.backend.base_with_mcp.MCPBackend
    :members:
    :undoc-members:
    :show-inheritance:

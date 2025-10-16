@@ -19,10 +19,10 @@ MCP Client
    :undoc-members:
    :show-inheritance:
 
-Filesystem Manager
-------------------
+Backend Utils
+-------------
 
-.. automodule:: massgen.mcp_tools.filesystem_manager
+.. automodule:: massgen.mcp_tools.backend_utils
    :members:
    :undoc-members:
    :show-inheritance:
@@ -51,10 +51,18 @@ Circuit Breaker
    :undoc-members:
    :show-inheritance:
 
-Converters
+Exceptions
 ----------
 
-.. automodule:: massgen.mcp_tools.converters
+.. automodule:: massgen.mcp_tools.exceptions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Hooks
+-----
+
+.. automodule:: massgen.mcp_tools.hooks
    :members:
    :undoc-members:
    :show-inheritance:
