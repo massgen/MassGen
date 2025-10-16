@@ -179,7 +179,7 @@ class CustomToolAndMCPBackend(LLMBackend):
     async def _process_stream(self, stream, all_params, agent_id: Optional[str] = None) -> AsyncGenerator[StreamChunk, None]:
         """Process stream."""
 
-    ## Custom tools support
+    # Custom tools support
     def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
         """Register custom tools with the tool manager.
 
