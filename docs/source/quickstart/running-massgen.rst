@@ -6,33 +6,44 @@ This guide shows you how to run MassGen with different configurations.
 .. tip::
    **Configuration File Paths:** Example commands use ``@examples/...`` paths which work from **any directory** because they're part of MassGen's installed package. See `Using Config Files from Anywhere`_ below for all path options.
 
-CLI Parameters
---------------
+Basic Usage
+-----------
 
-MassGen is run via command line with the following parameters:
+Run MassGen from the command line:
 
-.. list-table::
-   :header-rows: 1
-   :widths: 20 80
+.. code-block:: bash
 
-   * - Parameter
-     - Description
-   * - ``--config``
-     - Path to YAML configuration file with agent definitions, model parameters, backend parameters and UI settings
-   * - ``--backend``
-     - Backend type for quick setup without a config file (``claude``, ``claude_code``, ``gemini``, ``grok``, ``openai``, ``azure_openai``, ``zai``)
-   * - ``--model``
-     - Model name for quick setup (e.g., ``gemini-2.5-flash``, ``gpt-5-nano``). Mutually exclusive with ``--config``
-   * - ``--system-message``
-     - System prompt for the agent in quick setup mode. Omitted if ``--config`` is provided
-   * - ``--no-display``
-     - Disable real-time streaming UI coordination display (fallback to simple text output)
-   * - ``--no-logs``
-     - Disable real-time logging
-   * - ``--debug``
-     - Enable debug mode with verbose logging. Debug logs saved to ``agent_outputs/log_{time}/massgen_debug.log``
-   * - ``"<your question>"``
-     - Optional single-question input; if omitted, MassGen enters interactive chat mode
+   massgen [OPTIONS] ["<your question>"]
+
+For the complete list of CLI parameters and options, see :doc:`../reference/cli`
+
+Default Configuration Mode
+---------------------------
+
+The simplest way to use MassGen - no configuration needed on first run:
+
+.. code-block:: bash
+
+   # First time: Launches setup wizard
+   massgen
+
+The wizard helps you:
+
+* Configure API keys for your preferred AI models
+* Create your default agent team
+* Save configuration to ``~/.config/massgen/config.yaml``
+
+**After setup:**
+
+.. code-block:: bash
+
+   # Start interactive conversation
+   massgen
+
+   # Or run a single query
+   massgen "What is machine learning?"
+
+Your default configuration is automatically used when you run ``massgen`` without ``--config`` or ``--model`` flags.
 
 Single Agent (Quick Test)
 --------------------------
@@ -226,187 +237,59 @@ Debug logs saved to ``agent_outputs/log_{timestamp}/massgen_debug.log`` with det
 * Backend operations
 * Tool calls
 
-Using Config Files from Anywhere
----------------------------------
+Configuration File Paths
+-------------------------
 
-Understanding Configuration Paths
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+MassGen supports three ways to specify configuration files:
 
-MassGen supports multiple ways to specify configuration files, with different path resolution behaviors:
+**1. Built-in Examples (Recommended)**
 
-**1. Package Configs with @examples/ (Recommended)**
-
-Configs prefixed with ``@examples/`` are **built into MassGen's package** and work from any directory:
+Use ``@examples/`` prefix to access built-in configurations from any directory:
 
 .. code-block:: bash
 
-   # Works from any directory!
-   cd ~/my-project
    massgen --config @examples/basic/multi/three_agents_default "Your question"
 
-   cd ~/Documents
-   massgen --config @examples/tools/mcp/gpt5_nano_mcp_example "Another question"
-
-The ``@examples/`` prefix tells MassGen to search in its installed package configs. Use slashes (``/``) to match the actual directory structure:
-
-* ✅ ``@examples/basic/single/single_gpt5nano``
-* ✅ ``@examples/tools/mcp/multimcp_gemini``
-* ✅ ``@examples/providers/claude/claude``
-
-**List all available package configs:**
-
-.. code-block:: bash
-
+   # List all available examples
    massgen --list-examples
 
-**2. Relative and Absolute Paths**
+The ``@examples/`` prefix works from any directory and is the easiest way to get started.
 
-Standard filesystem paths work as expected:
+**2. Custom Configuration Files**
+
+Use relative or absolute paths for your own configurations:
 
 .. code-block:: bash
 
    # Relative to current directory
    massgen --config ./my-config.yaml "Question"
-   massgen --config ../configs/custom.yaml "Question"
 
-   # Absolute paths
-   massgen --config /Users/you/configs/my-setup.yaml "Question"
+   # Absolute path
+   massgen --config /path/to/my-config.yaml "Question"
 
-**3. User Config Directory (Coming Soon)**
+**3. User Configuration Directory**
 
-Save frequently-used configs to ``~/.config/massgen/agents/`` for easy access:
+Store frequently-used configs in ``~/.config/massgen/agents/`` for easy access:
 
 .. code-block:: bash
 
-   # Save your config
    mkdir -p ~/.config/massgen/agents
    cp my-config.yaml ~/.config/massgen/agents/my-setup.yaml
 
-   # Access by name (planned feature)
-   massgen --config my-setup "Question"
-
-Path Resolution Priority
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-When you specify ``--config``, MassGen searches in this order:
-
-1. **Package configs** - If path starts with ``@examples/``, search installed package
-2. **Filesystem paths** - Check if file exists at the given path (relative or absolute)
-3. **User configs** - Search ``~/.config/massgen/agents/`` (if basename provided)
-4. **Error** - Config not found
-
-Examples:
-
-.. code-block:: bash
-
-   # Package config - searches MassGen's installed configs
-   --config @examples/basic/multi/three_agents_default
-
-   # Relative path - looks in current directory
-   --config ./my-config.yaml
-
-   # Absolute path - exact file location
-   --config /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml
-
-Working with GitHub Repository Configs
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. note::
-   **For GitHub Users:** If you're working directly with the MassGen repository (not using the installed package), configs are located in ``massgen/configs/`` directory.
-
-**From within repository:**
-
-.. code-block:: bash
-
-   # You're in /Users/you/MassGen/
-   massgen --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
-
-   # Or use the package syntax (if installed in editable mode)
-   massgen --config @examples/basic/multi/three_agents_default "Question"
-
-**From outside repository:**
-
-.. code-block:: bash
-
-   # Use absolute path
-   massgen \
-     --config /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml \
-     "Question"
-
-   # Or copy the config to your project
-   cp /Users/you/MassGen/massgen/configs/basic/multi/three_agents_default.yaml ./my-config.yaml
-   massgen --config ./my-config.yaml "Question"
-
-Common Issues and Solutions
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Issue: "Config not found" error with @examples/ path**
-
-This means MassGen isn't installed properly or you're using an old version.
-
-**Solution:**
-
-.. code-block:: bash
-
-   # Reinstall MassGen
-   cd /path/to/MassGen
-   uv pip install -e .
-
-   # Verify installation
-   massgen --list-examples
-
-**Issue: Relative path works in one directory but not another**
-
-Relative paths like ``./config.yaml`` depend on your current working directory.
-
-**Solution:**
-
-Use ``@examples/`` for package configs, or absolute paths for custom configs:
-
-.. code-block:: bash
-
-   # Package config - works anywhere
-   massgen --config @examples/basic/multi/three_agents_default "Question"
-
-   # Absolute path - always works
-   massgen --config /Users/you/configs/my-setup.yaml "Question"
-
-Quick Reference
-~~~~~~~~~~~~~~~
-
-.. list-table::
-   :header-rows: 1
-   :widths: 35 65
-
-   * - Config Path Type
-     - Example & Behavior
-   * - **Package Config** (Recommended)
-     - ``@examples/basic/multi/three_agents_default``
-
-       ✅ Works from any directory
-
-       ✅ Always available after installation
-   * - **Relative Path**
-     - ``./my-config.yaml`` or ``../configs/setup.yaml``
-
-       📂 Relative to current directory
-   * - **Absolute Path**
-     - ``/Users/you/configs/my-setup.yaml``
-
-       ✅ Always works from any location
-   * - **User Config**
-     - ``~/.config/massgen/agents/my-setup.yaml``
-
-       🏠 Personal config storage
-   * - **Repository Path** (GitHub)
-     - ``massgen/configs/basic/multi/three_agents_default.yaml``
-
-       📦 Direct repository access (for development)
+.. seealso::
+   For detailed information on path resolution, troubleshooting, and working with the GitHub repository, see :doc:`../reference/configuration_paths`
 
 Next Steps
 ----------
 
-* :doc:`configuration` - Learn YAML configuration syntax
-* :doc:`../user_guide/concepts` - Understand core concepts
-* :doc:`../user_guide/mcp_integration` - Deep dive into MCP tools
-* :doc:`../user_guide/multi_turn_mode` - Master interactive mode
+**Congratulations! You've run MassGen successfully. Here's what to explore next:**
+
+✅ **You are here:** You've run both single-agent and multi-agent examples
+
+⬜ **Next:** :doc:`configuration` - Learn how to create custom agent teams
+
+⬜ **Understand:** :doc:`../user_guide/concepts` - See how multi-agent coordination works
+
+⬜ **Advanced:** :doc:`../user_guide/mcp_integration` - Add external tools to your agents
+
+**Already know what you want to build?** Jump to :doc:`../examples/basic_examples` for ready-to-use configurations.

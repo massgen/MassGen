@@ -45,7 +45,9 @@ After completing the wizard, your configuration is ready to use:
 Configuration Directory Structure
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-After installation, MassGen uses this directory structure:
+MassGen uses two directories for configuration:
+
+**User Configuration** (``~/.config/massgen/``):
 
 .. code-block:: text
 
@@ -53,16 +55,12 @@ After installation, MassGen uses this directory structure:
    ├── config.yaml              # Default configuration (from wizard)
    ├── agents/                  # Your custom named configurations
    │   ├── research-team.yaml
-   │   ├── coding-agents.yaml
-   │   └── custom-setup.yaml
-   ├── .env                     # API keys (optional)
-   └── sessions/                # Multi-turn conversation history
+   │   └── coding-agents.yaml
+   └── .env                     # API keys (optional)
 
-You can:
+**Project Workspace** (``.massgen/`` in your project):
 
-- Edit ``config.yaml`` to modify your default setup
-- Add named configs to ``agents/`` for specialized tasks
-- Store API keys in ``.env`` for convenience
+MassGen also creates a ``.massgen/`` directory in your project for sessions, workspaces, and snapshots. See :doc:`../user_guide/concepts` for details.
 
 **Creating Named Configurations:**
 
@@ -232,6 +230,9 @@ Backend Configuration
 ---------------------
 
 Each agent requires a ``backend`` configuration that specifies the model provider and settings.
+
+.. important::
+   **Choosing the right backend?** Different backends support different features (web search, code execution, file operations, etc.). Check the **Backend Capabilities Matrix** in :doc:`../user_guide/backends` to see which features are available for each backend type.
 
 Backend Types
 ~~~~~~~~~~~~~
@@ -472,39 +473,24 @@ For quick tests, you can use CLI flags without a configuration file:
      --system-message "You are a helpful coding assistant" \
      "Write a Python function to sort a list"
 
-CLI Configuration Parameters
-----------------------------
+CLI Quick Setup
+---------------
 
-.. list-table::
-   :header-rows: 1
-   :widths: 20 60 20
+For quick single-agent testing without a configuration file:
 
-   * - Parameter
-     - Description
-     - Required
-   * - ``--config``
-     - Path to YAML configuration file
-     - No*
-   * - ``--model``
-     - Model name for quick setup (e.g., ``gemini-2.5-flash``)
-     - No*
-   * - ``--backend``
-     - Backend type for quick setup (e.g., ``claude``, ``openai``)
-     - No
-   * - ``--system-message``
-     - Custom system prompt for agent
-     - No
-   * - ``--no-display``
-     - Disable real-time UI
-     - No
-   * - ``--no-logs``
-     - Disable logging
-     - No
-   * - ``--debug``
-     - Enable verbose debug logging
-     - No
+.. code-block:: bash
 
-\* Either ``--config`` or ``--model`` is required (they are mutually exclusive).
+   massgen --model gemini-2.5-flash "Your question"
+
+You can also specify backend type and system messages:
+
+.. code-block:: bash
+
+   massgen --backend claude --model claude-sonnet-4 \
+     --system-message "You are a helpful coding assistant" \
+     "Write a Python function"
+
+For the complete list of CLI parameters, see :doc:`../reference/cli`
 
 Configuration Best Practices
 -----------------------------
@@ -532,10 +518,17 @@ See the `Configuration Guide <https://github.com/Leezekun/MassGen/blob/main/@exa
 Next Steps
 ----------
 
-* :doc:`running-massgen` - Learn how to run MassGen with your configuration
-* :doc:`../user_guide/concepts` - Understand MassGen architecture
-* :doc:`../reference/yaml_schema` - Complete YAML schema reference
-* :doc:`../reference/supported_models` - See all supported models and backends
+**Excellent! You understand configuration basics. Here's your path forward:**
+
+✅ **You are here:** You know how to configure agents in YAML
+
+⬜ **Put it to use:** :doc:`../examples/basic_examples` - Copy ready-made configurations
+
+⬜ **Go deeper:** :doc:`../user_guide/concepts` - Understand how multi-agent coordination works
+
+⬜ **Add capabilities:** :doc:`../user_guide/mcp_integration` - Integrate external tools
+
+**Need a reference?** The complete configuration schema is at :doc:`../reference/yaml_schema`
 
 Troubleshooting
 ---------------

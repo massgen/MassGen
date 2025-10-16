@@ -10,6 +10,20 @@ Basic Usage
 
    massgen [OPTIONS] ["<your question>"]
 
+**Default Behavior (No Arguments):**
+
+When running ``massgen`` with no arguments, configs are auto-discovered with this priority:
+
+1. ``.massgen/config.yaml`` (project-level config in current directory)
+2. ``~/.config/massgen/config.yaml`` (global default config)
+3. Launch setup wizard if no config found
+
+**Actions:**
+
+* **First time** (no config exists) → Launches interactive setup wizard
+* **After setup** (config exists) → Starts multi-turn conversation mode
+* **With question** → Runs single query using discovered config
+
 CLI Parameters
 --------------
 
@@ -38,6 +52,20 @@ CLI Parameters
 
 Examples
 --------
+
+Default Configuration Mode
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   # First time: Launch setup wizard
+   massgen
+
+   # After setup: Start interactive conversation
+   massgen
+
+   # Run single query with default config
+   massgen "What is machine learning?"
 
 Quick Single Agent
 ~~~~~~~~~~~~~~~~~~

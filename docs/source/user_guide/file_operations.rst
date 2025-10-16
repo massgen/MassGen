@@ -116,11 +116,24 @@ Claude Code has built-in file operation tools:
 * **Read** - Read file contents
 * **Write** - Create or overwrite files
 * **Edit** - Make targeted edits to existing files
-* **MultiEdit** - Edit multiple locations in one file
 * **Bash** - Execute shell commands (including file operations)
 * **Grep** - Search file contents with regex
 * **Glob** - Find files matching patterns
-* **LS** - List directory contents
+
+**Additional Claude Code Tools:**
+
+* **Task** - Launch specialized agents for complex tasks
+* **ExitPlanMode** - Exit planning mode (when enabled)
+* **NotebookEdit** - Edit Jupyter notebook cells
+* **WebFetch** - Fetch and process web content
+* **TodoWrite** - Manage task lists
+* **WebSearch** - Search the web
+* **BashOutput** - Retrieve background shell output
+* **KillShell** - Terminate background shells
+* **SlashCommand** - Execute custom slash commands
+
+.. seealso::
+   For complete Claude Code tools documentation and usage examples, see the `Claude Code Documentation <https://docs.claude.com/en/docs/claude-code>`_
 
 **Example:**
 
@@ -157,6 +170,9 @@ All backends can use the MCP Filesystem Server for file operations:
 * ``list_directory`` - List directory contents
 * ``delete_file`` - Delete files (with safety checks)
 * ``move_file`` - Move or rename files
+
+.. seealso::
+   For complete MCP Filesystem Server documentation and additional operations, see the `official MCP Filesystem Server <https://github.com/modelcontextprotocol/servers/tree/main/src/filesystem>`_
 
 MassGen Workspace Tools
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -440,11 +456,6 @@ Example: Multi-Agent Document Processing
          type: "gemini"
          model: "gemini-2.5-flash"
          cwd: "analyzer_workspace"
-         mcp_servers:
-           - name: "filesystem"
-             type: "stdio"
-             command: "npx"
-             args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
 
      - id: "writer"
        backend:

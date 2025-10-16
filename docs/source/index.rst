@@ -112,88 +112,64 @@ Isolated command execution in Docker containers with resource limits and multi-a
 
 MCP-based command execution across all backends, AG2 framework integration, and audio/video generation.
 
-**Quick Start:**
-
-.. code-block:: bash
-
-   # Install from PyPI
-   pip install massgen
-
-   # Single-agent test (works from any directory)
-   massgen --model gemini-2.5-flash "What is 2+2?"
-
-   # Multi-agent collaboration (works from any directory)
-   massgen --config @examples/basic/multi/three_agents_default \
-     "What are the pros and cons of renewable energy?"
-
-.. note::
-   **Using @examples configs:** The ``@examples/`` prefix works from **any directory** - you don't need to be in the MassGen repo. MassGen automatically finds package configurations. See :doc:`examples/available_configs` for the complete list.
-
 Quick Start
 -----------
 
-Get started with MassGen in 3 simple steps:
+Get started with MassGen in minutes:
 
-Step 1: Install
-~~~~~~~~~~~~~~~
-
-**Prerequisites:** Python 3.11+
+**Install:**
 
 .. code-block:: bash
 
-   git clone https://github.com/Leezekun/MassGen.git
-   cd MassGen
-   pip install uv
-   uv venv
+   pip install massgen
 
-:doc:`See installation options <quickstart/installation>` including global installation with ``uv tool``
-
-Step 2: Set Up API Keys
-~~~~~~~~~~~~~~~~~~~~~~~~
+**Option 1: Use the setup wizard (recommended for first time):**
 
 .. code-block:: bash
 
-   cp .env.example .env
-   # Edit .env and add your API key (only one needed to start)
+   # Run without arguments to launch the interactive setup wizard
+   massgen
 
-You only need the API key for the model you plan to use first.
+The wizard will guide you through configuring your API keys and creating your first agent team.
 
-Step 3: Run Your First Task
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-**Hello World - Single Agent:**
+After setup, you can:
 
 .. code-block:: bash
 
-   # Simplest command - uses one model, no config file needed
+   # Run a single query with your configured agents
+   massgen "Your question here"
+
+   # Or start an interactive conversation (no prompt needed)
+   massgen
+
+**Option 2: Quick single-agent test:**
+
+.. code-block:: bash
+
+   # No config needed - specify model directly
    massgen --model gemini-2.5-flash "What is 2+2?"
 
-**Expected output:** The agent responds directly with the answer. *This takes ~5 seconds and costs ~$0.001*
-
-**Try Multi-Agent Collaboration:**
-
-Once the single agent works, experience MassGen's power with multiple agents:
+**Option 3: Multi-agent collaboration:**
 
 .. code-block:: bash
 
-   # Three agents collaborate on the answer
-   massgen \
-     --config @examples/basic/multi/three_agents_default.yaml \
+   # Use a built-in configuration
+   massgen --config @examples/basic/multi/three_agents_default \
      "What are the pros and cons of renewable energy?"
 
-**What happens:** You'll see agents discuss, vote, and converge on the best answer. The coordination table shows real-time progress.
+Watch agents discuss, vote, and converge on the best answer in real-time!
 
-.. note::
-   **Config file paths:** Examples show ``@examples/...`` which works when you're in the MassGen repo directory. See :doc:`quickstart/running-massgen` for how to use configs from other directories.
+**Ready to dive deeper?**
 
-**Next Steps:**
-
-* :doc:`quickstart/running-massgen` - More examples and interactive mode
+* :doc:`quickstart/installation` - Complete installation guide and setup wizard
+* :doc:`quickstart/running-massgen` - Learn all the ways to run MassGen
 * :doc:`quickstart/configuration` - Create custom agent teams
 * :doc:`examples/basic_examples` - Copy-paste ready examples
 
 Supported Models
 ----------------
+
+MassGen supports a wide range of AI models across different providers:
 
 **API-based Models:**
 
@@ -213,6 +189,9 @@ Supported Models
 
 * **AG2** Agents with code execution capabilities
 
+.. tip::
+   **Choosing the right backend?** Different models have different strengths. See the complete **Backend Capabilities Matrix** in :doc:`user_guide/backends` to understand which features (web search, code execution, file operations, etc.) are available for each model.
+
 Core Concepts
 -------------
 
@@ -229,13 +208,16 @@ Core Concepts
    Use Claude, Gemini, GPT, Grok, and more - each agent can use a different model. Mix and match models for optimal results.
 
 **MCP Tool Integration**
-   Extend agent capabilities with Model Context Protocol (MCP) tools via simple YAML configuration. Supports planning mode to prevent irreversible actions during coordination.
+   Extend agent capabilities with Model Context Protocol (MCP) tools. Supports planning mode to prevent irreversible actions during coordination.
 
 **Workspace Isolation & File Operations**
    Each agent gets its own isolated workspace for safe file operations. The ``.massgen/`` directory keeps all MassGen files organized and separate from your project.
 
 **Project Integration**
    Work directly with your existing codebases! Use context paths to grant agents read/write access to specific directories with granular permission control.
+
+**Configuration**
+   After using the setup wizard, customize your agent teams via YAML configuration files for advanced scenarios.
 
 Documentation Sections
 ----------------------

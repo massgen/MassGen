@@ -287,62 +287,21 @@ To set up API keys manually:
 Understanding the .massgen Directory
 =====================================
 
-Project Organization
---------------------
+MassGen organizes all its working files in a ``.massgen/`` directory within your project. This keeps your project clean and makes it easy to exclude MassGen files from version control by adding ``.massgen/`` to your ``.gitignore``.
 
-When you work with MassGen—whether in single queries, multi-turn conversations, or with file operations—MassGen automatically creates a clean, organized directory structure in your project:
+**What's inside?**
 
-.. code-block:: text
+- ``sessions/`` - Multi-turn conversation history
+- ``workspaces/`` - Agent working directories for file operations
+- ``snapshots/`` - Workspace snapshots shared between agents
+- ``temp_workspaces/`` - Previous turn results for context
 
-   your-project/
-   ├── .massgen/                          # All MassGen state
-   │   ├── sessions/                      # Multi-turn conversation history
-   │   │   └── session_20240101_143022/
-   │   │       ├── turn_1/                # Results from turn 1
-   │   │       ├── turn_2/                # Results from turn 2
-   │   │       └── SESSION_SUMMARY.txt    # Human-readable summary
-   │   ├── workspaces/                    # Agent working directories
-   │   │   ├── agent1/                    # Individual agent workspaces
-   │   │   └── agent2/
-   │   ├── snapshots/                     # Workspace snapshots for coordination
-   │   └── temp_workspaces/               # Previous turn results for context
-   ├── your-project-files/
-   └── ...
+**When is it created?**
 
-Why .massgen?
-~~~~~~~~~~~~~
+The ``.massgen/`` directory is automatically created when you use multi-turn mode, file operations, or workspace features. Simple single-agent queries don't create it.
 
-MassGen uses this directory structure to keep all AI-related files organized and separate from your project:
-
-.. grid:: 2
-   :gutter: 3
-
-   .. grid-item-card:: 🧹 Clean Projects
-
-      All MassGen files are contained in a single ``.massgen/`` directory, keeping your project organized.
-
-   .. grid-item-card:: 📝 Easy .gitignore
-
-      Simply add ``.massgen/`` to your ``.gitignore`` file to exclude all MassGen working files from version control.
-
-   .. grid-item-card:: 🚚 Portable
-
-      Move or delete the ``.massgen/`` directory without affecting your project files.
-
-   .. grid-item-card:: 💬 Session Persistence
-
-      Multi-turn conversation history is preserved across sessions for continuity.
-
-**When is .massgen created?**
-
-The ``.massgen/`` directory is automatically created when:
-
-- You run multi-turn interactive sessions
-- Agents use file operations or workspaces
-- MassGen needs to store coordination snapshots
-- Session history needs to be preserved
-
-For simple single-agent queries without file operations, no directory is created.
+.. seealso::
+   For a complete explanation of workspace management and directory structure, see :doc:`../user_guide/concepts` (State Management & .massgen Directory section)
 
 Optional Dependencies
 =====================
@@ -420,12 +379,17 @@ Try a simple query to verify everything works:
 Next Steps
 ==========
 
-Now that you have MassGen installed, you're ready to:
+**Great! You've installed MassGen. Here's your learning path:**
 
-1. :doc:`running-massgen` - Learn how to run MassGen with different configurations
-2. :doc:`configuration` - Understand configuration options and customization
-3. :doc:`../user_guide/multi_turn_mode` - Explore multi-turn interactive conversations
-4. :doc:`../reference/python_api` - Use MassGen programmatically from Python
+✅ **You are here:** Installation complete
+
+⬜ **Next:** :doc:`running-massgen` - Run your first command and see MassGen in action
+
+⬜ **Then:** :doc:`configuration` - Learn how to customize agent teams
+
+⬜ **Advanced:** :doc:`../user_guide/multi_turn_mode` - Explore interactive conversations
+
+**Quick jump:** Want to dive into examples? Check out :doc:`../examples/basic_examples` for copy-paste configurations.
 
 Troubleshooting
 ===============

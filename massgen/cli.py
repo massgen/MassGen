@@ -115,15 +115,20 @@ def _substitute_variables(obj: Any, variables: Dict[str, str]) -> Any:
 def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
     """Resolve config file with flexible syntax.
 
-    Priority:
+    Priority order:
+
+    **If --config flag provided (highest priority):**
     1. @examples/NAME → Package examples (search configs directory)
-    2. Absolute/relative paths (backwards compatible)
+    2. Absolute/relative paths (exact path as specified)
     3. Named configs in ~/.config/massgen/agents/
-    4. ~/.config/massgen/config.yaml (default config)
-    5. None → trigger config builder
+
+    **If NO --config flag (auto-discovery):**
+    1. .massgen/config.yaml (project-level config in current directory)
+    2. ~/.config/massgen/config.yaml (global default config)
+    3. None → trigger config builder
 
     Args:
-        config_arg: Config argument (can be @examples/NAME, path, or None)
+        config_arg: Config argument from --config flag (can be @examples/NAME, path, or None)
 
     Returns:
         Path to config file, or None if config builder should run
@@ -131,11 +136,18 @@ def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
     Raises:
         ConfigurationError: If config file not found
     """
-    # Check for default config first if no config_arg provided
+    # Check for default configs if no config_arg provided
     if not config_arg:
-        default_config = Path.home() / ".config/massgen/config.yaml"
-        if default_config.exists():
-            return default_config
+        # Priority 1: Project-level config (.massgen/config.yaml in current directory)
+        project_config = Path.cwd() / ".massgen" / "config.yaml"
+        if project_config.exists():
+            return project_config
+
+        # Priority 2: Global default config
+        global_config = Path.home() / ".config/massgen/config.yaml"
+        if global_config.exists():
+            return global_config
+
         return None  # Trigger builder
 
     # Handle @examples/ prefix - search in package configs
@@ -1346,10 +1358,27 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
 
 async def main(args):
     """Main CLI entry point (async operations only)."""
-    # Validate arguments
+    # Check if bare `massgen` with no args - use default config if it exists
+    if not args.backend and not args.model and not args.config:
+        # Use resolve_config_path to check project-level then global config
+        resolved_default = resolve_config_path(None)
+        if resolved_default:
+            # Use discovered config for interactive mode (no question) or single query (with question)
+            args.config = str(resolved_default)
+        else:
+            # No default config - this will be handled by wizard trigger in cli_main()
+            if args.question:
+                # User provided a question but no config exists - this is an error
+                print("❌ Configuration error: No default configuration found.", flush=True)
+                print("Run 'massgen --init' to create one, or use 'massgen --model MODEL \"question\"'", flush=True)
+                sys.exit(1)
+            # No question and no config - wizard will be triggered in cli_main()
+            return
+
+    # Validate arguments (only if we didn't auto-set config above)
     if not args.backend:
         if not args.model and not args.config:
-            print("❌ Configuration error: If there is not --backend, either --config or --model must be specified", flush=True)
+            print("❌ Configuration error: Either --config, --model, or --backend must be specified", flush=True)
             sys.exit(1)
 
     try:

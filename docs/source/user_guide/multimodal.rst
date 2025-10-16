@@ -1,21 +1,40 @@
 Multimodal Capabilities
 =======================
 
-MassGen supports multimodal AI workflows, enabling agents to work with images and other visual content. This includes image generation, image understanding, and file-based interactions.
+MassGen supports comprehensive multimodal AI workflows, enabling agents to work with images, audio, and video content. This includes generation (creating new content), understanding (analyzing existing content), and file-based interactions.
 
 .. note::
 
-   Multimodal support was introduced in **v0.0.27** and is currently available through OpenAI backends (GPT-4o, GPT-5-nano).
+   **Multimodal Timeline:**
+
+   * **v0.0.27**: Image generation and understanding
+   * **v0.0.30**: Audio and video understanding
+   * **v0.0.31**: Audio generation (text-to-speech, transcription) and video generation (Sora-2)
 
 Overview
 --------
 
-Multimodal capabilities extend MassGen's multi-agent collaboration to visual tasks:
+Multimodal capabilities extend MassGen's multi-agent collaboration across different content types:
 
-* **Image Generation**: Create images from text descriptions
-* **Image Understanding**: Analyze and describe image content
-* **File Upload and Search**: Work with documents and visual files
-* **Multimodal MCP Tools**: Read images as base64 data for processing
+**Image Capabilities:**
+
+* **Generation**: Create images from text descriptions (DALL-E, Imagen)
+* **Understanding**: Analyze and describe image content (Vision models)
+
+**Audio Capabilities:**
+
+* **Generation**: Text-to-speech, audio synthesis
+* **Understanding**: Transcription, audio analysis
+
+**Video Capabilities:**
+
+* **Generation**: Create videos from text prompts (Sora-2)
+* **Understanding**: Analyze video content
+
+**File Operations:**
+
+* **Upload and Search**: Work with documents and files (RAG)
+* **MCP Tools**: Read multimodal files with base64 encoding
 
 Image Generation
 ----------------
@@ -163,6 +182,180 @@ Multiple agents can provide diverse perspectives on image content:
 * Design feedback and critique
 * Scene understanding for robotics
 
+Audio Capabilities
+------------------
+
+MassGen supports both audio generation (creating speech from text) and audio understanding (transcribing and analyzing audio files).
+
+Audio Generation (Text-to-Speech)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Convert text to natural-sounding speech using OpenAI's text-to-speech models:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "audio_creator"
+       backend:
+         type: "openai"
+         model: "gpt-4o-audio-preview"
+         cwd: "workspace"
+         enable_audio_generation: true
+
+**Available Voices:**
+
+* **alloy**: Neutral, balanced voice
+* **echo**: Warm, engaging voice
+* **fable**: Expressive, storytelling voice
+* **onyx**: Deep, authoritative voice
+* **nova**: Friendly, energetic voice
+* **shimmer**: Soft, gentle voice
+* **coral**: Warm, conversational voice
+* **sage**: Calm, wise voice
+
+**Supported Formats:**
+
+* WAV, MP3, Opus, AAC, FLAC
+
+**Example Command:**
+
+.. code-block:: bash
+
+   massgen \
+     --config @examples/basic/single/single_gpt4o_audio_generation.yaml \
+     "Generate a podcast introduction with a professional tone"
+
+**Configuration Options:**
+
+.. code-block:: yaml
+
+   backend:
+     type: "openai"
+     model: "gpt-4o-audio-preview"
+     enable_audio_generation: true
+     audio_voice: "alloy"              # Choose voice
+     audio_format: "mp3"               # Output format
+     speaking_instructions: "Speak in a professional, clear tone"
+
+Audio Understanding (Transcription)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Transcribe and analyze audio files:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "transcriber"
+       backend:
+         type: "openai"
+         model: "gpt-4o"
+         upload_files:
+           - audio_path: "path/to/audio.mp3"
+
+**Supported Formats:**
+
+* MP3, MP4, M4A, WAV, WEBM
+
+**Example Use Cases:**
+
+* Meeting transcription
+* Podcast analysis
+* Voice memo processing
+* Interview transcription
+* Audio content summarization
+
+Video Capabilities
+------------------
+
+MassGen supports video generation (creating videos from text) and video understanding (analyzing video content).
+
+Video Generation
+~~~~~~~~~~~~~~~~
+
+Create videos from text descriptions using OpenAI's Sora-2 API:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "video_creator"
+       backend:
+         type: "openai"
+         model: "sora-2"
+         cwd: "workspace"
+         enable_video_generation: true
+
+**Example Command:**
+
+.. code-block:: bash
+
+   massgen \
+     --config @examples/basic/single/single_gpt4o_video_generation.yaml \
+     "Create a 10-second video of ocean waves at sunset"
+
+**Features:**
+
+* Asynchronous video generation with progress monitoring
+* Automatic MP4 format output
+* Configurable video duration
+* Workspace storage and organization
+
+**Configuration:**
+
+.. code-block:: yaml
+
+   backend:
+     type: "openai"
+     model: "sora-2"
+     enable_video_generation: true
+     video_duration: 10  # Duration in seconds
+
+Video Understanding
+~~~~~~~~~~~~~~~~~~~
+
+Analyze and extract information from video files:
+
+.. code-block:: yaml
+
+   agents:
+     - id: "video_analyzer"
+       backend:
+         type: "claude"  # or chatcompletion, qwen
+         model: "claude-sonnet-4"
+         upload_files:
+           - video_path: "path/to/video.mp4"
+
+**Supported Backends:**
+
+* Claude (Anthropic): Video understanding
+* ChatCompletion providers: Varies by provider
+* Qwen API: Video understanding support
+
+**Supported Formats:**
+
+* MP4, AVI, MOV, WEBM
+
+**Example Use Cases:**
+
+* Video content analysis
+* Scene detection and description
+* Action recognition
+* Video summarization
+* Quality assessment
+
+**Example Configuration:**
+
+.. code-block:: yaml
+
+   agents:
+     - id: "qwen_video"
+       backend:
+         type: "chatcompletion"
+         model: "qwen-vl-max"
+         base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+         api_key: "${QWEN_API_KEY}"
+         upload_files:
+           - video_path: "@examples/resources/demo_video.mp4"
+
 File Upload and Search
 ----------------------
 
@@ -293,63 +486,121 @@ Multimodal content is handled through the ``StreamChunk`` architecture:
 Supported Backends
 ------------------
 
-Multimodal capabilities vary by backend:
+Multimodal capabilities vary by backend. This table shows which backends support which multimodal features:
 
-.. list-table:: Backend Multimodal Support
+.. list-table:: Backend Multimodal Capabilities
    :header-rows: 1
-   :widths: 20 15 15 15 35
+   :widths: 15 12 12 12 12 12 12
 
    * - Backend
-     - Image Gen
-     - Image Understanding
+     - Image
+     - Audio
+     - Video
      - File Upload
+     - File Search
      - Notes
    * - ``openai``
+     - ⭐ Both
+     - ⭐ Both
+     - ⭐ Generation
      - ✅
      - ✅
-     - ✅
-     - GPT-4o, GPT-5-nano with DALL-E
+     - DALL-E, TTS, Sora-2
    * - ``claude``
+     - ✅ Understanding
+     - ✅ Understanding
+     - ✅ Understanding
+     - ✅
      - ❌
-     - ✅
-     - ✅
-     - Vision models (Sonnet, Opus)
+     - Vision models
+   * - ``claude_code``
+     - ✅ Understanding
+     - ❌
+     - ❌
+     - ⭐ Native
+     - ❌
+     - Native file tools
    * - ``gemini``
+     - ✅ Understanding
+     - ❌
      - ❌
      - ✅
-     - ✅
-     - Multimodal models (Flash, Pro)
+     - ❌
+     - Multimodal Pro/Flash
    * - ``grok``
      - ❌
+     - ❌
+     - ❌
+     - ❌
+     - ❌
+     - Limited multimodal
+   * - ``azure_openai``
+     - ⭐ Both
+     - ❌
+     - ❌
      - ✅
      - ❌
-     - Vision support in Grok-4
-   * - ``claude_code``
+     - DALL-E support
+   * - ``chatcompletion``
      - ❌
+     - ✅ Understanding
+     - ✅ Understanding
+     - ✅
      - ❌
-     - ❌
-     - File operations via MCP
+     - Provider-dependent
 
-See :doc:`backends` for complete backend capabilities.
+**Legend:**
+
+* ⭐ **Both** - Supports BOTH understanding (analyze existing) AND generation (create new)
+* ✅ **Understanding** - Can analyze/process existing content only
+* ✅ **Generation** - Can create new content only
+* ✅ **Available** - Feature supported
+* ❌ **Not available** - Feature not supported
+
+**Capability Details:**
+
+* **Image Both**: Can analyze images you provide AND generate new images (e.g., ``openai``, ``azure_openai``)
+* **Audio Both**: Can transcribe/analyze audio AND generate speech (e.g., ``openai`` with TTS)
+* **Video Generation**: Can create videos from text (e.g., ``openai`` with Sora-2)
+* **Understanding Only**: Can only analyze existing content, not create new (e.g., ``claude``, ``gemini``)
+* **Native**: Built into the backend (e.g., ``claude_code`` filesystem tools)
+
+**Provider-Specific Notes:**
+
+* **OpenAI**: Most comprehensive multimodal support (DALL-E, TTS, Sora-2)
+* **Claude**: Strong vision capabilities, audio/video understanding
+* **Gemini**: Multimodal understanding with Flash/Pro models
+* **Azure OpenAI**: Image generation/understanding via DALL-E
+* **ChatCompletion**: Varies by provider (Qwen, etc.)
+
+See :doc:`backends` for complete backend capabilities including web search, code execution, and MCP support.
 
 Configuration Examples
 ----------------------
 
 Complete configuration files are available in the MassGen repository:
 
-**Image Generation:**
+**Image:**
 
-* ``@examples/basic/single/single_gpt4o_image_generation.yaml``
-* ``@examples/basic/multi/gpt4o_image_generation.yaml``
+* ``@examples/basic/single/single_gpt4o_image_generation.yaml`` - Single agent image generation
+* ``@examples/basic/multi/gpt4o_image_generation.yaml`` - Multi-agent image generation
+* ``@examples/basic/single/single_gpt5nano_image_understanding.yaml`` - Image understanding
+* ``@examples/basic/multi/gpt5nano_image_understanding.yaml`` - Multi-agent image analysis
 
-**Image Understanding:**
+**Audio:**
 
-* ``@examples/basic/single/single_gpt5nano_image_understanding.yaml``
-* ``@examples/basic/multi/gpt5nano_image_understanding.yaml``
+* ``@examples/basic/single/single_gpt4o_audio_generation.yaml`` - Text-to-speech generation
+* ``@examples/basic/multi/gpt4o_audio_generation.yaml`` - Multi-agent audio generation
+* ``@examples/basic/single/single_openrouter_audio_understanding.yaml`` - Audio transcription
 
-**File Search:**
+**Video:**
 
-* ``@examples/basic/single/single_gpt5nano_file_search.yaml``
+* ``@examples/basic/single/single_gpt4o_video_generation.yaml`` - Video generation with Sora-2
+* ``@examples/basic/single/single_qwen_video_understanding.yaml`` - Video analysis with Qwen
+
+**File Operations:**
+
+* ``@examples/basic/single/single_gpt5nano_file_search.yaml`` - Document Q&A with file search
 
 Browse all examples in the `Configuration README <https://github.com/Leezekun/MassGen/blob/main/@examples/README.md>`_.
 
@@ -358,10 +609,11 @@ Best Practices
 
 1. **Image Generation**
 
-   * Use descriptive, detailed prompts
+   * Use descriptive, detailed prompts with style and mood
    * Leverage multiple agents for prompt refinement
-   * Specify style, mood, and composition clearly
+   * Specify composition, lighting, and artistic style clearly
    * Review generated images in agent workspaces
+   * Iterate on prompts based on results
 
 2. **Image Understanding**
 
@@ -369,94 +621,176 @@ Best Practices
    * Ask specific questions about image content
    * Use multi-agent collaboration for diverse perspectives
    * Combine with web search for contextual information
+   * Specify aspect ratio and resolution when needed
 
-3. **File Upload and Search**
+3. **Audio Generation**
+
+   * Choose appropriate voice for your use case (professional, friendly, etc.)
+   * Use ``speaking_instructions`` to control tone and style
+   * Select optimal audio format (MP3 for general use, WAV for high quality)
+   * Test different voices to find the best match
+   * Review generated audio in workspaces
+
+4. **Audio Understanding**
+
+   * Use clear, high-quality audio recordings
+   * Supported formats: MP3, WAV, M4A, WEBM
+   * Combine transcription with analysis tasks
+   * Ask specific questions about audio content
+   * Monitor file size limits (default 64MB)
+
+5. **Video Generation**
+
+   * Write detailed scene descriptions with action and movement
+   * Specify duration (typically 5-10 seconds for Sora-2)
+   * Be patient - video generation is asynchronous
+   * Review generated videos in MP4 format
+   * Iterate on prompts for better results
+
+6. **Video Understanding**
+
+   * Upload clear, well-lit videos
+   * Supported formats: MP4, AVI, MOV, WEBM
+   * Ask about specific scenes, actions, or content
+   * Use appropriate backends (Claude, Qwen for video)
+   * Monitor file size limits
+
+7. **File Upload and Search**
 
    * Organize files logically before upload
    * Use vector store search for large document collections
    * Clean up uploaded files after processing
-   * Monitor API costs for file storage
+   * Monitor API costs for file storage and search
+   * Test file paths before deployment
 
-4. **Workspace Management**
+8. **Workspace Management**
 
    * Configure ``cwd`` for organized file storage
    * Use ``snapshot_storage`` for agent collaboration
    * Review generated/analyzed content in workspaces
    * Include ``.massgen/`` in ``.gitignore``
+   * Clean up old workspaces periodically
 
 Troubleshooting
 ---------------
 
-**Image generation not working:**
+**Image Issues:**
 
-Ensure ``enable_image_generation: true`` in backend configuration:
+* **Image generation not working:** Ensure ``enable_image_generation: true`` in backend configuration
 
-.. code-block:: yaml
+  .. code-block:: yaml
 
-   backend:
-     type: "openai"
-     model: "gpt-4o"
-     enable_image_generation: true  # Required for DALL-E
+     backend:
+       type: "openai"
+       model: "gpt-4o"
+       enable_image_generation: true  # Required for DALL-E
 
-**Image upload fails:**
+* **Image upload fails:** Verify image path is correct and accessible. Use absolute paths or paths relative to execution directory.
 
-Verify image path is correct and accessible:
+**Audio Issues:**
 
-.. code-block:: yaml
+* **Audio generation fails:** Ensure you're using a supported model (``gpt-4o-audio-preview``) with ``enable_audio_generation: true``
 
-   upload_files:
-     - image_path: "absolute/path/to/image.jpg"  # Use absolute paths
+  .. code-block:: yaml
 
-**File not found in workspace:**
+     backend:
+       type: "openai"
+       model: "gpt-4o-audio-preview"
+       enable_audio_generation: true
+       audio_voice: "alloy"  # Choose from available voices
 
-Check agent's ``cwd`` configuration:
+* **Audio file too large:** Check file size limits (default 64MB). Configure with ``media_max_file_size_mb``
 
-.. code-block:: yaml
+  .. code-block:: yaml
 
-   backend:
-     cwd: "workspace1"  # Files stored in .massgen/workspaces/workspace1/
+     backend:
+       type: "openai"
+       media_max_file_size_mb: 100  # Increase limit if needed
 
-**Vector store errors:**
+* **Unsupported audio format:** Use MP3, WAV, M4A, or WEBM formats
 
-Enable file search explicitly:
+**Video Issues:**
 
-.. code-block:: yaml
+* **Video generation slow:** Video generation is asynchronous and can take several minutes. Monitor progress in logs.
 
-   backend:
-     type: "openai"
-     model: "gpt-5-nano"
-     enable_file_search: true
+* **Video understanding not working:** Ensure you're using a supported backend (Claude, Qwen) with video capabilities
+
+  .. code-block:: yaml
+
+     backend:
+       type: "claude"
+       model: "claude-sonnet-4"
+       upload_files:
+         - video_path: "path/to/video.mp4"
+
+* **Video file too large:** Check file size limits. Videos should typically be under 64MB.
+
+**General File Issues:**
+
+* **File not found in workspace:** Check agent's ``cwd`` configuration
+
+  .. code-block:: yaml
+
+     backend:
+       cwd: "workspace1"  # Files stored in .massgen/workspaces/workspace1/
+
+* **Vector store errors:** Enable file search explicitly
+
+  .. code-block:: yaml
+
+     backend:
+       type: "openai"
+       model: "gpt-5-nano"
+       enable_file_search: true
+
+* **Permission errors:** Ensure files are readable and paths are accessible
+
+**API Cost Issues:**
+
+* Monitor multimodal API usage carefully - image/audio/video generation can be expensive
+* Clean up uploaded files and vector stores after use
+* Use appropriate file sizes and durations to control costs
 
 Use Cases
 ---------
 
-**Creative Design:**
+**Image Use Cases:**
 
-* Logo generation with multi-agent refinement
-* Marketing asset creation
-* Visual concept exploration
-* Design iteration and feedback
+* **Creative Design**: Logo generation, marketing assets, visual concept exploration
+* **Document Analysis**: PDF Q&A, scanned form understanding, chart analysis
+* **Content Creation**: Image descriptions for accessibility, social media content
+* **Research**: Scientific image analysis, medical imaging, visual data extraction
 
-**Document Analysis:**
+**Audio Use Cases:**
 
-* PDF document Q&A with file search
-* Visual document understanding (scanned forms, receipts)
-* Chart and diagram analysis
-* Multi-document comparison
+* **Content Creation**: Podcast generation, audiobook narration, voiceover production
+* **Transcription**: Meeting notes, interview transcription, voice memo processing
+* **Accessibility**: Text-to-speech for visually impaired, audio descriptions
+* **Language Learning**: Pronunciation practice, language tutorials, conversation practice
+* **Customer Service**: IVR systems, automated responses, customer support audio
 
-**Content Creation:**
+**Video Use Cases:**
 
-* Image description for accessibility
-* Visual storytelling with generated images
-* Social media content generation
-* Educational material creation
+* **Marketing**: Product demonstrations, explainer videos, social media content
+* **Education**: Tutorial videos, educational content, training materials
+* **Entertainment**: Short-form content creation, video concepts, storyboarding
+* **Analysis**: Video content summarization, scene detection, quality assessment
+* **Security**: Surveillance analysis, incident review, activity recognition
 
-**Research and Analysis:**
+**Multi-Modal Workflows:**
 
-* Scientific image analysis
-* Medical imaging interpretation (with appropriate models)
-* Visual data extraction
-* Comparative visual analysis
+* **Podcast Production**: Generate script → Text-to-speech → Audio editing workflow
+* **Video Marketing**: Generate storyboard image → Create video → Add voiceover
+* **Document Processing**: Scan document → OCR with vision → Generate audio summary
+* **Educational Content**: Create visual aids → Generate explanation videos → Add narration
+* **Accessibility**: Take image → Generate description → Convert to speech
+
+**Enterprise Applications:**
+
+* **Documentation**: Convert technical docs to multimedia formats
+* **Training**: Create multi-modal training materials automatically
+* **Marketing**: Generate coordinated image, audio, and video campaigns
+* **Customer Support**: Multi-modal knowledge base with images, videos, and audio guides
 
 Next Steps
 ----------
