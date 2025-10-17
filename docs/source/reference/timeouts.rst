@@ -58,7 +58,7 @@ Override timeout for a single run:
    uv run python -m massgen.cli \
      --orchestrator-timeout 300 \
      --config config.yaml \
-     "What is 2+2?"
+     "What are LLM agents?"
 
    # Longer timeout for complex research
    uv run python -m massgen.cli \

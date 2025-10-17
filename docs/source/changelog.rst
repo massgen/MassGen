@@ -1,12 +1,6 @@
 Changelog
 =========
 
-.. note::
-
-   **Primary Source:** This page includes content from the root `CHANGELOG.md <https://github.com/Leezekun/MassGen/blob/main/CHANGELOG.md>`_ file, which is the authoritative source for all MassGen release history.
-
-This changelog follows the `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_ format and adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
-
 Full Changelog
 --------------
 
@@ -23,3 +17,9 @@ See Also
 ---
 
 *Last synced with CHANGELOG.md: October 2025*
+
+.. note::
+
+   **Primary Source:** This page includes content from the root `CHANGELOG.md <https://github.com/Leezekun/MassGen/blob/main/CHANGELOG.md>`_ file, which is the authoritative source for all MassGen release history.
+
+This changelog follows the `Keep a Changelog <https://keepachangelog.com/en/1.0.0/>`_ format and adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.

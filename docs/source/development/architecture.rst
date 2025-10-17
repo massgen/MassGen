@@ -265,7 +265,7 @@ Supported Backends:
 
 * **API-based**: OpenAI, Claude, Gemini, Grok, Azure OpenAI
 * **Local**: LM Studio, vLLM, SGLang
-* **External**: AG2 (AutoGen) framework agents
+* **External**: AG2 framework agents
 * **Custom**: Claude Code CLI with filesystem access
 
 Implementation: ``massgen/backend/``

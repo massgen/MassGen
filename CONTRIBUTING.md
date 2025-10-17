@@ -88,6 +88,119 @@ To add support for a new model provider:
 6. Add tests in `massgen/tests/`
 7. Update documentation
 
+## 🔒 API Stability & Versioning
+
+MassGen is currently in **Beta** (v0.1.x). We're rapidly iterating on features and patterns. Here's what you can depend on:
+
+### Stability Levels
+
+**🟢 Stable - We Maintain Backward Compatibility**
+
+- **CLI Command**: `massgen` executable and basic invocation patterns
+  - `massgen --config <path>` will continue to work
+  - Standard flags like `--help`, `--version`
+  - Exit codes and basic output format
+
+- **Core YAML Configuration Schema**: Basic structure for defining agents and running them
+  - Top-level keys: `agents`, `orchestrator`, `providers`
+  - Agent definition fields: `name`, `backend`, `system_prompt`
+  - Model provider configuration structure
+  - **Guarantee**: New fields may be added with sensible defaults. Breaking changes to existing fields require major version bump and migration guides.
+
+**🟡 Experimental - Evolving Rapidly, May Change**
+
+- **Orchestration & Coordination**: Agent coordination mechanisms and voting systems
+  - Binary decision framework with voting tools
+  - Planning mode vs execution mode
+  - Coordination configuration and agent selection logic
+  - New coordination patterns being explored
+
+- **Backend Implementations**: Individual model provider adapters
+  - Provider-specific settings and capabilities
+  - Tool/MCP integration per backend
+  - Multimodal support varies by provider
+
+- **Advanced YAML Features**:
+  - Memory module configuration
+  - Tool system configuration
+  - MCP server setup and permissions
+  - Multi-turn conversation settings
+
+- **Python Library API**: Internal APIs not yet released for public use
+  - Use CLI + YAML for production workflows
+  - Python API stability coming in future releases
+
+- **Multimodal Support**: Image, audio, video processing
+  - Backend capabilities evolving
+  - Configuration schema may change
+
+- **Web UI**: Visual interface (v0.1.x - v0.2.x)
+  - Rapid iteration and design changes
+
+**🔴 Deprecated - Will Be Removed**
+
+- **`v1/` directory**: Legacy code from version 1
+  - Scheduled for removal in v1.0.0
+  - Don't add features or dependencies on this code
+
+### What This Means for Contributors
+
+**When contributing to stable areas:**
+- Breaking changes require team discussion and RFC
+- Must provide deprecation warnings 2+ releases (1 week) in advance
+- Update migration documentation in CHANGELOG.md
+
+**When contributing to experimental areas:**
+- Coordinate with track owners in [ROADMAP.md](ROADMAP.md) before major changes
+- Document that features are experimental in user-facing docs
+- Breaking changes allowed but should be documented
+
+**When working with deprecated code:**
+- No new features should be added
+- Migrations and cleanup PRs welcome
+- Help users migrate to new patterns
+
+### Version Policy
+
+**Current (v0.1.x)**:
+- Minor breaking changes allowed for experimental features
+- Migration guides provided in CHANGELOG.md for any breaking changes
+- CLI and core YAML schema remain backward compatible
+
+**Future (v0.2.x+)**:
+- More features graduate to stable
+- Deprecation warnings before all removals
+- Broader stability guarantees
+
+**v1.0.0 and beyond**:
+- Full stability commitment for public APIs
+- Semantic versioning strictly enforced
+- Clear upgrade paths for all breaking changes
+
+### Examples
+
+**Stable - These will keep working:**
+```yaml
+# Basic agent configuration
+agents:
+  - name: researcher
+    backend: openai/gpt-4
+    system_prompt: "You are a research assistant"
+```
+
+**Experimental - May change:**
+```yaml
+# Orchestration patterns (structure evolving)
+orchestrator:
+  pattern: round-robin  # Pattern names/behavior may change
+  max_rounds: 3
+
+# Memory configuration (schema evolving)
+memory:
+  enabled: true
+  provider: mem0
+```
+
 ## 📋 Prerequisites
 
 - Python 3.11 or higher

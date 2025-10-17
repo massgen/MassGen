@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
+from rich.table import Table
 from rich.theme import Theme
 
 from massgen.backend.capabilities import BACKEND_CAPABILITIES, get_capabilities
@@ -29,14 +30,14 @@ from massgen.backend.capabilities import BACKEND_CAPABILITIES, get_capabilities
 # Load environment variables
 load_dotenv()
 
-# Custom theme for the CLI
+# Custom theme for the CLI - using colors that work on both light and dark backgrounds
 custom_theme = Theme(
     {
-        "info": "cyan",
-        "warning": "yellow",
-        "error": "red bold",
-        "success": "green bold",
-        "prompt": "blue bold",
+        "info": "bright_blue",
+        "warning": "bright_yellow",
+        "error": "bright_red bold",
+        "success": "bright_green bold",
+        "prompt": "bright_magenta bold",
     },
 )
 
@@ -132,11 +133,11 @@ class ConfigBuilder:
         },
         "qa": {
             "name": "Simple Q&A",
-            "description": "Basic question answering",
-            "recommended_agents": 1,
+            "description": "Basic question answering with multiple perspectives",
+            "recommended_agents": 3,
             "recommended_tools": [],
             "agent_types": "all",
-            "notes": "Start simple with 1 agent, add more for diverse perspectives",
+            "notes": "Multiple agents provide diverse perspectives and cross-verification",
             "info": None,  # No special features - skip preset panel
         },
         "research": {
@@ -158,15 +159,6 @@ class ConfigBuilder:
     • Cross-verification of facts and sources
 
 [dim]Use this for:[/dim] Research queries, current events, fact-checking, comparative analysis.""",
-        },
-        "creative": {
-            "name": "Creative Writing",
-            "description": "Collaborative creative content generation",
-            "recommended_agents": 3,
-            "recommended_tools": [],
-            "agent_types": "all",
-            "notes": "Multiple agents provide diverse creative perspectives",
-            "info": None,  # No special features - skip preset panel
         },
         "data_analysis": {
             "name": "Data Analysis",
@@ -193,26 +185,6 @@ class ConfigBuilder:
 
 [dim]Use this for:[/dim] Data analysis, chart interpretation, statistical processing, visualization.""",
         },
-        "reasoning": {
-            "name": "Deep Reasoning & Problem Solving",
-            "description": "Complex problem solving with extended thinking time",
-            "recommended_agents": 1,
-            "recommended_tools": ["reasoning", "web_search"],
-            "agent_types": "all",
-            "notes": "Best with OpenAI o-series or GPT-5 models",
-            "info": """[bold cyan]Features auto-configured for this preset:[/bold cyan]
-
-  [green]✓[/green] [bold]Extended Reasoning[/bold]
-    • Deep thinking for complex problems
-    • Chain-of-thought reasoning
-    • Available for: OpenAI GPT-5, o4, o4-mini models
-
-  [green]✓[/green] [bold]Web Search[/bold]
-    • Real-time information retrieval
-    • Fact verification during reasoning
-
-[dim]Use this for:[/dim] Complex problem solving, mathematical proofs, logic puzzles, strategic planning.""",
-        },
         "multimodal": {
             "name": "Multimodal Analysis",
             "description": "Analyze images, audio, and video content",
@@ -237,26 +209,6 @@ class ConfigBuilder:
 
 [dim]Use this for:[/dim] Image analysis, screenshot interpretation, multimedia content analysis.""",
         },
-        "web_automation": {
-            "name": "Web Automation",
-            "description": "Browser automation and web scraping with MCP",
-            "recommended_agents": 2,
-            "recommended_tools": ["mcp", "filesystem"],
-            "agent_types": "all",
-            "notes": "MCP servers provide browser automation capabilities",
-            "info": """[bold cyan]Features configured for this preset:[/bold cyan]
-
-  [yellow]⚠[/yellow] [bold]MCP Servers (Manual Setup Required)[/bold]
-    • Browser automation (Playwright MCP)
-    • Web scraping
-    • Screenshot capture
-
-  [green]✓[/green] [bold]Filesystem Access[/bold]
-    • Save scraped data and screenshots
-
-[yellow]Note:[/yellow] You'll need to manually configure MCP servers during agent setup.
-[dim]Use this for:[/dim] Web scraping, browser automation, screenshot capture, form filling.""",
-        },
     }
 
     def __init__(self, default_mode: bool = False) -> None:
@@ -276,19 +228,75 @@ class ConfigBuilder:
         self.default_mode = default_mode
 
     def show_banner(self) -> None:
-        """Display welcome banner."""
-        banner = """
-╔═══════════════════════════════════════════════════════════════╗
-║                                                               ║
-║       🚀  MassGen Interactive Configuration Builder  🚀       ║
-║                                                               ║
-║     Create custom multi-agent configurations in minutes!     ║
-║                                                               ║
-╚═══════════════════════════════════════════════════════════════╝
+        """Display welcome banner using Rich Panel."""
+        # Clear screen
+        console.clear()
+
+        # ASCII art for multi-agent coordination
+        ascii_art = """[bold cyan]
+    ███╗   ███╗ █████╗ ███████╗███████╗ ██████╗ ███████╗███╗   ██╗
+    ████╗ ████║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔════╝████╗  ██║
+    ██╔████╔██║███████║███████╗███████╗██║  ███╗█████╗  ██╔██╗ ██║
+    ██║╚██╔╝██║██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║
+    ██║ ╚═╝ ██║██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║
+    ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝[/bold cyan]
+
+[dim]         🤖 ──▶ 🤖           [bold]Multi-Agent Coordination[/bold]
+         │     ╱
+         ▼    ▼
+         🤖 ◀──[/dim]
+"""
+
+        banner_content = f"""{ascii_art}
+[bold bright_cyan]Interactive Configuration Builder[/bold bright_cyan]
+[dim]Create custom multi-agent configurations in minutes![/dim]"""
+
+        banner_panel = Panel(
+            banner_content,
+            border_style="bold cyan",
+            padding=(0, 2),
+            width=80,
+        )
+
+        console.print(banner_panel)
+        console.print()
+
+    def _calculate_visible_length(self, text: str) -> int:
+        """Calculate visible length of text, excluding Rich markup tags."""
+        import re
+
+        # Remove all Rich markup tags like [bold], [/bold], [dim cyan], etc.
+        visible_text = re.sub(r"\[/?[^\]]+\]", "", text)
+        return len(visible_text)
+
+    def _pad_with_markup(self, text: str, target_width: int) -> str:
+        """Pad text to target width, accounting for Rich markup."""
+        visible_len = self._calculate_visible_length(text)
+        padding_needed = target_width - visible_len
+        return text + (" " * padding_needed if padding_needed > 0 else "")
+
+    def _safe_prompt(self, prompt_func, error_msg: str = "Selection cancelled"):
+        """Wrapper for questionary prompts with graceful exit handling.
+
+        Args:
+            prompt_func: The questionary prompt function to call
+            error_msg: Error message to show if cancelled
+
+        Returns:
+            The result from the prompt, or raises KeyboardInterrupt if cancelled
+
+        Raises:
+            KeyboardInterrupt: If user cancels (Ctrl+C or returns None)
         """
-        console.print(banner, style="bold cyan")
-        console.print()
-        console.print()
+        try:
+            result = prompt_func()
+            if result is None:
+                # User pressed Ctrl+C or Esc - treat as cancellation
+                raise KeyboardInterrupt
+            return result
+        except (KeyboardInterrupt, EOFError):
+            # Re-raise to be handled by caller
+            raise
 
     def detect_api_keys(self) -> Dict[str, bool]:
         """Detect available API keys from environment with error handling."""
@@ -314,78 +322,70 @@ class ConfigBuilder:
         self,
         api_keys: Dict[str, bool],
     ) -> None:
-        """Display providers in improved format with error handling."""
+        """Display providers in a clean Rich table."""
         try:
-            # Use a reasonable max width for better readability
-            max_width = min(console.width - 8, 100)  # Cap at 100 chars for readability
+            # Create Rich table
+            table = Table(
+                title="[bold cyan]Available Providers[/bold cyan]",
+                show_header=True,
+                header_style="bold cyan",
+                border_style="cyan",
+                title_style="bold cyan",
+                expand=False,  # Don't expand to full width
+                padding=(0, 1),  # Padding around cells
+            )
 
-            console.print()
-            console.print()
-            console.print("╔" + "═" * max_width + "╗")
-            console.print("║" + " " * max_width + "║")
-            console.print("║  " + "[bold cyan]Available Providers[/bold cyan]".ljust(max_width - 2) + "║")
-            console.print("║" + " " * max_width + "║")
-            console.print("╠" + "═" * max_width + "╣")
-            console.print("║" + " " * max_width + "║")
+            # Add columns
+            table.add_column("", justify="center", width=3, no_wrap=True)  # Status icon
+            table.add_column("Provider", style="bold", min_width=20)
+            table.add_column("Models", style="dim", min_width=25)
+            table.add_column("Capabilities", style="dim cyan", min_width=20)
 
+            # Add rows for each provider
             for provider_id, provider_info in self.PROVIDERS.items():
                 try:
                     has_key = api_keys.get(provider_id, False)
                     status = "✅" if has_key else "❌"
                     name = provider_info.get("name", "Unknown")
 
-                    # Main line with status and name
-                    name_line = f"  {status}  [bold]{name}[/bold]"
-                    console.print("║" + name_line.ljust(max_width + 9) + "║")
-
-                    console.print("║" + " " * max_width + "║")
-
-                    # Models line
+                    # Models (first 2)
                     models = provider_info.get("models", [])
-                    models_display = ", ".join(models[:3])
-                    if len(models) > 3:
-                        models_display += f" (+{len(models)-3} more)"
+                    models_display = ", ".join(models[:2])
+                    if len(models) > 2:
+                        models_display += f" +{len(models)-2}"
 
-                    # Wrap models if too long
-                    max_content_width = max_width - 12
-                    if len(models_display) > max_content_width:
-                        models_display = models_display[: max_content_width - 3] + "..."
+                    # Capabilities (abbreviated, first 3)
+                    caps = provider_info.get("supports", [])
+                    cap_abbrev = {
+                        "web_search": "web",
+                        "code_execution": "code",
+                        "filesystem": "files",
+                        "image_understanding": "img",
+                        "reasoning": "reason",
+                        "mcp": "mcp",
+                        "audio_understanding": "audio",
+                        "video_understanding": "video",
+                    }
+                    caps_display = ", ".join([cap_abbrev.get(c, c[:4]) for c in caps[:3]])
+                    if len(caps) > 3:
+                        caps_display += f" +{len(caps)-3}"
 
-                    models_line = f"      [dim]{models_display}[/dim]"
-                    console.print("║" + models_line.ljust(max_width + 9) + "║")
-                    console.print("║" + " " * max_width + "║")
-
-                    # Capabilities line
-                    if provider_info.get("supports"):
-                        caps = "Supports: " + ", ".join(provider_info["supports"])
-                        # Wrap caps if too long
-                        if len(caps) > max_content_width:
-                            caps = caps[: max_content_width - 3] + "..."
-                        caps_line = f"      [dim cyan]{caps}[/dim cyan]"
-                        console.print("║" + caps_line.ljust(max_width + 14) + "║")
-                    elif has_key:
-                        basic_line = "      [dim]Basic text generation[/dim]"
-                        console.print("║" + basic_line.ljust(max_width + 9) + "║")
-
-                    # API key hint if missing
-                    if not has_key and provider_info.get("env_var"):
-                        key_line = f"      [yellow]Need: {provider_info['env_var']}[/yellow]"
-                        console.print("║" + " " * max_width + "║")
-                        console.print("║" + key_line.ljust(max_width + 16) + "║")
-
-                    console.print("║" + " " * max_width + "║")
-                    console.print("║" + " " * max_width + "║")
+                    # Add row
+                    if has_key:
+                        table.add_row(status, name, models_display, caps_display or "basic")
+                    else:
+                        # For missing keys, add env var hint
+                        env_var = provider_info.get("env_var", "")
+                        name_with_hint = f"{name}\n[yellow]Need: {env_var}[/yellow]"
+                        table.add_row(status, name_with_hint, models_display, caps_display or "basic")
 
                 except Exception as e:
-                    console.print(f"║  [warning]⚠️  Could not display {provider_id}: {e}[/warning]" + " " * 20 + "║")
-                    console.print("║" + " " * max_width + "║")
+                    console.print(f"[warning]⚠️ Could not display {provider_id}: {e}[/warning]")
 
-            console.print("╚" + "═" * max_width + "╝")
-            console.print()
-            console.print()
-            console.print("💡 [dim]Tip: Set API keys in ~/.config/massgen/.env or ~/.massgen/.env[/dim]")
-            console.print()
-            console.print()
+            # Display the table
+            console.print(table)
+            console.print("\n💡 [dim]Tip: Set API keys in ~/.config/massgen/.env or ~/.massgen/.env[/dim]\n")
+
         except Exception as e:
             console.print(f"[error]❌ Error displaying providers: {e}[/error]")
             console.print("[info]Continuing with setup...[/info]\n")
@@ -393,28 +393,38 @@ class ConfigBuilder:
     def select_use_case(self) -> str:
         """Let user select a use case template with error handling."""
         try:
-            console.print()
-            console.print()
-            sep_width = min(console.width - 8, 80)
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[bold cyan]  Step 1 of 4: Select Your Use Case[/bold cyan]")
-            console.print()
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[italic dim]  All agent types are supported for every use case[/italic dim]")
+            # Step header
+            step_panel = Panel(
+                "[bold cyan]Step 1 of 4: Select Your Use Case[/bold cyan]\n\n[italic dim]All agent types are supported for every use case[/italic dim]",
+                border_style="cyan",
+                padding=(0, 2),
+                width=80,
+            )
+            console.print(step_panel)
             console.print()
 
-            # Build choices for questionary
+            # Build choices for questionary - organized with tool hints
             choices = []
-            for use_case_id, use_case_info in self.USE_CASES.items():
-                try:
-                    name = use_case_info.get("name", "Unknown")
-                    description = use_case_info.get("description", "")
-                    use_case_info.get("recommended_agents", 1)
 
-                    # Create display string with name and description (no truncation)
-                    display = f"{name} - {description}"
+            # Define display with brief tool descriptions
+            display_info = [
+                ("custom", "⚙️", "Custom Configuration", "Choose your own tools"),
+                ("qa", "💬", "Simple Q&A", "Basic chat (no special tools)"),
+                ("research", "🔍", "Research & Analysis", "Web search enabled"),
+                ("coding", "💻", "Code & Files", "File ops + code execution"),
+                ("coding_docker", "🐳", "Code & Files (Docker)", "File ops + isolated Docker execution"),
+                ("data_analysis", "📊", "Data Analysis", "Files + code + image analysis"),
+                ("multimodal", "🎨", "Multimodal Analysis", "Images, audio, video understanding"),
+            ]
+
+            for use_case_id, emoji, name, tools_hint in display_info:
+                try:
+                    use_case_info = self.USE_CASES.get(use_case_id)
+                    if not use_case_info:
+                        continue
+
+                    # Show name with tools hint
+                    display = f"{emoji}  {name:<30} [{tools_hint}]"
 
                     choices.append(
                         questionary.Choice(
@@ -424,6 +434,10 @@ class ConfigBuilder:
                     )
                 except Exception as e:
                     console.print(f"[warning]⚠️  Could not display use case: {e}[/warning]")
+
+            # Add helpful context before the prompt
+            console.print("[dim]Choose a preset that matches your task. Each preset auto-configures tools and capabilities.[/dim]")
+            console.print("[dim]You can customize everything in later steps.[/dim]\n")
 
             use_case_id = questionary.select(
                 "Select your use case:",
@@ -438,25 +452,26 @@ class ConfigBuilder:
                 use_arrow_keys=True,
             ).ask()
 
-            if not use_case_id:
-                return "qa"  # Default if cancelled
+            if use_case_id is None:
+                raise KeyboardInterrupt  # User cancelled, exit immediately
 
-            console.print(f"\n✅ Selected: [green]{self.USE_CASES[use_case_id].get('name', use_case_id)}[/green]\n")
+            # Show selection with description
+            selected_info = self.USE_CASES[use_case_id]
+            console.print(f"\n✅ Selected: [green]{selected_info.get('name', use_case_id)}[/green]")
+            console.print(f"   [dim]{selected_info.get('description', '')}[/dim]")
+            console.print(f"   [dim cyan]→ Recommended: {selected_info.get('recommended_agents', 1)} agent(s)[/dim cyan]\n")
 
             # Show preset information (only if there are special features)
             use_case_details = self.USE_CASES[use_case_id]
             if use_case_details.get("info"):
-                # Use wider panel - aim for 80% of screen width or 100 chars max
-                panel_width = min(int(console.width * 0.8), 100)
-                console.print(
-                    Panel(
-                        use_case_details['info'],
-                        border_style="cyan",
-                        title="[bold]Preset Configuration[/bold]",
-                        width=panel_width,
-                        padding=(1, 2),
-                    ),
+                preset_panel = Panel(
+                    use_case_details["info"],
+                    border_style="cyan",
+                    title="[bold]Preset Configuration[/bold]",
+                    width=80,
+                    padding=(1, 2),
                 )
+                console.print(preset_panel)
                 console.print()
 
             return use_case_id
@@ -624,7 +639,7 @@ class ConfigBuilder:
             if "_" in new_id and len(new_id) > 0:
                 agent_letter = new_id.split("_")[-1]
                 if len(agent_letter) == 1 and agent_letter.isalpha():
-                    agent_num = ord(agent_letter.lower()) - ord('a') + 1
+                    agent_num = ord(agent_letter.lower()) - ord("a") + 1
                     cloned["backend"]["cwd"] = f"workspace{agent_num}"
 
         return cloned
@@ -665,11 +680,13 @@ class ConfigBuilder:
                     questionary.Choice("Filesystem settings", value="filesystem"),
                     questionary.Choice("MCP servers", value="mcp"),
                 ],
-                style=questionary.Style([
-                    ("selected", "fg:cyan"),
-                    ("pointer", "fg:cyan bold"),
-                    ("highlighted", "fg:cyan"),
-                ]),
+                style=questionary.Style(
+                    [
+                        ("selected", "fg:cyan"),
+                        ("pointer", "fg:cyan bold"),
+                        ("highlighted", "fg:cyan"),
+                    ],
+                ),
                 use_arrow_keys=True,
             ).ask()
 
@@ -694,11 +711,13 @@ class ConfigBuilder:
                         f"Select model for {agent['id']}:",
                         choices=model_choices,
                         default=current_model,
-                        style=questionary.Style([
-                            ("selected", "fg:cyan bold"),
-                            ("pointer", "fg:cyan bold"),
-                            ("highlighted", "fg:cyan"),
-                        ]),
+                        style=questionary.Style(
+                            [
+                                ("selected", "fg:cyan bold"),
+                                ("pointer", "fg:cyan bold"),
+                                ("highlighted", "fg:cyan"),
+                            ],
+                        ),
                         use_arrow_keys=True,
                     ).ask()
 
@@ -721,26 +740,28 @@ class ConfigBuilder:
                     tool_choices = []
                     if "web_search" in builtin_tools:
                         tool_choices.append(
-                            questionary.Choice("Web Search", value="web_search", checked="web_search" in current_tools)
+                            questionary.Choice("Web Search", value="web_search", checked="web_search" in current_tools),
                         )
                     if "code_execution" in builtin_tools:
                         tool_choices.append(
-                            questionary.Choice("Code Execution", value="code_execution", checked="code_execution" in current_tools)
+                            questionary.Choice("Code Execution", value="code_execution", checked="code_execution" in current_tools),
                         )
                     if "bash" in builtin_tools:
                         tool_choices.append(
-                            questionary.Choice("Bash/Shell", value="bash", checked="bash" in current_tools)
+                            questionary.Choice("Bash/Shell", value="bash", checked="bash" in current_tools),
                         )
 
                     if tool_choices:
                         selected_tools = questionary.checkbox(
                             "Enable built-in tools:",
                             choices=tool_choices,
-                            style=questionary.Style([
-                                ("selected", "fg:cyan"),
-                                ("pointer", "fg:cyan bold"),
-                                ("highlighted", "fg:cyan"),
-                            ]),
+                            style=questionary.Style(
+                                [
+                                    ("selected", "fg:cyan"),
+                                    ("pointer", "fg:cyan bold"),
+                                    ("highlighted", "fg:cyan"),
+                                ],
+                            ),
                             use_arrow_keys=True,
                         ).ask()
 
@@ -761,12 +782,12 @@ class ConfigBuilder:
                                 elif backend_type in ["claude", "gemini"]:
                                     agent["backend"]["enable_code_execution"] = True
 
-                        console.print(f"✅ Tools updated")
+                        console.print("✅ Tools updated")
 
             if "filesystem" in modify_choices and "filesystem" in provider_info.get("supports", []):
                 enable_fs = questionary.confirm(
                     "Enable filesystem access?",
-                    default=bool(agent["backend"].get("cwd"))
+                    default=bool(agent["backend"].get("cwd")),
                 ).ask()
 
                 if enable_fs:
@@ -914,7 +935,7 @@ class ConfigBuilder:
                 current_model = agent["backend"].get("model")
                 panel_content.append(f"[cyan]Current model:[/cyan] {current_model}")
 
-                console.print(Panel("\n".join(panel_content), border_style="cyan"))
+                console.print(Panel("\n".join(panel_content), border_style="cyan", width=80))
                 console.print()
 
                 model_choices = [
@@ -957,16 +978,18 @@ class ConfigBuilder:
                             questionary.Choice("High (detailed)", value="high"),
                         ],
                         default="medium",
-                        style=questionary.Style([
-                            ("selected", "fg:cyan bold"),
-                            ("pointer", "fg:cyan bold"),
-                            ("highlighted", "fg:cyan"),
-                        ]),
+                        style=questionary.Style(
+                            [
+                                ("selected", "fg:cyan bold"),
+                                ("pointer", "fg:cyan bold"),
+                                ("highlighted", "fg:cyan"),
+                            ],
+                        ),
                         use_arrow_keys=True,
                     ).ask()
 
                     agent["backend"]["text"] = {
-                        "verbosity": verbosity_choice if verbosity_choice else "medium"
+                        "verbosity": verbosity_choice if verbosity_choice else "medium",
                     }
                     console.print(f"✓ Text verbosity set to: {verbosity_choice if verbosity_choice else 'medium'}\n")
 
@@ -993,21 +1016,23 @@ class ConfigBuilder:
                                 questionary.Choice("Low (faster)", value="low"),
                             ],
                             default=default_effort,
-                            style=questionary.Style([
-                                ("selected", "fg:cyan bold"),
-                                ("pointer", "fg:cyan bold"),
-                                ("highlighted", "fg:cyan"),
-                            ]),
+                            style=questionary.Style(
+                                [
+                                    ("selected", "fg:cyan bold"),
+                                    ("pointer", "fg:cyan bold"),
+                                    ("highlighted", "fg:cyan"),
+                                ],
+                            ),
                             use_arrow_keys=True,
                         ).ask()
 
                         agent["backend"]["reasoning"] = {
                             "effort": effort_choice if effort_choice else default_effort,
-                            "summary": "auto"
+                            "summary": "auto",
                         }
                         console.print(f"✓ Reasoning effort set to: {effort_choice if effort_choice else default_effort}\n")
             else:
-                console.print(Panel("\n".join(panel_content), border_style="cyan"))
+                console.print(Panel("\n".join(panel_content), border_style="cyan", width=80))
 
             # Filesystem access (native or via MCP)
             if "filesystem" in provider_info.get("supports", []):
@@ -1154,11 +1179,13 @@ class ConfigBuilder:
                     selected_gen = questionary.checkbox(
                         "Enable generation capabilities (Space to select, Enter to confirm):",
                         choices=gen_choices,
-                        style=questionary.Style([
-                            ("selected", "fg:cyan"),
-                            ("pointer", "fg:cyan bold"),
-                            ("highlighted", "fg:cyan"),
-                        ]),
+                        style=questionary.Style(
+                            [
+                                ("selected", "fg:cyan"),
+                                ("pointer", "fg:cyan bold"),
+                                ("highlighted", "fg:cyan"),
+                            ],
+                        ),
                         use_arrow_keys=True,
                     ).ask()
 
@@ -1208,17 +1235,18 @@ class ConfigBuilder:
     def configure_agents(self, use_case: str, api_keys: Dict[str, bool]) -> List[Dict]:
         """Configure agents with batch creation and individual customization."""
         try:
+            # Step header
+            step_panel = Panel(
+                "[bold cyan]Step 2 of 4: Agent Setup[/bold cyan]\n\n[italic dim]Choose any provider(s) - all types work for your selected use case[/italic dim]",
+                border_style="cyan",
+                padding=(0, 2),
+                width=80,
+            )
+            console.print(step_panel)
             console.print()
-            console.print()
-            sep_width = min(console.width - 8, 80)
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[bold cyan]  Step 2 of 4: Agent Setup[/bold cyan]")
-            console.print()
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[italic dim]  Choose any provider(s) - all types work for your selected use case[/italic dim]")
-            console.print()
+
+            # Show available providers now (right when users need to select them)
+            self.show_available_providers(api_keys)
 
             use_case_info = self.USE_CASES.get(use_case, {})
             recommended = use_case_info.get("recommended_agents", 1)
@@ -1259,11 +1287,16 @@ class ConfigBuilder:
                     use_arrow_keys=True,
                 ).ask()
 
+                if num_agents_choice is None:
+                    raise KeyboardInterrupt  # User cancelled
+
                 if num_agents_choice == "custom":
                     num_agents_text = questionary.text(
                         "Enter number of agents:",
                         validate=lambda x: x.isdigit() and int(x) > 0,
                     ).ask()
+                    if num_agents_text is None:
+                        raise KeyboardInterrupt  # User cancelled
                     num_agents = int(num_agents_text) if num_agents_text else recommended
                 else:
                     num_agents = num_agents_choice
@@ -1309,8 +1342,8 @@ class ConfigBuilder:
                     use_arrow_keys=True,
                 ).ask()
 
-                if not provider_id:
-                    provider_id = available_providers[0]
+                if provider_id is None:
+                    raise KeyboardInterrupt  # User cancelled
 
                 agents = self.batch_create_agents(1, provider_id)
                 provider_name = self.PROVIDERS.get(provider_id, {}).get("name", provider_id)
@@ -1338,8 +1371,8 @@ class ConfigBuilder:
                     use_arrow_keys=True,
                 ).ask()
 
-                if not setup_mode:
-                    setup_mode = "same"
+                if setup_mode is None:
+                    raise KeyboardInterrupt  # User cancelled
 
                 if setup_mode == "same":
                     # Batch creation with same provider
@@ -1366,8 +1399,8 @@ class ConfigBuilder:
                         use_arrow_keys=True,
                     ).ask()
 
-                    if not provider_id:
-                        provider_id = available_providers[0]
+                    if provider_id is None:
+                        raise KeyboardInterrupt  # User cancelled
 
                     agents = self.batch_create_agents(num_agents, provider_id)
                     provider_name = self.PROVIDERS.get(provider_id, {}).get("name", provider_id)
@@ -1425,15 +1458,14 @@ class ConfigBuilder:
                 raise ValueError("Failed to configure any agents")
 
             # Step 2c: Model selection and preset application
-            console.print()
-            console.print()
-            sep_width = min(console.width - 8, 80)
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[bold cyan]  Step 3 of 4: Agent Configuration[/bold cyan]")
-            console.print()
-            console.print("━" * sep_width)
-            console.print()
+            # Step header
+            step_panel = Panel(
+                "[bold cyan]Step 3 of 4: Agent Configuration[/bold cyan]",
+                border_style="cyan",
+                padding=(0, 2),
+                width=80,
+            )
+            console.print(step_panel)
             console.print()
 
             # For non-custom presets, show info and configure models
@@ -1520,16 +1552,18 @@ class ConfigBuilder:
                                         questionary.Choice("High (detailed)", value="high"),
                                     ],
                                     default="medium",
-                                    style=questionary.Style([
-                                        ("selected", "fg:cyan bold"),
-                                        ("pointer", "fg:cyan bold"),
-                                        ("highlighted", "fg:cyan"),
-                                    ]),
+                                    style=questionary.Style(
+                                        [
+                                            ("selected", "fg:cyan bold"),
+                                            ("pointer", "fg:cyan bold"),
+                                            ("highlighted", "fg:cyan"),
+                                        ],
+                                    ),
                                     use_arrow_keys=True,
                                 ).ask()
 
                                 agent["backend"]["text"] = {
-                                    "verbosity": verbosity_choice if verbosity_choice else "medium"
+                                    "verbosity": verbosity_choice if verbosity_choice else "medium",
                                 }
                                 console.print(f"  ✓ Text verbosity: {verbosity_choice if verbosity_choice else 'medium'}\n")
 
@@ -1556,17 +1590,19 @@ class ConfigBuilder:
                                             questionary.Choice("Low", value="low"),
                                         ],
                                         default=default_effort,
-                                        style=questionary.Style([
-                                            ("selected", "fg:cyan bold"),
-                                            ("pointer", "fg:cyan bold"),
-                                            ("highlighted", "fg:cyan"),
-                                        ]),
+                                        style=questionary.Style(
+                                            [
+                                                ("selected", "fg:cyan bold"),
+                                                ("pointer", "fg:cyan bold"),
+                                                ("highlighted", "fg:cyan"),
+                                            ],
+                                        ),
                                         use_arrow_keys=True,
                                     ).ask()
 
                                     agent["backend"]["reasoning"] = {
                                         "effort": effort_choice if effort_choice else default_effort,
-                                        "summary": "auto"
+                                        "summary": "auto",
                                     }
                                     console.print(f"  ✓ Reasoning effort: {effort_choice if effort_choice else default_effort}\n")
 
@@ -1580,7 +1616,10 @@ class ConfigBuilder:
                 console.print()
 
                 # Ask if user wants additional customization
-                if Confirm.ask("\n  [prompt]Further customize agent settings (advanced)?[/prompt]", default=False):
+                customize_choice = Confirm.ask("\n  [prompt]Further customize agent settings (advanced)?[/prompt]", default=False)
+                if customize_choice is None:
+                    raise KeyboardInterrupt  # User cancelled
+                if customize_choice:
                     console.print()
                     console.print("  [cyan]Entering advanced customization...[/cyan]")
                     console.print()
@@ -1595,18 +1634,20 @@ class ConfigBuilder:
                                     questionary.Choice(f"✏️  Copy agent_{chr(ord('a') + i - 2)} and modify specific settings", value="clone_modify"),
                                     questionary.Choice("⚙️  Configure from scratch", value="scratch"),
                                 ],
-                                style=questionary.Style([
-                                    ("selected", "fg:cyan bold"),
-                                    ("pointer", "fg:cyan bold"),
-                                    ("highlighted", "fg:cyan"),
-                                ]),
+                                style=questionary.Style(
+                                    [
+                                        ("selected", "fg:cyan bold"),
+                                        ("pointer", "fg:cyan bold"),
+                                        ("highlighted", "fg:cyan"),
+                                    ],
+                                ),
                                 use_arrow_keys=True,
                             ).ask()
 
                             if clone_choice == "clone":
                                 # Clone the previous agent
                                 source_agent = agents[i - 2]
-                                agent = self.clone_agent(source_agent, agent['id'])
+                                agent = self.clone_agent(source_agent, agent["id"])
                                 agents[i - 1] = agent
                                 console.print(f"✅ Cloned configuration from agent_{chr(ord('a') + i - 2)}")
                                 console.print()
@@ -1614,7 +1655,7 @@ class ConfigBuilder:
                             elif clone_choice == "clone_modify":
                                 # Clone and selectively modify
                                 source_agent = agents[i - 2]
-                                agent = self.clone_agent(source_agent, agent['id'])
+                                agent = self.clone_agent(source_agent, agent["id"])
                                 agent = self.modify_cloned_agent(agent, i)
                                 agents[i - 1] = agent
                                 continue
@@ -1637,18 +1678,20 @@ class ConfigBuilder:
                                 questionary.Choice(f"✏️  Copy agent_{chr(ord('a') + i - 2)} and modify specific settings", value="clone_modify"),
                                 questionary.Choice("⚙️  Configure from scratch", value="scratch"),
                             ],
-                            style=questionary.Style([
-                                ("selected", "fg:cyan bold"),
-                                ("pointer", "fg:cyan bold"),
-                                ("highlighted", "fg:cyan"),
-                            ]),
+                            style=questionary.Style(
+                                [
+                                    ("selected", "fg:cyan bold"),
+                                    ("pointer", "fg:cyan bold"),
+                                    ("highlighted", "fg:cyan"),
+                                ],
+                            ),
                             use_arrow_keys=True,
                         ).ask()
 
                         if clone_choice == "clone":
                             # Clone the previous agent
                             source_agent = agents[i - 2]
-                            agent = self.clone_agent(source_agent, agent['id'])
+                            agent = self.clone_agent(source_agent, agent["id"])
                             agents[i - 1] = agent
                             console.print(f"✅ Cloned configuration from agent_{chr(ord('a') + i - 2)}")
                             console.print()
@@ -1656,7 +1699,7 @@ class ConfigBuilder:
                         elif clone_choice == "clone_modify":
                             # Clone and selectively modify
                             source_agent = agents[i - 2]
-                            agent = self.clone_agent(source_agent, agent['id'])
+                            agent = self.clone_agent(source_agent, agent["id"])
                             agent = self.modify_cloned_agent(agent, i)
                             agents[i - 1] = agent
                             continue
@@ -1676,16 +1719,14 @@ class ConfigBuilder:
     def configure_tools(self, use_case: str, agents: List[Dict]) -> Tuple[List[Dict], Dict]:
         """Configure orchestrator-level settings (tools are configured per-agent)."""
         try:
-            console.print()
-            console.print()
-            sep_width = min(console.width - 8, 80)
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[bold cyan]  Step 4 of 4: Orchestrator Configuration[/bold cyan]")
-            console.print()
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[dim]  Note: Tools and capabilities were configured per-agent in the previous step.[/dim]")
+            # Step header
+            step_panel = Panel(
+                "[bold cyan]Step 4 of 4: Orchestrator Configuration[/bold cyan]\n\n[dim]Note: Tools and capabilities were configured per-agent in the previous step.[/dim]",
+                border_style="cyan",
+                padding=(0, 2),
+                width=80,
+            )
+            console.print(step_panel)
             console.print()
 
             orchestrator_config = {}
@@ -1706,10 +1747,15 @@ class ConfigBuilder:
                 console.print("  [dim]      Write permission applies only to the final agent.[/dim]")
                 console.print()
 
-                if Confirm.ask("[prompt]Add context paths?[/prompt]", default=False):
+                add_paths = Confirm.ask("[prompt]Add context paths?[/prompt]", default=False)
+                if add_paths is None:
+                    raise KeyboardInterrupt  # User cancelled
+                if add_paths:
                     context_paths = []
                     while True:
                         path = Prompt.ask("[prompt]Enter directory or file path (or press Enter to finish)[/prompt]")
+                        if path is None:
+                            raise KeyboardInterrupt  # User cancelled
                         if not path:
                             break
 
@@ -1718,6 +1764,8 @@ class ConfigBuilder:
                             choices=["read", "write"],
                             default="write",
                         )
+                        if permission is None:
+                            raise KeyboardInterrupt  # User cancelled
 
                         context_path_entry = {
                             "path": path,
@@ -1760,7 +1808,10 @@ class ConfigBuilder:
                 console.print("  [dim]Planning Mode: Prevents MCP tool execution during coordination[/dim]")
                 console.print("  [dim](for irreversible actions like Discord/Twitter posts)[/dim]")
                 console.print()
-                if Confirm.ask("  [prompt]Enable planning mode for MCP tools?[/prompt]", default=False):
+                planning_choice = Confirm.ask("  [prompt]Enable planning mode for MCP tools?[/prompt]", default=False)
+                if planning_choice is None:
+                    raise KeyboardInterrupt  # User cancelled
+                if planning_choice:
                     orchestrator_config["coordination"] = {
                         "enable_planning_mode": True,
                     }
@@ -1779,15 +1830,14 @@ class ConfigBuilder:
     def review_and_save(self, agents: List[Dict], orchestrator_config: Dict) -> Optional[str]:
         """Review configuration and save to file with error handling."""
         try:
-            console.print()
-            console.print()
-            sep_width = min(console.width - 8, 80)
-            console.print("━" * sep_width)
-            console.print()
-            console.print("[bold green]  ✅  Review & Save Configuration[/bold green]")
-            console.print()
-            console.print("━" * sep_width)
-            console.print()
+            # Review header
+            review_panel = Panel(
+                "[bold green]✅  Review & Save Configuration[/bold green]",
+                border_style="green",
+                padding=(0, 2),
+                width=80,
+            )
+            console.print(review_panel)
             console.print()
 
             # Build final config
@@ -1797,15 +1847,23 @@ class ConfigBuilder:
 
             # Display configuration
             try:
-                console.print("[bold cyan]Generated Configuration:[/bold cyan]")
-                console.print()
                 yaml_content = yaml.dump(self.config, default_flow_style=False, sort_keys=False)
-                console.print(Panel(yaml_content, title="Config Preview", border_style="green"))
+                config_panel = Panel(
+                    yaml_content,
+                    title="[bold cyan]Generated Configuration[/bold cyan]",
+                    border_style="green",
+                    padding=(1, 2),
+                    width=min(console.width - 4, 100),  # Adaptive width, max 100
+                )
+                console.print(config_panel)
             except Exception as e:
                 console.print(f"[warning]⚠️  Could not preview YAML: {e}[/warning]")
                 console.print("[info]Proceeding with save...[/info]")
 
-            if not Confirm.ask("\n[prompt]Save this configuration?[/prompt]", default=True):
+            save_choice = Confirm.ask("\n[prompt]Save this configuration?[/prompt]", default=True)
+            if save_choice is None:
+                raise KeyboardInterrupt  # User cancelled
+            if not save_choice:
                 console.print("[info]Configuration not saved.[/info]")
                 return None
 
@@ -1942,9 +2000,6 @@ class ConfigBuilder:
                 console.print(f"[error]❌ Failed to detect API keys: {e}[/error]")
                 api_keys = {}
 
-            # Show available providers
-            self.show_available_providers(api_keys)
-
             # Check if any API keys are available
             if not any(api_keys.values()):
                 console.print("[error]❌ No API keys found in environment![/error]")
@@ -1981,23 +2036,25 @@ class ConfigBuilder:
 
                 if filepath:
                     # Ask if user wants to run now
-                    try:
-                        if Confirm.ask("\n[prompt]Run MassGen with this configuration now?[/prompt]", default=True):
-                            question = Prompt.ask("\n[prompt]Enter your question[/prompt]")
-                            if question:
-                                console.print(f'\n[info]Running: massgen --config {filepath} "{question}"[/info]\n')
-                                return (filepath, question)
-                            else:
-                                console.print("[warning]⚠️  No question provided.[/warning]")
-                                return (filepath, None)
-                    except (KeyboardInterrupt, EOFError):
-                        console.print("\n[info]Skipping immediate run.[/info]")
-                        return (filepath, None)
+                    run_choice = Confirm.ask("\n[prompt]Run MassGen with this configuration now?[/prompt]", default=True)
+                    if run_choice is None:
+                        raise KeyboardInterrupt  # User cancelled
+                    if run_choice:
+                        question = Prompt.ask("\n[prompt]Enter your question[/prompt]")
+                        if question is None:
+                            raise KeyboardInterrupt  # User cancelled
+                        if question:
+                            console.print(f'\n[info]Running: massgen --config {filepath} "{question}"[/info]\n')
+                            return (filepath, question)
+                        else:
+                            console.print("[warning]⚠️  No question provided.[/warning]")
+                            return (filepath, None)
 
                 return (filepath, None) if filepath else None
 
             except (KeyboardInterrupt, EOFError):
-                console.print("\n\n[warning]⚠️  Configuration cancelled by user[/warning]")
+                console.print("\n\n[bold yellow]Configuration cancelled by user[/bold yellow]")
+                console.print("\n[dim]You can run [bold]massgen --init[/bold] anytime to restart.[/dim]\n")
                 return None
             except ValueError as e:
                 console.print(f"\n[error]❌ Configuration error: {str(e)}[/error]")
@@ -2009,10 +2066,12 @@ class ConfigBuilder:
                 return None
 
         except KeyboardInterrupt:
-            console.print("\n\n[warning]⚠️  Configuration cancelled by user (Ctrl+C)[/warning]")
+            console.print("\n\n[bold yellow]Configuration cancelled by user[/bold yellow]")
+            console.print("\n[dim]You can run [bold]massgen --init[/bold] anytime to restart the configuration wizard.[/dim]\n")
             return None
         except EOFError:
-            console.print("\n\n[warning]⚠️  Configuration cancelled (EOF)[/warning]")
+            console.print("\n\n[bold yellow]Configuration cancelled[/bold yellow]")
+            console.print("\n[dim]You can run [bold]massgen --init[/bold] anytime to restart the configuration wizard.[/dim]\n")
             return None
         except Exception as e:
             console.print(f"\n[error]❌ Fatal error: {str(e)}[/error]")
@@ -2022,41 +2081,47 @@ class ConfigBuilder:
 
 def main() -> None:
     """Main entry point for the config builder."""
-    builder = ConfigBuilder()
-    result = builder.run()
+    try:
+        builder = ConfigBuilder()
+        result = builder.run()
 
-    if result and len(result) == 2:
-        filepath, question = result
-        if question:
-            # Run MassGen with the created config
-            console.print(
-                "\n[bold green]✅ Configuration created successfully![/bold green]",
-            )
-            console.print("\n[bold cyan]Running MassGen...[/bold cyan]\n")
+        if result and len(result) == 2:
+            filepath, question = result
+            if question:
+                # Run MassGen with the created config
+                console.print(
+                    "\n[bold green]✅ Configuration created successfully![/bold green]",
+                )
+                console.print("\n[bold cyan]Running MassGen...[/bold cyan]\n")
 
-            import asyncio
-            import sys
+                import asyncio
+                import sys
 
-            # Simulate CLI call with the config
-            original_argv = sys.argv.copy()
-            sys.argv = ["massgen", "--config", filepath, question]
+                # Simulate CLI call with the config
+                original_argv = sys.argv.copy()
+                sys.argv = ["massgen", "--config", filepath, question]
 
-            try:
-                from .cli import main as cli_main
+                try:
+                    from .cli import main as cli_main
 
-                asyncio.run(cli_main())
-            finally:
-                sys.argv = original_argv
+                    asyncio.run(cli_main())
+                finally:
+                    sys.argv = original_argv
+            else:
+                console.print(
+                    "\n[bold green]✅ Configuration saved![/bold green]",
+                )
+                console.print("\n[bold cyan]To use it, run:[/bold cyan]")
+                console.print(
+                    f"  [yellow]python -m massgen.cli --config {filepath} " '"Your question"[/yellow]\n',
+                )
         else:
-            console.print(
-                "\n[bold green]✅ Configuration saved![/bold green]",
-            )
-            console.print("\n[bold cyan]To use it, run:[/bold cyan]")
-            console.print(
-                f"  [yellow]python -m massgen.cli --config {filepath} " '"Your question"[/yellow]\n',
-            )
-    else:
-        console.print("[yellow]Configuration builder exited.[/yellow]")
+            console.print("[yellow]Configuration builder exited.[/yellow]")
+    except KeyboardInterrupt:
+        console.print("\n\n[bold yellow]Configuration cancelled by user[/bold yellow]\n")
+    except Exception as e:
+        console.print(f"\n[error]❌ Unexpected error in main: {str(e)}[/error]")
+        console.print("[info]Please report this issue if it persists.[/info]\n")
 
 
 if __name__ == "__main__":

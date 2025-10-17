@@ -75,7 +75,7 @@ Key Features
 
    .. grid-item-card:: 🛠️ MCP Integration
 
-      Model Context Protocol support for tools via YAML configuration with planning mode.
+      Model Context Protocol support for tools via YAML configuration.
 
    .. grid-item-card:: 🔗 AG2 Framework Support
 
@@ -100,17 +100,17 @@ Key Features
 Recent Releases
 ---------------
 
-**v0.1.0 (October 2025)** - PyPI Package & Documentation
+**v0.1.0 (October 17, 2025)** - PyPI Package Release
 
-Official PyPI release with enhanced documentation and installation via ``pip install massgen``.
+Official PyPI package available for installation via ``pip install massgen`` with comprehensive Sphinx documentation.
 
-**v0.0.32 (October 2025)** - Docker Execution Mode
+**v0.0.32 (October 15, 2025)** - Docker Execution & MCP Refactoring
 
-Isolated command execution in Docker containers with resource limits and multi-agent support.
+Docker-based isolated command execution with resource limits. Major MCP architecture simplification for better maintainability.
 
-**v0.0.31 (October 2025)** - Code Execution, AG2 Integration, Multimodal
+**v0.0.31 (October 13, 2025)** - Code Execution & Framework Integration
 
-MCP-based command execution across all backends, AG2 framework integration, and audio/video generation.
+Universal MCP-based command execution across all backends. AG2 framework integration with group chat support. Limited audio/video generation capabilities.
 
 Quick Start
 -----------
@@ -147,7 +147,7 @@ After setup, you can:
 .. code-block:: bash
 
    # No config needed - specify model directly
-   massgen --model gemini-2.5-flash "What is 2+2?"
+   massgen --model gemini-2.5-flash "What are LLM agents?"
 
 **Option 3: Multi-agent collaboration:**
 

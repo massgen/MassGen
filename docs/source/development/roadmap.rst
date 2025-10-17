@@ -1,10 +1,6 @@
 MassGen Roadmap
 ===============
 
-.. note::
-
-   **Primary Source:** This page includes content from the root `ROADMAP.md <https://github.com/Leezekun/MassGen/blob/main/ROADMAP.md>`_ file, which is the authoritative source for all development plans.
-
 Quick Overview
 --------------
 
@@ -12,7 +8,7 @@ Quick Overview
 
 **Latest Release:** PyPI package with enhanced documentation
 
-**Focus:** Production-ready release with streamlined user experience
+**Focus:** Streamlined user experience and easier access to MassGen
 
 ---
 
@@ -29,5 +25,9 @@ See Also
 * :doc:`../changelog` - Complete release history
 
 ---
+
+.. note::
+
+   **Primary Source:** This page includes content from the root `ROADMAP.md <https://github.com/Leezekun/MassGen/blob/main/ROADMAP.md>`_ file, which is the authoritative source for all development plans.
 
 *Last synced with ROADMAP.md: October 2025*

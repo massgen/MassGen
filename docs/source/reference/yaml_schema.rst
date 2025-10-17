@@ -105,7 +105,7 @@ MassGen supports multiple backend types with varying capabilities:
    * - Backend Type
      - Description & Key Features
    * - ``ag2``
-     - AG2 (AutoGen 2) framework integration with code execution support
+     - AG2 framework integration with code execution support
 
 Basic Structure
 ---------------

@@ -178,7 +178,7 @@ Different backends support different built-in tools:
 
 * **Code Execution vs Bash/Shell:**
 
-  * **Code Execution (⭐)**: Backend provider's native code execution tool
+  * **Code Execution (⭐)**: Backend provider's native code execution tool (no access to MassGen workspaces)
 
     * ``openai``: OpenAI code interpreter for calculations and data analysis
     * ``claude``: Anthropic's code execution tool
@@ -186,13 +186,13 @@ Different backends support different built-in tools:
     * ``azure_openai``: Azure OpenAI code interpreter
     * ``ag2``: AG2 framework code executors (Local, Docker, Jupyter, Cloud)
 
-  * **Bash/Shell**:
+  * **Bash/Shell**: (MassGen-level feature, will directly access workspaces)
 
     * ⭐ (``claude_code`` only): Native Bash tool built into Claude Code
     * ✅ (all MCP-enabled backends): Universal bash/shell via ``enable_mcp_command_line: true``
     * See :doc:`code_execution` for detailed setup and comparison
 
-  * **You can use both**: Backends can use built-in code execution AND MCP-based bash/shell simultaneously
+  * **You can use both**: Backends can use built-in code execution AND MCP-based bash/shell simultaneously, though it is preferred to choose one. Use built-in code execution for isolated tasks, and MCP bash/shell for operations you want to affect the agent's workspace.
 
 * **Filesystem:**
 

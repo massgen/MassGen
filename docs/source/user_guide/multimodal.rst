@@ -11,6 +11,30 @@ MassGen supports comprehensive multimodal AI workflows, enabling agents to work 
    * **v0.0.30**: Audio and video understanding
    * **v0.0.31**: Audio generation (text-to-speech, transcription) and video generation (Sora-2)
 
+.. warning::
+   **Current Multimodal Limitations:**
+
+   Agents **cannot directly analyze** multimodal content (images, audio, video) they generate in their workspace. Generated files are saved but not directly accessible for analysis.
+
+   **What works:**
+
+   * ✅ Generate images/audio/video from text prompts
+   * ✅ Upload and analyze pre-existing multimodal files via ``upload_files`` configuration
+   * ✅ Process multimodal content **when used as input** to generation tools:
+
+      - Call ``generate_and_store_image_with_input_images`` with a generated image → Agent can "see" it during generation
+      - Call ``generate_text_with_input_audio`` with generated audio → Agent can read/transcribe it
+
+   **What doesn't work:**
+
+   * ❌ Agent generates an image → Agent cannot directly analyze that image
+   * ❌ Agent generates audio → Agent cannot directly transcribe/analyze it (unless using it as input to another tool)
+   * ❌ Multi-agent workflows where Agent A generates content and Agent B analyzes it
+
+   **Workaround:** To analyze generated multimodal content, you must use it as **input** to another generation/processing tool (e.g., generate image variation with input image, transcribe audio). The content is only "readable" during API processing, not through direct workspace file access.
+
+   **Note:** Direct workspace multimodal file reading (``read_multimodal_files``) is planned for future releases.
+
 Overview
 --------
 

@@ -5,7 +5,9 @@ MassGen is configured using environment variables for API keys and YAML files fo
 
 .. note::
 
-   MassGen provides both a CLI and a Python API. Configuration can be done via the interactive setup wizard, YAML files, or programmatically. See :doc:`../reference/python_api` for Python API usage.
+   MassGen provides both a CLI and a Python API. Configuration is primarily done via the interactive setup wizard or YAML files.
+
+   **Python API Note:** The Python API is currently in early development with basic functionality only. For advanced features and full control, use the CLI with YAML configuration files. See :doc:`../reference/python_api` for Python API details and status.
 
 Configuration Methods
 =====================

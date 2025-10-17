@@ -10,6 +10,9 @@ MassGen provides a simple, async-first Python API for programmatic usage. This a
 .. note::
    MassGen is inherently asynchronous, so the API is naturally async. Use ``asyncio`` for sync contexts.
 
+.. warning::
+   **Python API Status:** The Python API is currently in early development. Only basic functionality is available through the ``massgen.run()`` function. More comprehensive programmatic APIs (agent creation, orchestrator control, streaming, callbacks, etc.) are planned for future releases. For now, use the CLI for advanced features or see :doc:`../api/index` for internal APIs.
+
 Quick Start
 ===========
 
