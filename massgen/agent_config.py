@@ -57,6 +57,7 @@ class AgentConfig:
         custom_system_instruction: Additional system instruction prepended to evaluation message
         timeout_config: Timeout and resource limit configuration
         skip_coordination_rounds: Debug/test mode - skip voting rounds and go straight to final presentation (default: False)
+        voting_sensitivity: Controls how critical agents are when voting ("lenient", "balanced")
     """
 
     # Core backend configuration (includes tool enablement)
@@ -64,6 +65,9 @@ class AgentConfig:
 
     # Framework configuration
     message_templates: Optional["MessageTemplates"] = None
+
+    # Voting behavior configuration
+    voting_sensitivity: str = "lenient"
 
     # Agent customization
     agent_id: Optional[str] = None

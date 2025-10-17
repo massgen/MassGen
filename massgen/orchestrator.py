@@ -134,8 +134,11 @@ class Orchestrator(ChatAgent):
         self.agent_states = {aid: AgentState() for aid in agents.keys()}
         self.config = config or AgentConfig.create_openai_config()
 
-        # Get message templates from config
-        self.message_templates = self.config.message_templates or MessageTemplates()
+        # Get message templates from config, applying voting_sensitivity
+        if self.config.message_templates:
+            self.message_templates = self.config.message_templates
+        else:
+            self.message_templates = MessageTemplates(voting_sensitivity=self.config.voting_sensitivity)
         # Create workflow tools for agents (vote and new_answer)
         self.workflow_tools = self.message_templates.get_standard_tools(list(agents.keys()))
 

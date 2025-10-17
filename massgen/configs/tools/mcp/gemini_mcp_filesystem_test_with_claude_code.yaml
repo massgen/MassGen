@@ -18,6 +18,7 @@ agents:
 orchestrator:
     snapshot_storage: "snapshots"  # Directory to store workspace snapshots
     agent_temporary_workspace: "temp_workspaces"  # Directory for temporary agent workspaces
+    voting_sensitivity: "balanced"
 
 ui:
   display_type: "rich_terminal"

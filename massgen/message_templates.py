@@ -10,8 +10,16 @@ from typing import Any, Dict, List, Optional
 class MessageTemplates:
     """Message templates implementing the proven MassGen approach."""
 
-    def __init__(self, **template_overrides):
-        """Initialize with optional template overrides."""
+    def __init__(self, voting_sensitivity: str = "lenient", **template_overrides):
+        """Initialize with optional template overrides.
+
+        Args:
+            voting_sensitivity: Controls how critical agents are when voting.
+                - "lenient": Agents vote YES more easily, fewer new answers (default)
+                - "balanced": Agents apply detailed criteria, more new answers
+            **template_overrides: Custom template strings to override defaults
+        """
+        self._voting_sensitivity = voting_sensitivity
         self._template_overrides = template_overrides
 
     # =============================================================================
@@ -58,11 +66,23 @@ class MessageTemplates:
         #
         # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
+        # Determine evaluation criteria based on voting sensitivity
+        if self._voting_sensitivity == "balanced":
+            evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well? Consider:
+- Is it comprehensive, accurate, and complete?
+- Could it be meaningfully improved, refined, or expanded?
+- Are there weaknesses, gaps, or better approaches?
+
+Only use the `vote` tool if the best answer is strong and complete."""
+        else:
+            # Default to lenient (including explicit "lenient" or any other value)
+            evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well?
+
+If YES, use the `vote` tool to record your vote and skip the `new_answer` tool."""
+
         return f"""You are evaluating answers from multiple agents for final response to a message.
 Different agents may have different builtin tools and capabilities.
-Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well?
-
-If YES, use the `vote` tool to record your vote and skip the `new_answer` tool.
+{evaluation_section}
 Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses,
 then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE.
 Make sure you actually call `vote` or `new_answer` (in tool call format).

@@ -1,0 +1,44 @@
+# MassGen Voting Sensitivity Configuration Example
+#
+# How to run:
+#   python -m massgen.cli --config configs/voting/gemini_gpt_voting_sensitivity.yaml "Your question here"
+#
+# Or in interactive mode:
+#   python -m massgen.cli --config configs/voting/gemini_gpt_voting_sensitivity.yaml
+#
+# Try different sensitivity levels by changing the voting_sensitivity value below
+
+agents:
+  - id: "gemini2.5flash"
+    backend:
+      type: "gemini"
+      model: "gemini-2.5-flash"
+      enable_web_search: true
+
+  - id: "gpt5nano"
+    backend:
+      type: "openai"
+      model: "gpt-5-nano"
+      text:
+        verbosity: "medium"
+      reasoning:
+        effort: "medium"
+        summary: "auto"
+      enable_web_search: true
+      enable_code_interpreter: true
+
+orchestrator:
+  # voting_sensitivity controls how critical agents are when evaluating answers
+  #
+  # Options:
+  #   - "lenient" (default): Agents vote YES more easily, fewer new answers
+  #                          Use when you want faster convergence
+  #
+  #   - "balanced": Agents apply detailed criteria (comprehensive, accurate, complete?),
+  #                 more new answers. Use when you want thorough evaluation
+  #
+  voting_sensitivity: "balanced"
+
+ui:
+  display_type: "rich_terminal"
+  logging_enabled: true

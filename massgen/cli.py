@@ -700,6 +700,10 @@ async def run_question_with_history(
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})
 
+        # Apply voting sensitivity if specified
+        if "voting_sensitivity" in orchestrator_cfg:
+            orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
+
         # Get context sharing parameters
         snapshot_storage = orchestrator_cfg.get("snapshot_storage")
         agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
@@ -799,6 +803,10 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
 
         # Get orchestrator parameters from config
         orchestrator_cfg = kwargs.get("orchestrator", {})
+
+        # Apply voting sensitivity if specified
+        if "voting_sensitivity" in orchestrator_cfg:
+            orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
 
         # Get context sharing parameters
         snapshot_storage = orchestrator_cfg.get("snapshot_storage")
