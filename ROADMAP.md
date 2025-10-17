@@ -13,7 +13,6 @@ This roadmap outlines MassGen's development priorities for upcoming releases. Ea
 | Release | Target | Feature | Owner | Use Case |
 |---------|--------|---------|-------|----------|
 | **v0.1.1** | 10/20/25 | Tool System Refactoring | Danrui | Unified tool system for web scraping, data processing, and API integration |
-| | | Nested Chat Integration | Danrui | Hierarchical agent coordination and specialized sub-task delegation |
 | | | Memory Module (Phase 1) | Karthik | Long-term memory for reasoning tasks and document understanding |
 | **v0.1.2** | 10/22/25 | AG2 Group Chat Patterns | Eric | Complex research workflows with specialized agent roles |
 | | | Final Agent Submit/Restart Tools | Nick | Multi-step task verification and intelligent restart decisions |
@@ -35,12 +34,7 @@ This roadmap outlines MassGen's development priorities for upcoming releases. Ea
 - Migrate multimodal tools into tool system
 - **Use Case**: Simplify adding new tools; enable custom tool plugins for domain-specific workflows
 
-**2. Nested Chat Integration** (Danrui)
-- Issue: [#281](https://github.com/Leezekun/MassGen/issues/281)
-- Enhanced nested chat capabilities for complex multi-agent interactions
-- **Use Case**: Hierarchical agent coordination and specialized sub-task delegation
-
-**3. Memory Module - Phase 1** (Karthik)
+**2. Memory Module - Phase 1** (Karthik)
 - Long-term memory implementation using mem0 inspired by agentscope.
 - **Use Case**: Reasoning tasks, large document/code understanding, ensuring quality of many-turn conversations
 

@@ -46,45 +46,134 @@ When you run ``massgen`` for the first time, you'll see a friendly setup wizard:
 
 .. code-block:: text
 
-   ╔═══════════════════════════════════════════════════════════╗
-   ║   🚀 MassGen Interactive Configuration Builder 🚀        ║
-   ║                                                           ║
-   ║   Create custom multi-agent configurations in minutes!   ║
-   ╚═══════════════════════════════════════════════════════════╝
+   ╔═══════════════════════════════════════════════════════════════╗
+   ║       🚀  MassGen Interactive Configuration Builder  🚀       ║
+   ║                                                               ║
+   ║     Create custom multi-agent configurations in minutes!     ║
+   ╚═══════════════════════════════════════════════════════════════╝
 
-   Step 1: Select Your Use Case
-   -----------------------------
-   1. Simple Q&A
-   2. Research & Analysis
-   3. Code Generation & Development
-   4. Creative Writing
-   5. Data Analysis
-   6. Web Automation
-   7. Custom Configuration
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Step 1 of 4: Select Your Use Case
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Step 2: Configure Agents
-   -------------------------
+   Choose your use case:
+   1. Simple Q&A - Basic question answering
+   2. Research & Analysis - Multi-agent research with web search
+   3. Filesystem + Code Execution - Generate, test, and modify code
+   4. Filesystem + Code Execution (Docker) - Secure isolated execution
+   5. Data Analysis - Analyze data with code execution and visualizations
+   6. Creative Writing - Collaborative creative content generation
+   7. Web Automation - Browser automation and web scraping with MCP
+   8. Custom Configuration - Full flexibility
+
+   ✅ Selected: Research & Analysis
+
+   ╔════════════════════════════════ Preset Configuration ═════════════════════════════╗
+   ║                                                                                    ║
+   ║   Features auto-configured for this preset:                                       ║
+   ║                                                                                    ║
+   ║     ✓ Web Search                                                                  ║
+   ║       • Real-time internet search for current information                         ║
+   ║       • Fact-checking and source verification                                     ║
+   ║       • Available for: OpenAI, Claude, Gemini, Grok                               ║
+   ║                                                                                    ║
+   ║     ✓ Multi-Agent Collaboration                                                   ║
+   ║       • 3 agents recommended for diverse perspectives                             ║
+   ║       • Cross-verification of facts and sources                                   ║
+   ║                                                                                    ║
+   ║   Use this for: Research queries, current events, fact-checking                   ║
+   ║                                                                                    ║
+   ╚════════════════════════════════════════════════════════════════════════════════════╝
+
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Step 2 of 4: Agent Setup
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
    Available providers:
-   1. OpenAI (GPT-5, GPT-4, etc.) ✅
-   2. Anthropic Claude ✅
-   3. Google Gemini ✅
-   4. xAI Grok ❌ (API key not found)
-   ...
+   • ✅ OpenAI - gpt-5, gpt-5-mini, gpt-5-nano...
+   • ✅ Claude - claude-sonnet-4-20250514, claude-opus-4-20250514...
+   • ✅ Gemini - gemini-2.5-flash, gemini-2.5-pro...
+   • ❌ Claude Code - Need: ANTHROPIC_API_KEY
 
-   Step 3: Configure Tools & Capabilities
-   ---------------------------------------
-   Enable web search? [Y/n]: y
-   Enable code execution? [Y/n]: y
-   Enable filesystem operations? [Y/n]: n
-   ...
+   How many agents? 3 agents (recommended for diverse perspectives)
+   Select provider: OpenAI
 
-   Step 4: Review & Save Configuration
-   ------------------------------------
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     Step 3 of 4: Agent Configuration
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Select models for your agents:
+   Agent 1: gpt-5-mini
+   Agent 2: gpt-5-mini
+   Agent 3: gpt-5-mini
+
+   ✅ 3 agent(s) configured with preset
+
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     ✅  Review & Save Configuration
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
    ✅ Configuration saved to: ~/.config/massgen/config.yaml
 
-   Run with: massgen "Your question"
-
 Your configuration is saved to ``~/.config/massgen/config.yaml`` and will be used for all future runs.
+
+Understanding Preset Configurations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The wizard offers several **preset configurations** that auto-configure tools and capabilities for common use cases:
+
+**Simple Q&A**
+  Basic question answering with no special tools. Start with 1 agent for straightforward queries, or add more for diverse perspectives. No auto-configuration needed.
+
+**Research & Analysis** *(Auto-configured)*
+  * ✓ **Web Search**: Real-time internet search for current information, fact-checking, and source verification
+  * ✓ **Multi-Agent**: 3 agents recommended for diverse perspectives and cross-verification
+  * Use for: Research queries, current events, fact-checking, comparative analysis
+
+**Filesystem + Code Execution** *(Auto-configured)*
+  * ✓ **Filesystem Access**: File read/write operations in isolated workspace
+  * ✓ **Code Execution**: OpenAI Code Interpreter or Claude/Gemini native code execution
+  * Use for: Code generation, refactoring, testing, file operations
+
+**Filesystem + Code Execution (Docker)** *(Auto-configured)*
+  * ✓ **Filesystem Access**: File read/write operations
+  * ✓ **Code Execution**: Backend-native code execution
+  * ✓ **Docker Isolation**: Fully isolated container execution, persistent packages, network controls
+  * ⚠️ Requires: Docker Engine 28.0.0+, docker Python library, massgen-executor image
+  * Use for: Secure code execution with full isolation and persistent dependencies
+
+**Data Analysis** *(Auto-configured)*
+  * ✓ **Filesystem Access**: Read/write data files (CSV, JSON, etc.), save visualizations
+  * ✓ **Code Execution**: Data processing, statistical analysis, visualization generation
+  * ✓ **Image Understanding**: Analyze charts, graphs, and visualizations from images
+  * Use for: Data analysis, chart interpretation, statistical processing, visualization
+
+**Deep Reasoning & Problem Solving** *(Auto-configured)*
+  * ✓ **Extended Reasoning**: Deep thinking for complex problems with chain-of-thought reasoning
+  * ✓ **Web Search**: Real-time information retrieval and fact verification
+  * Best with: OpenAI GPT-5, o4, or o4-mini models
+  * Use for: Complex problem solving, mathematical proofs, logic puzzles, strategic planning
+
+**Multimodal Analysis** *(Auto-configured)*
+  * ✓ **Image Understanding**: Analyze images, screenshots, charts, OCR and text extraction
+  * ✓ **Audio Understanding**: Transcribe and analyze audio (where supported)
+  * ✓ **Video Understanding**: Analyze video content (where supported)
+  * Note: Different backends support different modalities
+  * Use for: Image analysis, screenshot interpretation, multimedia content analysis
+
+**Creative Writing**
+  Multiple agents collaborate for diverse creative ideas, styles, and perspectives. No special tools—pure creativity.
+
+**Web Automation** *(Partial auto-configuration)*
+  * ⚠ **MCP Servers**: Manual setup required for browser automation (Playwright MCP)
+  * ✓ **Filesystem Access**: Save scraped data and screenshots
+  * Use for: Web scraping, browser automation, screenshot capture, form filling
+
+**Custom Configuration**
+  Full flexibility to choose any combination of agents, models, and tools. You'll configure everything manually.
+
+.. note::
+   Presets marked *(Auto-configured)* automatically enable specific tools and capabilities during setup. You can still customize further if needed.
 
 Quick Usage Examples
 ~~~~~~~~~~~~~~~~~~~

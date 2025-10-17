@@ -1638,6 +1638,21 @@ Environment Variables:
         type=str,
         help="Print example config to stdout (e.g., --example basic_multi)",
     )
+    parser.add_argument(
+        "--show-schema",
+        action="store_true",
+        help="Display configuration schema and available parameters",
+    )
+    parser.add_argument(
+        "--schema-backend",
+        type=str,
+        help="Show schema for specific backend (use with --show-schema)",
+    )
+    parser.add_argument(
+        "--with-examples",
+        action="store_true",
+        help="Include example configurations in schema display",
+    )
 
     # Timeout options
     timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
@@ -1663,6 +1678,12 @@ Environment Variables:
 
     if args.example:
         print_example_config(args.example)
+        return
+
+    if args.show_schema:
+        from .schema_display import show_schema
+
+        show_schema(backend=args.schema_backend, show_examples=args.with_examples)
         return
 
     # Launch interactive config builder if requested
@@ -1693,8 +1714,14 @@ Environment Variables:
     # First-run detection: auto-trigger builder if no config specified and first run
     if not args.question and not args.config and not args.model and not args.backend:
         if should_run_builder():
-            print(f"\n{BRIGHT_CYAN}👋 Welcome to MassGen!{RESET}")
-            print("Let's set up your default configuration...\n")
+            print()
+            print()
+            print(f"{BRIGHT_CYAN}{'=' * 60}{RESET}")
+            print(f"{BRIGHT_CYAN}  👋  Welcome to MassGen!{RESET}")
+            print(f"{BRIGHT_CYAN}{'=' * 60}{RESET}")
+            print()
+            print("  Let's set up your default configuration...")
+            print()
 
             from .config_builder import ConfigBuilder
 
