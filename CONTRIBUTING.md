@@ -2,6 +2,17 @@
 
 Thank you for your interest in contributing to MassGen (Multi-Agent Scaling System for GenAI)! We welcome contributions from the community and are excited to see what you'll bring to the project.
 
+---
+
+**📍 Looking for what to work on?** Check [ROADMAP.md](ROADMAP.md) for:
+- Active development tracks with owners
+- Upcoming release features and priorities
+- Long-term vision and goals
+
+**This guide covers:** Development setup, code standards, testing, PR process, and documentation requirements.
+
+---
+
 ## 🛠️ Development Guidelines
 
 ### Project Structure
@@ -190,10 +201,10 @@ agents:
 
 **Experimental - May change:**
 ```yaml
-# Orchestration patterns (structure evolving)
+# Orchestrator settings (features evolving)
 orchestrator:
-  pattern: round-robin  # Pattern names/behavior may change
-  max_rounds: 3
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
 
 # Memory configuration (schema evolving)
 memory:
@@ -258,7 +269,7 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 
 ## 🔧 Development Workflow
 
-> **Important**: Our next version is v0.0.33. If you want to contribute, please contribute to the `dev/v0.0.33` branch.
+> **Important**: Our next version is v0.1.1. If you want to contribute, please contribute to the `dev/v0.1.1` branch.
 
 ### 1. Create Feature Branch
 
@@ -266,8 +277,8 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 # Fetch latest changes from upstream
 git fetch upstream
 
-# Create feature branch from dev/v0.0.33
-git checkout -b feature/your-feature-name upstream/dev/v0.0.33
+# Create feature branch from dev/v0.1.1
+git checkout -b feature/your-feature-name upstream/dev/v0.1.1
 ```
 
 ### 2. Make Your Changes
@@ -396,20 +407,70 @@ Our pre-commit configuration includes:
 ### Package Quality
 - **pyroma**: Check package metadata quality
 
-## 🎯 Contributing Areas
+## 🎯 How to Find Where to Contribute
 
-We welcome contributions in these areas:
+MassGen development is organized into **tracks** - focused areas with dedicated owners who can guide your contributions.
 
-- **New Model Backends**: Add support for additional AI models (Claude, local models via vLLM/SGLang, etc.)
-- **Enhanced User Interface**: Improve the web interface, terminal displays, and visualization features
-- **Performance & Scalability**: Optimize streaming, logging, coordination, and resource management
-- **Advanced Agent Collaboration**: Improve communication patterns and consensus-building protocols
-- **AG2 Integration**: Support AG2 agents in MassGen
-- **Tool Ecosystem Integration**: Add support for MCP Servers and additional tool capabilities
-- **Configuration & Templates**: Expand agent configuration options and pre-built templates
-- **Documentation**: Add guides, examples, use cases, and comprehensive API documentation
-- **Testing & Benchmarking**: Add test coverage and benchmarking frameworks
-- **Bug Fixes**: Fix issues and edge cases
+### Step 1: Explore Active Tracks
+
+Visit [ROADMAP.md](ROADMAP.md#-contributors--contact) to see all active tracks with their owners and contact info:
+
+- **Tool System Refactoring** - Unified tool system (@qidanrui)
+- **Multimodal Support** - Image, audio, video processing (@qidanrui)
+- **AG2 Group Chat Patterns** - Complex research workflows (@Eric-Shang)
+- **Agent Adapter System** - Unified agent interface (@Eric-Shang)
+- **Irreversible Actions Safety** - Safety controls (@franklinnwren)
+- **Memory Module** - Long-term memory implementation (@kitrakrev, @qidanrui, @ncrispino)
+- **Final Agent Submit/Restart** - Multi-step verification (@ncrispino)
+- **Coding Agent Enhancements** - File operations (@ncrispino)
+- **DSPy Integration** - Automated prompt optimization (@praneeth999)
+- **Web UI** - Visual interface (@voidcenter)
+
+### Step 2: Reach Out to Track Owner
+
+**Before starting work:**
+
+1. **Open a GitHub issue** describing your contribution idea
+   - Include context, motivation, and approach
+   - Link to related issues/PRs if applicable
+
+2. **Start a Discord thread** in #massgen channel
+   - @ mention the track owner (Discord handle from [ROADMAP.md](ROADMAP.md#-contributors--contact))
+   - Link to your GitHub issue
+   - Discuss your idea with the track owner who can:
+     - Point you to existing work
+     - Suggest good first issues
+     - Explain current priorities
+     - Review designs before implementation
+
+**Example:**
+- Open issue: "Add support for OpenAI o1-pro model"
+- Discord: "@danrui2020 I'd like to contribute to multimodal support. Opened issue #123 with details."
+
+### Step 3: Create Your Own Track (Optional)
+
+Have a significant feature idea not covered by existing tracks?
+1. Open a GitHub issue describing the proposed track
+2. Start a thread in #massgen Discord channel linking to the issue
+3. Work with the MassGen dev team to define the track
+4. Become a track owner yourself!
+
+### Quick Contribution Ideas (No Track Coordination Needed)
+
+- 🐛 **Bug Fixes** - Open an issue/PR for any bugs you find
+- 📝 **Documentation** - Improvements always welcome
+- 🧪 **Tests** - Increase coverage in any module
+- 🎨 **Examples** - New configuration templates or use cases
+- 💡 **Feature Requests** - Open an issue to discuss ideas
+
+### First-Time Contributors
+
+**Good first issues:** Check GitHub issues tagged [`good first issue`](https://github.com/Leezekun/MassGen/labels/good%20first%20issue)
+
+**Quick wins:**
+- Add backend support for a new model provider (see [Adding New Model Backends](#adding-new-model-backends))
+- Create example configurations for your use case
+- Write case studies using MassGen
 
 
 ## 📝 Pull Request Guidelines

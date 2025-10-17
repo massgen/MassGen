@@ -3261,6 +3261,9 @@ class RichTerminalDisplay(TerminalDisplay):
         if self._keyboard_interactive_mode and hasattr(self, "_agent_keys") and not self._safe_keyboard_mode:
             self.show_agent_selector()
 
+            # Add visual separator after agent selector for better multi-turn UI clarity
+            self.console.print("\n" + "─" * 80 + "\n")
+
     def _display_answer_with_flush(self, answer: str) -> None:
         """Display answer with flush output effect - streaming character by character."""
         import sys

@@ -15,6 +15,7 @@ MassGen integrates MCP through YAML configuration, allowing agents to access too
 * Web search (Brave, Google)
 * Weather services
 * File operations
+* Browser automation (Playwright)
 * Discord, Twitter, Notion APIs
 * And many more MCP servers
 
@@ -134,6 +135,41 @@ Configuration Parameters
      - No
      - Environment variables to pass
 
+Variable Substitution
+~~~~~~~~~~~~~~~~~~~~~
+
+MassGen supports variable substitution in MCP configurations:
+
+**Built-in Variables:**
+
+* ``${cwd}`` - Replaced with the agent's working directory (from ``backend.cwd``)
+* Works anywhere in the backend config (``args``, ``env``, etc.)
+
+**Environment Variables:**
+
+* Use ``${VARIABLE_NAME}`` syntax (must be UPPERCASE)
+* Resolved from your ``.env`` file or system environment
+* Work in both ``args`` and ``env`` parameters
+
+.. code-block:: yaml
+
+   mcp_servers:
+     - name: "playwright"
+       type: "stdio"
+       command: "npx"
+       args:
+         - "@playwright/mcp@latest"
+         - "--output-dir=${cwd}"                # Built-in: agent's working directory
+         - "--user-data-dir=${cwd}/profile"
+       env:
+         API_KEY: "${API_KEY}"                  # Environment variable from .env file
+
+**Important:**
+
+* ``${cwd}`` is lowercase and refers to the agent's working directory
+* Environment variables must be UPPERCASE (e.g., ``${API_KEY}``, ``${BRAVE_API_KEY}``)
+* Both systems work together but are resolved separately
+
 Common MCP Servers
 ------------------
 
@@ -162,6 +198,32 @@ Requires ``BRAVE_API_KEY`` in your ``.env`` file:
        args: ["-y", "@modelcontextprotocol/server-brave-search"]
        env:
          BRAVE_API_KEY: "${BRAVE_API_KEY}"
+
+Playwright (Browser Automation)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Enables browser automation with screenshot and PDF capabilities:
+
+.. code-block:: yaml
+
+   mcp_servers:
+     playwright:
+       type: "stdio"
+       command: "npx"
+       args:
+         - "@playwright/mcp@latest"
+         - "--browser=chrome"              # Browser choice (chrome, firefox, webkit)
+         - "--caps=vision,pdf"             # Enable vision and PDF capabilities
+         - "--output-dir=${cwd}"           # Save screenshots/PDFs to workspace
+         - "--user-data-dir=${cwd}/playwright-profile"  # Persistent browser profile
+
+**Advanced Options:**
+
+* ``--browser`` - Browser to use: ``chrome``, ``firefox``, or ``webkit``
+* ``--caps`` - Capabilities: ``vision`` (screenshots), ``pdf`` (PDF generation)
+* ``--output-dir`` - Directory for saving screenshots and PDFs
+* ``--user-data-dir`` - Persistent browser profile directory
+* ``--save-trace`` - Save Playwright traces for debugging (uncomment to enable)
 
 Discord
 ~~~~~~~

@@ -188,13 +188,20 @@ Track development progress:
 
 ## 🤝 Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for:
-- Development setup instructions
-- Code quality standards
-- Pull request process
-- Documentation guidelines
+Interested in contributing? You have two options:
 
-Please reach out via the #massgen channel on [Discord](https://discord.gg/VVrT2rQaz5) if you want to get further involved in research and development.
+**Option 1: Join an Existing Track**
+1. See [Contributors & Contact](#-contributors--contact) table above for active tracks
+2. Contact the track owner via Discord to discuss your ideas
+3. Follow [CONTRIBUTING.md](CONTRIBUTING.md) for development process
+
+**Option 2: Create Your Own Track**
+1. Have a significant feature idea? Propose a new track!
+2. Reach out via the #massgen channel on [Discord](https://discord.gg/VVrT2rQaz5)
+3. Work with the MassGen dev team to integrate your track into the roadmap
+4. Become a track owner and guide other contributors
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, testing, and documentation requirements.
 
 ---
 

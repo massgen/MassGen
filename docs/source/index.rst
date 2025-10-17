@@ -178,7 +178,7 @@ MassGen supports a wide range of AI models across different providers:
 * **GPT** (OpenAI): GPT-4, GPT-5 series
 * **Grok** (xAI): Grok-3, Grok-4 series
 * **Azure OpenAI**: Enterprise deployments
-* And many more...
+* And :doc:`many more <reference/supported_models>`...
 
 **Local Models:**
 

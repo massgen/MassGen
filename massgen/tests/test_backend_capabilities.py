@@ -55,13 +55,18 @@ class TestBackendCapabilitiesRegistry:
             "web_search",
             "code_execution",
             "bash",
-            "multimodal",
-            "vision",
+            "multimodal",  # Legacy - being phased out
+            "vision",  # Legacy - use image_understanding
             "mcp",
             "filesystem_native",
             "filesystem_mcp",
             "reasoning",
             "image_generation",
+            "image_understanding",
+            "audio_generation",
+            "audio_understanding",
+            "video_generation",
+            "video_understanding",
         }
 
         for backend_type, caps in BACKEND_CAPABILITIES.items():
@@ -187,7 +192,11 @@ class TestSpecificBackends:
         assert "web_search" in caps.supported_capabilities
         assert "code_execution" in caps.supported_capabilities
         assert "mcp" in caps.supported_capabilities
-        assert "multimodal" in caps.supported_capabilities
+        assert "reasoning" in caps.supported_capabilities
+        assert "image_generation" in caps.supported_capabilities
+        assert "image_understanding" in caps.supported_capabilities
+        assert "audio_generation" in caps.supported_capabilities
+        assert "video_generation" in caps.supported_capabilities
         assert caps.filesystem_support == "mcp"
         assert caps.env_var == "OPENAI_API_KEY"
 
@@ -215,9 +224,9 @@ class TestSpecificBackends:
         assert "web_search" in caps.supported_capabilities
         assert "code_execution" in caps.supported_capabilities
         assert "mcp" in caps.supported_capabilities
-        assert "multimodal" in caps.supported_capabilities
+        assert "image_understanding" in caps.supported_capabilities
         assert caps.filesystem_support == "mcp"
-        assert caps.env_var == "GOOGLE_API_KEY"
+        assert caps.env_var == "GEMINI_API_KEY"
 
     def test_local_backends_no_api_key(self):
         """Test local backends don't require API keys."""

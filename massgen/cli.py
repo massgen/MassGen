@@ -32,6 +32,9 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from .agent_config import AgentConfig, TimeoutConfig
 from .backend.azure_openai import AzureOpenAIBackend
@@ -816,6 +819,7 @@ async def run_question_with_history(
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
             logging_enabled=ui_config.get("logging_enabled", True),
+            enable_final_presentation=True,  # Required for multi-turn: ensures final answer is saved
         )
 
         print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
@@ -911,6 +915,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
             logging_enabled=ui_config.get("logging_enabled", True),
+            enable_final_presentation=True,  # Ensures final presentation is generated
         )
 
         print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
@@ -938,41 +943,81 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
     existing_paths = orchestrator_cfg.get("context_paths", [])
     cwd = Path.cwd()
 
-    print(f"\n📂 {BRIGHT_YELLOW}Context Paths:{RESET}", flush=True)
+    # Use Rich for better display
+    from rich.console import Console as RichConsole
+    from rich.panel import Panel as RichPanel
+
+    rich_console = RichConsole()
+
+    # Build context paths display
+    context_content = []
     if existing_paths:
         for path_config in existing_paths:
             path = path_config.get("path") if isinstance(path_config, dict) else path_config
             permission = path_config.get("permission", "read") if isinstance(path_config, dict) else "read"
-            print(f"   • {path} ({permission})", flush=True)
+            context_content.append(f"  [green]✓[/green] {path} [dim]({permission})[/dim]")
     else:
-        print(f"   {BRIGHT_YELLOW}No context paths configured{RESET}", flush=True)
+        context_content.append("  [yellow]No context paths configured[/yellow]")
+
+    context_panel = RichPanel(
+        "\n".join(context_content),
+        title="[bold bright_cyan]📂 Context Paths[/bold bright_cyan]",
+        border_style="cyan",
+        padding=(0, 2),
+        width=80,
+    )
+    rich_console.print(context_panel)
+    print()
 
     # Check if CWD is already in context paths
     cwd_str = str(cwd)
     cwd_already_added = any((path_config.get("path") if isinstance(path_config, dict) else path_config) == cwd_str for path_config in existing_paths)
 
     if not cwd_already_added:
-        print("\n❓ Add current directory as context path?", flush=True)
-        print(f"   {cwd}", flush=True)
+        # Create prompt panel
+        prompt_content = [
+            "[bold cyan]Add current directory as context path?[/bold cyan]",
+            f"  [yellow]{cwd}[/yellow]",
+            "",
+            "  [dim]Context paths give agents access to your project files.[/dim]",
+            "  [dim]• Read-only during coordination (prevents conflicts)[/dim]",
+            "  [dim]• Write permission for final agent to save results[/dim]",
+            "",
+            "  [dim]Options:[/dim]",
+            "  [green]Y[/green] → Add with write permission (default)",
+            "  [cyan]P[/cyan] → Add with protected paths (e.g., .env, secrets)",
+            "  [yellow]N[/yellow] → Skip",
+            "  [blue]C[/blue] → Add custom path",
+        ]
+        prompt_panel = RichPanel(
+            "\n".join(prompt_content),
+            border_style="cyan",
+            padding=(1, 2),
+            width=80,
+        )
+        rich_console.print(prompt_panel)
+        print()
         try:
-            response = input("   [Y]es (default) / [P]rotected / [N]o / [C]ustom path: ").strip().lower()
+            response = input(f"   {BRIGHT_CYAN}Your choice [Y/P/N/C]:{RESET} ").strip().lower()
 
             if response in ["y", "yes", ""]:
                 # Add CWD with write permission
                 if "context_paths" not in orchestrator_cfg:
                     orchestrator_cfg["context_paths"] = []
                 orchestrator_cfg["context_paths"].append({"path": cwd_str, "permission": "write"})
-                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                print(f"   {BRIGHT_GREEN}✅ Added: {cwd} (write){RESET}", flush=True)
                 return True
             elif response in ["p", "protected"]:
                 # Add CWD with write permission and protected paths
                 protected_paths = []
-                print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                print(f"\n   {BRIGHT_CYAN}Enter protected paths (one per line, empty to finish):{RESET}", flush=True)
+                print(f"   {BRIGHT_YELLOW}Tip: Protected paths are relative to {cwd}{RESET}", flush=True)
                 while True:
-                    protected_input = input("     → ").strip()
+                    protected_input = input(f"   {BRIGHT_CYAN}→{RESET} ").strip()
                     if not protected_input:
                         break
                     protected_paths.append(protected_input)
+                    print(f"     {BRIGHT_GREEN}✓ Added: {protected_input}{RESET}", flush=True)
 
                 if "context_paths" not in orchestrator_cfg:
                     orchestrator_cfg["context_paths"] = []
@@ -982,20 +1027,18 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                     context_config["protected_paths"] = protected_paths
 
                 orchestrator_cfg["context_paths"].append(context_config)
-                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
-                if protected_paths:
-                    for protected in protected_paths:
-                        print(f"     🔒 {protected}", flush=True)
+                print(f"\n   {BRIGHT_GREEN}✅ Added: {cwd} (write) with {len(protected_paths)} protected path(s){RESET}", flush=True)
                 return True
             elif response in ["n", "no"]:
                 # User explicitly declined
                 return False
             elif response in ["c", "custom"]:
                 # Loop until valid path or user cancels
+                print()
                 while True:
-                    custom_path = input("   Enter path (absolute or relative, file or directory): ").strip()
+                    custom_path = input(f"   {BRIGHT_CYAN}Enter path (absolute or relative):{RESET} ").strip()
                     if not custom_path:
-                        print(f"   {BRIGHT_YELLOW}⚠ Cancelled{RESET}", flush=True)
+                        print(f"   {BRIGHT_YELLOW}⚠️  Cancelled{RESET}", flush=True)
                         return False
 
                     # Resolve to absolute path
@@ -1004,27 +1047,28 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                     # Check if path exists
                     if not Path(abs_path).exists():
                         print(f"   {BRIGHT_RED}✗ Path does not exist: {abs_path}{RESET}", flush=True)
-                        retry = input("   Try again? [Y/n]: ").strip().lower()
+                        retry = input(f"   {BRIGHT_CYAN}Try again? [Y/n]:{RESET} ").strip().lower()
                         if retry in ["n", "no"]:
                             return False
                         continue
 
                     # Valid path (file or directory), ask for permission
-                    permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
+                    permission = input(f"   {BRIGHT_CYAN}Permission [read/write] (default: write):{RESET} ").strip().lower() or "write"
                     if permission not in ["read", "write"]:
                         permission = "write"
 
                     # Ask about protected paths if write permission
                     protected_paths = []
                     if permission == "write":
-                        add_protected = input("   Add protected paths (files/dirs immune from modification)? [y/N]: ").strip().lower()
+                        add_protected = input(f"   {BRIGHT_CYAN}Add protected paths? [y/N]:{RESET} ").strip().lower()
                         if add_protected in ["y", "yes"]:
-                            print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                            print(f"   {BRIGHT_CYAN}Enter protected paths (one per line, empty to finish):{RESET}", flush=True)
                             while True:
-                                protected_input = input("     → ").strip()
+                                protected_input = input(f"   {BRIGHT_CYAN}→{RESET} ").strip()
                                 if not protected_input:
                                     break
                                 protected_paths.append(protected_input)
+                                print(f"     {BRIGHT_GREEN}✓ Added: {protected_input}{RESET}", flush=True)
 
                     if "context_paths" not in orchestrator_cfg:
                         orchestrator_cfg["context_paths"] = []
@@ -1034,15 +1078,15 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                         context_config["protected_paths"] = protected_paths
 
                     orchestrator_cfg["context_paths"].append(context_config)
-                    print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
                     if protected_paths:
-                        for protected in protected_paths:
-                            print(f"     🔒 {protected}", flush=True)
+                        print(f"   {BRIGHT_GREEN}✅ Added: {abs_path} ({permission}) with {len(protected_paths)} protected path(s){RESET}", flush=True)
+                    else:
+                        print(f"   {BRIGHT_GREEN}✅ Added: {abs_path} ({permission}){RESET}", flush=True)
                     return True
             else:
                 # Invalid response - clarify options
-                print(f"   {BRIGHT_RED}✗ Invalid option: '{response}'{RESET}", flush=True)
-                print(f"   {BRIGHT_YELLOW}Please choose: y/yes, p/protected, n/no, or c/custom{RESET}", flush=True)
+                print(f"\n   {BRIGHT_RED}✗ Invalid option: '{response}'{RESET}", flush=True)
+                print(f"   {BRIGHT_YELLOW}Please choose: Y (yes), P (protected), N (no), or C (custom){RESET}", flush=True)
                 return False
         except (KeyboardInterrupt, EOFError):
             print()  # New line after Ctrl+C
@@ -1138,49 +1182,111 @@ def should_run_builder() -> bool:
 
 
 def print_help_messages():
-    print(
-        "\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.",
-        flush=True,
+    """Display help messages using Rich for better formatting."""
+    rich_console = Console()
+
+    help_content = """[dim]💬  Type your questions below
+💡  Use slash commands: [cyan]/help[/cyan], [cyan]/quit[/cyan], [cyan]/reset[/cyan], [cyan]/status[/cyan], [cyan]/config[/cyan]
+⌨️   Press [cyan]Ctrl+C[/cyan] to exit[/dim]"""
+
+    help_panel = Panel(
+        help_content,
+        border_style="dim",
+        padding=(0, 2),
+        width=80,
     )
-    print("💡 Commands: /quit, /exit, /reset, /help", flush=True)
-    print("=" * 60, flush=True)
+    rich_console.print(help_panel)
 
 
-async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], original_config: Dict[str, Any] = None, orchestrator_cfg: Dict[str, Any] = None, **kwargs):
+async def run_interactive_mode(
+    agents: Dict[str, SingleAgent],
+    ui_config: Dict[str, Any],
+    original_config: Dict[str, Any] = None,
+    orchestrator_cfg: Dict[str, Any] = None,
+    config_path: Optional[str] = None,
+    **kwargs,
+):
     """Run MassGen in interactive mode with conversation history."""
 
-    # ASCII art for interactive multi-agent mode
-    ascii_art = f"""{BRIGHT_CYAN}
-    ███╗   ███╗ █████╗ ███████╗███████╗ ██████╗ ███████╗███╗   ██╗
-    ████╗ ████║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔════╝████╗  ██║
-    ██╔████╔██║███████║███████╗███████╗██║  ███╗█████╗  ██╔██╗ ██║
-    ██║╚██╔╝██║██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║
-    ██║ ╚═╝ ██║██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║
-    ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝{RESET}
+    # Use Rich console for better display
+    rich_console = Console()
 
-{BRIGHT_YELLOW}      🤖 ⟷ 🤖         {BOLD}Interactive Multi-Agent Chat{RESET}
-{BRIGHT_YELLOW}       ╲   ╱
-        ▼ ▼
-        🤖{RESET}
+    # Clear screen
+    rich_console.clear()
+
+    # ASCII art for interactive multi-agent mode
+    ascii_art = """[bold cyan]
+     ███╗   ███╗ █████╗ ███████╗███████╗ ██████╗ ███████╗███╗   ██╗
+     ████╗ ████║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔════╝████╗  ██║
+     ██╔████╔██║███████║███████╗███████╗██║  ███╗█████╗  ██╔██╗ ██║
+     ██║╚██╔╝██║██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║
+     ██║ ╚═╝ ██║██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║
+     ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝[/bold cyan]
+
+     [dim]     🤖 🤖 🤖  →  💬 collaborate  →  🎯 winner  →  📢 final[/dim]
 """
 
-    print(ascii_art, flush=True)
-    print("=" * 60, flush=True)
+    # Wrap ASCII art in a panel
+    ascii_panel = Panel(
+        ascii_art,
+        border_style="bold cyan",
+        padding=(0, 2),
+        width=80,
+    )
+    rich_console.print(ascii_panel)
+    print()
 
-    # Display configuration
-    print(f"📋 {BRIGHT_YELLOW}Configuration:{RESET}", flush=True)
-    print(f"   Agents: {len(agents)}", flush=True)
-    for agent_id, agent in agents.items():
-        backend_name = agent.backend.__class__.__name__.replace("Backend", "")
-        print(f"   • {agent_id}: {backend_name}", flush=True)
+    # Create configuration table
+    config_table = Table(
+        show_header=False,
+        box=None,
+        padding=(0, 2),
+        show_edge=False,
+    )
+    config_table.add_column("Label", style="bold cyan", no_wrap=True)
+    config_table.add_column("Value", style="white")
 
-    use_orchestrator_for_single = ui_config.get("use_orchestrator_for_single_agent", True)
+    # Determine mode
+    ui_config.get("use_orchestrator_for_single_agent", True)
     if len(agents) == 1:
-        mode = "Single Agent (Orchestrator)" if use_orchestrator_for_single else "Single Agent (Direct)"
+        mode = "Single Agent"
+        mode_icon = "🤖"
     else:
-        mode = "Multi-Agent Coordination"
-    print(f"   Mode: {mode}", flush=True)
-    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
+        mode = f"Multi-Agent ({len(agents)} agents)"
+        mode_icon = "🤝"
+
+    config_table.add_row(f"{mode_icon} Mode:", f"[bold]{mode}[/bold]")
+
+    # Add agents info
+    if len(agents) <= 3:
+        # Show all agents if 3 or fewer
+        for agent_id, agent in agents.items():
+            # Get model name from config
+            model = agent.config.backend_params.get("model", "unknown")
+            backend_name = agent.backend.__class__.__name__.replace("Backend", "")
+            # Show model with backend in parentheses
+            display = f"{model} [dim]({backend_name})[/dim]"
+            config_table.add_row(f"  ├─ {agent_id}:", display)
+    else:
+        # Show count and first 2 agents
+        agent_list = list(agents.items())
+        for i, (agent_id, agent) in enumerate(agent_list[:2]):
+            model = agent.config.backend_params.get("model", "unknown")
+            backend_name = agent.backend.__class__.__name__.replace("Backend", "")
+            display = f"{model} [dim]({backend_name})[/dim]"
+            config_table.add_row(f"  ├─ {agent_id}:", display)
+        config_table.add_row("  └─ ...", f"[dim]and {len(agents) - 2} more[/dim]")
+
+    # Create main panel with configuration
+    config_panel = Panel(
+        config_table,
+        title="[bold bright_yellow]⚙️  Session Configuration[/bold bright_yellow]",
+        border_style="yellow",
+        padding=(0, 2),
+        width=80,
+    )
+    rich_console.print(config_panel)
+    print()
 
     # Prompt for context paths if filesystem is enabled
     if original_config and orchestrator_cfg:
@@ -1189,6 +1295,7 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
             # Recreate agents with updated context paths
             agents = create_agents_from_config(original_config, orchestrator_cfg)
             print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
+            print()
 
     print_help_messages()
 
@@ -1278,6 +1385,7 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                             flush=True,
                         )
                         print("   /status              - Show current status", flush=True)
+                        print("   /config              - Open config file in editor", flush=True)
                         continue
                     elif command == "/status":
                         print(f"\n{BRIGHT_CYAN}📊 Current Status:{RESET}", flush=True)
@@ -1295,6 +1403,28 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                             f"   History: {len(conversation_history)//2} exchanges",
                             flush=True,
                         )
+                        if config_path:
+                            print(f"   Config: {config_path}", flush=True)
+                        continue
+                    elif command == "/config":
+                        if config_path:
+                            import platform
+                            import subprocess
+
+                            try:
+                                system = platform.system()
+                                if system == "Darwin":  # macOS
+                                    subprocess.run(["open", config_path])
+                                elif system == "Windows":
+                                    subprocess.run(["start", config_path], shell=True)
+                                else:  # Linux and others
+                                    subprocess.run(["xdg-open", config_path])
+                                print(f"\n📝 Opening config file: {config_path}", flush=True)
+                            except Exception as e:
+                                print(f"\n❌ Error opening config file: {e}", flush=True)
+                                print(f"   Config location: {config_path}", flush=True)
+                        else:
+                            print("\n❌ No config file available (using CLI arguments)", flush=True)
                         continue
                     else:
                         print(f"❓ Unknown command: {command}", flush=True)
@@ -1525,7 +1655,9 @@ async def main(args):
                 #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
                 #     print(f"{response}", flush=True)
             else:
-                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, **kwargs)
+                # Pass the config path to interactive mode
+                config_file_path = str(resolved_path) if args.config and resolved_path else None
+                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, config_path=config_file_path, **kwargs)
         finally:
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():
@@ -1760,7 +1892,11 @@ Environment Variables:
                 return
 
     # Now call the async main with the parsed arguments
-    asyncio.run(main(args))
+    try:
+        asyncio.run(main(args))
+    except KeyboardInterrupt:
+        # User pressed Ctrl+C - exit gracefully without traceback
+        pass
 
 
 if __name__ == "__main__":

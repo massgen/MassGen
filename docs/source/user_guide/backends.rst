@@ -394,7 +394,7 @@ Azure OpenAI Backend
 
    AZURE_OPENAI_API_KEY=...
    AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
-   AZURE_OPENAI_API_VERSION=2024-02-15-preview
+   AZURE_OPENAI_API_VERSION=YOUR-AZURE-OPENAI-API-VERSION
 
 AG2 Backend
 ~~~~~~~~~~~

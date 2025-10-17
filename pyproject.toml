@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["ai", "multi-agent", "collaboration", "orchestration", "llm", "claude", "gemini", "gpt", "xai"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",

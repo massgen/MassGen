@@ -234,17 +234,14 @@ class ConfigBuilder:
 
         # ASCII art for multi-agent coordination
         ascii_art = """[bold cyan]
-    ███╗   ███╗ █████╗ ███████╗███████╗ ██████╗ ███████╗███╗   ██╗
-    ████╗ ████║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔════╝████╗  ██║
-    ██╔████╔██║███████║███████╗███████╗██║  ███╗█████╗  ██╔██╗ ██║
-    ██║╚██╔╝██║██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║
-    ██║ ╚═╝ ██║██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║
-    ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝[/bold cyan]
+     ███╗   ███╗ █████╗ ███████╗███████╗ ██████╗ ███████╗███╗   ██╗
+     ████╗ ████║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔════╝████╗  ██║
+     ██╔████╔██║███████║███████╗███████╗██║  ███╗█████╗  ██╔██╗ ██║
+     ██║╚██╔╝██║██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║
+     ██║ ╚═╝ ██║██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║
+     ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝[/bold cyan]
 
-[dim]         🤖 ──▶ 🤖           [bold]Multi-Agent Coordination[/bold]
-         │     ╱
-         ▼    ▼
-         🤖 ◀──[/dim]
+     [dim]     🤖 🤖 🤖  →  💬 collaborate  →  🎯 winner  →  📢 final[/dim]
 """
 
         banner_content = f"""{ascii_art}
@@ -304,6 +301,11 @@ class ConfigBuilder:
         try:
             for provider_id, provider_info in self.PROVIDERS.items():
                 try:
+                    # Claude Code is always available (works with CLI login or API key)
+                    if provider_id == "claude_code":
+                        api_keys[provider_id] = True
+                        continue
+
                     env_var = provider_info.get("env_var")
                     if env_var:
                         api_keys[provider_id] = bool(os.getenv(env_var))
@@ -371,7 +373,16 @@ class ConfigBuilder:
                         caps_display += f" +{len(caps)-3}"
 
                     # Add row
-                    if has_key:
+                    # Special handling for Claude Code - always available but show hint if no API key
+                    if provider_id == "claude_code":
+                        env_var = provider_info.get("env_var", "")
+                        api_key_set = bool(os.getenv(env_var)) if env_var else False
+                        if api_key_set:
+                            table.add_row("✅", name, models_display, caps_display or "basic")
+                        else:
+                            name_with_hint = f"{name}\n[dim cyan]⚠️ Requires `claude login` (no API key found)[/dim cyan]"
+                            table.add_row("✅", name_with_hint, models_display, caps_display or "basic")
+                    elif has_key:
                         table.add_row(status, name, models_display, caps_display or "basic")
                     else:
                         # For missing keys, add env var hint
@@ -962,36 +973,37 @@ class ConfigBuilder:
 
                 if selected_model:
                     agent["backend"]["model"] = selected_model
-
-                    # Configure text verbosity for all models
                     console.print(f"\n✓ Model set to {selected_model}")
-                    console.print("\n[dim]Configure text verbosity:[/dim]")
-                    console.print("[dim]  • low: Concise responses[/dim]")
-                    console.print("[dim]  • medium: Balanced detail (recommended)[/dim]")
-                    console.print("[dim]  • high: Detailed, verbose responses[/dim]\n")
 
-                    verbosity_choice = questionary.select(
-                        "Text verbosity level:",
-                        choices=[
-                            questionary.Choice("Low (concise)", value="low"),
-                            questionary.Choice("Medium (recommended)", value="medium"),
-                            questionary.Choice("High (detailed)", value="high"),
-                        ],
-                        default="medium",
-                        style=questionary.Style(
-                            [
-                                ("selected", "fg:cyan bold"),
-                                ("pointer", "fg:cyan bold"),
-                                ("highlighted", "fg:cyan"),
+                    # Configure text verbosity for OpenAI models only
+                    if backend_type in ["openai", "azure_openai"]:
+                        console.print("\n[dim]Configure text verbosity:[/dim]")
+                        console.print("[dim]  • low: Concise responses[/dim]")
+                        console.print("[dim]  • medium: Balanced detail (recommended)[/dim]")
+                        console.print("[dim]  • high: Detailed, verbose responses[/dim]\n")
+
+                        verbosity_choice = questionary.select(
+                            "Text verbosity level:",
+                            choices=[
+                                questionary.Choice("Low (concise)", value="low"),
+                                questionary.Choice("Medium (recommended)", value="medium"),
+                                questionary.Choice("High (detailed)", value="high"),
                             ],
-                        ),
-                        use_arrow_keys=True,
-                    ).ask()
+                            default="medium",
+                            style=questionary.Style(
+                                [
+                                    ("selected", "fg:cyan bold"),
+                                    ("pointer", "fg:cyan bold"),
+                                    ("highlighted", "fg:cyan"),
+                                ],
+                            ),
+                            use_arrow_keys=True,
+                        ).ask()
 
-                    agent["backend"]["text"] = {
-                        "verbosity": verbosity_choice if verbosity_choice else "medium",
-                    }
-                    console.print(f"✓ Text verbosity set to: {verbosity_choice if verbosity_choice else 'medium'}\n")
+                        agent["backend"]["text"] = {
+                            "verbosity": verbosity_choice if verbosity_choice else "medium",
+                        }
+                        console.print(f"✓ Text verbosity set to: {verbosity_choice if verbosity_choice else 'medium'}\n")
 
                     # Auto-add reasoning params for GPT-5 and o-series models
                     if selected_model in ["gpt-5", "gpt-5-mini", "gpt-5-nano", "o4", "o4-mini"]:
@@ -1042,110 +1054,134 @@ class ConfigBuilder:
                 caps = get_capabilities(backend_type)
                 fs_type = caps.filesystem_support if caps else "mcp"
 
-                # Check if filesystem is recommended in the preset
-                filesystem_recommended = False
-                if use_case and use_case != "custom":
-                    use_case_info = self.USE_CASES.get(use_case, {})
-                    filesystem_recommended = "filesystem" in use_case_info.get("recommended_tools", [])
+                # Claude Code ALWAYS has filesystem access (that's what makes it special!)
+                if backend_type == "claude_code":
+                    # Filesystem is always enabled for Claude Code
+                    current_cwd = agent["backend"].get("cwd", "workspace")
+                    console.print("[dim]Claude Code has native filesystem access (always enabled)[/dim]")
+                    console.print(f"[dim]Current workspace: {current_cwd}[/dim]")
 
-                if fs_type == "native":
-                    console.print("[dim]This backend has native filesystem support[/dim]")
-                else:
-                    console.print("[dim]This backend supports filesystem operations via MCP[/dim]")
+                    if questionary.confirm("Customize workspace directory?", default=False).ask():
+                        custom_cwd = questionary.text(
+                            "Enter workspace directory:",
+                            default=current_cwd,
+                        ).ask()
+                        if custom_cwd:
+                            agent["backend"]["cwd"] = custom_cwd
 
-                if filesystem_recommended:
-                    console.print("[dim]💡 Filesystem access recommended for this preset[/dim]")
+                    console.print(f"✅ Filesystem access: {agent['backend']['cwd']} (native)")
 
-                # Auto-enable for Docker preset
-                enable_filesystem = filesystem_recommended
-                if not filesystem_recommended:
-                    enable_filesystem = questionary.confirm("Enable filesystem access for this agent?", default=True).ask()
+                    # Ask about Docker bash execution for Claude Code
+                    console.print()
+                    console.print("[dim]Claude Code bash execution mode:[/dim]")
+                    console.print("[dim]  • local: Run bash commands directly on your machine (default)[/dim]")
+                    console.print("[dim]  • docker: Run bash in isolated Docker container (requires Docker setup)[/dim]")
 
-                if enable_filesystem:
-                    if backend_type == "claude_code":
-                        # cwd is already set during batch_create_agents
-                        # Optionally allow user to customize it
-                        current_cwd = agent["backend"].get("cwd", "workspace")
-                        console.print(f"[dim]Current workspace: {current_cwd}[/dim]")
+                    enable_docker = questionary.confirm(
+                        "Enable Docker bash execution? (requires Docker setup)",
+                        default=(use_case == "coding_docker"),
+                    ).ask()
 
-                        if questionary.confirm("Customize workspace directory?", default=False).ask():
-                            custom_cwd = questionary.text(
-                                "Enter workspace directory:",
-                                default=current_cwd,
-                            ).ask()
-                            if custom_cwd:
-                                agent["backend"]["cwd"] = custom_cwd
-
-                        console.print(f"✅ Filesystem access enabled (native): {agent['backend']['cwd']}")
+                    if enable_docker:
+                        agent["backend"]["enable_mcp_command_line"] = True
+                        agent["backend"]["command_line_execution_mode"] = "docker"
+                        console.print("🐳 Docker bash execution enabled")
                     else:
+                        console.print("💻 Local bash execution enabled (default)")
+                else:
+                    # For non-Claude Code backends
+                    # Check if filesystem is recommended in the preset
+                    filesystem_recommended = False
+                    if use_case and use_case != "custom":
+                        use_case_info = self.USE_CASES.get(use_case, {})
+                        filesystem_recommended = "filesystem" in use_case_info.get("recommended_tools", [])
+
+                    if fs_type == "native":
+                        console.print("[dim]This backend has native filesystem support[/dim]")
+                    else:
+                        console.print("[dim]This backend supports filesystem operations via MCP[/dim]")
+
+                    if filesystem_recommended:
+                        console.print("[dim]💡 Filesystem access recommended for this preset[/dim]")
+
+                    # Auto-enable for Docker preset
+                    enable_filesystem = filesystem_recommended
+                    if not filesystem_recommended:
+                        enable_filesystem = questionary.confirm("Enable filesystem access for this agent?", default=True).ask()
+
+                    if enable_filesystem:
                         # For MCP-based filesystem, set cwd parameter
-                        # This will be used for MCP filesystem operations
                         if not agent["backend"].get("cwd"):
                             # Use agent index for workspace naming
                             agent["backend"]["cwd"] = f"workspace{agent_num}"
 
                         console.print(f"✅ Filesystem access enabled (via MCP): {agent['backend']['cwd']}")
 
-            # Enable Docker execution mode for Docker preset
-            if use_case == "coding_docker" and agent["backend"].get("cwd"):
-                agent["backend"]["enable_mcp_command_line"] = True
-                agent["backend"]["command_line_execution_mode"] = "docker"
-                console.print("🐳 Docker execution mode enabled for isolated code execution")
+                        # Enable Docker execution mode for Docker preset
+                        if use_case == "coding_docker":
+                            agent["backend"]["enable_mcp_command_line"] = True
+                            agent["backend"]["command_line_execution_mode"] = "docker"
+                            console.print("🐳 Docker execution mode enabled for isolated code execution")
 
             # Built-in tools (backend-specific capabilities)
+            # Skip for Claude Code - bash is always available, already configured above
+            if backend_type != "claude_code":
+                supports = provider_info.get("supports", [])
+                builtin_tools = [s for s in supports if s in ["web_search", "code_execution", "bash"]]
+
+                # Get recommended tools from use case
+                recommended_tools = []
+                if use_case:
+                    use_case_info = self.USE_CASES.get(use_case, {})
+                    recommended_tools = use_case_info.get("recommended_tools", [])
+
+                if builtin_tools:
+                    console.print()
+
+                    # Show preset info if this is a preset use case
+                    if recommended_tools and use_case != "custom":
+                        console.print(f"[dim]💡 Preset recommendation: {', '.join(recommended_tools)}[/dim]")
+
+                    tool_choices = []
+
+                    if "web_search" in builtin_tools:
+                        tool_choices.append(questionary.Choice("Web Search", value="web_search", checked="web_search" in recommended_tools))
+                    if "code_execution" in builtin_tools:
+                        tool_choices.append(questionary.Choice("Code Execution", value="code_execution", checked="code_execution" in recommended_tools))
+                    if "bash" in builtin_tools:
+                        tool_choices.append(questionary.Choice("Bash/Shell", value="bash", checked="bash" in recommended_tools))
+
+                    if tool_choices:
+                        selected_tools = questionary.checkbox(
+                            "Enable built-in tools for this agent (Space to select, Enter to confirm):",
+                            choices=tool_choices,
+                            style=questionary.Style(
+                                [
+                                    ("selected", "fg:cyan"),
+                                    ("pointer", "fg:cyan bold"),
+                                    ("highlighted", "fg:cyan"),
+                                ],
+                            ),
+                            use_arrow_keys=True,
+                        ).ask()
+
+                        if selected_tools:
+                            # Apply backend-specific configuration
+                            if "web_search" in selected_tools:
+                                if backend_type in ["openai", "claude", "gemini", "grok", "azure_openai"]:
+                                    agent["backend"]["enable_web_search"] = True
+
+                            if "code_execution" in selected_tools:
+                                if backend_type == "openai" or backend_type == "azure_openai":
+                                    agent["backend"]["enable_code_interpreter"] = True
+                                elif backend_type in ["claude", "gemini"]:
+                                    agent["backend"]["enable_code_execution"] = True
+
+                            console.print(f"✅ Enabled {len(selected_tools)} built-in tool(s)")
+
+            # Multimodal capabilities (passive - no config needed)
             supports = provider_info.get("supports", [])
-            builtin_tools = [s for s in supports if s in ["web_search", "code_execution", "bash"]]
             multimodal_caps = [s for s in supports if s in ["image_understanding", "audio_understanding", "video_understanding", "reasoning"]]
-
-            # Get recommended tools from use case
-            recommended_tools = []
-            if use_case:
-                use_case_info = self.USE_CASES.get(use_case, {})
-                recommended_tools = use_case_info.get("recommended_tools", [])
-
-            if builtin_tools:
-                console.print()
-
-                # Show preset info if this is a preset use case
-                if recommended_tools and use_case != "custom":
-                    console.print(f"[dim]💡 Preset recommendation: {', '.join(recommended_tools)}[/dim]")
-
-                tool_choices = []
-
-                if "web_search" in builtin_tools:
-                    tool_choices.append(questionary.Choice("Web Search", value="web_search", checked="web_search" in recommended_tools))
-                if "code_execution" in builtin_tools:
-                    tool_choices.append(questionary.Choice("Code Execution", value="code_execution", checked="code_execution" in recommended_tools))
-                if "bash" in builtin_tools:
-                    tool_choices.append(questionary.Choice("Bash/Shell", value="bash", checked="bash" in recommended_tools))
-
-                if tool_choices:
-                    selected_tools = questionary.checkbox(
-                        "Enable built-in tools for this agent (Space to select, Enter to confirm):",
-                        choices=tool_choices,
-                        style=questionary.Style(
-                            [
-                                ("selected", "fg:cyan"),
-                                ("pointer", "fg:cyan bold"),
-                                ("highlighted", "fg:cyan"),
-                            ],
-                        ),
-                        use_arrow_keys=True,
-                    ).ask()
-
-                    if selected_tools:
-                        # Apply backend-specific configuration
-                        if "web_search" in selected_tools:
-                            if backend_type in ["openai", "claude", "gemini", "grok", "azure_openai"]:
-                                agent["backend"]["enable_web_search"] = True
-
-                        if "code_execution" in selected_tools:
-                            if backend_type == "openai" or backend_type == "azure_openai":
-                                agent["backend"]["enable_code_interpreter"] = True
-                            elif backend_type in ["claude", "gemini"]:
-                                agent["backend"]["enable_code_execution"] = True
-
-                        console.print(f"✅ Enabled {len(selected_tools)} built-in tool(s)")
 
             # Show multimodal capabilities info (passive - no config needed)
             if multimodal_caps:
@@ -1536,36 +1572,37 @@ class ConfigBuilder:
 
                             if selected_model:
                                 agent["backend"]["model"] = selected_model
-
-                                # Configure text verbosity for all models
                                 console.print(f"  ✓ {selected_model}")
-                                console.print("\n  [dim]Configure text verbosity:[/dim]")
-                                console.print("  [dim]• low: Concise responses[/dim]")
-                                console.print("  [dim]• medium: Balanced detail (recommended)[/dim]")
-                                console.print("  [dim]• high: Detailed, verbose responses[/dim]\n")
 
-                                verbosity_choice = questionary.select(
-                                    "  Text verbosity:",
-                                    choices=[
-                                        questionary.Choice("Low (concise)", value="low"),
-                                        questionary.Choice("Medium (recommended)", value="medium"),
-                                        questionary.Choice("High (detailed)", value="high"),
-                                    ],
-                                    default="medium",
-                                    style=questionary.Style(
-                                        [
-                                            ("selected", "fg:cyan bold"),
-                                            ("pointer", "fg:cyan bold"),
-                                            ("highlighted", "fg:cyan"),
+                                # Configure text verbosity for OpenAI models only
+                                if backend_type in ["openai", "azure_openai"]:
+                                    console.print("\n  [dim]Configure text verbosity:[/dim]")
+                                    console.print("  [dim]• low: Concise responses[/dim]")
+                                    console.print("  [dim]• medium: Balanced detail (recommended)[/dim]")
+                                    console.print("  [dim]• high: Detailed, verbose responses[/dim]\n")
+
+                                    verbosity_choice = questionary.select(
+                                        "  Text verbosity:",
+                                        choices=[
+                                            questionary.Choice("Low (concise)", value="low"),
+                                            questionary.Choice("Medium (recommended)", value="medium"),
+                                            questionary.Choice("High (detailed)", value="high"),
                                         ],
-                                    ),
-                                    use_arrow_keys=True,
-                                ).ask()
+                                        default="medium",
+                                        style=questionary.Style(
+                                            [
+                                                ("selected", "fg:cyan bold"),
+                                                ("pointer", "fg:cyan bold"),
+                                                ("highlighted", "fg:cyan"),
+                                            ],
+                                        ),
+                                        use_arrow_keys=True,
+                                    ).ask()
 
-                                agent["backend"]["text"] = {
-                                    "verbosity": verbosity_choice if verbosity_choice else "medium",
-                                }
-                                console.print(f"  ✓ Text verbosity: {verbosity_choice if verbosity_choice else 'medium'}\n")
+                                    agent["backend"]["text"] = {
+                                        "verbosity": verbosity_choice if verbosity_choice else "medium",
+                                    }
+                                    console.print(f"  ✓ Text verbosity: {verbosity_choice if verbosity_choice else 'medium'}\n")
 
                                 # Auto-add reasoning params for GPT-5 and o-series models
                                 if selected_model in ["gpt-5", "gpt-5-mini", "gpt-5-nano", "o4", "o4-mini"]:

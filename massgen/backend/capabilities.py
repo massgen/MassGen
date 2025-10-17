@@ -137,6 +137,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         builtin_tools=["web_search", "code_execution"],
         filesystem_support="mcp",
         models=[
+            "claude-sonnet-4-5-20250929",
             "claude-sonnet-4-20250514",
             "claude-opus-4-20250514",
             "claude-3-5-sonnet-latest",
@@ -172,10 +173,18 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
             "NotebookRead",
         ],
         filesystem_support="native",
-        models=["claude-sonnet-4-5-20250929", "claude-opus-4-20250514"],
+        models=[
+            "claude-sonnet-4-5-20250929",
+            "claude-sonnet-4-20250514",
+            "claude-opus-4-20250514",
+        ],
         default_model="claude-sonnet-4-5-20250929",
         env_var="ANTHROPIC_API_KEY",
-        notes="Native filesystem access via SDK. Extensive built-in tooling for code operations. Image understanding support.",
+        notes=(
+            "⚠️ Works with local Claude Code CLI login (`claude login`) or ANTHROPIC_API_KEY. "
+            "Native filesystem access via SDK. Extensive built-in tooling for code operations. "
+            "Image understanding support."
+        ),
     ),
     "gemini": BackendCapabilities(
         backend_type="gemini",
@@ -195,7 +204,7 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
             "gemini-exp-1206",
         ],
         default_model="gemini-2.5-flash",
-        env_var="GOOGLE_API_KEY",
+        env_var="GEMINI_API_KEY",
         notes="Google Search Retrieval provides web search. Image understanding capabilities.",
     ),
     "grok": BackendCapabilities(
@@ -208,6 +217,9 @@ BACKEND_CAPABILITIES: Dict[str, BackendCapabilities] = {
         builtin_tools=["web_search"],
         filesystem_support="mcp",
         models=[
+            "grok-4",
+            "grok-3",
+            "grok-3-mini",
             "grok-beta",
             "grok-vision-beta",
         ],

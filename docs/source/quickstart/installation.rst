@@ -57,14 +57,13 @@ When you run ``massgen`` for the first time, you'll see a friendly setup wizard:
    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    Choose your use case:
-   1. Simple Q&A - Basic question answering
-   2. Research & Analysis - Multi-agent research with web search
-   3. Filesystem + Code Execution - Generate, test, and modify code
-   4. Filesystem + Code Execution (Docker) - Secure isolated execution
-   5. Data Analysis - Analyze data with code execution and visualizations
-   6. Creative Writing - Collaborative creative content generation
-   7. Web Automation - Browser automation and web scraping with MCP
-   8. Custom Configuration - Full flexibility
+   ⚙️  Custom Configuration          [Choose your own tools]
+   💬  Simple Q&A                     [Basic chat (no special tools)]
+   🔍  Research & Analysis            [Web search enabled]
+   💻  Code & Files                   [File ops + code execution]
+   🐳  Code & Files (Docker)          [File ops + isolated Docker execution]
+   📊  Data Analysis                  [Files + code + image analysis]
+   🎨  Multimodal Analysis            [Images, audio, video understanding]
 
    ✅ Selected: Research & Analysis
 
@@ -81,7 +80,8 @@ When you run ``massgen`` for the first time, you'll see a friendly setup wizard:
    ║       • 3 agents recommended for diverse perspectives                             ║
    ║       • Cross-verification of facts and sources                                   ║
    ║                                                                                    ║
-   ║   Use this for: Research queries, current events, fact-checking                   ║
+   ║   Use this for: Research queries, current events, fact-checking, comparative      ║
+   ║                 analysis                                                           ║
    ║                                                                                    ║
    ╚════════════════════════════════════════════════════════════════════════════════════╝
 
@@ -122,55 +122,51 @@ Understanding Preset Configurations
 
 The wizard offers several **preset configurations** that auto-configure tools and capabilities for common use cases:
 
+**Custom Configuration**
+  Full flexibility to choose any combination of agents, models, and tools. You'll configure everything manually.
+  * Choose your own tools
+  * Use for: Specialized workflows with specific requirements
+
 **Simple Q&A**
-  Basic question answering with no special tools. Start with 1 agent for straightforward queries, or add more for diverse perspectives. No auto-configuration needed.
+  Basic question answering with multiple perspectives. No special tools configured.
+  * Multiple agents provide diverse perspectives and cross-verification
+  * Use for: General questions, discussions, brainstorming
 
 **Research & Analysis** *(Auto-configured)*
   * ✓ **Web Search**: Real-time internet search for current information, fact-checking, and source verification
-  * ✓ **Multi-Agent**: 3 agents recommended for diverse perspectives and cross-verification
+  * ✓ **Multi-Agent Collaboration**: 3 agents recommended for diverse perspectives and cross-verification
+  * Available for: OpenAI, Claude, Gemini, Grok
   * Use for: Research queries, current events, fact-checking, comparative analysis
 
-**Filesystem + Code Execution** *(Auto-configured)*
+**Code & Files** *(Auto-configured)*
   * ✓ **Filesystem Access**: File read/write operations in isolated workspace
   * ✓ **Code Execution**: OpenAI Code Interpreter or Claude/Gemini native code execution
+  * Claude Code recommended for best filesystem support
   * Use for: Code generation, refactoring, testing, file operations
 
-**Filesystem + Code Execution (Docker)** *(Auto-configured)*
+**Code & Files (Docker)** *(Auto-configured)*
   * ✓ **Filesystem Access**: File read/write operations
   * ✓ **Code Execution**: Backend-native code execution
-  * ✓ **Docker Isolation**: Fully isolated container execution, persistent packages, network controls
-  * ⚠️ Requires: Docker Engine 28.0.0+, docker Python library, massgen-executor image
+  * ✓ **Docker Isolation**: Fully isolated container execution via MCP, persistent packages, network controls
+  * ⚠️ **Setup Required**: Docker Engine 28.0.0+, docker Python library, and massgen-executor image (see massgen/docker/README.md)
   * Use for: Secure code execution with full isolation and persistent dependencies
 
 **Data Analysis** *(Auto-configured)*
   * ✓ **Filesystem Access**: Read/write data files (CSV, JSON, etc.), save visualizations
-  * ✓ **Code Execution**: Data processing, statistical analysis, visualization generation
-  * ✓ **Image Understanding**: Analyze charts, graphs, and visualizations from images
+  * ✓ **Code Execution**: Data processing, transformation, statistical analysis, visualization generation
+  * ✓ **Image Understanding**: Analyze charts, graphs, and visualizations; extract data from images
+  * Available for: OpenAI, Claude Code, Gemini, Azure OpenAI
   * Use for: Data analysis, chart interpretation, statistical processing, visualization
 
-**Deep Reasoning & Problem Solving** *(Auto-configured)*
-  * ✓ **Extended Reasoning**: Deep thinking for complex problems with chain-of-thought reasoning
-  * ✓ **Web Search**: Real-time information retrieval and fact verification
-  * Best with: OpenAI GPT-5, o4, or o4-mini models
-  * Use for: Complex problem solving, mathematical proofs, logic puzzles, strategic planning
-
 **Multimodal Analysis** *(Auto-configured)*
-  * ✓ **Image Understanding**: Analyze images, screenshots, charts, OCR and text extraction
+  * ✓ **Image Understanding**: Analyze images, screenshots, charts; OCR and text extraction
+    * Available for: OpenAI, Claude Code, Gemini, Azure OpenAI
   * ✓ **Audio Understanding**: Transcribe and analyze audio (where supported)
+    * Available for: Claude, ChatCompletion
   * ✓ **Video Understanding**: Analyze video content (where supported)
+    * Available for: Claude, ChatCompletion, OpenAI
   * Note: Different backends support different modalities
   * Use for: Image analysis, screenshot interpretation, multimedia content analysis
-
-**Creative Writing**
-  Multiple agents collaborate for diverse creative ideas, styles, and perspectives. No special tools—pure creativity.
-
-**Web Automation** *(Partial auto-configuration)*
-  * ⚠ **MCP Servers**: Manual setup required for browser automation (Playwright MCP)
-  * ✓ **Filesystem Access**: Save scraped data and screenshots
-  * Use for: Web scraping, browser automation, screenshot capture, form filling
-
-**Custom Configuration**
-  Full flexibility to choose any combination of agents, models, and tools. You'll configure everything manually.
 
 .. note::
    Presets marked *(Auto-configured)* automatically enable specific tools and capabilities during setup. You can still customize further if needed.

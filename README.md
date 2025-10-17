@@ -104,7 +104,7 @@ This project started with the "threads of thought" and "iterative refinement" id
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.33 Roadmap](#v0033-roadmap)
+- [v0.1.1 Roadmap](#v011-roadmap)
 </details>
 
 <details open>
@@ -1116,9 +1116,9 @@ To use Docker execution mode, complete these steps before running:
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.33 Roadmap
+### v0.1.1 Roadmap
 
-Version 0.0.33 focuses on developer experience improvements and PyPI distribution:
+Version 0.1.1 focuses on developer experience improvements and PyPI distribution:
 
 #### Required Features
 - **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
@@ -1134,7 +1134,7 @@ Key technical approach:
 - **Nested Chat**: AG2 integration for hierarchical conversations with parent-child agent relationships
 - **DSPy**: Prompt optimization, performance tuning, and systematic agent improvement workflows
 
-For detailed milestones and technical specifications, see the [full v0.0.33 roadmap](ROADMAP_v0.0.33.md).
+For detailed milestones and technical specifications, see the [full v0.1.1 roadmap](ROADMAP.md).
 
 ---
 

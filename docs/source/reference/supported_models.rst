@@ -15,7 +15,7 @@ Quick Reference: Backend Setup
    * - **Claude API**
      - ``ANTHROPIC_API_KEY``
    * - **Claude Code**
-     - ``ANTHROPIC_API_KEY`` + Native tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite
+     - Native tools: Read, Write, Edit, Bash, Grep, Glob, TodoWrite. If logged in via Anthropic account, ``ANTHROPIC_API_KEY`` is NOT needed (comment it out in ``.env`` or it will default to using the API key)
    * - **Gemini API**
      - ``GEMINI_API_KEY``
    * - **OpenAI API**
