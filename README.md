@@ -1014,60 +1014,13 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Built-in Examples**: `@examples/` prefix for instant access to configurations
 - **Backwards Compatibility**: Existing git clone workflows continue to work
 
-### Recent Achievements (v0.0.32)
-
-**🎉 Released: October 15, 2025**
-
-#### Docker Execution Mode
-- **Container-Based Isolation**: Secure command execution in isolated Docker containers preventing host filesystem access
-- **Persistent State Management**: Packages and dependencies persist across conversation turns eliminating redundant setup
-- **Multi-Agent Support**: Each agent receives dedicated isolated container enabling safe parallel execution
-- **Configurable Security**: Resource limits (CPU, memory), network isolation modes, and read-only volume mounts
-
-**⚠️ Docker Setup Required:**
-To use Docker execution mode, complete these steps before running:
-1. **Docker Engine 28.0.0+** installed and running (`docker ps` should work)
-2. **Python docker library**: `uv pip install -e ".[docker]"` or `pip install docker>=7.0.0`
-3. **Build Docker image**: `bash massgen/docker/build.sh` (from repository root)
-4. **📚 Full setup guide**: See `massgen/docker/README.md` for complete instructions
-
-#### MCP Architecture Refactoring
-- **Simplified Client**: Renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture
-- **Code Consolidation**: Removed deprecated modules and consolidated duplicate MCP protocol handling
-- **Improved Maintainability**: Standardized type hints, enhanced error handling, cleaner code organization
-
-#### Claude Code Docker Integration
-- **Automatic Tool Management**: Bash tool automatically disabled in Docker mode routing commands through execute_command
-- **MCP Auto-Permissions**: Automatic approval for MCP tools while preserving security validation
-- **Enhanced Guidance**: System messages prevent git repository confusion between host and container environments
-
-#### Configuration and Testing
-- **Docker Documentation**: `massgen/docker/README.md` with setup guide and build scripts
-- **Example Configurations**: `docker_simple.yaml`, `docker_multi_agent.yaml`, `docker_with_resource_limits.yaml`, `docker_claude_code.yaml`, `docker_verification.yaml`
-- **Testing**: Comprehensive test suite validating Docker and local execution modes
-
-### Recent Achievements (v0.0.31)
-
-**🎉 Released: October 13, 2025**
-
-#### Universal Code Execution
-- **MCP-Based Tool**: New `execute_command` tool works across Claude, Gemini, OpenAI, and Chat Completions backends
-- **AG2-Inspired Security**: Permission management and command filtering (whitelist/blacklist patterns)
-- **Planning Mode Support**: Code execution in planning mode for safer coordination
-
-#### AG2 Group Chat Integration
-- **Multi-Agent Conversations**: Native support using AG2's GroupChat and GroupChatManager frameworks
-- **Smart Speaker Selection**: Automatic, round-robin, or manual selection powered by LLMs
-- **Enhanced Adapter**: AG2 adapter supporting native group chat coordination
-
-#### Audio & Video Generation
-- **Audio Tools**: Text-to-speech and transcription capabilities
-- **Video Generation**: Integration with OpenAI's Sora-2 API for video creation
-- **Multimodal Expansion**: Extended capabilities beyond text and images
-
 ### Previous Achievements (v0.0.3 - v0.0.32)
 
-<div style="max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease;">
+✅ **Docker Execution Mode (v0.0.32)**: Container-based isolation with secure command execution in isolated Docker containers preventing host filesystem access, persistent state management with packages and dependencies persisting across conversation turns, multi-agent support with dedicated isolated containers for each agent, configurable security with resource limits (CPU, memory), network isolation modes, and read-only volume mounts
+
+✅ **MCP Architecture Refactoring (v0.0.32)**: Simplified client with renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture, code consolidation by removing deprecated modules and consolidating duplicate MCP protocol handling, improved maintainability with standardized type hints, enhanced error handling, and cleaner code organization
+
+✅ **Claude Code Docker Integration (v0.0.32)**: Automatic tool management with Bash tool automatically disabled in Docker mode routing commands through execute_command, MCP auto-permissions with automatic approval for MCP tools while preserving security validation, enhanced guidance with system messages preventing git repository confusion between host and container environments
 
 ✅ **Universal Command Execution (v0.0.31)**: MCP-based execute_command tool works across Claude, Gemini, OpenAI, and Chat Completions providers, AG2-inspired security with permission management and command filtering, code execution in planning mode for safer coordination
 
@@ -1148,8 +1101,6 @@ To use Docker execution mode, complete these steps before running:
 ✅ **Foundation Architecture (v0.0.3)**: Complete multi-agent orchestration system with async streaming, builtin tools, and multi-backend support
 
 ✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
-
-</div>
 
 ### Key Future Enhancements
 

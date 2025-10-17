@@ -103,6 +103,17 @@ def build_presentation(presentation_name):
             "Getting Started - 60 Seconds",
             "Call to Action - Applied AI Summit",
         ],
+        "pytorch-openagents": [
+            "Title - PyTorch OpenAgents Conference",
+            "Problem - AI Scaling Challenges",
+            "Solution - Multi-Agent Collaboration",
+            "Evidence - Performance Gains",
+            "Architecture - System Design",
+            "Case Study - Success Through Collaboration",
+            "Demo - Live Examples",
+            "Getting Started - 60 Seconds",
+            "Call to Action - PyTorch OpenAgents",
+        ],
         "columbia": [
             "Title - Columbia University",
             "Problem - Single-Agent Limitation",
@@ -264,6 +275,17 @@ def build_presentation(presentation_name):
             "slide-live-demo-examples",
             "slide-getting-started",
             "slide-call-to-action-applied-ai-summit",
+        ],
+        "pytorch-openagents": [
+            "slide-title-pytorch-openagents",
+            "slide-the-problem",
+            "slide-the-solution-multi-agent-collaboration",
+            "slide-evidence-performance-gains",
+            "slide-architecture",
+            "slide-case-study-success-through-collaboration",
+            "slide-live-demo-examples",
+            "slide-getting-started",
+            "slide-call-to-action-general",
         ],
         "aibuilders": [
             "slide-title-aibuilders",  # AI Builders-specific title
