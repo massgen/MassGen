@@ -291,29 +291,33 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     if backend_type == "openai":
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            print("⚠️  Warning: OpenAI API key not found. Set OPENAI_API_KEY environment variable or add to .env file.", flush=True)
-            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
+            raise ConfigurationError(
+                "OpenAI API key not found. Set OPENAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return ResponseBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "grok":
         api_key = kwargs.get("api_key") or os.getenv("XAI_API_KEY")
         if not api_key:
-            print("⚠️  Warning: Grok API key not found. Set XAI_API_KEY environment variable or add to .env file.", flush=True)
-            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
+            raise ConfigurationError(
+                "Grok API key not found. Set XAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return GrokBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "claude":
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            print("⚠️  Warning: Claude API key not found. Set ANTHROPIC_API_KEY environment variable or add to .env file.", flush=True)
-            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
+            raise ConfigurationError(
+                "Claude API key not found. Set ANTHROPIC_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return ClaudeBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "gemini":
         api_key = kwargs.get("api_key") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
-            print("⚠️  Warning: Gemini API key not found. Set GOOGLE_API_KEY environment variable or add to .env file.", flush=True)
-            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
+            raise ConfigurationError(
+                "Gemini API key not found. Set GOOGLE_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return GeminiBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "chatcompletion":
@@ -325,43 +329,81 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             if base_url and "cerebras.ai" in base_url:
                 api_key = os.getenv("CEREBRAS_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Cerebras AI API key not found. Set CEREBRAS_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "together.xyz" in base_url:
                 api_key = os.getenv("TOGETHER_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Together AI API key not found. Set TOGETHER_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Together AI API key not found. Set TOGETHER_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "fireworks.ai" in base_url:
                 api_key = os.getenv("FIREWORKS_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Fireworks AI API key not found. Set FIREWORKS_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Fireworks AI API key not found. Set FIREWORKS_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "groq.com" in base_url:
                 api_key = os.getenv("GROQ_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Groq API key not found. Set GROQ_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Groq API key not found. Set GROQ_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "nebius.com" in base_url:
                 api_key = os.getenv("NEBIUS_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Nebius AI Studio API key not found. Set NEBIUS_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Nebius AI Studio API key not found. Set NEBIUS_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "openrouter.ai" in base_url:
                 api_key = os.getenv("OPENROUTER_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("OpenRouter API key not found. Set OPENROUTER_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "OpenRouter API key not found. Set OPENROUTER_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and ("z.ai" in base_url or "bigmodel.cn" in base_url):
                 api_key = os.getenv("ZAI_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("ZAI API key not found. Set ZAI_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "ZAI API key not found. Set ZAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and ("moonshot.ai" in base_url or "moonshot.cn" in base_url):
                 api_key = os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Kimi/Moonshot API key not found. Set MOONSHOT_API_KEY or KIMI_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Kimi/Moonshot API key not found. Set MOONSHOT_API_KEY or KIMI_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "poe.com" in base_url:
                 api_key = os.getenv("POE_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "POE API key not found. Set POE_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "aliyuncs.com" in base_url:
                 api_key = os.getenv("QWEN_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Qwen API key not found. Set QWEN_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Qwen API key not found. Set QWEN_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -370,7 +412,9 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         # Supports both global (z.ai) and China (bigmodel.cn) endpoints
         api_key = kwargs.get("api_key") or os.getenv("ZAI_API_KEY")
         if not api_key:
-            raise ConfigurationError("ZAI API key not found. Set ZAI_API_KEY or provide in config.")
+            raise ConfigurationError(
+                "ZAI API key not found. Set ZAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "lmstudio":
@@ -1219,13 +1263,13 @@ async def run_interactive_mode(
     rich_console.clear()
 
     # ASCII art for interactive multi-agent mode
-    ascii_art = """[bold cyan]
+    ascii_art = """[bold #4A90E2]
      ███╗   ███╗ █████╗ ███████╗███████╗ ██████╗ ███████╗███╗   ██╗
      ████╗ ████║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔════╝████╗  ██║
      ██╔████╔██║███████║███████╗███████╗██║  ███╗█████╗  ██╔██╗ ██║
      ██║╚██╔╝██║██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║
      ██║ ╚═╝ ██║██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║
-     ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝[/bold cyan]
+     ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝[/bold #4A90E2]
 
      [dim]     🤖 🤖 🤖  →  💬 collaborate  →  🎯 winner  →  📢 final[/dim]
 """
@@ -1233,7 +1277,7 @@ async def run_interactive_mode(
     # Wrap ASCII art in a panel
     ascii_panel = Panel(
         ascii_art,
-        border_style="bold cyan",
+        border_style="bold #4A90E2",
         padding=(0, 2),
         width=80,
     )

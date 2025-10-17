@@ -33,11 +33,11 @@ load_dotenv()
 # Custom theme for the CLI - using colors that work on both light and dark backgrounds
 custom_theme = Theme(
     {
-        "info": "bright_blue",
-        "warning": "bright_yellow",
-        "error": "bright_red bold",
-        "success": "bright_green bold",
-        "prompt": "bright_magenta bold",
+        "info": "#4A90E2",  # Medium blue - matches system status colors
+        "warning": "#CC6600",  # Orange-brown - works on both light and dark
+        "error": "#CC0000 bold",  # Deep red - strong contrast
+        "success": "#00AA44 bold",  # Deep green - visible on both
+        "prompt": "#6633CC bold",  # Purple - good on both backgrounds
     },
 )
 

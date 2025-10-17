@@ -360,27 +360,83 @@ API Key Configuration
 MassGen looks for API keys in the following order:
 
 1. Environment variables (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, etc.)
-2. ``~/.config/massgen/.env`` file (created by setup wizard)
+2. ``~/.massgen/.env`` file (recommended - global user config)
 
-   * Windows: ``%USERPROFILE%\.config\massgen\.env``
+   * Windows: ``%USERPROFILE%\.massgen\.env``
 
-3. Project-specific ``.env`` file in current directory
+3. Project-specific ``.env`` file in current directory (highest priority)
+
+**Option 1: Interactive Setup** (Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use the interactive API key wizard to set up credentials:
+
+.. code-block:: bash
+
+   # Launch API key setup wizard
+   massgen --setup-keys
+
+The wizard will:
+
+1. Show a checkbox list of all 15+ supported providers
+2. Let you select which providers to configure (Space to toggle, Enter to confirm)
+3. Prompt for API keys only for selected providers (password-masked input)
+4. Save to ``~/.massgen/.env`` (global) or ``./.env`` (project-specific)
+5. Merge with existing keys if the file already exists
+
+**Supported providers:**
+
+* **Main backends:** OpenAI, Anthropic (Claude), Google Gemini, xAI (Grok)
+* **Azure:** Azure OpenAI
+* **ChatCompletion providers:** Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, ZAI (Zhipu.ai), Kimi/Moonshot AI, POE, Qwen (Alibaba)
+
+.. note::
+   You can skip all providers if you're using local models (vLLM, Ollama, etc.) which don't require API keys.
+
+**Option 2: Manual Setup**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To set up API keys manually:
 
 .. code-block:: bash
 
    # Unix/Mac: Create or edit the .env file
-   vim ~/.config/massgen/.env
+   vim ~/.massgen/.env
 
    # Windows: Create or edit the .env file
-   notepad %USERPROFILE%\.config\massgen\.env
+   notepad %USERPROFILE%\.massgen\.env
 
    # Add your API keys (same format for all platforms)
    OPENAI_API_KEY=sk-your-key-here
    ANTHROPIC_API_KEY=sk-ant-your-key
-   GOOGLE_API_KEY=your-gemini-key
+   GEMINI_API_KEY=your-gemini-key
    XAI_API_KEY=xai-your-key
+
+**Complete API Key Reference:**
+
+.. code-block:: bash
+
+   # Main backends
+   OPENAI_API_KEY=sk-...
+   ANTHROPIC_API_KEY=sk-ant-...
+   GEMINI_API_KEY=...
+   XAI_API_KEY=xai-...
+
+   # Azure
+   AZURE_OPENAI_API_KEY=...
+   AZURE_OPENAI_ENDPOINT=...
+
+   # ChatCompletion providers
+   CEREBRAS_API_KEY=...
+   TOGETHER_API_KEY=...
+   FIREWORKS_API_KEY=...
+   GROQ_API_KEY=...
+   NEBIUS_API_KEY=...
+   OPENROUTER_API_KEY=...
+   ZAI_API_KEY=...
+   MOONSHOT_API_KEY=...        # Also accepts KIMI_API_KEY
+   POE_API_KEY=...
+   QWEN_API_KEY=...
 
 Understanding the .massgen Directory
 =====================================
