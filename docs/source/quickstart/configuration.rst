@@ -494,23 +494,6 @@ For quick tests, you can use CLI flags without a configuration file:
      --system-message "You are a helpful coding assistant" \
      "Write a Python function to sort a list"
 
-CLI Quick Setup
----------------
-
-For quick single-agent testing without a configuration file:
-
-.. code-block:: bash
-
-   massgen --model gemini-2.5-flash "Your question"
-
-You can also specify backend type and system messages:
-
-.. code-block:: bash
-
-   massgen --backend claude --model claude-sonnet-4 \
-     --system-message "You are a helpful coding assistant" \
-     "Write a Python function"
-
 For the complete list of CLI parameters, see :doc:`../reference/cli`
 
 Configuration Best Practices
