@@ -9,6 +9,9 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
   </a>
+  <a href="https://docs.massgen.io">
+    <img src="https://img.shields.io/badge/docs-massgen.ai-blue.svg" alt="Documentation" style="margin-right: 5px;">
+  </a>
   <a href="https://discord.massgen.ai">
     <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
   </a>
@@ -135,7 +138,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **What's New in v0.1.0:**
 - **📦 PyPI Package** - Official pip installation: `pip install massgen`
-- **📖 Comprehensive Documentation** - Full Sphinx docs at [docs.massgen.io](https://docs.massgen.io/en/latest/)
+- **📖 Comprehensive Documentation** - Full Sphinx docs at [MassGen Official Documentation](https://docs.massgen.io/)
 - **🎯 Interactive Setup Wizard** - Guided configuration for first-time users
 - **🚀 Simplified Commands** - Clean `massgen` CLI with `@examples/` prefix for built-in configs
 
@@ -199,7 +202,7 @@ This collaborative approach ensures that the final output leverages collective i
 
 ---
 
-> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[docs.massgen.io](https://docs.massgen.io/en/latest/)**
+> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[MassGen Official Documentation](https://docs.massgen.io/)**
 
 ---
 
@@ -998,7 +1001,7 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 - **Global Access**: Run `massgen` command from any directory after pip install
 
 #### Comprehensive Documentation
-- **Sphinx Documentation**: Full documentation site at [docs.massgen.io](https://docs.massgen.io/en/latest/)
+- **Sphinx Documentation**: Full documentation site at [MassGen Official Documentation](https://docs.massgen.io/en/latest/)
 - **Complete User Guide**: Installation, configuration, usage modes, and API reference
 - **Case Studies**: Real-world examples with session logs and outcomes
 - **Structured Navigation**: Getting Started, User Guide, Reference, Examples, and Development sections
