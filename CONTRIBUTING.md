@@ -145,9 +145,6 @@ MassGen is currently in **Beta** (v0.1.x). We're rapidly iterating on features a
   - Backend capabilities evolving
   - Configuration schema may change
 
-- **Web UI**: Visual interface (v0.1.x - v0.2.x)
-  - Rapid iteration and design changes
-
 **🔴 Deprecated - Will Be Removed**
 
 - **`v1/` directory**: Legacy code from version 1
@@ -157,7 +154,7 @@ MassGen is currently in **Beta** (v0.1.x). We're rapidly iterating on features a
 ### What This Means for Contributors
 
 **When contributing to stable areas:**
-- Breaking changes require team discussion and RFC
+- Breaking changes require team discussion
 - Must provide deprecation warnings 2+ releases (1 week) in advance
 - Update migration documentation in CHANGELOG.md
 
@@ -195,7 +192,8 @@ MassGen is currently in **Beta** (v0.1.x). We're rapidly iterating on features a
 # Basic agent configuration
 agents:
   - name: researcher
-    backend: openai/gpt-4
+    backend: openai
+    model: gpt-5
     system_prompt: "You are a research assistant"
 ```
 
@@ -206,7 +204,7 @@ orchestrator:
   snapshot_storage: "snapshots"
   agent_temporary_workspace: "temp_workspaces"
 
-# Memory configuration (schema evolving)
+# Memory configuration (schema not yet implemented but may evolve when it does)
 memory:
   enabled: true
   provider: mem0

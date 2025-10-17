@@ -31,7 +31,7 @@ The wizard helps you:
 
 * Configure API keys for your preferred AI models
 * Create your default agent team
-* Save configuration to ``~/.config/massgen/config.yaml``
+* Save configuration to ``~/.config/massgen/config.yaml`` (Windows: ``%USERPROFILE%\.config\massgen\config.yaml``)
 
 **After setup:**
 
@@ -297,8 +297,13 @@ Store frequently-used configs in ``~/.config/massgen/agents/`` for easy access:
 
 .. code-block:: bash
 
+   # Unix/Mac
    mkdir -p ~/.config/massgen/agents
    cp my-config.yaml ~/.config/massgen/agents/my-setup.yaml
+
+   # Windows
+   mkdir %USERPROFILE%\.config\massgen\agents
+   copy my-config.yaml %USERPROFILE%\.config\massgen\agents\my-setup.yaml
 
 .. seealso::
    For detailed information on configuration files and examples, see :doc:`../reference/configuration_examples`
@@ -317,3 +322,104 @@ Next Steps
 ⬜ **Advanced:** :doc:`../user_guide/mcp_integration` - Add external tools to your agents
 
 **Already know what you want to build?** Jump to :doc:`../examples/basic_examples` for ready-to-use configurations.
+
+Backwards Compatibility
+=======================
+
+For Existing Users
+------------------
+
+If you previously used MassGen via git clone, **all your existing workflows continue to work**. The PyPI package introduces simplified commands and the ``@examples/`` prefix while maintaining full backwards compatibility.
+
+Command Syntax Changes
+~~~~~~~~~~~~~~~~~~~~~~
+
+**Old Command Syntax** (still works):
+
+.. code-block:: bash
+
+   # Old way - using python -m from MassGen directory
+   cd /path/to/MassGen
+   python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
+
+**New Command Syntax** (recommended):
+
+.. code-block:: bash
+
+   # New way - simple massgen command from anywhere
+   massgen --config @examples/basic/multi/three_agents_default "Question"
+
+Configuration Path Changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Old Config Paths** (still work):
+
+.. code-block:: bash
+
+   # Relative paths from MassGen directory
+   python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
+
+**New @ Prefix for Built-in Configs** (recommended):
+
+.. code-block:: bash
+
+   # @ prefix works from any directory
+   massgen --config @examples/basic/multi/three_agents_default "Question"
+
+**What is the @ prefix?**
+
+The ``@`` prefix is a convenient shortcut to access MassGen's built-in example configurations:
+
+* ``@examples/`` maps to the installed package's example configurations
+* Works from **any directory** (no need to be in MassGen folder)
+* Easier to type and remember
+* Part of the installed package, always available
+
+.. code-block:: bash
+
+   # List all available @examples/ configurations
+   massgen --list-examples
+
+Migration Guide
+~~~~~~~~~~~~~~~
+
+You have several options for migrating to the new PyPI package:
+
+**Option 1: Global Install (Recommended)**
+
+.. code-block:: bash
+
+   # Install MassGen globally via pip
+   pip install massgen
+
+   # Now use the simple 'massgen' command from anywhere
+   massgen --config @examples/basic_multi "Question"
+
+**Option 2: Keep Git Clone with Editable Install**
+
+.. code-block:: bash
+
+   # Keep your git clone and install in editable mode
+   cd /path/to/MassGen
+   pip install -e .
+
+   # Now you can use 'massgen' from anywhere
+   cd ~/other-project
+   massgen --config @examples/basic_multi "Question"
+
+**Option 3: Continue Using Old Syntax**
+
+.. code-block:: bash
+
+   # Your existing commands still work
+   cd /path/to/MassGen
+   python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
+
+Compatibility Summary
+~~~~~~~~~~~~~~~~~~~~~
+
+* ✅ ``massgen`` - New simplified command (recommended)
+* ✅ ``python -m massgen.cli`` - Old command syntax (still works)
+* ✅ ``@examples/...`` - New config prefix (recommended)
+* ✅ ``massgen/configs/...`` - Old config paths (still work when in MassGen directory)
+* ✅ Custom config paths (``./my-config.yaml``) - Work in both old and new syntax

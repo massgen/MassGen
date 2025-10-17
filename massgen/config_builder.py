@@ -2150,7 +2150,7 @@ def main() -> None:
                 )
                 console.print("\n[bold cyan]To use it, run:[/bold cyan]")
                 console.print(
-                    f"  [yellow]python -m massgen.cli --config {filepath} " '"Your question"[/yellow]\n',
+                    f'  [yellow]massgen --config {filepath} "Your question"[/yellow]\n',
                 )
         else:
             console.print("[yellow]Configuration builder exited.[/yellow]")

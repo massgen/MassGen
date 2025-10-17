@@ -228,7 +228,13 @@ Special commands available during interactive sessions:
 
    * - Command
      - Description
-   * - ``/clear``
+   * - ``/help`` or ``/h``
+     - Show available commands and help message
+   * - ``/status``
+     - Show current session status (agents, mode, conversation history, config path)
+   * - ``/config``
+     - Open configuration file in default editor (macOS, Windows, Linux)
+   * - ``/clear`` or ``/reset``
      - Reset conversation history and start fresh
    * - ``/quit`` or ``/exit`` or ``/q``
      - Exit interactive mode

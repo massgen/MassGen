@@ -55,7 +55,7 @@ The wizard guides you through 4 simple steps:
 1. **Select Your Use Case**: Choose from pre-built templates (Research, Coding, Q&A, etc.)
 2. **Configure Agents**: Select providers and models (wizard detects available API keys)
 3. **Configure Tools**: Enable web search, code execution, file operations, etc.
-4. **Review & Save**: Save to ``~/.config/massgen/config.yaml``
+4. **Review & Save**: Save to ``~/.config/massgen/config.yaml`` (Windows: ``%USERPROFILE%\.config\massgen\config.yaml``)
 
 After completing the wizard, your configuration is ready to use:
 
@@ -72,7 +72,7 @@ MassGen uses two directories for configuration:
 
 .. code-block:: text
 
-   ~/.config/massgen/
+   ~/.config/massgen/                        # Windows: %USERPROFILE%\.config\massgen\
    ├── config.yaml              # Default configuration (from wizard)
    ├── agents/                  # Your custom named configurations
    │   ├── research-team.yaml
@@ -90,14 +90,14 @@ MassGen also creates a ``.massgen/`` directory in your project for sessions, wor
    # Run the wizard in named config mode
    massgen --init
 
-   # Choose to save to ~/.config/massgen/agents/ instead of default
+   # Choose to save to ~/.config/massgen/agents/ (Windows: %USERPROFILE%\.config\massgen\agents\)
    # Then use it:
    massgen --config research-team "Your question"
 
 Environment Variables
 ---------------------
 
-API keys are configured through environment variables or a ``.env`` file. After pip install, the setup wizard can create ``~/.config/massgen/.env`` for you.
+API keys are configured through environment variables or a ``.env`` file. After pip install, the setup wizard can create ``~/.config/massgen/.env`` (Windows: ``%USERPROFILE%\.config\massgen\.env``) for you.
 
 Creating Your .env File
 ~~~~~~~~~~~~~~~~~~~~~~~

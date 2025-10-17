@@ -29,10 +29,17 @@ The easiest way to get started with MassGen is via pip or uv:
    # Or with pip
    pip install massgen
 
+.. important::
+   **Before running MassGen:** Set up your API keys so models are available in the setup wizard.
+
+   See `API Key Configuration`_ below for instructions (environment variables or .env file).
+
+Once your API keys are configured, run MassGen to launch the interactive setup wizard:
+
+.. code-block:: bash
+
    # Run MassGen for the first time
    massgen
-
-That's it! On first run, MassGen will launch an interactive setup wizard to help you configure your agents.
 
 .. note::
    **Why the setup wizard?**
@@ -42,7 +49,7 @@ That's it! On first run, MassGen will launch an interactive setup wizard to help
 First-Run Experience
 ~~~~~~~~~~~~~~~~~~~~
 
-When you run ``massgen`` for the first time, you'll see a friendly setup wizard:
+When you run ``massgen`` for the first time (after configuring API keys), you'll see a friendly setup wizard:
 
 .. code-block:: text
 
@@ -115,7 +122,7 @@ When you run ``massgen`` for the first time, you'll see a friendly setup wizard:
 
    ✅ Configuration saved to: ~/.config/massgen/config.yaml
 
-Your configuration is saved to ``~/.config/massgen/config.yaml`` and will be used for all future runs.
+Your configuration is saved to ``~/.config/massgen/config.yaml`` (Unix/Mac) or ``%USERPROFILE%\.config\massgen\config.yaml`` (Windows) and will be used for all future runs.
 
 Understanding Preset Configurations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -209,8 +216,8 @@ MassGen ships with ready-to-use example configurations:
 
 See :doc:`configuration` for more details on customizing configurations.
 
-**Method 2: Development Installation** (For Contributors)
-----------------------------------------------------------
+**Method 2: Development Installation** (For Developers)
+-------------------------------------------------------
 
 If you want to contribute to MassGen or customize the source code:
 
@@ -324,7 +331,7 @@ MassGen uses the following directory structure:
 
 .. code-block:: text
 
-   ~/.config/massgen/
+   ~/.config/massgen/                        # Windows: %USERPROFILE%\.config\massgen\
    ├── config.yaml              # Your default configuration (from wizard)
    ├── agents/                  # Your custom named configurations
    │   ├── research-team.yaml
@@ -345,7 +352,7 @@ You can re-run the setup wizard anytime:
 
    # This will:
    # - Let you create a new default config (overwrites existing)
-   # - Or save as a named config in ~/.config/massgen/agents/
+   # - Or save as a named config in ~/.config/massgen/agents/ (Windows: %USERPROFILE%\.config\massgen\agents\)
 
 API Key Configuration
 ---------------------
@@ -354,16 +361,22 @@ MassGen looks for API keys in the following order:
 
 1. Environment variables (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, etc.)
 2. ``~/.config/massgen/.env`` file (created by setup wizard)
+
+   * Windows: ``%USERPROFILE%\.config\massgen\.env``
+
 3. Project-specific ``.env`` file in current directory
 
 To set up API keys manually:
 
 .. code-block:: bash
 
-   # Create or edit the .env file
+   # Unix/Mac: Create or edit the .env file
    vim ~/.config/massgen/.env
 
-   # Add your API keys
+   # Windows: Create or edit the .env file
+   notepad %USERPROFILE%\.config\massgen\.env
+
+   # Add your API keys (same format for all platforms)
    OPENAI_API_KEY=sk-your-key-here
    ANTHROPIC_API_KEY=sk-ant-your-key
    GOOGLE_API_KEY=your-gemini-key
@@ -434,7 +447,7 @@ Local model inference for running open-weight models:
 
 .. code-block:: bash
 
-   cmd /c %USERPROFILE%/.lmstudio/bin/lms.exe bootstrap
+   cmd /c %USERPROFILE%\.lmstudio\bin\lms.exe bootstrap
 
 Verification Steps
 ==================
@@ -489,8 +502,11 @@ If the wizard doesn't appear on first run:
    # Manually trigger the setup wizard
    massgen --init
 
-   # Or check if a config already exists
+   # Or check if a config already exists (Unix/Mac)
    ls ~/.config/massgen/config.yaml
+
+   # Windows
+   dir %USERPROFILE%\.config\massgen\config.yaml
 
 To start fresh, remove the existing config and run again.
 
@@ -526,42 +542,15 @@ API Key Errors
 
 If you see "API key not found" errors:
 
-1. Check your ``.env`` file exists: ``~/.config/massgen/.env``
+1. Check your ``.env`` file exists:
+
+   * Unix/Mac: ``~/.config/massgen/.env``
+   * Windows: ``%USERPROFILE%\.config\massgen\.env``
+
 2. Verify the key is correctly named (e.g., ``OPENAI_API_KEY``)
 3. Re-run the wizard: ``massgen --init``
 
 For more help, visit our `GitHub Issues <https://github.com/Leezekun/MassGen/issues>`_ or join our community.
 
-Backwards Compatibility
-=======================
-
-For Existing Users
-------------------
-
-If you previously used MassGen via git clone, **all your existing workflows continue to work**:
-
-.. code-block:: bash
-
-   # Old command syntax still works
-   cd /path/to/MassGen
-   python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Question"
-
-   # New command syntax (simpler)
-   massgen --config @examples/basic_multi "Question"
-
-You can install MassGen globally via pip even if you have a git clone:
-
-.. code-block:: bash
-
-   cd /path/to/MassGen
-   pip install -e .  # Editable install
-
-   # Now you can use 'massgen' from anywhere
-   cd ~/other-project
-   massgen "Question"
-
-**Command Compatibility:**
-
-* ✅ ``massgen`` - New simplified command (recommended)
-* ✅ ``python -m massgen.cli`` - Old command syntax (still works)
-* ✅ Old config paths (``massgen/configs/...``) work interchangeably with new paths (``@examples/...``)
+.. note::
+   **Existing MassGen users:** If you previously used MassGen via git clone, all your existing workflows continue to work. See :doc:`running-massgen` (Backwards Compatibility section) for details on command syntax and migration.

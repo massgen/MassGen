@@ -34,6 +34,10 @@ _LOG_SESSION_DIR = None
 _LOG_BASE_SESSION_DIR = None  # Base session dir (without turn subdirectory)
 _CURRENT_TURN = None
 
+# Console logging suppression (for Rich Live display compatibility)
+_CONSOLE_HANDLER_ID = None
+_CONSOLE_SUPPRESSED = False
+
 
 def get_log_session_dir(turn: Optional[int] = None) -> Path:
     """Get the current log session directory.
@@ -133,8 +137,9 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
         log_file: Optional path to log file for persistent logging
         turn: Optional turn number for multi-turn conversations
     """
-    global _DEBUG_MODE
+    global _DEBUG_MODE, _CONSOLE_HANDLER_ID, _CONSOLE_SUPPRESSED
     _DEBUG_MODE = debug
+    _CONSOLE_SUPPRESSED = False
 
     # Remove all existing handlers
     logger.remove()
@@ -164,7 +169,7 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
                 f"<{name_color}>{{line}}</{name_color}> - {{message}}\n{{exception}}"
             )
 
-        logger.add(
+        _CONSOLE_HANDLER_ID = logger.add(
             sys.stderr,
             format=custom_format,
             level="DEBUG",
@@ -196,7 +201,7 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
         # Normal mode: only important messages to console, but all INFO+ to file
         console_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
 
-        logger.add(
+        _CONSOLE_HANDLER_ID = logger.add(
             sys.stderr,
             format=console_format,
             level="WARNING",  # Only show WARNING and above on console in non-debug mode
@@ -221,6 +226,77 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
         )
 
         logger.info("Logging enabled - logging INFO+ to file: {}", log_file)
+
+
+def suppress_console_logging():
+    """
+    Temporarily suppress console logging to prevent interference with Rich Live display.
+
+    This removes the console handler while keeping file logging active.
+    Call restore_console_logging() to re-enable console output.
+    """
+    global _CONSOLE_HANDLER_ID, _CONSOLE_SUPPRESSED
+
+    if _CONSOLE_HANDLER_ID is not None and not _CONSOLE_SUPPRESSED:
+        try:
+            logger.remove(_CONSOLE_HANDLER_ID)
+            _CONSOLE_SUPPRESSED = True
+        except ValueError:
+            # Handler already removed
+            pass
+
+
+def restore_console_logging():
+    """
+    Restore console logging after it was suppressed.
+
+    Re-adds the console handler with the same settings that were used during setup.
+    """
+    global _CONSOLE_HANDLER_ID, _CONSOLE_SUPPRESSED, _DEBUG_MODE
+
+    if not _CONSOLE_SUPPRESSED:
+        return
+
+    # Re-add console handler with same settings as setup_logging
+    if _DEBUG_MODE:
+
+        def custom_format(record):
+            name = record["extra"].get("name", "")
+            if "orchestrator" in name:
+                name_color = "magenta"
+            elif "backend" in name:
+                name_color = "yellow"
+            elif "agent" in name:
+                name_color = "cyan"
+            elif "coordination" in name:
+                name_color = "red"
+            else:
+                name_color = "white"
+            formatted_name = name if name else "{name}"
+            return (
+                f"<green>{{time:HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | "
+                f"<{name_color}>{formatted_name}</{name_color}>:<{name_color}>{{function}}</{name_color}>:"
+                f"<{name_color}>{{line}}</{name_color}> - {{message}}\n{{exception}}"
+            )
+
+        _CONSOLE_HANDLER_ID = logger.add(
+            sys.stderr,
+            format=custom_format,
+            level="DEBUG",
+            colorize=True,
+            backtrace=True,
+            diagnose=True,
+        )
+    else:
+        console_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+        _CONSOLE_HANDLER_ID = logger.add(
+            sys.stderr,
+            format=console_format,
+            level="WARNING",
+            colorize=True,
+        )
+
+    _CONSOLE_SUPPRESSED = False
 
 
 def get_logger(name: str):
@@ -588,6 +664,8 @@ def _format_message(message: dict) -> str:
 __all__ = [
     "logger",
     "setup_logging",
+    "suppress_console_logging",
+    "restore_console_logging",
     "get_logger",
     "get_log_session_dir",
     "save_execution_metadata",
