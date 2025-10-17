@@ -291,25 +291,29 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     if backend_type == "openai":
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise ConfigurationError("OpenAI API key not found. Set OPENAI_API_KEY or provide " "in config.")
+            print("⚠️  Warning: OpenAI API key not found. Set OPENAI_API_KEY environment variable or add to .env file.", flush=True)
+            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
         return ResponseBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "grok":
         api_key = kwargs.get("api_key") or os.getenv("XAI_API_KEY")
         if not api_key:
-            raise ConfigurationError("Grok API key not found. Set XAI_API_KEY or provide in config.")
+            print("⚠️  Warning: Grok API key not found. Set XAI_API_KEY environment variable or add to .env file.", flush=True)
+            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
         return GrokBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "claude":
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            raise ConfigurationError("Claude API key not found. Set ANTHROPIC_API_KEY or provide in config.")
+            print("⚠️  Warning: Claude API key not found. Set ANTHROPIC_API_KEY environment variable or add to .env file.", flush=True)
+            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
         return ClaudeBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "gemini":
         api_key = kwargs.get("api_key") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise ConfigurationError("Gemini API key not found. Set GOOGLE_API_KEY or provide in config.")
+            print("⚠️  Warning: Gemini API key not found. Set GOOGLE_API_KEY environment variable or add to .env file.", flush=True)
+            print("   .env file locations: current directory, or ~/.massgen/.env", flush=True)
         return GeminiBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "chatcompletion":
@@ -1777,6 +1781,11 @@ Environment Variables:
         help="Launch interactive configuration builder to create config file",
     )
     parser.add_argument(
+        "--setup-keys",
+        action="store_true",
+        help="Launch interactive API key setup wizard to configure credentials",
+    )
+    parser.add_argument(
         "--list-examples",
         action="store_true",
         help="List available example configurations from package",
@@ -1832,6 +1841,21 @@ Environment Variables:
         from .schema_display import show_schema
 
         show_schema(backend=args.schema_backend, show_examples=args.with_examples)
+        return
+
+    # Launch interactive API key setup if requested
+    if args.setup_keys:
+        from .config_builder import ConfigBuilder
+
+        builder = ConfigBuilder()
+        api_keys = builder.interactive_api_key_setup()
+
+        if any(api_keys.values()):
+            print(f"\n{BRIGHT_GREEN}✅ API key setup complete!{RESET}")
+            print(f"{BRIGHT_CYAN}💡 You can now use MassGen with these providers{RESET}\n")
+        else:
+            print(f"\n{BRIGHT_YELLOW}⚠️  No API keys configured{RESET}")
+            print(f"{BRIGHT_CYAN}💡 You can run 'massgen --setup-keys' anytime to set them up{RESET}\n")
         return
 
     # Launch interactive config builder if requested

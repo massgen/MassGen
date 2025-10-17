@@ -310,21 +310,25 @@ cmd /c %USERPROFILE%\.lmstudio\bin\lms.exe bootstrap
 
 ### 2. 🔐 API Configuration
 
-**If you used the setup wizard (`massgen` command), your API keys are already configured!**
-
-For development installations or manual configuration:
+**Create a `.env` file in your working directory with your API keys:**
 
 ```bash
-# Copy example configuration
-cp .env.example .env
+# Copy this template to .env and add your API keys
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=...
+XAI_API_KEY=...
+
+# Optional: Additional providers
+CEREBRAS_API_KEY=...
+TOGETHER_API_KEY=...
+GROQ_API_KEY=...
+OPENROUTER_API_KEY=...
 ```
 
-Or set environment variables directly:
-```bash
-export OPENAI_API_KEY="your-key"
-export ANTHROPIC_API_KEY="your-key"
-export GOOGLE_API_KEY="your-key"
-```
+MassGen automatically loads API keys from `.env` in your current directory.
+
+→ **Complete setup guide with all providers:** See [API Key Configuration](https://massgen.readthedocs.io/en/latest/quickstart/installation.html#api-key-configuration) in the docs
 
 **Get API keys:**
  - [OpenAI](https://platform.openai.com/api-keys) | [Claude](https://docs.anthropic.com/en/api/overview) | [Gemini](https://ai.google.dev/gemini-api/docs) | [Grok](https://docs.x.ai/docs/overview)

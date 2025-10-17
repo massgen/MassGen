@@ -320,6 +320,202 @@ class ConfigBuilder:
             # Return empty dict to allow continue with manual input
             return {provider_id: False for provider_id in self.PROVIDERS.keys()}
 
+    def interactive_api_key_setup(self) -> Dict[str, bool]:
+        """Interactive API key setup wizard.
+
+        Prompts user to enter API keys for providers and saves them to .env file.
+        Follows CLI tool patterns (AWS CLI, Stripe CLI) for API key management.
+
+        Returns:
+            Updated api_keys dict after setup
+        """
+        try:
+            console.print("\n[bold cyan]API Key Setup[/bold cyan]\n")
+            console.print("[dim]Configure API keys for cloud AI providers.[/dim]")
+            console.print("[dim](Alternatively, you can use local models like vLLM/Ollama - no keys needed)[/dim]\n")
+
+            # Collect API keys from user
+            collected_keys = {}
+
+            # Complete list of all API key providers (includes main backends + chatcompletion variants)
+            # This is the complete set from cli.py create_backend()
+            all_providers = [
+                # Main backends (high priority)
+                ("openai", "OpenAI", "OPENAI_API_KEY"),
+                ("anthropic", "Anthropic (Claude)", "ANTHROPIC_API_KEY"),
+                ("gemini", "Google Gemini", "GOOGLE_API_KEY"),
+                ("grok", "xAI (Grok)", "XAI_API_KEY"),
+                # Azure
+                ("azure_openai", "Azure OpenAI", "AZURE_OPENAI_API_KEY"),
+                # ChatCompletion providers
+                ("cerebras", "Cerebras AI", "CEREBRAS_API_KEY"),
+                ("together", "Together AI", "TOGETHER_API_KEY"),
+                ("fireworks", "Fireworks AI", "FIREWORKS_API_KEY"),
+                ("groq", "Groq", "GROQ_API_KEY"),
+                ("nebius", "Nebius AI Studio", "NEBIUS_API_KEY"),
+                ("openrouter", "OpenRouter", "OPENROUTER_API_KEY"),
+                ("zai", "ZAI (Zhipu.ai)", "ZAI_API_KEY"),
+                ("moonshot", "Kimi/Moonshot AI", "MOONSHOT_API_KEY"),
+                ("poe", "POE", "POE_API_KEY"),
+                ("qwen", "Qwen (Alibaba)", "QWEN_API_KEY"),
+            ]
+
+            # Create checkbox choices for provider selection (nothing pre-checked)
+            provider_choices = []
+            for provider_id, name, env_var in all_providers:
+                provider_choices.append(
+                    questionary.Choice(
+                        f"{name:<25} [{env_var}]",
+                        value=(provider_id, name, env_var),
+                        checked=False,
+                    ),
+                )
+
+            console.print("[dim]Select which providers you want to configure (Space to toggle, Enter to confirm):[/dim]")
+            console.print("[dim]Or skip all to use local models (vLLM, Ollama, etc.)[/dim]\n")
+
+            selected_providers = questionary.checkbox(
+                "Select cloud providers to configure:",
+                choices=provider_choices,
+                style=questionary.Style(
+                    [
+                        ("selected", "fg:cyan"),
+                        ("pointer", "fg:cyan bold"),
+                        ("highlighted", "fg:cyan"),
+                    ],
+                ),
+                use_arrow_keys=True,
+            ).ask()
+
+            if selected_providers is None:
+                raise KeyboardInterrupt
+
+            if not selected_providers:
+                console.print("\n[yellow]⚠️  No providers selected[/yellow]")
+                console.print("[dim]Skipping API key setup. You can use local models (vLLM, Ollama) without API keys.[/dim]\n")
+                return {}
+
+            # Now prompt for API keys only for selected providers
+            console.print(f"\n[cyan]Configuring {len(selected_providers)} provider(s)[/cyan]\n")
+
+            for provider_id, name, env_var in selected_providers:
+                # Prompt for API key (with password-style input)
+                console.print(f"[bold cyan]{name}[/bold cyan]")
+                console.print(f"[dim]Environment variable: {env_var}[/dim]")
+
+                api_key = Prompt.ask(
+                    f"Enter your {name} API key",
+                    password=True,  # Hide input
+                )
+
+                if api_key is None:
+                    raise KeyboardInterrupt
+
+                if api_key and api_key.strip():
+                    collected_keys[env_var] = api_key.strip()
+                    console.print(f"✅ {name} API key saved")
+                else:
+                    console.print(f"[yellow]⚠️  Skipped {name} (empty input)[/yellow]")
+                console.print()
+
+            if not collected_keys:
+                console.print("[error]❌ No API keys were configured.[/error]")
+                console.print("[info]At least one API key is required to use MassGen.[/info]")
+                return {}
+
+            # Ask where to save
+            console.print("\n[bold cyan]Where to Save API Keys[/bold cyan]\n")
+            console.print("[dim]Choose where to save your API keys:[/dim]\n")
+            console.print("  [1] ~/.massgen/.env (recommended - available globally)")
+            console.print("  [2] ./.env (current directory only)")
+            console.print()
+
+            save_location = Prompt.ask(
+                "[prompt]Choose location[/prompt]",
+                choices=["1", "2"],
+                default="1",
+            )
+
+            if save_location is None:
+                raise KeyboardInterrupt
+
+            # Determine target path
+            if save_location == "1":
+                env_dir = Path.home() / ".massgen"
+                env_dir.mkdir(parents=True, exist_ok=True)
+                env_path = env_dir / ".env"
+            else:
+                env_path = Path(".env")
+
+            # Check if .env already exists
+            existing_content = {}
+            if env_path.exists():
+                console.print(f"\n[yellow]⚠️  {env_path} already exists[/yellow]")
+
+                # Parse existing .env file
+                try:
+                    with open(env_path, "r") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith("#") and "=" in line:
+                                key, value = line.split("=", 1)
+                                existing_content[key.strip()] = value.strip()
+                except Exception as e:
+                    console.print(f"[warning]⚠️  Could not read existing .env: {e}[/warning]")
+
+                merge = Confirm.ask("Merge with existing keys (recommended)?", default=True)
+                if merge is None:
+                    raise KeyboardInterrupt
+
+                if merge:
+                    # Merge: existing keys + new keys (new keys overwrite)
+                    existing_content.update(collected_keys)
+                    collected_keys = existing_content
+                else:
+                    # User chose to overwrite completely
+                    pass
+
+            # Write .env file
+            try:
+                with open(env_path, "w") as f:
+                    f.write("# MassGen API Keys\n")
+                    f.write("# Generated by MassGen Interactive Setup\n\n")
+
+                    for env_var, api_key in sorted(collected_keys.items()):
+                        f.write(f"{env_var}={api_key}\n")
+
+                console.print(f"\n✅ [success]API keys saved to: {env_path.absolute()}[/success]")
+
+                # Security reminder
+                if env_path == Path(".env"):
+                    console.print("\n[yellow]⚠️  Security reminder:[/yellow]")
+                    console.print("[yellow]   Add .env to your .gitignore to avoid committing API keys![/yellow]")
+
+            except Exception as e:
+                console.print(f"\n[error]❌ Failed to save .env file: {e}[/error]")
+                return {}
+
+            # Reload environment variables
+            console.print("\n[dim]Reloading environment variables...[/dim]")
+            load_dotenv(env_path, override=True)
+
+            # Re-detect API keys
+            console.print("[dim]Verifying API keys...[/dim]\n")
+            updated_api_keys = self.detect_api_keys()
+
+            # Show what was detected
+            available_count = sum(1 for has_key in updated_api_keys.values() if has_key)
+            console.print(f"[success]✅ {available_count} provider(s) available[/success]\n")
+
+            return updated_api_keys
+
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n\n[yellow]API key setup cancelled[/yellow]\n")
+            return {}
+        except Exception as e:
+            console.print(f"\n[error]❌ Error during API key setup: {e}[/error]")
+            return {}
+
     def show_available_providers(
         self,
         api_keys: Dict[str, bool],
@@ -2038,14 +2234,49 @@ class ConfigBuilder:
                 api_keys = {}
 
             # Check if any API keys are available
+            # Note: api_keys includes local models (vLLM, etc.) which are always True
             if not any(api_keys.values()):
-                console.print("[error]❌ No API keys found in environment![/error]")
-                console.print("\n[yellow]Please set at least one API key in your .env file:[/yellow]")
-                for provider_id, provider_info in self.PROVIDERS.items():
-                    if provider_info.get("env_var"):
-                        console.print(f"  - {provider_info['env_var']}")
-                console.print("\n[info]Tip: Copy .env.example to .env and add your keys[/info]")
-                return None
+                # No providers available at all (no API keys, no local models, no Claude Code)
+                console.print("[yellow]⚠️  No API keys or local models detected[/yellow]\n")
+                console.print("[dim]MassGen needs at least one of:[/dim]")
+                console.print("[dim]  • API keys for cloud providers (OpenAI, Anthropic, Google, etc.)[/dim]")
+                console.print("[dim]  • Local models (vLLM, Ollama, etc.)[/dim]")
+                console.print("[dim]  • Claude Code with 'claude login'[/dim]\n")
+
+                setup_choice = Confirm.ask(
+                    "[prompt]Would you like to set up API keys now (interactive)?[/prompt]",
+                    default=True,
+                )
+
+                if setup_choice is None:
+                    raise KeyboardInterrupt
+
+                if setup_choice:
+                    # Run interactive setup
+                    api_keys = self.interactive_api_key_setup()
+
+                    # Check if setup was successful
+                    if not any(api_keys.values()):
+                        console.print("\n[error]❌ No API keys were configured.[/error]")
+                        console.print("\n[dim]Alternatives to API keys:[/dim]")
+                        console.print("[dim]  • Set up local models (vLLM, Ollama)[/dim]")
+                        console.print("[dim]  • Use Claude Code with 'claude login'[/dim]")
+                        console.print("[dim]  • Manually create .env file: ~/.massgen/.env or ./.env[/dim]\n")
+                        return None
+                else:
+                    # User declined interactive setup
+                    console.print("\n[info]To use MassGen, you need at least one provider.[/info]")
+                    console.print("\n[cyan]Option 1: API Keys[/cyan]")
+                    console.print("  Create .env file with one or more:")
+                    for provider_id, provider_info in self.PROVIDERS.items():
+                        if provider_info.get("env_var"):
+                            console.print(f"    • {provider_info['env_var']}")
+                    console.print("\n[cyan]Option 2: Local Models[/cyan]")
+                    console.print("  • Set up vLLM, Ollama, or other local inference")
+                    console.print("\n[cyan]Option 3: Claude Code[/cyan]")
+                    console.print("  • Run 'claude login' in your terminal")
+                    console.print("\n[dim]Run 'massgen --init' anytime to restart this wizard[/dim]\n")
+                    return None
 
             try:
                 # Step 1: Select use case
