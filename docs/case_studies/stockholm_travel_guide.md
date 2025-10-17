@@ -4,7 +4,7 @@ This case study demonstrates MassGen's sophisticated intelligence sharing mechan
 
 **Command:**
 ```
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "what's best to do in Stockholm in October 2025"
+massgen --config @examples/basic/multi/gemini_4o_claude "what's best to do in Stockholm in October 2025"
 ```
 
 **Prompt:** what's best to do in Stockholm in October 2025
