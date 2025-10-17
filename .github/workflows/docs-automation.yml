@@ -1,0 +1,168 @@
+name: Documentation Automation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'scripts/check_duplication.py'
+      - 'scripts/validate_links.py'
+  push:
+    branches:
+      - main
+      - doc_web
+    paths:
+      - 'docs/**'
+
+jobs:
+  validate-documentation:
+    name: Validate Documentation Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install any dependencies needed by scripts
+          # pip install requests  # Uncomment if external link checking is enabled
+
+      - name: Check for duplicated content
+        id: check-duplication
+        run: |
+          echo "::group::Checking for duplicated content"
+          python scripts/check_duplication.py --threshold 0.8 --min-words 50
+          echo "::endgroup::"
+        continue-on-error: false
+
+      - name: Validate cross-references and links
+        id: check-links
+        run: |
+          echo "::group::Validating documentation links"
+          python scripts/validate_links.py
+          echo "::endgroup::"
+        continue-on-error: false
+
+      - name: Upload duplication report
+        if: failure() && steps.check-duplication.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: duplication-report
+          path: docs/DUPLICATION_REPORT.md
+          if-no-files-found: ignore
+
+      - name: Upload link validation report
+        if: failure() && steps.check-links.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-validation-report
+          path: docs/LINK_VALIDATION_REPORT.md
+          if-no-files-found: ignore
+
+      - name: Comment on PR (if failed)
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            let comment = '## ⚠️ Documentation Validation Failed\n\n';
+
+            // Check which validation failed
+            const dupCheck = '${{ steps.check-duplication.outcome }}';
+            const linkCheck = '${{ steps.check-links.outcome }}';
+
+            if (dupCheck === 'failure') {
+              comment += '### ❌ Duplication Detected\n\n';
+              comment += 'Duplicated content was found in the documentation. Please consolidate to maintain single source of truth.\n\n';
+              comment += 'See the [duplication report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.\n\n';
+            }
+
+            if (linkCheck === 'failure') {
+              comment += '### ❌ Broken Links Found\n\n';
+              comment += 'Some cross-references or links are broken. Please fix them before merging.\n\n';
+              comment += 'See the [link validation report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.\n\n';
+            }
+
+            comment += '\n**What to do:**\n';
+            comment += '1. Download the validation reports from the workflow artifacts\n';
+            comment += '2. Fix the issues identified\n';
+            comment += '3. Push your changes\n';
+            comment += '4. This check will run again automatically\n';
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # readme-sync:
+  #   name: Check README Sync
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'pull_request'
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
+
+  #     - name: Generate README
+  #       run: |
+  #         echo "::group::Generating README from docs"
+  #         python scripts/generate_readme.py || echo "README generation script not fully implemented yet"
+  #         echo "::endgroup::"
+  #       continue-on-error: true
+
+  #     - name: Check for README changes
+  #       run: |
+  #         if git diff --exit-code README.md; then
+  #           echo "✓ README is in sync with documentation"
+  #         else
+  #           echo "::warning::README.md needs updating. Run 'python scripts/generate_readme.py' locally."
+  #           echo "Changes detected:"
+  #           git diff README.md
+  #         fi
+  #       continue-on-error: true
+
+  documentation-build:
+    name: Test Documentation Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Sphinx
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme
+
+      - name: Build documentation
+        run: |
+          cd docs
+          make html
+        continue-on-error: true
+
+      - name: Check build warnings
+        run: |
+          if [ -f docs/_build/warnings.txt ]; then
+            echo "::warning::Documentation build produced warnings"
+            cat docs/_build/warnings.txt
+          fi
+        continue-on-error: true

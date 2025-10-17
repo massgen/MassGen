@@ -1,0 +1,111 @@
+name: Release Documentation Automation (Auto-merge)
+
+# This is an alternative workflow that auto-merges instead of creating a PR
+# To use this instead of the PR workflow:
+# 1. Rename this file to remove .disabled extension
+# 2. Disable or remove release-docs-automation.yml
+# 3. Ensure branch protection allows actions to push to main
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "📦 Processing release: $TAG"
+
+      - name: Verify release documentation exists
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          DOCS_DIR="docs/releases/$TAG"
+
+          echo "🔍 Checking for required documentation in $DOCS_DIR..."
+
+          if [ ! -f "$DOCS_DIR/features-overview.md" ]; then
+            echo "❌ Missing: $DOCS_DIR/features-overview.md"
+            exit 1
+          fi
+
+          if [ ! -f "$DOCS_DIR/release-notes.md" ]; then
+            echo "❌ Missing: $DOCS_DIR/release-notes.md"
+            exit 1
+          fi
+
+          echo "✅ All required documentation found!"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run README update script
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          echo "📝 Running update script for $TAG..."
+          python scripts/update_readme_release.py "$TAG"
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet README.md; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  No changes needed"
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected"
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add README.md
+          git commit -m "docs: update README for $TAG release
+
+          - Added What's New section for $TAG
+          - Archived previous release to Previous Releases
+          - Auto-merged by release-docs-automation workflow"
+
+          echo "⬆️  Pushing directly to main..."
+          git push origin HEAD:main
+
+          echo "✅ README.md updated and pushed to main!"
+
+      - name: Summary
+        if: always()
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          echo "## 📋 Release Documentation Automation Summary (Auto-merge)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release:** $TAG" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation verified" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.check_changes.outputs.changes }}" = "true" ]; then
+            echo "✅ README.md updated and **auto-merged to main**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️  README.md already up to date (no changes needed)" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -2,6 +2,17 @@
 
 Thank you for your interest in contributing to MassGen (Multi-Agent Scaling System for GenAI)! We welcome contributions from the community and are excited to see what you'll bring to the project.
 
+---
+
+**📍 Looking for what to work on?** Check [ROADMAP.md](ROADMAP.md) for:
+- Active development tracks with owners
+- Upcoming release features and priorities
+- Long-term vision and goals
+
+**This guide covers:** Development setup, code standards, testing, PR process, and documentation requirements.
+
+---
+
 ## 🛠️ Development Guidelines
 
 ### Project Structure
@@ -88,9 +99,120 @@ To add support for a new model provider:
 6. Add tests in `massgen/tests/`
 7. Update documentation
 
+## 🔒 API Stability & Versioning
+
+MassGen is currently in **Beta** (v0.1.x). We're rapidly iterating on features and patterns. Here's what you can depend on:
+
+### Stability Levels
+
+**🟢 Stable - We Maintain Backward Compatibility**
+
+- **CLI Command**: `massgen` executable and basic invocation patterns
+  - `massgen --config <path>` will continue to work
+  - Standard flags like `--help`, `--version`
+  - Exit codes and basic output format
+
+- **Core YAML Configuration Schema**: Basic structure for defining agents and running them
+  - Top-level keys: `agents`, `orchestrator`, `providers`
+  - Agent definition fields: `name`, `backend`, `system_prompt`
+  - Model provider configuration structure
+  - **Guarantee**: New fields may be added with sensible defaults. Breaking changes to existing fields require major version bump and migration guides.
+
+**🟡 Experimental - Evolving Rapidly, May Change**
+
+- **Orchestration & Coordination**: Agent coordination mechanisms and voting systems
+  - Binary decision framework with voting tools
+  - Planning mode vs execution mode
+  - Coordination configuration and agent selection logic
+  - New coordination patterns being explored
+
+- **Backend Implementations**: Individual model provider adapters
+  - Provider-specific settings and capabilities
+  - Tool/MCP integration per backend
+  - Multimodal support varies by provider
+
+- **Advanced YAML Features**:
+  - Memory module configuration
+  - Tool system configuration
+  - MCP server setup and permissions
+  - Multi-turn conversation settings
+
+- **Python Library API**: Internal APIs not yet released for public use
+  - Use CLI + YAML for production workflows
+  - Python API stability coming in future releases
+
+- **Multimodal Support**: Image, audio, video processing
+  - Backend capabilities evolving
+  - Configuration schema may change
+
+**🔴 Deprecated - Will Be Removed**
+
+- **`v1/` directory**: Legacy code from version 1
+  - Scheduled for removal in v1.0.0
+  - Don't add features or dependencies on this code
+
+### What This Means for Contributors
+
+**When contributing to stable areas:**
+- Breaking changes require team discussion
+- Must provide deprecation warnings 2+ releases (1 week) in advance
+- Update migration documentation in CHANGELOG.md
+
+**When contributing to experimental areas:**
+- Coordinate with track owners in [ROADMAP.md](ROADMAP.md) before major changes
+- Document that features are experimental in user-facing docs
+- Breaking changes allowed but should be documented
+
+**When working with deprecated code:**
+- No new features should be added
+- Migrations and cleanup PRs welcome
+- Help users migrate to new patterns
+
+### Version Policy
+
+**Current (v0.1.x)**:
+- Minor breaking changes allowed for experimental features
+- Migration guides provided in CHANGELOG.md for any breaking changes
+- CLI and core YAML schema remain backward compatible
+
+**Future (v0.2.x+)**:
+- More features graduate to stable
+- Deprecation warnings before all removals
+- Broader stability guarantees
+
+**v1.0.0 and beyond**:
+- Full stability commitment for public APIs
+- Semantic versioning strictly enforced
+- Clear upgrade paths for all breaking changes
+
+### Examples
+
+**Stable - These will keep working:**
+```yaml
+# Basic agent configuration
+agents:
+  - name: researcher
+    backend: openai
+    model: gpt-5
+    system_prompt: "You are a research assistant"
+```
+
+**Experimental - May change:**
+```yaml
+# Orchestrator settings (features evolving)
+orchestrator:
+  snapshot_storage: "snapshots"
+  agent_temporary_workspace: "temp_workspaces"
+
+# Memory configuration (schema not yet implemented but may evolve when it does)
+memory:
+  enabled: true
+  provider: mem0
+```
+
 ## 📋 Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - Git
 - API keys for the model providers you want to use
 - [uv](https://github.com/astral-sh/uv) for dependency management (recommended)
@@ -145,7 +267,7 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 
 ## 🔧 Development Workflow
 
-> **Important**: Our next version is v0.0.33. If you want to contribute, please contribute to the `dev/v0.0.33` branch.
+> **Important**: Our next version is v0.1.1. If you want to contribute, please contribute to the `dev/v0.1.1` branch.
 
 ### 1. Create Feature Branch
 
@@ -153,8 +275,8 @@ Create a `.env` file in the `massgen` directory as described in [README](README.
 # Fetch latest changes from upstream
 git fetch upstream
 
-# Create feature branch from dev/v0.0.33
-git checkout -b feature/your-feature-name upstream/dev/v0.0.33
+# Create feature branch from dev/v0.1.1
+git checkout -b feature/your-feature-name upstream/dev/v0.1.1
 ```
 
 ### 2. Make Your Changes
@@ -217,7 +339,7 @@ pytest massgen/tests/test_specific.py
 pytest --cov=massgen massgen/tests/
 
 # Test with different configurations
-uv run python -m massgen.cli --config massgen/configs/single_4omini.yaml "Test question"
+massgen --config @examples/basic/single/single_agent "Test question"
 ```
 
 ### 5. Commit Your Changes
@@ -251,7 +373,7 @@ git push origin feature/your-feature-name
 ```
 
 Then create a pull request on GitHub:
-- Base branch: `dev/v0.0.33`
+- Base branch: `dev/v0.1.1`
 - Compare branch: `feature/your-feature-name`
 - Add clear description of changes
 - Link any related issues
@@ -283,20 +405,71 @@ Our pre-commit configuration includes:
 ### Package Quality
 - **pyroma**: Check package metadata quality
 
-## 🎯 Contributing Areas
+## 🎯 How to Find Where to Contribute
 
-We welcome contributions in these areas:
+MassGen development is organized into **tracks** - focused areas with dedicated owners who can guide your contributions.
 
-- **New Model Backends**: Add support for additional AI models (Claude, local models via vLLM/SGLang, etc.)
-- **Enhanced User Interface**: Improve the web interface, terminal displays, and visualization features
-- **Performance & Scalability**: Optimize streaming, logging, coordination, and resource management
-- **Advanced Agent Collaboration**: Improve communication patterns and consensus-building protocols
-- **AG2 Integration**: Support AG2 agents in MassGen
-- **Tool Ecosystem Integration**: Add support for MCP Servers and additional tool capabilities
-- **Configuration & Templates**: Expand agent configuration options and pre-built templates
-- **Documentation**: Add guides, examples, use cases, and comprehensive API documentation
-- **Testing & Benchmarking**: Add test coverage and benchmarking frameworks
-- **Bug Fixes**: Fix issues and edge cases
+### Step 1: Explore Active Tracks
+
+Visit [ROADMAP.md](ROADMAP.md#-contributors--contact) to see all active tracks with their owners and contact info:
+
+- **Tool System Refactoring** - Unified tool system (@qidanrui)
+- **Multimodal Support** - Image, audio, video processing (@qidanrui)
+- **AG2 Group Chat Patterns** - Complex research workflows (@Eric-Shang)
+- **Agent Adapter System** - Unified agent interface (@Eric-Shang)
+- **Irreversible Actions Safety** - Safety controls (@franklinnwren)
+- **Memory Module** - Long-term memory implementation (@kitrakrev, @qidanrui, @ncrispino)
+- **Final Agent Submit/Restart** - Multi-step verification (@ncrispino)
+- **Coding Agent Enhancements** - File operations (@ncrispino)
+- **DSPy Integration** - Automated prompt optimization (@praneeth999)
+- **Web UI** - Visual interface (@voidcenter)
+
+### Step 2: Reach Out to Track Owner
+
+**Before starting work:**
+
+1. **Open a GitHub issue** describing your contribution idea
+   - Include context, motivation, and approach
+   - Link to related issues/PRs if applicable
+
+2. **Start a Discord thread** in #massgen channel
+   - @ mention the track owner (Discord handle from [ROADMAP.md](ROADMAP.md#-contributors--contact))
+   - Link to your GitHub issue
+   - Discuss your idea with the track owner who can:
+     - Point you to existing work
+     - Suggest good first issues
+     - Explain current priorities
+     - Review designs before implementation
+
+**Example:**
+- Open issue: "Add support for OpenAI o1-pro model"
+- Discord: "@danrui2020 I'd like to contribute to multimodal support. Opened issue #123 with details."
+
+### Step 3: Create Your Own Track (Optional)
+
+Have a significant feature idea not covered by existing tracks?
+1. Open a GitHub issue describing the proposed track
+2. Start a thread in #massgen Discord channel linking to the issue
+3. Work with the MassGen dev team to define the track
+4. Become a track owner yourself!
+
+### Quick Contribution Ideas (No Track Coordination Needed)
+
+- 🐛 **Bug Fixes** - Open an issue/PR for any bugs you find
+- 📝 **Documentation** - Improvements always welcome
+- 🧪 **Tests** - Increase coverage in any module
+- 🎨 **Examples** - New configuration templates or use cases
+- 💡 **Feature Requests** - Open an issue to discuss ideas
+
+### First-Time Contributors
+
+**Good first issues:** Check GitHub issues tagged [`good first issue`](https://github.com/Leezekun/MassGen/labels/good%20first%20issue)
+
+**Quick wins:**
+- Add backend support for a new model provider (see [Adding New Model Backends](#adding-new-model-backends))
+- Create example configurations for your use case
+- Write case studies using MassGen
+
 
 ## 📝 Pull Request Guidelines
 
@@ -306,7 +479,7 @@ We welcome contributions in these areas:
 - [ ] Tests pass locally
 - [ ] Documentation is updated if needed
 - [ ] Commit messages follow convention
-- [ ] PR targets `dev/v0.0.33` branch
+- [ ] PR targets `dev/v0.1.1` branch
 
 ### PR Description Should Include
 
@@ -341,13 +514,6 @@ When reporting issues, please include:
 - **GitHub Issues**: Report bugs and request features
 - **GitHub Discussions**: Ask questions and share ideas
 
-## 📚 Additional Resources
-
-- [Main README](README.md)
-- [MCP Documentation](massgen/mcp_tools/README.md)
-- [Backend Implementation Guide](massgen/backend/README.md)
-- [Testing Guide](massgen/tests/README.md)
-
 ## ⚠️ Important Notes
 
 ### Dependencies
@@ -364,6 +530,172 @@ When reporting issues, please include:
 - Profile code for performance bottlenecks
 - Consider memory usage for large-scale operations
 - Optimize streaming and async operations
+
+## 📚 Documentation Guidelines
+
+### When Implementing a New Feature
+
+Every feature needs documentation! Here's how to decide where and what to write.
+
+#### 1. Decide Where to Document
+
+**Add to existing user guide when:**
+- ✅ Feature extends existing functionality (e.g., new backend → add to `backends.rst`)
+- ✅ Natural fit in current documentation structure
+- ✅ Small enhancement (< 200 words of documentation)
+
+**Create new user guide when:**
+- ✅ Feature is a major new capability (e.g., multi-turn mode)
+- ✅ Deserves its own page (> 500 words of documentation)
+- ✅ Introduces new concepts or workflows
+
+**Examples:**
+- Adding new backend → Update `user_guide/backends.rst`
+- New MCP server → Add to `user_guide/mcp_integration.rst`
+- Update multi-turn conversation system → Edit `user_guide/multi_turn_mode.rst`
+
+#### 2. Required Documentation for Every Feature
+
+**Always update these files:**
+
+1. ✅ **User Guide** - How users interact with the feature
+   - Location: `docs/source/user_guide/`
+   - What to include: Usage examples, configuration, common patterns
+
+2. ✅ **Configuration Docs** - If feature adds config options
+   - Location: `docs/source/quickstart/configuration.rst`
+   - What to include: YAML examples, parameter descriptions
+
+3. ✅ **API Reference** - If feature changes Python API
+   - Location: `docs/source/api/`
+   - What to include: Docstrings, function signatures, examples
+
+4. ✅ **CHANGELOG.md** - What changed in this version
+   - Location: Root directory
+   - What to include: Brief description under "Added", "Changed", or "Fixed"
+
+5. ✅ **Examples** - **REQUIRED for every feature**
+   - Location: `docs/source/examples/basic_examples.rst` or feature-specific example files
+   - What to include: Runnable code showing feature in action
+   - **Note**: Examples are ALWAYS required, even if you write a case study. Case studies showcase real-world usage; examples show basic functionality.
+
+#### 3. Optional Design Documentation
+
+**When to write additional documentation:**
+
+##### Design Doc (for complex implementation)
+
+**Write when:**
+- Implementation is complex and needs explanation for maintainers
+- Future contributors need to understand the design choices
+- Multiple approaches were considered
+
+**Location:** `docs/dev_notes/feature_name_design.md`
+
+**Examples:**
+- `multi_turn_filesystem_design.md` - Complex state management
+- `gemini_filesystem_mcp_design.md` - Integration architecture
+
+##### Case Study (after feature is complete)
+
+**Write when:**
+- Want to demonstrate real-world usage
+- Feature is significant enough to showcase
+- Following case-driven development methodology
+
+**Location:** `docs/case_studies/feature_name.md`
+
+**Examples:**
+- `claude-code-workspace-management.md`
+- `unified-filesystem-mcp-integration.md`
+
+#### 4. Documentation Decision Flowchart
+
+```
+┌─────────────────────────────────────────┐
+│  Implementing a New Feature             │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────────────┐
+│  ALWAYS: Update user guide, config      │
+│  docs, API docs, CHANGELOG.md           │
+└────────────────┬────────────────────────┘
+                 │
+                 ▼
+      Is implementation complex?
+                 │
+        Yes ──┬──┴──┬── No
+              │     │
+              ▼     └──────────────┐
+   ┌──────────────────┐            │
+   │ Write Design Doc │            │
+   │ (dev_notes/)     │            │
+   └──────┬───────────┘            │
+          │                        │
+          └────────────┬───────────┘
+                       │
+                       ▼
+              Want to showcase
+              real-world usage?
+                       │
+                  Yes──┼──No
+                       │
+                       ▼
+                ┌──────────────┐
+                │ Write Case   │
+                │ Study        │
+                │ (case_studies/)│
+                └──────────────┘
+```
+
+#### 5. Quick Reference
+
+| Document Type | When to Use | Location | Required? |
+|--------------|-------------|----------|-----------|
+| **User Guide** | Every feature | `docs/source/user_guide/` | ✅ Yes |
+| **Config Docs** | Config changes | `docs/source/quickstart/configuration.rst` | ✅ Yes |
+| **API Docs** | API changes | `docs/source/api/` | ✅ Yes |
+| **CHANGELOG** | Every PR | `CHANGELOG.md` | ✅ Yes |
+| **Examples** | **Every feature** | `docs/source/examples/` | ✅ **ALWAYS** |
+| **Design Doc** | Complex implementation | `docs/dev_notes/` | ⚠️ Optional |
+| **Case Study** | Demonstrate real-world usage | `docs/case_studies/` | ⚠️ Optional but expected |
+
+#### 6. Documentation Quality Standards
+
+**User-facing documentation must:**
+- ✅ Include runnable code examples
+- ✅ Show expected output
+- ✅ Explain configuration options
+- ✅ Link to related features
+- ✅ Follow single source of truth principle (no duplication)
+
+**Design documentation should:**
+- ✅ Explain the "why" not just the "what"
+- ✅ Document alternatives considered
+- ✅ Include diagrams for complex flows
+- ✅ Link to related code files
+
+### Documentation Validation
+
+Before submitting a PR with documentation changes:
+
+```bash
+# Run all documentation checks
+make docs-check
+
+# Build and preview locally
+make docs-serve
+# Visit http://localhost:8000
+
+# Verify no broken links
+make docs-validate
+
+# Verify no duplication
+make docs-duplication
+```
+
+See [docs/DOCUMENTATION_DEPLOYMENT.md](docs/DOCUMENTATION_DEPLOYMENT.md) for comprehensive testing guide.
 
 ## 📄 License
 
