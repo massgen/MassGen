@@ -142,8 +142,8 @@ For complex queries requiring multiple agents:
 
 Use the ``@examples/`` prefix to access built-in configurations:
 
-- ``@examples/basic_single`` - Single agent configuration
-- ``@examples/basic_multi`` - Three-agent basic setup
+- ``@examples/basic/single/single_gpt5nano`` - Single agent configuration
+- ``@examples/basic/multi/three_agents_default`` - Three-agent basic setup
 - ``@examples/research_team`` - Research-focused agents with web search
 - ``@examples/coding_team`` - Code generation with multiple agents
 
@@ -356,7 +356,7 @@ Or specify a config explicitly:
 
 .. code-block:: python
 
-   result = await massgen.run(query="...", config="@examples/basic_multi")
+   result = await massgen.run(query="...", config="@examples/basic/multi/three_agents_default")
 
 API Key Not Found
 -----------------

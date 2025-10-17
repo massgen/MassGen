@@ -75,7 +75,7 @@ Use this approach:
    ls @examples/tools/{relevant_category}/
 
    # 2. Read them to understand structure
-   cat @examples/tools/multimodal/gpt5mini_gpt5nano_image_analysis.yaml
+   cat @examples/basic/multi/gpt5nano_image_understanding.yaml
    cat @examples/basic/multi/three_agents_default.yaml
 
 Configuration Rules
@@ -299,8 +299,8 @@ Follow this workflow to create a new config:
    ls @examples/basic/multi/
 
    # Read 2-3 examples to understand structure
-   cat @examples/tools/multimodal/example1.yaml
-   cat @examples/tools/mcp/example2.yaml
+   cat @examples/basic/multi/gpt5nano_image_understanding.yaml
+   cat @examples/tools/mcp/multimcp_gemini.yaml
 
 **Step 2: Copy and Adapt Structure**
 

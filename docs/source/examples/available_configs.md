@@ -499,7 +499,7 @@ massgen --config @examples/tools/mcp/multimcp_gemini "Question"
 massgen --config @examples/providers/claude/claude "Question"
 
 # ❌ Incorrect - don't use underscores
-massgen --config @examples/basic_single_single_gpt5nano "Question"
+massgen --config @examples/basic/single/single_gpt5nano_single_gpt5nano "Question"
 ```
 
 ## Key Features Demonstrated

@@ -25,7 +25,7 @@ Quick Start
 .. code-block:: bash
 
    massgen \
-     --config @examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
+     --config @examples/tools/mcp/five_agents_weather_mcp_test.yaml \
      "Compare weather forecasts for New York, London, and Tokyo"
 
 What is Planning Mode?
@@ -93,7 +93,7 @@ MCP External Tools
 
    # Weather API example with planning mode
    massgen \
-     --config @examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
+     --config @examples/tools/mcp/five_agents_weather_mcp_test.yaml \
      "Get weather data for multiple cities"
 
 **Why**: Prevents redundant API calls, rate limiting issues, and conflicting external state changes.
@@ -310,12 +310,12 @@ Example 1: Project Structure Creation
 Example 2: Weather Data Collection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Config**: ``@examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml``
+**Config**: ``@examples/tools/mcp/five_agents_weather_mcp_test.yaml``
 
 .. code-block:: bash
 
    massgen \
-     --config @examples/tools/planning/five_agents_weather_mcp_planning_mode.yaml \
+     --config @examples/tools/mcp/five_agents_weather_mcp_test.yaml \
      "Fetch weather data for San Francisco, New York, and London. Compare temperatures."
 
 **Result**: Agents plan the API calls, agree on data format, then winning agent makes the actual requests.

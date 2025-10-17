@@ -284,13 +284,13 @@ git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 uv tool install -e .
 # Now run from any directory
-uv tool run massgen --config @examples/basic_multi "Question"
+uv tool run massgen --config @examples/basic/multi/three_agents_default "Question"
 ```
 
 **Backwards compatibility (uv run):**
 ```bash
 cd /path/to/MassGen
-uv run massgen --config @examples/basic_multi "Question"
+uv run massgen --config @examples/basic/multi/three_agents_default "Question"
 uv run python -m massgen.cli --config config.yaml "Question"
 ```
 
@@ -782,7 +782,7 @@ massgen --config @examples/tools/mcp/claude_mcp_example \
 **OpenAI (GPT-5 Series with MCP - v0.0.17+)**
 ```bash
 # GPT-5 with weather and external tools
-massgen --config @examples/tools/mcp/gpt5_mini_mcp_example \
+massgen --config @examples/tools/mcp/gpt5_nano_mcp_example \
   "What's the weather of Tokyo"
 ```
 

@@ -30,15 +30,122 @@ The easiest way to get started with MassGen is via pip or uv:
    pip install massgen
 
 .. important::
-   **Before running MassGen:** Set up your API keys so models are available in the setup wizard.
+   **Before running MassGen:** Set up your API keys first.
 
    See `API Key Configuration`_ below for instructions (environment variables or .env file).
 
-Once your API keys are configured, run MassGen to launch the interactive setup wizard:
+API Key Configuration
+---------------------
+
+MassGen looks for API keys in the following order:
+
+1. Environment variables (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, etc.)
+2. ``~/.massgen/.env`` file (recommended - global user config)
+
+   * Windows: ``%USERPROFILE%\.massgen\.env``
+
+3. Project-specific ``.env`` file in current directory (highest priority)
+
+**Option 1: Interactive Setup** (Recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use the interactive API key wizard to set up credentials:
 
 .. code-block:: bash
 
-   # Run MassGen for the first time
+   # Launch API key setup wizard
+   massgen --setup-keys
+
+The wizard will:
+
+1. Show a checkbox list of all 15+ supported providers
+2. Let you select which providers to configure (Space to toggle, Enter to confirm)
+3. Prompt for API keys only for selected providers (password-masked input)
+4. Save to ``~/.massgen/.env`` (global) or ``./.env`` (project-specific)
+5. Merge with existing keys if the file already exists
+
+**Supported providers:**
+
+* **Main backends:** OpenAI, Anthropic (Claude), Google Gemini, xAI (Grok)
+* **Azure:** Azure OpenAI
+* **ChatCompletion providers:** Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, ZAI (Zhipu.ai), Kimi/Moonshot AI, POE, Qwen (Alibaba)
+
+.. note::
+   You can skip all providers if you're using local models (vLLM, Ollama, etc.) which don't require API keys.
+
+**Option 2: Manual Setup**
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To set up API keys manually:
+
+.. code-block:: bash
+
+   # Unix/Mac: Create or edit the .env file
+   vim ~/.massgen/.env
+
+   # Windows: Create or edit the .env file
+   notepad %USERPROFILE%\.massgen\.env
+
+   # Add your API keys (same format for all platforms)
+   OPENAI_API_KEY=sk-your-key-here
+   ANTHROPIC_API_KEY=sk-ant-your-key
+   GEMINI_API_KEY=your-gemini-key
+   XAI_API_KEY=xai-your-key
+
+**Complete API Key Reference:**
+
+.. code-block:: bash
+
+   # Main backends
+   OPENAI_API_KEY=sk-...
+   ANTHROPIC_API_KEY=sk-ant-...
+   GEMINI_API_KEY=...
+   XAI_API_KEY=xai-...
+
+   # Azure
+   AZURE_OPENAI_API_KEY=...
+   AZURE_OPENAI_ENDPOINT=...
+
+   # ChatCompletion providers
+   CEREBRAS_API_KEY=...
+   TOGETHER_API_KEY=...
+   FIREWORKS_API_KEY=...
+   GROQ_API_KEY=...
+   NEBIUS_API_KEY=...
+   OPENROUTER_API_KEY=...
+   ZAI_API_KEY=...
+   MOONSHOT_API_KEY=...        # Also accepts KIMI_API_KEY
+   POE_API_KEY=...
+   QWEN_API_KEY=...
+
+Running MassGen
+---------------------
+Once your API keys are configured, you have two ways to get started:
+
+**Option 1: Use Pre-Built Examples** (Fastest)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Jump right in with ready-to-use configurations:
+
+.. code-block:: bash
+
+   # Try a basic multi-agent query
+   massgen --config @examples/three_agents_default "What is quantum computing?"
+
+   # Or see all 100+ available examples
+   massgen --list-examples
+
+.. seealso::
+   Browse the complete catalog: :doc:`../reference/configuration_examples`
+
+**Option 2: Run the Setup Wizard** (Customized)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Create a personalized configuration for your needs:
+
+.. code-block:: bash
+
+   # Launch the interactive setup wizard
    massgen
 
 .. note::
@@ -192,7 +299,7 @@ After setup, using MassGen is simple:
    massgen --model gpt-5-mini "Quick question"
 
    # Use a pre-built example configuration
-   massgen --config @examples/basic_multi "Compare renewable energy sources"
+   massgen --config @examples/basic/multi/three_agents_default "Compare renewable energy sources"
 
    # Start interactive multi-turn mode
    massgen
@@ -208,7 +315,7 @@ MassGen ships with ready-to-use example configurations:
    massgen --list-examples
 
    # Use an example configuration
-   massgen --config @examples/basic_single "Your question"
+   massgen --config @examples/basic/single/single_gpt5nano "Your question"
    massgen --config @examples/research_team "Research query"
 
    # Copy an example to customize
@@ -286,7 +393,7 @@ Command Line Interface
    massgen --model gemini-2.5-flash "Quick question"
 
    # Use example configuration
-   massgen --config @examples/basic_multi "Complex question"
+   massgen --config @examples/basic/multi/three_agents_default "Complex question"
 
    # Use custom configuration file
    massgen --config ./my-agents.yaml "Your question"
@@ -353,90 +460,6 @@ You can re-run the setup wizard anytime:
    # This will:
    # - Let you create a new default config (overwrites existing)
    # - Or save as a named config in ~/.config/massgen/agents/ (Windows: %USERPROFILE%\.config\massgen\agents\)
-
-API Key Configuration
----------------------
-
-MassGen looks for API keys in the following order:
-
-1. Environment variables (``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, etc.)
-2. ``~/.massgen/.env`` file (recommended - global user config)
-
-   * Windows: ``%USERPROFILE%\.massgen\.env``
-
-3. Project-specific ``.env`` file in current directory (highest priority)
-
-**Option 1: Interactive Setup** (Recommended)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Use the interactive API key wizard to set up credentials:
-
-.. code-block:: bash
-
-   # Launch API key setup wizard
-   massgen --setup-keys
-
-The wizard will:
-
-1. Show a checkbox list of all 15+ supported providers
-2. Let you select which providers to configure (Space to toggle, Enter to confirm)
-3. Prompt for API keys only for selected providers (password-masked input)
-4. Save to ``~/.massgen/.env`` (global) or ``./.env`` (project-specific)
-5. Merge with existing keys if the file already exists
-
-**Supported providers:**
-
-* **Main backends:** OpenAI, Anthropic (Claude), Google Gemini, xAI (Grok)
-* **Azure:** Azure OpenAI
-* **ChatCompletion providers:** Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, OpenRouter, ZAI (Zhipu.ai), Kimi/Moonshot AI, POE, Qwen (Alibaba)
-
-.. note::
-   You can skip all providers if you're using local models (vLLM, Ollama, etc.) which don't require API keys.
-
-**Option 2: Manual Setup**
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To set up API keys manually:
-
-.. code-block:: bash
-
-   # Unix/Mac: Create or edit the .env file
-   vim ~/.massgen/.env
-
-   # Windows: Create or edit the .env file
-   notepad %USERPROFILE%\.massgen\.env
-
-   # Add your API keys (same format for all platforms)
-   OPENAI_API_KEY=sk-your-key-here
-   ANTHROPIC_API_KEY=sk-ant-your-key
-   GEMINI_API_KEY=your-gemini-key
-   XAI_API_KEY=xai-your-key
-
-**Complete API Key Reference:**
-
-.. code-block:: bash
-
-   # Main backends
-   OPENAI_API_KEY=sk-...
-   ANTHROPIC_API_KEY=sk-ant-...
-   GEMINI_API_KEY=...
-   XAI_API_KEY=xai-...
-
-   # Azure
-   AZURE_OPENAI_API_KEY=...
-   AZURE_OPENAI_ENDPOINT=...
-
-   # ChatCompletion providers
-   CEREBRAS_API_KEY=...
-   TOGETHER_API_KEY=...
-   FIREWORKS_API_KEY=...
-   GROQ_API_KEY=...
-   NEBIUS_API_KEY=...
-   OPENROUTER_API_KEY=...
-   ZAI_API_KEY=...
-   MOONSHOT_API_KEY=...        # Also accepts KIMI_API_KEY
-   POE_API_KEY=...
-   QWEN_API_KEY=...
 
 Understanding the .massgen Directory
 =====================================

@@ -277,7 +277,7 @@ AG2 agents excel at code-based data analysis:
 .. code-block:: bash
 
    massgen \
-     --config @examples/ag2/ag2_data_analyst.yaml \
+     --config @examples/ag2/ag2_coder.yaml \
      "Analyze sales_data.csv and identify trends, create visualizations"
 
 The AG2 agent:
@@ -317,7 +317,7 @@ AG2 agents can write and execute test code:
 .. code-block:: bash
 
    massgen \
-     --config @examples/ag2/ag2_test_writer.yaml \
+     --config @examples/ag2/ag2_coder.yaml \
      "Write comprehensive unit tests for the authentication module and run them"
 
 Benefits of AG2 Integration

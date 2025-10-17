@@ -539,7 +539,7 @@ Run both vLLM and SGLang simultaneously:
 
 **Configuration Example:**
 
-See ``@examples/providers/local/two_qwen_vllm_sglang.yaml`` for a complete mixed deployment example.
+See ``@examples/basic/multi/two_qwen_vllm_sglang.yaml`` for a complete mixed deployment example.
 
 Common Backend Parameters
 -------------------------

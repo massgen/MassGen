@@ -85,18 +85,18 @@ Available Example Configurations
 ═════════════════════════════════
 
 Single Agent:
-  @examples/basic_single           Claude Sonnet 4 (fast)
+  @examples/basic/single/single_gpt5nano           Claude Sonnet 4 (fast)
 
 Multi-Agent:
-  @examples/basic_multi            Gemini + GPT + Grok (recommended)
+  @examples/basic/multi/three_agents_default            Gemini + GPT + Grok (recommended)
   @examples/research_team          Research-optimized team
 
 Tools:
-  @examples/mcp_weather            Weather information
-  @examples/file_operations        File system operations
+  @examples/tools/mcp/gpt5_nano_mcp_example            Weather information
+  @examples/tools/filesystem/claude_code_single        File system operations
 
 # Try an example
-$ massgen --config @examples/basic_multi "Compare renewable energy sources"
+$ massgen --config @examples/basic/multi/three_agents_default "Compare renewable energy sources"
 
 # Save and customize
 $ massgen --example basic_multi > my-team.yaml
@@ -156,7 +156,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
 
 # Now use clean commands (same as PyPI users!)
-massgen --config @examples/basic_multi "Question"
+massgen --config @examples/basic/multi/three_agents_default "Question"
 massgen "Question"  # Works with your default config
 ```
 
@@ -166,7 +166,7 @@ massgen "Question"  # Works with your default config
 cd /path/to/MassGen
 
 # Your existing commands still work
-uv run massgen --config @examples/basic_multi "Question"
+uv run massgen --config @examples/basic/multi/three_agents_default "Question"
 
 # Or with full module path
 uv run python -m massgen.cli --config my-custom-config.yaml "Question"
@@ -207,7 +207,7 @@ result = await massgen.run("Question", model="gemini-2.5-flash")
 print(result['final_answer'])
 
 # Use with config files
-result = await massgen.run("Question", config="@examples/basic_multi")
+result = await massgen.run("Question", config="@examples/basic/multi/three_agents_default")
 
 # Or use local config files
 result = await massgen.run(
@@ -233,7 +233,7 @@ After implementing this design, **both** syntaxes work:
 massgen --config massgen/configs/basic/multi/three_agents_default.yaml "Q"
 
 # New style (works from any directory after pip install)
-massgen --config @examples/basic_multi "Q"
+massgen --config @examples/basic/multi/three_agents_default "Q"
 ```
 
 ### Why Both Work
@@ -269,7 +269,7 @@ So if you provide `massgen/configs/...` and that file exists, it uses it. No bre
 massgen --config massgen/configs/basic/multi/three_agents_default.yaml "Q"
 
 # New (shorter, works from any directory)
-massgen --config @examples/basic_multi "Q"
+massgen --config @examples/basic/multi/three_agents_default "Q"
 ```
 
 But migration is **optional**. Old style will be supported indefinitely.
@@ -293,7 +293,7 @@ Users can reference configs in multiple ways:
 
 ```bash
 # Package examples (works after pip install)
-massgen --config @examples/basic_multi
+massgen --config @examples/basic/multi/three_agents_default
 
 # Named config in user directory
 massgen --config my-team
@@ -389,7 +389,7 @@ massgen --init
 vim ~/.config/massgen/config.yaml
 
 # Or override per-query (doesn't change saved config)
-massgen --config @examples/basic_single "Question"
+massgen --config @examples/basic/single/single_gpt5nano "Question"
 massgen --model gemini-2.5-flash "Question"
 ```
 
@@ -700,7 +700,7 @@ def show_available_examples():
             print(f"  @examples/{shortcut:<30} {config.stem}")
 
     print("\nUsage:")
-    print("  massgen --config @examples/basic_multi 'Question'")
+    print("  massgen --config @examples/basic/multi/three_agents_default 'Question'")
 ```
 
 ### 4. Simple Python API
@@ -732,7 +732,7 @@ async def run(query: str,
 
         # Multi-agent
         result = await massgen.run("Compare energy sources",
-                                   config="@examples/basic_multi")
+                                   config="@examples/basic/multi/three_agents_default")
     """
     from massgen.cli import run_massgen_from_config, run_massgen_quick
     from massgen.cli import resolve_config_path
@@ -779,7 +779,7 @@ MassGen supports interactive multi-turn conversations where context is preserved
 massgen
 
 # With specific config
-massgen --config @examples/basic_multi
+massgen --config @examples/basic/multi/three_agents_default
 
 # With single agent
 massgen --model gemini-2.5-flash
@@ -790,7 +790,7 @@ massgen --model gemini-2.5-flash
 import massgen
 
 # Start interactive session (future API)
-session = await massgen.start_session(config="@examples/basic_multi")
+session = await massgen.start_session(config="@examples/basic/multi/three_agents_default")
 result1 = await session.ask("What is quantum computing?")
 result2 = await session.ask("Give me a practical example")  # Has context from turn 1
 await session.close()
@@ -887,7 +887,7 @@ Turn 3: "How to implement?"
 When using agents with file operations (Claude Code, MCP filesystem), workspaces persist across turns:
 
 ```bash
-$ massgen --config @examples/file_operations
+$ massgen --config @examples/tools/filesystem/claude_code_single
 
 You: Create a Python web scraper
 
@@ -969,7 +969,7 @@ Proposed Python API for multi-turn sessions:
 import massgen
 
 # Start session
-session = await massgen.start_session(config="@examples/basic_multi")
+session = await massgen.start_session(config="@examples/basic/multi/three_agents_default")
 
 # Turn 1
 result = await session.ask("What is quantum computing?")
@@ -1105,12 +1105,12 @@ massgen/
 1. Add `resolve_config_path()` function to `cli.py`
 2. Update `pyproject.toml` to include `configs/**/*.yaml`
 3. Test that configs ship with package
-4. Test `@examples/basic_multi` resolution
+4. Test `@examples/basic/multi/three_agents_default` resolution
 
 **Test:**
 ```bash
 pip install -e .
-massgen --config @examples/basic_multi "Test"
+massgen --config @examples/basic/multi/three_agents_default "Test"
 ```
 
 ### Phase 2: CLI Enhancements (2-3 days)
@@ -1252,7 +1252,7 @@ massgen "What is AI?"
 # ✓ Wizard runs, creates config, answers question
 
 # Use examples
-massgen --config @examples/basic_multi "Question"
+massgen --config @examples/basic/multi/three_agents_default "Question"
 # ✓ Works without error
 
 # List examples
@@ -1274,11 +1274,11 @@ source .venv/bin/activate
 uv pip install -e .
 
 # Clean commands work
-massgen --config @examples/basic_multi "Question"
+massgen --config @examples/basic/multi/three_agents_default "Question"
 # ✓ Works
 
 # Backwards compatible: uv run still works
-uv run massgen --config @examples/basic_multi "Question"
+uv run massgen --config @examples/basic/multi/three_agents_default "Question"
 # ✓ Works
 
 uv run python -m massgen.cli --config config.yaml "Question"
@@ -1295,7 +1295,7 @@ result = await massgen.run("Question", model="gemini-2.5-flash")
 # ✓ Returns dict with answer
 
 # Config examples work
-result = await massgen.run("Question", config="@examples/basic_multi")
+result = await massgen.run("Question", config="@examples/basic/multi/three_agents_default")
 # ✓ Returns dict with answer
 ```
 
@@ -1327,7 +1327,7 @@ massgen/configs/basic/multi/three_agents_default.yaml
 
 **Option A: Fuzzy matching**
 ```bash
-@examples/basic_multi
+@examples/basic/multi/three_agents_default
 # Searches for files containing "basic_multi"
 # Matches: basic/multi/*.yaml
 ```
@@ -1410,7 +1410,7 @@ massgen --config massgen/configs/basic/multi/three_agents_default.yaml
 **After this design:**
 ```bash
 pip install massgen
-massgen --config @examples/basic_multi "Question"
+massgen --config @examples/basic/multi/three_agents_default "Question"
 # Works!
 ```
 

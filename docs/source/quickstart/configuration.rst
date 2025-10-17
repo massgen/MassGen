@@ -180,7 +180,7 @@ For a single agent, use the ``agents`` field (plural) with one entry:
 
 .. code-block:: yaml
 
-   # @examples/basic_single
+   # @examples/basic/single/single_gpt5nano
    agents:                # Note: plural 'agents' even for single agent
      - id: "gpt-5-nano"
        backend:
@@ -204,7 +204,7 @@ For a single agent, use the ``agents`` field (plural) with one entry:
 .. code-block:: bash
 
    massgen \
-     --config @examples/basic_single \
+     --config @examples/basic/single/single_gpt5nano \
      "What is machine learning?"
 
 Multi-Agent Configuration
@@ -214,7 +214,7 @@ For multiple agents, add more entries to the ``agents`` list:
 
 .. code-block:: yaml
 
-   # @examples/basic_multi
+   # @examples/basic/multi/three_agents_default
    agents:
      - id: "gemini2.5flash"
        backend:
@@ -244,7 +244,7 @@ For multiple agents, add more entries to the ``agents`` list:
 .. code-block:: bash
 
    massgen \
-     --config @examples/basic_multi \
+     --config @examples/basic/multi/three_agents_default \
      "Analyze the pros and cons of renewable energy"
 
 Backend Configuration
@@ -511,8 +511,8 @@ Example Configuration Templates
 
 All configuration examples are in ``@examples/``:
 
-* ``@examples/basic_single`` - Single agent configuration
-* ``@examples/basic_multi`` - Multi-agent collaboration
+* ``@examples/basic/single/single_gpt5nano`` - Single agent configuration
+* ``@examples/basic/multi/three_agents_default`` - Multi-agent collaboration
 * ``@examples/tools/mcp/*`` - MCP integration examples
 * ``@examples/tools/filesystem/*`` - File operation examples
 * ``@examples/ag2/*`` - AG2 framework integration
@@ -544,7 +544,7 @@ Ensure the path is correct relative to the MassGen directory:
 .. code-block:: bash
 
    # Correct - relative to MassGen root
-   massgen --config @examples/basic_multi
+   massgen --config @examples/basic/multi/three_agents_default
 
    # Incorrect - missing massgen/ prefix
    massgen --config configs/basic/multi/three_agents_default.yaml

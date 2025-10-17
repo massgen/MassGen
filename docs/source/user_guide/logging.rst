@@ -165,7 +165,7 @@ This file captures the complete execution context for reproducibility:
 
    query: "Your original question"
    timestamp: "2025-10-13T14:30:22"
-   config_path: "@examples/basic_multi"
+   config_path: "@examples/basic/multi/three_agents_default"
    config:
      agents:
        - id: "agent1"

@@ -176,7 +176,7 @@ Claude
 .. code-block:: bash
 
    massgen \
-     --config @examples/providers/claude/claude_mcp_example.yaml \
+     --config @examples/tools/mcp/claude_mcp_example.yaml \
      "Creative writing task"
 
 Gemini
@@ -185,7 +185,7 @@ Gemini
 .. code-block:: bash
 
    massgen \
-     --config @examples/providers/gemini/gemini_mcp_example.yaml \
+     --config @examples/tools/mcp/gemini_mcp_example.yaml \
      "Research task"
 
 Local Models
@@ -229,7 +229,7 @@ Development Teams
 .. code-block:: bash
 
    massgen \
-     --config @examples/teams/development/zai_coding_team.yaml \
+     --config @examples/providers/others/zai_coding_team.yaml \
      "Build a web app"
 
 Configuration File Format

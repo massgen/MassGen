@@ -393,7 +393,7 @@ You have several options for migrating to the new PyPI package:
    pip install massgen
 
    # Now use the simple 'massgen' command from anywhere
-   massgen --config @examples/basic_multi "Question"
+   massgen --config @examples/basic/multi/three_agents_default "Question"
 
 **Option 2: Keep Git Clone with Editable Install**
 
@@ -405,7 +405,7 @@ You have several options for migrating to the new PyPI package:
 
    # Now you can use 'massgen' from anywhere
    cd ~/other-project
-   massgen --config @examples/basic_multi "Question"
+   massgen --config @examples/basic/multi/three_agents_default "Question"
 
 **Option 3: Continue Using Old Syntax**
 
