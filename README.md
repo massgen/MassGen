@@ -135,7 +135,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 **What's New in v0.1.0:**
 - **📦 PyPI Package** - Official pip installation: `pip install massgen`
-- **📖 Comprehensive Documentation** - Full Sphinx docs at [massgen.readthedocs.io](https://docs.massgen.io/en/latest/)
+- **📖 Comprehensive Documentation** - Full Sphinx docs at [docs.massgen.io](https://docs.massgen.io/en/latest/)
 - **🎯 Interactive Setup Wizard** - Guided configuration for first-time users
 - **🚀 Simplified Commands** - Clean `massgen` CLI with `@examples/` prefix for built-in configs
 
@@ -199,7 +199,7 @@ This collaborative approach ensures that the final output leverages collective i
 
 ---
 
-> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[massgen.readthedocs.io](https://docs.massgen.io/en/latest/)**
+> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[docs.massgen.io](https://docs.massgen.io/en/latest/)**
 
 ---
 
