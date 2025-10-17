@@ -7,7 +7,7 @@ name = "massgen"
 dynamic = ["version"]
 description = "Multi-Agent Scaling System - A powerful framework for collaborative AI"
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "MassGen Team", email = "contact@massgen.dev" }
@@ -111,7 +111,24 @@ version = {attr = "massgen.__version__"}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["agents*", "massgen*"]
-exclude = ["tests*", "docs*", "future_mass*"]
+exclude = [
+    "tests*",
+    "docs*",
+    "future_mass*",
+    "massgen_logs*",
+    "snapshots*",
+    "temp_workspaces*",
+    "workspace*",
+    "sessions*",
+    ".massgen*",
+    "claude_code_workspace*",
+    "code_execution_workspaces*",
+    "agent_outputs*",
+    "traces*",
+    "summaries*",
+    "output*",
+    ".playwright-mcp*",
+]
 
 [tool.setuptools.package-data]
 massgen = [
