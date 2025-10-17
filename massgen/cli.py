@@ -1198,23 +1198,20 @@ async def main():
         epilog="""
 Examples:
   # Use configuration file
-  python -m massgen.cli --config config.yaml "What is machine learning?"
+  massgen --config config.yaml "What is machine learning?"
 
   # Quick single agent setup
-  python -m massgen.cli --backend openai --model gpt-4o-mini "Explain quantum computing"
-  python -m massgen.cli --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
+  massgen --backend openai --model gpt-4o-mini "Explain quantum computing"
+  massgen --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
 
   # Use ChatCompletion backend with custom base URL
-  python -m massgen.cli --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
+  massgen --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
 
   # Interactive mode
-  python -m massgen.cli --config config.yaml
+  massgen --config config.yaml
 
   # Timeout control examples
-  python -m massgen.cli --config config.yaml --orchestrator-timeout 600 "Complex task"
-
-  # Create sample configurations
-  python -m massgen.cli --create-samples
+  massgen --config config.yaml --orchestrator-timeout 600 "Complex task"
 
 Environment Variables:
     OPENAI_API_KEY      - Required for OpenAI backend
