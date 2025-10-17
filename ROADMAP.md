@@ -209,7 +209,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code standards, te
 
 - [CHANGELOG.md](CHANGELOG.md) - Complete release history
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
-- [Documentation](https://massgen.readthedocs.io/) - Full user guide
+- [Documentation](https://docs.massgen.io/en/latest/) - Full user guide
 
 ---
 

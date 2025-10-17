@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["ai", "multi-agent", "collaboration", "orchestration", "llm", "claude", "gemini", "gpt", "xai"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
@@ -99,7 +99,7 @@ Homepage = "https://github.com/Leezekun/MassGen"
 Repository = "https://github.com/Leezekun/MassGen"
 "Bug Reports" = "https://github.com/Leezekun/MassGen/issues"
 Source = "https://github.com/Leezekun/MassGen"
-Documentation = "https://github.com/Leezekun/MassGen/blob/main/README.md"
+Documentation = "https://docs.massgen.io/en/latest/"
 
 [tool.setuptools]
 include-package-data = true
