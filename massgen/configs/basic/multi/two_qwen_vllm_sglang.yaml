@@ -4,7 +4,7 @@
 # In another terminal window, in an environment with SGLang installed, run:
 #   python -m sglang.launch_server --model-path Qwen/Qwen3-4B --tool-call-parser qwen25
 # In another terminal window, run:
-#   uv run python -m massgen.cli --config massgen/configs/basic/multi/two_qwen_vllm_sglang.yaml "what is machine learning?"
+#   massgen --config @examples/basic/multi/two_qwen_vllm_sglang "what is machine learning?"
 agents:
   - id: "qwen1"
     backend:

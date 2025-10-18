@@ -11,7 +11,7 @@
 #    XAI_API_KEY="your_grok_key"
 #
 # Example usage:
-# uv run python -m massgen.cli --config configs/five_agents_weather_mcp_test.yaml "What's the weather like in Tokyo, London, and New York today? Compare the conditions and give me travel recommendations."
+# massgen --config @examples/tools/mcp/five_agents_weather_mcp_test "What's the weather like in Tokyo, London, and New York today? Compare the conditions and give me travel recommendations."
 
 agents:
   - id: "gemini_weather_agent"

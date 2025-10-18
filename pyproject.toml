@@ -7,7 +7,7 @@ name = "massgen"
 dynamic = ["version"]
 description = "Multi-Agent Scaling System - A powerful framework for collaborative AI"
 readme = { file = "README.md", content-type = "text/markdown" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 authors = [
     { name = "MassGen Team", email = "contact@massgen.dev" }
@@ -37,6 +37,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "PyYAML>=6.0",
     "rich==14.1.0",
+    "questionary>=2.0.0",
     "requests>=2.31.0",
     "typing-extensions>=4.0.0",
     "claude-agent-sdk>=0.0.22",
@@ -44,6 +45,8 @@ dependencies = [
     "mcp>=1.12.0",
     "aiohttp>=3.8.0",
     "fastmcp>=2.12.3",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-book-theme>=1.1.4",
     "pillow>=11.3.0",
     "ag2>=0.9.10",
     "pyautogen>=0.10.0",
@@ -66,9 +69,19 @@ dev = [
     "pyupgrade>=3.7.0",
 ]
 docs = [
-    "sphinx>=5.0.0",
-    "sphinx-rtd-theme>=1.2.0",
-    "myst-parser>=1.0.0",
+    "sphinx>=7.0.0",
+    "sphinx-rtd-theme>=2.0.0",
+    "myst-parser>=2.0.0",
+    "sphinx-copybutton>=0.5.0",
+    "sphinx-autobuild>=2021.3.14",
+    "sphinxcontrib-mermaid>=0.9.0",
+    "sphinx-autodoc-typehints>=1.24.0",
+    "sphinx-autoapi>=3.0.0",
+    "sphinx-design>=0.5.0",
+    "sphinx-tabs>=3.4.0",
+    "sphinx-togglebutton>=0.3.0",
+    "sphinx-inline-tabs>=2023.4.21",
+    "sphinxcontrib-lunrsearch>=0.4",
 ]
 docker = [
     "docker>=7.0.0",
@@ -87,7 +100,7 @@ Homepage = "https://github.com/Leezekun/MassGen"
 Repository = "https://github.com/Leezekun/MassGen"
 "Bug Reports" = "https://github.com/Leezekun/MassGen/issues"
 Source = "https://github.com/Leezekun/MassGen"
-Documentation = "https://github.com/Leezekun/MassGen/blob/main/README.md"
+Documentation = "https://docs.massgen.io/en/latest/"
 
 [tool.setuptools]
 include-package-data = true
@@ -99,10 +112,32 @@ version = {attr = "massgen.__version__"}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["agents*", "massgen*"]
-exclude = ["tests*", "docs*", "future_mass*"]
+exclude = [
+    "tests*",
+    "docs*",
+    "future_mass*",
+    "massgen_logs*",
+    "snapshots*",
+    "temp_workspaces*",
+    "workspace*",
+    "sessions*",
+    ".massgen*",
+    "claude_code_workspace*",
+    "code_execution_workspaces*",
+    "agent_outputs*",
+    "traces*",
+    "summaries*",
+    "output*",
+    ".playwright-mcp*",
+]
 
 [tool.setuptools.package-data]
-massgen = ["examples/*.yaml", "backends/.env.example"]
+massgen = [
+    "configs/**/*.yaml",
+    "configs/**/*.yml",
+    "examples/*.yaml",
+    "backends/.env.example"
+]
 "*" = ["*.json", "*.yaml", "*.yml", "*.md"]
 
 # Black configuration
@@ -217,5 +252,12 @@ dev = [
     "astroid>=3.0.0",
     "pre-commit>=4.3.0",
     "pylint>=3.0.0",
+    "linkify-it-py>=2.0.3",
+    "myst-parser>=4.0.1",
+    "sphinx>=8.1.3",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-design>=0.6.1",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-book-theme>=1.1.4",
     "pytest-asyncio>=1.2.0",
 ]

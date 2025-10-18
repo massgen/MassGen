@@ -48,7 +48,7 @@ massgen/configs/
 **Best starting point for multi-agent collaboration:**
 ```bash
 # Three powerful agents (Gemini, GPT-5, Grok) with enhanced workspace tools
-uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml "Your complex task"
+massgen --config @examples/basic/multi/three_agents_default "Your complex task"
 ```
 
 This configuration combines:
@@ -61,25 +61,25 @@ This configuration combines:
 **Single agent with model name only:**
 ```bash
 # Quick test with any supported model - no configuration needed
-uv run python -m massgen.cli --model claude-3-5-sonnet-latest "What is machine learning?"
-uv run python -m massgen.cli --model gemini-2.5-flash "Explain quantum computing"
-uv run python -m massgen.cli --model gpt-5-nano "Summarize the latest AI developments"
+massgen --model claude-3-5-sonnet-latest "What is machine learning?"
+massgen --model gemini-2.5-flash "Explain quantum computing"
+massgen --model gpt-5-nano "Summarize the latest AI developments"
 ```
 
 **Interactive Mode:**
 ```bash
 # Start interactive chat (no initial question)
-uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml
+massgen --config @examples/basic/multi/three_agents_default
 
 # Debug mode for troubleshooting
-uv run python -m massgen.cli --config massgen/configs/basic/multi/three_agents_default.yaml --debug "Your question"
+massgen --config @examples/basic/multi/three_agents_default --debug "Your question"
 ```
 
 ### Basic Usage
 
 For simple single-agent setups:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/basic/single/single_agent.yaml "Your question"
+massgen --config @examples/basic/single/single_agent "Your question"
 ```
 
 ### Tool-Enabled Configurations
@@ -88,32 +88,33 @@ uv run python -m massgen.cli --config massgen/configs/basic/single/single_agent.
 MCP enables agents to use external tools and services:
 ```bash
 # Weather queries
-uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_example.yaml "What's the weather in Tokyo?"
+massgen --config @examples/tools/mcp/gemini_mcp_example "What's the weather in Tokyo?"
 
 # Discord integration
-uv run python -m massgen.cli --config massgen/configs/tools/mcp/claude_code_discord_mcp_example.yaml "Extract latest messages"
+massgen --config @examples/tools/mcp/claude_code_discord_mcp_example "Extract latest messages"
 ```
 
 #### Web Search
 For agents with web search capabilities:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/tools/web-search/claude_streamable_http_test.yaml "Search for latest news"
+massgen --config @examples/tools/web-search/claude_streamable_http_test "Search for latest news"
 ```
 
 #### Code Execution
 For code interpretation and execution:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
+massgen --config @examples/tools/code-execution/multi_agent_playwright_automation \
+  "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 ```
 
 #### Filesystem Operations
 For file manipulation, workspace management, and copy tools:
 ```bash
 # Single agent with enhanced file operations
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_single.yaml "Analyze this codebase"
+massgen --config @examples/tools/filesystem/claude_code_single "Analyze this codebase"
 
 # Multi-agent workspace collaboration with copy tools (NEW in v0.0.22)
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create shared workspace files"
+massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create shared workspace files"
 ```
 
 ### Provider-Specific Examples
@@ -122,22 +123,22 @@ Each provider has unique features and capabilities:
 
 #### OpenAI (GPT-5 Series)
 ```bash
-uv run python -m massgen.cli --config massgen/configs/providers/openai/gpt5.yaml "Complex reasoning task"
+massgen --config @examples/providers/openai/gpt5 "Complex reasoning task"
 ```
 
 #### Claude
 ```bash
-uv run python -m massgen.cli --config massgen/configs/providers/claude/claude_mcp_example.yaml "Creative writing task"
+massgen --config @examples/providers/claude/claude_mcp_example "Creative writing task"
 ```
 
 #### Gemini
 ```bash
-uv run python -m massgen.cli --config massgen/configs/providers/gemini/gemini_mcp_example.yaml "Research task"
+massgen --config @examples/providers/gemini/gemini_mcp_example "Research task"
 ```
 
 #### Local Models
 ```bash
-uv run python -m massgen.cli --config massgen/configs/providers/local/lmstudio.yaml "Run with local model"
+massgen --config @examples/providers/local/lmstudio "Run with local model"
 ```
 
 ### Pre-Configured Teams
@@ -146,17 +147,17 @@ Teams are specialized multi-agent setups for specific domains:
 
 #### Creative Teams
 ```bash
-uv run python -m massgen.cli --config massgen/configs/teams/creative/creative_team.yaml "Write a story"
+massgen --config @examples/teams/creative/creative_team "Write a story"
 ```
 
 #### Research Teams
 ```bash
-uv run python -m massgen.cli --config massgen/configs/teams/research/research_team.yaml "Analyze market trends"
+massgen --config @examples/teams/research/research_team "Analyze market trends"
 ```
 
 #### Development Teams
 ```bash
-uv run python -m massgen.cli --config massgen/configs/teams/development/zai_coding_team.yaml "Build a web app"
+massgen --config @examples/teams/development/zai_coding_team "Build a web app"
 ```
 
 ## Configuration File Format
@@ -226,7 +227,33 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.0.32 - Latest
+### v0.1.0 - Latest
+**New Features:** PyPI Package Release, Comprehensive Documentation, Interactive Setup Wizard, Enhanced CLI Experience
+
+**Key Features:**
+- Official PyPI distribution: `pip install massgen` (no repo clone needed)
+- Global CLI command: Run `massgen` from any directory with centralized config in `~/.config/massgen/`
+- Simplified command syntax: `massgen "question"` replaces `uv run python -m massgen.cli`
+- Built-in examples: `@examples/` prefix for instant access (e.g., `@examples/basic/multi/three_agents_default`)
+- Interactive Setup Wizard: Step-by-step first-run with smart defaults (API keys, use case, model)
+- Documentation site at [docs.massgen.io](https://docs.massgen.io/en/latest/)
+- Backward compatibility: Existing git/`uv run` workflows still work
+
+**Try it:**
+```bash
+# Install and run setup wizard
+pip install massgen
+massgen
+
+# Quick multi-agent collaboration
+massgen --config @examples/basic/multi/three_agents_default \
+  "Analyze the pros and cons of renewable energy"
+
+# Single agent quick start
+massgen --model gpt-5-nano "What is machine learning?"
+```
+
+### v0.0.32
 **New Features:** Docker Execution Mode, MCP Architecture Refactoring, Claude Code Docker Integration
 
 **Configuration Files:**
@@ -247,23 +274,19 @@ Most configurations use environment variables for API keys:
 **Try it:**
 ```bash
 # Docker isolated execution - secure command execution in containers
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_simple.yaml \
+massgen --config @examples/tools/code-execution/docker_simple \
   "Write a factorial function and test it"
 
 # Multi-agent Docker deployment - each agent in isolated container
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_multi_agent.yaml \
+massgen --config @examples/tools/code-execution/docker_multi_agent \
   "Build a Flask website about Bob Dylan"
 
 # Claude Code with Docker - automatic tool management
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_claude_code.yaml \
+massgen --config @examples/tools/code-execution/docker_claude_code \
   "Build a Flask website about Bob Dylan"
 
 # Resource-limited Docker execution - production-ready setup
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml \
+massgen --config @examples/tools/code-execution/docker_with_resource_limits \
   "Fetch data from an API and analyze it"
 ```
 
@@ -292,28 +315,23 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # Universal code execution - works with any backend
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/basic_command_execution.yaml \
+massgen --config @examples/tools/code-execution/basic_command_execution \
   "Write a Python function to calculate factorial and test it"
 
 # AG2 group chat - multi-agent conversations
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_groupchat.yaml \
+massgen --config @examples/ag2/ag2_groupchat \
   "Write a Python function to calculate factorial."
 
 # Mixed MassGen + AG2 agents - GPT-5-nano collaborating with AG2 team
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_groupchat_gpt.yaml \
+massgen --config @examples/ag2/ag2_groupchat_gpt \
   "Write a Python function to calculate factorial."
 
 # Audio generation
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt4o_audio_generation.yaml \
+massgen --config @examples/basic/single/single_gpt4o_audio_generation \
   "I want to you tell me a very short introduction about Sherlock Homes in one sentence, and I want you to use emotion voice to read it out loud."
 
 # Video generation with Sora-2
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt4o_video_generation.yaml \
+massgen --config @examples/basic/single/single_gpt4o_video_generation \
   "Generate a 4 seconds video with neon-lit alley at night, light rain, slow push-in, cinematic."
 ```
 
@@ -332,18 +350,15 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # Audio understanding with OpenRouter
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_openrouter_audio_understanding.yaml \
+massgen --config @examples/basic/single/single_openrouter_audio_understanding \
   "What is in this recording?"
 
 # Video understanding with Qwen API
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_qwen_video_understanding.yaml \
+massgen --config @examples/basic/single/single_qwen_video_understanding \
   "Describe what happens in this video"
 
 # Multi-agent filesystem collaboration
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/cc_gpt5_gemini_filesystem.yaml \
+massgen --config @examples/tools/filesystem/cc_gpt5_gemini_filesystem \
   "Create a comprehensive project with documentation"
 ```
 
@@ -366,18 +381,15 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # Planning mode with filesystem operations
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_filesystem_mcp_planning_mode.yaml \
+massgen --config @examples/tools/planning/five_agents_filesystem_mcp_planning_mode \
   "Create a comprehensive project structure with documentation"
 
 # Multi-agent weather MCP testing
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/five_agents_weather_mcp_test.yaml \
+massgen --config @examples/tools/mcp/five_agents_weather_mcp_test \
   "Compare weather forecasts for New York, London, and Tokyo"
 
 # Planning mode with Twitter integration
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/planning/five_agents_twitter_mcp_planning_mode.yaml \
+massgen --config @examples/tools/planning/five_agents_twitter_mcp_planning_mode \
   "Draft and plan tweet series about AI advancements"
 ```
 
@@ -396,19 +408,16 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # AG2 single agent with code execution
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder.yaml \
+massgen --config @examples/ag2/ag2_coder \
   "Create a factorial function and calculate the factorial of 8. Show the result?"
 
 # Mixed team: AG2 agent + Gemini agent
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_gemini.yaml \
+massgen --config @examples/ag2/ag2_gemini \
   "what is quantum computing?"
 
 # AG2 case study: Compare AG2 and MassGen (requires external dependency)
 uv pip install -e ".[external]"
-uv run python -m massgen.cli \
-  --config massgen/configs/ag2/ag2_coder_case_study.yaml \
+massgen --config @examples/ag2/ag2_coder_case_study \
   "Output a summary comparing the differences between AG2 (https://github.com/ag2ai/ag2) and MassGen (https://github.com/Leezekun/MassGen) for LLM agents."
 ```
 
@@ -425,18 +434,15 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # Image generation with single agent
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml \
+massgen --config @examples/basic/single/single_gpt4o_image_generation \
   "Generate an image of gray tabby cat hugging an otter with an orange scarf. Limit image size within 5kb."
 
 # Image understanding with multiple agents
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gpt5nano_image_understanding.yaml \
+massgen --config @examples/basic/multi/gpt5nano_image_understanding \
   "Please summarize the content in this image."
 
 # File search for document Q&A
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/single/single_gpt5nano_file_search.yaml \
+massgen --config @examples/basic/single/single_gpt5nano_file_search \
   "What is humanity's last exam score for OpenAI Deep Research? Also, provide details about the other models mentioned in the PDF?"
 ```
 
@@ -450,13 +456,11 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # Protected paths - keep reference files safe
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml \
+massgen --config @examples/tools/filesystem/gemini_gpt5nano_protected_paths \
   "Review the HTML and CSS files, then improve the styling"
 
 # File-based context paths - grant access to specific files
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/gemini_gpt5nano_file_context_path.yaml \
+massgen --config @examples/tools/filesystem/gemini_gpt5nano_file_context_path \
   "Analyze the CSS file and make modern improvements"
 ```
 
@@ -491,8 +495,7 @@ Turn 2: Can you (1) remove the image placeholder? we will not use image directly
 ```bash
 # Try vLLM backend with local models (requires vLLM server running)
 # First start vLLM server: python -m vllm.entrypoints.openai.api_server --model Qwen/Qwen3-0.6B --host 0.0.0.0 --port 8000
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/two_qwen_vllm.yaml \
+massgen --config @examples/basic/multi/two_qwen_vllm \
   "What is machine learning?"
 ```
 
@@ -510,7 +513,7 @@ uv run python -m massgen.cli \
 **Case Study:** [Advanced Filesystem with User Context Path Support](../../docs/case_studies/v0.0.21-v0.0.22-filesystem-permissions.md)
 ```bash
 # Multi-agent collaboration with granular filesystem permissions
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+massgen --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path "Enhance the website in massgen/configs/resources with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 ### v0.0.21
@@ -522,8 +525,7 @@ uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_
 **Try it:**
 ```bash
 # Grok with MCP tools
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/grok3_mini_mcp_example.yaml \
+massgen --config @examples/tools/mcp/grok3_mini_mcp_example \
   "What's the weather in Tokyo?"
 ```
 
@@ -535,8 +537,7 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # Claude with MCP tools
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/claude_mcp_example.yaml \
+massgen --config @examples/tools/mcp/claude_mcp_example \
   "What's the current weather?"
 ```
 
@@ -548,8 +549,7 @@ uv run python -m massgen.cli \
 **Try it:**
 ```bash
 # Claude with MCP tools
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+massgen --config @examples/tools/mcp/gpt5_nano_mcp_example \
   "whats the weather of Tokyo?"
 ```
 
@@ -559,7 +559,7 @@ uv run python -m massgen.cli \
 **Case Study:** [Cross-Backend Collaboration with Gemini MCP Filesystem](../../docs/case_studies/unified-filesystem-mcp-integration.md)
 ```bash
 # Gemini and Claude Code agents with unified filesystem via MCP
-uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_filesystem_test_with_claude_code.yaml "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
+massgen --config @examples/tools/mcp/gemini_mcp_filesystem_test_with_claude_code "Create a presentation that teaches a reinforcement learning algorithm and output it in LaTeX Beamer format. No figures should be added."
 ```
 
 ### v0.0.15
@@ -572,7 +572,7 @@ uv run python -m massgen.cli --config massgen/configs/tools/mcp/gemini_mcp_files
 **Case Study:** [Claude Code Workspace Management with Comprehensive Logging](../../docs/case_studies/claude-code-workspace-management.md)
 ```bash
 # Multi-agent Claude Code collaboration with enhanced workspace isolation
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
 ### v0.0.10

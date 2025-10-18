@@ -6,7 +6,7 @@
 # within a writable context path immune from modification or deletion.
 #
 # Run with:
-#   uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gpt5nano_protected_paths.yaml "Review the HTML and CSS files, then improve the styling"
+#   massgen --config @examples/tools/filesystem/gemini_gpt5nano_protected_paths "Review the HTML and CSS files, then improve the styling"
 
 agents:
   - id: "agent_a"

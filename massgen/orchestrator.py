@@ -6,8 +6,10 @@ The orchestrator presents a unified chat interface to users while coordinating
 multiple sub-agents using the proven binary decision framework behind the scenes.
 
 TODOs:
+
 - Move CLI's coordinate_with_context logic to orchestrator and simplify CLI to just use orchestrator
 - Implement orchestrator system message functionality to customize coordination behavior:
+
   * Custom voting strategies (consensus, expertise-weighted, domain-specific)
   * Message construction templates for sub-agent instructions
   * Conflict resolution approaches (evidence-based, democratic, expert-priority)

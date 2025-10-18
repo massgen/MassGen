@@ -1001,6 +1001,11 @@ class RichTerminalDisplay(TerminalDisplay):
         # Clear screen
         self.console.clear()
 
+        # Suppress console logging to prevent interference with Live display
+        from massgen.logger_config import suppress_console_logging
+
+        suppress_console_logging()
+
         # Create initial layout
         self._create_initial_display()
 
@@ -2664,7 +2669,7 @@ class RichTerminalDisplay(TerminalDisplay):
             return
 
         # Stop live display temporarily for clean voting results output
-        was_live = self.live is not None
+        self.live is not None
         if self.live:
             self.live.stop()
             self.live = None
@@ -2748,24 +2753,15 @@ class RichTerminalDisplay(TerminalDisplay):
         )
 
         self.console.print(voting_panel)
-        self.console.print()
 
-        # Restart live display if it was active
-        if was_live:
-            self.live = Live(
-                self._create_layout(),
-                console=self.console,
-                refresh_per_second=self.refresh_rate,
-                vertical_overflow="ellipsis",
-                transient=False,
-            )
-            self.live.start()
+        # Don't restart live display - leave it stopped to show static results
+        # This prevents duplication from stop/restart cycles
 
     def display_coordination_table(self) -> None:
         """Display the coordination table showing the full coordination flow."""
         try:
             # Stop live display temporarily
-            was_live = self.live is not None
+            self.live is not None
             if self.live:
                 self.live.stop()
                 self.live = None
@@ -2895,16 +2891,8 @@ class RichTerminalDisplay(TerminalDisplay):
                 self.console.print(table_panel)
                 self.console.print()
 
-            # Restart live display if it was active
-            if was_live:
-                self.live = Live(
-                    self._create_layout(),
-                    console=self.console,
-                    refresh_per_second=self.refresh_rate,
-                    vertical_overflow="ellipsis",
-                    transient=False,
-                )
-                self.live.start()
+            # Don't restart live display - leave it stopped to show static results
+            # This prevents duplication from stop/restart cycles
 
         except Exception as e:
             print(f"Error displaying coordination table: {e}")
@@ -2930,11 +2918,13 @@ class RichTerminalDisplay(TerminalDisplay):
         self._final_presentation_file_path = None  # Will be set after file is initialized
 
         # Add visual separator before starting live display to prevent content from being hidden
-        self.console.print("\n" + "─" * 80 + "\n")
+        self.console.print("\n")
 
         # Keep live display running for streaming
         was_live = self.live is not None and self.live.is_started
         if not was_live:
+            # Clear screen before creating new Live to prevent duplication
+            self.console.clear()
             self.live = Live(
                 self._create_layout(),
                 console=self.console,
@@ -3187,7 +3177,6 @@ class RichTerminalDisplay(TerminalDisplay):
             expand=False,
         )
 
-        self.console.print("\n")
         self.console.print(final_panel)
 
         # Show which agent was selected
@@ -3212,8 +3201,6 @@ class RichTerminalDisplay(TerminalDisplay):
                 box=ROUNDED,
             )
             self.console.print(selection_panel)
-
-        self.console.print("\n")
 
         # Display selected agent's final provided answer directly without flush
         # if selected_agent:
@@ -3806,6 +3793,11 @@ class RichTerminalDisplay(TerminalDisplay):
                             )
             except Exception:
                 pass
+
+        # Restore console logging after Live display cleanup (outside lock)
+        from massgen.logger_config import restore_console_logging
+
+        restore_console_logging()
 
     def _schedule_priority_update(self, agent_id: str) -> None:
         """Schedule immediate priority update for critical agent status changes."""

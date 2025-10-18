@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MassGen presentation at M2L Summer School.">
+    <meta name="theme-color" content="#667eea">
+    <title>MassGen: Scaling AI Through Multi-Agent Collaboration | M2L Summer School</title>
+    <link rel="preconnect" href="https://docs.ag2.ai">
+    <link rel="preconnect" href="https://github.com">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            overflow: hidden;
+        }
+
+        .slideshow-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .slide {
+            display: none;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            padding: 60px;
+            box-sizing: border-box;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .slide h1 {
+            font-size: 3.5em;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .slide h2 {
+            font-size: 2.8em;
+            color: #34495e;
+            margin-bottom: 40px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .slide .subtitle {
+            font-size: 1.4em;
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .slide .speaker-info {
+            font-size: 1.3em;
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .slide .summit-info {
+            font-size: 1.1em;
+            color: #3498db;
+            text-align: center;
+            margin-bottom: 20px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .slide ul {
+            font-size: 1.8em;
+            line-height: 1.8;
+            color: #2c3e50;
+            list-style: none;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .slide li {
+            margin-bottom: 25px;
+            padding-left: 40px;
+            position: relative;
+        }
+
+        .slide li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #3498db;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .navigation {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+        }
+
+        .nav-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            margin: 0 5px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .slide-counter {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .slide-nav {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            max-width: 250px;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: #3498db;
+            transform: scale(1.3);
+        }
+
+        .nav-dot:hover {
+            background: rgba(255,255,255,0.6);
+        }
+
+        .icon {
+            font-size: 4em;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .code-snippet {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            width: 95%;
+            max-width: 1200px;
+            font-size: 1.1em;
+            margin: 20px auto;
+        }
+
+        .highlight {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .architecture-diagram {
+            width: 100%;
+            height: 60vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .arch-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .arch-component {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            min-width: 180px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+        }
+
+        .arch-component:hover {
+            transform: translateY(-3px);
+        }
+
+        .orchestrator {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+        }
+
+        .agent {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            min-width: 160px;
+            padding: 20px;
+        }
+
+        .hub {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+        }
+
+        .agents-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .agents-row {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .collaboration-note {
+            font-size: 1.2em;
+            color: #2c3e50;
+            font-weight: bold;
+            text-align: center;
+            background: rgba(116, 185, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 25px;
+            border: 2px dashed #74b9ff;
+        }
+
+        .component-icon {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .component-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .component-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .flow-arrow {
+            font-size: 3em;
+            color: #3498db;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 20px 0;
+        }
+
+        .demo-box {
+            background: linear-gradient(135deg, #fd79a8, #e84393);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            font-size: 1.1em;
+        }
+
+        .metrics-comparison {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            gap: 30px;
+        }
+
+        .metrics-box {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            flex: 1;
+            border: 3px solid;
+        }
+
+        .metrics-box.single {
+            border-color: #3498db;
+        }
+
+        .metrics-box.multi {
+            border-color: #e74c3c;
+        }
+
+        .metrics-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .metrics-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+
+        .version-evolution {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .version-box {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .version-box.current {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            transform: scale(1.05);
+        }
+
+        .call-to-action {
+            background: linear-gradient(135deg, #00b894, #00cec9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .cta-links {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .cta-link {
+            background: rgba(255,255,255,0.2);
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .cta-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-3px);
+        }
+
+        .inline-link {
+            color: #3498db;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .inline-link:hover {
+            color: #2980b9;
+        }
+
+        .version-badge {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 20px;
+            animation: pulse 2s infinite;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin: 30px 0;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.1);
+            border: 2px solid #3498db;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .datahack-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            .slide {
+                padding: 20px;
+                font-size: 14px;
+            }
+
+            .slide h1 {
+                font-size: 2.2em;
+                margin-bottom: 20px;
+            }
+
+            .slide h2 {
+                font-size: 1.8em;
+                margin-bottom: 25px;
+            }
+
+            .slide ul {
+                font-size: 1.2em;
+                max-width: 100%;
+            }
+
+            .slide li {
+                margin-bottom: 15px;
+                padding-left: 25px;
+            }
+
+            .navigation {
+                bottom: 15px;
+                right: 15px;
+            }
+
+            .nav-btn {
+                padding: 8px 12px;
+                font-size: 14px;
+                margin: 0 2px;
+            }
+
+            .slide-counter {
+                bottom: 15px;
+                left: 15px;
+                padding: 5px 10px;
+                font-size: 12px;
+            }
+
+            .slide-nav {
+                top: 15px;
+                right: 15px;
+                padding: 10px;
+            }
+
+            .nav-grid {
+                max-width: 200px;
+                gap: 6px;
+            }
+
+            .nav-dot {
+                width: 10px;
+                height: 10px;
+            }
+
+            .metrics-comparison {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .demo-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .version-evolution {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .architecture-diagram {
+                height: 50vh;
+                padding: 10px;
+            }
+
+            .arch-component {
+                min-width: 140px;
+                padding: 15px;
+                font-size: 0.9em;
+            }
+
+            .code-snippet {
+                font-size: 0.9em;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slideshow-container">
+        <!-- Slide 1: Title -->
+        <div class="slide active">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 80px; margin: 40px 0 50px 0;">
+                <div style="text-align: center;">
+                    <img src="https://github.com/Leezekun/MassGen/blob/main/assets/logo.png?raw=true" alt="MassGen logo featuring multi-agent collaboration design" style="width: 280px; height: 280px; object-fit: contain;" loading="lazy">
+                </div>
+                <div style="text-align: center;">
+                    <img src="https://docs.ag2.ai/latest/docs/blog/2025-04-16-Reasoning/img/threads.jpeg" alt="Diagram showing collaborative AI agents working together in parallel threads" style="width: 300px; height: 280px; object-fit: cover; border-radius: 20px; box-shadow: 0 12px 35px rgba(0,0,0,0.15);" loading="lazy">
+                </div>
+            </div>
+
+            <div class="subtitle" style="font-size: 2.2em; margin: 30px 0; text-align: center; font-weight: 600; color: #2c3e50;">Scaling AI Through Multi-Agent Collaboration</div>
+            <!-- <div class="speaker-info">Chi Wang</div> -->
+
+            <div style="background: rgba(238, 76, 44, 0.08); padding: 30px; border-radius: 20px; margin: 40px 0; border-left: 5px solid #EE4C2C;">
+                <div class="event-context" style="text-align: center; font-size: 1.5em; color: #EE4C2C;">
+                    🔥 <strong style="font-size: 1.1em;">PyTorch OpenAgents Conference</strong><br>
+                    <div style="margin: 20px 0; font-size: 1.1em; color: #4b5563;"><em>Building the Future of Multi-Agent AI</em></div>
+                    <div style="font-size: 1em; color: #6b7280;">🌐 pytorch.org</div>
+                </div>
+            </div>
+
+            <div class="contact-info" style="text-align: center; margin-top: 30px; font-size: 1.6em; background: rgba(52, 152, 219, 0.1); padding: 20px; border-radius: 10px;">
+                <span style="color: #2c3e50;">🌐 </span>
+                <a href="https://massgen.ai" style="color: #3498db; text-decoration: underline; font-weight: bold; font-size: 1.1em;">massgen.ai</a>
+                <span style="color: #2c3e50; margin: 0 20px; font-weight: bold;">|</span>
+                <a href="https://github.com/Leezekun/MassGen" style="color: #3498db; text-decoration: underline; font-weight: bold; font-size: 1.1em;">GitHub</a>
+            </div>
+        </div>
+
+
+        <!-- Slide 2: The Problem -->
+        <div class="slide">
+            <div class="icon">📈</div>
+            <h2>How Do We Scale Up AI?</h2>
+            <div style="max-width: 1000px; margin: 0 auto;">
+                <div style="background: #f8f9fa; padding: 40px; border-radius: 20px; border: 2px solid #dee2e6; margin-bottom: 30px;">
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="font-size: 3em; margin-bottom: 15px;">⚡</div>
+                        <h3 style="color: #2c3e50; font-size: 1.8em;">Traditional Scaling Laws Hit Limits</h3>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px; color: #e74c3c;">💡</div>
+                            <h4 style="color: #e74c3c; margin-bottom: 10px;">Power Crisis</h4>
+                            <div style="font-size: 1.1em; color: #2c3e50; line-height: 1.6;">
+                                <strong>4-16 GW by 2030</strong><br>
+                                <span style="font-size: 0.9em; color: #666;">Enough to power entire cities</span>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px; color: #e74c3c;">📚</div>
+                            <h4 style="color: #e74c3c; margin-bottom: 10px;">Data Depletion</h4>
+                            <div style="font-size: 1.1em; color: #2c3e50; line-height: 1.6;">
+                                <strong>Depleted by 2026-2028</strong><br>
+                                <span style="font-size: 0.9em; color: #666;">Quality text data exhausted</span>
+                            </div>
+                        </div>
+
+                        <div style="text-align: center;">
+                            <div style="font-size: 2em; margin-bottom: 10px; color: #e74c3c;">🚧</div>
+                            <h4 style="color: #e74c3c; margin-bottom: 10px;">Performance Plateau</h4>
+                            <div style="font-size: 1.1em; color: #2c3e50; line-height: 1.6;">
+                                <strong>GPT-5 delayed >1 year</strong><br>
+                                <span style="font-size: 0.9em; color: #666;">Early training runs failed</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #fff3cd; padding: 25px; border-radius: 15px; border-left: 4px solid #f39c12; text-align: center;">
+                        <h4 style="margin: 0 0 15px 0; font-size: 1.4em; color: #f39c12;">⚠️ Inference-time scaling</h4>
+                        <div style="font-size: 1.3em; color: #2c3e50; line-height: 1.6;">
+                            <strong>No universal way to leverage improvements & address limitations</strong><br>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: center;">
+                    <div style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px; border-radius: 15px;">
+                        <div style="font-size: 1.5em; font-weight: bold; margin-bottom: 10px;">The New Paradigm:</div>
+                        <div style="font-size: 1.3em;">Model → Agent → <strong>Multi-Agent Systems</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: The Solution - Multi-Agent Collaboration -->
+        <div class="slide">
+            <div class="icon">🤝</div>
+            <h2>The Promise of Multi-Agent Collaboration</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center;">
+                <div>
+                    <ul style="font-size: 1.6em;">
+                        <li><strong>Study Group Dynamics:</strong> Like humans collaborating on complex problems</li>
+                        <li><strong>Cross-Ecosystem Integration:</strong> Bridge Claude, Gemini, GPT, Grok, and specialized coding agents</li>
+                        <li><strong>Emergent Intelligence:</strong> Collective problem-solving beyond individual capabilities</li>
+                        <li><strong>Real-time Intelligence Sharing:</strong> Agents learn and adapt from each other</li>
+                    </ul>
+                </div>
+                <div style="text-align: center;">
+                    <img src="https://docs.ag2.ai/latest/docs/blog/2025-04-16-Reasoning/img/cognition.jpg" alt="Visual representation of collaborative AI reasoning and cognitive processes" style="width: 100%; max-width: 400px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.15);" loading="lazy">
+                    <div style="margin-top: 15px; font-size: 1.1em; color: #2c3e50;">
+                        <div style="font-style: italic; margin-bottom: 10px;">The Promise of Collaborative Reasoning</div>
+                        <div style="font-size: 0.9em; color: #3498db; margin-bottom: 8px;">
+                            📖 <a href="https://root.massgen.ai" style="color: #3498db; text-decoration: none;">root.massgen.ai - "Myth of Reasoning"</a>
+                        </div>
+                        <div style="font-size: 0.85em; color: #27ae60;">
+                            🏗️ Built on AG2's foundational multi-agent research and community
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Evidence - Performance Gains -->
+        <div class="slide">
+            <div class="icon">📈</div>
+            <h2>Proven Performance Gains</h2>
+            <div class="metrics-comparison" style="justify-content: space-between; gap: 15px;">
+                <div class="metrics-box single">
+                    <div class="metrics-title" style="color: #3498db;">Grok-4 Standard</div>
+                    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #3498db, #2980b9); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">1</div>
+                    <div>Single Agent Processing</div>
+                    <div class="metrics-value" style="color: #3498db;">38.6%</div>
+                    <div style="color: #666; font-size: 1em;">Last Human Exam Score</div>
+                    <div style="color: #666; font-size: 1em; margin-top: 8px;">$30/month</div>
+                </div>
+                <div class="metrics-box multi">
+                    <div class="metrics-title" style="color: #e74c3c;">Grok-4 Heavy</div>
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 15px;">
+                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8em;">A1</div>
+                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8em;">A2</div>
+                        <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.8em;">A3</div>
+                    </div>
+                    <div>Multi-Agent Collaboration</div>
+                    <div class="metrics-value" style="color: #e74c3c;">44.4%</div>
+                    <div style="color: #666; font-size: 1em;">Last Human Exam Score</div>
+                    <div style="color: #666; font-size: 1em; margin-top: 8px;">$300/month</div>
+                </div>
+                <div class="metrics-box" style="border-color: #27ae60;">
+                    <div class="metrics-title" style="color: #27ae60;">Gemini 2.5 DeepThink</div>
+                    <div style="display: flex; justify-content: center; gap: 6px; margin-bottom: 15px;">
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #27ae60, #2ecc71); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.7em;">🏆</div>
+                        <div style="width: 35px; height: 35px; background: linear-gradient(135deg, #f39c12, #e67e22); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 0.7em;">🥇</div>
+                    </div>
+                    <div>Competition Gold Medals</div>
+                    <div class="metrics-value" style="color: #27ae60; font-size: 1.8em;">IMO + ICPC</div>
+                    <div style="color: #666; font-size: 0.9em;">5/6 IMO Problems (2024)</div>
+                    <div style="color: #666; font-size: 0.9em;">10/12 ICPC Problems (2025)</div>
+                    <div style="color: #27ae60; font-size: 0.8em; margin-top: 8px; font-weight: bold;">First AI Gold Medals</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background: #e8f5e8; border-left: 4px solid #27ae60; border-radius: 8px;">
+                <strong style="font-size: 1.4em; color: #27ae60;">🚀 Multi-Agent Revolution</strong><br>
+                <span style="color: #666; font-style: italic;">"Individual AI excellence + Multi-agent coordination = Next frontier of AI capabilities"</span>
+            </div>
+        </div>
+
+        <!-- Slide 6: Architecture -->
+        <div class="slide">
+            <div class="architecture-diagram" style="height: 70vh; margin-top: 0;">
+                <div class="arch-flow">
+                    <div class="arch-component orchestrator">
+                        <div class="component-icon">🚀</div>
+                        <div class="component-title" style="font-size: 1.8em;">MassGen Orchestrator</div>
+                        <div class="component-desc" style="font-size: 1.2em;">Task Distribution & Coordination</div>
+                    </div>
+
+                    <div class="flow-arrow">↓</div>
+
+                    <div class="agents-container">
+                        <div class="agents-row">
+                            <div class="arch-component agent">
+                                <div class="component-icon">🏗️</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 1</div>
+                                <div class="component-desc" style="font-size: 1.1em;">Anthropic/Claude</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">👨‍💻</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 2</div>
+                                <div class="component-desc" style="font-size: 1.1em;">Claude Code</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">🌟</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 3</div>
+                                <div class="component-desc" style="font-size: 1.1em;">Google/Gemini</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">🤖</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 4</div>
+                                <div class="component-desc" style="font-size: 1.1em;">OpenAI/GPT</div>
+                            </div>
+                            <div class="arch-component agent">
+                                <div class="component-icon">⚡</div>
+                                <div class="component-title" style="font-size: 1.4em;">Agent 5</div>
+                                <div class="component-desc" style="font-size: 1.1em;">xAI/Grok</div>
+                            </div>
+                        </div>
+                        <div class="collaboration-note" style="font-size: 1.3em;">↕ Real-time Collaboration ↕</div>
+                    </div>
+
+                    <div class="flow-arrow">↓</div>
+
+                    <div class="arch-component hub">
+                        <div class="component-icon">🔄</div>
+                        <div class="component-title" style="font-size: 1.6em;">Shared Collaboration Hub</div>
+                        <div class="component-desc" style="font-size: 1.1em;">Real-time Notification & Consensus</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 16: Case Study - Success Through Collaboration -->
+        <div class="slide">
+            <div class="icon">🔬</div>
+            <h2>Case Study: Success Through Peer Correction</h2>
+            <div style="text-align: center; margin-bottom: 30px; color: #666; font-style: italic;">
+                Graduate-level physics question from GPQA-Diamond benchmark
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;">
+                <div>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 15px; border-left: 4px solid #3498db; margin-bottom: 25px;">
+                        <h3 style="color: #2c3e50; margin: 0 0 15px 0;">🌌 The Problem</h3>
+                        <div style="font-size: 0.95em; line-height: 1.5; color: #495057;">
+                            A quasar shows a peak at 790 nm wavelength. Given Lambda-CDM cosmological parameters
+                            (H₀ = 70 km/s/Mpc, Ωₘ = 0.3, ΩΛ = 0.7), what is the comoving distance?<br><br>
+                            <strong>Options:</strong> A) 8 Gpc  B) 7 Gpc  C) 6 Gpc  D) 9 Gpc
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 15px 0;">🎯 Final Result</h3>
+                        <div style="font-size: 1.1em; text-align: center;">
+                            <div style="font-size: 2em; margin: 15px 0;">✅</div>
+                            <strong>Correct Answer: A (8 Gpc)</strong><br>
+                            <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                                Orchestration succeeded where individual agents initially failed
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div style="background: linear-gradient(135deg, #3498db, #2980b9); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">🤖 Round 1: Initial Answers</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4;">
+                            <strong>Claude:</strong> "I calculate ~6 Gpc → Answer C"<br>
+                            <strong>GPT-5:</strong> "I get ~8.95 Gpc → Answer D"<br>
+                            <strong>Gemini:</strong> "~6.1 Gpc → Answer C"
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 10px 0;">🔄 Self-Correction Process</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            <strong>Claude observes:</strong> "There is significant discrepancy in calculations:
+                            Agent1 gets ~6.1 Gpc, Agent2 gets ~8.95 Gpc. Let me re-examine..."
+                        </div>
+                    </div>
+
+                    <div style="background: linear-gradient(135deg, #27ae60, #229954); color: white; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin: 0 0 10px 0;">✨ Breakthrough Moment</h3>
+                        <div style="font-size: 0.9em; line-height: 1.4; font-style: italic;">
+                            <strong>Claude revises:</strong> "Standard cosmological calculators yield 8000-8500 Mpc
+                            for z=5.5. This equals 8.0-8.5 Gpc, closest to option A."<br><br>
+                            <strong>Result:</strong> 3/4 agents converge on correct answer
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px; padding: 20px; background: rgba(39, 174, 96, 0.1); border-radius: 15px; border: 2px dashed #27ae60;">
+                <strong style="color: #27ae60; font-size: 1.2em;">💡 Success Mechanism:</strong><br>
+                <span style="color: #155724; font-size: 1.1em;">Peer observation → Discrepancy detection → Self-correction → Consensus</span>
+            </div>
+        </div>
+
+        <!-- Slide 21: Live Demo Examples -->
+        <div class="slide">
+            <div class="icon">🎬</div>
+            <h2>Live Demonstrations</h2>
+            <div class="demo-grid">
+                <div class="demo-box">
+                    <strong>🤝 AG2 Framework Integration (v0.0.28):</strong> AG2 agents with code execution collaborate with Gemini agents via MassGen's adapter system
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Cross-framework multi-agent collaboration with AG2's code execution + Gemini's web search
+                    </div>
+                </div>
+                <div class="demo-box">
+                    <strong>🛡️ MCP Planning Mode (v0.0.29):</strong> Agents plan Discord messaging without execution during coordination, preventing duplicate notifications
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Safe MCP tool coordination - only winner executes planned actions
+                    </div>
+                </div>
+                <div class="demo-box">
+                    <strong>📁 Unified Filesystem (v0.0.16):</strong> Cross-backend collaboration between Gemini and Claude Code agents creating educational content with shared workspace management
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> First-time cross-backend coordination producing comprehensive 25-slide presentations
+                    </div>
+                </div>
+                <div class="demo-box">
+                    <strong>🌐 Claude Code Workspace (v0.0.14):</strong> Multiple Claude Code agents develop websites in parallel with enhanced logging and workspace isolation
+                    <div style="margin-top: 10px; font-size: 0.9em; opacity: 0.9;">
+                        <strong>Result:</strong> Conflict-free development with per-agent versioning and final workspace snapshots
+                    </div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <a href="https://case.massgen.ai" style="color: #3498db; font-size: 1.4em; text-decoration: underline; font-weight: bold;">📚 case.massgen.ai - Complete Case Studies</a>
+            </div>
+        </div>
+
+        <!-- Slide 23: Getting Started -->
+        <div class="slide">
+            <div class="icon">⚡</div>
+            <h2>Get Started in 60 Seconds</h2>
+            <div class="code-snippet">
+                # 1. Clone and setup<br>
+                git clone https://github.com/Leezekun/MassGen<br>
+                cd MassGen && pip install uv && uv venv<br><br>
+
+                # 2. Configure API keys<br>
+                cp .env.example .env  # Add your API keys<br><br>
+
+                # 3. Run single agent (quick test)<br>
+                uv run python -m massgen.cli --model gemini-2.5-flash "When is your knowledge up to"<br><br>
+
+                # 4. Run multi-agent collaboration<br>
+                uv run python -m massgen.cli --config three_agents_default.yaml "Summarize latest news of github.com/Leezekun/MassGen"
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 25px; margin-top: 30px;">
+                <div style="text-align: center; padding: 20px; background: rgba(46, 204, 113, 0.1); border-radius: 15px;">
+                    <h3 style="color: #27ae60; margin-bottom: 15px;">✅ Supported Models & Providers</h3>
+                    <div style="font-size: 1em; line-height: 1.5;">
+                        <div style="font-weight: bold; margin-bottom: 8px;">🏢 Major Providers:</div>
+                        <div>Anthropic Claude • Google Gemini • OpenAI GPT • xAI Grok • ZAI GLM</div>
+                        <div style="font-weight: bold; margin: 12px 0 8px 0;">🏠 Local & Extended:</div>
+                        <div>Cerebras • Fireworks • Groq • LM Studio • OpenRouter • SGLang • Together • vLLM...</div>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 20px; background: rgba(155, 89, 182, 0.1); border-radius: 15px;">
+                    <h3 style="color: #8e44ad; margin-bottom: 15px;">🤖 Agents & Frameworks</h3>
+                    <div style="font-size: 1.1em;">AG2 • Claude Code CLI</div>
+                </div>
+                <div style="text-align: center; padding: 20px; background: rgba(52, 152, 219, 0.1); border-radius: 15px;">
+                    <h3 style="color: #3498db; margin-bottom: 15px;">🛠️ Advanced Tools</h3>
+                    <div style="font-size: 1.1em;">Browser Automation • Code Execution • File Operations • MCP • Multimodal • Web Search</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide: Call to Action -->
+        <div class="slide" style="background: linear-gradient(135deg, #667eea, #764ba2), url('https://github.com/Leezekun/MassGen/blob/main/assets/cos.png?raw=true'); background-size: cover; background-blend-mode: overlay; background-position: center;">
+            <div class="icon">🚀</div>
+            <h2 style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">Join the Multi-Agent Revolution</h2>
+            <div class="call-to-action" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);">
+                <div style="font-size: 1.4em; margin-bottom: 20px; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.7);">
+                    <strong>Build Scalable, Collaborative AI Systems</strong>
+                </div>
+                <div class="cta-links">
+                    <a href="https://github.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">⭐ github.massgen.ai</a>
+                    <a href="https://discord.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">💬 discord.massgen.ai</a>
+                    <a href="https://x.massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">🐦 x.massgen.ai</a>
+                    <a href="https://massgen.ai" class="cta-link" style="background: rgba(255,255,255,0.25); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">🌐 massgen.ai</a>
+                </div>
+                <!-- <div style="margin-top: 30px;">
+                    <div class="version-badge" style="background: linear-gradient(135deg, #e74c3c, #c0392b); backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.3);">
+                        🚀 12+ providers; Claude Code CLI; GPT-5 & GPT-OSS; Local Models; MCP Integration; Unified Filesystem
+                    </div>
+                </div> -->
+            </div>
+            <!-- <div style="text-align: center; margin-top: 30px; font-size: 1.2em; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);">
+                <strong>Thank you!</strong><br>
+                <span style="color: #e8f4fd; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">Questions & Discussion</span>
+            </div> -->
+        </div>
+    </div>
+<!-- Navigation -->
+    <div class="slide-counter">
+        <span id="current-slide">1</span> / <span id="total-slides">24</span>
+    </div>
+
+    <div class="slide-nav">
+        <div class="nav-grid" id="nav-grid">
+            <!-- Dots will be generated by JavaScript -->
+        </div>
+    </div>
+
+    <div class="navigation">
+        <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)" aria-label="Go to previous slide">← Previous</button>
+        <button class="nav-btn" id="next-btn" onclick="changeSlide(1)" aria-label="Go to next slide">Next →</button>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+
+        // Slide titles for navigation
+        const slideTitles = [
+            "Title - PyTorch OpenAgents Conference",
+            "Problem - AI Scaling Challenges",
+            "Solution - Multi-Agent Collaboration",
+            "Evidence - Performance Gains",
+            "Architecture - System Design",
+            "Case Study - Success Through Collaboration",
+            "Demo - Live Examples",
+            "Getting Started - 60 Seconds",
+            "Call to Action - PyTorch OpenAgents"
+        ];
+
+        document.getElementById('total-slides').textContent = totalSlides;
+
+        // Generate navigation dots
+        const navGrid = document.getElementById('nav-grid');
+        for (let i = 0; i < totalSlides; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot';
+            dot.title = `Slide ${i + 1}: ${slideTitles[i]}`;
+            dot.onclick = () => showSlide(i);
+            navGrid.appendChild(dot);
+        }
+
+        function showSlide(n) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (n + totalSlides) % totalSlides;
+            slides[currentSlide].classList.add('active');
+
+            document.getElementById('current-slide').textContent = currentSlide + 1;
+
+            // Update navigation dots
+            document.querySelectorAll('.nav-dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentSlide);
+            });
+
+            // Update navigation buttons
+            document.getElementById('prev-btn').disabled = currentSlide === 0;
+            document.getElementById('next-btn').disabled = currentSlide === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            if (direction === 1 && currentSlide < totalSlides - 1) {
+                showSlide(currentSlide + 1);
+            } else if (direction === -1 && currentSlide > 0) {
+                showSlide(currentSlide - 1);
+            }
+        }
+
+        // Navigation visibility toggle
+        let navigationVisible = true;
+
+        function toggleNavigation() {
+            navigationVisible = !navigationVisible;
+            const navigation = document.querySelector('.navigation');
+            const slideNav = document.querySelector('.slide-nav');
+            const slideCounter = document.querySelector('.slide-counter');
+
+            const display = navigationVisible ? '' : 'none';
+
+            if (navigation) navigation.style.display = display;
+            if (slideNav) slideNav.style.display = display;
+            if (slideCounter) slideCounter.style.display = display;
+
+            console.log(navigationVisible ? 'Navigation shown' : 'Navigation hidden');
+        }
+
+        // Enhanced keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            // Prevent default behavior if we handle the key
+            const handledKeys = ['ArrowRight', 'ArrowLeft', ' ', 'Home', 'End', 'n', 'N'];
+            const numberKeys = e.key >= '1' && e.key <= '9';
+
+            if (handledKeys.includes(e.key) || numberKeys) {
+                e.preventDefault();
+            }
+
+            switch(e.key) {
+                case 'ArrowRight':
+                case ' ':
+                    changeSlide(1);
+                    break;
+                case 'ArrowLeft':
+                    changeSlide(-1);
+                    break;
+                case 'Home':
+                    showSlide(0);
+                    break;
+                case 'End':
+                    showSlide(totalSlides - 1);
+                    break;
+                case 'n':
+                case 'N':
+                    toggleNavigation();
+                    break;
+                default:
+                    if (numberKeys) {
+                        const slideNum = parseInt(e.key) - 1;
+                        if (slideNum < totalSlides) {
+                            showSlide(slideNum);
+                        }
+                    }
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>

@@ -9,6 +9,9 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License" style="margin-right: 5px;">
   </a>
+  <a href="https://docs.massgen.io">
+    <img src="https://img.shields.io/badge/docs-massgen.ai-blue.svg" alt="Documentation" style="margin-right: 5px;">
+  </a>
   <a href="https://discord.massgen.ai">
     <img src="https://img.shields.io/discord/1153072414184452236?color=7289da&label=chat&logo=discord&style=flat-square" alt="Join our Discord">
   </a>
@@ -51,7 +54,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.0.32 Features](#-latest-features-v0032)
+- [v0.1.0 Features](#-latest-features-v010)
 </details>
 
 <details open>
@@ -96,15 +99,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.0.32](#recent-achievements-v0032)
-  - [v0.0.3 - v0.0.31](#previous-achievements-v003---v0031)
+  - [v0.1.0](#recent-achievements-v010)
+  - [v0.0.3 - v0.0.32](#previous-achievements-v003---v0032)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.0.33 Roadmap](#v0033-roadmap)
+- [v0.1.1 Roadmap](#v011-roadmap)
 </details>
 
 <details open>
@@ -129,37 +132,30 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.0.32)
+## 🆕 Latest Features (v0.1.0)
 
-**What's New in v0.0.32:**
-- **Docker Execution Mode** - Run agent commands in isolated Docker containers for enhanced security
-- **MCP Architecture Refactoring** - Simplified and streamlined MCP integration with cleaner codebase
-- **Claude Code Docker Integration** - Automatic Bash tool management and seamless Docker support
+**🎉 Released: October 17, 2025**
 
-**Try v0.0.32 Features:**
+**What's New in v0.1.0:**
+- **📦 PyPI Package** - Official pip installation: `pip install massgen`
+- **📖 Comprehensive Documentation** - Full Sphinx docs at [MassGen Official Documentation](https://docs.massgen.io/)
+- **🎯 Interactive Setup Wizard** - Guided configuration for first-time users
+- **🚀 Simplified Commands** - Clean `massgen` CLI with `@examples/` prefix for built-in configs
+
+**Get Started with v0.1.0:**
 ```bash
-# Docker isolated execution - secure command execution in containers
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_simple.yaml \
-  "Write a factorial function and test it"
+# Install from PyPI
+pip install massgen
 
-# Multi-agent Docker deployment - each agent in isolated container
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_multi_agent.yaml \
-  "Build a Flask website about Bob Dylan"
+# Run the interactive setup wizard
+massgen
 
-# Claude Code with Docker - automatic tool management
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_claude_code.yaml \
-  "Build a Flask website about Bob Dylan"
-
-# Resource-limited Docker execution - production-ready setup
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/docker_with_resource_limits.yaml \
-  "Fetch data from an API and analyze it"
+# Start using with example configurations
+massgen --config @examples/basic/multi/three_agents_default \
+  "Analyze the pros and cons of renewable energy"
 ```
 
-→ [See all release examples](massgen/configs/README.md#release-history--examples)
+→ [See full release history and examples](massgen/configs/README.md#release-history--examples)
 
 ---
 
@@ -206,89 +202,140 @@ This collaborative approach ensures that the final output leverages collective i
 
 ---
 
+> 📖 **Complete Documentation:** For comprehensive guides, API reference, and detailed examples, visit **[MassGen Official Documentation](https://docs.massgen.io/)**
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. 📥 Installation
 
-**Core Installation** (requires Python 3.11+):
+**Method 1: PyPI Installation** (Recommended - Python 3.11+):
+
 ```bash
-git clone https://github.com/Leezekun/MassGen.git
-cd MassGen
+# Install MassGen via pip
+pip install massgen
 
-pip install uv
-uv venv
+# Or with uv (faster)
+uv pip install massgen
 
-# Optional: Install AG2 framework integration (only needed for AG2 configs)
-# uv pip install -e ".[external]"
+# Run the interactive setup wizard
+massgen
 ```
 
-**Global Installation using `uv tool` (Recommended for multi-directory usage):**
+The wizard will guide you through:
+- Configuring API keys
+- Selecting your use case (Research, Code, Q&A, etc.)
+- Choosing AI models
+- Saving your configuration
 
-Install MassGen using `uv tool` for isolated, global access:
+After setup, you can run MassGen with:
+```bash
+# Interactive mode
+massgen
+
+# Single query
+massgen "Your question here"
+
+# With example configurations
+massgen --config @examples/basic/multi/three_agents_default "Your question"
+```
+
+→ See [Installation Guide](https://docs.massgen.io/en/latest/quickstart/installation.html) for complete setup instructions.
+
+**Method 2: Development Installation** (for contributors):
 
 ```bash
 # Clone the repository
 git clone https://github.com/Leezekun/MassGen.git
 cd MassGen
 
-# Install MassGen as a global tool in editable mode
-uv tool install -e .
+# Install in editable mode with pip
+pip install -e .
 
-# Optional: Install AG2 framework integration (only needed for AG2 configs)
-# uv pip install -e ".[external]"
+# Or with uv (faster)
+uv pip install -e .
 
-# Now run from any directory
-cd ~/projects/website
-uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
-
-cd ~/documents/research
-uv tool run massgen --config tools/filesystem/gemini_gpt5_filesystem_multiturn.yaml
+# Optional: AG2 framework integration
+pip install -e ".[external]"
 ```
 
-**Benefits of `uv tool` installation:**
-- ✅ Isolated Python environment (no conflicts with system Python)
-- ✅ Available globally from any directory
-- ✅ Editable mode (`-e .`) allows live development
-- ✅ Easy updates with `git pull` (editable mode)
-- ✅ Clean uninstall with `uv tool uninstall massgen`
+<details>
+<summary><b>Alternative Installation Methods</b> (click to expand)</summary>
 
-**Optional Dependencies:**
+**Using uv with venv:**
 ```bash
-# AG2 Framework Integration (for external agent frameworks)
-uv pip install -e ".[external]"
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+uv venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+uv pip install -e .
 ```
 
-**Optional CLI Tools** (for enhanced capabilities):
+**Using traditional Python venv:**
+```bash
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -e .
+```
+
+**Global installation with uv tool:**
+```bash
+git clone https://github.com/Leezekun/MassGen.git
+cd MassGen
+uv tool install -e .
+# Now run from any directory
+uv tool run massgen --config @examples/basic/multi/three_agents_default "Question"
+```
+
+**Backwards compatibility (uv run):**
+```bash
+cd /path/to/MassGen
+uv run massgen --config @examples/basic/multi/three_agents_default "Question"
+uv run python -m massgen.cli --config config.yaml "Question"
+```
+
+</details>
+
+**Optional CLI Tools:**
 ```bash
 # Claude Code CLI - Advanced coding assistant
 npm install -g @anthropic-ai/claude-code
 
 # LM Studio - Local model inference
-# For MacOS/Linux
+# MacOS/Linux:
 sudo ~/.lmstudio/bin/lms bootstrap
-# For Windows
-cmd /c %USERPROFILE%/.lmstudio/bin/lms.exe bootstrap
+# Windows:
+cmd /c %USERPROFILE%\.lmstudio\bin\lms.exe bootstrap
 ```
 
 ### 2. 🔐 API Configuration
 
-Using the template file `.env.example` to create a `.env` file in the `massgen` directory with your API keys. Note that only the API keys of the models used by your MassGen agent team is needed.
+**Create a `.env` file in your working directory with your API keys:**
 
 ```bash
-# Copy example configuration
-cp .env.example .env
+# Copy this template to .env and add your API keys
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=...
+XAI_API_KEY=...
+
+# Optional: Additional providers
+CEREBRAS_API_KEY=...
+TOGETHER_API_KEY=...
+GROQ_API_KEY=...
+OPENROUTER_API_KEY=...
 ```
 
-**Useful links to get API keys:**
- - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
- - [Cerebras](https://inference-docs.cerebras.ai/introduction)
- - [Claude](https://docs.anthropic.com/en/api/overview)
- - [Gemini](https://ai.google.dev/gemini-api/docs)
- - [Grok](https://docs.x.ai/docs/overview)
- - [Kimi/Moonshot](https://platform.moonshot.ai/)
- - [OpenAI](https://platform.openai.com/api-keys)
- - [POE](https://poe.com/)
- - [Z AI](https://docs.z.ai/guides/overview/quick-start)
+MassGen automatically loads API keys from `.env` in your current directory.
+
+→ **Complete setup guide with all providers:** See [API Key Configuration](https://docs.massgen.io/en/latest/quickstart/installation.html#api-key-configuration) in the docs
+
+**Get API keys:**
+ - [OpenAI](https://platform.openai.com/api-keys) | [Claude](https://docs.anthropic.com/en/api/overview) | [Gemini](https://ai.google.dev/gemini-api/docs) | [Grok](https://docs.x.ai/docs/overview)
+ - [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-services/openai/) | [Cerebras](https://inference-docs.cerebras.ai/introduction) | [More providers...](https://docs.massgen.io/en/latest/reference/supported_models.html)
 
 ### 3. 🧩 Supported Models and Tools
 
@@ -319,7 +366,7 @@ The system currently supports multiple model providers with advanced capabilitie
   - Zero-cost usage reporting
   - Support for LLaMA, Mistral, Qwen and other open-weight models
 
-More providers and local inference engines (sglang) are welcome to be added.
+→ For complete model list and configuration details, see [Supported Models](https://docs.massgen.io/en/latest/reference/supported_models.html)
 
 #### Tools
 
@@ -339,8 +386,13 @@ MassGen agents can leverage various tools to enhance their problem-solving capab
 
 **Note:** Audio/video multimodal support (NEW in v0.0.30) is available through Chat Completions-based providers like OpenRouter and Qwen API. See configuration examples: [`single_openrouter_audio_understanding.yaml`](massgen/configs/basic/single/single_openrouter_audio_understanding.yaml), [`single_qwen_video_understanding.yaml`](massgen/configs/basic/single/single_qwen_video_understanding.yaml)
 
+→ For detailed backend capabilities and tool integration guides, see [User Guide - Backends](https://docs.massgen.io/en/latest/user_guide/backends.html)
+
+---
 
 ### 4. 🏃 Run MassGen
+
+> **Complete Usage Guide:** For all usage modes, advanced features, and interactive multi-turn sessions, see [Running MassGen](https://docs.massgen.io/en/latest/quickstart/running-massgen.html)
 
 #### 🚀 Getting Started
 
@@ -395,8 +447,7 @@ Use the `agents` field to define multiple agents, each with its own backend and 
 
 ```bash
 # Three powerful agents working together - Gemini, GPT-5, and Grok
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml \
+massgen --config @examples/basic/multi/three_agents_default \
   "Analyze the pros and cons of renewable energy"
 ```
 
@@ -448,13 +499,11 @@ The [Model context protocol](https://modelcontextprotocol.io/) (MCP) standardise
 
 ```bash
 # Weather service with GPT-5
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_nano_mcp_example.yaml \
+massgen --config @examples/tools/mcp/gpt5_nano_mcp_example \
   "What's the weather forecast for New York this week?"
 
 # Multi-tool MCP with Gemini - Search + Weather + Filesystem (Requires BRAVE_API_KEY in .env)
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+massgen --config @examples/tools/mcp/multimcp_gemini \
   "Find the best restaurants in Paris and save the recommendations to a file"
 ```
 
@@ -507,6 +556,7 @@ agents:
 
 → [View more MCP examples](massgen/configs/tools/mcp/)
 
+→ For comprehensive MCP integration guide, see [MCP Integration](https://docs.massgen.io/en/latest/user_guide/mcp_integration.html)
 
 #### **4. File System Operations & Workspace Management**
 
@@ -526,13 +576,11 @@ MassGen provides comprehensive file system support through multiple backends, en
 
 ```bash
 # File operations with Claude Code
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_single.yaml \
+massgen --config @examples/tools/filesystem/claude_code_single \
   "Create a Python web scraper and save results to CSV"
 
 # Multi-agent file collaboration
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml \
+massgen --config @examples/tools/filesystem/claude_code_context_sharing \
   "Generate a comprehensive project report with charts and analysis"
 ```
 
@@ -549,12 +597,12 @@ agents:
 
 # Multi-Agent Workspace Isolation:
 agents:
-  - id: "analyzer"
+  - id: "agent_a"
     backend:
       type: "claude_code"
       cwd: "workspace1"            # Agent-specific workspace
 
-  - id: "reviewer"
+  - id: "agent_b"
     backend:
       type: "gemini"
       cwd: "workspace2"            # Separate workspace
@@ -587,6 +635,8 @@ orchestrator:
 >
 > The agents will execute file operations without additional confirmation once permissions are granted.
 
+→ For comprehensive file operations guide, see [File Operations](https://docs.massgen.io/en/latest/user_guide/file_operations.html)
+
 #### **5. Project Integration & User Context Paths (NEW in v0.0.21)**
 
 Work directly with your existing projects! User Context Paths allow you to share specific directories with all agents while maintaining granular permission control. This enables secure multi-agent collaboration on your real codebases, documentation, and data.
@@ -598,17 +648,23 @@ MassGen automatically organizes all its working files under a `.massgen/` direct
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `context_paths` | list | **Yes** (for project integration) | Shared directories for all agents |
-| └─ `path` | string | Yes | Absolute path to your project directory (**must be directory, not file**) |
-| └─ `permission` | string | Yes | Access level: `"read"` or `"write"` |
+| └─ `path` | string | Yes | Absolute or relative path to your project directory (**must be directory, not file**) |
+| └─ `permission` | string | Yes | Access level: `"read"` or `"write"` (write applies only to final agent) |
+| └─ `protected_paths` | list | No | Files/directories immune from modification (relative to context path) |
 
-**⚠️ Important:** Context paths must point to **directories**, not individual files. MassGen validates all paths during startup and will show clear error messages for missing paths or file paths.
+**⚠️ Important Notes:**
+- Context paths must point to **directories**, not individual files
+- Paths can be **absolute** or **relative** (resolved against current working directory)
+- **Write permissions** apply only to the **final agent** during presentation phase
+- During coordination, all context paths are **read-only** to protect your files
+- MassGen validates all paths during startup and will show clear error messages for missing paths or file paths
 
 
 **Quick Start Commands:**
 
 ```bash
 # Multi-agent collaboration to improve the website in `massgen/configs/resources/v0.0.21-example
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gpt5mini_cc_fs_context_path.yaml "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
+massgen --config @examples/tools/filesystem/gpt5mini_cc_fs_context_path "Enhance the website with: 1) A dark/light theme toggle with smooth transitions, 2) An interactive feature that helps users engage with the blog content (your choice - could be search, filtering by topic, reading time estimates, social sharing, reactions, etc.), and 3) Visual polish with CSS animations or transitions that make the site feel more modern and responsive. Use vanilla JavaScript and be creative with the implementation details."
 ```
 
 **Configuration:**
@@ -623,10 +679,13 @@ agents:
 
 orchestrator:
   context_paths:
-    - path: "/home/user/my-project/src"
+    - path: "."                    # Current directory (relative path)
+      permission: "write"          # Final agent can create/modify files
+      protected_paths:             # Optional: files immune from modification
+        - ".env"
+        - "config.json"
+    - path: "/home/user/my-project/src"  # Absolute path example
       permission: "read"           # Agents can analyze your code
-    - path: "/home/user/my-project/docs"
-      permission: "write"          # Final agent can update docs
 
 # Advanced: Multi-Agent Project Collaboration
 agents:
@@ -642,12 +701,14 @@ agents:
 
 orchestrator:
   context_paths:
-    - path: "/home/user/legacy-app/src"
+    - path: "../legacy-app/src"   # Relative path to existing codebase
       permission: "read"           # Read existing codebase
-    - path: "/home/user/legacy-app/tests"
-      permission: "write"          # Write new tests
-    - path: "/home/user/modernized-app"
-      permission: "write"          # Create modernized version
+    - path: "../legacy-app/tests"
+      permission: "write"          # Final agent can write new tests
+      protected_paths:             # Protect specific test files
+        - "integration_tests/production_data_test.py"
+    - path: "/home/user/modernized-app"  # Absolute path
+      permission: "write"          # Final agent can create modernized version
 ```
 
 **This showcases project integration:**
@@ -702,6 +763,8 @@ agents:
 
 → [Learn more about project integration](massgen/mcp_tools/permissions_and_context_files.md)
 
+→ For comprehensive project integration guide, see [Project Integration](https://docs.massgen.io/en/latest/user_guide/project_integration.html)
+
 **Security Considerations:**
 - **Agent ID Safety**: Avoid using agent+incremental digits for IDs (e.g., `agent1`, `agent2`). This may cause ID exposure during voting
 - **File Access Control**: Restrict file access using MCP server configurations when needed
@@ -715,24 +778,21 @@ agents:
 **Claude (Recursive MCP Execution - v0.0.20+)**
 ```bash
 # Claude with advanced tool chaining
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/claude_mcp_example.yaml \
+massgen --config @examples/tools/mcp/claude_mcp_example \
   "Research and compare weather in Beijing and Shanghai"
 ```
 
 **OpenAI (GPT-5 Series with MCP - v0.0.17+)**
 ```bash
 # GPT-5 with weather and external tools
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/gpt5_mini_mcp_example.yaml \
+massgen --config @examples/tools/mcp/gpt5_nano_mcp_example \
   "What's the weather of Tokyo"
 ```
 
 **Gemini (Multi-Server MCP - v0.0.15+)**
 ```bash
 # Gemini with multiple MCP services
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/mcp/multimcp_gemini.yaml \
+massgen --config @examples/tools/mcp/multimcp_gemini \
   "Find accommodations in Paris with neighborhood analysis"    # (requires BRAVE_API_KEY in .env)
 ```
 
@@ -753,8 +813,7 @@ uv run python -m massgen.cli \
 **Local Models (LM Studio - v0.0.7+)**
 ```bash
 # Run open-source models locally
-uv run python -m massgen.cli \
-  --config massgen/configs/providers/local/lmstudio.yaml \
+massgen --config @examples/providers/local/lmstudio \
   "Explain machine learning concepts"
 ```
 
@@ -765,29 +824,25 @@ uv run python -m massgen.cli \
 **Question Answering & Research:**
 ```bash
 # Complex research with multiple perspectives
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+massgen --config @examples/basic/multi/gemini_4o_claude \
   "What's best to do in Stockholm in October 2025"
 
 # Specific research requirements
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+massgen --config @examples/basic/multi/gemini_4o_claude \
   "Give me all the talks on agent frameworks in Berkeley Agentic AI Summit 2025"
 ```
 
 **Creative Writing:**
 ```bash
 # Story generation with multiple creative agents
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/gemini_4o_claude.yaml \
+massgen --config @examples/basic/multi/gemini_4o_claude \
   "Write a short story about a robot who discovers music"
 ```
 
 **Development & Coding:**
 ```bash
 # Full-stack development with file operations
-uv run python -m massgen.cli \
-  --config  massgen/configs/tools/filesystem/claude_code_single.yaml \
+massgen --config @examples/tools/filesystem/claude_code_single \
   "Create a Flask web app with authentication"
 ```
 
@@ -795,13 +850,11 @@ uv run python -m massgen.cli \
 ```bash
 # Browser automation with screenshots and reporting
 # Prerequisites: npm install @playwright/mcp@latest (for Playwright MCP server)
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
+massgen --config @examples/tools/code-execution/multi_agent_playwright_automation \
   "Browse three issues in https://github.com/Leezekun/MassGen and suggest documentation improvements. Include screenshots and suggestions in a website."
 
 # Data extraction and analysis
-uv run python -m massgen.cli \
-  --config massgen/configs/tools/code-execution/multi_agent_playwright_automation.yaml \
+massgen --config @examples/tools/code-execution/multi_agent_playwright_automation \
   "Navigate to https://news.ycombinator.com, extract the top 10 stories, and create a summary report"
 ```
 
@@ -812,12 +865,10 @@ uv run python -m massgen.cli \
 **Multi-Turn Conversations:**
 ```bash
 # Start interactive chat (no initial question)
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml
+massgen --config @examples/basic/multi/three_agents_default
 
 # Debug mode for troubleshooting
-uv run python -m massgen.cli \
-  --config massgen/configs/basic/multi/three_agents_default.yaml \
+massgen --config @examples/basic/multi/three_agents_default \
   --debug "Your question"
 ```
 
@@ -879,53 +930,57 @@ The system provides multiple ways to view and analyze results:
 
 #### Comprehensive Logging
 
-All sessions are automatically logged with detailed information. The file can be viewed throught the interaction with UI.
+All sessions are automatically logged with detailed information for debugging and analysis.
+
+**Real-time Interaction:**
+- Press `r` during execution to view the coordination table in your terminal
+- Watch agents collaborate, vote, and reach consensus in real-time
 
 ##### Logging Storage Structure
-Logging storage are organized in the following directory hierarchy:
 
 ```
-massgen_logs/
-└── log_{timestamp}/
-    ├── agent_outputs/
-    │   ├── agent_id.txt
-    │   ├── final_presentation_agent_id.txt
-    │   └── system_status.txt
-    ├── agent_id/
-    │   └── {answer_generation_timestamp}/
-    │       └── files_included_in_generated_answer
-    ├── final_workspace/
-    │   └── agent_id/
-    │       └── {answer_generation_timestamp}/
-    │           └── files_included_in_generated_answer
-    └── massgen.log / massgen_debug.log
+.massgen/
+└── massgen_logs/
+    └── log_YYYYMMDD_HHMMSS/           # Timestamped log directory
+        ├── agent_<id>/                 # Agent-specific coordination logs
+        │   └── YYYYMMDD_HHMMSS_NNNNNN/ # Timestamped coordination steps
+        │       ├── answer.txt          # Agent's answer at this step
+        │       ├── context.txt         # Context available to agent
+        │       └── workspace/          # Agent workspace (if filesystem tools used)
+        ├── agent_outputs/              # Consolidated output files
+        │   ├── agent_<id>.txt          # Complete output from each agent
+        │   ├── final_presentation_agent_<id>.txt       # Winning agent's final answer
+        │   ├── final_presentation_agent_<id>_latest.txt # Symlink to latest
+        │   └── system_status.txt       # System status and metadata
+        ├── final/                      # Final presentation phase
+        │   └── agent_<id>/             # Winning agent's final work
+        │       ├── answer.txt          # Final answer
+        │       └── context.txt         # Final context
+        ├── coordination_events.json    # Structured coordination events
+        ├── coordination_table.txt      # Human-readable coordination table
+        ├── vote.json                   # Final vote tallies and consensus data
+        ├── massgen.log                 # Complete debug log (or massgen_debug.log in debug mode)
+        ├── snapshot_mappings.json      # Workspace snapshot metadata
+        └── execution_metadata.yaml     # Query, config, and execution details
 ```
 
-##### Directory Structure Explanation
-- `log_{timestamp}`: Main log directory identified by session timestamp
-- `agent_outputs/`: Contains text outputs from each agent
-  - `agent_id.txt`: Raw output from each agent
-  - `final_presentation_agent_id.txt`: Final presentation for the selected agent
-  - `system_status.txt`: System status information
-- `agent_id/`: Directory for each agent containing answer versions
-  - `{answer_generation_timestamp}/`: Timestamp directory for each answer version
-    - `files_included_in_generated_answer`: All relevant files in that version
-- `final_workspace/`: Final presentation for selected agents
-  - `agent_id/`: Selected agent id
-    - `{answer_generation_timestamp}/`: Timestamp directory for final presentation
-      - `files_included_in_generated_answer`: All relevant files in final presentation
-- `massgen.log` or `massgen_debug.log`: Main log file, `massgen.log` for general logging, `massgen_debug.log` for verbose debugging information.
+##### Key Log Files
 
-##### Important Note
-The final presentation continues to be stored in each Claude Code Agent's workspace as before. After generating the final presentation, the relevant files will be copied to the `final_workspace/` directory.
+- **Coordination Table** (`coordination_table.txt`): Complete visualization of multi-agent coordination with event timeline, voting patterns, and consensus building
+- **Coordination Events** (`coordination_events.json`): Structured JSON log of all events (started_streaming, new_answer, vote, restart, final_answer)
+- **Vote Summary** (`vote.json`): Final vote tallies, winning agent, and consensus information
+- **Execution Metadata** (`execution_metadata.yaml`): Original query, timestamp, configuration, and execution context for reproducibility
+- **Agent Outputs** (`agent_outputs/`): Complete output history and final presentations from all agents
+- **Debug Log** (`massgen.log`): Complete system operations, API calls, tool usage, and error traces (use `--debug` for verbose logging)
+
+→ For comprehensive logging guide and debugging techniques, see [Logging & Debugging](https://docs.massgen.io/en/latest/user_guide/logging.html)
 
 ## 💡 Case Studies
-
-### Case Studies
 
 To see how MassGen works in practice, check out these detailed case studies based on real session logs:
 
 - [**MassGen Case Studies**](docs/case_studies/README.md)
+- [**Case Studies Documentation**](https://docs.massgen.io/en/latest/examples/case_studies.html) - Browse case studies online
 
 ---
 
@@ -936,34 +991,39 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.0.32)
+### Recent Achievements (v0.1.0)
 
-**🎉 Released: October 15, 2025**
+**🎉 Released: October 17, 2025**
 
-#### Docker Execution Mode
-- **Container-Based Isolation**: Secure command execution in isolated Docker containers preventing host filesystem access
-- **Persistent State Management**: Packages and dependencies persist across conversation turns eliminating redundant setup
-- **Multi-Agent Support**: Each agent receives dedicated isolated container enabling safe parallel execution
-- **Configurable Security**: Resource limits (CPU, memory), network isolation modes, and read-only volume mounts
+#### PyPI Package Release
+- **Official Distribution**: MassGen now available via `pip install massgen`
+- **Simplified Installation**: No need to clone repository for standard usage
+- **Global Access**: Run `massgen` command from any directory after pip install
 
-#### MCP Architecture Refactoring
-- **Simplified Client**: Renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture
-- **Code Consolidation**: Removed deprecated modules and consolidated duplicate MCP protocol handling
-- **Improved Maintainability**: Standardized type hints, enhanced error handling, cleaner code organization
+#### Comprehensive Documentation
+- **Sphinx Documentation**: Full documentation site at [MassGen Official Documentation](https://docs.massgen.io/en/latest/)
+- **Complete User Guide**: Installation, configuration, usage modes, and API reference
+- **Case Studies**: Real-world examples with session logs and outcomes
+- **Structured Navigation**: Getting Started, User Guide, Reference, Examples, and Development sections
 
-#### Claude Code Docker Integration
-- **Automatic Tool Management**: Bash tool automatically disabled in Docker mode routing commands through execute_command
-- **MCP Auto-Permissions**: Automatic approval for MCP tools while preserving security validation
-- **Enhanced Guidance**: System messages prevent git repository confusion between host and container environments
+#### Interactive Setup Wizard
+- **Guided Configuration**: Step-by-step wizard for first-time users
+- **Use Case Presets**: Research, Code, Q&A, Data Analysis, and more
+- **API Key Management**: Centralized configuration in `~/.config/massgen/`
+- **Smart Defaults**: Auto-configured tools based on selected use case
 
-#### Configuration and Testing
-- **Docker Documentation**: `massgen/docker/README.md` with setup guide and build scripts
-- **Example Configurations**: `docker_simple.yaml`, `docker_multi_agent.yaml`, `docker_with_resource_limits.yaml`, `docker_claude_code.yaml`, `docker_verification.yaml`
-- **Testing**: Comprehensive test suite validating Docker and local execution modes
+#### Enhanced CLI Experience
+- **Simplified Commands**: Clean `massgen` command with intuitive syntax
+- **Built-in Examples**: `@examples/` prefix for instant access to configurations
+- **Backwards Compatibility**: Existing git clone workflows continue to work
 
-### Previous Achievements (v0.0.3 - v0.0.31)
+### Previous Achievements (v0.0.3 - v0.0.32)
 
-<div style="max-height: 600px; overflow-y: auto; transition: max-height 0.3s ease;">
+✅ **Docker Execution Mode (v0.0.32)**: Container-based isolation with secure command execution in isolated Docker containers preventing host filesystem access, persistent state management with packages and dependencies persisting across conversation turns, multi-agent support with dedicated isolated containers for each agent, configurable security with resource limits (CPU, memory), network isolation modes, and read-only volume mounts
+
+✅ **MCP Architecture Refactoring (v0.0.32)**: Simplified client with renamed `MultiMCPClient` to `MCPClient` reflecting streamlined architecture, code consolidation by removing deprecated modules and consolidating duplicate MCP protocol handling, improved maintainability with standardized type hints, enhanced error handling, and cleaner code organization
+
+✅ **Claude Code Docker Integration (v0.0.32)**: Automatic tool management with Bash tool automatically disabled in Docker mode routing commands through execute_command, MCP auto-permissions with automatic approval for MCP tools while preserving security validation, enhanced guidance with system messages preventing git repository confusion between host and container environments
 
 ✅ **Universal Command Execution (v0.0.31)**: MCP-based execute_command tool works across Claude, Gemini, OpenAI, and Chat Completions providers, AG2-inspired security with permission management and command filtering, code execution in planning mode for safer coordination
 
@@ -1045,8 +1105,6 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ✅ **Extended Provider Ecosystem**: Support for 15+ providers including Cerebras AI, Together AI, Fireworks AI, Groq, Nebius AI Studio, and OpenRouter
 
-</div>
-
 ### Key Future Enhancements
 
 -   **Bug Fixes & Backend Improvements:** Fixing image generation path issues and adding Claude multimodal support
@@ -1057,9 +1115,9 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.0.33 Roadmap
+### v0.1.1 Roadmap
 
-Version 0.0.33 focuses on developer experience improvements and PyPI distribution:
+Version 0.1.1 focuses on developer experience improvements and PyPI distribution:
 
 #### Required Features
 - **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
@@ -1075,7 +1133,7 @@ Key technical approach:
 - **Nested Chat**: AG2 integration for hierarchical conversations with parent-child agent relationships
 - **DSPy**: Prompt optimization, performance tuning, and systematic agent improvement workflows
 
-For detailed milestones and technical specifications, see the [full v0.0.33 roadmap](ROADMAP_v0.0.33.md).
+For detailed milestones and technical specifications, see the [full v0.1.1 roadmap](ROADMAP.md).
 
 ---
 

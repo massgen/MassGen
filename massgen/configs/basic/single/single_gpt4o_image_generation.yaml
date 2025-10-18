@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt4o_image_generation.yaml "Generate an image of gray tabby cat hugging an otter with an orange scarf."
+# massgen --config @examples/basic/single/single_gpt4o_image_generation "Generate an image of gray tabby cat hugging an otter with an orange scarf."
 agents:
   - id: "gpt4o_agent1"
     backend:
