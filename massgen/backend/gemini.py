@@ -888,9 +888,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
                 self._mcp_client = None
                 self._mcp_initialized = False
                 # Also clear parent class attributes if they exist (for compatibility)
-                if hasattr(self, '_mcp_functions'):
+                if hasattr(self, "_mcp_functions"):
                     self._mcp_functions.clear()
-                if hasattr(self, '_mcp_function_names'):
+                if hasattr(self, "_mcp_function_names"):
                     self._mcp_function_names.clear()
 
     async def __aenter__(self) -> "GeminiBackend":
