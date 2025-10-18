@@ -1,6 +1,6 @@
 # MassGen Case Study Template
 
-MassGen is focused on **case-driven development**. New features should be discovered and reflected through performance improvements grounded in real-world use cases. 
+MassGen is focused on **case-driven development**. New features should be discovered and reflected through performance improvements grounded in real-world use cases.
 
 **Importantly, each new version of MassGen will be associated with a case study detailed in this way.**
 
@@ -9,7 +9,7 @@ Use this template to detail the "why" behind development changes. Once a new ver
 ## 🤝 Contributing
 To guide future versions of MassGen, we encourage **anyone** to submit an issue using the corresponding `case-study` issue template based on the "PLANNING PHASE" section found in this template.
 
-Then, this issue will be resolved by a PR (use the link in the issue template), describing new features and with a link to a full case study doc. This can happen in multiple ways: 1) the development team will try to address the issue, scheduling it for a further release, or 2) you can contribute yourself, as in the [CONTRIBUTING.md](../../CONTRIBUTING.md). 
+Then, this issue will be resolved by a PR (use the link in the issue template), describing new features and with a link to a full case study doc. This can happen in multiple ways: 1) the development team will try to address the issue, scheduling it for a further release, or 2) you can contribute yourself, as in the [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 Regardless, please make sure you join [our Discord](https://discord.com/invite/VVrT2rQaz5) to discuss your changes and get more involved with MassGen.
 
@@ -51,7 +51,7 @@ The more case studies we have, the more we can improve the features according to
 
 *Complete this section before implementation*
 
-<h2 id="evaluation-design">📝 Evaluation Design</h2> 
+<h2 id="evaluation-design">📝 Evaluation Design</h2>
 
 ### Prompt
 The prompt should be a specific task that is driving the development of the new desired features. It should be clear that the new features are used when the prompt is answered. This need not be the original prompt you were using when you thought of the new set of desired features; instead, it should be carefully chosen such that it is relatively simple, clear, and unambiguous to allow for better evaluation.
@@ -63,7 +63,7 @@ Provide the yaml file or link to the yaml file that describes the configuration 
 Place the command here that describes how to test MassGen on the baseline version:
 
 ```bash
-uv run python -m massgen.cli --config massgen/configs/xxx.yaml "<prompt>"
+massgen --config @examples/xxx "<prompt>"
 ```
 
 <h2 id="evaluation-analysis">🔧 Evaluation Analysis</h2>
@@ -95,7 +95,7 @@ Place the version or branch of MassGen here with the new features.
 Describe the new features that were implemented to improve MassGen to perform better on the case study.
 
 ### New Config
-Provide the yaml file or link to the yaml file that describes how to run the configuration file for the new version. 
+Provide the yaml file or link to the yaml file that describes how to run the configuration file for the new version.
 
 *Note that this may be the same as the baseline config or not depending on what the new features look like. If it is the same, delete this section.*
 
@@ -103,7 +103,7 @@ Provide the yaml file or link to the yaml file that describes how to run the con
 Place the command here that describes how to test MassGen on the new version:
 
 ```bash
-uv run python -m massgen.cli --config massgen/configs/xxx.yaml "<prompt>"
+massgen --config @examples/xxx "<prompt>"
 ```
 
 *Note that this may be the same as the baseline command or not depending on what the new features look like. If it is the same, delete this section.*
@@ -112,7 +112,7 @@ uv run python -m massgen.cli --config massgen/configs/xxx.yaml "<prompt>"
 
 Describe the agents used and any relevant information about them.
 - **Agent 1**: ...
-- **Agent 2**: ... 
+- **Agent 2**: ...
 - **Agent 3**: ...
 
 <h2 id="demo">🎥 Demo</h2>
@@ -126,9 +126,9 @@ Each case study should be accompanied by a recording demonstrating the new funct
 <h1 id="evaluation-analysis">📊 EVALUATION & ANALYSIS</h1>
 
 ## Results
-Given the success criteria described above, how does the new version of MassGen perform relative to the old one? Describe in specific terms and address each portion of the MassGen orchestration pipeline, highlighting different areas as applicable. It is important here to directly connect the results to the new features. 
+Given the success criteria described above, how does the new version of MassGen perform relative to the old one? Describe in specific terms and address each portion of the MassGen orchestration pipeline, highlighting different areas as applicable. It is important here to directly connect the results to the new features.
 
-Like with baseline analysis, be specific enough such that it is clear to anyone reading this why the new version is better. If there is auxiliary information such as code or external artifacts, include detailed descriptions, snippets, and/or screenshots here. 
+Like with baseline analysis, be specific enough such that it is clear to anyone reading this why the new version is better. If there is auxiliary information such as code or external artifacts, include detailed descriptions, snippets, and/or screenshots here.
 
 Below are important aspects to consider describing:
 

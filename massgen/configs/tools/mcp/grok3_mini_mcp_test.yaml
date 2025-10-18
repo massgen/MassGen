@@ -1,6 +1,6 @@
 # MassGen Configuration
 # Usage:
-# uv run python -m massgen.cli --config massgen/configs/tools/mcp/grok3_mini_mcp_test.yaml "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
+# massgen --config @examples/tools/mcp/grok3_mini_mcp_test "Test the MCP tools by calling mcp_echo with text 'Hello massgen' and add_numbers with 46 and 52"
 agents:
   - id: "grok3_mini_mcp_test"
     backend:

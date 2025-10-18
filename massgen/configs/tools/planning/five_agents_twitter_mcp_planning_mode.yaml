@@ -11,7 +11,7 @@
 #    XAI_API_KEY="your_grok_key"
 #
 # Example usage:
-# uv run python -m massgen.cli --config configs/five_agents_twitter_mcp_planning_mode.yaml "Research the latest trends in AI development, draft an engaging tweet about it with relevant hashtags, and post it to Twitter"
+# massgen --config @examples/tools/planning/five_agents_twitter_mcp_planning_mode "Research the latest trends in AI development, draft an engaging tweet about it with relevant hashtags, and post it to Twitter"
 
 agents:
   - id: "gemini_twitter_agent"

@@ -4,7 +4,7 @@ This case study demonstrates MassGen's ability to achieve unanimous consensus on
 
 ## Command:
 ```bash
-uv run python -m massgen.cli --config massgen/configs/basic/multi/gemini_4o_claude.yaml "How much does it cost to run HLE benchmark with Grok-4"
+massgen --config @examples/basic/multi/gemini_4o_claude "How much does it cost to run HLE benchmark with Grok-4"
 ```
 
 **Prompt:**

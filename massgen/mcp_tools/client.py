@@ -361,7 +361,20 @@ class MCPClient:
                 env=env,
                 cwd=cwd,
             )
-            return stdio_client(server_params)
+
+            # Open errlog file to redirect MCP server stderr output
+            from ..logger_config import get_log_session_dir
+
+            log_dir = get_log_session_dir()
+            errlog_path = log_dir / f"mcp_{server_name}_stderr.log"
+            errlog_file = open(errlog_path, "w", encoding="utf-8")
+
+            # Store errlog file handle for cleanup
+            if not hasattr(self, "_errlog_files"):
+                self._errlog_files = {}
+            self._errlog_files[server_name] = errlog_file
+
+            return stdio_client(server_params, errlog=errlog_file)
 
         elif transport_type == "streamable-http":
             url = config["url"]
@@ -809,6 +822,15 @@ class MCPClient:
             try:
                 # Disconnect all servers
                 await self.disconnect()
+
+                # Close errlog files
+                if hasattr(self, "_errlog_files"):
+                    for server_name, errlog_file in self._errlog_files.items():
+                        try:
+                            errlog_file.close()
+                        except Exception as e:
+                            logger.debug(f"Error closing errlog file for {server_name}: {e}")
+                    self._errlog_files.clear()
 
                 # Clear all references
                 self.tools.clear()
