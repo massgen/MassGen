@@ -44,7 +44,7 @@ To guide future versions of MassGen, we encourage **anyone** to submit an issue 
 
 The prompt tests whether MassGen agents can create automated tests, execute them, and verify results through the new code execution MCP integration:
 
-```bash
+```
 Create a test case for ensuring the config file is a valid format and all the parameters are supported. Then, run it on /Users/ncrispin/GitHubProjects/MassGenOther/massgen/configs/examples/code_execution_use_case_simple.yaml to ensure that the config is valid. Note you can use uv run for testing.
 ```
 
@@ -269,7 +269,7 @@ Key artifacts from the case study run:
 - Test validates YAML config using `massgen.mcp_tools.config_validator.validate_mcp_integration`
 - Executed via `uv run pytest -q test_config_validator.py::test_code_execution_use_case_simple_config_is_valid`
 - **Test passed** with exit code 0, confirming config validity
-- Both agents engaged in 5 restarts for refinement
+- 5 total restarts for iterative refinement (Agent A: 3 restarts, Agent B: 2 restarts)
 - Agent B selected as winner after consensus voting
 
 ---
@@ -615,6 +615,22 @@ While this case study used both Gemini and OpenAI, the same `execute_command` to
 - **OpenAI (Response API)**: Works alongside existing code interpreter
 
 This universality means any backend can now participate in test-driven workflows.
+
+**Evolution to Docker Execution (v0.0.32):**
+
+Building on the foundation of universal command execution in v0.0.31, MassGen v0.0.32 introduced **Docker-based code execution** to address additional security and isolation requirements:
+
+- **Container Isolation**: Commands execute in ephemeral Docker containers with strict resource limits (CPU, memory, network access)
+- **Enhanced Security**: Additional isolation layer beyond the AG2-inspired security framework, preventing any host system impact
+- **Reproducible Environments**: Agents can execute code in consistent, pre-configured container images
+- **Multi-Language Support**: Expanded beyond Python to support execution in various language runtimes (Node.js, Java, Go, etc.) through containerized environments
+- **Configuration**: Enable Docker execution with `enable_mcp_command_line_docker: true` in agent backend config
+
+The Docker execution mode complements the local execution introduced in v0.0.31, giving users the flexibility to choose between:
+- **Local execution**: Fast, direct shell access for trusted environments
+- **Docker execution**: Isolated, sandboxed containers for untrusted code or production deployments
+
+Both modes share the same `execute_command` MCP tool interface, ensuring consistent agent behavior regardless of execution environment.
 
 <h2 id="conclusion">🎯 Conclusion</h2>
 
