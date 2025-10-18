@@ -17,7 +17,7 @@
 #    XAI_API_KEY="your_grok_key"
 #
 # Example usage:
-# uv run python -m massgen.cli --config configs/five_agents_notion_mcp_planning_mode.yaml "Create a comprehensive project management system in Notion with tasks, timelines, and progress tracking. Design the database structure, create initial pages, and set up automation workflows."
+# massgen --config @examples/tools/planning/five_agents_notion_mcp_planning_mode "Create a comprehensive project management system in Notion with tasks, timelines, and progress tracking. Design the database structure, create initial pages, and set up automation workflows."
 
 agents:
   - id: "gemini_notion_agent"

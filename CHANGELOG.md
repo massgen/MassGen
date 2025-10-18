@@ -5,6 +5,39 @@ All notable changes to MassGen will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Recent Releases
+
+**v0.1.0 (October 2025)** - PyPI Package & Documentation
+Official PyPI release with enhanced documentation and installation via `pip install massgen`.
+
+**v0.0.32 (October 2025)** - Docker Execution Mode
+Isolated command execution in Docker containers with resource limits and multi-agent support.
+
+**v0.0.31 (October 2025)** - Code Execution, AG2 Integration, Multimodal
+MCP-based command execution across all backends, AG2 framework integration, and audio/video generation.
+
+---
+
+## [0.1.0] - 2025-10-15 (PyPI Release)
+
+### Added
+- **PyPI Package Release**: Official MassGen package available on PyPI for easy installation via pip
+- **Enhanced Documentation**: Comprehensive Sphinx documentation with improved structure and clarity
+  - Rebuilt documentation with v0.1.0 version numbers
+  - Improved backend capabilities table with split multimodal columns
+  - Enhanced explanations for multimodal capabilities (Both, Understanding, Generation)
+  - Updated homepage with v0.1.0 features
+
+### Changed
+- **Documentation Updates**: Major documentation improvements for PyPI release
+  - Updated version numbers across all documentation files
+  - Clarified multimodal capability terminology
+  - Enhanced backend configuration guides
+
+### Technical Details
+- **Major Focus**: PyPI distribution and documentation improvements
+- **Contributors**: @ncrispino @qidanrui @sonichi @Henry-811 and the MassGen team
+
 ## [0.0.32] - 2025-10-15
 
 ### Added

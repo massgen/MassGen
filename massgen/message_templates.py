@@ -10,16 +10,21 @@ from typing import Any, Dict, List, Optional
 class MessageTemplates:
     """Message templates implementing the proven MassGen approach."""
 
-    def __init__(self, voting_sensitivity: str = "lenient", **template_overrides):
+    def __init__(self, voting_sensitivity: str = "lenient", answer_novelty_requirement: str = "lenient", **template_overrides):
         """Initialize with optional template overrides.
 
         Args:
             voting_sensitivity: Controls how critical agents are when voting.
                 - "lenient": Agents vote YES more easily, fewer new answers (default)
                 - "balanced": Agents apply detailed criteria, more new answers
+            answer_novelty_requirement: Controls how different new answers must be.
+                - "lenient": No additional checks (default)
+                - "balanced": Require meaningful differences
+                - "strict": Require substantially different solutions
             **template_overrides: Custom template strings to override defaults
         """
         self._voting_sensitivity = voting_sensitivity
+        self._answer_novelty_requirement = answer_novelty_requirement
         self._template_overrides = template_overrides
 
     # =============================================================================
@@ -80,11 +85,27 @@ Only use the `vote` tool if the best answer is strong and complete."""
 
 If YES, use the `vote` tool to record your vote and skip the `new_answer` tool."""
 
+        # Add novelty requirement instructions if not lenient
+        novelty_section = ""
+        if self._answer_novelty_requirement == "balanced":
+            novelty_section = """
+IMPORTANT: If you provide a new answer, it must be meaningfully different from existing answers.
+- Don't just rephrase or reword existing solutions
+- Introduce new insights, approaches, or tools
+- Make substantive improvements, not cosmetic changes"""
+        elif self._answer_novelty_requirement == "strict":
+            novelty_section = """
+CRITICAL: New answers must be SUBSTANTIALLY different from existing answers.
+- Use a fundamentally different approach or methodology
+- Employ different tools or techniques
+- Provide significantly more depth or novel perspectives
+- If you cannot provide a truly novel solution, vote instead"""
+
         return f"""You are evaluating answers from multiple agents for final response to a message.
 Different agents may have different builtin tools and capabilities.
 {evaluation_section}
 Otherwise, digest existing answers, combine their strengths, and do additional work to address their weaknesses,
-then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE.
+then use the `new_answer` tool to record a better answer to the ORIGINAL MESSAGE.{novelty_section}
 Make sure you actually call `vote` or `new_answer` (in tool call format).
 
 *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""

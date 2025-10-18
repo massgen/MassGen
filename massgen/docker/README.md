@@ -447,7 +447,7 @@ docker container prune -f
 
 ## Examples Directory
 
-See `massgen/configs/debug/code_execution/` for example configurations:
+See `massgen/configs/tools/code-execution/` for example configurations:
 - `docker_simple.yaml` - Minimal Docker setup
 - `docker_with_resource_limits.yaml` - Memory/CPU limits with network access
 - `docker_multi_agent.yaml` - Multi-agent execution with Docker isolation

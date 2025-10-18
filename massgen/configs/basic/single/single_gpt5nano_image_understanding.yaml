@@ -1,5 +1,5 @@
 # MassGen Multimodal GPT Configuration
-# uv run python -m massgen.cli --config massgen/configs/basic/single/single_gpt5nano_image_understanding.yaml "Please summarize the content in this image."
+# massgen --config @examples/basic/single/single_gpt5nano_image_understanding "Please summarize the content in this image."
 agent:
   id: "response_agent"
   # system_message: "You are a helpful AI assistant powered by Google Gemini."

@@ -32,7 +32,6 @@ agents:
 
 orchestrator:
   voting_sensitivity: "balanced"
-  # voting_sensitivity: "strict"
 
 ui:
   display_type: "rich_terminal"

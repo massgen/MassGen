@@ -34,6 +34,10 @@ _LOG_SESSION_DIR = None
 _LOG_BASE_SESSION_DIR = None  # Base session dir (without turn subdirectory)
 _CURRENT_TURN = None
 
+# Console logging suppression (for Rich Live display compatibility)
+_CONSOLE_HANDLER_ID = None
+_CONSOLE_SUPPRESSED = False
+
 
 def get_log_session_dir(turn: Optional[int] = None) -> Path:
     """Get the current log session directory.
@@ -51,7 +55,6 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
         # Check if we're running from within the MassGen development directory
         # by looking for pyproject.toml with massgen package
         cwd = Path.cwd()
-        is_massgen_dev = False
 
         # Check if pyproject.toml exists and contains massgen package definition
         pyproject_file = cwd / "pyproject.toml"
@@ -59,16 +62,11 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
             try:
                 content = pyproject_file.read_text()
                 if 'name = "massgen"' in content:
-                    is_massgen_dev = True
+                    pass
             except Exception:
                 pass
 
-        # Use massgen_logs/ for dev, .massgen/logs/ for external usage
-        if is_massgen_dev:
-            log_base_dir = Path("massgen_logs")
-        else:
-            log_base_dir = Path(".massgen") / "massgen_logs"
-
+        log_base_dir = Path(".massgen") / "massgen_logs"
         log_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Create timestamped session directory
@@ -95,6 +93,77 @@ def get_log_session_dir(turn: Optional[int] = None) -> Path:
     return _LOG_SESSION_DIR
 
 
+def save_execution_metadata(
+    query: str,
+    config_path: Optional[str] = None,
+    config_content: Optional[dict] = None,
+    cli_args: Optional[dict] = None,
+):
+    """Save the query and config metadata to the log directory.
+
+    This allows reconstructing what was executed in this session.
+
+    Args:
+        query: The user's query/prompt
+        config_path: Path to the config file that was used (optional)
+        config_content: The actual config dictionary (optional)
+        cli_args: Command line arguments as dict (optional)
+    """
+    import subprocess
+
+    import yaml
+
+    log_dir = get_log_session_dir()
+
+    # Create a single metadata file with all execution info
+    metadata = {
+        "query": query,
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    if config_path:
+        metadata["config_path"] = str(config_path)
+
+    if config_content:
+        metadata["config"] = config_content
+
+    if cli_args:
+        metadata["cli_args"] = cli_args
+
+    # Try to get git information if in a git repository
+    try:
+        git_commit = subprocess.check_output(["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL, text=True).strip()
+        git_branch = subprocess.check_output(["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.DEVNULL, text=True).strip()
+        metadata["git"] = {"commit": git_commit, "branch": git_branch}
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Not in a git repo or git not available
+        pass
+
+    # Add Python version and package version
+    import sys
+
+    metadata["python_version"] = sys.version
+    try:
+        import massgen
+
+        metadata["massgen_version"] = getattr(massgen, "__version__", "unknown")
+    except Exception:
+        pass
+
+    # Add working directory
+    from pathlib import Path as PathLib
+
+    metadata["working_directory"] = str(PathLib.cwd())
+
+    metadata_file = log_dir / "execution_metadata.yaml"
+    try:
+        with open(metadata_file, "w", encoding="utf-8") as f:
+            yaml.dump(metadata, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        logger.info(f"Saved execution metadata to: {metadata_file}")
+    except Exception as e:
+        logger.warning(f"Failed to save execution metadata: {e}")
+
+
 def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Optional[int] = None):
     """
     Configure MassGen logging system using loguru.
@@ -104,8 +173,9 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
         log_file: Optional path to log file for persistent logging
         turn: Optional turn number for multi-turn conversations
     """
-    global _DEBUG_MODE
+    global _DEBUG_MODE, _CONSOLE_HANDLER_ID, _CONSOLE_SUPPRESSED
     _DEBUG_MODE = debug
+    _CONSOLE_SUPPRESSED = False
 
     # Remove all existing handlers
     logger.remove()
@@ -135,7 +205,7 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
                 f"<{name_color}>{{line}}</{name_color}> - {{message}}\n{{exception}}"
             )
 
-        logger.add(
+        _CONSOLE_HANDLER_ID = logger.add(
             sys.stderr,
             format=custom_format,
             level="DEBUG",
@@ -167,7 +237,7 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
         # Normal mode: only important messages to console, but all INFO+ to file
         console_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
 
-        logger.add(
+        _CONSOLE_HANDLER_ID = logger.add(
             sys.stderr,
             format=console_format,
             level="WARNING",  # Only show WARNING and above on console in non-debug mode
@@ -192,6 +262,77 @@ def setup_logging(debug: bool = False, log_file: Optional[str] = None, turn: Opt
         )
 
         logger.info("Logging enabled - logging INFO+ to file: {}", log_file)
+
+
+def suppress_console_logging():
+    """
+    Temporarily suppress console logging to prevent interference with Rich Live display.
+
+    This removes the console handler while keeping file logging active.
+    Call restore_console_logging() to re-enable console output.
+    """
+    global _CONSOLE_HANDLER_ID, _CONSOLE_SUPPRESSED
+
+    if _CONSOLE_HANDLER_ID is not None and not _CONSOLE_SUPPRESSED:
+        try:
+            logger.remove(_CONSOLE_HANDLER_ID)
+            _CONSOLE_SUPPRESSED = True
+        except ValueError:
+            # Handler already removed
+            pass
+
+
+def restore_console_logging():
+    """
+    Restore console logging after it was suppressed.
+
+    Re-adds the console handler with the same settings that were used during setup.
+    """
+    global _CONSOLE_HANDLER_ID, _CONSOLE_SUPPRESSED, _DEBUG_MODE
+
+    if not _CONSOLE_SUPPRESSED:
+        return
+
+    # Re-add console handler with same settings as setup_logging
+    if _DEBUG_MODE:
+
+        def custom_format(record):
+            name = record["extra"].get("name", "")
+            if "orchestrator" in name:
+                name_color = "magenta"
+            elif "backend" in name:
+                name_color = "yellow"
+            elif "agent" in name:
+                name_color = "cyan"
+            elif "coordination" in name:
+                name_color = "red"
+            else:
+                name_color = "white"
+            formatted_name = name if name else "{name}"
+            return (
+                f"<green>{{time:HH:mm:ss.SSS}}</green> | <level>{{level: <8}}</level> | "
+                f"<{name_color}>{formatted_name}</{name_color}>:<{name_color}>{{function}}</{name_color}>:"
+                f"<{name_color}>{{line}}</{name_color}> - {{message}}\n{{exception}}"
+            )
+
+        _CONSOLE_HANDLER_ID = logger.add(
+            sys.stderr,
+            format=custom_format,
+            level="DEBUG",
+            colorize=True,
+            backtrace=True,
+            diagnose=True,
+        )
+    else:
+        console_format = "<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
+        _CONSOLE_HANDLER_ID = logger.add(
+            sys.stderr,
+            format=console_format,
+            level="WARNING",
+            colorize=True,
+        )
+
+    _CONSOLE_SUPPRESSED = False
 
 
 def get_logger(name: str):
@@ -559,8 +700,11 @@ def _format_message(message: dict) -> str:
 __all__ = [
     "logger",
     "setup_logging",
+    "suppress_console_logging",
+    "restore_console_logging",
     "get_logger",
     "get_log_session_dir",
+    "save_execution_metadata",
     "log_orchestrator_activity",
     "log_agent_message",
     "log_orchestrator_agent_message",

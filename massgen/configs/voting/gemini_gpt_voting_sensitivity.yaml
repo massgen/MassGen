@@ -39,6 +39,26 @@ orchestrator:
   #
   voting_sensitivity: "balanced"
 
+  # max_new_answers_per_agent controls how many new answers each agent can provide
+  # Once an agent reaches this limit, they can only vote (not provide new answers)
+  #
+  # Options:
+  #   - null (default): No limit - agents can provide unlimited new answers
+  #   - 1, 2, 3, etc.: Cap the number of new answers per agent
+  #
+  # Example: Set to 2 for thorough evaluation but bounded duration
+  max_new_answers_per_agent: 2
+
+  # answer_novelty_requirement controls how different new answers must be from existing ones
+  #
+  # Options:
+  #   - "lenient" (default): No additional checks - current behavior (fastest)
+  #   - "balanced": Reject if >70% token overlap - requires meaningful differences
+  #   - "strict": Reject if >50% token overlap - requires substantially different solutions
+  #
+  # Example: Use "balanced" to prevent agents from just rephrasing the same answer
+  answer_novelty_requirement: "balanced"
+
 ui:
   display_type: "rich_terminal"
   logging_enabled: true

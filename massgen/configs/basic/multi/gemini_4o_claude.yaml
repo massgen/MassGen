@@ -27,8 +27,7 @@ agents:
     # system_message: "You are a helpful AI assistant with web search capabilities. For any question involving current events, recent information, or real-time data, ALWAYS use web search first."
 
 orchestrator:
-  # voting_sensitivity: "balanced"
-  voting_sensitivity: "strict"
+  voting_sensitivity: "balanced"
 
 ui:
   display_type: "rich_terminal"

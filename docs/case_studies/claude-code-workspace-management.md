@@ -34,7 +34,7 @@ MassGen v0.0.12-v0.0.14 introduces comprehensive logging functionality and impro
 
 <h1 id="planning-phase">📋 PLANNING PHASE</h1>
 
-<h2 id="evaluation-design">📝 Evaluation Design</h2> 
+<h2 id="evaluation-design">📝 Evaluation Design</h2>
 
 ### Prompt
 "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
@@ -44,7 +44,7 @@ Prior to v0.0.12, for multiple Claude Code agents to collaborate, they need to u
 
 ### Baseline Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
 ### Expected Result
@@ -98,14 +98,14 @@ agents:
 
 ### Command
 ```bash
-uv run python -m massgen.cli --config massgen/configs/tools/filesystem/claude_code_context_sharing.yaml "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
+massgen --config @examples/tools/filesystem/claude_code_context_sharing "Create a website about a diverse set of fun facts about LLMs, placing the output in one index.html file"
 ```
 
 <h2 id="agents">🤖 Agents</h2>
 
 - **Agent 1 (claude_code_agent1)**: Creates website in `/claude_code_workspace1/`
   - Focus: Traditional grid-based layout with fact cards
-  
+
 - **Agent 2 (claude_code_agent2)**: Creates website in `/claude_code_workspace2/`
   - Focus: Interactive features with animations and sparkle effects
 
@@ -131,7 +131,7 @@ The most significant change is the **comprehensive logging system** that capture
 **Evidence from actual log directory structure:**
 ```
 massgen_logs/
-└── log_20250901_202552/                         
+└── log_20250901_202552/
     ├── agent_outputs/
     │   ├── system_status.txt                       # Complete timeline with timestamps
     │   ├── claude_code_agent1.txt                  # Agent 1's complete output
@@ -232,7 +232,7 @@ The success of this case study validates the workspace isolation approach and de
 
 <h3 id="status-tracker">📌 Status Tracker</h3>
 - ✅ Planning phase completed
-- ✅ Features implemented  
+- ✅ Features implemented
 - ✅ Testing completed
 - ✅ Demo recorded
 - ✅ Results analyzed

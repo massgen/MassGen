@@ -8,16 +8,17 @@ Supports both interactive mode and single-question mode.
 
 Usage examples:
     # Use YAML/JSON configuration file
-    python -m massgen.cli --config config.yaml "What is the capital of France?"
+    massgen --config config.yaml "What is the capital of France?"
 
     # Quick setup with backend and model
-    python -m massgen.cli --backend openai --model gpt-4o-mini "What is 2+2?"
+    massgen --backend openai --model gpt-4o-mini "What is 2+2?"
 
     # Interactive mode
-    python -m massgen.cli --config config.yaml
+    massgen --config config.yaml
+    massgen  # Uses default config if available
 
     # Multiple agents from config
-    python -m massgen.cli --config multi_agent.yaml "Compare different approaches to renewable energy"  # noqa
+    massgen --config multi_agent.yaml "Compare different approaches to renewable energy"
 """
 
 import argparse
@@ -28,10 +29,15 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+import questionary
 import yaml
 from dotenv import load_dotenv
+from prompt_toolkit.styles import Style
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from .agent_config import AgentConfig, TimeoutConfig
 from .backend.azure_openai import AzureOpenAIBackend
@@ -45,7 +51,7 @@ from .backend.lmstudio import LMStudioBackend
 from .backend.response import ResponseBackend
 from .chat_agent import ConfigurableAgent, SingleAgent
 from .frontend.coordination_ui import CoordinationUI
-from .logger_config import _DEBUG_MODE, logger, setup_logging
+from .logger_config import _DEBUG_MODE, logger, save_execution_metadata, setup_logging
 from .orchestrator import Orchestrator
 from .utils import get_backend_type_from_model
 
@@ -83,6 +89,22 @@ BRIGHT_WHITE = "\033[97m"
 RESET = "\033[0m"
 BOLD = "\033[1m"
 
+# Custom questionary style for polished selection interface
+MASSGEN_QUESTIONARY_STYLE = Style(
+    [
+        ("qmark", "fg:#00d7ff bold"),  # Bright cyan question mark
+        ("question", "fg:#ffffff bold"),  # White question text
+        ("answer", "fg:#00d7ff bold"),  # Bright cyan answer
+        ("pointer", "fg:#00d7ff bold"),  # Bright cyan pointer (▸)
+        ("highlighted", "fg:#00d7ff bold"),  # Bright cyan highlighted option
+        ("selected", "fg:#00ff87"),  # Bright green selected
+        ("separator", "fg:#6c6c6c"),  # Gray separators
+        ("instruction", "fg:#808080"),  # Gray instructions
+        ("text", "fg:#ffffff"),  # White text
+        ("disabled", "fg:#6c6c6c italic"),  # Gray disabled
+    ]
+)
+
 
 class ConfigurationError(Exception):
     """Configuration error for CLI."""
@@ -110,6 +132,94 @@ def _substitute_variables(obj: Any, variables: Dict[str, str]) -> Any:
         return result
     else:
         return obj
+
+
+def resolve_config_path(config_arg: Optional[str]) -> Optional[Path]:
+    """Resolve config file with flexible syntax.
+
+    Priority order:
+
+    **If --config flag provided (highest priority):**
+    1. @examples/NAME → Package examples (search configs directory)
+    2. Absolute/relative paths (exact path as specified)
+    3. Named configs in ~/.config/massgen/agents/
+
+    **If NO --config flag (auto-discovery):**
+    1. .massgen/config.yaml (project-level config in current directory)
+    2. ~/.config/massgen/config.yaml (global default config)
+    3. None → trigger config builder
+
+    Args:
+        config_arg: Config argument from --config flag (can be @examples/NAME, path, or None)
+
+    Returns:
+        Path to config file, or None if config builder should run
+
+    Raises:
+        ConfigurationError: If config file not found
+    """
+    # Check for default configs if no config_arg provided
+    if not config_arg:
+        # Priority 1: Project-level config (.massgen/config.yaml in current directory)
+        project_config = Path.cwd() / ".massgen" / "config.yaml"
+        if project_config.exists():
+            return project_config
+
+        # Priority 2: Global default config
+        global_config = Path.home() / ".config/massgen/config.yaml"
+        if global_config.exists():
+            return global_config
+
+        return None  # Trigger builder
+
+    # Handle @examples/ prefix - search in package configs
+    if config_arg.startswith("@examples/"):
+        name = config_arg[10:]  # Remove '@examples/' prefix
+        try:
+            from importlib.resources import files
+
+            configs_root = files("massgen") / "configs"
+
+            # Search recursively for matching name
+            # Try to find by filename stem match
+            for config_file in configs_root.rglob("*.yaml"):
+                # Check if name matches the file stem or is contained in the path
+                if name in config_file.name or name in str(config_file):
+                    return Path(str(config_file))
+
+            raise ConfigurationError(
+                f"Config '{config_arg}' not found in package.\n" f"Use --list-examples to see available configs.",
+            )
+        except Exception as e:
+            if isinstance(e, ConfigurationError):
+                raise
+            raise ConfigurationError(f"Error loading package config: {e}")
+
+    # Try as regular path (absolute or relative)
+    path = Path(config_arg).expanduser()
+    if path.exists():
+        return path
+
+    # Try in user config directory (~/.config/massgen/agents/)
+    user_agents_dir = Path.home() / ".config/massgen/agents"
+    user_config = user_agents_dir / f"{config_arg}.yaml"
+    if user_config.exists():
+        return user_config
+
+    # Also try with .yaml extension if not provided
+    if not config_arg.endswith((".yaml", ".yml")):
+        user_config_with_ext = user_agents_dir / f"{config_arg}.yaml"
+        if user_config_with_ext.exists():
+            return user_config_with_ext
+
+    # Config not found anywhere
+    raise ConfigurationError(
+        f"Configuration file not found: {config_arg}\n"
+        f"Searched in:\n"
+        f"  - Current directory: {Path.cwd() / config_arg}\n"
+        f"  - User configs: {user_agents_dir / config_arg}.yaml\n"
+        f"Use --list-examples to see available package configs.",
+    )
 
 
 def load_config_file(config_path: str) -> Dict[str, Any]:
@@ -200,25 +310,33 @@ def create_backend(backend_type: str, **kwargs) -> Any:
     if backend_type == "openai":
         api_key = kwargs.get("api_key") or os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise ConfigurationError("OpenAI API key not found. Set OPENAI_API_KEY or provide " "in config.")
+            raise ConfigurationError(
+                "OpenAI API key not found. Set OPENAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return ResponseBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "grok":
         api_key = kwargs.get("api_key") or os.getenv("XAI_API_KEY")
         if not api_key:
-            raise ConfigurationError("Grok API key not found. Set XAI_API_KEY or provide in config.")
+            raise ConfigurationError(
+                "Grok API key not found. Set XAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return GrokBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "claude":
         api_key = kwargs.get("api_key") or os.getenv("ANTHROPIC_API_KEY")
         if not api_key:
-            raise ConfigurationError("Claude API key not found. Set ANTHROPIC_API_KEY or provide in config.")
+            raise ConfigurationError(
+                "Claude API key not found. Set ANTHROPIC_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return ClaudeBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "gemini":
         api_key = kwargs.get("api_key") or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not api_key:
-            raise ConfigurationError("Gemini API key not found. Set GOOGLE_API_KEY or provide in config.")
+            raise ConfigurationError(
+                "Gemini API key not found. Set GOOGLE_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return GeminiBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "chatcompletion":
@@ -230,43 +348,81 @@ def create_backend(backend_type: str, **kwargs) -> Any:
             if base_url and "cerebras.ai" in base_url:
                 api_key = os.getenv("CEREBRAS_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Cerebras AI API key not found. Set CEREBRAS_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Cerebras AI API key not found. Set CEREBRAS_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "together.xyz" in base_url:
                 api_key = os.getenv("TOGETHER_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Together AI API key not found. Set TOGETHER_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Together AI API key not found. Set TOGETHER_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "fireworks.ai" in base_url:
                 api_key = os.getenv("FIREWORKS_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Fireworks AI API key not found. Set FIREWORKS_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Fireworks AI API key not found. Set FIREWORKS_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "groq.com" in base_url:
                 api_key = os.getenv("GROQ_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Groq API key not found. Set GROQ_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Groq API key not found. Set GROQ_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "nebius.com" in base_url:
                 api_key = os.getenv("NEBIUS_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Nebius AI Studio API key not found. Set NEBIUS_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Nebius AI Studio API key not found. Set NEBIUS_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "openrouter.ai" in base_url:
                 api_key = os.getenv("OPENROUTER_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("OpenRouter API key not found. Set OPENROUTER_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "OpenRouter API key not found. Set OPENROUTER_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and ("z.ai" in base_url or "bigmodel.cn" in base_url):
                 api_key = os.getenv("ZAI_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("ZAI API key not found. Set ZAI_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "ZAI API key not found. Set ZAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and ("moonshot.ai" in base_url or "moonshot.cn" in base_url):
                 api_key = os.getenv("MOONSHOT_API_KEY") or os.getenv("KIMI_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Kimi/Moonshot API key not found. Set MOONSHOT_API_KEY or KIMI_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Kimi/Moonshot API key not found. Set MOONSHOT_API_KEY or KIMI_API_KEY environment variable.\n"
+                        "You can add it to a .env file in:\n"
+                        "  - Current directory: .env\n"
+                        "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "poe.com" in base_url:
                 api_key = os.getenv("POE_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("POE API key not found. Set POE_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "POE API key not found. Set POE_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
             elif base_url and "aliyuncs.com" in base_url:
                 api_key = os.getenv("QWEN_API_KEY")
                 if not api_key:
-                    raise ConfigurationError("Qwen API key not found. Set QWEN_API_KEY or provide in config.")
+                    raise ConfigurationError(
+                        "Qwen API key not found. Set QWEN_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+                    )
 
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
@@ -275,7 +431,9 @@ def create_backend(backend_type: str, **kwargs) -> Any:
         # Supports both global (z.ai) and China (bigmodel.cn) endpoints
         api_key = kwargs.get("api_key") or os.getenv("ZAI_API_KEY")
         if not api_key:
-            raise ConfigurationError("ZAI API key not found. Set ZAI_API_KEY or provide in config.")
+            raise ConfigurationError(
+                "ZAI API key not found. Set ZAI_API_KEY environment variable.\n" "You can add it to a .env file in:\n" "  - Current directory: .env\n" "  - Global config: ~/.massgen/.env",
+            )
         return ChatCompletionsBackend(api_key=api_key, **kwargs)
 
     elif backend_type == "lmstudio":
@@ -408,6 +566,7 @@ def create_simple_config(
     model: str,
     system_message: Optional[str] = None,
     base_url: Optional[str] = None,
+    ui_config: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Create a simple single-agent configuration."""
     backend_config = {"type": backend_type, "model": model}
@@ -418,13 +577,17 @@ def create_simple_config(
     if backend_type == "claude_code":
         backend_config["cwd"] = "workspace1"
 
+    # Use provided UI config or default to rich_terminal for CLI usage
+    if ui_config is None:
+        ui_config = {"display_type": "rich_terminal", "logging_enabled": True}
+
     config = {
         "agent": {
             "id": "agent1",
             "backend": backend_config,
             "system_message": system_message or "You are a helpful AI assistant.",
         },
-        "ui": {"display_type": "rich_terminal", "logging_enabled": True},
+        "ui": ui_config,
     }
 
     # Add orchestrator config with .massgen/ structure for Claude Code
@@ -658,108 +821,94 @@ async def run_question_with_history(
     messages = history.copy()
     messages.append({"role": "user", "content": question})
 
-    # Check if we should use orchestrator for single agents (default: False for backward compatibility)
-    use_orchestrator_for_single = ui_config.get("use_orchestrator_for_single_agent", True)
+    # In multiturn mode with session persistence, ALWAYS use orchestrator for proper final/ directory creation
+    # Single agents in multiturn mode need the orchestrator to create session artifacts (final/, workspace/, etc.)
+    # The orchestrator handles single agents efficiently by skipping unnecessary coordination
 
-    if len(agents) == 1 and not use_orchestrator_for_single:
-        # Single agent mode with history
-        agent = next(iter(agents.values()))
-        print(f"\n🤖 {BRIGHT_CYAN}Single Agent Mode{RESET}", flush=True)
-        print(f"Agent: {agent.agent_id}", flush=True)
-        if history:
-            print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {question}", flush=True)
-        print("\n" + "=" * 60, flush=True)
+    # Create orchestrator config with timeout settings
+    timeout_config = kwargs.get("timeout_config")
+    orchestrator_config = AgentConfig()
+    if timeout_config:
+        orchestrator_config.timeout_config = timeout_config
 
-        response_content = ""
+    # Get orchestrator parameters from config
+    orchestrator_cfg = kwargs.get("orchestrator", {})
 
-        async for chunk in agent.chat(messages):
-            if chunk.type == "content" and chunk.content:
-                response_content += chunk.content
-                print(chunk.content, end="", flush=True)
-            elif chunk.type == "builtin_tool_results":
-                # Skip builtin_tool_results to avoid duplication with real-time streaming
-                # The backends already show tool status during execution
-                continue
-            elif chunk.type == "error":
-                print(f"\n❌ Error: {chunk.error}", flush=True)
-                return ("", session_info.get("session_id"), session_info.get("current_turn", 0))
+    # Apply voting sensitivity if specified
+    if "voting_sensitivity" in orchestrator_cfg:
+        orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
 
-        print("\n" + "=" * 60, flush=True)
-        # Single agent mode doesn't use session storage
-        return (response_content, session_info.get("session_id"), session_info.get("current_turn", 0))
+    # Apply answer count limit if specified
+    if "max_new_answers_per_agent" in orchestrator_cfg:
+        orchestrator_config.max_new_answers_per_agent = orchestrator_cfg["max_new_answers_per_agent"]
 
+    # Apply answer novelty requirement if specified
+    if "answer_novelty_requirement" in orchestrator_cfg:
+        orchestrator_config.answer_novelty_requirement = orchestrator_cfg["answer_novelty_requirement"]
+
+    # Get context sharing parameters
+    snapshot_storage = orchestrator_cfg.get("snapshot_storage")
+    agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
+    session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
+
+    # Get debug/test parameters
+    if orchestrator_cfg.get("skip_coordination_rounds", False):
+        orchestrator_config.skip_coordination_rounds = True
+
+    # Load previous turns from session storage for multi-turn conversations
+    previous_turns = load_previous_turns(session_info, session_storage)
+
+    orchestrator = Orchestrator(
+        agents=agents,
+        config=orchestrator_config,
+        snapshot_storage=snapshot_storage,
+        agent_temporary_workspace=agent_temporary_workspace,
+        previous_turns=previous_turns,
+    )
+    # Create a fresh UI instance for each question to ensure clean state
+    ui = CoordinationUI(
+        display_type=ui_config.get("display_type", "rich_terminal"),
+        logging_enabled=ui_config.get("logging_enabled", True),
+        enable_final_presentation=True,  # Required for multi-turn: ensures final answer is saved
+    )
+
+    # Determine display mode text
+    if len(agents) == 1:
+        mode_text = "Single Agent (Orchestrator)"
     else:
-        # Multi-agent mode with history
-        # Create orchestrator config with timeout settings
-        timeout_config = kwargs.get("timeout_config")
-        orchestrator_config = AgentConfig()
-        if timeout_config:
-            orchestrator_config.timeout_config = timeout_config
+        mode_text = "Multi-Agent"
 
-        # Get orchestrator parameters from config
-        orchestrator_cfg = kwargs.get("orchestrator", {})
+    print(f"\n🤖 {BRIGHT_CYAN}{mode_text}{RESET}", flush=True)
+    print(f"Agents: {', '.join(agents.keys())}", flush=True)
+    if history:
+        print(f"History: {len(history)//2} previous exchanges", flush=True)
+    print(f"Question: {question}", flush=True)
+    print("\n" + "=" * 60, flush=True)
 
-        # Apply voting sensitivity if specified
-        if "voting_sensitivity" in orchestrator_cfg:
-            orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
+    # For multi-agent with history, we need to use a different approach
+    # that maintains coordination UI display while supporting conversation context
 
-        # Get context sharing parameters
-        snapshot_storage = orchestrator_cfg.get("snapshot_storage")
-        agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
-        session_storage = orchestrator_cfg.get("session_storage", "sessions")  # Default to "sessions"
+    if history and len(history) > 0:
+        # Use coordination UI with conversation context
+        # Extract current question from messages
+        current_question = messages[-1].get("content", question) if messages else question
 
-        # Get debug/test parameters
-        if orchestrator_cfg.get("skip_coordination_rounds", False):
-            orchestrator_config.skip_coordination_rounds = True
+        # Pass the full message context to the UI coordination
+        response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
+    else:
+        # Standard coordination for new conversations
+        response_content = await ui.coordinate(orchestrator, question)
 
-        # Load previous turns from session storage for multi-turn conversations
-        previous_turns = load_previous_turns(session_info, session_storage)
+    # Handle session persistence if applicable
+    session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
+        orchestrator,
+        question,
+        session_info,
+        session_storage,
+    )
 
-        orchestrator = Orchestrator(
-            agents=agents,
-            config=orchestrator_config,
-            snapshot_storage=snapshot_storage,
-            agent_temporary_workspace=agent_temporary_workspace,
-            previous_turns=previous_turns,
-        )
-        # Create a fresh UI instance for each question to ensure clean state
-        ui = CoordinationUI(
-            display_type=ui_config.get("display_type", "rich_terminal"),
-            logging_enabled=ui_config.get("logging_enabled", True),
-        )
-
-        print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
-        print(f"Agents: {', '.join(agents.keys())}", flush=True)
-        if history:
-            print(f"History: {len(history)//2} previous exchanges", flush=True)
-        print(f"Question: {question}", flush=True)
-        print("\n" + "=" * 60, flush=True)
-
-        # For multi-agent with history, we need to use a different approach
-        # that maintains coordination UI display while supporting conversation context
-
-        if history and len(history) > 0:
-            # Use coordination UI with conversation context
-            # Extract current question from messages
-            current_question = messages[-1].get("content", question) if messages else question
-
-            # Pass the full message context to the UI coordination
-            response_content = await ui.coordinate_with_context(orchestrator, current_question, messages)
-        else:
-            # Standard coordination for new conversations
-            response_content = await ui.coordinate(orchestrator, question)
-
-        # Handle session persistence if applicable
-        session_id_to_use, updated_turn, normalized_response = await handle_session_persistence(
-            orchestrator,
-            question,
-            session_info,
-            session_storage,
-        )
-
-        # Return normalized response so conversation history has correct paths
-        return (normalized_response or response_content, session_id_to_use, updated_turn)
+    # Return normalized response so conversation history has correct paths
+    return (normalized_response or response_content, session_id_to_use, updated_turn)
 
 
 async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], **kwargs) -> str:
@@ -808,6 +957,14 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         if "voting_sensitivity" in orchestrator_cfg:
             orchestrator_config.voting_sensitivity = orchestrator_cfg["voting_sensitivity"]
 
+        # Apply answer count limit if specified
+        if "max_new_answers_per_agent" in orchestrator_cfg:
+            orchestrator_config.max_new_answers_per_agent = orchestrator_cfg["max_new_answers_per_agent"]
+
+        # Apply answer novelty requirement if specified
+        if "answer_novelty_requirement" in orchestrator_cfg:
+            orchestrator_config.answer_novelty_requirement = orchestrator_cfg["answer_novelty_requirement"]
+
         # Get context sharing parameters
         snapshot_storage = orchestrator_cfg.get("snapshot_storage")
         agent_temporary_workspace = orchestrator_cfg.get("agent_temporary_workspace")
@@ -826,6 +983,7 @@ async def run_single_question(question: str, agents: Dict[str, SingleAgent], ui_
         ui = CoordinationUI(
             display_type=ui_config.get("display_type", "rich_terminal"),
             logging_enabled=ui_config.get("logging_enabled", True),
+            enable_final_presentation=True,  # Ensures final presentation is generated
         )
 
         print(f"\n🤖 {BRIGHT_CYAN}Multi-Agent Mode{RESET}", flush=True)
@@ -853,41 +1011,81 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
     existing_paths = orchestrator_cfg.get("context_paths", [])
     cwd = Path.cwd()
 
-    print(f"\n📂 {BRIGHT_YELLOW}Context Paths:{RESET}", flush=True)
+    # Use Rich for better display
+    from rich.console import Console as RichConsole
+    from rich.panel import Panel as RichPanel
+
+    rich_console = RichConsole()
+
+    # Build context paths display
+    context_content = []
     if existing_paths:
         for path_config in existing_paths:
             path = path_config.get("path") if isinstance(path_config, dict) else path_config
             permission = path_config.get("permission", "read") if isinstance(path_config, dict) else "read"
-            print(f"   • {path} ({permission})", flush=True)
+            context_content.append(f"  [green]✓[/green] {path} [dim]({permission})[/dim]")
     else:
-        print(f"   {BRIGHT_YELLOW}No context paths configured{RESET}", flush=True)
+        context_content.append("  [yellow]No context paths configured[/yellow]")
+
+    context_panel = RichPanel(
+        "\n".join(context_content),
+        title="[bold bright_cyan]📂 Context Paths[/bold bright_cyan]",
+        border_style="cyan",
+        padding=(0, 2),
+        width=80,
+    )
+    rich_console.print(context_panel)
+    print()
 
     # Check if CWD is already in context paths
     cwd_str = str(cwd)
     cwd_already_added = any((path_config.get("path") if isinstance(path_config, dict) else path_config) == cwd_str for path_config in existing_paths)
 
     if not cwd_already_added:
-        print("\n❓ Add current directory as context path?", flush=True)
-        print(f"   {cwd}", flush=True)
+        # Create prompt panel
+        prompt_content = [
+            "[bold cyan]Add current directory as context path?[/bold cyan]",
+            f"  [yellow]{cwd}[/yellow]",
+            "",
+            "  [dim]Context paths give agents access to your project files.[/dim]",
+            "  [dim]• Read-only during coordination (prevents conflicts)[/dim]",
+            "  [dim]• Write permission for final agent to save results[/dim]",
+            "",
+            "  [dim]Options:[/dim]",
+            "  [green]Y[/green] → Add with write permission (default)",
+            "  [cyan]P[/cyan] → Add with protected paths (e.g., .env, secrets)",
+            "  [yellow]N[/yellow] → Skip",
+            "  [blue]C[/blue] → Add custom path",
+        ]
+        prompt_panel = RichPanel(
+            "\n".join(prompt_content),
+            border_style="cyan",
+            padding=(1, 2),
+            width=80,
+        )
+        rich_console.print(prompt_panel)
+        print()
         try:
-            response = input("   [Y]es (default) / [P]rotected / [N]o / [C]ustom path: ").strip().lower()
+            response = input(f"   {BRIGHT_CYAN}Your choice [Y/P/N/C]:{RESET} ").strip().lower()
 
             if response in ["y", "yes", ""]:
                 # Add CWD with write permission
                 if "context_paths" not in orchestrator_cfg:
                     orchestrator_cfg["context_paths"] = []
                 orchestrator_cfg["context_paths"].append({"path": cwd_str, "permission": "write"})
-                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
+                print(f"   {BRIGHT_GREEN}✅ Added: {cwd} (write){RESET}", flush=True)
                 return True
             elif response in ["p", "protected"]:
                 # Add CWD with write permission and protected paths
                 protected_paths = []
-                print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                print(f"\n   {BRIGHT_CYAN}Enter protected paths (one per line, empty to finish):{RESET}", flush=True)
+                print(f"   {BRIGHT_YELLOW}Tip: Protected paths are relative to {cwd}{RESET}", flush=True)
                 while True:
-                    protected_input = input("     → ").strip()
+                    protected_input = input(f"   {BRIGHT_CYAN}→{RESET} ").strip()
                     if not protected_input:
                         break
                     protected_paths.append(protected_input)
+                    print(f"     {BRIGHT_GREEN}✓ Added: {protected_input}{RESET}", flush=True)
 
                 if "context_paths" not in orchestrator_cfg:
                     orchestrator_cfg["context_paths"] = []
@@ -897,20 +1095,18 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                     context_config["protected_paths"] = protected_paths
 
                 orchestrator_cfg["context_paths"].append(context_config)
-                print(f"   {BRIGHT_GREEN}✓ Added {cwd} (write){RESET}", flush=True)
-                if protected_paths:
-                    for protected in protected_paths:
-                        print(f"     🔒 {protected}", flush=True)
+                print(f"\n   {BRIGHT_GREEN}✅ Added: {cwd} (write) with {len(protected_paths)} protected path(s){RESET}", flush=True)
                 return True
             elif response in ["n", "no"]:
                 # User explicitly declined
                 return False
             elif response in ["c", "custom"]:
                 # Loop until valid path or user cancels
+                print()
                 while True:
-                    custom_path = input("   Enter path (absolute or relative, file or directory): ").strip()
+                    custom_path = input(f"   {BRIGHT_CYAN}Enter path (absolute or relative):{RESET} ").strip()
                     if not custom_path:
-                        print(f"   {BRIGHT_YELLOW}⚠ Cancelled{RESET}", flush=True)
+                        print(f"   {BRIGHT_YELLOW}⚠️  Cancelled{RESET}", flush=True)
                         return False
 
                     # Resolve to absolute path
@@ -919,27 +1115,28 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                     # Check if path exists
                     if not Path(abs_path).exists():
                         print(f"   {BRIGHT_RED}✗ Path does not exist: {abs_path}{RESET}", flush=True)
-                        retry = input("   Try again? [Y/n]: ").strip().lower()
+                        retry = input(f"   {BRIGHT_CYAN}Try again? [Y/n]:{RESET} ").strip().lower()
                         if retry in ["n", "no"]:
                             return False
                         continue
 
                     # Valid path (file or directory), ask for permission
-                    permission = input("   Permission [read/write] (default: write): ").strip().lower() or "write"
+                    permission = input(f"   {BRIGHT_CYAN}Permission [read/write] (default: write):{RESET} ").strip().lower() or "write"
                     if permission not in ["read", "write"]:
                         permission = "write"
 
                     # Ask about protected paths if write permission
                     protected_paths = []
                     if permission == "write":
-                        add_protected = input("   Add protected paths (files/dirs immune from modification)? [y/N]: ").strip().lower()
+                        add_protected = input(f"   {BRIGHT_CYAN}Add protected paths? [y/N]:{RESET} ").strip().lower()
                         if add_protected in ["y", "yes"]:
-                            print("   Enter protected paths (relative to context path), one per line. Empty line to finish:")
+                            print(f"   {BRIGHT_CYAN}Enter protected paths (one per line, empty to finish):{RESET}", flush=True)
                             while True:
-                                protected_input = input("     → ").strip()
+                                protected_input = input(f"   {BRIGHT_CYAN}→{RESET} ").strip()
                                 if not protected_input:
                                     break
                                 protected_paths.append(protected_input)
+                                print(f"     {BRIGHT_GREEN}✓ Added: {protected_input}{RESET}", flush=True)
 
                     if "context_paths" not in orchestrator_cfg:
                         orchestrator_cfg["context_paths"] = []
@@ -949,15 +1146,15 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
                         context_config["protected_paths"] = protected_paths
 
                     orchestrator_cfg["context_paths"].append(context_config)
-                    print(f"   {BRIGHT_GREEN}✓ Added {abs_path} ({permission}){RESET}", flush=True)
                     if protected_paths:
-                        for protected in protected_paths:
-                            print(f"     🔒 {protected}", flush=True)
+                        print(f"   {BRIGHT_GREEN}✅ Added: {abs_path} ({permission}) with {len(protected_paths)} protected path(s){RESET}", flush=True)
+                    else:
+                        print(f"   {BRIGHT_GREEN}✅ Added: {abs_path} ({permission}){RESET}", flush=True)
                     return True
             else:
                 # Invalid response - clarify options
-                print(f"   {BRIGHT_RED}✗ Invalid option: '{response}'{RESET}", flush=True)
-                print(f"   {BRIGHT_YELLOW}Please choose: y/yes, p/protected, n/no, or c/custom{RESET}", flush=True)
+                print(f"\n   {BRIGHT_RED}✗ Invalid option: '{response}'{RESET}", flush=True)
+                print(f"   {BRIGHT_YELLOW}Please choose: Y (yes), P (protected), N (no), or C (custom){RESET}", flush=True)
                 return False
         except (KeyboardInterrupt, EOFError):
             print()  # New line after Ctrl+C
@@ -966,34 +1163,640 @@ def prompt_for_context_paths(original_config: Dict[str, Any], orchestrator_cfg: 
     return False
 
 
-def print_help_messages():
-    print(
-        "\n💬 Type your questions below. Use slash commands or press Ctrl+C to stop.",
-        flush=True,
+def show_available_examples():
+    """Display available example configurations from package."""
+    try:
+        from importlib.resources import files
+
+        configs_root = files("massgen") / "configs"
+
+        print(f"\n{BRIGHT_CYAN}Available Example Configurations{RESET}")
+        print("=" * 60)
+
+        # Organize by category
+        categories = {}
+        for config_file in sorted(configs_root.rglob("*.yaml")):
+            # Get relative path from configs root
+            rel_path = str(config_file).replace(str(configs_root) + "/", "")
+            # Extract category (first directory)
+            parts = rel_path.split("/")
+            category = parts[0] if len(parts) > 1 else "root"
+
+            if category not in categories:
+                categories[category] = []
+
+            # Create a short name for @examples/
+            # Use the path without .yaml extension
+            short_name = rel_path.replace(".yaml", "").replace("/", "_")
+
+            categories[category].append((short_name, rel_path))
+
+        # Display categories
+        for category, configs in sorted(categories.items()):
+            print(f"\n{BRIGHT_YELLOW}{category.title()}:{RESET}")
+            for short_name, rel_path in configs[:10]:  # Limit to avoid overwhelming
+                print(f"  {BRIGHT_GREEN}@examples/{short_name:<40}{RESET} {rel_path}")
+
+            if len(configs) > 10:
+                print(f"  ... and {len(configs) - 10} more")
+
+        print(f"\n{BRIGHT_BLUE}Usage:{RESET}")
+        print('  massgen --config @examples/SHORTNAME "Your question"')
+        print("  massgen --example SHORTNAME > my-config.yaml")
+        print()
+
+    except Exception as e:
+        print(f"Error listing examples: {e}")
+        print("Examples may not be available (development mode?)")
+
+
+def print_example_config(name: str):
+    """Print an example config to stdout.
+
+    Args:
+        name: Name of the example (can include or exclude @examples/ prefix)
+    """
+    try:
+        # Remove @examples/ prefix if present
+        if name.startswith("@examples/"):
+            name = name[10:]
+
+        # Try to resolve the config
+        resolved = resolve_config_path(f"@examples/{name}")
+        if resolved:
+            with open(resolved, "r") as f:
+                print(f.read())
+        else:
+            print(f"Error: Could not find example '{name}'", file=sys.stderr)
+            print("Use --list-examples to see available configs", file=sys.stderr)
+            sys.exit(1)
+
+    except ConfigurationError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error printing example config: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def discover_available_configs() -> Dict[str, List[Tuple[str, Path]]]:
+    """Discover all available configuration files.
+
+    Returns:
+        Dict with categories as keys and list of (display_name, path) tuples as values
+    """
+    configs = {
+        "User Configs": [],
+        "Project Configs": [],
+        "Current Directory": [],
+        "Package Examples": [],
+    }
+
+    # 1. User configs (~/.config/massgen/agents/)
+    user_agents_dir = Path.home() / ".config/massgen/agents"
+    if user_agents_dir.exists():
+        for config_file in sorted(user_agents_dir.glob("*.yaml")):
+            display_name = config_file.stem
+            configs["User Configs"].append((display_name, config_file))
+
+    # 2. Project configs (.massgen/)
+    project_config_dir = Path.cwd() / ".massgen"
+    if project_config_dir.exists():
+        for config_file in sorted(project_config_dir.glob("*.yaml")):
+            display_name = f".massgen/{config_file.name}"
+            configs["Project Configs"].append((display_name, config_file))
+
+    # 3. Current directory (*.yaml files, excluding .massgen/ and non-massgen configs)
+    # Filter out common non-massgen YAML files
+    exclude_patterns = {
+        ".pre-commit-config.yaml",
+        ".readthedocs.yaml",
+        ".github",
+        "docker-compose",
+        "ansible",
+        "kubernetes",
+    }
+
+    for config_file in sorted(Path.cwd().glob("*.yaml")):
+        # Skip if inside .massgen/ (already covered)
+        if ".massgen" in str(config_file):
+            continue
+
+        # Skip common non-massgen config files
+        file_name = config_file.name.lower()
+        if any(pattern in file_name for pattern in exclude_patterns):
+            continue
+
+        display_name = config_file.name
+        configs["Current Directory"].append((display_name, config_file))
+
+    # 4. Package examples (massgen/configs/)
+    try:
+        from importlib.resources import files
+
+        configs_root = files("massgen") / "configs"
+
+        # Organize by subdirectory
+        for config_file in sorted(configs_root.rglob("*.yaml")):
+            # Get relative path from configs root
+            rel_path = str(config_file).replace(str(configs_root) + "/", "")
+            # Skip README and docs
+            if "README" in rel_path or "BACKEND_CONFIGURATION" in rel_path:
+                continue
+            # Use relative path as display name
+            display_name = rel_path.replace(".yaml", "")
+            configs["Package Examples"].append((display_name, Path(str(config_file))))
+
+    except Exception as e:
+        logger.warning(f"Could not load package examples: {e}")
+
+    # Remove empty categories
+    configs = {k: v for k, v in configs.items() if v}
+
+    return configs
+
+
+def interactive_config_selector() -> Optional[str]:
+    """Interactively select a configuration file.
+
+    Shows user/project/current directory configs directly in a flat list.
+    Package examples are shown hierarchically (category → config).
+
+    Returns:
+        Path to selected config file, or None if cancelled
+    """
+    # Create console instance for rich output
+    selector_console = Console()
+
+    selector_console.print()
+    selector_console.print(
+        Panel(
+            "[bold bright_cyan]🚀 Configuration Selector[/bold bright_cyan]\n\n"
+            "[dim]Choose from your saved configurations or browse examples[/dim]",
+            border_style="bright_cyan",
+            padding=(1, 2),
+            width=90,
+        ),
     )
-    print("💡 Commands: /quit, /exit, /reset, /help", flush=True)
-    print("=" * 60, flush=True)
+
+    # Discover all available configs
+    configs = discover_available_configs()
+
+    if not configs:
+        selector_console.print(
+            "\n[yellow]⚠️  No configurations found![/yellow]",
+        )
+        selector_console.print("[dim]Create one with: massgen --init[/dim]\n")
+        return None
+
+    # Create a summary table showing what's available
+    summary_table = Table(
+        show_header=True,
+        header_style="bold bright_white",
+        border_style="bright_black",
+        box=None,
+        padding=(0, 1),
+        width=88,
+    )
+    summary_table.add_column("Category", style="bright_cyan", no_wrap=True, width=25)
+    summary_table.add_column("Count", justify="center", style="bright_yellow", width=10)
+    summary_table.add_column("Available Configs", style="dim")
+
+    # Build summary and choices
+    choices = []
+
+    # User configs
+    if "User Configs" in configs and configs["User Configs"]:
+        config_names = ", ".join([name for name, _ in configs["User Configs"][:3]])
+        if len(configs["User Configs"]) > 3:
+            config_names += f", +{len(configs['User Configs']) - 3} more"
+        summary_table.add_row(
+            "👤 Your Configs",
+            str(len(configs["User Configs"])),
+            config_names,
+        )
+        choices.append(questionary.Separator("\n─────────────────────────────────"))
+        for display_name, path in configs["User Configs"]:
+            choices.append(
+                questionary.Choice(
+                    title=f"  👤  {display_name}",
+                    value=str(path),
+                )
+            )
+
+    # Project configs
+    if "Project Configs" in configs and configs["Project Configs"]:
+        config_names = ", ".join([name for name, _ in configs["Project Configs"][:3]])
+        if len(configs["Project Configs"]) > 3:
+            config_names += f", +{len(configs['Project Configs']) - 3} more"
+        summary_table.add_row(
+            "📁 Project Configs",
+            str(len(configs["Project Configs"])),
+            config_names,
+        )
+        if choices:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        else:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        for display_name, path in configs["Project Configs"]:
+            choices.append(
+                questionary.Choice(
+                    title=f"  📁  {display_name}",
+                    value=str(path),
+                )
+            )
+
+    # Current directory configs
+    if "Current Directory" in configs and configs["Current Directory"]:
+        config_names = ", ".join([name for name, _ in configs["Current Directory"][:3]])
+        if len(configs["Current Directory"]) > 3:
+            config_names += f", +{len(configs['Current Directory']) - 3} more"
+        summary_table.add_row(
+            "📂 Current Directory",
+            str(len(configs["Current Directory"])),
+            config_names,
+        )
+        if choices:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        else:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        for display_name, path in configs["Current Directory"]:
+            choices.append(
+                questionary.Choice(
+                    title=f"  📂  {display_name}",
+                    value=str(path),
+                )
+            )
+
+    # Package examples
+    if "Package Examples" in configs and configs["Package Examples"]:
+        summary_table.add_row(
+            "📦 Package Examples",
+            str(len(configs["Package Examples"])),
+            "Built-in example configurations",
+        )
+        if choices:
+            choices.append(questionary.Separator("\n─────────────────────────────────"))
+        choices.append(
+            questionary.Choice(
+                title=f"  📦  Browse {len(configs['Package Examples'])} example configs  →",
+                value="__browse_examples__",
+            )
+        )
+
+    # Display summary table in a panel
+    selector_console.print()
+    selector_console.print(
+        Panel(
+            summary_table,
+            title="[bold bright_white]📊 Available Configurations[/bold bright_white]",
+            border_style="bright_black",
+            padding=(0, 1),
+            width=90,
+        ),
+    )
+
+    # Add cancel option
+    choices.append(questionary.Separator("\n─────────────────────────────────"))
+    choices.append(questionary.Choice(title="  ❌  Cancel", value="__cancel__"))
+
+    # Show the selector
+    selector_console.print()
+    selected = questionary.select(
+        "Select a configuration:",
+        choices=choices,
+        use_shortcuts=True,
+        use_arrow_keys=True,
+        style=MASSGEN_QUESTIONARY_STYLE,
+        pointer="▸",
+    ).ask()
+
+    if selected is None or selected == "__cancel__":
+        selector_console.print("\n[yellow]⚠️  Selection cancelled[/yellow]\n")
+        return None
+
+    # If user wants to browse package examples, show hierarchical navigation
+    if selected == "__browse_examples__":
+        return _select_package_example(configs["Package Examples"], selector_console)
+
+    # Otherwise, return the selected config path
+    selector_console.print(f"\n[bold green]✓ Selected:[/bold green] [cyan]{selected}[/cyan]\n")
+    return selected
 
 
-async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[str, Any], original_config: Dict[str, Any] = None, orchestrator_cfg: Dict[str, Any] = None, **kwargs):
+def _select_package_example(examples: List[Tuple[str, Path]], console: Console) -> Optional[str]:
+    """Show hierarchical navigation for package examples.
+
+    Args:
+        examples: List of (display_name, path) tuples
+        console: Rich console for output
+
+    Returns:
+        Path to selected config, or None if cancelled/back
+    """
+    # Organize examples by category (first directory in path)
+    categories = {}
+    for display_name, path in examples:
+        # Extract category from display name (e.g., "basic/multi/config" -> "basic")
+        parts = display_name.split("/")
+        category = parts[0] if len(parts) > 1 else "other"
+
+        if category not in categories:
+            categories[category] = []
+        categories[category].append((display_name, path))
+
+    # Emoji mapping for categories
+    category_emojis = {
+        "basic": "🎯",
+        "tools": "🛠️",
+        "providers": "🌐",
+        "configs": "⚙️",
+        "other": "📋",
+    }
+
+    # Show category selection header
+    console.print()
+    console.print(
+        Panel(
+            "[bold bright_yellow]📦 Package Examples Browser[/bold bright_yellow]\n\n"
+            "[dim]Built-in example configurations organized by category[/dim]",
+            border_style="bright_yellow",
+            padding=(1, 2),
+            width=90,
+        ),
+    )
+
+    # Create category summary table
+    category_table = Table(
+        show_header=True,
+        header_style="bold bright_white",
+        border_style="bright_black",
+        box=None,
+        padding=(0, 1),
+        width=88,
+    )
+    category_table.add_column("Category", style="bright_cyan", no_wrap=True, width=20)
+    category_table.add_column("Count", justify="center", style="bright_yellow", width=10)
+    category_table.add_column("Description", style="dim")
+
+    # Category descriptions
+    category_descriptions = {
+        "basic": "Simple configurations for getting started",
+        "tools": "Configs demonstrating tool integrations",
+        "providers": "Provider-specific example configs",
+        "configs": "Advanced configuration examples",
+        "other": "Miscellaneous configurations",
+    }
+
+    # Build category table and choices
+    category_choices = []
+    for category in sorted(categories.keys()):
+        count = len(categories[category])
+        emoji = category_emojis.get(category, "📁")
+        description = category_descriptions.get(category, "Example configurations")
+
+        category_table.add_row(
+            f"{emoji} {category.title()}",
+            str(count),
+            description,
+        )
+
+        category_choices.append(
+            questionary.Choice(
+                title=f"  {emoji}  {category.title()}  ({count} config{'s' if count != 1 else ''})",
+                value=category,
+            )
+        )
+
+    # Display category summary in a panel
+    console.print()
+    console.print(
+        Panel(
+            category_table,
+            title="[bold bright_white]📑 Categories[/bold bright_white]",
+            border_style="bright_black",
+            padding=(0, 1),
+            width=90,
+        ),
+    )
+
+    # Add back option
+    category_choices.append(questionary.Separator("\n─────────────────────────────────"))
+    category_choices.append(questionary.Choice(title="  ← Back to main menu", value="__back__"))
+
+    # Step 1: Select category
+    console.print()
+    selected_category = questionary.select(
+        "Select a category:",
+        choices=category_choices,
+        use_shortcuts=True,
+        use_arrow_keys=True,
+        style=MASSGEN_QUESTIONARY_STYLE,
+        pointer="▸",
+    ).ask()
+
+    if selected_category is None or selected_category == "__cancel__":
+        console.print("\n[yellow]⚠️  Selection cancelled[/yellow]\n")
+        return None
+
+    if selected_category == "__back__":
+        # Go back to main selector
+        return interactive_config_selector()
+
+    # Show config selection header
+    emoji = category_emojis.get(selected_category, "📁")
+    console.print()
+    console.print(
+        Panel(
+            f"[bold bright_green]{emoji} {selected_category.title()} Configurations[/bold bright_green]\n\n"
+            f"[dim]{len(categories[selected_category])} configurations available in this category[/dim]",
+            border_style="bright_green",
+            padding=(1, 2),
+            width=90,
+        ),
+    )
+
+    # Create configs table
+    configs_table = Table(
+        show_header=True,
+        header_style="bold bright_white",
+        border_style="bright_black",
+        box=None,
+        padding=(0, 1),
+        width=88,
+    )
+    configs_table.add_column("#", style="dim", width=5, justify="right")
+    configs_table.add_column("Configuration", style="bright_cyan")
+
+    # Build config choices and table
+    config_choices = []
+    for idx, (display_name, path) in enumerate(sorted(categories[selected_category]), 1):
+        # Show relative path within category
+        short_name = display_name.replace(f"{selected_category}/", "")
+        configs_table.add_row(str(idx), short_name)
+        config_choices.append(
+            questionary.Choice(
+                title=f"  {idx:2d}. {short_name}",
+                value=str(path),
+            )
+        )
+
+    # Display configs in a panel
+    console.print()
+    console.print(
+        Panel(
+            configs_table,
+            title=f"[bold bright_white]📄 {selected_category.title()} Configs[/bold bright_white]",
+            border_style="bright_black",
+            padding=(0, 1),
+            width=90,
+        ),
+    )
+
+    # Add back option
+    config_choices.append(questionary.Separator("\n─────────────────────────────────"))
+    config_choices.append(questionary.Choice(title="  ← Back to categories", value="__back__"))
+
+    # Step 2: Select config
+    console.print()
+    selected_config = questionary.select(
+        "Select a configuration:",
+        choices=config_choices,
+        use_shortcuts=True,
+        use_arrow_keys=True,
+        style=MASSGEN_QUESTIONARY_STYLE,
+        pointer="▸",
+    ).ask()
+
+    if selected_config is None or selected_config == "__cancel__":
+        console.print("\n[yellow]⚠️  Selection cancelled[/yellow]\n")
+        return None
+
+    if selected_config == "__back__":
+        # Recursively call to go back to category selection
+        return _select_package_example(examples, console)
+
+    # Return the selected config path
+    console.print(f"\n[bold green]✓ Selected:[/bold green] [cyan]{selected_config}[/cyan]\n")
+    return selected_config
+
+
+def should_run_builder() -> bool:
+    """Check if config builder should run automatically.
+
+    Returns True if:
+    - No default config exists at ~/.config/massgen/config.yaml
+    """
+    default_config = Path.home() / ".config/massgen/config.yaml"
+    return not default_config.exists()
+
+
+def print_help_messages():
+    """Display help messages using Rich for better formatting."""
+    rich_console = Console()
+
+    help_content = """[dim]💬  Type your questions below
+💡  Use slash commands: [cyan]/help[/cyan], [cyan]/quit[/cyan], [cyan]/reset[/cyan], [cyan]/status[/cyan], [cyan]/config[/cyan]
+⌨️   Press [cyan]Ctrl+C[/cyan] to exit[/dim]"""
+
+    help_panel = Panel(
+        help_content,
+        border_style="dim",
+        padding=(0, 2),
+        width=80,
+    )
+    rich_console.print(help_panel)
+
+
+async def run_interactive_mode(
+    agents: Dict[str, SingleAgent],
+    ui_config: Dict[str, Any],
+    original_config: Dict[str, Any] = None,
+    orchestrator_cfg: Dict[str, Any] = None,
+    config_path: Optional[str] = None,
+    **kwargs,
+):
     """Run MassGen in interactive mode with conversation history."""
-    print(f"\n{BRIGHT_CYAN}🤖 MassGen Interactive Mode{RESET}", flush=True)
-    print("=" * 60, flush=True)
 
-    # Display configuration
-    print(f"📋 {BRIGHT_YELLOW}Configuration:{RESET}", flush=True)
-    print(f"   Agents: {len(agents)}", flush=True)
-    for agent_id, agent in agents.items():
-        backend_name = agent.backend.__class__.__name__.replace("Backend", "")
-        print(f"   • {agent_id}: {backend_name}", flush=True)
+    # Use Rich console for better display
+    rich_console = Console()
 
-    use_orchestrator_for_single = ui_config.get("use_orchestrator_for_single_agent", True)
+    # Clear screen
+    rich_console.clear()
+
+    # ASCII art for interactive multi-agent mode
+    ascii_art = """[bold #4A90E2]
+     ███╗   ███╗ █████╗ ███████╗███████╗ ██████╗ ███████╗███╗   ██╗
+     ████╗ ████║██╔══██╗██╔════╝██╔════╝██╔════╝ ██╔════╝████╗  ██║
+     ██╔████╔██║███████║███████╗███████╗██║  ███╗█████╗  ██╔██╗ ██║
+     ██║╚██╔╝██║██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║
+     ██║ ╚═╝ ██║██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║
+     ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝[/bold #4A90E2]
+
+     [dim]     🤖 🤖 🤖  →  💬 collaborate  →  🎯 winner  →  📢 final[/dim]
+"""
+
+    # Wrap ASCII art in a panel
+    ascii_panel = Panel(
+        ascii_art,
+        border_style="bold #4A90E2",
+        padding=(0, 2),
+        width=80,
+    )
+    rich_console.print(ascii_panel)
+    print()
+
+    # Create configuration table
+    config_table = Table(
+        show_header=False,
+        box=None,
+        padding=(0, 2),
+        show_edge=False,
+    )
+    config_table.add_column("Label", style="bold cyan", no_wrap=True)
+    config_table.add_column("Value", style="white")
+
+    # Determine mode
+    ui_config.get("use_orchestrator_for_single_agent", True)
     if len(agents) == 1:
-        mode = "Single Agent (Orchestrator)" if use_orchestrator_for_single else "Single Agent (Direct)"
+        mode = "Single Agent"
+        mode_icon = "🤖"
     else:
-        mode = "Multi-Agent Coordination"
-    print(f"   Mode: {mode}", flush=True)
-    print(f"   UI: {ui_config.get('display_type', 'rich_terminal')}", flush=True)
+        mode = f"Multi-Agent ({len(agents)} agents)"
+        mode_icon = "🤝"
+
+    config_table.add_row(f"{mode_icon} Mode:", f"[bold]{mode}[/bold]")
+
+    # Add agents info
+    if len(agents) <= 3:
+        # Show all agents if 3 or fewer
+        for agent_id, agent in agents.items():
+            # Get model name from config
+            model = agent.config.backend_params.get("model", "unknown")
+            backend_name = agent.backend.__class__.__name__.replace("Backend", "")
+            # Show model with backend in parentheses
+            display = f"{model} [dim]({backend_name})[/dim]"
+            config_table.add_row(f"  ├─ {agent_id}:", display)
+    else:
+        # Show count and first 2 agents
+        agent_list = list(agents.items())
+        for i, (agent_id, agent) in enumerate(agent_list[:2]):
+            model = agent.config.backend_params.get("model", "unknown")
+            backend_name = agent.backend.__class__.__name__.replace("Backend", "")
+            display = f"{model} [dim]({backend_name})[/dim]"
+            config_table.add_row(f"  ├─ {agent_id}:", display)
+        config_table.add_row("  └─ ...", f"[dim]and {len(agents) - 2} more[/dim]")
+
+    # Create main panel with configuration
+    config_panel = Panel(
+        config_table,
+        title="[bold bright_yellow]⚙️  Session Configuration[/bold bright_yellow]",
+        border_style="yellow",
+        padding=(0, 2),
+        width=80,
+    )
+    rich_console.print(config_panel)
+    print()
 
     # Prompt for context paths if filesystem is enabled
     if original_config and orchestrator_cfg:
@@ -1002,6 +1805,7 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
             # Recreate agents with updated context paths
             agents = create_agents_from_config(original_config, orchestrator_cfg)
             print(f"   {BRIGHT_GREEN}✓ Agents reloaded with updated context paths{RESET}", flush=True)
+            print()
 
     print_help_messages()
 
@@ -1091,6 +1895,7 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                             flush=True,
                         )
                         print("   /status              - Show current status", flush=True)
+                        print("   /config              - Open config file in editor", flush=True)
                         continue
                     elif command == "/status":
                         print(f"\n{BRIGHT_CYAN}📊 Current Status:{RESET}", flush=True)
@@ -1108,6 +1913,28 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                             f"   History: {len(conversation_history)//2} exchanges",
                             flush=True,
                         )
+                        if config_path:
+                            print(f"   Config: {config_path}", flush=True)
+                        continue
+                    elif command == "/config":
+                        if config_path:
+                            import platform
+                            import subprocess
+
+                            try:
+                                system = platform.system()
+                                if system == "Darwin":  # macOS
+                                    subprocess.run(["open", config_path])
+                                elif system == "Windows":
+                                    subprocess.run(["start", config_path], shell=True)
+                                else:  # Linux and others
+                                    subprocess.run(["xdg-open", config_path])
+                                print(f"\n📝 Opening config file: {config_path}", flush=True)
+                            except Exception as e:
+                                print(f"\n❌ Error opening config file: {e}", flush=True)
+                                print(f"   Config location: {config_path}", flush=True)
+                        else:
+                            print("\n❌ No config file available (using CLI arguments)", flush=True)
                         continue
                     else:
                         print(f"❓ Unknown command: {command}", flush=True)
@@ -1145,6 +1972,14 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
                 # Reconfigure logging for the turn we're about to process
                 setup_logging(debug=_DEBUG_MODE, turn=next_turn)
                 logger.info(f"Starting turn {next_turn}")
+
+                # Save execution metadata for this turn (original_config already has pre-relocation paths)
+                save_execution_metadata(
+                    query=question,
+                    config_path=config_path,
+                    config_content=original_config,  # This is the pre-relocation config passed from main()
+                    cli_args={"mode": "interactive", "turn": next_turn, "session_id": session_id},
+                )
 
                 # Pass session state for multi-turn filesystem support
                 session_info = {
@@ -1190,126 +2025,42 @@ async def run_interactive_mode(agents: Dict[str, SingleAgent], ui_config: Dict[s
         print("\n👋 Goodbye!")
 
 
-async def main():
-    """Main CLI entry point."""
-    parser = argparse.ArgumentParser(
-        description="MassGen - Multi-Agent Coordination CLI",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  # Use configuration file
-  massgen --config config.yaml "What is machine learning?"
+async def main(args):
+    """Main CLI entry point (async operations only)."""
+    # Check if bare `massgen` with no args - use default config if it exists
+    if not args.backend and not args.model and not args.config:
+        # Use resolve_config_path to check project-level then global config
+        resolved_default = resolve_config_path(None)
+        if resolved_default:
+            # Use discovered config for interactive mode (no question) or single query (with question)
+            args.config = str(resolved_default)
+        else:
+            # No default config - this will be handled by wizard trigger in cli_main()
+            if args.question:
+                # User provided a question but no config exists - this is an error
+                print("❌ Configuration error: No default configuration found.", flush=True)
+                print("Run 'massgen --init' to create one, or use 'massgen --model MODEL \"question\"'", flush=True)
+                sys.exit(1)
+            # No question and no config - wizard will be triggered in cli_main()
+            return
 
-  # Quick single agent setup
-  massgen --backend openai --model gpt-4o-mini "Explain quantum computing"
-  massgen --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
-
-  # Use ChatCompletion backend with custom base URL
-  massgen --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
-
-  # Interactive mode
-  massgen --config config.yaml
-
-  # Timeout control examples
-  massgen --config config.yaml --orchestrator-timeout 600 "Complex task"
-
-Environment Variables:
-    OPENAI_API_KEY      - Required for OpenAI backend
-    XAI_API_KEY         - Required for Grok backend
-    ANTHROPIC_API_KEY   - Required for Claude backend
-    GOOGLE_API_KEY      - Required for Gemini backend (or GEMINI_API_KEY)
-    ZAI_API_KEY         - Required for ZAI backend
-
-    CEREBRAS_API_KEY    - For Cerebras AI (cerebras.ai)
-    TOGETHER_API_KEY    - For Together AI (together.ai, together.xyz)
-    FIREWORKS_API_KEY   - For Fireworks AI (fireworks.ai)
-    GROQ_API_KEY        - For Groq (groq.com)
-    NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
-    OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
-    POE_API_KEY         - For POE (poe.com)
-    QWEN_API_KEY        - For Qwen (dashscope.aliyuncs.com)
-
-  Note: The chatcompletion backend auto-detects the provider from the base_url
-        and uses the appropriate environment variable for API key.
-        """,
-    )
-
-    # Question (optional for interactive mode)
-    parser.add_argument(
-        "question",
-        nargs="?",
-        help="Question to ask (optional - if not provided, enters interactive mode)",
-    )
-
-    # Configuration options
-    config_group = parser.add_mutually_exclusive_group()
-    config_group.add_argument("--config", type=str, help="Path to YAML/JSON configuration file")
-    config_group.add_argument(
-        "--backend",
-        type=str,
-        choices=[
-            "chatcompletion",
-            "claude",
-            "gemini",
-            "grok",
-            "openai",
-            "azure_openai",
-            "claude_code",
-            "zai",
-            "lmstudio",
-            "vllm",
-            "sglang",
-        ],
-        help="Backend type for quick setup",
-    )
-
-    # Quick setup options
-    parser.add_argument(
-        "--model",
-        type=str,
-        default="gpt-4o-mini",
-        help="Model name for quick setup (default: gpt-4o-mini)",
-    )
-    parser.add_argument("--system-message", type=str, help="System message for quick setup")
-    parser.add_argument(
-        "--base-url",
-        type=str,
-        help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)",
-    )
-
-    # UI options
-    parser.add_argument("--no-display", action="store_true", help="Disable visual coordination display")
-    parser.add_argument("--no-logs", action="store_true", help="Disable logging")
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
-
-    # Timeout options
-    timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
-    timeout_group.add_argument(
-        "--orchestrator-timeout",
-        type=int,
-        help="Maximum time for orchestrator coordination in seconds (default: 1800)",
-    )
-
-    args = parser.parse_args()
-
-    # Always setup logging (will save INFO to file, console output depends on debug flag)
-    setup_logging(debug=args.debug)
-
-    if args.debug:
-        logger.info("Debug mode enabled")
-        logger.debug(f"Command line arguments: {vars(args)}")
-
-    # Validate arguments
+    # Validate arguments (only if we didn't auto-set config above)
     if not args.backend:
         if not args.model and not args.config:
-            parser.error("If there is not --backend, either --config or --model must be specified")
+            print("❌ Configuration error: Either --config, --model, or --backend must be specified", flush=True)
+            sys.exit(1)
 
     try:
         # Load or create configuration
         if args.config:
-            config = load_config_file(args.config)
+            # Resolve config path (handles @examples/, paths, ~/.config/massgen/agents/)
+            resolved_path = resolve_config_path(args.config)
+            if resolved_path is None:
+                # This shouldn't happen if we reached here, but handle it
+                raise ConfigurationError("Could not resolve config path")
+            config = load_config_file(str(resolved_path))
             if args.debug:
-                logger.debug(f"Loaded config from file: {args.config}")
+                logger.debug(f"Resolved config path: {resolved_path}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
         else:
             model = args.model
@@ -1330,6 +2081,11 @@ Environment Variables:
             if args.debug:
                 logger.debug(f"Created simple config with backend: {backend}, model: {model}")
                 logger.debug(f"Config content: {json.dumps(config, indent=2)}")
+
+        # Save original config before relocation (for execution_metadata.yaml)
+        import copy
+
+        original_config_for_metadata = copy.deepcopy(config)
 
         # Validate that all context paths exist before proceeding
         validate_context_paths(config)
@@ -1414,6 +2170,16 @@ Environment Variables:
         if "orchestrator" in config:
             kwargs["orchestrator"] = config["orchestrator"]
 
+        # Save execution metadata for debugging and reconstruction
+        if args.question:
+            # For single question mode, save metadata now (use original config before .massgen/ relocation)
+            save_execution_metadata(
+                query=args.question,
+                config_path=str(resolved_path) if args.config and 'resolved_path' in locals() else None,
+                config_content=original_config_for_metadata,
+                cli_args=vars(args),
+            )
+
         # Run mode based on whether question was provided
         try:
             if args.question:
@@ -1422,7 +2188,9 @@ Environment Variables:
                 #     print(f"\n{BRIGHT_GREEN}Final Response:{RESET}", flush=True)
                 #     print(f"{response}", flush=True)
             else:
-                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, **kwargs)
+                # Pass the config path to interactive mode
+                config_file_path = str(resolved_path) if args.config and resolved_path else None
+                await run_interactive_mode(agents, ui_config, original_config=config, orchestrator_cfg=orchestrator_cfg, config_path=config_file_path, **kwargs)
         finally:
             # Cleanup all agents' filesystem managers (including Docker containers)
             for agent_id, agent in agents.items():
@@ -1445,7 +2213,263 @@ Environment Variables:
 
 def cli_main():
     """Synchronous wrapper for CLI entry point."""
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(
+        description="MassGen - Multi-Agent Coordination CLI",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use configuration file
+  massgen --config config.yaml "What is machine learning?"
+
+  # Quick single agent setup
+  massgen --backend openai --model gpt-4o-mini "Explain quantum computing"
+  massgen --backend claude --model claude-sonnet-4-20250514 "Analyze this data"
+
+  # Use ChatCompletion backend with custom base URL
+  massgen --backend chatcompletion --model gpt-oss-120b --base-url https://api.cerebras.ai/v1/chat/completions "What is 2+2?"
+
+  # Interactive mode
+  massgen --config config.yaml
+  massgen  # Uses default config if available
+
+  # Timeout control examples
+  massgen --config config.yaml --orchestrator-timeout 600 "Complex task"
+
+  # Configuration management
+  massgen --init          # Create new configuration interactively
+  massgen --select        # Choose from available configurations
+  massgen --setup-keys    # Set up API keys
+  massgen --list-examples # View example configurations
+
+Environment Variables:
+    OPENAI_API_KEY      - Required for OpenAI backend
+    XAI_API_KEY         - Required for Grok backend
+    ANTHROPIC_API_KEY   - Required for Claude backend
+    GOOGLE_API_KEY      - Required for Gemini backend (or GEMINI_API_KEY)
+    ZAI_API_KEY         - Required for ZAI backend
+
+    CEREBRAS_API_KEY    - For Cerebras AI (cerebras.ai)
+    TOGETHER_API_KEY    - For Together AI (together.ai, together.xyz)
+    FIREWORKS_API_KEY   - For Fireworks AI (fireworks.ai)
+    GROQ_API_KEY        - For Groq (groq.com)
+    NEBIUS_API_KEY      - For Nebius AI Studio (studio.nebius.ai)
+    OPENROUTER_API_KEY  - For OpenRouter (openrouter.ai)
+    POE_API_KEY         - For POE (poe.com)
+
+  Note: The chatcompletion backend auto-detects the provider from the base_url
+        and uses the appropriate environment variable for API key.
+        """,
+    )
+
+    # Question (optional for interactive mode)
+    parser.add_argument(
+        "question",
+        nargs="?",
+        help="Question to ask (optional - if not provided, enters interactive mode)",
+    )
+
+    # Configuration options
+    config_group = parser.add_mutually_exclusive_group()
+    config_group.add_argument("--config", type=str, help="Path to YAML/JSON configuration file or @examples/NAME")
+    config_group.add_argument(
+        "--select",
+        action="store_true",
+        help="Interactively select from available configurations",
+    )
+    config_group.add_argument(
+        "--backend",
+        type=str,
+        choices=[
+            "chatcompletion",
+            "claude",
+            "gemini",
+            "grok",
+            "openai",
+            "azure_openai",
+            "claude_code",
+            "zai",
+            "lmstudio",
+            "vllm",
+            "sglang",
+        ],
+        help="Backend type for quick setup",
+    )
+
+    # Quick setup options
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model name for quick setup",
+    )
+    parser.add_argument("--system-message", type=str, help="System message for quick setup")
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        help="Base URL for API endpoint (e.g., https://api.cerebras.ai/v1/chat/completions)",
+    )
+
+    # UI options
+    parser.add_argument("--no-display", action="store_true", help="Disable visual coordination display")
+    parser.add_argument("--no-logs", action="store_true", help="Disable logging")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode with verbose logging")
+    parser.add_argument(
+        "--init",
+        action="store_true",
+        help="Launch interactive configuration builder to create config file",
+    )
+    parser.add_argument(
+        "--setup-keys",
+        action="store_true",
+        help="Launch interactive API key setup wizard to configure credentials",
+    )
+    parser.add_argument(
+        "--list-examples",
+        action="store_true",
+        help="List available example configurations from package",
+    )
+    parser.add_argument(
+        "--example",
+        type=str,
+        help="Print example config to stdout (e.g., --example basic_multi)",
+    )
+    parser.add_argument(
+        "--show-schema",
+        action="store_true",
+        help="Display configuration schema and available parameters",
+    )
+    parser.add_argument(
+        "--schema-backend",
+        type=str,
+        help="Show schema for specific backend (use with --show-schema)",
+    )
+    parser.add_argument(
+        "--with-examples",
+        action="store_true",
+        help="Include example configurations in schema display",
+    )
+
+    # Timeout options
+    timeout_group = parser.add_argument_group("timeout settings", "Override timeout settings from config")
+    timeout_group.add_argument(
+        "--orchestrator-timeout",
+        type=int,
+        help="Maximum time for orchestrator coordination in seconds (default: 1800)",
+    )
+
+    args = parser.parse_args()
+
+    # Always setup logging (will save INFO to file, console output depends on debug flag)
+    setup_logging(debug=args.debug)
+
+    if args.debug:
+        logger.info("Debug mode enabled")
+        logger.debug(f"Command line arguments: {vars(args)}")
+
+    # Handle special commands first
+    if args.list_examples:
+        show_available_examples()
+        return
+
+    if args.example:
+        print_example_config(args.example)
+        return
+
+    if args.show_schema:
+        from .schema_display import show_schema
+
+        show_schema(backend=args.schema_backend, show_examples=args.with_examples)
+        return
+
+    # Launch interactive API key setup if requested
+    if args.setup_keys:
+        from .config_builder import ConfigBuilder
+
+        builder = ConfigBuilder()
+        api_keys = builder.interactive_api_key_setup()
+
+        if any(api_keys.values()):
+            print(f"\n{BRIGHT_GREEN}✅ API key setup complete!{RESET}")
+            print(f"{BRIGHT_CYAN}💡 You can now use MassGen with these providers{RESET}\n")
+        else:
+            print(f"\n{BRIGHT_YELLOW}⚠️  No API keys configured{RESET}")
+            print(f"{BRIGHT_CYAN}💡 You can run 'massgen --setup-keys' anytime to set them up{RESET}\n")
+        return
+
+    # Launch interactive config selector if requested
+    if args.select:
+        selected_config = interactive_config_selector()
+        if selected_config:
+            # Update args to use the selected config
+            args.config = selected_config
+            # Continue to main() with the selected config
+        else:
+            # User cancelled selection
+            return
+
+    # Launch interactive config builder if requested
+    if args.init:
+        from .config_builder import ConfigBuilder
+
+        builder = ConfigBuilder()
+        result = builder.run()
+
+        if result and len(result) == 2:
+            filepath, question = result
+            if filepath and question:
+                # Update args to use the newly created config
+                args.config = filepath
+                args.question = question
+            elif filepath:
+                # Config created but user chose not to run
+                print(f"\n✅ Configuration saved to: {filepath}")
+                print(f'Run with: massgen --config {filepath} "Your question"')
+                return
+            else:
+                # User cancelled
+                return
+        else:
+            # Builder returned None (cancelled or error)
+            return
+
+    # First-run detection: auto-trigger builder if no config specified and first run
+    if not args.question and not args.config and not args.model and not args.backend:
+        if should_run_builder():
+            print()
+            print()
+            print(f"{BRIGHT_CYAN}{'=' * 60}{RESET}")
+            print(f"{BRIGHT_CYAN}  👋  Welcome to MassGen!{RESET}")
+            print(f"{BRIGHT_CYAN}{'=' * 60}{RESET}")
+            print()
+            print("  Let's set up your default configuration...")
+            print()
+
+            from .config_builder import ConfigBuilder
+
+            builder = ConfigBuilder(default_mode=True)
+            result = builder.run()
+
+            if result and len(result) == 2:
+                filepath, question = result
+                if filepath:
+                    args.config = filepath
+                    if question:
+                        args.question = question
+                    else:
+                        print("\n✅ Configuration saved! You can now run queries.")
+                        print('Example: massgen "Your question here"')
+                        return
+                else:
+                    return
+            else:
+                return
+
+    # Now call the async main with the parsed arguments
+    try:
+        asyncio.run(main(args))
+    except KeyboardInterrupt:
+        # User pressed Ctrl+C - exit gracefully without traceback
+        pass
 
 
 if __name__ == "__main__":

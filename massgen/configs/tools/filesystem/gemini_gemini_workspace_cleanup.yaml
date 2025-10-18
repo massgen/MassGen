@@ -7,7 +7,7 @@
 # Agents can clean this up by deleting redundant files.
 #
 # Run with:
-#   uv run python -m massgen.cli --config massgen/configs/tools/filesystem/gemini_gemini_workspace_cleanup.yaml "Please improve the website to reference Jimi Hendrix then remove the other files and directories that aren't being used"
+#   massgen --config @examples/tools/filesystem/gemini_gemini_workspace_cleanup "Please improve the website to reference Jimi Hendrix then remove the other files and directories that aren't being used"
 
 agents:
   - id: "agent_a"

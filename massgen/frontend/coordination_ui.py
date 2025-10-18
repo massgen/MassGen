@@ -214,6 +214,15 @@ class CoordinationUI:
                         self.logger.log_chunk(source, content, chunk_type)
                     continue
 
+                # Filter out mcp_status chunks - display via agent panel instead of console
+                elif chunk_type == "mcp_status":
+                    # Let the display handle MCP status via agent panel
+                    if source and source in self.agent_ids:
+                        self.display.update_agent_content(source, content, "tool")
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk_type)
+                    continue
+
                 # builtin_tool_results handling removed - now handled as simple content
 
                 # Handle reasoning streams
@@ -306,9 +315,11 @@ class CoordinationUI:
             #     time.sleep(1.0)
 
             # Get final presentation from winning agent
-            if self.enable_final_presentation and selected_agent and vote_results.get("vote_counts"):
-                print(f"\n🎤  Final Presentation from {selected_agent}:")
-                print("=" * 60)
+            # Run final presentation if enabled and there's a selected agent (regardless of votes)
+            if self.enable_final_presentation and selected_agent:
+                # Don't print - let the display handle it
+                # print(f"\n🎤  Final Presentation from {selected_agent}:")
+                # print("=" * 60)
 
                 presentation_content = ""
                 try:
@@ -396,18 +407,19 @@ class CoordinationUI:
                                 except Exception:
                                     # Error processing presentation content - continue gracefully
                                     pass
-                                # Also print to console with flush using consistent timing with rich display
-                                self._print_with_flush(content)
+                                # Don't print - let the display handle it
+                                # self._print_with_flush(content)
                             else:
-                                # Simple print for non-display mode
+                                # Simple print for non-display mode (only if no display)
                                 print(content, end="", flush=True)
                 except AttributeError:
                     # get_final_presentation method doesn't exist or failed
-                    print("Final presentation not available - using coordination result")
+                    # print("Final presentation not available - using coordination result")
                     presentation_content = ""
 
                 final_answer = presentation_content
-                print("\n" + "=" * 60)
+                # Don't print - let the display handle it
+                # print("\n" + "=" * 60)
                 # Allow time for final presentation to be fully visible
                 time.sleep(1.5)
 
@@ -426,19 +438,6 @@ class CoordinationUI:
 
             # Use orchestrator's clean answer if available, otherwise fall back to presentation
             final_result = orchestrator_final_answer if orchestrator_final_answer else (final_answer if final_answer else full_response)
-            if final_result:
-                # print(f"\n🎯 FINAL COORDINATED ANSWER")
-                # print("=" * 80)
-                # print(f"{final_result.strip()}")
-                # print("=" * 80)
-
-                # Show which agent was selected
-                if selected_agent:
-                    print(f"✅ Selected by: {selected_agent}")
-                    if vote_results.get("vote_counts"):
-                        vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results["vote_counts"].items()])
-                        print(f"🗳️ Vote results: {vote_summary}")
-                print()
 
             # Finalize session
             if self.logger:
@@ -477,12 +476,13 @@ class CoordinationUI:
             if self.display:
                 self.display.cleanup()
 
-            if selected_agent:
-                print(f"✅ Selected by: {selected_agent}")
-                if vote_results.get("vote_counts"):
-                    vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results["vote_counts"].items()])
-                    print(f"🗳️ Vote results: {vote_summary}")
-            print()
+            # Don't print - display already showed this info
+            # if selected_agent:
+            #     print(f"✅ Selected by: {selected_agent}")
+            #     if vote_results.get("vote_counts"):
+            #         vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results["vote_counts"].items()])
+            #         print(f"🗳️ Vote results: {vote_summary}")
+            # print()
 
             if self.logger:
                 session_info = self.logger.finalize_session(
@@ -592,6 +592,15 @@ class CoordinationUI:
                         self.logger.log_chunk(source, content, chunk_type)
                     continue
 
+                # Filter out mcp_status chunks - display via agent panel instead of console
+                elif chunk_type == "mcp_status":
+                    # Let the display handle MCP status via agent panel
+                    if source and source in self.agent_ids:
+                        self.display.update_agent_content(source, content, "tool")
+                    if self.logger:
+                        self.logger.log_chunk(source, content, chunk_type)
+                    continue
+
                 # builtin_tool_results handling removed - now handled as simple content
 
                 # Handle reasoning streams
@@ -683,9 +692,11 @@ class CoordinationUI:
             #     time.sleep(1.0)
 
             # Get final presentation from winning agent
-            if self.enable_final_presentation and selected_agent and vote_results.get("vote_counts"):
-                print(f"\n🎤 Final Presentation from {selected_agent}:")
-                print("=" * 60)
+            # Run final presentation if enabled and there's a selected agent (regardless of votes)
+            if self.enable_final_presentation and selected_agent:
+                # Don't print - let the display handle it
+                # print(f"\n🎤 Final Presentation from {selected_agent}:")
+                # print("=" * 60)
 
                 presentation_content = ""
                 try:
@@ -766,8 +777,8 @@ class CoordinationUI:
                                     getattr(chunk, "type", "presentation"),
                                 )
 
-                            # Stream presentation to console with consistent flush timing
-                            self._print_with_flush(content)
+                            # Don't print - let the display handle it
+                            # self._print_with_flush(content)
 
                             # Update display
                             await self._process_content(selected_agent, content)
@@ -775,12 +786,14 @@ class CoordinationUI:
                             if getattr(chunk, "type", "") == "done":
                                 break
 
-                except Exception as e:
-                    print(f"\n❌ Error during final presentation: {e}")
+                except Exception:
+                    # Don't print - let the display handle errors
+                    # print(f"\n❌ Error during final presentation: {e}")
                     presentation_content = full_response  # Fallback
 
                 final_answer = presentation_content
-                print("\n" + "=" * 60)
+                # Don't print - let the display handle it
+                # print("\n" + "=" * 60)
                 # Allow time for final presentation to be fully visible
                 time.sleep(1.5)
 
@@ -794,19 +807,6 @@ class CoordinationUI:
 
             # Use orchestrator's clean answer if available, otherwise fall back to presentation
             final_result = orchestrator_final_answer if orchestrator_final_answer else (final_answer if final_answer else full_response)
-            if final_result:
-                # print(f"\n🎯 FINAL COORDINATED ANSWER")
-                # print("=" * 80)
-                # print(f"{final_result.strip()}")
-                # print("=" * 80)
-
-                # Show which agent was selected
-                if selected_agent:
-                    print(f"✅ Selected by: {selected_agent}")
-                    if vote_results.get("vote_counts"):
-                        vote_summary = ", ".join([f"{agent}: {count}" for agent, count in vote_results["vote_counts"].items()])
-                        print(f"🗳️ Vote results: {vote_summary}")
-                print()
 
             # Finalize session
             if self.logger:

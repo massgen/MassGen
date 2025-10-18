@@ -3,9 +3,38 @@ include LICENSE
 include CONTRIBUTING.md
 include CHANGELOG.md
 include requirements.txt
-include massgen/configs/*
+recursive-include massgen/configs *.yaml *.yml
 include .env.example
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 exclude .gitignore
-exclude massgen_logs/*
+
+# Exclude logs, workspaces, and temporary files
+prune massgen_logs
+prune snapshots
+prune temp_workspaces
+prune workspace
+prune workspace1
+prune workspace2
+prune sessions
+prune .massgen
+prune .claude
+prune claude_code_workspace
+prune code_execution_workspaces
+prune agent_outputs
+prune traces
+prune summaries
+prune output
+prune docs/_build
+prune docs/build
+prune .playwright-mcp
+
+# Exclude test and config files
+exclude test_*.py
+exclude *_test.py
+exclude config_*.yaml
+exclude my_massgen_config.yaml
+exclude CLAUDE.md
+exclude .env
+exclude *.log
+exclude bandit-report.json
