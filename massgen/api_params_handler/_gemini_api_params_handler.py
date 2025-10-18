@@ -18,6 +18,7 @@ class GeminiAPIParamsHandler(APIParamsHandlerBase):
             "mcp_sdk_auto",
             "allowed_tools",
             "exclude_tools",
+            "custom_tools",
         }
         return set(base) | extra
 
