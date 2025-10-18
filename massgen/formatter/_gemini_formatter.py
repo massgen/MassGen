@@ -4,10 +4,13 @@ Gemini formatter for message formatting, coordination prompts, and structured ou
 """
 
 import json
+import logging
 import re
 from typing import Any, Dict, List, Optional
 
 from ._formatter_base import FormatterBase
+
+logger = logging.getLogger(__name__)
 
 
 class GeminiFormatter(FormatterBase):
@@ -219,3 +222,231 @@ Make your decision and include the JSON at the very end of your response."""
             ]
 
         return []
+
+    # Custom tools formatting for Gemini
+
+    def format_custom_tools(
+        self,
+        custom_tools: List[Dict[str, Any]],
+        return_sdk_objects: bool = True
+    ) -> List[Any]:
+        """
+        Convert custom tools from OpenAI Chat Completions format to Gemini format.
+
+        Can return either SDK FunctionDeclaration objects (default) or Gemini-format dictionaries.
+
+        OpenAI format:
+            [{"type": "function", "function": {"name": ..., "description": ..., "parameters": {...}}}]
+
+        Gemini dictionary format:
+            [{"name": ..., "description": ..., "parameters": {...}}]
+
+        Gemini SDK format:
+            [FunctionDeclaration(name=..., description=..., parameters=Schema(...))]
+
+        Args:
+            custom_tools: List of tools in OpenAI Chat Completions format
+            return_sdk_objects: If True, return FunctionDeclaration objects;
+                               if False, return Gemini-format dictionaries
+
+        Returns:
+            List of tools in Gemini SDK format (default) or dictionary format
+        """
+        if not custom_tools:
+            return []
+
+        # Step 1: Convert to Gemini dictionary format
+        gemini_dicts = self._convert_to_gemini_dict_format(custom_tools)
+
+        if not return_sdk_objects:
+            return gemini_dicts
+
+        # Step 2: Convert dictionaries to SDK FunctionDeclaration objects
+        return self._convert_to_function_declarations(gemini_dicts)
+
+    def _convert_to_gemini_dict_format(self, custom_tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Convert OpenAI format to Gemini dictionary format (intermediate step).
+
+        Args:
+            custom_tools: List of tools in OpenAI Chat Completions format
+
+        Returns:
+            List of tools in Gemini-compatible dictionary format
+        """
+        if not custom_tools:
+            return []
+
+        converted_tools = []
+
+        for tool in custom_tools:
+            # Handle OpenAI Chat Completions format with type="function" wrapper
+            if isinstance(tool, dict) and tool.get("type") == "function" and "function" in tool:
+                func_def = tool["function"]
+                converted_tool = {
+                    "name": func_def.get("name", ""),
+                    "description": func_def.get("description", ""),
+                    "parameters": func_def.get("parameters", {})
+                }
+                converted_tools.append(converted_tool)
+            # Handle already-converted Gemini format (idempotent)
+            elif isinstance(tool, dict) and "name" in tool and "parameters" in tool:
+                # Already in Gemini format, pass through
+                converted_tools.append(tool)
+            else:
+                # Skip unrecognized formats
+                logger.warning(f"[GeminiFormatter] Skipping unrecognized tool format: {tool}")
+
+        return converted_tools
+
+    def _convert_to_function_declarations(self, tools_dicts: List[Dict[str, Any]]) -> List[Any]:
+        """
+        Convert Gemini-format tool dictionaries to FunctionDeclaration objects.
+
+        Args:
+            tools_dicts: List of tool dictionaries in Gemini format
+                [{"name": ..., "description": ..., "parameters": {...}}]
+
+        Returns:
+            List of google.genai.types.FunctionDeclaration objects
+        """
+        if not tools_dicts:
+            return []
+
+        try:
+            from google.genai import types
+        except ImportError:
+            logger.error("[GeminiFormatter] Cannot import google.genai.types for FunctionDeclaration")
+            logger.error("[GeminiFormatter] Falling back to dictionary format")
+            return tools_dicts  # Fallback to dict format
+
+        function_declarations = []
+
+        for tool_dict in tools_dicts:
+            try:
+                # Create Schema object for parameters
+                params = tool_dict.get("parameters", {})
+
+                # Convert parameters to Schema object (recursive)
+                schema = self._build_schema_recursive(params)
+
+                # Create FunctionDeclaration object
+                func_decl = types.FunctionDeclaration(
+                    name=tool_dict.get("name", ""),
+                    description=tool_dict.get("description", ""),
+                    parameters=schema
+                )
+
+                function_declarations.append(func_decl)
+
+                logger.debug(
+                    f"[GeminiFormatter] Converted tool '{tool_dict.get('name')}' "
+                    f"to FunctionDeclaration"
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"[GeminiFormatter] Failed to convert tool to FunctionDeclaration: {e}"
+                )
+                logger.error(f"[GeminiFormatter] Tool dict: {tool_dict}")
+                # Continue processing other tools instead of failing completely
+                continue
+
+        return function_declarations
+
+    def _build_schema_recursive(self, param_schema: Dict[str, Any]) -> Any:
+        """
+        Recursively build a Gemini Schema object from JSON Schema format.
+
+        Handles nested objects, arrays, and all standard JSON Schema types.
+
+        Args:
+            param_schema: JSON Schema dictionary (may be nested)
+
+        Returns:
+            google.genai.types.Schema object
+        """
+        try:
+            from google.genai import types
+        except ImportError:
+            logger.error("[GeminiFormatter] Cannot import google.genai.types")
+            return None
+
+        # Get the type (default to "object" for top-level parameters)
+        param_type = param_schema.get("type", "object")
+        gemini_type = self._convert_json_type_to_gemini_type(param_type)
+
+        # Build base schema kwargs
+        schema_kwargs = {
+            "type": gemini_type,
+        }
+
+        # Add description if present
+        if "description" in param_schema:
+            schema_kwargs["description"] = param_schema["description"]
+
+        # Handle object type with nested properties
+        if param_type == "object" and "properties" in param_schema:
+            schema_kwargs["properties"] = {
+                prop_name: self._build_schema_recursive(prop_schema)
+                for prop_name, prop_schema in param_schema["properties"].items()
+            }
+
+            # Add required fields if present
+            if "required" in param_schema:
+                schema_kwargs["required"] = param_schema["required"]
+
+        # Handle array type with items
+        elif param_type == "array" and "items" in param_schema:
+            schema_kwargs["items"] = self._build_schema_recursive(param_schema["items"])
+
+        # Handle enum if present (for string/number types)
+        if "enum" in param_schema:
+            schema_kwargs["enum"] = param_schema["enum"]
+
+        # Handle format if present (e.g., "date-time", "email", etc.)
+        if "format" in param_schema:
+            schema_kwargs["format"] = param_schema["format"]
+
+        # Handle nullable if present
+        if "nullable" in param_schema:
+            schema_kwargs["nullable"] = param_schema["nullable"]
+
+        return types.Schema(**schema_kwargs)
+
+    def _convert_json_type_to_gemini_type(self, json_type: str) -> Any:
+        """
+        Convert JSON Schema type string to Gemini Type enum.
+
+        Args:
+            json_type: JSON Schema type like "string", "number", "integer", etc.
+
+        Returns:
+            Corresponding google.genai.types.Type enum value
+        """
+        try:
+            from google.genai import types
+        except ImportError:
+            # If we can't import, return string as fallback
+            # This shouldn't happen in practice since _build_schema_recursive checks first
+            return "STRING"
+
+        # Map JSON Schema types to Gemini Type enum
+        type_mapping = {
+            "string": types.Type.STRING,
+            "number": types.Type.NUMBER,
+            "integer": types.Type.INTEGER,
+            "boolean": types.Type.BOOLEAN,
+            "array": types.Type.ARRAY,
+            "object": types.Type.OBJECT,
+        }
+
+        # Return mapped type or default to STRING
+        gemini_type = type_mapping.get(json_type.lower(), types.Type.STRING)
+
+        if json_type.lower() not in type_mapping:
+            logger.warning(
+                f"[GeminiFormatter] Unknown JSON type '{json_type}', defaulting to STRING"
+            )
+
+        return gemini_type

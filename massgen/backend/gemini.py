@@ -305,13 +305,24 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     # Try to initialize custom tools
                     if using_custom_tools:
                         try:
-                            # Get custom tools schemas
+                            # Get custom tools schemas (in OpenAI format)
                             custom_tools_schemas = self._get_custom_tools_schemas()
                             if custom_tools_schemas:
-                                # Convert custom tools to Gemini-compatible format if needed
-                                # Note: This assumes _get_custom_tools_schemas() returns Gemini-compatible format
-                                custom_tools_functions = custom_tools_schemas
-                                logger.debug(f"[Gemini] Loaded {len(custom_tools_functions)} custom tools")
+                                # Convert to Gemini SDK format using formatter
+                                # formatter handles: OpenAI format -> Gemini dict -> FunctionDeclaration objects
+                                custom_tools_functions = self.formatter.format_custom_tools(
+                                    custom_tools_schemas,
+                                    return_sdk_objects=True
+                                )
+
+                                if custom_tools_functions:
+                                    logger.debug(
+                                        f"[Gemini] Loaded {len(custom_tools_functions)} custom tools "
+                                        f"as FunctionDeclarations"
+                                    )
+                                else:
+                                    custom_tools_error = RuntimeError("Custom tools conversion failed")
+                                    logger.warning(f"[Gemini] Custom tools unavailable: {custom_tools_error}")
                             else:
                                 custom_tools_error = RuntimeError("No custom tools available")
                                 logger.warning(f"[Gemini] Custom tools unavailable: {custom_tools_error}")
@@ -447,6 +458,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
                     # Iterate over the asynchronous stream to get chunks as they arrive
                     async for chunk in stream:
+                        print(chunk)
                         # ============================================
                         # 1. Process function calls/responses
                         # ============================================
@@ -720,7 +732,12 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         try:
                             custom_tools_schemas = self._get_custom_tools_schemas()
                             if custom_tools_schemas:
-                                manual_config["tools"] = custom_tools_schemas
+                                # Convert to Gemini format using formatter
+                                custom_tools_functions = self.formatter.format_custom_tools(
+                                    custom_tools_schemas,
+                                    return_sdk_objects=True
+                                )
+                                manual_config["tools"] = custom_tools_functions
                                 logger.info("[Gemini] Fallback: using custom tools only (MCP failed)")
                             else:
                                 # Custom tools also unavailable, use builtin tools
