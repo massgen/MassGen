@@ -83,26 +83,22 @@ uv run python -m massgen.cli \
 
 ### Results & Failure Modes
 
-Before v0.0.31, users attempting to perform test-driven development or validation workflows with MassGen would face:
+Before v0.0.31, users attempting to perform test-driven development or validation workflows with MassGen faced significant challenges:
 
-**Backend-Specific Code Execution (Fragmented):**
-- **OpenAI, Azure OpenAI**: Builtin `code_interpreter` (sandboxed Python only - cannot run shell commands like `pytest`, `uv run`, `npm test`)
-- **Claude Messages API**: Builtin `code_execution` tool (Python sandboxed environment)
-- **Gemini**: Builtin `code_execution` tool (Python execution, limited shell access)
-- **Claude Code backend**: Native Bash tool (SDK-specific, comprehensive shell access)
-- **AG2 agents**: LocalCommandLineCodeExecutor (framework-specific, full shell access but isolated from other backends)
+**1. Backend Lock-In for Test Automation:**
+Users wanting to run pytest, npm test, or other shell-based testing tools were forced to use only Claude Code or AG2 backends, limiting flexibility in choosing AI providers.
 
-**Backends Without ANY Code Execution:**
-- **Grok** - No execution capability
-- **Chat Completions providers** (Cerebras, Fireworks, Together, OpenRouter, Qwen, etc.) - No execution capability
-- **LM Studio** - No execution capability
-- **Inference (vLLM/SGLang)** - No execution capability
+**2. Inconsistent Multi-Agent Collaboration:**
+Multi-agent workflows couldn't mix backends freely - e.g., couldn't have a Gemini agent collaborate with an OpenAI agent on test execution tasks, as Gemini/OpenAI were limited to Python sandboxes.
 
-**Key Problem - No Universal Shell Command Execution:**
-- Most backends limited to sandboxed Python (cannot run `pytest`, `uv run`, `npm test`, shell commands)
-- No consistent way to execute actual shell commands across all backends
-- Chat Completions providers (multiple inference APIs) completely lacked execution
-- Test-driven workflows requiring shell commands only worked with Claude Code or AG2
+**3. Workarounds Required:**
+Users had to implement hacky workarounds like:
+- Writing Python wrapper scripts to simulate shell commands
+- Using backend-specific tools instead of standard test frameworks
+- Splitting workflows across different backend configurations
+
+**4. Limited Chat Completions Support:**
+Providers like Cerebras, Fireworks, Together, OpenRouter, Qwen had no code execution at all, making them unsuitable for any validation workflows despite potentially offering better cost/performance.
 
 ### Success Criteria
 
