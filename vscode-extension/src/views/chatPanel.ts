@@ -494,6 +494,7 @@ export class ChatPanel {
         let modelsByProvider = {};
         let selectedModels = [];
         let currentStreamingMessageId = null; // Track the current streaming message
+        let agentStreamingMessages = {}; // Map source -> messageId for each agent's streaming message
 
         // Notify extension that webview is ready
         window.addEventListener('load', () => {
@@ -525,37 +526,27 @@ export class ChatPanel {
                     if (message.data.models && message.data.models.length > 0) {
                         addAgentProgress(message.data.models);
                     }
-                    // Create an empty message for streaming response
-                    currentStreamingMessageId = addMessage('agent', 'MassGen', '', true);
+                    // Clear previous agent streaming messages
+                    agentStreamingMessages = {};
+                    // Note: We no longer create a single streaming message upfront
+                    // Each agent will create its own message box when it first sends content
                     setStatus('Processing query...');
                     break;
 
                 case 'queryComplete':
                     isProcessing = false;
                     updateUI();
-                    // If we have a streaming message, finalize it
-                    if (currentStreamingMessageId) {
-                        const streamingMsg = document.getElementById(currentStreamingMessageId);
-                        if (streamingMsg) {
-                            const content = streamingMsg.querySelector('.message-content');
-                            // If the message is still empty, show the result
-                            if (content && !content.textContent.trim()) {
-                                const resultText = typeof message.data.result === 'string'
-                                    ? message.data.result
-                                    : JSON.stringify(message.data.result, null, 2);
-                                content.textContent = resultText;
-                            }
-                        }
-                        // Remove the streaming cursor
-                        finalizeStreamingMessage(currentStreamingMessageId);
-                        currentStreamingMessageId = null;
-                    } else {
-                        // No streaming message, add result as new message
-                        const resultText = typeof message.data.result === 'string'
-                            ? message.data.result
-                            : JSON.stringify(message.data.result, null, 2);
-                        addMessage('agent', 'MassGen', resultText);
+
+                    // Finalize all agent streaming messages
+                    for (const source in agentStreamingMessages) {
+                        const messageId = agentStreamingMessages[source];
+                        finalizeStreamingMessage(messageId);
                     }
+
+                    // Clear the agent streaming messages map
+                    agentStreamingMessages = {};
+                    currentStreamingMessageId = null;
+
                     setStatus('Ready');
                     break;
 
@@ -766,9 +757,29 @@ export class ChatPanel {
                     break;
 
                 case 'stream_chunk':
-                    // Handle streaming content - append to current message
-                    if (currentStreamingMessageId && event.content) {
-                        appendToMessage(currentStreamingMessageId, event.content);
+                    // Handle streaming content - create separate message box for each agent
+                    if (event.content) {
+                        const source = event.source || 'unknown';
+
+                        // Check if this source already has a streaming message
+                        if (!agentStreamingMessages[source]) {
+                            // Create a new message box for this agent/source
+                            let senderName = source;
+                            if (source === 'orchestrator') {
+                                senderName = '🎯 Orchestrator';
+                            } else if (source === 'final_answer') {
+                                senderName = '🏆 Final Answer';
+                            } else if (source && source !== 'unknown') {
+                                senderName = \`🤖 \${source}\`;
+                            } else {
+                                senderName = 'MassGen';
+                            }
+
+                            agentStreamingMessages[source] = addMessage('agent', senderName, '', true);
+                        }
+
+                        // Append content to this agent's message
+                        appendToMessage(agentStreamingMessages[source], event.content);
                     }
                     break;
 

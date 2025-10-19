@@ -315,6 +315,7 @@ class VSCodeServer:
                         {
                             "type": "stream_chunk",
                             "content": chunk.content,
+                            "source": chunk.source,  # Include source to identify which agent is speaking
                         }
                     )
                     full_response += chunk.content
