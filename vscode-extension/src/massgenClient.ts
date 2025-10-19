@@ -128,8 +128,8 @@ export class MassGenClient {
     /**
      * Query MassGen with a question
      */
-    async query(text: string, config?: string): Promise<any> {
-        return this.sendRequest('query', { text, config });
+    async query(text: string, config?: string, models?: string[]): Promise<any> {
+        return this.sendRequest('query', { text, config, models });
     }
 
     /**
@@ -144,6 +144,13 @@ export class MassGenClient {
      */
     async listConfigs(): Promise<any> {
         return this.sendRequest('list_configs', {});
+    }
+
+    /**
+     * Get available models
+     */
+    async getAvailableModels(): Promise<any> {
+        return this.sendRequest('get_available_models', {});
     }
 
     /**

@@ -69,7 +69,7 @@ export class ChatPanel {
     private async handleWebviewMessage(message: any): Promise<void> {
         switch (message.type) {
             case 'sendQuery':
-                await this.handleQuery(message.text, message.config);
+                await this.handleQuery(message.text, message.config, message.models);
                 break;
 
             case 'analyzeCode':
@@ -78,6 +78,10 @@ export class ChatPanel {
 
             case 'listConfigs':
                 await this.handleListConfigs();
+                break;
+
+            case 'getAvailableModels':
+                await this.handleGetAvailableModels();
                 break;
 
             case 'ready':
@@ -90,14 +94,14 @@ export class ChatPanel {
     /**
      * Handle query from user
      */
-    private async handleQuery(text: string, config?: string): Promise<void> {
+    private async handleQuery(text: string, config?: string, models?: string[]): Promise<void> {
         try {
             this.sendToWebview({
                 type: 'queryStart',
-                data: { text }
+                data: { text, models }
             });
 
-            const result = await this.client.query(text, config);
+            const result = await this.client.query(text, config, models);
 
             this.sendToWebview({
                 type: 'queryComplete',
@@ -140,6 +144,21 @@ export class ChatPanel {
             });
         } catch (error) {
             vscode.window.showErrorMessage(`Failed to list configs: ${error}`);
+        }
+    }
+
+    /**
+     * Handle get available models request
+     */
+    private async handleGetAvailableModels(): Promise<void> {
+        try {
+            const result = await this.client.getAvailableModels();
+            this.sendToWebview({
+                type: 'availableModels',
+                data: result
+            });
+        } catch (error) {
+            vscode.window.showErrorMessage(`Failed to get available models: ${error}`);
         }
     }
 
@@ -190,9 +209,84 @@ export class ChatPanel {
         }
 
         .header h1 {
-            margin: 0;
+            margin: 0 0 12px 0;
             font-size: 18px;
             font-weight: 600;
+        }
+
+        .model-selector {
+            margin-top: 8px;
+        }
+
+        .provider-section {
+            margin-bottom: 12px;
+        }
+
+        .provider-header {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            margin-bottom: 6px;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--vscode-panel-border);
+        }
+
+        .provider-models {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding-left: 8px;
+        }
+
+        .model-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            background-color: var(--vscode-input-background);
+            border: 1px solid var(--vscode-input-border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+
+        .model-checkbox:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        .model-checkbox input[type="checkbox"] {
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .model-checkbox.selected {
+            background-color: var(--vscode-inputOption-activeBackground);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .model-checkbox.popular {
+            border-color: var(--vscode-charts-blue);
+        }
+
+        .model-label {
+            font-size: 11px;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .expand-toggle {
+            cursor: pointer;
+            color: var(--vscode-textLink-foreground);
+            text-decoration: underline;
+            font-size: 10px;
+        }
+
+        .expand-toggle:hover {
+            color: var(--vscode-textLink-activeForeground);
         }
 
         .chat-container {
@@ -221,6 +315,10 @@ export class ChatPanel {
             border: 1px solid var(--vscode-inputValidation-errorBorder);
         }
 
+        .message.progress {
+            background-color: var(--vscode-editor-selectionBackground);
+        }
+
         .message-header {
             font-weight: 600;
             margin-bottom: 8px;
@@ -232,6 +330,48 @@ export class ChatPanel {
         .message-content {
             white-space: pre-wrap;
             word-wrap: break-word;
+        }
+
+        .agent-progress {
+            margin-top: 12px;
+        }
+
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 12px;
+        }
+
+        .agent-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .agent-icon.working {
+            background-color: var(--vscode-charts-blue);
+        }
+
+        .agent-icon.complete {
+            background-color: var(--vscode-charts-green);
+        }
+
+        .agent-icon.error {
+            background-color: var(--vscode-charts-red);
+        }
+
+        .agent-name {
+            font-weight: 500;
+        }
+
+        .agent-status {
+            color: var(--vscode-descriptionForeground);
+            font-size: 11px;
         }
 
         .status {
@@ -307,6 +447,11 @@ export class ChatPanel {
 <body>
     <div class="header">
         <h1>🚀 MassGen - Multi-Agent AI Assistant</h1>
+        <div class="model-label">Select Models for Multi-Agent Execution:</div>
+        <div class="model-selector" id="modelSelector">
+            <!-- Models will be loaded dynamically -->
+            <div style="color: var(--vscode-descriptionForeground); font-size: 12px;">Loading available models...</div>
+        </div>
     </div>
 
     <div class="status" id="status">Ready</div>
@@ -328,10 +473,15 @@ export class ChatPanel {
     <script>
         const vscode = acquireVsCodeApi();
         let isProcessing = false;
+        let modelsByProvider = {};
+        let selectedModels = [];
+        let expandedProviders = {}; // Track which providers are expanded
 
         // Notify extension that webview is ready
         window.addEventListener('load', () => {
             vscode.postMessage({ type: 'ready' });
+            // Request available models
+            vscode.postMessage({ type: 'getAvailableModels' });
         });
 
         // Handle messages from extension
@@ -346,17 +496,28 @@ export class ChatPanel {
                     setStatus('Ready');
                     break;
 
+                case 'availableModels':
+                    handleAvailableModels(message.data);
+                    break;
+
                 case 'queryStart':
                     isProcessing = true;
                     updateUI();
                     addMessage('user', 'You', message.data.text);
+                    if (message.data.models && message.data.models.length > 0) {
+                        addAgentProgress(message.data.models);
+                    }
                     setStatus('Processing query...');
                     break;
 
                 case 'queryComplete':
                     isProcessing = false;
                     updateUI();
-                    addMessage('agent', 'MassGen', JSON.stringify(message.data.result, null, 2));
+                    if (typeof message.data.result === 'string') {
+                        addMessage('agent', 'MassGen', message.data.result);
+                    } else {
+                        addMessage('agent', 'MassGen', JSON.stringify(message.data.result, null, 2));
+                    }
                     setStatus('Ready');
                     break;
 
@@ -373,6 +534,168 @@ export class ChatPanel {
             }
         }
 
+        function handleAvailableModels(data) {
+            if (data && data.models_by_provider) {
+                modelsByProvider = data.models_by_provider;
+                // Initialize all providers as collapsed (show only popular)
+                Object.keys(modelsByProvider).forEach(provider => {
+                    expandedProviders[provider] = false;
+                });
+                renderModelSelector();
+            }
+        }
+
+        function renderModelSelector() {
+            const selector = document.getElementById('modelSelector');
+            if (!selector) return;
+
+            if (Object.keys(modelsByProvider).length === 0) {
+                selector.innerHTML = '<div style="color: var(--vscode-descriptionForeground); font-size: 12px;">No models available</div>';
+                return;
+            }
+
+            selector.innerHTML = '';
+
+            Object.entries(modelsByProvider).forEach(([provider, data]) => {
+                const section = document.createElement('div');
+                section.className = 'provider-section';
+
+                // Provider header
+                const header = document.createElement('div');
+                header.className = 'provider-header';
+                header.textContent = provider;
+                section.appendChild(header);
+
+                // Models container
+                const modelsContainer = document.createElement('div');
+                modelsContainer.className = 'provider-models';
+
+                const isExpanded = expandedProviders[provider];
+                const modelsToShow = isExpanded ? data.models : data.popular || data.models.slice(0, 3);
+
+                modelsToShow.forEach((model) => {
+                    const label = document.createElement('label');
+                    label.className = 'model-checkbox';
+
+                    // Highlight popular models
+                    if (data.popular && data.popular.includes(model)) {
+                        label.classList.add('popular');
+                    }
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = model;
+                    checkbox.id = \`model-\${provider}-\${model}\`;
+                    checkbox.onchange = () => toggleModel(model, checkbox.checked);
+
+                    const span = document.createElement('span');
+                    span.textContent = model;
+
+                    label.appendChild(checkbox);
+                    label.appendChild(span);
+                    modelsContainer.appendChild(label);
+                });
+
+                section.appendChild(modelsContainer);
+
+                // Add expand/collapse toggle if there are more models
+                if (data.models.length > modelsToShow.length) {
+                    const toggle = document.createElement('div');
+                    toggle.className = 'expand-toggle';
+                    toggle.style.paddingLeft = '8px';
+                    toggle.style.marginTop = '4px';
+                    toggle.textContent = isExpanded ? 'Show less' : \`Show all (\${data.models.length})\`;
+                    toggle.onclick = () => toggleProvider(provider);
+                    section.appendChild(toggle);
+                }
+
+                selector.appendChild(section);
+            });
+        }
+
+        function toggleProvider(provider) {
+            expandedProviders[provider] = !expandedProviders[provider];
+            renderModelSelector();
+            // Re-check selected models after re-render
+            updateModelCheckboxStyles();
+        }
+
+        function toggleModel(model, checked) {
+            if (checked) {
+                if (!selectedModels.includes(model)) {
+                    selectedModels.push(model);
+                }
+            } else {
+                selectedModels = selectedModels.filter(m => m !== model);
+            }
+            updateModelCheckboxStyles();
+        }
+
+        function updateModelCheckboxStyles() {
+            Object.entries(modelsByProvider).forEach(([provider, data]) => {
+                data.models.forEach((model) => {
+                    const checkbox = document.getElementById(\`model-\${provider}-\${model}\`);
+                    const label = checkbox?.parentElement;
+                    if (label) {
+                        if (selectedModels.includes(model)) {
+                            label.classList.add('selected');
+                            if (checkbox) checkbox.checked = true;
+                        } else {
+                            label.classList.remove('selected');
+                            if (checkbox) checkbox.checked = false;
+                        }
+                    }
+                });
+            });
+        }
+
+        function addAgentProgress(models) {
+            const container = document.getElementById('chatContainer');
+            const progressDiv = document.createElement('div');
+            progressDiv.className = 'message progress';
+            progressDiv.id = 'agent-progress-message';
+
+            let html = \`
+                <div class="message-header">Multi-Agent Execution</div>
+                <div class="message-content">
+                    <div class="agent-progress">
+            \`;
+
+            models.forEach(model => {
+                html += \`
+                    <div class="agent-item" id="agent-\${model.replace(/[^a-zA-Z0-9]/g, '-')}">
+                        <div class="agent-icon working">
+                            <div class="loading" style="width: 8px; height: 8px; border-width: 1px;"></div>
+                        </div>
+                        <span class="agent-name">\${model}</span>
+                        <span class="agent-status">Working...</span>
+                    </div>
+                \`;
+            });
+
+            html += \`
+                    </div>
+                </div>
+            \`;
+
+            progressDiv.innerHTML = html;
+            container.appendChild(progressDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateAgentStatus(model, status, message) {
+            const agentId = 'agent-' + model.replace(/[^a-zA-Z0-9]/g, '-');
+            const agentDiv = document.getElementById(agentId);
+            if (!agentDiv) return;
+
+            const icon = agentDiv.querySelector('.agent-icon');
+            const statusSpan = agentDiv.querySelector('.agent-status');
+
+            icon.className = 'agent-icon ' + status;
+            icon.innerHTML = status === 'complete' ? '✓' : (status === 'error' ? '✗' : '<div class="loading" style="width: 8px; height: 8px; border-width: 1px;"></div>');
+            statusSpan.textContent = message || status;
+        }
+
         function handleMassGenEvent(event) {
             console.log('MassGen event:', event);
 
@@ -383,6 +706,17 @@ export class ChatPanel {
 
                 case 'execution_complete':
                     setStatus('✅ Complete');
+                    break;
+
+                case 'agent_update':
+                    if (event.agent && event.status) {
+                        updateAgentStatus(event.agent, event.status, event.message);
+                    }
+                    break;
+
+                case 'stream_chunk':
+                    // Handle streaming content
+                    console.log('Stream chunk:', event.content);
                     break;
 
                 case 'log':
@@ -399,10 +733,14 @@ export class ChatPanel {
                 return;
             }
 
+            // Use selected models, or fall back to a default
+            const modelsToUse = selectedModels.length > 0 ? selectedModels : null;
+
             vscode.postMessage({
                 type: 'sendQuery',
                 text: text,
-                config: null
+                config: null,
+                models: modelsToUse
             });
 
             input.value = '';

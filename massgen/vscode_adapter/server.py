@@ -34,6 +34,7 @@ class VSCodeServer:
             "analyze": self._handle_analyze,
             "list_configs": self._handle_list_configs,
             "test_connection": self._handle_test_connection,
+            "get_available_models": self._handle_get_available_models,
         }
 
     async def start(self):
@@ -124,15 +125,46 @@ class VSCodeServer:
         """Handle test connection request."""
         return {"success": True, "message": "Connection successful"}
 
+    async def _handle_get_available_models(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle get available models request."""
+        from massgen.utils import MODEL_MAPPINGS
+
+        # Get models from MassGen's official model mappings
+        models_by_provider = {
+            "OpenAI": {
+                "models": MODEL_MAPPINGS.get("openai", []),
+                "popular": ["gpt-4o", "gpt-4o-mini", "o3-mini"],
+            },
+            "Claude": {
+                "models": MODEL_MAPPINGS.get("claude", []),
+                "popular": [
+                    "claude-3-5-sonnet-latest",
+                    "claude-3-5-haiku-latest",
+                ],
+            },
+            "Gemini": {
+                "models": MODEL_MAPPINGS.get("gemini", []),
+                "popular": ["gemini-2.5-flash", "gemini-2.5-pro"],
+            },
+            "Grok": {
+                "models": MODEL_MAPPINGS.get("grok", []),
+                "popular": ["grok-3", "grok-3-mini"],
+            },
+            "Zai": {
+                "models": MODEL_MAPPINGS.get("zai", []),
+                "popular": ["glm-4.5"],
+            },
+        }
+
+        return {"success": True, "models_by_provider": models_by_provider}
+
     async def _handle_query(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle query request from VSCode."""
-        from massgen.agent_config import AgentConfig
-        from massgen.orchestrator import Orchestrator
-        from massgen.cli import create_backend
-        from massgen.chat_agent import create_simple_agent
-
         query_text = params.get("text", "")
         config_path = params.get("config")
+        models = params.get("models", [])
 
         if not query_text:
             raise ValueError("Query text is required")
@@ -140,54 +172,183 @@ class VSCodeServer:
         self._send_log(f"Processing query: {query_text[:50]}...")
 
         try:
-            # Load configuration
-            if config_path:
-                config = self._load_config(config_path)
+            # If models are specified, use multi-agent execution
+            if models and len(models) > 0:
+                return await self._handle_multi_agent_query(query_text, models)
             else:
-                # Use default single agent config
-                config = self._get_default_config()
-
-            # Create a single agent from the config
-            agent_id = config.agent_id or "agent-1"
-
-            # Extract backend type and other params
-            backend_params = config.backend_params.copy()
-            backend_type = backend_params.pop("backend", "openai")
-
-            # Create backend
-            backend = create_backend(backend_type, **backend_params)
-
-            # Wrap backend in a ChatAgent
-            agent = create_simple_agent(
-                backend=backend,
-                system_message="You are a helpful AI assistant.",
-                agent_id=agent_id,
-            )
-
-            # Create agents dictionary
-            agents = {agent_id: agent}
-
-            # Create orchestrator with agents
-            orchestrator = Orchestrator(
-                agents=agents,
-                config=config,
-            )
-
-            # Send execution start event
-            self._send_event(
-                {"type": "execution_start", "query": query_text, "timestamp": None}
-            )
-
-            # Execute query
-            result = await self._execute_query_async(orchestrator, query_text)
-
-            self._send_event({"type": "execution_complete", "result": result})
-
-            return {"success": True, "result": result}
+                return await self._handle_single_agent_query(query_text, config_path)
 
         except Exception as e:
             logger.error(f"Query execution error: {e}")
             self._send_event({"type": "error", "message": str(e)})
+            raise
+
+    async def _handle_single_agent_query(
+        self, query_text: str, config_path: Optional[str]
+    ) -> Dict[str, Any]:
+        """Handle single agent query."""
+        from massgen.agent_config import AgentConfig
+        from massgen.orchestrator import Orchestrator
+        from massgen.cli import create_backend
+        from massgen.chat_agent import create_simple_agent
+
+        # Load configuration
+        if config_path:
+            config = self._load_config(config_path)
+        else:
+            # Use default single agent config
+            config = self._get_default_config()
+
+        # Create a single agent from the config
+        agent_id = config.agent_id or "agent-1"
+
+        # Extract backend type and other params
+        backend_params = config.backend_params.copy()
+        backend_type = backend_params.pop("backend", "openai")
+
+        # Create backend
+        backend = create_backend(backend_type, **backend_params)
+
+        # Wrap backend in a ChatAgent
+        agent = create_simple_agent(
+            backend=backend,
+            system_message="You are a helpful AI assistant.",
+            agent_id=agent_id,
+        )
+
+        # Create agents dictionary
+        agents = {agent_id: agent}
+
+        # Create orchestrator with agents
+        orchestrator = Orchestrator(
+            agents=agents,
+            config=config,
+        )
+
+        # Send execution start event
+        self._send_event(
+            {"type": "execution_start", "query": query_text, "timestamp": None}
+        )
+
+        # Execute query
+        result = await self._execute_query_async(orchestrator, query_text)
+
+        self._send_event({"type": "execution_complete", "result": result})
+
+        return {"success": True, "result": result}
+
+    async def _handle_multi_agent_query(
+        self, query_text: str, models: List[str]
+    ) -> Dict[str, Any]:
+        """Handle multi-agent query with specified models."""
+        from massgen.cli import create_agents_from_config, create_simple_config
+        from massgen.orchestrator import Orchestrator
+        from massgen.utils import get_backend_type_from_model
+
+        self._send_log(f"Creating multi-agent system with models: {models}")
+
+        # Send execution start event
+        self._send_event(
+            {
+                "type": "execution_start",
+                "query": query_text,
+                "models": models,
+                "timestamp": None,
+            }
+        )
+
+        try:
+            # Create agent configurations for each model
+            agents_config = []
+            for i, model in enumerate(models):
+                backend_type = get_backend_type_from_model(model)
+                agent_config = {
+                    "agent_id": f"agent_{i+1}",
+                    "backend": {
+                        "type": backend_type,
+                        "model": model,
+                    },
+                    "system_message": "You are a helpful AI assistant with expertise in various domains.",
+                }
+                agents_config.append(agent_config)
+
+            # Create full config dict
+            config_dict = {
+                "agents": agents_config,
+                "orchestrator": {
+                    "max_duration": 600,
+                    "consensus_threshold": 0.5,
+                    "max_debate_rounds": 2,
+                },
+                "ui": {
+                    "display_type": "simple",
+                    "logging_enabled": False,
+                },
+            }
+
+            # Create agents from config
+            orchestrator_cfg = config_dict.get("orchestrator", {})
+            agents = create_agents_from_config(config_dict, orchestrator_cfg)
+
+            if not agents:
+                raise ValueError("Failed to create agents from models")
+
+            # Create orchestrator
+            orchestrator = Orchestrator(agents=agents)
+
+            # Send agent update events
+            for model in models:
+                self._send_event(
+                    {
+                        "type": "agent_update",
+                        "agent": model,
+                        "status": "working",
+                        "message": "Starting...",
+                    }
+                )
+
+            # Execute query using orchestrator's chat_simple
+            full_response = ""
+            async for chunk in orchestrator.chat_simple(query_text):
+                if chunk.type == "content":
+                    self._send_event(
+                        {
+                            "type": "stream_chunk",
+                            "content": chunk.content,
+                        }
+                    )
+                    full_response += chunk.content
+                elif chunk.type == "error":
+                    raise Exception(chunk.error)
+
+            # Mark all agents as complete
+            for model in models:
+                self._send_event(
+                    {
+                        "type": "agent_update",
+                        "agent": model,
+                        "status": "complete",
+                        "message": "Completed",
+                    }
+                )
+
+            self._send_event({"type": "execution_complete", "result": full_response})
+
+            return {"success": True, "result": full_response}
+
+        except Exception as e:
+            logger.error(f"Multi-agent execution error: {e}")
+            logger.error(traceback.format_exc())
+            # Mark all agents as error
+            for model in models:
+                self._send_event(
+                    {
+                        "type": "agent_update",
+                        "agent": model,
+                        "status": "error",
+                        "message": str(e),
+                    }
+                )
             raise
 
     async def _execute_query_async(
