@@ -86,6 +86,26 @@ except ImportError:
     MCPConfigHelper = None  # type: ignore[assignment]
 
 
+def format_tool_response_as_json(response_text: str) -> str:
+    """
+    Format tool response text as pretty-printed JSON if possible.
+
+    Args:
+        response_text: The raw response text from a tool
+
+    Returns:
+        Pretty-printed JSON string if response is valid JSON, otherwise original text
+    """
+    try:
+        # Try to parse as JSON
+        parsed = json.loads(response_text)
+        # Return pretty-printed JSON with 2-space indentation
+        return json.dumps(parsed, indent=2, ensure_ascii=False)
+    except (json.JSONDecodeError, TypeError):
+        # If not valid JSON, return original text
+        return response_text
+
+
 class GeminiBackend(CustomToolAndMCPBackend):
     """Google Gemini backend using structured output for coordination and MCP tool integration."""
 
@@ -736,10 +756,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                             time.localtime(response_record["timestamp"]),
                                                         )
 
+                                                        # Format response as JSON if possible
+                                                        formatted_response = format_tool_response_as_json(response_text)
+
                                                         yield StreamChunk(
                                                             type="mcp_status",
                                                             status="mcp_tool_response",
-                                                            content=f"✅ MCP Tool Response from {tool_name} at {timestamp_str}: {response_text}",
+                                                            content=f"✅ MCP Tool Response from {tool_name} at {timestamp_str}: {formatted_response}",
                                                             source="mcp_tools",
                                                         )
 
@@ -766,10 +789,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                             time.localtime(response_record["timestamp"]),
                                                         )
 
+                                                        # Format response as JSON if possible
+                                                        formatted_response = format_tool_response_as_json(response_text)
+
                                                         yield StreamChunk(
                                                             type="custom_tool_status",
                                                             status="custom_tool_response",
-                                                            content=f"✅ Custom Tool Response from {tool_name} at {timestamp_str}: {response_text}",
+                                                            content=f"✅ Custom Tool Response from {tool_name} at {timestamp_str}: {formatted_response}",
                                                             source="custom_tools",
                                                         )
 
@@ -861,11 +887,14 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     }
                                 )
 
+                                # Format result as JSON if possible
+                                formatted_result = format_tool_response_as_json(result_str)
+
                                 # Yield execution status
                                 yield StreamChunk(
                                     type="custom_tool_status",
                                     status="custom_tool_executed",
-                                    content=f"✅ Custom Tool Executed: {tool_name} -> {result_str[:200]}{'...' if len(result_str) > 200 else ''}",
+                                    content=f"✅ Custom Tool Executed: {tool_name} -> {formatted_result[:200]}{'...' if len(formatted_result) > 200 else ''}",
                                     source="custom_tools",
                                 )
 
@@ -914,12 +943,26 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
                                 mcp_result = await self._mcp_client.call_tool(prefixed_tool_name, tool_args)
 
+                                # Extract text from CallToolResult object
+                                result_str = None
+                                if mcp_result:
+                                    if hasattr(mcp_result, "content") and mcp_result.content:
+                                        first_content = mcp_result.content[0]
+                                        if hasattr(first_content, "text"):
+                                            result_str = first_content.text
+
+                                if result_str is None:
+                                    result_str = str(mcp_result) if mcp_result else "None"
+
+                                # Format result as JSON if possible
+                                formatted_result = format_tool_response_as_json(result_str)
+                                result_preview = formatted_result[:200]
+
                                 # Yield execution status
-                                result_preview = str(mcp_result)[:200] if mcp_result else "None"
                                 yield StreamChunk(
                                     type="mcp_status",
                                     status="mcp_tool_executed",
-                                    content=f"✅ MCP Tool Executed: {tool_name} -> {result_preview}{'...' if len(str(mcp_result)) > 200 else ''}",
+                                    content=f"✅ MCP Tool Executed: {tool_name} -> {result_preview}{'...' if len(formatted_result) > 200 else ''}",
                                     source="mcp_tools",
                                 )
 
@@ -1247,10 +1290,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                                         time.localtime(response_record["timestamp"]),
                                                                     )
 
+                                                                    # Format response as JSON if possible
+                                                                    formatted_response = format_tool_response_as_json(response_text)
+
                                                                     yield StreamChunk(
                                                                         type="mcp_status",
                                                                         status="mcp_tool_response",
-                                                                        content=f"✅ MCP Tool Response from {tool_name} at {timestamp_str}: {response_text}",
+                                                                        content=f"✅ MCP Tool Response from {tool_name} at {timestamp_str}: {formatted_response}",
                                                                         source="mcp_tools",
                                                                     )
 
@@ -1277,10 +1323,13 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                                         time.localtime(response_record["timestamp"]),
                                                                     )
 
+                                                                    # Format response as JSON if possible
+                                                                    formatted_response = format_tool_response_as_json(response_text)
+
                                                                     yield StreamChunk(
                                                                         type="custom_tool_status",
                                                                         status="custom_tool_response",
-                                                                        content=f"✅ Custom Tool Response from {tool_name} at {timestamp_str}: {response_text}",
+                                                                        content=f"✅ Custom Tool Response from {tool_name} at {timestamp_str}: {formatted_response}",
                                                                         source="custom_tools",
                                                                     )
 
