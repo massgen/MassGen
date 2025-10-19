@@ -7,8 +7,8 @@ agents:
       type: "gemini"
       model: "gemini-2.5-flash"
       custom_tools:
-        - name: "two_num_tool"
-          function: "wrong_two_num_tool"
+        - name: ["two_num_tool"]
+          function: ["wrong_two_num_tool"]
       mcp_servers:
         - name: "weather"
           type: "stdio"

@@ -516,6 +516,14 @@ class ClaudeCodeBackend(LLMBackend):
 
                     num_functions = len(functions)
 
+                    # Process name field (can be str or List[str])
+                    name_field = tool_config.get("name")
+                    names = self._process_field_for_functions(
+                        name_field, num_functions, "name"
+                    )
+                    if names is None:
+                        continue  # Validation error, skip this tool
+
                     # Process description field (can be str or List[str])
                     desc_field = tool_config.get("description")
                     descriptions = self._process_field_for_functions(
@@ -534,16 +542,43 @@ class ClaudeCodeBackend(LLMBackend):
 
                     # Register each function with its corresponding values
                     for i, func in enumerate(functions):
-                        self._custom_tool_manager.add_tool_function(
-                            path=path,
-                            func=func,
-                            category=category,
-                            preset_args=preset_args_list[i],
-                            description=descriptions[i],
-                        )
+                        # Load the function first if custom name is needed
+                        if names[i] and names[i] != func:
+                            # Need to load function and apply custom name
+                            if path:
+                                loaded_func = self._custom_tool_manager._load_function_from_path(path, func)
+                            else:
+                                loaded_func = self._custom_tool_manager._load_builtin_function(func)
 
+                            if loaded_func is None:
+                                logger.error(f"Could not load function '{func}' from path: {path}")
+                                continue
+
+                            # Apply custom name by modifying __name__ attribute
+                            loaded_func.__name__ = names[i]
+
+                            # Register with loaded function (no path needed)
+                            self._custom_tool_manager.add_tool_function(
+                                path=None,
+                                func=loaded_func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+                        else:
+                            # No custom name or same as function name, use normal registration
+                            self._custom_tool_manager.add_tool_function(
+                                path=path,
+                                func=func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+
+                        # Use custom name for logging if provided
+                        registered_name = names[i] if names[i] else func
                         logger.info(
-                            f"Registered custom tool: {func} from {path} "
+                            f"Registered custom tool: {registered_name} from {path} "
                             f"(category: {category}, "
                             f"desc: '{descriptions[i][:50] if descriptions[i] else 'None'}...')"
                         )

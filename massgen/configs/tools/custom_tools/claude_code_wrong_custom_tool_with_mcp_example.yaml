@@ -12,7 +12,7 @@ agents:
       model: "claude-sonnet-4-20250514"
       cwd: "claude_code_workspace"
       custom_tools:
-        - name: "two_num_tool"
+        - name: ["two_num_tool"]
           function: ["wrong_two_num_tool"]
       mcp_servers:
         - name: "weather"
