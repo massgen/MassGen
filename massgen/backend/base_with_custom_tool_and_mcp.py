@@ -183,6 +183,29 @@ class CustomToolAndMCPBackend(LLMBackend):
     def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
         """Register custom tools with the tool manager.
 
+        Supports flexible configuration:
+        - function: str | List[str]
+        - description: str (shared) | List[str] (1-to-1 mapping)
+        - preset_args: dict (shared) | List[dict] (1-to-1 mapping)
+
+        Examples:
+            # Single function
+            function: "my_func"
+            description: "My description"
+
+            # Multiple functions with shared description
+            function: ["func1", "func2"]
+            description: "Shared description"
+
+            # Multiple functions with individual descriptions
+            function: ["func1", "func2"]
+            description: ["Description 1", "Description 2"]
+
+            # Multiple functions with mixed (shared desc, individual args)
+            function: ["func1", "func2"]
+            description: "Shared description"
+            preset_args: [{"arg1": "val1"}, {"arg1": "val2"}]
+
         Args:
             custom_tools: List of custom tool configurations
         """
@@ -203,41 +226,169 @@ class CustomToolAndMCPBackend(LLMBackend):
                     enabled=True,
                 )
 
+        # Register each custom tool
         for tool_config in custom_tools:
             try:
                 if isinstance(tool_config, dict):
-                    # Extract tool configuration
+                    # Extract base configuration
                     path = tool_config.get("path")
-                    func = tool_config.get("function")
                     category = tool_config.get("category", "default")
-                    preset_args = tool_config.get("preset_args")
-                    description = tool_config.get("description")
 
-                    # Register the tool
-                    self.custom_tool_manager.add_tool_function(
-                        path=path,
-                        func=func,
-                        category=category,
-                        preset_args=preset_args,
-                        description=description,
+                    # Normalize function field to list
+                    func_field = tool_config.get("function")
+                    if isinstance(func_field, str):
+                        functions = [func_field]
+                    elif isinstance(func_field, list):
+                        functions = func_field
+                    else:
+                        logger.error(
+                            f"Invalid function field type: {type(func_field)}. "
+                            f"Must be str or List[str]."
+                        )
+                        continue
+
+                    if not functions:
+                        logger.error("Empty function list in tool config")
+                        continue
+
+                    num_functions = len(functions)
+
+                    # Process name field (can be str or List[str])
+                    name_field = tool_config.get("name")
+                    names = self._process_field_for_functions(
+                        name_field, num_functions, "name"
                     )
+                    if names is None:
+                        continue  # Validation error, skip this tool
 
-                    # Track tool name for categorization
-                    if isinstance(func, str):
-                        if func.startswith("custom_tool__"):
-                            self._custom_tool_names.add(func)
-                        else:
-                            self._custom_tool_names.add(f"custom_tool__{func}")
-                    elif callable(func):
-                        if func.__name__.startswith("custom_tool__"):
-                            self._custom_tool_names.add(func.__name__)
-                        else:
-                            self._custom_tool_names.add(f"custom_tool__{func.__name__}")
+                    # Process description field (can be str or List[str])
+                    desc_field = tool_config.get("description")
+                    descriptions = self._process_field_for_functions(
+                        desc_field, num_functions, "description"
+                    )
+                    if descriptions is None:
+                        continue  # Validation error, skip this tool
 
-                    logger.info(f"Registered custom tool: {func}")
+                    # Process preset_args field (can be dict or List[dict])
+                    preset_field = tool_config.get("preset_args")
+                    preset_args_list = self._process_field_for_functions(
+                        preset_field, num_functions, "preset_args"
+                    )
+                    if preset_args_list is None:
+                        continue  # Validation error, skip this tool
+
+                    # Register each function with its corresponding values
+                    for i, func in enumerate(functions):
+                        # Load the function first if custom name is needed
+                        if names[i] and names[i] != func:
+                            # Need to load function and apply custom name
+                            if path:
+                                loaded_func = self.custom_tool_manager._load_function_from_path(path, func)
+                            else:
+                                loaded_func = self.custom_tool_manager._load_builtin_function(func)
+
+                            if loaded_func is None:
+                                logger.error(f"Could not load function '{func}' from path: {path}")
+                                continue
+
+                            # Apply custom name by modifying __name__ attribute
+                            loaded_func.__name__ = names[i]
+
+                            # Register with loaded function (no path needed)
+                            self.custom_tool_manager.add_tool_function(
+                                path=None,
+                                func=loaded_func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+                        else:
+                            # No custom name or same as function name, use normal registration
+                            self.custom_tool_manager.add_tool_function(
+                                path=path,
+                                func=func,
+                                category=category,
+                                preset_args=preset_args_list[i],
+                                description=descriptions[i],
+                            )
+
+                        # Use custom name for logging and tracking if provided
+                        registered_name = names[i] if names[i] else func
+
+                        # Track tool name for categorization
+                        if registered_name.startswith("custom_tool__"):
+                            self._custom_tool_names.add(registered_name)
+                        else:
+                            self._custom_tool_names.add(f"custom_tool__{registered_name}")
+
+                        logger.info(
+                            f"Registered custom tool: {registered_name} from {path} "
+                            f"(category: {category}, "
+                            f"desc: '{descriptions[i][:50] if descriptions[i] else 'None'}...')"
+                        )
 
             except Exception as e:
-                logger.error(f"Failed to register custom tool: {e}")
+                func_name = tool_config.get('function', 'unknown')
+                logger.error(
+                    f"Failed to register custom tool {func_name}: {e}",
+                    exc_info=True
+                )
+
+    def _process_field_for_functions(
+        self,
+        field_value: Any,
+        num_functions: int,
+        field_name: str
+    ) -> Optional[List[Any]]:
+        """Process a config field that can be a single value or list.
+
+        Conversion rules:
+        - None → [None, None, ...] (repeated num_functions times)
+        - Single value (not list) → [value, value, ...] (shared)
+        - List with matching length → use as-is (1-to-1 mapping)
+        - List with wrong length → ERROR (return None)
+
+        Args:
+            field_value: The field value from config
+            num_functions: Number of functions being registered
+            field_name: Name of the field (for error messages)
+
+        Returns:
+            List of values (one per function), or None if validation fails
+
+        Examples:
+            _process_field_for_functions(None, 3, "desc")
+            → [None, None, None]
+
+            _process_field_for_functions("shared", 3, "desc")
+            → ["shared", "shared", "shared"]
+
+            _process_field_for_functions(["a", "b", "c"], 3, "desc")
+            → ["a", "b", "c"]
+
+            _process_field_for_functions(["a", "b"], 3, "desc")
+            → None (error logged)
+        """
+        # Case 1: None or missing field → use None for all functions
+        if field_value is None:
+            return [None] * num_functions
+
+        # Case 2: Single value (not a list) → share across all functions
+        if not isinstance(field_value, list):
+            return [field_value] * num_functions
+
+        # Case 3: List value → must match function count exactly
+        if len(field_value) == num_functions:
+            return field_value
+        else:
+            # Length mismatch → validation error
+            logger.error(
+                f"Configuration error: {field_name} is a list with "
+                f"{len(field_value)} items, but there are {num_functions} functions. "
+                f"Either use a single value (shared) or a list with exactly "
+                f"{num_functions} items (1-to-1 mapping)."
+            )
+            return None
 
     async def _execute_custom_tool(self, call: Dict[str, Any]) -> str:
         """Execute a custom tool and return the result.
