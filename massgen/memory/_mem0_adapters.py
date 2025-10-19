@@ -80,7 +80,7 @@ class MassGenLLMAdapter(LLMBase):
                         {
                             "role": role,
                             "content": content,
-                        }
+                        },
                     )
 
             if not massgen_messages:
@@ -197,7 +197,3 @@ class MassGenEmbeddingAdapter(EmbeddingBase):
             raise RuntimeError(
                 f"Error generating embedding with MassGen backend: {str(e)}",
             ) from e
-
-
-# Import guard to ensure Union is available
-from typing import Union

@@ -105,7 +105,7 @@ class TestOrchestratorSharedConversationMemory:
             [
                 {"role": "assistant", "content": "Previous insight", "agent_id": "agent1"},
                 {"role": "assistant", "content": "Another finding", "agent_id": "agent2"},
-            ]
+            ],
         )
 
         agents = {
@@ -181,7 +181,7 @@ class TestOrchestratorSharedConversationMemory:
                 "role": "assistant",
                 "content": "Agent1's discovery",
                 "agent_id": "agent1",
-            }
+            },
         )
 
         agents = {
@@ -355,7 +355,7 @@ class TestOrchestratorBothMemories:
                 "role": "assistant",
                 "content": "Recent conversation",
                 "agent_id": "agent1",
-            }
+            },
         )
 
         persist_memory = create_mock_persistent_memory()

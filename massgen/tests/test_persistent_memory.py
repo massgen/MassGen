@@ -265,7 +265,7 @@ class TestPersistentMemoryMocked:
             },
         )
 
-        result = await memory.recall_from_memory(
+        await memory.recall_from_memory(
             keywords=["test"],
             limit=3,
         )
@@ -370,7 +370,7 @@ class TestPersistentMemoryIntegration:
             await memory.record(
                 [
                     {"role": "user", "content": "Test message"},
-                ]
+                ],
             )
 
             assert memory.agent_id == "agent_1"
