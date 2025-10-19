@@ -51,6 +51,7 @@ dependencies = [
     "ag2>=0.9.10",
     "pyautogen>=0.10.0",
     "vertexai>=1.71.1",
+    "mem0ai>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -254,4 +255,6 @@ dev = [
     "sphinx-design>=0.6.1",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx-book-theme>=1.1.4",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
 ]

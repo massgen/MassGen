@@ -7,7 +7,7 @@ backends to work seamlessly with the mem0 memory system.
 """
 
 import asyncio
-from typing import Any, Dict, List, Literal, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Literal, Optional, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     from mem0.configs.embeddings.base import BaseEmbedderConfig
