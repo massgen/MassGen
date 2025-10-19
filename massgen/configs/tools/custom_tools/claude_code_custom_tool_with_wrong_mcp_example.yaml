@@ -19,7 +19,7 @@ agents:
           type: "stdio"
           command: "python"
           args: ["-u", "-m", "aaa.bbb"]  # Wrong MCP command to demonstrate error handling
-    system_message: |
+    append_system_prompt: |
       You are an AI assistant with access to a custom math calculation tool and a weather information MCP tool.
 
       The two_num_tool is available as a custom tool that can add two numbers together.
