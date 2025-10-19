@@ -10,7 +10,7 @@ agents:
   - id: "claude_code_custom_tools"
     backend:
       type: "claude_code"
-      model: "claude-3-5-sonnet-20241022"
+      model: "claude-sonnet-4-20250514"
       cwd: "claude_code_workspace"
       custom_tools:
         - name: "two_num_tool"
@@ -18,7 +18,7 @@ agents:
           path: "massgen/tool/_basic/_two_num_tool.py"
           function: "two_num_tool"
           description: "Add two numbers together"
-    system_message: |
+    append_system_prompt: |
       You are an AI assistant with access to custom calculation tools in addition to your built-in Claude Code tools.
 
       When users ask about calculations or math operations, check if a custom tool is available and use it.

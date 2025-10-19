@@ -73,7 +73,9 @@ from ..logger_config import (
     log_backend_activity,
     log_backend_agent_message,
     log_stream_chunk,
+    logger,
 )
+from ..tool import ToolManager
 from .base import FilesystemSupport, LLMBackend, StreamChunk
 
 
@@ -147,6 +149,36 @@ class ClaudeCodeBackend(LLMBackend):
         self._cwd: str = str(Path(str(self.filesystem_manager.get_current_workspace())).resolve())
 
         self._pending_system_prompt: Optional[str] = None  # Windows-only workaround
+
+        # Custom tools support - initialize ToolManager if custom_tools are provided
+        self._custom_tool_manager: Optional[ToolManager] = None
+        custom_tools = kwargs.get("custom_tools", [])
+        if custom_tools:
+            self._custom_tool_manager = ToolManager()
+            self._register_custom_tools(custom_tools)
+
+            # Create SDK MCP Server from custom tools and inject into mcp_servers
+            sdk_mcp_server = self._create_sdk_mcp_server_from_custom_tools()
+            if sdk_mcp_server:
+                # Ensure mcp_servers exists in config
+                if "mcp_servers" not in self.config:
+                    self.config["mcp_servers"] = {}
+
+                # Add SDK MCP server (convert to list format if dict format is used)
+                if isinstance(self.config["mcp_servers"], dict):
+                    # Already in dict format
+                    self.config["mcp_servers"]["massgen_custom_tools"] = sdk_mcp_server
+                elif isinstance(self.config["mcp_servers"], list):
+                    # List format - add as dict entry with name
+                    self.config["mcp_servers"].append({
+                        "name": "massgen_custom_tools",
+                        "server": sdk_mcp_server
+                    })
+                else:
+                    # Initialize as dict with SDK server
+                    self.config["mcp_servers"] = {"massgen_custom_tools": sdk_mcp_server}
+
+                logger.info(f"Registered SDK MCP server with {len(self._custom_tool_manager.registered_tools)} custom tools")
 
     def _setup_windows_subprocess_cleanup_suppression(self):
         """Comprehensive Windows subprocess cleanup warning suppression."""
@@ -404,6 +436,169 @@ class ClaudeCodeBackend(LLMBackend):
     #     """Check if current agent has permission for path access."""
     #     # Will integrate with PermissionManager
     #     pass
+
+    def _register_custom_tools(self, custom_tools: List[Dict[str, Any]]) -> None:
+        """Register custom tools with the tool manager.
+
+        Args:
+            custom_tools: List of custom tool configurations
+        """
+        if not self._custom_tool_manager:
+            logger.warning("Custom tool manager not initialized, cannot register tools")
+            return
+
+        # Collect unique categories and create them if needed
+        categories = set()
+        for tool_config in custom_tools:
+            if isinstance(tool_config, dict):
+                category = tool_config.get("category", "default")
+                if category != "default":
+                    categories.add(category)
+
+        # Create categories that don't exist
+        for category in categories:
+            if category not in self._custom_tool_manager.tool_categories:
+                self._custom_tool_manager.setup_category(
+                    category_name=category,
+                    description=f"Custom {category} tools",
+                    enabled=True,
+                )
+
+        # Register each custom tool
+        for tool_config in custom_tools:
+            try:
+                if isinstance(tool_config, dict):
+                    # Extract tool configuration
+                    path = tool_config.get("path")
+                    func = tool_config.get("function")
+                    category = tool_config.get("category", "default")
+                    preset_args = tool_config.get("preset_args")
+                    description = tool_config.get("description")
+
+                    # Register the tool
+                    self._custom_tool_manager.add_tool_function(
+                        path=path,
+                        func=func,
+                        category=category,
+                        preset_args=preset_args,
+                        description=description,
+                    )
+
+                    logger.info(f"Registered custom tool: {func} from {path}")
+
+            except Exception as e:
+                logger.error(f"Failed to register custom tool {tool_config.get('function', 'unknown')}: {e}")
+
+    async def _execute_massgen_custom_tool(self, tool_name: str, args: dict) -> dict:
+        """Execute a MassGen custom tool and convert result to MCP format.
+
+        Args:
+            tool_name: Name of the custom tool to execute
+            args: Arguments for the tool
+
+        Returns:
+            MCP-formatted response with content blocks
+        """
+        if not self._custom_tool_manager:
+            return {
+                "content": [
+                    {"type": "text", "text": "Error: Custom tool manager not initialized"}
+                ]
+            }
+
+        tool_request = {
+            "name": tool_name,
+            "input": args
+        }
+
+        result_text = ""
+        try:
+            async for result in self._custom_tool_manager.execute_tool(tool_request):
+                # Accumulate ExecutionResult blocks
+                if hasattr(result, "output_blocks"):
+                    for block in result.output_blocks:
+                        if hasattr(block, "data"):
+                            result_text += str(block.data)
+                        elif hasattr(block, "content"):
+                            result_text += str(block.content)
+                elif hasattr(result, "content"):
+                    result_text += str(result.content)
+                else:
+                    result_text += str(result)
+        except Exception as e:
+            logger.error(f"Error executing custom tool {tool_name}: {e}")
+            result_text = f"Error: {str(e)}"
+
+        # Return MCP format response
+        return {
+            "content": [
+                {"type": "text", "text": result_text or "Tool executed successfully"}
+            ]
+        }
+
+    def _create_sdk_mcp_server_from_custom_tools(self):
+        """Convert MassGen custom tools to SDK MCP Server.
+
+        Returns:
+            SDK MCP Server instance or None if no tools or SDK unavailable
+        """
+        if not self._custom_tool_manager:
+            return None
+
+        try:
+            from claude_agent_sdk import create_sdk_mcp_server, tool
+        except ImportError:
+            logger.warning("claude-agent-sdk not available, custom tools will not be registered")
+            return None
+
+        # Get all registered custom tools
+        tool_schemas = self._custom_tool_manager.fetch_tool_schemas()
+        if not tool_schemas:
+            logger.info("No custom tools to register")
+            return None
+
+        # Convert each tool to MCP tool format
+        mcp_tools = []
+        for tool_schema in tool_schemas:
+            try:
+                tool_name = tool_schema["function"]["name"]
+                tool_desc = tool_schema["function"].get("description", "")
+                tool_params = tool_schema["function"]["parameters"]
+
+                # Create async wrapper for MassGen tool
+                # Use default argument to capture tool_name in closure
+                async def tool_wrapper(args, tool_name=tool_name):
+                    return await self._execute_massgen_custom_tool(tool_name, args)
+
+                # Register using SDK tool decorator
+                mcp_tool = tool(
+                    name=tool_name,
+                    description=tool_desc,
+                    input_schema=tool_params
+                )(tool_wrapper)
+
+                mcp_tools.append(mcp_tool)
+                logger.info(f"Converted custom tool to MCP: {tool_name}")
+
+            except Exception as e:
+                logger.error(f"Failed to convert tool {tool_schema.get('function', {}).get('name', 'unknown')} to MCP: {e}")
+
+        if not mcp_tools:
+            logger.warning("No custom tools successfully converted to MCP")
+            return None
+
+        # Create SDK MCP server
+        try:
+            sdk_mcp_server = create_sdk_mcp_server(
+                name="massgen_custom_tools",
+                version="1.0.0",
+                tools=mcp_tools
+            )
+            logger.info(f"Created SDK MCP server with {len(mcp_tools)} custom tools")
+            return sdk_mcp_server
+        except Exception as e:
+            logger.error(f"Failed to create SDK MCP server: {e}")
+            return None
 
     def _build_system_prompt_with_workflow_tools(self, tools: List[Dict[str, Any]], base_system: Optional[str] = None) -> str:
         """Build system prompt that includes workflow tools information.
@@ -703,7 +898,7 @@ class ClaudeCodeBackend(LLMBackend):
             "api_key",
             "allowed_tools",
             "permission_mode",
-            "custom_tools",  # Not supported by ClaudeCodeBackend (uses LLMBackend, not CustomToolAndMCPBackend)
+            "custom_tools",  # Handled separately via SDK MCP server conversion
         }
 
         # Get cwd from filesystem manager (always available since we require it in __init__)
@@ -839,6 +1034,7 @@ class ClaudeCodeBackend(LLMBackend):
                 system_content = ""
 
             # Build system prompt with tools information
+            # This must be done before any conditional paths to ensure it's always defined
             workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
 
             # Windows-specific handling: detect complex prompts that cause subprocess hang
