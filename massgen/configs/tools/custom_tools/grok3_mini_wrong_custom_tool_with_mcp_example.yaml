@@ -1,15 +1,14 @@
-# MassGen Configuration: Gemini with MCP Integration
+# MassGen Configuration: Grok-3 Mini with Wrong Custom Tool and MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_wrong_custom_tool_with_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/grok3_mini_wrong_custom_tool_with_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
 agents:
-  - id: "gpt-oss-custom_tool" # Cerebras AI GPT-OSS
+  - id: "grok3_mini_custom_tool"
     backend:
-      type: "chatcompletion"
-      model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1"
+      type: "grok"
+      model: "grok-3-mini"
       custom_tools:
-        - name: ["two_num_tool"]
-          function: ["wrong_two_num_tool"]
+        - name: "two_num_tool"
+          function: "wrong_two_num_tool"
       mcp_servers:
         - name: "weather"
           type: "stdio"
@@ -30,5 +29,5 @@ agents:
       When users ask about weather conditions, forecasts, or alerts, include the location and time frame in your
       response and provide concise, up-to-date information using the integrated tools.
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

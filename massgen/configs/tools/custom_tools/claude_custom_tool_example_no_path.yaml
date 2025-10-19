@@ -1,16 +1,14 @@
-# MassGen Configuration: Gemini with MCP Integration
+# MassGen Configuration: Claude with Custom Tool (No Path)
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt5_nano_custom_tool_example.yaml "whats the sum of 123 and 456?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/claude_custom_tool_example_no_path.yaml "whats the sum of 123 and 456?"
 agents:
-  - id: "gpt5_nano_custom_tool" # OpenAI GPT-5 Nano
+  - id: "claude_custom_tool" # Anthropic Claude
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      type: "claude"
+      model: "claude-sonnet-4-20250514"
       custom_tools:
-        - name: ["two_num_tool"]
-          category: "math"
-          path: "massgen/tool/_basic/_two_num_tool.py"
-          function: ["two_num_tool"]
+        - name: "two_num_tool"
+          function: "two_num_tool"
     system_message: |
       You are an AI assistant with access to a custom math calculation tool.
 

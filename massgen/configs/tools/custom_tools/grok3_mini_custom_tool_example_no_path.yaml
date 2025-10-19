@@ -1,16 +1,14 @@
-# MassGen Configuration: Gemini with MCP Integration
+# MassGen Configuration: Grok-3 Mini with Custom Tool (No Path)
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt5_nano_custom_tool_example.yaml "whats the sum of 123 and 456?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/grok3_mini_custom_tool_example_no_path.yaml "whats the sum of 123 and 456?"
 agents:
-  - id: "gpt5_nano_custom_tool" # OpenAI GPT-5 Nano
+  - id: "grok3_mini_custom_tool"
     backend:
-      type: "openai"
-      model: "gpt-5-nano"
+      type: "grok"
+      model: "grok-3-mini"
       custom_tools:
-        - name: ["two_num_tool"]
-          category: "math"
-          path: "massgen/tool/_basic/_two_num_tool.py"
-          function: ["two_num_tool"]
+        - name: "two_num_tool"
+          function: "two_num_tool"
     system_message: |
       You are an AI assistant with access to a custom math calculation tool.
 
@@ -20,5 +18,5 @@ agents:
       When users ask about adding two numbers together, use the two_num_tool to calculate the sum and provide
       a clear, accurate result.
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

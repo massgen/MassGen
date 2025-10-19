@@ -1,20 +1,19 @@
-# MassGen Configuration: Gemini with MCP Integration
+# MassGen Configuration: GPT-5 Nano with Wrong MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_wrong_custom_tool_with_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt5_nano_custom_tool_with_wrong_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
 agents:
-  - id: "gpt-oss-custom_tool" # Cerebras AI GPT-OSS
+  - id: "gpt5_nano_custom_tool" # OpenAI GPT-5 Nano
     backend:
-      type: "chatcompletion"
-      model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1"
+      type: "openai"
+      model: "gpt-5-nano"
       custom_tools:
         - name: ["two_num_tool"]
-          function: ["wrong_two_num_tool"]
+          function: ["two_num_tool"]
       mcp_servers:
         - name: "weather"
           type: "stdio"
-          command: "npx"
-          args: ["-y", "@fak111/weather-mcp"]
+          command: "python"
+          args: ["-u", "-m", "aaa.bbb"]  # Wrong MCP command to demonstrate error handling
     system_message: |
       You are an AI assistant with access to a custom math calculation tool and a weather information MCP tool.
 

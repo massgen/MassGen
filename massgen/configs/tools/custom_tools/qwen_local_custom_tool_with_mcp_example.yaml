@@ -1,15 +1,16 @@
-# MassGen Configuration: Gemini with MCP Integration
+# MassGen Configuration: Qwen Local with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_wrong_custom_tool_with_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/qwen_local_custom_tool_with_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
 agents:
-  - id: "gpt-oss-custom_tool" # Cerebras AI GPT-OSS
+  - id: "qwen3-4b-custom_tool" # Qwen-3-4B Local
     backend:
-      type: "chatcompletion"
-      model: "gpt-oss-120b"
-      base_url: "https://api.cerebras.ai/v1"
+      type: "lmstudio"
+      model: "qwen/qwen3-4b-2507"
       custom_tools:
-        - name: ["two_num_tool"]
-          function: ["wrong_two_num_tool"]
+        - name: "two_num_tool"
+          category: "math"
+          path: "massgen/tool/_basic/_two_num_tool.py"
+          function: "two_num_tool"
       mcp_servers:
         - name: "weather"
           type: "stdio"

@@ -1,17 +1,15 @@
-# MassGen Configuration: Gemini with MCP Integration
+# MassGen Configuration: Qwen API with Custom Tool (No Path)
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt_oss_custom_tool_example.yaml "whats the sum of 123 and 456?"
+#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/qwen_api_custom_tool_example_no_path.yaml "whats the sum of 123 and 456?"
 agents:
-  - id: "gpt-oss-custom_tool" # Cerebras AI GPT-OSS
+  - id: "qwen-mcp_weather" # Cerebras AI
     backend:
       type: "chatcompletion"
-      model: "gpt-oss-120b"
+      model: "qwen-3-235b-a22b-instruct-2507"
       base_url: "https://api.cerebras.ai/v1"
       custom_tools:
-        - name: ["two_num_tool"]
-          category: "math"
-          path: "massgen/tool/_basic/_two_num_tool.py"
-          function: ["two_num_tool"]
+        - name: "two_num_tool"
+          function: "two_num_tool"
     system_message: |
       You are an AI assistant with access to a custom math calculation tool.
 
@@ -21,5 +19,5 @@ agents:
       When users ask about adding two numbers together, use the two_num_tool to calculate the sum and provide
       a clear, accurate result.
 ui:
-  display_type: "simple"
+  display_type: "rich_terminal"
   logging_enabled: true

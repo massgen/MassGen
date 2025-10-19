@@ -2151,7 +2151,7 @@ class Orchestrator(ChatAgent):
                             type=chunk_type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
-                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source", "timestamp", "sequence_number"]},
                         )
                     else:
                         log_stream_chunk(
@@ -2164,7 +2164,7 @@ class Orchestrator(ChatAgent):
                             type=chunk_type,
                             content=getattr(chunk, "content", ""),
                             source=selected_agent_id,
-                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source"]},
+                            **{k: v for k, v in chunk.__dict__.items() if k not in ["type", "content", "source", "timestamp", "sequence_number"]},
                         )
 
         finally:
