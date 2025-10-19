@@ -14,7 +14,7 @@ agents:
       cwd: "claude_code_workspace"
       custom_tools:
         - name: "two_num_tool"
-          function: "two_num_tool"
+          function: ["two_num_tool"]
     append_system_prompt: |
       You are an AI assistant with access to a custom math calculation tool.
 

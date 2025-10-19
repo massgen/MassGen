@@ -16,8 +16,8 @@ agents:
         - name: "two_num_tool"
           category: "math"
           path: "massgen/tool/_basic/_two_num_tool.py"
-          function: "two_num_tool"
-          description: "Add two numbers together"
+          function: ["two_num_tool"]
+          description: ["Add two numbers together"]
     append_system_prompt: |
       You are an AI assistant with access to custom calculation tools in addition to your built-in Claude Code tools.
 

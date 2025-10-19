@@ -15,7 +15,7 @@ agents:
         - name: "two_num_tool"
           category: "math"
           path: "massgen/tool/_basic/_two_num_tool.py"
-          function: "two_num_tool"
+          function: ["two_num_tool"]
       mcp_servers:
         - name: "weather"
           type: "stdio"
