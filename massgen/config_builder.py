@@ -25,7 +25,11 @@ from rich.prompt import Confirm, Prompt
 from rich.table import Table
 from rich.theme import Theme
 
-from massgen.backend.capabilities import BACKEND_CAPABILITIES, get_capabilities
+from massgen.backend.capabilities import (
+    BACKEND_CAPABILITIES,
+    get_capabilities,
+    has_capability,
+)
 
 # Load environment variables
 load_dotenv()
@@ -871,6 +875,8 @@ class ConfigBuilder:
                         skipped_settings.append("mcp_servers (not supported by target provider)")
 
                 # Copy tool flags if they exist and are supported by target
+                target_caps = get_capabilities(target_backend_type)
+
                 for key in [
                     "enable_web_search",
                     "enable_code_execution",
@@ -879,19 +885,21 @@ class ConfigBuilder:
                     "command_line_execution_mode",
                 ]:
                     if key in source_backend:
-                        # Check if target supports this tool
+                        # Check if target supports this specific tool
                         if key == "enable_web_search":
-                            if target_backend_type in ["openai", "claude", "gemini", "grok", "azure_openai"]:
-                                preserved_settings[key] = source_backend[key]
-                            else:
-                                skipped_settings.append(f"{key} (not supported by {target_backend_type})")
-                        elif key == "enable_code_execution":
-                            if target_backend_type in ["claude", "gemini"]:
+                            if has_capability(target_backend_type, "web_search"):
                                 preserved_settings[key] = source_backend[key]
                             else:
                                 skipped_settings.append(f"{key} (not supported by {target_backend_type})")
                         elif key == "enable_code_interpreter":
-                            if target_backend_type in ["openai", "azure_openai"]:
+                            # code_interpreter is OpenAI/Azure-specific
+                            if target_caps and "code_interpreter" in target_caps.builtin_tools:
+                                preserved_settings[key] = source_backend[key]
+                            else:
+                                skipped_settings.append(f"{key} (not supported by {target_backend_type})")
+                        elif key == "enable_code_execution":
+                            # code_execution is Claude/Gemini-specific
+                            if target_caps and "code_execution" in target_caps.builtin_tools:
                                 preserved_settings[key] = source_backend[key]
                             else:
                                 skipped_settings.append(f"{key} (not supported by {target_backend_type})")
