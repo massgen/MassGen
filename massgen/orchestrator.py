@@ -1172,10 +1172,16 @@ class Orchestrator(ChatAgent):
         # Determine threshold based on setting
         if self.config.answer_novelty_requirement == "strict":
             threshold = 0.50  # Reject if >50% overlap (strict)
-            error_msg = "Your answer is too similar to existing answers (>50% overlap). Please use a fundamentally different approach, employ different tools/techniques, or vote for an existing answer."
+            error_msg = (
+                "Your answer is too similar to existing answers (>50% overlap). Please use a fundamentally different approach, employ different tools/techniques, or vote for an existing answer."
+            )
         else:  # balanced
             threshold = 0.70  # Reject if >70% overlap (balanced)
-            error_msg = "Your answer is too similar to existing answers (>70% overlap). Please provide a meaningfully different solution with new insights, approaches, or tools, or vote for an existing answer."
+            error_msg = (
+                "Your answer is too similar to existing answers (>70% overlap). "
+                "Please provide a meaningfully different solution with new insights, "
+                "approaches, or tools, or vote for an existing answer."
+            )
 
         # Check similarity against all existing answers
         for agent_id, existing_answer in existing_answers.items():

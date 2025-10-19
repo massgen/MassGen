@@ -71,7 +71,6 @@ class MessageTemplates:
         # Make sure you actually call `vote` or `new_answer` (in tool call format).
         #
         # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
-
         # Determine evaluation criteria based on voting sensitivity
         if self._voting_sensitivity == "strict":
             evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE exceptionally well? Consider:

@@ -871,8 +871,13 @@ class ConfigBuilder:
                         skipped_settings.append("mcp_servers (not supported by target provider)")
 
                 # Copy tool flags if they exist and are supported by target
-                for key in ["enable_web_search", "enable_code_execution", "enable_code_interpreter",
-                           "enable_mcp_command_line", "command_line_execution_mode"]:
+                for key in [
+                    "enable_web_search",
+                    "enable_code_execution",
+                    "enable_code_interpreter",
+                    "enable_mcp_command_line",
+                    "command_line_execution_mode",
+                ]:
                     if key in source_backend:
                         # Check if target supports this tool
                         if key == "enable_web_search":
@@ -909,7 +914,7 @@ class ConfigBuilder:
                 cloned["backend"] = {
                     "type": target_backend_type,
                     "model": target_provider_info.get("models", ["default"])[0],
-                    **preserved_settings
+                    **preserved_settings,
                 }
 
                 # Store skipped settings for later warning
@@ -1970,7 +1975,7 @@ class ConfigBuilder:
                                     # Show skipped settings warning if any
                                     skipped = agent.get("_skipped_settings", [])
                                     if skipped:
-                                        console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                        console.print("   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
                                         for setting in skipped:
                                             console.print(f"      • {setting}")
                                     console.print()
@@ -1986,10 +1991,12 @@ class ConfigBuilder:
                                         model_choice = questionary.select(
                                             f"Select {target_backend_type} model:",
                                             choices=target_provider_info["models"],
-                                            style=questionary.Style([
-                                                ("selected", "fg:cyan bold"),
-                                                ("pointer", "fg:cyan bold"),
-                                            ]),
+                                            style=questionary.Style(
+                                                [
+                                                    ("selected", "fg:cyan bold"),
+                                                    ("pointer", "fg:cyan bold"),
+                                                ],
+                                            ),
                                         ).ask()
 
                                         if model_choice:
@@ -2022,7 +2029,7 @@ class ConfigBuilder:
                                     # Show skipped settings warning if any
                                     skipped = agent.get("_skipped_settings", [])
                                     if skipped:
-                                        console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                        console.print("   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
                                         for setting in skipped:
                                             console.print(f"      • {setting}")
                                     console.print()
@@ -2038,10 +2045,12 @@ class ConfigBuilder:
                                         model_choice = questionary.select(
                                             f"Select {target_backend_type} model:",
                                             choices=target_provider_info["models"],
-                                            style=questionary.Style([
-                                                ("selected", "fg:cyan bold"),
-                                                ("pointer", "fg:cyan bold"),
-                                            ]),
+                                            style=questionary.Style(
+                                                [
+                                                    ("selected", "fg:cyan bold"),
+                                                    ("pointer", "fg:cyan bold"),
+                                                ],
+                                            ),
                                         ).ask()
 
                                         if model_choice:
@@ -2100,7 +2109,7 @@ class ConfigBuilder:
                                 # Show skipped settings warning if any
                                 skipped = agent.get("_skipped_settings", [])
                                 if skipped:
-                                    console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                    console.print("   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
                                     for setting in skipped:
                                         console.print(f"      • {setting}")
                                 console.print()
@@ -2116,10 +2125,12 @@ class ConfigBuilder:
                                     model_choice = questionary.select(
                                         f"Select {target_backend_type} model:",
                                         choices=target_provider_info["models"],
-                                        style=questionary.Style([
-                                            ("selected", "fg:cyan bold"),
-                                            ("pointer", "fg:cyan bold"),
-                                        ]),
+                                        style=questionary.Style(
+                                            [
+                                                ("selected", "fg:cyan bold"),
+                                                ("pointer", "fg:cyan bold"),
+                                            ],
+                                        ),
                                     ).ask()
 
                                     if model_choice:
@@ -2152,7 +2163,7 @@ class ConfigBuilder:
                                 # Show skipped settings warning if any
                                 skipped = agent.get("_skipped_settings", [])
                                 if skipped:
-                                    console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                    console.print("   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
                                     for setting in skipped:
                                         console.print(f"      • {setting}")
                                 console.print()
@@ -2168,10 +2179,12 @@ class ConfigBuilder:
                                     model_choice = questionary.select(
                                         f"Select {target_backend_type} model:",
                                         choices=target_provider_info["models"],
-                                        style=questionary.Style([
-                                            ("selected", "fg:cyan bold"),
-                                            ("pointer", "fg:cyan bold"),
-                                        ]),
+                                        style=questionary.Style(
+                                            [
+                                                ("selected", "fg:cyan bold"),
+                                                ("pointer", "fg:cyan bold"),
+                                            ],
+                                        ),
                                     ).ask()
 
                                     if model_choice:
@@ -2312,7 +2325,7 @@ class ConfigBuilder:
                 voting_input = Prompt.ask(
                     "  [prompt]Voting sensitivity[/prompt]",
                     choices=["l", "b", "s"],
-                    default="l"
+                    default="l",
                 )
 
                 # Map input to full value
@@ -2332,7 +2345,7 @@ class ConfigBuilder:
 
                 limit_input = Prompt.ask(
                     "  [prompt]Max new answers per agent (leave empty for unlimited)[/prompt]",
-                    default=""
+                    default="",
                 )
 
                 if limit_input.strip():
@@ -2363,7 +2376,7 @@ class ConfigBuilder:
                 novelty_input = Prompt.ask(
                     "  [prompt]Answer novelty requirement[/prompt]",
                     choices=["l", "b", "s"],
-                    default="l"
+                    default="l",
                 )
 
                 # Map input to full value

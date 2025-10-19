@@ -102,7 +102,7 @@ MASSGEN_QUESTIONARY_STYLE = Style(
         ("instruction", "fg:#808080"),  # Gray instructions
         ("text", "fg:#ffffff"),  # White text
         ("disabled", "fg:#6c6c6c italic"),  # Gray disabled
-    ]
+    ],
 )
 
 
@@ -1360,7 +1360,7 @@ def interactive_config_selector() -> Optional[str]:
         summary_table.add_row(
             "👤 Your Configs",
             str(len(configs["User Configs"])),
-            f"~/.config/massgen/agents/",
+            "~/.config/massgen/agents/",
         )
         choices.append(questionary.Separator("\n─────────────────────────────────"))
         for display_name, path in configs["User Configs"]:
@@ -1368,7 +1368,7 @@ def interactive_config_selector() -> Optional[str]:
                 questionary.Choice(
                     title=f"  👤  {display_name}",
                     value=str(path),
-                )
+                ),
             )
 
     # Project configs
@@ -1376,7 +1376,7 @@ def interactive_config_selector() -> Optional[str]:
         summary_table.add_row(
             "📁 Project Configs",
             str(len(configs["Project Configs"])),
-            f".massgen/",
+            ".massgen/",
         )
         if choices:
             choices.append(questionary.Separator("\n─────────────────────────────────"))
@@ -1387,7 +1387,7 @@ def interactive_config_selector() -> Optional[str]:
                 questionary.Choice(
                     title=f"  📁  {display_name}",
                     value=str(path),
-                )
+                ),
             )
 
     # Current directory configs
@@ -1406,7 +1406,7 @@ def interactive_config_selector() -> Optional[str]:
                 questionary.Choice(
                     title=f"  📂  {display_name}",
                     value=str(path),
-                )
+                ),
             )
 
     # Package examples
@@ -1422,7 +1422,7 @@ def interactive_config_selector() -> Optional[str]:
             questionary.Choice(
                 title=f"  📦  Browse {len(configs['Package Examples'])} example configs  →",
                 value="__browse_examples__",
-            )
+            ),
         )
 
     # Display summary table in a panel
@@ -1534,7 +1534,7 @@ def _select_package_example(examples: List[Tuple[str, Path]], console: Console) 
             questionary.Choice(
                 title=f"  {emoji}  {category.title()}  ({count} config{'s' if count != 1 else ''})",
                 value=category,
-            )
+            ),
         )
 
     # Display category summary in a panel
@@ -1595,7 +1595,7 @@ def _select_package_example(examples: List[Tuple[str, Path]], console: Console) 
             questionary.Choice(
                 title=f"  {idx:2d}. {short_name}",
                 value=str(path),
-            )
+            ),
         )
 
     # Display configs in a panel
@@ -2132,7 +2132,7 @@ async def main(args):
             # For single question mode, save metadata now (use original config before .massgen/ relocation)
             save_execution_metadata(
                 query=args.question,
-                config_path=str(resolved_path) if args.config and 'resolved_path' in locals() else None,
+                config_path=str(resolved_path) if args.config and "resolved_path" in locals() else None,
                 config_content=original_config_for_metadata,
                 cli_args=vars(args),
             )
