@@ -1,0 +1,119 @@
+{
+  "name": "massgen-vscode",
+  "displayName": "MassGen - Multi-Agent AI Assistant",
+  "description": "Multi-Agent Scaling System for GenAI - Collaborative AI powered by multiple frontier models",
+  "version": "0.1.0",
+  "publisher": "massgen",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Machine Learning",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "ai",
+    "multi-agent",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "code assistant",
+    "ai collaboration"
+  ],
+  "activationEvents": [
+    "onCommand:massgen.chat",
+    "onCommand:massgen.analyzeCode",
+    "onCommand:massgen.configure"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "massgen.chat",
+        "title": "MassGen: Start Chat",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "massgen.analyzeCode",
+        "title": "MassGen: Analyze Code Selection",
+        "icon": "$(search)"
+      },
+      {
+        "command": "massgen.configure",
+        "title": "MassGen: Configure Agents",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "massgen.testConnection",
+        "title": "MassGen: Test Connection"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "massgen.analyzeCode",
+          "group": "massgen",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "massgen",
+          "title": "MassGen",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "massgen": [
+        {
+          "id": "massgenAgents",
+          "name": "Agents"
+        },
+        {
+          "id": "massgenHistory",
+          "name": "History"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "MassGen",
+      "properties": {
+        "massgen.pythonPath": {
+          "type": "string",
+          "default": "python",
+          "description": "Path to Python executable with MassGen installed"
+        },
+        "massgen.defaultConfig": {
+          "type": "string",
+          "description": "Path to default MassGen configuration file"
+        },
+        "massgen.enableLogging": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable detailed logging"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/node": "^18.x",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {}
+}
