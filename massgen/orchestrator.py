@@ -42,6 +42,7 @@ from .logger_config import (
     log_stream_chunk,
     log_tool_call,
 )
+from .memory import ConversationMemory, PersistentMemoryBase
 from .message_templates import MessageTemplates
 from .stream_chunk import ChunkType
 from .utils import ActionType, AgentStatus, CoordinationStage
@@ -117,6 +118,8 @@ class Orchestrator(ChatAgent):
         snapshot_storage: Optional[str] = None,
         agent_temporary_workspace: Optional[str] = None,
         previous_turns: Optional[List[Dict[str, Any]]] = None,
+        shared_conversation_memory: Optional[ConversationMemory] = None,
+        shared_persistent_memory: Optional[PersistentMemoryBase] = None,
     ):
         """
         Initialize MassGen orchestrator.
@@ -129,12 +132,18 @@ class Orchestrator(ChatAgent):
             snapshot_storage: Optional path to store agent workspace snapshots
             agent_temporary_workspace: Optional path for agent temporary workspaces
             previous_turns: List of previous turn metadata for multi-turn conversations (loaded by CLI)
+            shared_conversation_memory: Optional shared conversation memory for all agents
+            shared_persistent_memory: Optional shared persistent memory for all agents
         """
-        super().__init__(session_id)
+        super().__init__(session_id, shared_conversation_memory, shared_persistent_memory)
         self.orchestrator_id = orchestrator_id
         self.agents = agents
         self.agent_states = {aid: AgentState() for aid in agents.keys()}
         self.config = config or AgentConfig.create_openai_config()
+
+        # Shared memory for all agents
+        self.shared_conversation_memory = shared_conversation_memory
+        self.shared_persistent_memory = shared_persistent_memory
 
         # Get message templates from config
         self.message_templates = self.config.message_templates or MessageTemplates()
@@ -317,6 +326,111 @@ class Orchestrator(ChatAgent):
             "conversation_history": conversation_history,
             "full_messages": messages,
         }
+
+    async def _inject_shared_memory_context(
+        self, messages: List[Dict[str, Any]], agent_id: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Inject shared memory context into agent messages.
+
+        This allows all agents to see shared memories including what other agents
+        have stored in the shared memory.
+
+        Args:
+            messages: Original messages to send to agent
+            agent_id: ID of the agent receiving the messages
+
+        Returns:
+            Messages with shared memory context injected
+        """
+        if not self.shared_conversation_memory and not self.shared_persistent_memory:
+            # No shared memory configured, return original messages
+            return messages
+
+        memory_context_parts = []
+
+        # Get conversation memory content
+        if self.shared_conversation_memory:
+            try:
+                conv_messages = await self.shared_conversation_memory.get_messages()
+                if conv_messages:
+                    memory_context_parts.append("=== SHARED CONVERSATION MEMORY ===")
+                    for msg in conv_messages[-10:]:  # Last 10 messages
+                        role = msg.get("role", "unknown")
+                        content = msg.get("content", "")
+                        agent_source = msg.get("agent_id", "unknown")
+                        memory_context_parts.append(f"[{agent_source}] {role}: {content}")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve shared conversation memory: {e}")
+
+        # Get persistent memory content
+        if self.shared_persistent_memory:
+            try:
+                # Extract user message for retrieval
+                user_messages = [msg for msg in messages if msg.get("role") == "user"]
+                if user_messages:
+                    retrieved = await self.shared_persistent_memory.retrieve(user_messages)
+                    if retrieved:
+                        memory_context_parts.append("\n=== SHARED PERSISTENT MEMORY ===")
+                        memory_context_parts.append(retrieved)
+            except NotImplementedError:
+                # Memory backend doesn't support retrieve
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to retrieve shared persistent memory: {e}")
+
+        # Inject memory context if we have any
+        if memory_context_parts:
+            memory_message = {
+                "role": "system",
+                "content": (
+                    "You have access to shared memory that all agents can see and contribute to.\n"
+                    + "\n".join(memory_context_parts)
+                )
+            }
+
+            # Insert after existing system messages but before user messages
+            system_count = sum(1 for msg in messages if msg.get("role") == "system")
+            modified_messages = messages.copy()
+            modified_messages.insert(system_count, memory_message)
+            return modified_messages
+
+        return messages
+
+    async def _record_to_shared_memory(
+        self, agent_id: str, content: str, role: str = "assistant"
+    ) -> None:
+        """
+        Record agent's contribution to shared memory.
+
+        Args:
+            agent_id: ID of the agent contributing
+            content: Content to record
+            role: Role of the message (default: "assistant")
+        """
+        message = {
+            "role": role,
+            "content": content,
+            "agent_id": agent_id,
+            "timestamp": time.time()
+        }
+
+        # Add to conversation memory
+        if self.shared_conversation_memory:
+            try:
+                await self.shared_conversation_memory.add(message)
+            except Exception as e:
+                logger.warning(f"Failed to add to shared conversation memory: {e}")
+
+        # Record to persistent memory
+        if self.shared_persistent_memory:
+            try:
+                await self.shared_persistent_memory.record([message])
+            except NotImplementedError:
+                # Memory backend doesn't support record
+                pass
+            except Exception as e:
+                logger.warning(f"Failed to record to shared persistent memory: {e}")
 
     def save_coordination_logs(self):
         """Public method to save coordination logs after final presentation is complete."""
@@ -1355,6 +1469,12 @@ class Orchestrator(ChatAgent):
                 {"role": "system", "content": conversation["system_message"]},
                 {"role": "user", "content": conversation["user_message"]},
             ]
+
+            # Inject shared memory context
+            conversation_messages = await self._inject_shared_memory_context(
+                conversation_messages, agent_id
+            )
+
             enforcement_msg = self.message_templates.enforcement_message()
 
             # Update agent status to STREAMING
@@ -1646,6 +1766,14 @@ class Orchestrator(ChatAgent):
                                 "reason": reason,
                             }
 
+                            # Record vote to shared memory
+                            vote_message = f"Voted for {voted_agent}. Reason: {reason}"
+                            await self._record_to_shared_memory(
+                                agent_id=agent_id,
+                                content=vote_message,
+                                role="assistant"
+                            )
+
                             # Send tool result - orchestrator will decide if vote is accepted
                             # Vote submitted (result will be shown by orchestrator)
                             yield (
@@ -1690,6 +1818,14 @@ class Orchestrator(ChatAgent):
                                         return
                             # Send successful tool result back to agent
                             # Answer recorded (result will be shown by orchestrator)
+
+                            # Record to shared memory
+                            await self._record_to_shared_memory(
+                                agent_id=agent_id,
+                                content=content,
+                                role="assistant"
+                            )
+
                             yield ("result", ("answer", content))
                             yield ("done", None)
                             return

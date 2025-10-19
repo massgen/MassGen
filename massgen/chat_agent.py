@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional
 
 from .backend.base import LLMBackend, StreamChunk
+from .memory import ConversationMemory, PersistentMemoryBase
 from .stream_chunk import ChunkType
 from .utils import CoordinationStage
 
@@ -26,9 +27,18 @@ class ChatAgent(ABC):
     providing a unified way to interact with any type of agent system.
     """
 
-    def __init__(self, session_id: Optional[str] = None):
+    def __init__(
+        self,
+        session_id: Optional[str] = None,
+        conversation_memory: Optional[ConversationMemory] = None,
+        persistent_memory: Optional[PersistentMemoryBase] = None,
+    ):
         self.session_id = session_id or f"chat_session_{uuid.uuid4().hex[:8]}"
         self.conversation_history: List[Dict[str, Any]] = []
+
+        # Memory components
+        self.conversation_memory = conversation_memory
+        self.persistent_memory = persistent_memory
 
     @abstractmethod
     async def chat(
@@ -132,6 +142,8 @@ class SingleAgent(ChatAgent):
         agent_id: Optional[str] = None,
         system_message: Optional[str] = None,
         session_id: Optional[str] = None,
+        conversation_memory: Optional[ConversationMemory] = None,
+        persistent_memory: Optional[PersistentMemoryBase] = None,
     ):
         """
         Initialize single agent.
@@ -141,8 +153,10 @@ class SingleAgent(ChatAgent):
             agent_id: Optional agent identifier
             system_message: Optional system message for the agent
             session_id: Optional session identifier
+            conversation_memory: Optional conversation memory instance
+            persistent_memory: Optional persistent memory instance
         """
-        super().__init__(session_id)
+        super().__init__(session_id, conversation_memory, persistent_memory)
         self.backend = backend
         self.agent_id = agent_id or f"agent_{uuid.uuid4().hex[:8]}"
         self.system_message = system_message
@@ -174,6 +188,7 @@ class SingleAgent(ChatAgent):
         assistant_response = ""
         tool_calls = []
         complete_message = None
+        messages_to_record = []
 
         try:
             async for chunk in backend_stream:
@@ -213,9 +228,11 @@ class SingleAgent(ChatAgent):
                         # Each item in output should be added to conversation history individually
                         if isinstance(complete_message, dict) and "output" in complete_message:
                             self.conversation_history.extend(complete_message["output"])
+                            messages_to_record = complete_message["output"]
                         else:
                             # Fallback if it's already in message format
                             self.conversation_history.append(complete_message)
+                            messages_to_record = [complete_message]
                     elif assistant_response.strip() or tool_calls:
                         # Fallback for legacy backends
                         message_data = {
@@ -225,6 +242,28 @@ class SingleAgent(ChatAgent):
                         if tool_calls:
                             message_data["tool_calls"] = tool_calls
                         self.conversation_history.append(message_data)
+                        messages_to_record = [message_data]
+
+                    # Record to memories
+                    if messages_to_record:
+                        # Add to conversation memory
+                        if self.conversation_memory:
+                            try:
+                                await self.conversation_memory.add(messages_to_record)
+                            except Exception as e:
+                                # Log but don't fail if memory add fails
+                                print(f"Warning: Failed to add response to conversation memory: {e}")
+                        # Record to persistent memory
+                        if self.persistent_memory:
+                            try:
+                                await self.persistent_memory.record(messages_to_record)
+                            except NotImplementedError:
+                                # Memory backend doesn't support record
+                                pass
+                            except Exception as e:
+                                # Log but don't fail if memory record fails
+                                print(f"Warning: Failed to record to persistent memory: {e}")
+
                     yield chunk
                 else:
                     yield chunk
@@ -255,6 +294,9 @@ class SingleAgent(ChatAgent):
             # Clear backend history while maintaining session
             if self.backend.is_stateful():
                 await self.backend.clear_history()
+            # Clear conversation memory if available
+            if self.conversation_memory:
+                await self.conversation_memory.clear()
 
         if reset_chat:
             # Reset conversation history to the provided messages
@@ -262,17 +304,57 @@ class SingleAgent(ChatAgent):
             # Reset backend state completely
             if self.backend.is_stateful():
                 await self.backend.reset_state()
+            # Reset conversation memory
+            if self.conversation_memory:
+                await self.conversation_memory.clear()
+                await self.conversation_memory.add(messages)
             backend_messages = self.conversation_history.copy()
         else:
             # Regular conversation - append new messages to agent's history
             self.conversation_history.extend(messages)
+            # Add to conversation memory
+            if self.conversation_memory:
+                try:
+                    await self.conversation_memory.add(messages)
+                except Exception as e:
+                    # Log but don't fail if memory add fails
+                    print(f"Warning: Failed to add messages to conversation memory: {e}")
+
+            # Retrieve relevant persistent memories if available
+            memory_context = ""
+            if self.persistent_memory:
+                try:
+                    memory_context = await self.persistent_memory.retrieve(messages)
+                except NotImplementedError:
+                    # Memory backend doesn't support retrieve
+                    pass
+                except Exception as e:
+                    # Log but don't fail if memory retrieval fails
+                    print(f"Warning: Failed to retrieve from persistent memory: {e}")
+
             # Handle stateful vs stateless backends differently
             if self.backend.is_stateful():
                 # Stateful: only send new messages, backend maintains context
                 backend_messages = messages.copy()
+                # Inject memory context before user messages if available
+                if memory_context:
+                    memory_msg = {
+                        "role": "system",
+                        "content": f"Relevant memories:\n{memory_context}"
+                    }
+                    backend_messages.insert(0, memory_msg)
             else:
                 # Stateless: send full conversation history
                 backend_messages = self.conversation_history.copy()
+                # Inject memory context after system message but before conversation
+                if memory_context:
+                    memory_msg = {
+                        "role": "system",
+                        "content": f"Relevant memories:\n{memory_context}"
+                    }
+                    # Insert after existing system messages
+                    system_count = sum(1 for msg in backend_messages if msg.get("role") == "system")
+                    backend_messages.insert(system_count, memory_msg)
 
         if current_stage:
             self.backend.set_stage(current_stage)
@@ -310,6 +392,10 @@ class SingleAgent(ChatAgent):
         # Reset stateful backend if needed
         if self.backend.is_stateful():
             await self.backend.reset_state()
+
+        # Clear conversation memory (not persistent memory)
+        if self.conversation_memory:
+            await self.conversation_memory.clear()
 
         # Re-add system message if it exists
         if self.system_message:
@@ -356,6 +442,8 @@ class ConfigurableAgent(SingleAgent):
         config,  # AgentConfig - avoid circular import
         backend: LLMBackend,
         session_id: Optional[str] = None,
+        conversation_memory: Optional[ConversationMemory] = None,
+        persistent_memory: Optional[PersistentMemoryBase] = None,
     ):
         """
         Initialize configurable agent.
@@ -364,12 +452,16 @@ class ConfigurableAgent(SingleAgent):
             config: AgentConfig with all settings
             backend: LLM backend
             session_id: Optional session identifier
+            conversation_memory: Optional conversation memory instance
+            persistent_memory: Optional persistent memory instance
         """
         super().__init__(
             backend=backend,
             agent_id=config.agent_id,
             system_message=config.custom_system_instruction,
             session_id=session_id,
+            conversation_memory=conversation_memory,
+            persistent_memory=persistent_memory,
         )
         self.config = config
 
