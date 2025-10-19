@@ -228,7 +228,7 @@ Make your decision and include the JSON at the very end of your response."""
     def format_custom_tools(
         self,
         custom_tools: List[Dict[str, Any]],
-        return_sdk_objects: bool = True
+        return_sdk_objects: bool = True,
     ) -> List[Any]:
         """
         Convert custom tools from OpenAI Chat Completions format to Gemini format.
@@ -286,7 +286,7 @@ Make your decision and include the JSON at the very end of your response."""
                 converted_tool = {
                     "name": func_def.get("name", ""),
                     "description": func_def.get("description", ""),
-                    "parameters": func_def.get("parameters", {})
+                    "parameters": func_def.get("parameters", {}),
                 }
                 converted_tools.append(converted_tool)
             # Handle already-converted Gemini format (idempotent)
@@ -334,19 +334,18 @@ Make your decision and include the JSON at the very end of your response."""
                 func_decl = types.FunctionDeclaration(
                     name=tool_dict.get("name", ""),
                     description=tool_dict.get("description", ""),
-                    parameters=schema
+                    parameters=schema,
                 )
 
                 function_declarations.append(func_decl)
 
                 logger.debug(
-                    f"[GeminiFormatter] Converted tool '{tool_dict.get('name')}' "
-                    f"to FunctionDeclaration"
+                    f"[GeminiFormatter] Converted tool '{tool_dict.get('name')}' " f"to FunctionDeclaration",
                 )
 
             except Exception as e:
                 logger.error(
-                    f"[GeminiFormatter] Failed to convert tool to FunctionDeclaration: {e}"
+                    f"[GeminiFormatter] Failed to convert tool to FunctionDeclaration: {e}",
                 )
                 logger.error(f"[GeminiFormatter] Tool dict: {tool_dict}")
                 # Continue processing other tools instead of failing completely
@@ -387,10 +386,7 @@ Make your decision and include the JSON at the very end of your response."""
 
         # Handle object type with nested properties
         if param_type == "object" and "properties" in param_schema:
-            schema_kwargs["properties"] = {
-                prop_name: self._build_schema_recursive(prop_schema)
-                for prop_name, prop_schema in param_schema["properties"].items()
-            }
+            schema_kwargs["properties"] = {prop_name: self._build_schema_recursive(prop_schema) for prop_name, prop_schema in param_schema["properties"].items()}
 
             # Add required fields if present
             if "required" in param_schema:
@@ -446,7 +442,7 @@ Make your decision and include the JSON at the very end of your response."""
 
         if json_type.lower() not in type_mapping:
             logger.warning(
-                f"[GeminiFormatter] Unknown JSON type '{json_type}', defaulting to STRING"
+                f"[GeminiFormatter] Unknown JSON type '{json_type}', defaulting to STRING",
             )
 
         return gemini_type

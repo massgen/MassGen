@@ -240,7 +240,6 @@ class GeminiBackend(CustomToolAndMCPBackend):
             if is_coordination:
                 full_content = self.formatter.build_structured_output_prompt(full_content, valid_agent_ids)
 
-
             # Use google-genai package
             client = genai.Client(api_key=self.api_key)
 
@@ -312,7 +311,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             if not self._mcp_client:
                                 raise RuntimeError("MCP client not initialized")
                             mcp_sessions = self.mcp_manager.get_active_mcp_sessions(
-                                convert_to_permission_sessions=bool(self.filesystem_manager)
+                                convert_to_permission_sessions=bool(self.filesystem_manager),
                             )
                             if not mcp_sessions:
                                 # If no MCP sessions, record error but don't interrupt (may still have custom tools)
@@ -332,13 +331,12 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 # formatter handles: OpenAI format -> Gemini dict -> FunctionDeclaration objects
                                 custom_tools_functions = self.formatter.format_custom_tools(
                                     custom_tools_schemas,
-                                    return_sdk_objects=True
+                                    return_sdk_objects=True,
                                 )
 
                                 if custom_tools_functions:
                                     logger.debug(
-                                        f"[Gemini] Loaded {len(custom_tools_functions)} custom tools "
-                                        f"as FunctionDeclarations"
+                                        f"[Gemini] Loaded {len(custom_tools_functions)} custom tools " f"as FunctionDeclarations",
                                     )
                                 else:
                                     custom_tools_error = RuntimeError("Custom tools conversion failed")
@@ -357,8 +355,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     if not has_mcp and not has_custom_tools:
                         # Both failed, raise error to enter fallback
                         raise RuntimeError(
-                            f"Both MCP and custom tools unavailable. "
-                            f"MCP error: {mcp_error}. Custom tools error: {custom_tools_error}"
+                            f"Both MCP and custom tools unavailable. " f"MCP error: {mcp_error}. Custom tools error: {custom_tools_error}",
                         )
 
                     # ====================================================================
@@ -381,11 +378,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     # Add MCP sessions (if available and not blocked by planning mode)
                     if has_mcp:
                         if not self.mcp_manager.should_block_mcp_tools_in_planning_mode(
-                            self.is_planning_mode_enabled(), available_mcp_tools
+                            self.is_planning_mode_enabled(),
+                            available_mcp_tools,
                         ):
                             logger.debug(
-                                f"[Gemini] Passing {len(mcp_sessions)} MCP sessions to SDK: "
-                                f"{[type(s).__name__ for s in mcp_sessions]}"
+                                f"[Gemini] Passing {len(mcp_sessions)} MCP sessions to SDK: " f"{[type(s).__name__ for s in mcp_sessions]}",
                             )
                             tools_to_apply.extend(mcp_sessions)
                             sessions_applied = True
@@ -400,8 +397,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             custom_tool = types.Tool(function_declarations=custom_tools_functions)
 
                             logger.debug(
-                                f"[Gemini] Wrapped {len(custom_tools_functions)} custom tools "
-                                f"in Tool object for SDK"
+                                f"[Gemini] Wrapped {len(custom_tools_functions)} custom tools " f"in Tool object for SDK",
                             )
                             tools_to_apply.append(custom_tool)
                             custom_tools_applied = True
@@ -418,8 +414,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         # instead of automatically executing them
                         if has_custom_tools:
                             from google.genai import types
+
                             session_config["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(
-                                disable=True
+                                disable=True,
                             )
                             logger.debug("[Gemini] Disabled automatic function calling for custom tools")
 
@@ -485,7 +482,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     # ====================================================================
                     # Use async streaming call with sessions/tools
                     stream = await client.aio.models.generate_content_stream(
-                        model=model_name, contents=full_content, config=session_config
+                        model=model_name,
+                        contents=full_content,
+                        config=session_config,
                     )
 
                     # Initialize trackers for both MCP and custom tools
@@ -884,7 +883,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     {
                                         "name": tool_name,
                                         "arguments": json.dumps(tool_args) if isinstance(tool_args, dict) else tool_args,
-                                    }
+                                    },
                                 )
 
                                 # Format result as JSON if possible
@@ -899,10 +898,12 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 )
 
                                 # Build function response in Gemini format
-                                tool_responses.append({
-                                    "name": tool_name,
-                                    "response": {"result": result_str}
-                                })
+                                tool_responses.append(
+                                    {
+                                        "name": tool_name,
+                                        "response": {"result": result_str},
+                                    },
+                                )
 
                             except Exception as e:
                                 error_msg = f"Error executing custom tool {tool_name}: {str(e)}"
@@ -914,10 +915,12 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     source="custom_tools",
                                 )
                                 # Add error response
-                                tool_responses.append({
-                                    "name": tool_name,
-                                    "response": {"error": str(e)}
-                                })
+                                tool_responses.append(
+                                    {
+                                        "name": tool_name,
+                                        "response": {"error": str(e)},
+                                    },
+                                )
 
                         # Execute MCP tools manually (since automatic_function_calling is disabled)
                         for tool_call in new_mcp_tools:
@@ -967,10 +970,12 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 )
 
                                 # Build function response in Gemini format
-                                tool_responses.append({
-                                    "name": tool_name,
-                                    "response": {"result": mcp_result}
-                                })
+                                tool_responses.append(
+                                    {
+                                        "name": tool_name,
+                                        "response": {"result": mcp_result},
+                                    },
+                                )
 
                             except Exception as e:
                                 error_msg = f"Error executing MCP tool {tool_name}: {str(e)}"
@@ -982,10 +987,12 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     source="mcp_tools",
                                 )
                                 # Add error response
-                                tool_responses.append({
-                                    "name": tool_name,
-                                    "response": {"error": str(e)}
-                                })
+                                tool_responses.append(
+                                    {
+                                        "name": tool_name,
+                                        "response": {"error": str(e)},
+                                    },
+                                )
 
                         # Make continuation call with tool results from this round
                         if tool_responses:
@@ -1003,8 +1010,8 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 conversation_history.append(
                                     types.Content(
                                         parts=[types.Part(text=full_content)],
-                                        role="user"
-                                    )
+                                        role="user",
+                                    ),
                                 )
 
                                 # Add model's function call response (tools from THIS round)
@@ -1013,15 +1020,15 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     model_parts.append(
                                         types.Part.from_function_call(
                                             name=tool_call["name"],
-                                            args=tool_call["arguments"]
-                                        )
+                                            args=tool_call["arguments"],
+                                        ),
                                     )
 
                                 conversation_history.append(
                                     types.Content(
                                         parts=model_parts,
-                                        role="model"
-                                    )
+                                        role="model",
+                                    ),
                                 )
 
                                 # Add function response (as user message with function_response parts)
@@ -1030,15 +1037,15 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     response_parts.append(
                                         types.Part.from_function_response(
                                             name=resp["name"],
-                                            response=resp["response"]
-                                        )
+                                            response=resp["response"],
+                                        ),
                                     )
 
                                 conversation_history.append(
                                     types.Content(
                                         parts=response_parts,
-                                        role="user"
-                                    )
+                                        role="user",
+                                    ),
                                 )
 
                                 # Make continuation call
@@ -1053,7 +1060,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 continuation_stream = await client.aio.models.generate_content_stream(
                                     model=model_name,
                                     contents=conversation_history,
-                                    config=session_config
+                                    config=session_config,
                                 )
 
                                 # Process continuation stream (same processing as main stream)
@@ -1454,10 +1461,11 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 # Convert to Gemini format using formatter
                                 custom_tools_functions = self.formatter.format_custom_tools(
                                     custom_tools_schemas,
-                                    return_sdk_objects=True
+                                    return_sdk_objects=True,
                                 )
                                 # Wrap FunctionDeclarations in a Tool object for Gemini SDK
                                 from google.genai import types
+
                                 custom_tool = types.Tool(function_declarations=custom_tools_functions)
                                 manual_config["tools"] = [custom_tool]
                                 logger.info("[Gemini] Fallback: using custom tools only (MCP failed)")
@@ -1476,7 +1484,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         try:
                             if self._mcp_client:
                                 mcp_sessions = self.mcp_manager.get_active_mcp_sessions(
-                                    convert_to_permission_sessions=bool(self.filesystem_manager)
+                                    convert_to_permission_sessions=bool(self.filesystem_manager),
                                 )
                                 if mcp_sessions:
                                     manual_config["tools"] = mcp_sessions
@@ -1498,7 +1506,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
                     # Create new stream for fallback
                     stream = await client.aio.models.generate_content_stream(
-                        model=model_name, contents=full_content, config=manual_config
+                        model=model_name,
+                        contents=full_content,
+                        config=manual_config,
                     )
 
                     async for chunk in stream:
