@@ -218,77 +218,80 @@ export class ChatPanel {
 
         .model-selector {
             margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
         }
 
         .provider-section {
-            margin-bottom: 12px;
-        }
-
-        .provider-header {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--vscode-foreground);
-            margin-bottom: 6px;
-            padding: 4px 0;
-            border-bottom: 1px solid var(--vscode-panel-border);
-        }
-
-        .provider-models {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            padding-left: 8px;
-        }
-
-        .model-checkbox {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 5px 10px;
+        }
+
+        .provider-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            white-space: nowrap;
+        }
+
+        .provider-select {
+            min-width: 150px;
+            padding: 4px 8px;
+            font-family: var(--vscode-font-family);
+            font-size: 12px;
+            color: var(--vscode-input-foreground);
             background-color: var(--vscode-input-background);
             border: 1px solid var(--vscode-input-border);
             border-radius: 4px;
             cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
         }
 
-        .model-checkbox:hover {
-            background-color: var(--vscode-list-hoverBackground);
+        .provider-select:focus {
+            outline: 1px solid var(--vscode-focusBorder);
         }
 
-        .model-checkbox input[type="checkbox"] {
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .model-checkbox.selected {
-            background-color: var(--vscode-inputOption-activeBackground);
-            border-color: var(--vscode-focusBorder);
-        }
-
-        .model-checkbox.popular {
-            border-color: var(--vscode-charts-blue);
+        .provider-select option {
+            background-color: var(--vscode-input-background);
+            color: var(--vscode-input-foreground);
         }
 
         .model-label {
             font-size: 11px;
             color: var(--vscode-descriptionForeground);
             margin-bottom: 8px;
+        }
+
+        .selected-models {
             display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .selected-model-tag {
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 4px;
+            padding: 3px 8px;
+            background-color: var(--vscode-inputOption-activeBackground);
+            border: 1px solid var(--vscode-focusBorder);
+            border-radius: 12px;
+            font-size: 11px;
+            color: var(--vscode-foreground);
         }
 
-        .expand-toggle {
+        .remove-model {
             cursor: pointer;
-            color: var(--vscode-textLink-foreground);
-            text-decoration: underline;
-            font-size: 10px;
+            color: var(--vscode-descriptionForeground);
+            font-weight: bold;
+            margin-left: 2px;
         }
 
-        .expand-toggle:hover {
-            color: var(--vscode-textLink-activeForeground);
+        .remove-model:hover {
+            color: var(--vscode-errorForeground);
         }
 
         .chat-container {
@@ -461,11 +464,12 @@ export class ChatPanel {
 <body>
     <div class="header">
         <h1>🚀 MassGen - Multi-Agent AI Assistant</h1>
-        <div class="model-label">Select Models for Multi-Agent Execution:</div>
+        <div class="model-label">Select Models:</div>
         <div class="model-selector" id="modelSelector">
             <!-- Models will be loaded dynamically -->
             <div style="color: var(--vscode-descriptionForeground); font-size: 12px;">Loading available models...</div>
         </div>
+        <div class="selected-models" id="selectedModels"></div>
     </div>
 
     <div class="status" id="status">Ready</div>
@@ -489,7 +493,6 @@ export class ChatPanel {
         let isProcessing = false;
         let modelsByProvider = {};
         let selectedModels = [];
-        let expandedProviders = {}; // Track which providers are expanded
         let currentStreamingMessageId = null; // Track the current streaming message
 
         // Notify extension that webview is ready
@@ -572,10 +575,6 @@ export class ChatPanel {
         function handleAvailableModels(data) {
             if (data && data.models_by_provider) {
                 modelsByProvider = data.models_by_provider;
-                // Initialize all providers as collapsed (show only popular)
-                Object.keys(modelsByProvider).forEach(provider => {
-                    expandedProviders[provider] = false;
-                });
                 renderModelSelector();
             }
         }
@@ -595,92 +594,109 @@ export class ChatPanel {
                 const section = document.createElement('div');
                 section.className = 'provider-section';
 
-                // Provider header
-                const header = document.createElement('div');
-                header.className = 'provider-header';
-                header.textContent = provider;
-                section.appendChild(header);
+                // Provider label
+                const label = document.createElement('label');
+                label.className = 'provider-label';
+                label.textContent = provider + ':';
+                label.setAttribute('for', \`select-\${provider}\`);
+                section.appendChild(label);
 
-                // Models container
-                const modelsContainer = document.createElement('div');
-                modelsContainer.className = 'provider-models';
+                // Provider select dropdown
+                const select = document.createElement('select');
+                select.className = 'provider-select';
+                select.id = \`select-\${provider}\`;
+                select.multiple = true;
+                select.size = 1; // Compact dropdown
 
-                const isExpanded = expandedProviders[provider];
-                const modelsToShow = isExpanded ? data.models : data.popular || data.models.slice(0, 3);
+                // Add a placeholder option
+                const placeholderOption = document.createElement('option');
+                placeholderOption.value = '';
+                placeholderOption.textContent = '-- Select models --';
+                placeholderOption.disabled = true;
+                select.appendChild(placeholderOption);
 
-                modelsToShow.forEach((model) => {
-                    const label = document.createElement('label');
-                    label.className = 'model-checkbox';
-
-                    // Highlight popular models
-                    if (data.popular && data.popular.includes(model)) {
-                        label.classList.add('popular');
-                    }
-
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.value = model;
-                    checkbox.id = \`model-\${provider}-\${model}\`;
-                    checkbox.onchange = () => toggleModel(model, checkbox.checked);
-
-                    const span = document.createElement('span');
-                    span.textContent = model;
-
-                    label.appendChild(checkbox);
-                    label.appendChild(span);
-                    modelsContainer.appendChild(label);
-                });
-
-                section.appendChild(modelsContainer);
-
-                // Add expand/collapse toggle if there are more models
-                if (data.models.length > modelsToShow.length) {
-                    const toggle = document.createElement('div');
-                    toggle.className = 'expand-toggle';
-                    toggle.style.paddingLeft = '8px';
-                    toggle.style.marginTop = '4px';
-                    toggle.textContent = isExpanded ? 'Show less' : \`Show all (\${data.models.length})\`;
-                    toggle.onclick = () => toggleProvider(provider);
-                    section.appendChild(toggle);
+                // Add popular models first (if they exist)
+                if (data.popular && data.popular.length > 0) {
+                    const popularGroup = document.createElement('optgroup');
+                    popularGroup.label = 'Popular';
+                    data.popular.forEach((model) => {
+                        const option = document.createElement('option');
+                        option.value = model;
+                        option.textContent = model;
+                        popularGroup.appendChild(option);
+                    });
+                    select.appendChild(popularGroup);
                 }
 
+                // Add all models
+                const allModelsGroup = document.createElement('optgroup');
+                allModelsGroup.label = 'All Models';
+                data.models.forEach((model) => {
+                    const option = document.createElement('option');
+                    option.value = model;
+                    option.textContent = model;
+                    allModelsGroup.appendChild(option);
+                });
+                select.appendChild(allModelsGroup);
+
+                // Handle selection
+                select.onchange = () => handleModelSelection(provider, select);
+
+                section.appendChild(select);
                 selector.appendChild(section);
             });
+
+            updateSelectedModelsDisplay();
         }
 
-        function toggleProvider(provider) {
-            expandedProviders[provider] = !expandedProviders[provider];
-            renderModelSelector();
-            // Re-check selected models after re-render
-            updateModelCheckboxStyles();
-        }
+        function handleModelSelection(provider, selectElement) {
+            const selectedOptions = Array.from(selectElement.selectedOptions);
 
-        function toggleModel(model, checked) {
-            if (checked) {
-                if (!selectedModels.includes(model)) {
+            // Add newly selected models
+            selectedOptions.forEach(option => {
+                const model = option.value;
+                if (model && !selectedModels.includes(model)) {
                     selectedModels.push(model);
                 }
-            } else {
-                selectedModels = selectedModels.filter(m => m !== model);
-            }
-            updateModelCheckboxStyles();
+            });
+
+            // Clear the selection in the dropdown
+            selectElement.selectedIndex = -1;
+
+            updateSelectedModelsDisplay();
         }
 
-        function updateModelCheckboxStyles() {
-            Object.entries(modelsByProvider).forEach(([provider, data]) => {
-                data.models.forEach((model) => {
-                    const checkbox = document.getElementById(\`model-\${provider}-\${model}\`);
-                    const label = checkbox?.parentElement;
-                    if (label) {
-                        if (selectedModels.includes(model)) {
-                            label.classList.add('selected');
-                            if (checkbox) checkbox.checked = true;
-                        } else {
-                            label.classList.remove('selected');
-                            if (checkbox) checkbox.checked = false;
-                        }
-                    }
-                });
+        function removeModel(model) {
+            selectedModels = selectedModels.filter(m => m !== model);
+            updateSelectedModelsDisplay();
+        }
+
+        function updateSelectedModelsDisplay() {
+            const container = document.getElementById('selectedModels');
+            if (!container) return;
+
+            if (selectedModels.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = '';
+
+            selectedModels.forEach(model => {
+                const tag = document.createElement('div');
+                tag.className = 'selected-model-tag';
+
+                const modelText = document.createElement('span');
+                modelText.textContent = model;
+                tag.appendChild(modelText);
+
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-model';
+                removeBtn.textContent = '×';
+                removeBtn.onclick = () => removeModel(model);
+                tag.appendChild(removeBtn);
+
+                container.appendChild(tag);
             });
         }
 
