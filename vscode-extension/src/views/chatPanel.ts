@@ -101,8 +101,10 @@ export class ChatPanel {
                 data: { text, models }
             });
 
+            // Query is handled asynchronously, streaming will be handled via events
             const result = await this.client.query(text, config, models);
 
+            // Only send queryComplete if we didn't already stream the result
             this.sendToWebview({
                 type: 'queryComplete',
                 data: result
@@ -442,6 +444,18 @@ export class ChatPanel {
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        .streaming-cursor {
+            display: inline-block;
+            color: var(--vscode-foreground);
+            animation: blink 1s step-end infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -476,6 +490,7 @@ export class ChatPanel {
         let modelsByProvider = {};
         let selectedModels = [];
         let expandedProviders = {}; // Track which providers are expanded
+        let currentStreamingMessageId = null; // Track the current streaming message
 
         // Notify extension that webview is ready
         window.addEventListener('load', () => {
@@ -507,16 +522,36 @@ export class ChatPanel {
                     if (message.data.models && message.data.models.length > 0) {
                         addAgentProgress(message.data.models);
                     }
+                    // Create an empty message for streaming response
+                    currentStreamingMessageId = addMessage('agent', 'MassGen', '', true);
                     setStatus('Processing query...');
                     break;
 
                 case 'queryComplete':
                     isProcessing = false;
                     updateUI();
-                    if (typeof message.data.result === 'string') {
-                        addMessage('agent', 'MassGen', message.data.result);
+                    // If we have a streaming message, finalize it
+                    if (currentStreamingMessageId) {
+                        const streamingMsg = document.getElementById(currentStreamingMessageId);
+                        if (streamingMsg) {
+                            const content = streamingMsg.querySelector('.message-content');
+                            // If the message is still empty, show the result
+                            if (content && !content.textContent.trim()) {
+                                const resultText = typeof message.data.result === 'string'
+                                    ? message.data.result
+                                    : JSON.stringify(message.data.result, null, 2);
+                                content.textContent = resultText;
+                            }
+                        }
+                        // Remove the streaming cursor
+                        finalizeStreamingMessage(currentStreamingMessageId);
+                        currentStreamingMessageId = null;
                     } else {
-                        addMessage('agent', 'MassGen', JSON.stringify(message.data.result, null, 2));
+                        // No streaming message, add result as new message
+                        const resultText = typeof message.data.result === 'string'
+                            ? message.data.result
+                            : JSON.stringify(message.data.result, null, 2);
+                        addMessage('agent', 'MassGen', resultText);
                     }
                     setStatus('Ready');
                     break;
@@ -715,8 +750,10 @@ export class ChatPanel {
                     break;
 
                 case 'stream_chunk':
-                    // Handle streaming content
-                    console.log('Stream chunk:', event.content);
+                    // Handle streaming content - append to current message
+                    if (currentStreamingMessageId && event.content) {
+                        appendToMessage(currentStreamingMessageId, event.content);
+                    }
                     break;
 
                 case 'log':
@@ -746,18 +783,67 @@ export class ChatPanel {
             input.value = '';
         }
 
-        function addMessage(type, sender, content) {
+        function addMessage(type, sender, content, isStreaming = false) {
             const container = document.getElementById('chatContainer');
             const messageDiv = document.createElement('div');
+            const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+            messageDiv.id = messageId;
             messageDiv.className = \`message \${type}\`;
+
+            // For streaming messages, add a cursor indicator
+            const cursorHtml = isStreaming ? '<span class="streaming-cursor">▋</span>' : '';
 
             messageDiv.innerHTML = \`
                 <div class="message-header">\${sender}</div>
-                <div class="message-content">\${escapeHtml(content)}</div>
+                <div class="message-content">\${escapeHtml(content)}\${cursorHtml}</div>
             \`;
 
             container.appendChild(messageDiv);
             container.scrollTop = container.scrollHeight;
+
+            return messageId;
+        }
+
+        function appendToMessage(messageId, text) {
+            const messageDiv = document.getElementById(messageId);
+            if (!messageDiv) return;
+
+            const contentDiv = messageDiv.querySelector('.message-content');
+            if (!contentDiv) return;
+
+            // Get existing content (without the cursor)
+            const cursor = contentDiv.querySelector('.streaming-cursor');
+            if (cursor) {
+                cursor.remove();
+            }
+
+            // Append new text
+            const textNode = document.createTextNode(text);
+            contentDiv.appendChild(textNode);
+
+            // Re-add cursor at the end
+            const newCursor = document.createElement('span');
+            newCursor.className = 'streaming-cursor';
+            newCursor.textContent = '▋';
+            contentDiv.appendChild(newCursor);
+
+            // Scroll to bottom
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function finalizeStreamingMessage(messageId) {
+            const messageDiv = document.getElementById(messageId);
+            if (!messageDiv) return;
+
+            const contentDiv = messageDiv.querySelector('.message-content');
+            if (!contentDiv) return;
+
+            // Remove cursor
+            const cursor = contentDiv.querySelector('.streaming-cursor');
+            if (cursor) {
+                cursor.remove();
+            }
         }
 
         function setStatus(text) {
