@@ -170,10 +170,12 @@ class ClaudeCodeBackend(LLMBackend):
                     self.config["mcp_servers"]["massgen_custom_tools"] = sdk_mcp_server
                 elif isinstance(self.config["mcp_servers"], list):
                     # List format - add as dict entry with name
-                    self.config["mcp_servers"].append({
-                        "name": "massgen_custom_tools",
-                        "server": sdk_mcp_server
-                    })
+                    self.config["mcp_servers"].append(
+                        {
+                            "name": "massgen_custom_tools",
+                            "server": sdk_mcp_server,
+                        }
+                    )
                 else:
                     # Initialize as dict with SDK server
                     self.config["mcp_servers"] = {"massgen_custom_tools": sdk_mcp_server}
@@ -502,13 +504,13 @@ class ClaudeCodeBackend(LLMBackend):
         if not self._custom_tool_manager:
             return {
                 "content": [
-                    {"type": "text", "text": "Error: Custom tool manager not initialized"}
-                ]
+                    {"type": "text", "text": "Error: Custom tool manager not initialized"},
+                ],
             }
 
         tool_request = {
             "name": tool_name,
-            "input": args
+            "input": args,
         }
 
         result_text = ""
@@ -532,8 +534,8 @@ class ClaudeCodeBackend(LLMBackend):
         # Return MCP format response
         return {
             "content": [
-                {"type": "text", "text": result_text or "Tool executed successfully"}
-            ]
+                {"type": "text", "text": result_text or "Tool executed successfully"},
+            ],
         }
 
     def _create_sdk_mcp_server_from_custom_tools(self):
@@ -574,7 +576,7 @@ class ClaudeCodeBackend(LLMBackend):
                 mcp_tool = tool(
                     name=tool_name,
                     description=tool_desc,
-                    input_schema=tool_params
+                    input_schema=tool_params,
                 )(tool_wrapper)
 
                 mcp_tools.append(mcp_tool)
@@ -592,7 +594,7 @@ class ClaudeCodeBackend(LLMBackend):
             sdk_mcp_server = create_sdk_mcp_server(
                 name="massgen_custom_tools",
                 version="1.0.0",
-                tools=mcp_tools
+                tools=mcp_tools,
             )
             logger.info(f"Created SDK MCP server with {len(mcp_tools)} custom tools")
             return sdk_mcp_server
