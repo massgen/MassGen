@@ -703,6 +703,7 @@ class ClaudeCodeBackend(LLMBackend):
             "api_key",
             "allowed_tools",
             "permission_mode",
+            "custom_tools",  # Not supported by ClaudeCodeBackend (uses LLMBackend, not CustomToolAndMCPBackend)
         }
 
         # Get cwd from filesystem manager (always available since we require it in __init__)
