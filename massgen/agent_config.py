@@ -58,7 +58,7 @@ class AgentConfig:
         timeout_config: Timeout and resource limit configuration
         coordination_config: Coordination behavior configuration (e.g., planning mode)
         skip_coordination_rounds: Debug/test mode - skip voting rounds and go straight to final presentation (default: False)
-        voting_sensitivity: Controls how critical agents are when voting ("lenient", "balanced")
+        voting_sensitivity: Controls how critical agents are when voting ("lenient", "balanced", "strict")
         max_new_answers_per_agent: Maximum number of new answers each agent can provide (None = unlimited)
         answer_novelty_requirement: How different new answers must be from existing ones ("lenient", "balanced", "strict")
     """

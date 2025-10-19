@@ -724,7 +724,7 @@ These parameters control coordination behavior to balance quality and duration.
    * - ``voting_sensitivity``
      - string
      - No
-     - Controls how critical agents are when evaluating answers. **Options:** ``"lenient"`` (default) - agents vote YES more easily, faster convergence; ``"balanced"`` - agents apply detailed criteria (comprehensive, accurate, complete?), more thorough evaluation.
+     - Controls how critical agents are when evaluating answers. **Options:** ``"lenient"`` (default) - agents vote YES more easily, faster convergence; ``"balanced"`` - agents apply detailed criteria (comprehensive, accurate, complete?), more thorough evaluation; ``"strict"`` - agents apply high standards of excellence (all aspects, edge cases, reference-quality), maximum quality.
    * - ``max_new_answers_per_agent``
      - integer or null
      - No
@@ -750,7 +750,7 @@ Maximum quality with bounded time:
 .. code-block:: yaml
 
    orchestrator:
-     voting_sensitivity: "balanced"
+     voting_sensitivity: "strict"          # Highest quality bar
      max_new_answers_per_agent: 3
      answer_novelty_requirement: "strict"   # Only accept real improvements
 

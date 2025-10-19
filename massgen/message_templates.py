@@ -16,7 +16,8 @@ class MessageTemplates:
         Args:
             voting_sensitivity: Controls how critical agents are when voting.
                 - "lenient": Agents vote YES more easily, fewer new answers (default)
-                - "balanced": Agents apply detailed criteria, more new answers
+                - "balanced": Agents apply detailed criteria (comprehensive, accurate, complete?)
+                - "strict": Agents apply high standards of excellence (all aspects, edge cases, reference-quality)
             answer_novelty_requirement: Controls how different new answers must be.
                 - "lenient": No additional checks (default)
                 - "balanced": Require meaningful differences
@@ -72,7 +73,16 @@ class MessageTemplates:
         # *Note*: The CURRENT TIME is **{time.strftime("%Y-%m-%d %H:%M:%S")}**."""
 
         # Determine evaluation criteria based on voting sensitivity
-        if self._voting_sensitivity == "balanced":
+        if self._voting_sensitivity == "strict":
+            evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE exceptionally well? Consider:
+- Is it comprehensive, addressing ALL aspects and edge cases?
+- Is it technically accurate and well-reasoned?
+- Does it provide clear explanations and proper justification?
+- Is it complete with no significant gaps or weaknesses?
+- Could it serve as a reference-quality solution?
+
+Only use the `vote` tool if the best answer meets high standards of excellence."""
+        elif self._voting_sensitivity == "balanced":
             evaluation_section = """Does the best CURRENT ANSWER address the ORIGINAL MESSAGE well? Consider:
 - Is it comprehensive, accurate, and complete?
 - Could it be meaningfully improved, refined, or expanded?

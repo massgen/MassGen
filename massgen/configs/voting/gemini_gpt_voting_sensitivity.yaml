@@ -37,6 +37,9 @@ orchestrator:
   #   - "balanced": Agents apply detailed criteria (comprehensive, accurate, complete?),
   #                 more new answers. Use when you want thorough evaluation
   #
+  #   - "strict": Agents apply high standards of excellence (all aspects, edge cases, reference-quality),
+  #               most new answers. Use when you need maximum quality
+  #
   voting_sensitivity: "balanced"
 
   # max_new_answers_per_agent controls how many new answers each agent can provide

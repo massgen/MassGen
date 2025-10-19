@@ -1050,12 +1050,13 @@ class ConfigBuilder:
             console.print(f"[error]❌ Error modifying agent: {e}[/error]")
             return agent
 
-    def apply_preset_to_agent(self, agent: Dict, use_case: str) -> Dict:
+    def apply_preset_to_agent(self, agent: Dict, use_case: str, agent_index: int = 1) -> Dict:
         """Auto-apply preset configuration to an agent.
 
         Args:
             agent: Agent configuration dict
             use_case: Use case ID for preset configuration
+            agent_index: Agent index for unique workspace naming (1-based)
 
         Returns:
             Updated agent configuration with preset applied
@@ -1081,7 +1082,8 @@ class ConfigBuilder:
         # Auto-enable filesystem if recommended
         if "filesystem" in recommended_tools and "filesystem" in provider_info.get("supports", []):
             if not agent["backend"].get("cwd"):
-                agent["backend"]["cwd"] = "workspace"
+                # Generate unique workspace name for each agent
+                agent["backend"]["cwd"] = f"workspace{agent_index}"
 
         # Auto-enable web search if recommended
         if "web_search" in recommended_tools:
@@ -1844,7 +1846,7 @@ class ConfigBuilder:
                 console.print()
                 console.print("  [cyan]Applying preset configuration to all agents...[/cyan]")
                 for i, agent in enumerate(agents):
-                    agents[i] = self.apply_preset_to_agent(agent, use_case)
+                    agents[i] = self.apply_preset_to_agent(agent, use_case, agent_index=i + 1)
 
                 console.print(f"  [green]✅ {len(agents)} agent(s) configured with preset[/green]")
                 console.print()
@@ -2058,16 +2060,17 @@ class ConfigBuilder:
                 console.print("  [dim]Voting Sensitivity: Controls how agents reach consensus[/dim]")
                 console.print("  [dim]• L: Lenient - Lower threshold for faster decisions (default)[/dim]")
                 console.print("  [dim]• B: Balanced - Often requires more answers for consensus[/dim]")
+                console.print("  [dim]• S: Strict - High standards, maximum quality (slowest)[/dim]")
                 console.print()
 
                 voting_input = Prompt.ask(
                     "  [prompt]Voting sensitivity[/prompt]",
-                    choices=["l", "b"],
+                    choices=["l", "b", "s"],
                     default="l"
                 )
 
                 # Map input to full value
-                voting_map = {"l": "lenient", "b": "balanced"}
+                voting_map = {"l": "lenient", "b": "balanced", "s": "strict"}
                 voting_choice = voting_map[voting_input]
 
                 orchestrator_config["voting_sensitivity"] = voting_choice

@@ -1328,17 +1328,6 @@ def interactive_config_selector() -> Optional[str]:
     # Create console instance for rich output
     selector_console = Console()
 
-    selector_console.print()
-    selector_console.print(
-        Panel(
-            "[bold bright_cyan]🚀 Configuration Selector[/bold bright_cyan]\n\n"
-            "[dim]Choose from your saved configurations or browse examples[/dim]",
-            border_style="bright_cyan",
-            padding=(1, 2),
-            width=90,
-        ),
-    )
-
     # Discover all available configs
     configs = discover_available_configs()
 
@@ -1360,20 +1349,18 @@ def interactive_config_selector() -> Optional[str]:
     )
     summary_table.add_column("Category", style="bright_cyan", no_wrap=True, width=25)
     summary_table.add_column("Count", justify="center", style="bright_yellow", width=10)
-    summary_table.add_column("Available Configs", style="dim")
+    summary_table.add_column("Location", style="dim")
 
     # Build summary and choices
     choices = []
 
+    # Build summary table (overview only - no duplication)
     # User configs
     if "User Configs" in configs and configs["User Configs"]:
-        config_names = ", ".join([name for name, _ in configs["User Configs"][:3]])
-        if len(configs["User Configs"]) > 3:
-            config_names += f", +{len(configs['User Configs']) - 3} more"
         summary_table.add_row(
             "👤 Your Configs",
             str(len(configs["User Configs"])),
-            config_names,
+            f"~/.config/massgen/agents/",
         )
         choices.append(questionary.Separator("\n─────────────────────────────────"))
         for display_name, path in configs["User Configs"]:
@@ -1386,13 +1373,10 @@ def interactive_config_selector() -> Optional[str]:
 
     # Project configs
     if "Project Configs" in configs and configs["Project Configs"]:
-        config_names = ", ".join([name for name, _ in configs["Project Configs"][:3]])
-        if len(configs["Project Configs"]) > 3:
-            config_names += f", +{len(configs['Project Configs']) - 3} more"
         summary_table.add_row(
             "📁 Project Configs",
             str(len(configs["Project Configs"])),
-            config_names,
+            f".massgen/",
         )
         if choices:
             choices.append(questionary.Separator("\n─────────────────────────────────"))
@@ -1408,13 +1392,10 @@ def interactive_config_selector() -> Optional[str]:
 
     # Current directory configs
     if "Current Directory" in configs and configs["Current Directory"]:
-        config_names = ", ".join([name for name, _ in configs["Current Directory"][:3]])
-        if len(configs["Current Directory"]) > 3:
-            config_names += f", +{len(configs['Current Directory']) - 3} more"
         summary_table.add_row(
             "📂 Current Directory",
             str(len(configs["Current Directory"])),
-            config_names,
+            f"*.yaml in {Path.cwd().name}/",
         )
         if choices:
             choices.append(questionary.Separator("\n─────────────────────────────────"))
@@ -1433,7 +1414,7 @@ def interactive_config_selector() -> Optional[str]:
         summary_table.add_row(
             "📦 Package Examples",
             str(len(configs["Package Examples"])),
-            "Built-in example configurations",
+            "Built-in examples (hierarchical browser)",
         )
         if choices:
             choices.append(questionary.Separator("\n─────────────────────────────────"))
@@ -1449,8 +1430,8 @@ def interactive_config_selector() -> Optional[str]:
     selector_console.print(
         Panel(
             summary_table,
-            title="[bold bright_white]📊 Available Configurations[/bold bright_white]",
-            border_style="bright_black",
+            title="[bold bright_cyan]🚀 Select a Configuration[/bold bright_cyan]",
+            border_style="bright_cyan",
             padding=(0, 1),
             width=90,
         ),
@@ -1514,18 +1495,6 @@ def _select_package_example(examples: List[Tuple[str, Path]], console: Console) 
         "other": "📋",
     }
 
-    # Show category selection header
-    console.print()
-    console.print(
-        Panel(
-            "[bold bright_yellow]📦 Package Examples Browser[/bold bright_yellow]\n\n"
-            "[dim]Built-in example configurations organized by category[/dim]",
-            border_style="bright_yellow",
-            padding=(1, 2),
-            width=90,
-        ),
-    )
-
     # Create category summary table
     category_table = Table(
         show_header=True,
@@ -1573,8 +1542,8 @@ def _select_package_example(examples: List[Tuple[str, Path]], console: Console) 
     console.print(
         Panel(
             category_table,
-            title="[bold bright_white]📑 Categories[/bold bright_white]",
-            border_style="bright_black",
+            title="[bold bright_yellow]📦 Package Examples - Select Category[/bold bright_yellow]",
+            border_style="bright_yellow",
             padding=(0, 1),
             width=90,
         ),
@@ -1603,20 +1572,8 @@ def _select_package_example(examples: List[Tuple[str, Path]], console: Console) 
         # Go back to main selector
         return interactive_config_selector()
 
-    # Show config selection header
-    emoji = category_emojis.get(selected_category, "📁")
-    console.print()
-    console.print(
-        Panel(
-            f"[bold bright_green]{emoji} {selected_category.title()} Configurations[/bold bright_green]\n\n"
-            f"[dim]{len(categories[selected_category])} configurations available in this category[/dim]",
-            border_style="bright_green",
-            padding=(1, 2),
-            width=90,
-        ),
-    )
-
     # Create configs table
+    emoji = category_emojis.get(selected_category, "📁")
     configs_table = Table(
         show_header=True,
         header_style="bold bright_white",
@@ -1646,8 +1603,8 @@ def _select_package_example(examples: List[Tuple[str, Path]], console: Console) 
     console.print(
         Panel(
             configs_table,
-            title=f"[bold bright_white]📄 {selected_category.title()} Configs[/bold bright_white]",
-            border_style="bright_black",
+            title=f"[bold bright_green]{emoji} {selected_category.title()} Configurations[/bold bright_green]",
+            border_style="bright_green",
             padding=(0, 1),
             width=90,
         ),
