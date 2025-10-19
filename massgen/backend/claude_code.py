@@ -169,11 +169,11 @@ class ClaudeCodeBackend(LLMBackend):
                     # Already in dict format
                     self.config["mcp_servers"]["massgen_custom_tools"] = sdk_mcp_server
                 elif isinstance(self.config["mcp_servers"], list):
-                    # List format - add as dict entry with name
+                    # List format - add as special entry with SDK server marker
                     self.config["mcp_servers"].append(
                         {
                             "name": "massgen_custom_tools",
-                            "server": sdk_mcp_server,
+                            "__sdk_server__": sdk_mcp_server,
                         }
                     )
                 else:
@@ -918,10 +918,15 @@ class ClaudeCodeBackend(LLMBackend):
             mcp_servers = options_kwargs["mcp_servers"]
             if isinstance(mcp_servers, list):
                 for server in mcp_servers:
-                    if isinstance(server, dict) and "name" in server:
-                        # Create a copy and remove "name" key
-                        server_config = {k: v for k, v in server.items() if k != "name"}
-                        mcp_servers_dict[server["name"]] = server_config
+                    if isinstance(server, dict):
+                        if "__sdk_server__" in server:
+                            # SDK MCP Server object (created via create_sdk_mcp_server)
+                            server_name = server["name"]
+                            mcp_servers_dict[server_name] = server["__sdk_server__"]
+                        elif "name" in server:
+                            # Regular dictionary configuration
+                            server_config = {k: v for k, v in server.items() if k != "name"}
+                            mcp_servers_dict[server["name"]] = server_config
             elif isinstance(mcp_servers, dict):
                 # Already in dict format
                 mcp_servers_dict = mcp_servers
@@ -1003,6 +1008,19 @@ class ClaudeCodeBackend(LLMBackend):
         )
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
+
+        # Extract system message from messages for append mode (always do this)
+        # This must be done BEFORE checking if we have a client to ensure workflow_system_prompt is always defined
+        system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
+        if system_msg:
+            system_content = system_msg.get("content", "")  # noqa: E128
+        else:
+            system_content = ""
+
+        # Build system prompt with tools information
+        # This must be done before any conditional paths to ensure it's always defined
+        workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
+
         # Check if we already have a client
         if self._client is not None:
             client = self._client
@@ -1027,17 +1045,6 @@ class ClaudeCodeBackend(LLMBackend):
                     if tool not in disallowed_tools:
                         disallowed_tools.append(tool)
                 all_params["disallowed_tools"] = disallowed_tools
-
-            # Extract system message from messages for append mode (always do this)
-            system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
-            if system_msg:
-                system_content = system_msg.get("content", "")  # noqa: E128
-            else:
-                system_content = ""
-
-            # Build system prompt with tools information
-            # This must be done before any conditional paths to ensure it's always defined
-            workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
 
             # Windows-specific handling: detect complex prompts that cause subprocess hang
             if sys.platform == "win32" and len(workflow_system_prompt) > 200:
