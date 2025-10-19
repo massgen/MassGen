@@ -393,6 +393,16 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     if tools_to_apply:
                         session_config["tools"] = tools_to_apply
 
+                        # Disable automatic function calling for custom tools
+                        # MassGen uses declarative mode: SDK should return function call requests
+                        # instead of automatically executing them
+                        if has_custom_tools:
+                            from google.genai import types
+                            session_config["automatic_function_calling"] = types.AutomaticFunctionCallingConfig(
+                                disable=True
+                            )
+                            logger.debug("[Gemini] Disabled automatic function calling for custom tools")
+
                     # ====================================================================
                     # Logging and status output
                     # ====================================================================
@@ -489,9 +499,33 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                     tool_name = call_data["name"]
                                                     tool_args = call_data["arguments"]
 
+                                                    # DEBUG: Log tool matching
+                                                    logger.info(f"🔍 [DEBUG] Function call detected: tool_name='{tool_name}'")
+                                                    logger.info(f"🔍 [DEBUG] Available MCP tools: {available_mcp_tools}")
+                                                    logger.info(f"🔍 [DEBUG] Available custom tools: {list(self._custom_tool_names) if has_custom_tools else []}")
+
                                                     # Determine if it's MCP tool or custom tool
-                                                    is_mcp_tool = has_mcp and tool_name in available_mcp_tools
+                                                    # MCP tools may come from SDK without prefix, so we need to check both:
+                                                    # 1. Direct match (tool_name in list)
+                                                    # 2. Prefixed match (mcp__server__tool_name in list)
+                                                    is_mcp_tool = False
+                                                    if has_mcp:
+                                                        # Direct match
+                                                        if tool_name in available_mcp_tools:
+                                                            is_mcp_tool = True
+                                                        else:
+                                                            # Try matching with MCP prefix format: mcp__<server>__<tool>
+                                                            # Check if any available MCP tool ends with the current tool_name
+                                                            for mcp_tool in available_mcp_tools:
+                                                                # Format: mcp__server__toolname
+                                                                if mcp_tool.startswith("mcp__") and mcp_tool.endswith(f"__{tool_name}"):
+                                                                    is_mcp_tool = True
+                                                                    logger.info(f"🔍 [DEBUG] Matched MCP tool: {tool_name} -> {mcp_tool}")
+                                                                    break
+
                                                     is_custom_tool = has_custom_tools and tool_name in self._custom_tool_names
+
+                                                    logger.info(f"🔍 [DEBUG] Tool matching result: is_mcp_tool={is_mcp_tool}, is_custom_tool={is_custom_tool}")
 
                                                     if is_custom_tool:
                                                         # Process custom tool call
@@ -570,9 +604,28 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                 tool_name = call_data["name"]
                                                 tool_args = call_data["arguments"]
 
+                                                # DEBUG: Log tool matching (from automatic_function_calling_history)
+                                                logger.info(f"🔍 [DEBUG-AUTO] Function call in history: tool_name='{tool_name}'")
+                                                logger.info(f"🔍 [DEBUG-AUTO] Available MCP tools: {available_mcp_tools}")
+                                                logger.info(f"🔍 [DEBUG-AUTO] Available custom tools: {list(self._custom_tool_names) if has_custom_tools else []}")
+
                                                 # Determine if it's MCP tool or custom tool
-                                                is_mcp_tool = has_mcp and tool_name in available_mcp_tools
+                                                # MCP tools may come from SDK without prefix, so we need to check both
+                                                is_mcp_tool = False
+                                                if has_mcp:
+                                                    if tool_name in available_mcp_tools:
+                                                        is_mcp_tool = True
+                                                    else:
+                                                        # Try matching with MCP prefix format
+                                                        for mcp_tool in available_mcp_tools:
+                                                            if mcp_tool.startswith("mcp__") and mcp_tool.endswith(f"__{tool_name}"):
+                                                                is_mcp_tool = True
+                                                                logger.info(f"🔍 [DEBUG-AUTO] Matched MCP tool: {tool_name} -> {mcp_tool}")
+                                                                break
+
                                                 is_custom_tool = has_custom_tools and tool_name in self._custom_tool_names
+
+                                                logger.info(f"🔍 [DEBUG-AUTO] Tool matching result: is_mcp_tool={is_mcp_tool}, is_custom_tool={is_custom_tool}")
 
                                                 if is_mcp_tool:
                                                     # Process MCP tool call
@@ -647,7 +700,18 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                 tool_response = response_data["response"]
 
                                                 # Determine if it's MCP tool or custom tool
-                                                is_mcp_tool = has_mcp and tool_name in available_mcp_tools
+                                                # MCP tools may come from SDK without prefix
+                                                is_mcp_tool = False
+                                                if has_mcp:
+                                                    if tool_name in available_mcp_tools:
+                                                        is_mcp_tool = True
+                                                    else:
+                                                        # Try matching with MCP prefix format
+                                                        for mcp_tool in available_mcp_tools:
+                                                            if mcp_tool.startswith("mcp__") and mcp_tool.endswith(f"__{tool_name}"):
+                                                                is_mcp_tool = True
+                                                                break
+
                                                 is_custom_tool = has_custom_tools and tool_name in self._custom_tool_names
 
                                                 if is_mcp_tool:
@@ -745,13 +809,46 @@ class GeminiBackend(CustomToolAndMCPBackend):
                         delattr(self, "_mcp_stream_started")
 
                     # ====================================================================
-                    # Custom tool execution phase: Execute custom tools if any were called
+                    # Tool execution loop: Execute tools until model stops calling them
                     # ====================================================================
-                    if custom_tools_used:
-                        # Execute custom tools and collect results
-                        tool_responses = []
+                    # Note: When automatic_function_calling is disabled, BOTH custom and MCP tools
+                    # need to be manually executed. The model may make multiple rounds of tool calls
+                    # (e.g., call custom tool first, then MCP tool after seeing the result).
+
+                    executed_tool_calls = set()  # Track which tools we've already executed
+                    max_tool_rounds = 10  # Prevent infinite loops
+                    tool_round = 0
+                    all_function_calls = []  # Track all function calls for conversation history
+
+                    while tool_round < max_tool_rounds:
+                        # Find new tool calls that haven't been executed yet
+                        new_custom_tools = []
+                        new_mcp_tools = []
 
                         for tool_call in custom_tools_used:
+                            call_signature = f"custom_{tool_call['name']}_{json.dumps(tool_call['arguments'], sort_keys=True)}"
+                            if call_signature not in executed_tool_calls:
+                                new_custom_tools.append(tool_call)
+                                executed_tool_calls.add(call_signature)
+
+                        for tool_call in mcp_tools_used:
+                            call_signature = f"mcp_{tool_call['name']}_{json.dumps(tool_call['arguments'], sort_keys=True)}"
+                            if call_signature not in executed_tool_calls:
+                                new_mcp_tools.append(tool_call)
+                                executed_tool_calls.add(call_signature)
+
+                        # If no new tools to execute, break the loop
+                        if not new_custom_tools and not new_mcp_tools:
+                            break
+
+                        tool_round += 1
+                        logger.debug(f"[Gemini] Tool execution round {tool_round}: {len(new_custom_tools)} custom, {len(new_mcp_tools)} MCP")
+
+                        # Execute tools and collect results for this round
+                        tool_responses = []
+
+                        # Execute custom tools
+                        for tool_call in new_custom_tools:
                             tool_name = tool_call["name"]
                             tool_args = tool_call["arguments"]
 
@@ -793,17 +890,70 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     "response": {"error": str(e)}
                                 })
 
-                        # Make continuation call with tool results
+                        # Execute MCP tools manually (since automatic_function_calling is disabled)
+                        for tool_call in new_mcp_tools:
+                            tool_name = tool_call["name"]
+                            tool_args = tool_call["arguments"]
+
+                            try:
+                                # Execute the MCP tool via MCP client
+                                if not self._mcp_client:
+                                    raise RuntimeError("MCP client not initialized")
+
+                                # Convert tool name to prefixed format if needed
+                                # MCP client expects: mcp__server__toolname
+                                # Gemini SDK returns: toolname (without prefix)
+                                prefixed_tool_name = tool_name
+                                if not tool_name.startswith("mcp__"):
+                                    # Find the matching prefixed tool name
+                                    for mcp_tool in available_mcp_tools:
+                                        if mcp_tool.startswith("mcp__") and mcp_tool.endswith(f"__{tool_name}"):
+                                            prefixed_tool_name = mcp_tool
+                                            logger.info(f"🔧 [DEBUG] Converting tool name for execution: {tool_name} -> {prefixed_tool_name}")
+                                            break
+
+                                mcp_result = await self._mcp_client.call_tool(prefixed_tool_name, tool_args)
+
+                                # Yield execution status
+                                result_preview = str(mcp_result)[:200] if mcp_result else "None"
+                                yield StreamChunk(
+                                    type="mcp_status",
+                                    status="mcp_tool_executed",
+                                    content=f"✅ MCP Tool Executed: {tool_name} -> {result_preview}{'...' if len(str(mcp_result)) > 200 else ''}",
+                                    source="mcp_tools",
+                                )
+
+                                # Build function response in Gemini format
+                                tool_responses.append({
+                                    "name": tool_name,
+                                    "response": {"result": mcp_result}
+                                })
+
+                            except Exception as e:
+                                error_msg = f"Error executing MCP tool {tool_name}: {str(e)}"
+                                logger.error(error_msg)
+                                yield StreamChunk(
+                                    type="mcp_status",
+                                    status="mcp_tool_error",
+                                    content=f"❌ {error_msg}",
+                                    source="mcp_tools",
+                                )
+                                # Add error response
+                                tool_responses.append({
+                                    "name": tool_name,
+                                    "response": {"error": str(e)}
+                                })
+
+                        # Make continuation call with tool results from this round
                         if tool_responses:
                             try:
                                 from google.genai import types
 
                                 # Build conversation history for continuation
-                                # 1. Original user message
-                                # 2. Model's response with function calls
-                                # 3. Function responses
-                                # 4. Continue generation
+                                # Track all function calls from this round
+                                round_function_calls = new_custom_tools + new_mcp_tools
 
+                                # Build conversation history
                                 conversation_history = []
 
                                 # Add original user content
@@ -814,9 +964,9 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     )
                                 )
 
-                                # Add model's function call response
+                                # Add model's function call response (tools from THIS round)
                                 model_parts = []
-                                for tool_call in custom_tools_used:
+                                for tool_call in round_function_calls:
                                     model_parts.append(
                                         types.Part.from_function_call(
                                             name=tool_call["name"],
@@ -863,16 +1013,299 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                     config=session_config
                                 )
 
-                                # Process continuation stream
+                                # Process continuation stream (same processing as main stream)
                                 async for chunk in continuation_stream:
+                                    # ============================================
+                                    # Process function calls/responses in continuation
+                                    # ============================================
+                                    # Check for function calls in current chunk's candidates
+                                    if hasattr(chunk, "candidates") and chunk.candidates:
+                                        for candidate in chunk.candidates:
+                                            if hasattr(candidate, "content") and candidate.content:
+                                                if hasattr(candidate.content, "parts") and candidate.content.parts:
+                                                    for part in candidate.content.parts:
+                                                        # Check for function_call part
+                                                        if hasattr(part, "function_call") and part.function_call:
+                                                            call_data = self.mcp_extractor.extract_function_call(part.function_call)
+
+                                                            if call_data:
+                                                                tool_name = call_data["name"]
+                                                                tool_args = call_data["arguments"]
+
+                                                                # Determine if it's MCP tool or custom tool
+                                                                # MCP tools may come from SDK without prefix
+                                                                is_mcp_tool = False
+                                                                if has_mcp:
+                                                                    if tool_name in available_mcp_tools:
+                                                                        is_mcp_tool = True
+                                                                    else:
+                                                                        # Try matching with MCP prefix format
+                                                                        for mcp_tool in available_mcp_tools:
+                                                                            if mcp_tool.startswith("mcp__") and mcp_tool.endswith(f"__{tool_name}"):
+                                                                                is_mcp_tool = True
+                                                                                break
+
+                                                                is_custom_tool = has_custom_tools and tool_name in self._custom_tool_names
+
+                                                                if is_custom_tool:
+                                                                    # Process custom tool call
+                                                                    if custom_tracker.is_new_call(tool_name, tool_args):
+                                                                        call_record = custom_tracker.add_call(tool_name, tool_args)
+
+                                                                        custom_tools_used.append(
+                                                                            {
+                                                                                "name": tool_name,
+                                                                                "arguments": tool_args,
+                                                                                "timestamp": call_record["timestamp"],
+                                                                            },
+                                                                        )
+
+                                                                        timestamp_str = time.strftime(
+                                                                            "%H:%M:%S",
+                                                                            time.localtime(call_record["timestamp"]),
+                                                                        )
+
+                                                                        yield StreamChunk(
+                                                                            type="custom_tool_status",
+                                                                            status="custom_tool_called",
+                                                                            content=f"🔧 Custom Tool Called: {tool_name} at {timestamp_str} with args: {json.dumps(tool_args, indent=2)}",
+                                                                            source="custom_tools",
+                                                                        )
+
+                                                                        log_tool_call(
+                                                                            agent_id,
+                                                                            tool_name,
+                                                                            tool_args,
+                                                                            backend_name="gemini",
+                                                                        )
+                                                                elif is_mcp_tool:
+                                                                    # Process MCP tool call
+                                                                    if mcp_tracker.is_new_call(tool_name, tool_args):
+                                                                        call_record = mcp_tracker.add_call(tool_name, tool_args)
+
+                                                                        mcp_tools_used.append(
+                                                                            {
+                                                                                "name": tool_name,
+                                                                                "arguments": tool_args,
+                                                                                "timestamp": call_record["timestamp"],
+                                                                            },
+                                                                        )
+
+                                                                        timestamp_str = time.strftime(
+                                                                            "%H:%M:%S",
+                                                                            time.localtime(call_record["timestamp"]),
+                                                                        )
+
+                                                                        yield StreamChunk(
+                                                                            type="mcp_status",
+                                                                            status="mcp_tool_called",
+                                                                            content=f"🔧 MCP Tool Called: {tool_name} at {timestamp_str} with args: {json.dumps(tool_args, indent=2)}",
+                                                                            source="mcp_tools",
+                                                                        )
+
+                                                                        log_tool_call(
+                                                                            agent_id,
+                                                                            tool_name,
+                                                                            tool_args,
+                                                                            backend_name="gemini",
+                                                                        )
+
+                                    # Check automatic_function_calling_history (for auto-executed MCP tools)
+                                    if hasattr(chunk, "automatic_function_calling_history") and chunk.automatic_function_calling_history:
+                                        for history_item in chunk.automatic_function_calling_history:
+                                            if hasattr(history_item, "parts") and history_item.parts is not None:
+                                                for part in history_item.parts:
+                                                    # Check for function_call part
+                                                    if hasattr(part, "function_call") and part.function_call:
+                                                        call_data = self.mcp_extractor.extract_function_call(part.function_call)
+
+                                                        if call_data:
+                                                            tool_name = call_data["name"]
+                                                            tool_args = call_data["arguments"]
+
+                                                            # Determine if it's MCP tool or custom tool
+                                                            # MCP tools may come from SDK without prefix
+                                                            is_mcp_tool = False
+                                                            if has_mcp:
+                                                                if tool_name in available_mcp_tools:
+                                                                    is_mcp_tool = True
+                                                                else:
+                                                                    # Try matching with MCP prefix format
+                                                                    for mcp_tool in available_mcp_tools:
+                                                                        if mcp_tool.startswith("mcp__") and mcp_tool.endswith(f"__{tool_name}"):
+                                                                            is_mcp_tool = True
+                                                                            break
+
+                                                            is_custom_tool = has_custom_tools and tool_name in self._custom_tool_names
+
+                                                            if is_mcp_tool:
+                                                                # Process MCP tool call
+                                                                if mcp_tracker.is_new_call(tool_name, tool_args):
+                                                                    call_record = mcp_tracker.add_call(tool_name, tool_args)
+
+                                                                    mcp_tools_used.append(
+                                                                        {
+                                                                            "name": tool_name,
+                                                                            "arguments": tool_args,
+                                                                            "timestamp": call_record["timestamp"],
+                                                                        },
+                                                                    )
+
+                                                                    timestamp_str = time.strftime(
+                                                                        "%H:%M:%S",
+                                                                        time.localtime(call_record["timestamp"]),
+                                                                    )
+
+                                                                    yield StreamChunk(
+                                                                        type="mcp_status",
+                                                                        status="mcp_tool_called",
+                                                                        content=f"🔧 MCP Tool Called: {tool_name} at {timestamp_str} with args: {json.dumps(tool_args, indent=2)}",
+                                                                        source="mcp_tools",
+                                                                    )
+
+                                                                    log_tool_call(
+                                                                        agent_id,
+                                                                        tool_name,
+                                                                        tool_args,
+                                                                        backend_name="gemini",
+                                                                    )
+
+                                                            elif is_custom_tool:
+                                                                # Process custom tool call
+                                                                if custom_tracker.is_new_call(tool_name, tool_args):
+                                                                    call_record = custom_tracker.add_call(tool_name, tool_args)
+
+                                                                    custom_tools_used.append(
+                                                                        {
+                                                                            "name": tool_name,
+                                                                            "arguments": tool_args,
+                                                                            "timestamp": call_record["timestamp"],
+                                                                        },
+                                                                    )
+
+                                                                    timestamp_str = time.strftime(
+                                                                        "%H:%M:%S",
+                                                                        time.localtime(call_record["timestamp"]),
+                                                                    )
+
+                                                                    yield StreamChunk(
+                                                                        type="custom_tool_status",
+                                                                        status="custom_tool_called",
+                                                                        content=f"🔧 Custom Tool Called: {tool_name} at {timestamp_str} with args: {json.dumps(tool_args, indent=2)}",
+                                                                        source="custom_tools",
+                                                                    )
+
+                                                                    log_tool_call(
+                                                                        agent_id,
+                                                                        tool_name,
+                                                                        tool_args,
+                                                                        backend_name="gemini",
+                                                                    )
+
+                                                    # Check for function_response part
+                                                    elif hasattr(part, "function_response") and part.function_response:
+                                                        response_data = self.mcp_extractor.extract_function_response(part.function_response)
+
+                                                        if response_data:
+                                                            tool_name = response_data["name"]
+                                                            tool_response = response_data["response"]
+
+                                                            # Determine if it's MCP tool or custom tool
+                                                            # MCP tools may come from SDK without prefix
+                                                            is_mcp_tool = False
+                                                            if has_mcp:
+                                                                if tool_name in available_mcp_tools:
+                                                                    is_mcp_tool = True
+                                                                else:
+                                                                    # Try matching with MCP prefix format
+                                                                    for mcp_tool in available_mcp_tools:
+                                                                        if mcp_tool.startswith("mcp__") and mcp_tool.endswith(f"__{tool_name}"):
+                                                                            is_mcp_tool = True
+                                                                            break
+
+                                                            is_custom_tool = has_custom_tools and tool_name in self._custom_tool_names
+
+                                                            if is_mcp_tool:
+                                                                # Process MCP tool response
+                                                                if mcp_response_tracker.is_new_response(tool_name, tool_response):
+                                                                    response_record = mcp_response_tracker.add_response(tool_name, tool_response)
+
+                                                                    # Extract text content from CallToolResult
+                                                                    response_text = None
+                                                                    if isinstance(tool_response, dict) and "result" in tool_response:
+                                                                        result = tool_response["result"]
+                                                                        if hasattr(result, "content") and result.content:
+                                                                            first_content = result.content[0]
+                                                                            if hasattr(first_content, "text"):
+                                                                                response_text = first_content.text
+
+                                                                    if response_text is None:
+                                                                        response_text = str(tool_response)
+
+                                                                    timestamp_str = time.strftime(
+                                                                        "%H:%M:%S",
+                                                                        time.localtime(response_record["timestamp"]),
+                                                                    )
+
+                                                                    yield StreamChunk(
+                                                                        type="mcp_status",
+                                                                        status="mcp_tool_response",
+                                                                        content=f"✅ MCP Tool Response from {tool_name} at {timestamp_str}: {response_text}",
+                                                                        source="mcp_tools",
+                                                                    )
+
+                                                                    log_backend_activity(
+                                                                        "gemini",
+                                                                        "MCP tool response received",
+                                                                        {
+                                                                            "tool_name": tool_name,
+                                                                            "response_preview": str(tool_response)[:],
+                                                                        },
+                                                                        agent_id=agent_id,
+                                                                    )
+
+                                                            elif is_custom_tool:
+                                                                # Process custom tool response
+                                                                if custom_response_tracker.is_new_response(tool_name, tool_response):
+                                                                    response_record = custom_response_tracker.add_response(tool_name, tool_response)
+
+                                                                    # Extract text from response
+                                                                    response_text = str(tool_response)
+
+                                                                    timestamp_str = time.strftime(
+                                                                        "%H:%M:%S",
+                                                                        time.localtime(response_record["timestamp"]),
+                                                                    )
+
+                                                                    yield StreamChunk(
+                                                                        type="custom_tool_status",
+                                                                        status="custom_tool_response",
+                                                                        content=f"✅ Custom Tool Response from {tool_name} at {timestamp_str}: {response_text}",
+                                                                        source="custom_tools",
+                                                                    )
+
+                                                                    log_backend_activity(
+                                                                        "gemini",
+                                                                        "Custom tool response received",
+                                                                        {
+                                                                            "tool_name": tool_name,
+                                                                            "response_preview": str(tool_response)[:200],
+                                                                        },
+                                                                        agent_id=agent_id,
+                                                                    )
+
+                                    # ============================================
                                     # Process text content
+                                    # ============================================
                                     if hasattr(chunk, "text") and chunk.text:
                                         chunk_text = chunk.text
                                         full_content_text += chunk_text
                                         log_stream_chunk("backend.gemini", "continuation_content", chunk_text, agent_id)
                                         yield StreamChunk(type="content", content=chunk_text)
 
+                                    # ============================================
                                     # Buffer last chunk
+                                    # ============================================
                                     if hasattr(chunk, "candidates") and chunk.candidates:
                                         last_response_with_candidates = chunk
 
