@@ -242,8 +242,7 @@ class CustomToolAndMCPBackend(LLMBackend):
                         functions = func_field
                     else:
                         logger.error(
-                            f"Invalid function field type: {type(func_field)}. "
-                            f"Must be str or List[str]."
+                            f"Invalid function field type: {type(func_field)}. " f"Must be str or List[str].",
                         )
                         continue
 
@@ -256,7 +255,9 @@ class CustomToolAndMCPBackend(LLMBackend):
                     # Process name field (can be str or List[str])
                     name_field = tool_config.get("name")
                     names = self._process_field_for_functions(
-                        name_field, num_functions, "name"
+                        name_field,
+                        num_functions,
+                        "name",
                     )
                     if names is None:
                         continue  # Validation error, skip this tool
@@ -264,7 +265,9 @@ class CustomToolAndMCPBackend(LLMBackend):
                     # Process description field (can be str or List[str])
                     desc_field = tool_config.get("description")
                     descriptions = self._process_field_for_functions(
-                        desc_field, num_functions, "description"
+                        desc_field,
+                        num_functions,
+                        "description",
                     )
                     if descriptions is None:
                         continue  # Validation error, skip this tool
@@ -272,7 +275,9 @@ class CustomToolAndMCPBackend(LLMBackend):
                     # Process preset_args field (can be dict or List[dict])
                     preset_field = tool_config.get("preset_args")
                     preset_args_list = self._process_field_for_functions(
-                        preset_field, num_functions, "preset_args"
+                        preset_field,
+                        num_functions,
+                        "preset_args",
                     )
                     if preset_args_list is None:
                         continue  # Validation error, skip this tool
@@ -322,23 +327,21 @@ class CustomToolAndMCPBackend(LLMBackend):
                             self._custom_tool_names.add(f"custom_tool__{registered_name}")
 
                         logger.info(
-                            f"Registered custom tool: {registered_name} from {path} "
-                            f"(category: {category}, "
-                            f"desc: '{descriptions[i][:50] if descriptions[i] else 'None'}...')"
+                            f"Registered custom tool: {registered_name} from {path} " f"(category: {category}, " f"desc: '{descriptions[i][:50] if descriptions[i] else 'None'}...')",
                         )
 
             except Exception as e:
-                func_name = tool_config.get('function', 'unknown')
+                func_name = tool_config.get("function", "unknown")
                 logger.error(
                     f"Failed to register custom tool {func_name}: {e}",
-                    exc_info=True
+                    exc_info=True,
                 )
 
     def _process_field_for_functions(
         self,
         field_value: Any,
         num_functions: int,
-        field_name: str
+        field_name: str,
     ) -> Optional[List[Any]]:
         """Process a config field that can be a single value or list.
 
@@ -386,7 +389,7 @@ class CustomToolAndMCPBackend(LLMBackend):
                 f"Configuration error: {field_name} is a list with "
                 f"{len(field_value)} items, but there are {num_functions} functions. "
                 f"Either use a single value (shared) or a list with exactly "
-                f"{num_functions} items (1-to-1 mapping)."
+                f"{num_functions} items (1-to-1 mapping).",
             )
             return None
 
