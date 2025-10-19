@@ -24,7 +24,8 @@
   "activationEvents": [
     "onCommand:massgen.chat",
     "onCommand:massgen.analyzeCode",
-    "onCommand:massgen.configure"
+    "onCommand:massgen.configure",
+    "onCommand:massgen.testConnection"
   ],
   "main": "./out/extension.js",
   "contributes": {

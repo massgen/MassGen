@@ -15,23 +15,21 @@ let client: MassGenClient | undefined;
 export async function activate(context: vscode.ExtensionContext) {
     console.log('MassGen extension is activating...');
 
+    // Initialize MassGen client
+    client = new MassGenClient(context);
+
+    // Register commands first (so they're always available)
+    registerCommands(context);
+
+    // Try to start the server in the background
     try {
-        // Initialize MassGen client
-        client = new MassGenClient(context);
-
-        // Start the server
         await client.start();
-
-        // Register commands
-        registerCommands(context);
-
         console.log('MassGen extension activated successfully');
         vscode.window.showInformationMessage('MassGen is ready! Use "MassGen: Start Chat" to begin.');
-
     } catch (error) {
-        console.error('Failed to activate MassGen extension:', error);
-        vscode.window.showErrorMessage(
-            `Failed to activate MassGen: ${error}\n\n` +
+        console.error('Failed to start MassGen server:', error);
+        vscode.window.showWarningMessage(
+            `MassGen extension loaded, but server failed to start: ${error}\n\n` +
             'Make sure MassGen is installed: pip install massgen'
         );
     }
@@ -41,10 +39,6 @@ export async function activate(context: vscode.ExtensionContext) {
  * Register all extension commands
  */
 function registerCommands(context: vscode.ExtensionContext) {
-    if (!client) {
-        return;
-    }
-
     // Command: Start Chat
     context.subscriptions.push(
         vscode.commands.registerCommand('massgen.chat', () => {

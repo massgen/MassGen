@@ -128,6 +128,8 @@ class VSCodeServer:
         """Handle query request from VSCode."""
         from massgen.agent_config import AgentConfig
         from massgen.orchestrator import Orchestrator
+        from massgen.cli import create_backend
+        from massgen.chat_agent import create_simple_agent
 
         query_text = params.get("text", "")
         config_path = params.get("config")
@@ -145,21 +147,38 @@ class VSCodeServer:
                 # Use default single agent config
                 config = self._get_default_config()
 
-            # Create orchestrator
-            orchestrator = Orchestrator(config)
+            # Create a single agent from the config
+            agent_id = config.agent_id or "agent-1"
 
-            # Register event listener to stream events to VSCode
-            def event_listener(event):
-                self._send_event(event)
+            # Extract backend type and other params
+            backend_params = config.backend_params.copy()
+            backend_type = backend_params.pop("backend", "openai")
 
-            # Hook into orchestrator events (we'll need to modify orchestrator)
-            # For now, just execute the query
+            # Create backend
+            backend = create_backend(backend_type, **backend_params)
+
+            # Wrap backend in a ChatAgent
+            agent = create_simple_agent(
+                backend=backend,
+                system_message="You are a helpful AI assistant.",
+                agent_id=agent_id,
+            )
+
+            # Create agents dictionary
+            agents = {agent_id: agent}
+
+            # Create orchestrator with agents
+            orchestrator = Orchestrator(
+                agents=agents,
+                config=config,
+            )
+
+            # Send execution start event
             self._send_event(
                 {"type": "execution_start", "query": query_text, "timestamp": None}
             )
 
-            # Execute query (simplified version)
-            # In real implementation, we need async streaming support
+            # Execute query
             result = await self._execute_query_async(orchestrator, query_text)
 
             self._send_event({"type": "execution_complete", "result": result})
@@ -174,10 +193,31 @@ class VSCodeServer:
     async def _execute_query_async(
         self, orchestrator: "Orchestrator", query: str
     ) -> str:
-        """Execute query asynchronously (placeholder)."""
-        # This is a simplified version
-        # Real implementation needs to integrate with orchestrator's async methods
-        return "Query executed successfully (placeholder)"
+        """Execute query asynchronously."""
+        try:
+            # Use chat_simple which returns an async generator
+            full_response = ""
+
+            async for chunk in orchestrator.chat_simple(query):
+                # Send streaming events to VSCode
+                if chunk.type == "content":
+                    self._send_event({
+                        "type": "stream_chunk",
+                        "content": chunk.content,
+                    })
+                    full_response += chunk.content
+                elif chunk.type == "error":
+                    self._send_event({
+                        "type": "error",
+                        "message": chunk.error,
+                    })
+                    raise Exception(chunk.error)
+
+            return full_response
+
+        except Exception as e:
+            logger.error(f"Orchestrator execution error: {e}")
+            raise
 
     async def _handle_configure(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Handle configuration request."""
@@ -256,15 +296,13 @@ class VSCodeServer:
         """Get default single-agent configuration."""
         from massgen.agent_config import AgentConfig
 
-        # Return a simple default config
-        # This should be customizable
-        return AgentConfig.from_dict(
-            {
-                "agent": {
-                    "id": "default-agent",
-                    "backend": {"type": "openai", "model": "gpt-4o-mini"},
-                }
-            }
+        # Return a simple default config using backend_params
+        return AgentConfig(
+            backend_params={
+                "backend": "openai",
+                "model": "gpt-4o-mini",
+            },
+            agent_id="vscode-default-agent",
         )
 
     def _send_response(self, response: Dict[str, Any]):
