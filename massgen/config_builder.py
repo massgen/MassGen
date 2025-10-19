@@ -825,12 +825,13 @@ class ConfigBuilder:
 
         return agents
 
-    def clone_agent(self, source_agent: Dict, new_id: str) -> Dict:
-        """Clone an agent's configuration with a new ID.
+    def clone_agent(self, source_agent: Dict, new_id: str, target_backend_type: str = None) -> Dict:
+        """Clone an agent's configuration with a new ID, optionally preserving target backend.
 
         Args:
             source_agent: Agent to clone
             new_id: New agent ID
+            target_backend_type: If provided, preserve this backend type instead of copying source's
 
         Returns:
             Cloned agent with updated ID and workspace (if applicable)
@@ -840,9 +841,82 @@ class ConfigBuilder:
         cloned = copy.deepcopy(source_agent)
         cloned["id"] = new_id
 
-        # Update workspace for Claude Code agents to avoid conflicts
-        backend_type = cloned.get("backend", {}).get("type")
-        if backend_type == "claude_code" and "cwd" in cloned.get("backend", {}):
+        # If target backend type is different, preserve it and update model
+        if target_backend_type and target_backend_type != source_agent.get("backend", {}).get("type"):
+            # Find target provider info to get default model
+            target_provider_info = None
+            for pid, pinfo in self.PROVIDERS.items():
+                if pinfo.get("type") == target_backend_type:
+                    target_provider_info = pinfo
+                    break
+
+            if target_provider_info:
+                # Preserve tool enablement flags (provider-agnostic)
+                preserved_settings = {}
+                skipped_settings = []
+                source_backend = source_agent.get("backend", {})
+                source_backend_type = source_backend.get("type")
+
+                # Copy filesystem settings (provider-agnostic)
+                if "cwd" in source_backend:
+                    preserved_settings["cwd"] = source_backend["cwd"]
+
+                # Copy MCP servers (provider-agnostic, but check if target supports MCP)
+                if "mcp_servers" in source_backend:
+                    # Check if target provider supports MCP
+                    target_supports_mcp = "mcp" in target_provider_info.get("supports", [])
+                    if target_supports_mcp:
+                        preserved_settings["mcp_servers"] = copy.deepcopy(source_backend["mcp_servers"])
+                    else:
+                        skipped_settings.append("mcp_servers (not supported by target provider)")
+
+                # Copy tool flags if they exist and are supported by target
+                for key in ["enable_web_search", "enable_code_execution", "enable_code_interpreter",
+                           "enable_mcp_command_line", "command_line_execution_mode"]:
+                    if key in source_backend:
+                        # Check if target supports this tool
+                        if key == "enable_web_search":
+                            if target_backend_type in ["openai", "claude", "gemini", "grok", "azure_openai"]:
+                                preserved_settings[key] = source_backend[key]
+                            else:
+                                skipped_settings.append(f"{key} (not supported by {target_backend_type})")
+                        elif key == "enable_code_execution":
+                            if target_backend_type in ["claude", "gemini"]:
+                                preserved_settings[key] = source_backend[key]
+                            else:
+                                skipped_settings.append(f"{key} (not supported by {target_backend_type})")
+                        elif key == "enable_code_interpreter":
+                            if target_backend_type in ["openai", "azure_openai"]:
+                                preserved_settings[key] = source_backend[key]
+                            else:
+                                skipped_settings.append(f"{key} (not supported by {target_backend_type})")
+                        else:
+                            # MCP command line and execution mode are universal
+                            preserved_settings[key] = source_backend[key]
+
+                # Copy reasoning/text settings if target is OpenAI
+                if target_backend_type == "openai":
+                    for key in ["text", "reasoning"]:
+                        if key in source_backend:
+                            preserved_settings[key] = copy.deepcopy(source_backend[key])
+                elif source_backend_type == "openai":
+                    # Source was OpenAI but target is not - these settings can't be copied
+                    for key in ["text", "reasoning"]:
+                        if key in source_backend:
+                            skipped_settings.append(f"{key} (OpenAI-specific)")
+
+                # Replace backend with target provider's default model + preserved settings
+                cloned["backend"] = {
+                    "type": target_backend_type,
+                    "model": target_provider_info.get("models", ["default"])[0],
+                    **preserved_settings
+                }
+
+                # Store skipped settings for later warning
+                cloned["_skipped_settings"] = skipped_settings
+
+        # Update workspace for filesystem-enabled agents to avoid conflicts
+        if "cwd" in cloned.get("backend", {}):
             # Extract number from new_id (e.g., "agent_b" -> 2)
             if "_" in new_id and len(new_id) > 0:
                 agent_letter = new_id.split("_")[-1]
@@ -1881,17 +1955,103 @@ class ConfigBuilder:
                             ).ask()
 
                             if clone_choice == "clone":
-                                # Clone the previous agent
+                                # Clone the previous agent, preserving current agent's backend type
                                 source_agent = agents[i - 2]
-                                agent = self.clone_agent(source_agent, agent["id"])
+                                target_backend_type = agent.get("backend", {}).get("type")
+                                source_backend_type = source_agent.get("backend", {}).get("type")
+
+                                agent = self.clone_agent(source_agent, agent["id"], target_backend_type)
+
+                                # If cross-provider cloning, prompt for model selection
+                                if target_backend_type != source_backend_type:
+                                    console.print(f"✅ Cloned settings from agent_{chr(ord('a') + i - 2)} ({source_backend_type})")
+                                    console.print(f"   [dim]Note: Model must be selected for {target_backend_type}[/dim]")
+
+                                    # Show skipped settings warning if any
+                                    skipped = agent.get("_skipped_settings", [])
+                                    if skipped:
+                                        console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                        for setting in skipped:
+                                            console.print(f"      • {setting}")
+                                    console.print()
+
+                                    # Prompt for model selection
+                                    target_provider_info = None
+                                    for _, pinfo in self.PROVIDERS.items():
+                                        if pinfo.get("type") == target_backend_type:
+                                            target_provider_info = pinfo
+                                            break
+
+                                    if target_provider_info and target_provider_info.get("models"):
+                                        model_choice = questionary.select(
+                                            f"Select {target_backend_type} model:",
+                                            choices=target_provider_info["models"],
+                                            style=questionary.Style([
+                                                ("selected", "fg:cyan bold"),
+                                                ("pointer", "fg:cyan bold"),
+                                            ]),
+                                        ).ask()
+
+                                        if model_choice:
+                                            agent["backend"]["model"] = model_choice
+                                            console.print(f"   ✅ Model: {model_choice}")
+
+                                    # Clean up temporary skipped settings marker
+                                    agent.pop("_skipped_settings", None)
+                                else:
+                                    console.print(f"✅ Cloned configuration from agent_{chr(ord('a') + i - 2)}")
+                                    # Clean up temporary skipped settings marker
+                                    agent.pop("_skipped_settings", None)
+
                                 agents[i - 1] = agent
-                                console.print(f"✅ Cloned configuration from agent_{chr(ord('a') + i - 2)}")
                                 console.print()
                                 continue
                             elif clone_choice == "clone_modify":
-                                # Clone and selectively modify
+                                # Clone and selectively modify, preserving current agent's backend type
                                 source_agent = agents[i - 2]
-                                agent = self.clone_agent(source_agent, agent["id"])
+                                target_backend_type = agent.get("backend", {}).get("type")
+                                source_backend_type = source_agent.get("backend", {}).get("type")
+
+                                agent = self.clone_agent(source_agent, agent["id"], target_backend_type)
+
+                                # If cross-provider cloning, prompt for model selection before modification
+                                if target_backend_type != source_backend_type:
+                                    console.print(f"✅ Cloned settings from agent_{chr(ord('a') + i - 2)} ({source_backend_type})")
+                                    console.print(f"   [dim]Note: Model must be selected for {target_backend_type}[/dim]")
+
+                                    # Show skipped settings warning if any
+                                    skipped = agent.get("_skipped_settings", [])
+                                    if skipped:
+                                        console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                        for setting in skipped:
+                                            console.print(f"      • {setting}")
+                                    console.print()
+
+                                    # Prompt for model selection
+                                    target_provider_info = None
+                                    for _, pinfo in self.PROVIDERS.items():
+                                        if pinfo.get("type") == target_backend_type:
+                                            target_provider_info = pinfo
+                                            break
+
+                                    if target_provider_info and target_provider_info.get("models"):
+                                        model_choice = questionary.select(
+                                            f"Select {target_backend_type} model:",
+                                            choices=target_provider_info["models"],
+                                            style=questionary.Style([
+                                                ("selected", "fg:cyan bold"),
+                                                ("pointer", "fg:cyan bold"),
+                                            ]),
+                                        ).ask()
+
+                                        if model_choice:
+                                            agent["backend"]["model"] = model_choice
+                                            console.print(f"   ✅ Model: {model_choice}")
+                                            console.print()
+
+                                    # Clean up temporary skipped settings marker before modification
+                                    agent.pop("_skipped_settings", None)
+
                                 agent = self.modify_cloned_agent(agent, i)
                                 agents[i - 1] = agent
                                 continue
@@ -1925,17 +2085,103 @@ class ConfigBuilder:
                         ).ask()
 
                         if clone_choice == "clone":
-                            # Clone the previous agent
+                            # Clone the previous agent, preserving current agent's backend type
                             source_agent = agents[i - 2]
-                            agent = self.clone_agent(source_agent, agent["id"])
+                            target_backend_type = agent.get("backend", {}).get("type")
+                            source_backend_type = source_agent.get("backend", {}).get("type")
+
+                            agent = self.clone_agent(source_agent, agent["id"], target_backend_type)
+
+                            # If cross-provider cloning, prompt for model selection
+                            if target_backend_type != source_backend_type:
+                                console.print(f"✅ Cloned settings from agent_{chr(ord('a') + i - 2)} ({source_backend_type})")
+                                console.print(f"   [dim]Note: Model must be selected for {target_backend_type}[/dim]")
+
+                                # Show skipped settings warning if any
+                                skipped = agent.get("_skipped_settings", [])
+                                if skipped:
+                                    console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                    for setting in skipped:
+                                        console.print(f"      • {setting}")
+                                console.print()
+
+                                # Prompt for model selection
+                                target_provider_info = None
+                                for _, pinfo in self.PROVIDERS.items():
+                                    if pinfo.get("type") == target_backend_type:
+                                        target_provider_info = pinfo
+                                        break
+
+                                if target_provider_info and target_provider_info.get("models"):
+                                    model_choice = questionary.select(
+                                        f"Select {target_backend_type} model:",
+                                        choices=target_provider_info["models"],
+                                        style=questionary.Style([
+                                            ("selected", "fg:cyan bold"),
+                                            ("pointer", "fg:cyan bold"),
+                                        ]),
+                                    ).ask()
+
+                                    if model_choice:
+                                        agent["backend"]["model"] = model_choice
+                                        console.print(f"   ✅ Model: {model_choice}")
+
+                                # Clean up temporary skipped settings marker
+                                agent.pop("_skipped_settings", None)
+                            else:
+                                console.print(f"✅ Cloned configuration from agent_{chr(ord('a') + i - 2)}")
+                                # Clean up temporary skipped settings marker
+                                agent.pop("_skipped_settings", None)
+
                             agents[i - 1] = agent
-                            console.print(f"✅ Cloned configuration from agent_{chr(ord('a') + i - 2)}")
                             console.print()
                             continue
                         elif clone_choice == "clone_modify":
-                            # Clone and selectively modify
+                            # Clone and selectively modify, preserving current agent's backend type
                             source_agent = agents[i - 2]
-                            agent = self.clone_agent(source_agent, agent["id"])
+                            target_backend_type = agent.get("backend", {}).get("type")
+                            source_backend_type = source_agent.get("backend", {}).get("type")
+
+                            agent = self.clone_agent(source_agent, agent["id"], target_backend_type)
+
+                            # If cross-provider cloning, prompt for model selection before modification
+                            if target_backend_type != source_backend_type:
+                                console.print(f"✅ Cloned settings from agent_{chr(ord('a') + i - 2)} ({source_backend_type})")
+                                console.print(f"   [dim]Note: Model must be selected for {target_backend_type}[/dim]")
+
+                                # Show skipped settings warning if any
+                                skipped = agent.get("_skipped_settings", [])
+                                if skipped:
+                                    console.print(f"   [yellow]⚠️  Skipped incompatible settings:[/yellow]")
+                                    for setting in skipped:
+                                        console.print(f"      • {setting}")
+                                console.print()
+
+                                # Prompt for model selection
+                                target_provider_info = None
+                                for _, pinfo in self.PROVIDERS.items():
+                                    if pinfo.get("type") == target_backend_type:
+                                        target_provider_info = pinfo
+                                        break
+
+                                if target_provider_info and target_provider_info.get("models"):
+                                    model_choice = questionary.select(
+                                        f"Select {target_backend_type} model:",
+                                        choices=target_provider_info["models"],
+                                        style=questionary.Style([
+                                            ("selected", "fg:cyan bold"),
+                                            ("pointer", "fg:cyan bold"),
+                                        ]),
+                                    ).ask()
+
+                                    if model_choice:
+                                        agent["backend"]["model"] = model_choice
+                                        console.print(f"   ✅ Model: {model_choice}")
+                                        console.print()
+
+                                # Clean up temporary skipped settings marker before modification
+                                agent.pop("_skipped_settings", None)
+
                             agent = self.modify_cloned_agent(agent, i)
                             agents[i - 1] = agent
                             continue
@@ -2212,11 +2458,13 @@ class ConfigBuilder:
                 default="1",
             )
 
+            # Determine save directory
+            save_dir = None
             if save_location == "2":
                 # Save to ~/.config/massgen/agents/
-                agents_dir = Path.home() / ".config/massgen/agents"
-                agents_dir.mkdir(parents=True, exist_ok=True)
-                default_name = str(agents_dir / "my_massgen_config.yaml")
+                save_dir = Path.home() / ".config/massgen/agents"
+                save_dir.mkdir(parents=True, exist_ok=True)
+                default_name = str(save_dir / "my_massgen_config.yaml")
 
             while True:
                 try:
@@ -2234,7 +2482,10 @@ class ConfigBuilder:
                     if not filename.endswith(".yaml"):
                         filename += ".yaml"
 
+                    # Create filepath - if save_dir is set and filename is not absolute, join them
                     filepath = Path(filename)
+                    if save_dir and not filepath.is_absolute():
+                        filepath = save_dir / filepath
 
                     # Check if file exists
                     if filepath.exists():
