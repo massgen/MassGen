@@ -14,7 +14,7 @@ KEY FEATURES:
 
 TECHNICAL SOLUTION:
 - Uses Pydantic models to define structured output schemas
-- Prompts model to use specific JSON format for voting/ansering
+- Prompts model to use specific JSON format for voting/answering
 - Converts structured responses to standard tool call format
 - Maintains compatibility with existing MassGen workflow
 """

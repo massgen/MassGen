@@ -238,11 +238,11 @@ Documentation Sections
       **User Guide**
 
       * :doc:`user_guide/concepts`
-      * :doc:`user_guide/multi_turn_mode`
-      * :doc:`user_guide/file_operations`
       * :doc:`user_guide/backends`
+      * :doc:`user_guide/tools`
+      * :doc:`user_guide/file_operations`
+      * :doc:`user_guide/multi_turn_mode`
       * :doc:`user_guide/ag2_integration`
-      * :doc:`user_guide/mcp_integration`
 
    .. grid-item::
 
@@ -286,10 +286,9 @@ Documentation Sections
 
    user_guide/concepts
    user_guide/backends
-   user_guide/mcp_integration
+   user_guide/tools
    user_guide/file_operations
    user_guide/multi_turn_mode
-   user_guide/tools
    user_guide/multimodal
    user_guide/ag2_integration
    user_guide/logging
