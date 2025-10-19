@@ -804,7 +804,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                             "Custom tool response received",
                                                             {
                                                                 "tool_name": tool_name,
-                                                                "response_preview": str(tool_response)[:200],
+                                                                "response_preview": str(tool_response),
                                                             },
                                                             agent_id=agent_id,
                                                         )
@@ -894,7 +894,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                 yield StreamChunk(
                                     type="custom_tool_status",
                                     status="custom_tool_executed",
-                                    content=f"✅ Custom Tool Executed: {tool_name} -> {formatted_result[:200]}{'...' if len(formatted_result) > 200 else ''}",
+                                    content=f"✅ Custom Tool Executed: {tool_name} -> {formatted_result}",
                                     source="custom_tools",
                                 )
 
@@ -956,7 +956,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
 
                                 # Format result as JSON if possible
                                 formatted_result = format_tool_response_as_json(result_str)
-                                result_preview = formatted_result[:200]
+                                result_preview = formatted_result
 
                                 # Yield execution status
                                 yield StreamChunk(
@@ -1338,7 +1338,7 @@ class GeminiBackend(CustomToolAndMCPBackend):
                                                                         "Custom tool response received",
                                                                         {
                                                                             "tool_name": tool_name,
-                                                                            "response_preview": str(tool_response)[:200],
+                                                                            "response_preview": str(tool_response),
                                                                         },
                                                                         agent_id=agent_id,
                                                                     )
