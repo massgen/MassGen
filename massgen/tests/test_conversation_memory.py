@@ -8,6 +8,7 @@ including adding, retrieving, deleting, and managing messages.
 """
 
 import pytest
+
 from massgen.memory import ConversationMemory
 
 
@@ -118,10 +119,7 @@ async def test_delete_multiple_indices():
     """Test deleting multiple messages at once."""
     memory = ConversationMemory()
 
-    messages = [
-        {"role": "user", "content": f"Message {i}"}
-        for i in range(5)
-    ]
+    messages = [{"role": "user", "content": f"Message {i}"} for i in range(5)]
     await memory.add(messages)
 
     # Delete indices 1 and 3
@@ -204,10 +202,7 @@ async def test_get_messages_with_limit():
     """Test getting messages with limit."""
     memory = ConversationMemory()
 
-    messages = [
-        {"role": "user", "content": f"Message {i}"}
-        for i in range(10)
-    ]
+    messages = [{"role": "user", "content": f"Message {i}"} for i in range(10)]
     await memory.add(messages)
 
     # Get last 3 messages
@@ -224,10 +219,7 @@ async def test_truncate_to_size():
     """Test truncating memory to a maximum size."""
     memory = ConversationMemory()
 
-    messages = [
-        {"role": "user", "content": f"Message {i}"}
-        for i in range(10)
-    ]
+    messages = [{"role": "user", "content": f"Message {i}"} for i in range(10)]
     await memory.add(messages)
 
     # Truncate to last 5 messages
@@ -245,10 +237,7 @@ async def test_clear_memory():
     """Test clearing all messages from memory."""
     memory = ConversationMemory()
 
-    messages = [
-        {"role": "user", "content": f"Message {i}"}
-        for i in range(5)
-    ]
+    messages = [{"role": "user", "content": f"Message {i}"} for i in range(5)]
     await memory.add(messages)
 
     assert await memory.size() == 5

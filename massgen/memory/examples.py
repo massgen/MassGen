@@ -7,7 +7,6 @@ in your MassGen agents.
 """
 
 import asyncio
-from typing import List, Dict, Any
 
 
 async def example_conversation_memory():
@@ -37,7 +36,7 @@ async def example_conversation_memory():
         print(f"Added: {msg['role']} - {msg['content'][:50]}...")
 
     # Get all messages
-    all_messages = await memory.get_messages()
+    await memory.get_messages()
     print(f"\nTotal messages: {await memory.size()}")
 
     # Get last message
@@ -184,7 +183,7 @@ async def example_memory_management():
             {
                 "role": "user" if i % 2 == 0 else "assistant",
                 "content": f"Message {i}",
-            }
+            },
         )
 
     print(f"Added {await memory.size()} messages")

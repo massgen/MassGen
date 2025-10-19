@@ -6,9 +6,8 @@ This module provides long-term memory storage with semantic retrieval capabiliti
 enabling agents to remember and recall information across multiple sessions.
 """
 
-import json
 from importlib import metadata
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from pydantic import field_validator
 
@@ -135,24 +134,20 @@ class PersistentMemory(PersistentMemoryBase):
         try:
             import mem0
             from mem0.configs.llms.base import BaseLlmConfig
-            from mem0.utils.factory import LlmFactory, EmbedderFactory
+            from mem0.utils.factory import EmbedderFactory, LlmFactory
             from packaging import version
 
             # Check mem0 version for compatibility
             current_version = metadata.version("mem0ai")
             is_legacy_version = version.parse(current_version) <= version.parse(
-                "0.1.115"
+                "0.1.115",
             )
 
             # Register MassGen adapters with mem0's factory system
-            EmbedderFactory.provider_to_class[
-                "massgen"
-            ] = "massgen.memory._mem0_adapters.MassGenEmbeddingAdapter"
+            EmbedderFactory.provider_to_class["massgen"] = "massgen.memory._mem0_adapters.MassGenEmbeddingAdapter"
 
             if is_legacy_version:
-                LlmFactory.provider_to_class[
-                    "massgen"
-                ] = "massgen.memory._mem0_adapters.MassGenLLMAdapter"
+                LlmFactory.provider_to_class["massgen"] = "massgen.memory._mem0_adapters.MassGenLLMAdapter"
             else:
                 # Newer mem0 versions use tuple format
                 LlmFactory.provider_to_class["massgen"] = (
@@ -162,8 +157,7 @@ class PersistentMemory(PersistentMemoryBase):
 
         except ImportError as e:
             raise ImportError(
-                "mem0 library is required for persistent memory. "
-                "Install it with: pip install mem0ai"
+                "mem0 library is required for persistent memory. " "Install it with: pip install mem0ai",
             ) from e
 
         # Create custom config classes
@@ -172,8 +166,7 @@ class PersistentMemory(PersistentMemoryBase):
         # Validate metadata requirements
         if not any([agent_name, user_name, session_name]):
             raise ValueError(
-                "At least one of agent_name, user_name, or session_name must be provided "
-                "to organize memories."
+                "At least one of agent_name, user_name, or session_name must be provided " "to organize memories.",
             )
 
         # Store identifiers for memory operations
@@ -203,8 +196,7 @@ class PersistentMemory(PersistentMemoryBase):
             # Build mem0_config from scratch
             if llm_backend is None or embedding_backend is None:
                 raise ValueError(
-                    "Both llm_backend and embedding_backend are required "
-                    "when mem0_config is not provided."
+                    "Both llm_backend and embedding_backend are required " "when mem0_config is not provided.",
                 )
 
             mem0_config = mem0.configs.base.MemoryConfig(
@@ -225,7 +217,7 @@ class PersistentMemory(PersistentMemoryBase):
                 # Default to Qdrant with disk persistence
                 persist = kwargs.get("on_disk", True)
                 mem0_config.vector_store = mem0.vector_stores.configs.VectorStoreConfig(
-                    config={"on_disk": persist}
+                    config={"on_disk": persist},
                 )
 
         # Initialize async mem0 instance
@@ -272,7 +264,7 @@ class PersistentMemory(PersistentMemoryBase):
                         "role": "assistant",
                         "content": "\n".join(full_content),
                         "name": "memory_save",
-                    }
+                    },
                 ],
                 **kwargs,
             )
@@ -329,9 +321,7 @@ class PersistentMemory(PersistentMemoryBase):
                 )
 
                 if search_result and "results" in search_result:
-                    memories = [
-                        item["memory"] for item in search_result["results"]
-                    ]
+                    memories = [item["memory"] for item in search_result["results"]]
                     all_memories.extend(memories)
 
             return {
@@ -378,12 +368,9 @@ class PersistentMemory(PersistentMemoryBase):
         mem0_messages = [
             {
                 "role": "assistant",
-                "content": "\n".join([
-                    f"{msg.get('role', 'unknown')}: {msg.get('content', '')}"
-                    for msg in valid_messages
-                ]),
+                "content": "\n".join([f"{msg.get('role', 'unknown')}: {msg.get('content', '')}" for msg in valid_messages]),
                 "name": "conversation",
-            }
+            },
         ]
 
         await self._mem0_add(

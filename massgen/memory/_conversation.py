@@ -65,7 +65,7 @@ class ConversationMemory(MemoryBase):
         """
         if strict and "messages" not in state_dict:
             raise ValueError(
-                "State dictionary must contain 'messages' key when strict=True"
+                "State dictionary must contain 'messages' key when strict=True",
             )
 
         self.messages = []
@@ -93,8 +93,7 @@ class ConversationMemory(MemoryBase):
             NotImplementedError: Always, as basic retrieval is not supported
         """
         raise NotImplementedError(
-            f"The retrieve method is not implemented in {self.__class__.__name__}. "
-            "Use get_messages() to access conversation history directly."
+            f"The retrieve method is not implemented in {self.__class__.__name__}. " "Use get_messages() to access conversation history directly.",
         )
 
     async def delete(self, index: Union[Iterable, int]) -> None:
@@ -119,14 +118,11 @@ class ConversationMemory(MemoryBase):
 
         if invalid_indices:
             raise IndexError(
-                f"The following indices do not exist: {invalid_indices}. "
-                f"Valid range is 0-{len(self.messages) - 1}"
+                f"The following indices do not exist: {invalid_indices}. " f"Valid range is 0-{len(self.messages) - 1}",
             )
 
         # Create new list excluding deleted indices
-        self.messages = [
-            msg for idx, msg in enumerate(self.messages) if idx not in index
-        ]
+        self.messages = [msg for idx, msg in enumerate(self.messages) if idx not in index]
 
     async def add(
         self,
@@ -163,15 +159,14 @@ class ConversationMemory(MemoryBase):
 
         if not isinstance(messages, list):
             raise TypeError(
-                f"Messages should be a list of dicts or a single dict, "
-                f"but got {type(messages)}"
+                f"Messages should be a list of dicts or a single dict, " f"but got {type(messages)}",
             )
 
         # Validate each message
         for msg in messages:
             if not isinstance(msg, dict):
                 raise TypeError(
-                    f"Each message should be a dictionary, but got {type(msg)}"
+                    f"Each message should be a dictionary, but got {type(msg)}",
                 )
 
         # Add message IDs if not present (for duplicate detection)
@@ -185,10 +180,7 @@ class ConversationMemory(MemoryBase):
         # Filter duplicates if needed
         if not allow_duplicates:
             existing_ids = {msg.get("id") for msg in self.messages if "id" in msg}
-            processed_messages = [
-                msg for msg in processed_messages
-                if msg.get("id") not in existing_ids
-            ]
+            processed_messages = [msg for msg in processed_messages if msg.get("id") not in existing_ids]
 
         self.messages.extend(processed_messages)
 

@@ -9,12 +9,14 @@ including recording, retrieving, and managing memories across sessions.
 Note: Some tests require mem0ai to be installed and may be skipped if unavailable.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Try to import memory components
 try:
     from massgen.memory import PersistentMemory
+
     MEMORY_AVAILABLE = True
 except ImportError:
     MEMORY_AVAILABLE = False
@@ -22,7 +24,6 @@ except ImportError:
 
 # Check if mem0 is available
 try:
-    import mem0
     MEM0_AVAILABLE = True
 except ImportError:
     MEM0_AVAILABLE = False
@@ -32,9 +33,11 @@ except ImportError:
 def create_mock_backend():
     """Create a mock backend for testing."""
     backend = MagicMock()
-    backend.chat_completion = AsyncMock(return_value={
-        "choices": [{"message": {"content": "Test response"}}]
-    })
+    backend.chat_completion = AsyncMock(
+        return_value={
+            "choices": [{"message": {"content": "Test response"}}],
+        },
+    )
     return backend
 
 
@@ -48,7 +51,7 @@ class TestPersistentMemoryInitialization:
         with pytest.raises(ValueError, match="At least one of"):
             PersistentMemory(
                 llm_backend=create_mock_backend(),
-                embedding_backend=create_mock_backend()
+                embedding_backend=create_mock_backend(),
             )
         print("✅ Initialization validation works")
 
@@ -65,7 +68,7 @@ class TestPersistentMemoryInitialization:
         memory = PersistentMemory(
             agent_name="test_agent",
             llm_backend=create_mock_backend(),
-            embedding_backend=create_mock_backend()
+            embedding_backend=create_mock_backend(),
         )
         assert memory.agent_id == "test_agent"
         assert memory.user_id is None
@@ -80,7 +83,7 @@ class TestPersistentMemoryInitialization:
             user_name="test_user",
             session_name="test_session",
             llm_backend=create_mock_backend(),
-            embedding_backend=create_mock_backend()
+            embedding_backend=create_mock_backend(),
         )
         assert memory.agent_id == "test_agent"
         assert memory.user_id == "test_user"
@@ -88,15 +91,17 @@ class TestPersistentMemoryInitialization:
         print("✅ Initialization with all identifiers works")
 
 
-@pytest.mark.skipif(not MEMORY_AVAILABLE or not MEM0_AVAILABLE,
-                    reason="Memory module or mem0 not available")
+@pytest.mark.skipif(
+    not MEMORY_AVAILABLE or not MEM0_AVAILABLE,
+    reason="Memory module or mem0 not available",
+)
 class TestPersistentMemoryMocked:
     """Tests for PersistentMemory with mocked mem0 backend."""
 
     @pytest.fixture
     def mock_memory(self):
         """Create a PersistentMemory instance with mocked mem0."""
-        with patch('mem0.AsyncMemory') as mock_mem0:
+        with patch("mem0.AsyncMemory") as mock_mem0:
             # Configure mock
             mock_mem0_instance = AsyncMock()
             mock_mem0.return_value = mock_mem0_instance
@@ -104,7 +109,7 @@ class TestPersistentMemoryMocked:
             memory = PersistentMemory(
                 agent_name="test_agent",
                 llm_backend=create_mock_backend(),
-                embedding_backend=create_mock_backend()
+                embedding_backend=create_mock_backend(),
             )
 
             # Replace with our mock
@@ -122,7 +127,7 @@ class TestPersistentMemoryMocked:
 
         messages = [
             {"role": "user", "content": "What is quantum computing?"},
-            {"role": "assistant", "content": "Quantum computing uses qubits..."}
+            {"role": "assistant", "content": "Quantum computing uses qubits..."},
         ]
 
         await memory.record(messages)
@@ -139,12 +144,14 @@ class TestPersistentMemoryMocked:
         memory, mock_mem0 = mock_memory
 
         # Mock search results
-        mock_mem0.search = AsyncMock(return_value={
-            "results": [
-                {"memory": "Quantum computing uses qubits"},
-                {"memory": "Qubits can be in superposition"}
-            ]
-        })
+        mock_mem0.search = AsyncMock(
+            return_value={
+                "results": [
+                    {"memory": "Quantum computing uses qubits"},
+                    {"memory": "Qubits can be in superposition"},
+                ],
+            },
+        )
 
         result = await memory.retrieve("quantum computing")
 
@@ -158,9 +165,11 @@ class TestPersistentMemoryMocked:
         """Test retrieving with message dictionary."""
         memory, mock_mem0 = mock_memory
 
-        mock_mem0.search = AsyncMock(return_value={
-            "results": [{"memory": "Relevant information"}]
-        })
+        mock_mem0.search = AsyncMock(
+            return_value={
+                "results": [{"memory": "Relevant information"}],
+            },
+        )
 
         query = {"role": "user", "content": "Tell me about AI"}
         result = await memory.retrieve(query)
@@ -173,15 +182,17 @@ class TestPersistentMemoryMocked:
         """Test retrieving with list of messages."""
         memory, mock_mem0 = mock_memory
 
-        mock_mem0.search = AsyncMock(return_value={
-            "results": [{"memory": "AI information"}]
-        })
+        mock_mem0.search = AsyncMock(
+            return_value={
+                "results": [{"memory": "AI information"}],
+            },
+        )
 
         queries = [
             {"role": "user", "content": "What is AI?"},
-            {"role": "user", "content": "How does it work?"}
+            {"role": "user", "content": "How does it work?"},
         ]
-        result = await memory.retrieve(queries)
+        await memory.retrieve(queries)
 
         assert mock_mem0.search.call_count == 2
         print("✅ Retrieving with message list works")
@@ -195,7 +206,7 @@ class TestPersistentMemoryMocked:
 
         result = await memory.save_to_memory(
             thinking="User mentioned their birthday",
-            content=["User's birthday is March 15"]
+            content=["User's birthday is March 15"],
         )
 
         assert result["success"] is True
@@ -213,7 +224,7 @@ class TestPersistentMemoryMocked:
 
         result = await memory.save_to_memory(
             thinking="Test thinking",
-            content=["Test content"]
+            content=["Test content"],
         )
 
         assert result["success"] is False
@@ -225,15 +236,17 @@ class TestPersistentMemoryMocked:
         """Test the recall_from_memory agent tool."""
         memory, mock_mem0 = mock_memory
 
-        mock_mem0.search = AsyncMock(return_value={
-            "results": [
-                {"memory": "User likes Python programming"},
-                {"memory": "User's favorite framework is Django"}
-            ]
-        })
+        mock_mem0.search = AsyncMock(
+            return_value={
+                "results": [
+                    {"memory": "User likes Python programming"},
+                    {"memory": "User's favorite framework is Django"},
+                ],
+            },
+        )
 
         result = await memory.recall_from_memory(
-            keywords=["programming", "preferences"]
+            keywords=["programming", "preferences"],
         )
 
         assert result["success"] is True
@@ -246,16 +259,15 @@ class TestPersistentMemoryMocked:
         """Test recall with custom limit."""
         memory, mock_mem0 = mock_memory
 
-        mock_mem0.search = AsyncMock(return_value={
-            "results": [
-                {"memory": f"Memory {i}"}
-                for i in range(3)
-            ]
-        })
+        mock_mem0.search = AsyncMock(
+            return_value={
+                "results": [{"memory": f"Memory {i}"} for i in range(3)],
+            },
+        )
 
         result = await memory.recall_from_memory(
             keywords=["test"],
-            limit=3
+            limit=3,
         )
 
         call_kwargs = mock_mem0.search.call_args.kwargs
@@ -305,8 +317,10 @@ class TestPersistentMemoryMocked:
         print("✅ Retrieving with empty query handled gracefully")
 
 
-@pytest.mark.skipif(not MEMORY_AVAILABLE or not MEM0_AVAILABLE,
-                    reason="Memory module or mem0 not available")
+@pytest.mark.skipif(
+    not MEMORY_AVAILABLE or not MEM0_AVAILABLE,
+    reason="Memory module or mem0 not available",
+)
 class TestPersistentMemoryIntegration:
     """Integration tests with actual mem0 (if available)."""
 
@@ -319,13 +333,13 @@ class TestPersistentMemoryIntegration:
                 agent_name="test_integration_agent",
                 llm_backend=create_mock_backend(),
                 embedding_backend=create_mock_backend(),
-                on_disk=False  # Use in-memory for tests
+                on_disk=False,  # Use in-memory for tests
             )
 
             # Record some information
             messages = [
                 {"role": "user", "content": "I love Python programming"},
-                {"role": "assistant", "content": "That's great! Python is versatile."}
+                {"role": "assistant", "content": "That's great! Python is versatile."},
             ]
             await memory.record(messages)
 
@@ -349,13 +363,15 @@ class TestPersistentMemoryIntegration:
                 session_name="session_1",
                 llm_backend=create_mock_backend(),
                 embedding_backend=create_mock_backend(),
-                on_disk=False
+                on_disk=False,
             )
 
             # Record and verify identifiers are used
-            await memory.record([
-                {"role": "user", "content": "Test message"}
-            ])
+            await memory.record(
+                [
+                    {"role": "user", "content": "Test message"},
+                ]
+            )
 
             assert memory.agent_id == "agent_1"
             assert memory.user_id == "user_1"
@@ -375,10 +391,10 @@ class TestPersistentMemoryBase:
         from massgen.memory import PersistentMemoryBase
 
         # Check that methods exist
-        assert hasattr(PersistentMemoryBase, 'record')
-        assert hasattr(PersistentMemoryBase, 'retrieve')
-        assert hasattr(PersistentMemoryBase, 'save_to_memory')
-        assert hasattr(PersistentMemoryBase, 'recall_from_memory')
+        assert hasattr(PersistentMemoryBase, "record")
+        assert hasattr(PersistentMemoryBase, "retrieve")
+        assert hasattr(PersistentMemoryBase, "save_to_memory")
+        assert hasattr(PersistentMemoryBase, "recall_from_memory")
         print("✅ PersistentMemoryBase has expected methods")
 
 

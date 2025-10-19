@@ -7,12 +7,12 @@ This module tests the integration of memory systems (ConversationMemory and
 PersistentMemory) with MassGen agents (SingleAgent and ConfigurableAgent).
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List, Dict, Any
 
 # Import agent classes
-from massgen.chat_agent import SingleAgent, ConfigurableAgent
+from massgen.chat_agent import ConfigurableAgent, SingleAgent
 from massgen.memory import ConversationMemory, PersistentMemory
 
 
@@ -30,7 +30,7 @@ def create_mock_backend():
         yield MagicMock(type="content", content="How can I help?")
         yield MagicMock(
             type="complete_message",
-            complete_message={"role": "assistant", "content": "Hello! How can I help?"}
+            complete_message={"role": "assistant", "content": "Hello! How can I help?"},
         )
         yield MagicMock(type="done")
 
@@ -59,7 +59,7 @@ class TestSingleAgentConversationMemory:
             backend=backend,
             agent_id="test_agent",
             system_message="You are a helpful assistant",
-            conversation_memory=conv_memory
+            conversation_memory=conv_memory,
         )
 
         assert agent.conversation_memory is conv_memory
@@ -74,7 +74,7 @@ class TestSingleAgentConversationMemory:
         agent = SingleAgent(
             backend=backend,
             agent_id="test_agent",
-            conversation_memory=conv_memory
+            conversation_memory=conv_memory,
         )
 
         # Initial memory should be empty
@@ -104,7 +104,7 @@ class TestSingleAgentConversationMemory:
 
         agent = SingleAgent(
             backend=backend,
-            conversation_memory=conv_memory
+            conversation_memory=conv_memory,
         )
 
         # Add some messages
@@ -130,7 +130,7 @@ class TestSingleAgentConversationMemory:
         agent = SingleAgent(
             backend=backend,
             conversation_memory=conv_memory,
-            system_message="System prompt"
+            system_message="System prompt",
         )
 
         # First conversation
@@ -167,7 +167,7 @@ class TestSingleAgentPersistentMemory:
         agent = SingleAgent(
             backend=backend,
             agent_id="test_agent",
-            persistent_memory=persist_memory
+            persistent_memory=persist_memory,
         )
 
         assert agent.persistent_memory is persist_memory
@@ -180,12 +180,12 @@ class TestSingleAgentPersistentMemory:
 
         # Mock retrieve to return some context
         persist_memory.retrieve = AsyncMock(
-            return_value="User previously asked about Python"
+            return_value="User previously asked about Python",
         )
 
         agent = SingleAgent(
             backend=backend,
-            persistent_memory=persist_memory
+            persistent_memory=persist_memory,
         )
 
         # Chat with agent
@@ -204,7 +204,7 @@ class TestSingleAgentPersistentMemory:
 
         agent = SingleAgent(
             backend=backend,
-            persistent_memory=persist_memory
+            persistent_memory=persist_memory,
         )
 
         # Chat with agent
@@ -227,7 +227,7 @@ class TestSingleAgentPersistentMemory:
 
         agent = SingleAgent(
             backend=backend,
-            persistent_memory=persist_memory
+            persistent_memory=persist_memory,
         )
 
         # Should not raise error
@@ -251,7 +251,7 @@ class TestSingleAgentBothMemories:
         agent = SingleAgent(
             backend=backend,
             conversation_memory=conv_memory,
-            persistent_memory=persist_memory
+            persistent_memory=persist_memory,
         )
 
         # Chat with agent
@@ -268,6 +268,7 @@ class TestSingleAgentBothMemories:
 
     async def test_memory_integration_flow(self):
         """Test complete memory integration flow."""
+
         # Create a fresh backend for each chat call
         def create_fresh_backend():
             backend = MagicMock()
@@ -278,7 +279,7 @@ class TestSingleAgentBothMemories:
                 yield MagicMock(type="content", content="Response")
                 yield MagicMock(
                     type="complete_message",
-                    complete_message={"role": "assistant", "content": "Response"}
+                    complete_message={"role": "assistant", "content": "Response"},
                 )
                 yield MagicMock(type="done")
 
@@ -292,7 +293,7 @@ class TestSingleAgentBothMemories:
             backend=create_fresh_backend(),
             agent_id="test_agent",
             conversation_memory=conv_memory,
-            persistent_memory=persist_memory
+            persistent_memory=persist_memory,
         )
 
         # First conversation
@@ -341,14 +342,14 @@ class TestConfigurableAgentMemory:
 
         config = AgentConfig(
             agent_id="configurable_test",
-            backend_params={"model": "gpt-4o-mini"}
+            backend_params={"model": "gpt-4o-mini"},
         )
 
         agent = ConfigurableAgent(
             config=config,
             backend=backend,
             conversation_memory=conv_memory,
-            persistent_memory=persist_memory
+            persistent_memory=persist_memory,
         )
 
         assert agent.conversation_memory is conv_memory
@@ -377,7 +378,7 @@ class TestMemoryStateManagement:
 
         agent = SingleAgent(
             backend=backend,
-            conversation_memory=conv_memory
+            conversation_memory=conv_memory,
         )
 
         # First chat
@@ -411,7 +412,7 @@ class TestMemoryStateManagement:
 
         agent = SingleAgent(
             backend=backend,
-            conversation_memory=conv_memory
+            conversation_memory=conv_memory,
         )
 
         # First chat
@@ -450,7 +451,7 @@ class TestMemoryErrorHandling:
 
         agent = SingleAgent(
             backend=backend,
-            conversation_memory=conv_memory
+            conversation_memory=conv_memory,
         )
 
         # Should not crash even if memory fails

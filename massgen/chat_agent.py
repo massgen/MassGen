@@ -340,7 +340,7 @@ class SingleAgent(ChatAgent):
                 if memory_context:
                     memory_msg = {
                         "role": "system",
-                        "content": f"Relevant memories:\n{memory_context}"
+                        "content": f"Relevant memories:\n{memory_context}",
                     }
                     backend_messages.insert(0, memory_msg)
             else:
@@ -350,7 +350,7 @@ class SingleAgent(ChatAgent):
                 if memory_context:
                     memory_msg = {
                         "role": "system",
-                        "content": f"Relevant memories:\n{memory_context}"
+                        "content": f"Relevant memories:\n{memory_context}",
                     }
                     # Insert after existing system messages
                     system_count = sum(1 for msg in backend_messages if msg.get("role") == "system")

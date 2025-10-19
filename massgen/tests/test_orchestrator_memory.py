@@ -8,15 +8,16 @@ including how agents can access and contribute to shared memory that
 all agents can see.
 """
 
+from typing import List
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List, Dict, Any
+
+from massgen.chat_agent import SingleAgent
+from massgen.memory import ConversationMemory
 
 # Import orchestrator and memory classes
 from massgen.orchestrator import Orchestrator
-from massgen.chat_agent import SingleAgent
-from massgen.memory import ConversationMemory, PersistentMemory
-from massgen.agent_config import AgentConfig
 
 
 # Helper functions
@@ -45,7 +46,7 @@ def create_mock_backend(agent_responses: List[str] = None):
         yield MagicMock(type="content", content=response)
         yield MagicMock(
             type="complete_message",
-            complete_message={"role": "assistant", "content": response}
+            complete_message={"role": "assistant", "content": response},
         )
         yield MagicMock(type="done")
 
@@ -61,7 +62,7 @@ def create_mock_agent(agent_id: str, backend=None):
     agent = SingleAgent(
         backend=backend,
         agent_id=agent_id,
-        system_message=f"You are {agent_id}"
+        system_message=f"You are {agent_id}",
     )
     return agent
 
@@ -88,7 +89,7 @@ class TestOrchestratorSharedConversationMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=shared_memory
+            shared_conversation_memory=shared_memory,
         )
 
         assert orchestrator.shared_conversation_memory is shared_memory
@@ -100,10 +101,12 @@ class TestOrchestratorSharedConversationMemory:
         shared_memory = ConversationMemory()
 
         # Add some messages to shared memory first
-        await shared_memory.add([
-            {"role": "assistant", "content": "Previous insight", "agent_id": "agent1"},
-            {"role": "assistant", "content": "Another finding", "agent_id": "agent2"},
-        ])
+        await shared_memory.add(
+            [
+                {"role": "assistant", "content": "Previous insight", "agent_id": "agent1"},
+                {"role": "assistant", "content": "Another finding", "agent_id": "agent2"},
+            ]
+        )
 
         agents = {
             "agent1": create_mock_agent("agent1"),
@@ -111,17 +114,18 @@ class TestOrchestratorSharedConversationMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=shared_memory
+            shared_conversation_memory=shared_memory,
         )
 
         # Test the injection method
         original_messages = [
             {"role": "system", "content": "You are an agent"},
-            {"role": "user", "content": "Solve this task"}
+            {"role": "user", "content": "Solve this task"},
         ]
 
         injected_messages = await orchestrator._inject_shared_memory_context(
-            original_messages, "agent1"
+            original_messages,
+            "agent1",
         )
 
         # Should have an additional system message with shared memory
@@ -146,14 +150,14 @@ class TestOrchestratorSharedConversationMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=shared_memory
+            shared_conversation_memory=shared_memory,
         )
 
         # Simulate recording to shared memory
         await orchestrator._record_to_shared_memory(
             agent_id="agent1",
             content="I found the solution",
-            role="assistant"
+            role="assistant",
         )
 
         # Check if the message was recorded
@@ -172,11 +176,13 @@ class TestOrchestratorSharedConversationMemory:
         shared_memory = ConversationMemory()
 
         # Agent1 contributes to memory
-        await shared_memory.add({
-            "role": "assistant",
-            "content": "Agent1's discovery",
-            "agent_id": "agent1"
-        })
+        await shared_memory.add(
+            {
+                "role": "assistant",
+                "content": "Agent1's discovery",
+                "agent_id": "agent1",
+            }
+        )
 
         agents = {
             "agent1": create_mock_agent("agent1"),
@@ -185,15 +191,17 @@ class TestOrchestratorSharedConversationMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=shared_memory
+            shared_conversation_memory=shared_memory,
         )
 
         # Both agents should see the same memory
         messages1 = await orchestrator._inject_shared_memory_context(
-            [{"role": "user", "content": "Task"}], "agent1"
+            [{"role": "user", "content": "Task"}],
+            "agent1",
         )
         messages2 = await orchestrator._inject_shared_memory_context(
-            [{"role": "user", "content": "Task"}], "agent2"
+            [{"role": "user", "content": "Task"}],
+            "agent2",
         )
 
         # Both should have memory injection
@@ -213,7 +221,7 @@ class TestOrchestratorSharedConversationMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=shared_memory
+            shared_conversation_memory=shared_memory,
         )
 
         # Simulate multiple agents contributing
@@ -249,7 +257,7 @@ class TestOrchestratorSharedPersistentMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_persistent_memory=persistent_memory
+            shared_persistent_memory=persistent_memory,
         )
 
         assert orchestrator.shared_persistent_memory is persistent_memory
@@ -266,16 +274,17 @@ class TestOrchestratorSharedPersistentMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_persistent_memory=persistent_memory
+            shared_persistent_memory=persistent_memory,
         )
 
         # Test injection
         original_messages = [
-            {"role": "user", "content": "New task"}
+            {"role": "user", "content": "New task"},
         ]
 
         injected_messages = await orchestrator._inject_shared_memory_context(
-            original_messages, "agent1"
+            original_messages,
+            "agent1",
         )
 
         # Should have persistent memory context
@@ -294,14 +303,14 @@ class TestOrchestratorSharedPersistentMemory:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_persistent_memory=persistent_memory
+            shared_persistent_memory=persistent_memory,
         )
 
         # Record to memory
         await orchestrator._record_to_shared_memory(
             agent_id="agent1",
             content="Important discovery",
-            role="assistant"
+            role="assistant",
         )
 
         # Verify record was called
@@ -330,7 +339,7 @@ class TestOrchestratorBothMemories:
         orchestrator = Orchestrator(
             agents=agents,
             shared_conversation_memory=conv_memory,
-            shared_persistent_memory=persist_memory
+            shared_persistent_memory=persist_memory,
         )
 
         assert orchestrator.shared_conversation_memory is conv_memory
@@ -341,11 +350,13 @@ class TestOrchestratorBothMemories:
     async def test_both_memories_used_together(self):
         """Test that both memory types are used together correctly."""
         conv_memory = ConversationMemory()
-        await conv_memory.add({
-            "role": "assistant",
-            "content": "Recent conversation",
-            "agent_id": "agent1"
-        })
+        await conv_memory.add(
+            {
+                "role": "assistant",
+                "content": "Recent conversation",
+                "agent_id": "agent1",
+            }
+        )
 
         persist_memory = create_mock_persistent_memory()
         persist_memory.retrieve = AsyncMock(return_value="Long-term knowledge")
@@ -357,12 +368,13 @@ class TestOrchestratorBothMemories:
         orchestrator = Orchestrator(
             agents=agents,
             shared_conversation_memory=conv_memory,
-            shared_persistent_memory=persist_memory
+            shared_persistent_memory=persist_memory,
         )
 
         # Inject both memories
         injected_messages = await orchestrator._inject_shared_memory_context(
-            [{"role": "user", "content": "Task"}], "agent1"
+            [{"role": "user", "content": "Task"}],
+            "agent1",
         )
 
         # Should have both memory types
@@ -386,14 +398,14 @@ class TestOrchestratorBothMemories:
         orchestrator = Orchestrator(
             agents=agents,
             shared_conversation_memory=conv_memory,
-            shared_persistent_memory=persist_memory
+            shared_persistent_memory=persist_memory,
         )
 
         # Record once
         await orchestrator._record_to_shared_memory(
             agent_id="agent1",
             content="Shared finding",
-            role="assistant"
+            role="assistant",
         )
 
         # Check conversation memory
@@ -444,7 +456,7 @@ class TestSharedMemoryErrorHandling:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=conv_memory
+            shared_conversation_memory=conv_memory,
         )
 
         # Injection should not crash even if memory fails
@@ -470,7 +482,7 @@ class TestSharedMemoryErrorHandling:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_persistent_memory=persist_memory
+            shared_persistent_memory=persist_memory,
         )
 
         # Should handle NotImplementedError gracefully
@@ -498,20 +510,20 @@ class TestCrossAgentMemoryVisibility:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=shared_memory
+            shared_conversation_memory=shared_memory,
         )
 
         # Agent1 makes a contribution
         await orchestrator._record_to_shared_memory(
             agent_id="agent1",
             content="Agent1 discovered X",
-            role="assistant"
+            role="assistant",
         )
 
         # Agent2 should see Agent1's contribution
         messages_for_agent2 = await orchestrator._inject_shared_memory_context(
             [{"role": "user", "content": "Continue the work"}],
-            "agent2"
+            "agent2",
         )
 
         # Check that agent2 can see agent1's contribution
@@ -533,7 +545,7 @@ class TestCrossAgentMemoryVisibility:
 
         orchestrator = Orchestrator(
             agents=agents,
-            shared_conversation_memory=shared_memory
+            shared_conversation_memory=shared_memory,
         )
 
         # Multiple agents contribute
@@ -544,7 +556,7 @@ class TestCrossAgentMemoryVisibility:
         # Check that any agent can see all contributions with attribution
         messages = await orchestrator._inject_shared_memory_context(
             [{"role": "user", "content": "Task"}],
-            "agent1"
+            "agent1",
         )
 
         all_content = "\n".join([msg.get("content", "") for msg in messages])

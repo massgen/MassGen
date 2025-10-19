@@ -7,7 +7,7 @@ backends to work seamlessly with the mem0 memory system.
 """
 
 import asyncio
-from typing import Any, Dict, List, Literal, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
 
 if TYPE_CHECKING:
     from mem0.configs.embeddings.base import BaseEmbedderConfig
@@ -76,10 +76,12 @@ class MassGenLLMAdapter(LLMBase):
 
                 # Only include valid message roles
                 if role in ["system", "user", "assistant", "tool"]:
-                    massgen_messages.append({
-                        "role": role,
-                        "content": content
-                    })
+                    massgen_messages.append(
+                        {
+                            "role": role,
+                            "content": content,
+                        }
+                    )
 
             if not massgen_messages:
                 return ""
@@ -92,14 +94,14 @@ class MassGenLLMAdapter(LLMBase):
 
                 async for chunk in self.massgen_backend.chat(
                     massgen_messages,
-                    tools=tools
+                    tools=tools,
                 ):
                     # Extract text content from chunks
-                    if hasattr(chunk, 'content') and chunk.content:
+                    if hasattr(chunk, "content") and chunk.content:
                         response_text += chunk.content
-                    elif hasattr(chunk, 'type'):
+                    elif hasattr(chunk, "type"):
                         # Handle different chunk types
-                        if chunk.type == "content" and hasattr(chunk, 'content'):
+                        if chunk.type == "content" and hasattr(chunk, "content"):
                             response_text += chunk.content or ""
 
                 return response_text
@@ -111,7 +113,7 @@ class MassGenLLMAdapter(LLMBase):
 
         except Exception as e:
             raise RuntimeError(
-                f"Error generating response with MassGen backend: {str(e)}"
+                f"Error generating response with MassGen backend: {str(e)}",
             ) from e
 
 
@@ -165,13 +167,13 @@ class MassGenEmbeddingAdapter(EmbeddingBase):
             async def _async_embed():
                 # MassGen embedding backends typically have an async call method
                 # or similar interface
-                if hasattr(self.massgen_backend, '__call__'):
+                if hasattr(self.massgen_backend, "__call__"):
                     response = await self.massgen_backend(text_list)
-                elif hasattr(self.massgen_backend, 'embed'):
+                elif hasattr(self.massgen_backend, "embed"):
                     response = await self.massgen_backend.embed(text_list)
                 else:
                     raise AttributeError(
-                        "MassGen backend must have __call__ or embed method"
+                        "MassGen backend must have __call__ or embed method",
                     )
 
                 return response
@@ -181,11 +183,11 @@ class MassGenEmbeddingAdapter(EmbeddingBase):
 
             # Extract embedding vector from response
             # MassGen embedding response format: response.embeddings[0]
-            if hasattr(response, 'embeddings') and response.embeddings:
+            if hasattr(response, "embeddings") and response.embeddings:
                 embedding = response.embeddings[0]
 
                 # Handle both list and numpy array formats
-                if hasattr(embedding, 'tolist'):
+                if hasattr(embedding, "tolist"):
                     return embedding.tolist()
                 return list(embedding)
 
@@ -193,7 +195,7 @@ class MassGenEmbeddingAdapter(EmbeddingBase):
 
         except Exception as e:
             raise RuntimeError(
-                f"Error generating embedding with MassGen backend: {str(e)}"
+                f"Error generating embedding with MassGen backend: {str(e)}",
             ) from e
 
 

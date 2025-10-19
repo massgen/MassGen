@@ -328,7 +328,9 @@ class Orchestrator(ChatAgent):
         }
 
     async def _inject_shared_memory_context(
-        self, messages: List[Dict[str, Any]], agent_id: str
+        self,
+        messages: List[Dict[str, Any]],
+        agent_id: str,
     ) -> List[Dict[str, Any]]:
         """
         Inject shared memory context into agent messages.
@@ -383,10 +385,7 @@ class Orchestrator(ChatAgent):
         if memory_context_parts:
             memory_message = {
                 "role": "system",
-                "content": (
-                    "You have access to shared memory that all agents can see and contribute to.\n"
-                    + "\n".join(memory_context_parts)
-                )
+                "content": ("You have access to shared memory that all agents can see and contribute to.\n" + "\n".join(memory_context_parts)),
             }
 
             # Insert after existing system messages but before user messages
@@ -398,7 +397,10 @@ class Orchestrator(ChatAgent):
         return messages
 
     async def _record_to_shared_memory(
-        self, agent_id: str, content: str, role: str = "assistant"
+        self,
+        agent_id: str,
+        content: str,
+        role: str = "assistant",
     ) -> None:
         """
         Record agent's contribution to shared memory.
@@ -412,7 +414,7 @@ class Orchestrator(ChatAgent):
             "role": role,
             "content": content,
             "agent_id": agent_id,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
         # Add to conversation memory
@@ -1472,7 +1474,8 @@ class Orchestrator(ChatAgent):
 
             # Inject shared memory context
             conversation_messages = await self._inject_shared_memory_context(
-                conversation_messages, agent_id
+                conversation_messages,
+                agent_id,
             )
 
             enforcement_msg = self.message_templates.enforcement_message()
@@ -1771,7 +1774,7 @@ class Orchestrator(ChatAgent):
                             await self._record_to_shared_memory(
                                 agent_id=agent_id,
                                 content=vote_message,
-                                role="assistant"
+                                role="assistant",
                             )
 
                             # Send tool result - orchestrator will decide if vote is accepted
@@ -1823,7 +1826,7 @@ class Orchestrator(ChatAgent):
                             await self._record_to_shared_memory(
                                 agent_id=agent_id,
                                 content=content,
-                                role="assistant"
+                                role="assistant",
                             )
 
                             yield ("result", ("answer", content))

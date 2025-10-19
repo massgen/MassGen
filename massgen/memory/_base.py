@@ -7,7 +7,7 @@ must follow, ensuring consistency across different storage backends.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 
 class MemoryBase(ABC):
@@ -121,7 +121,7 @@ class PersistentMemoryBase(ABC):
             **kwargs: Additional recording options
         """
         raise NotImplementedError(
-            "The `record` method is not implemented in this memory backend."
+            "The `record` method is not implemented in this memory backend.",
         )
 
     async def retrieve(
@@ -143,7 +143,7 @@ class PersistentMemoryBase(ABC):
             Retrieved information as formatted string
         """
         raise NotImplementedError(
-            "The `retrieve` method is not implemented in this memory backend."
+            "The `retrieve` method is not implemented in this memory backend.",
         )
 
     async def save_to_memory(
@@ -167,8 +167,7 @@ class PersistentMemoryBase(ABC):
             Tool response with status and saved memory IDs
         """
         raise NotImplementedError(
-            "The `save_to_memory` tool is not implemented in this memory backend. "
-            "Implement this method to allow agents to actively manage their memory."
+            "The `save_to_memory` tool is not implemented in this memory backend. " "Implement this method to allow agents to actively manage their memory.",
         )
 
     async def recall_from_memory(
@@ -190,6 +189,5 @@ class PersistentMemoryBase(ABC):
             Tool response with retrieved memories
         """
         raise NotImplementedError(
-            "The `recall_from_memory` tool is not implemented in this memory backend. "
-            "Implement this method to allow agents to actively query their memory."
+            "The `recall_from_memory` tool is not implemented in this memory backend. " "Implement this method to allow agents to actively query their memory.",
         )
