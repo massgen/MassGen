@@ -470,10 +470,12 @@ class GeminiBackend(CustomToolAndMCPBackend):
                             agent_id=agent_id,
                         )
 
+                        tools_preview = ", ".join(available_custom_tool_names[:5])
+                        tools_suffix = "..." if len(available_custom_tool_names) > 5 else ""
                         yield StreamChunk(
                             type="custom_tool_status",
                             status="custom_tools_initiated",
-                            content=f"Custom tools initiated ({len(custom_tools_functions)} tools available): {', '.join(available_custom_tool_names[:5])}{'...' if len(available_custom_tool_names) > 5 else ''}",
+                            content=f"Custom tools initiated ({len(custom_tools_functions)} tools available): {tools_preview}{tools_suffix}",
                             source="custom_tools",
                         )
 
@@ -843,7 +845,6 @@ class GeminiBackend(CustomToolAndMCPBackend):
                     executed_tool_calls = set()  # Track which tools we've already executed
                     max_tool_rounds = 10  # Prevent infinite loops
                     tool_round = 0
-                    all_function_calls = []  # Track all function calls for conversation history
 
                     while tool_round < max_tool_rounds:
                         # Find new tool calls that haven't been executed yet
