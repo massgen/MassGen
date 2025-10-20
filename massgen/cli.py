@@ -532,7 +532,7 @@ def create_agents_from_config(config: Dict[str, Any], orchestrator_config: Optio
                 agent_config.backend_params["system_prompt"] = {
                     "type": "preset",
                     "preset": "claude_code",
-                    "append": system_msg
+                    "append": system_msg,
                 }
             else:
                 # For other backends, fall back to deprecated custom_system_instruction
@@ -846,7 +846,6 @@ async def run_question_with_history(
         if timeout_config:
             orchestrator_config.timeout_config = timeout_config
 
-        
         # Get coordination config from YAML (if present)
         coordination_settings = kwargs.get("orchestrator", {}).get("coordination", {})
         if coordination_settings:

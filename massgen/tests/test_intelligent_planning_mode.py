@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Test intelligent planning mode that analyzes questions for irreversibility.
 
@@ -8,21 +9,20 @@ This test verifies that the orchestrator can:
 4. All analysis happens silently - users don't see the internal analysis
 """
 
-import asyncio
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from massgen.agent_config import AgentConfig
 from massgen.backend.base import StreamChunk
 from massgen.backend.response import ResponseBackend
 from massgen.chat_agent import ConfigurableAgent
 from massgen.orchestrator import Orchestrator
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 
 @pytest.fixture
@@ -84,7 +84,8 @@ async def test_irreversible_operation_enables_planning_mode(orchestrator_with_ag
 
     # Run the analysis
     has_irreversible = await orchestrator._analyze_question_irreversibility(
-        user_question, conversation_context
+        user_question,
+        conversation_context,
     )
 
     # Verify that it detected irreversible operation
@@ -112,7 +113,8 @@ async def test_reversible_operation_disables_planning_mode(orchestrator_with_age
 
     # Run the analysis
     has_irreversible = await orchestrator._analyze_question_irreversibility(
-        user_question, conversation_context
+        user_question,
+        conversation_context,
     )
 
     # Verify that it detected reversible operation
@@ -135,7 +137,7 @@ async def test_planning_mode_set_on_all_agents(orchestrator_with_agents):
         yield StreamChunk(type="content", content="Coordinated response")
         yield StreamChunk(type="done")
 
-    with patch.object(orchestrator, '_coordinate_agents_with_timeout', mock_coordinate):
+    with patch.object(orchestrator, "_coordinate_agents_with_timeout", mock_coordinate):
         # Simulate a chat interaction
         user_question = "Delete all files in the temp directory"
         messages = [{"role": "user", "content": user_question}]
@@ -173,7 +175,8 @@ async def test_error_defaults_to_safe_mode(orchestrator_with_agents):
 
     # Run the analysis
     has_irreversible = await orchestrator._analyze_question_irreversibility(
-        user_question, conversation_context
+        user_question,
+        conversation_context,
     )
 
     # Verify that it defaulted to safe mode (True = planning enabled)
@@ -219,7 +222,8 @@ async def test_analysis_uses_random_agent():
 
     # Run analysis once
     result = await orchestrator._analyze_question_irreversibility(
-        user_question, conversation_context
+        user_question,
+        conversation_context,
     )
 
     # Just verify it completes without error

@@ -805,7 +805,7 @@ class ClaudeCodeBackend(LLMBackend):
         )
         # Merge constructor config with stream kwargs (stream kwargs take priority)
         all_params = {**self.config, **kwargs}
-        
+
         # Extract system message from messages for append mode (always do this, even if reusing client)
         system_msg = next((msg for msg in messages if msg.get("role") == "system"), None)
         if system_msg:
@@ -815,7 +815,7 @@ class ClaudeCodeBackend(LLMBackend):
 
         # Build system prompt with tools information (needed for logging and client creation)
         workflow_system_prompt = self._build_system_prompt_with_workflow_tools(tools or [], system_content)
-        
+
         # Check if we already have a client
         if self._client is not None:
             client = self._client
