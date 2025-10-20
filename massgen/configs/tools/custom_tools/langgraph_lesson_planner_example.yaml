@@ -1,0 +1,48 @@
+# MassGen Configuration: LangGraph Lesson Planner Tool
+# This demonstrates interoperability by using LangGraph's state graph as a custom tool
+#
+# Usage:
+#   massgen --config massgen/configs/tools/custom_tools/langgraph_lesson_planner_example.yaml "Create a lesson plan for photosynthesis"
+#
+# Description:
+#   This configuration uses the LangGraph state graph architecture to create comprehensive
+#   lesson plans. The tool uses a sequential workflow with multiple specialized nodes:
+#   - Curriculum Node: Determines standards and objectives
+#   - Lesson Planner Node: Creates detailed lesson plans
+#   - Lesson Reviewer Node: Reviews and provides feedback
+#   - Lesson Formatter Node: Formats the final output
+#
+# Requirements:
+#   - pip install langgraph langchain-openai langchain-core
+#   - OPENAI_API_KEY environment variable must be set
+
+agents:
+  - id: "langgraph_lesson_planner" # OpenAI GPT-4o with LangGraph custom tool
+    backend:
+      type: "openai"
+      model: "gpt-4o"
+      custom_tools:
+        - name: ["langgraph_lesson_planner"]
+          category: "education"
+          path: "massgen/tool/_extraframework_agents/langgraph_lesson_planner_tool.py"
+          function: ["langgraph_lesson_planner"]
+    system_message: |
+      You are an AI assistant with access to an advanced lesson planning tool powered by LangGraph.
+
+      The langgraph_lesson_planner tool is available as a custom tool that creates comprehensive fourth-grade
+      lesson plans using a state graph approach. This tool demonstrates interoperability
+      between MassGen and LangGraph frameworks.
+
+      When users ask for a lesson plan on any topic, use the langgraph_lesson_planner tool by providing
+      the topic as input. The tool will execute a sequential workflow through multiple specialized nodes to:
+      1. Identify relevant curriculum standards and learning objectives
+      2. Design engaging lesson activities with proper timing
+      3. Review the plan for age-appropriateness and effectiveness
+      4. Format the final lesson plan in a structured format
+
+      After receiving the lesson plan, present it clearly to the user and offer to make any adjustments
+      they'd like.
+
+ui:
+  display_type: "simple"
+  logging_enabled: true
