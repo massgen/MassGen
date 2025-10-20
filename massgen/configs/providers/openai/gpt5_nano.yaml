@@ -6,7 +6,7 @@ agents:
     backend:
       type: "openai"
       model: "gpt-5-nano"
-      text: 
+      text:
         verbosity: "medium"
       reasoning:
         effort: "low"
@@ -19,7 +19,7 @@ agents:
     backend:
       type: "openai"
       model: "gpt-5-nano"
-      text: 
+      text:
         verbosity: "medium"
       reasoning:
         effort: "medium"
@@ -32,7 +32,7 @@ agents:
     backend:
       type: "openai"
       model: "gpt-5-nano"
-      text: 
+      text:
         verbosity: "medium"
       reasoning:
         effort: "high"
