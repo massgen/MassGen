@@ -18,6 +18,15 @@ Each case study includes:
 * **Final outcome** - Results and quality assessment
 * **Session logs** - Actual coordination history and voting patterns
 
+Contributing Your Own
+----------------------
+
+.. toctree::
+   :maxdepth: 1
+   :titlesonly:
+
+   case_studies/case-study-template
+
 Release Features
 ----------------
 
@@ -44,27 +53,18 @@ Feature case studies organized by release version (newest first).
    case_studies/collaborative_creative_writing
    case_studies/imo_2025_winner
 
-Running Your Own Case Studies
-------------------------------
+Contributing Case Studies
+-------------------------
 
-To create your own case studies:
+We welcome community contributions! To create your own case study:
 
 1. Run MassGen with interesting tasks
 2. Save session logs and outputs
-3. Use the :doc:`case study template <case_studies/case-study-template>`
-4. Submit a pull request to ``docs/case_studies/``
+3. Follow the :doc:`case study template <case_studies/case-study-template>`
+4. Submit a pull request
 
-See :doc:`../user_guide/logging` for details on accessing session logs.
+See :doc:`../user_guide/logging` for details on accessing session logs and the `Contributing Guidelines <https://github.com/Leezekun/MassGen/blob/main/CONTRIBUTING.md>`_ for submission instructions.
 
-Contributing
-------------
-
-We welcome new case studies! To contribute:
-
-* Follow the case study template
-* Include configuration and session logs
-* Provide clear highlights and insights
-* See `Contributing Guidelines <https://github.com/Leezekun/MassGen/blob/main/CONTRIBUTING.md>`_
 
 See Also
 --------
