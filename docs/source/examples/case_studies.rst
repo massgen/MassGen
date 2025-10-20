@@ -35,53 +35,13 @@ Feature case studies organized by release version (newest first).
    case_studies/unified-filesystem-mcp-integration
    case_studies/gemini-mcp-notion-integration
    case_studies/claude-code-workspace-management
-
-Research and Analysis
----------------------
-
-.. toctree::
-   :maxdepth: 1
-   :titlesonly:
-
+   case_studies/SuperIntelligence
+   case_studies/fibonacci_number_algorithms
    case_studies/berkeley-conference-talks
    case_studies/diverse_ai_news
    case_studies/grok_hle_cost
-
-Travel and Recommendations
---------------------------
-
-.. toctree::
-   :maxdepth: 1
-   :titlesonly:
-
    case_studies/stockholm_travel_guide
-
-Creative Writing
-----------------
-
-.. toctree::
-   :maxdepth: 1
-   :titlesonly:
-
    case_studies/collaborative_creative_writing
-
-Technical Analysis
-------------------
-
-.. toctree::
-   :maxdepth: 1
-   :titlesonly:
-
-   case_studies/fibonacci_number_algorithms
-
-Problem Solving
----------------
-
-.. toctree::
-   :maxdepth: 1
-   :titlesonly:
-
-   case_studies/SuperIntelligence
    case_studies/imo_2025_winner
 
 Running Your Own Case Studies
