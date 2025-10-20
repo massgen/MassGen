@@ -227,30 +227,53 @@ Most configurations use environment variables for API keys:
 
 ## Release History & Examples
 
-### v0.1.0 - Latest
-**New Features:** PyPI Package Release, Comprehensive Documentation, Interactive Setup Wizard, Enhanced CLI Experience
+### v0.1.1 - Latest
+**New Features:** Custom Tools System, Voting Sensitivity Controls, Interactive Configuration Builder, Backend Enhancements
 
 **Key Features:**
-- Official PyPI distribution: `pip install massgen` (no repo clone needed)
-- Global CLI command: Run `massgen` from any directory with centralized config in `~/.config/massgen/`
-- Simplified command syntax: `massgen "question"` replaces `uv run python -m massgen.cli`
-- Built-in examples: `@examples/` prefix for instant access (e.g., `@examples/basic/multi/three_agents_default`)
-- Interactive Setup Wizard: Step-by-step first-run with smart defaults (API keys, use case, model)
-- Documentation site at [docs.massgen.io](https://docs.massgen.io/en/latest/)
-- Backward compatibility: Existing git/`uv run` workflows still work
+- **Custom Tools**: Register your own Python functions as tools using `ToolManager` class
+- **Voting Controls**: Three-tier quality system (lenient/balanced/strict) for multi-agent consensus
+- **Config Builder**: Interactive wizard via `massgen --config-builder` to create custom configurations
+- **Backend Registry**: New capabilities tracking in `massgen/backend/capabilities.py`
+- **40+ Examples**: Custom tools configurations in `massgen/configs/tools/custom_tools/`
+- **Gemini Refactoring**: Enhanced architecture with separate MCP manager and tracking modules
+- **Documentation**: New case study for universal code execution via MCP
+
+**Configuration Files:**
+- `massgen/configs/tools/custom_tools/` - 40+ custom tool examples (calculator, weather, data processing)
+- `massgen/configs/voting/gemini_gpt_voting_sensitivity.yaml` - Voting sensitivity demonstration
+- Enhanced documentation in `docs/case_studies/universal-code-execution-mcp.md`
 
 **Try it:**
 ```bash
-# Install and run setup wizard
-pip install massgen
-massgen
+# Install or upgrade
+pip install --upgrade massgen
 
-# Quick multi-agent collaboration
-massgen --config @examples/basic/multi/three_agents_default \
-  "Analyze the pros and cons of renewable energy"
+# Create custom configuration interactively
+massgen --config-builder
 
-# Single agent quick start
-massgen --model gpt-5-nano "What is machine learning?"
+# Try custom tools with agents
+massgen --config @examples/tools/custom_tools/claude_custom_tool_example \
+  "What's the sum of 123 and 456?"
+
+# Test voting sensitivity controls
+massgen --config @examples/voting/gemini_gpt_voting_sensitivity \
+  "What are the pros and cons of renewable energy?"
+```
+
+### v0.1.0
+**New Features:** PyPI Package Release, Comprehensive Documentation, Interactive Setup Wizard, Enhanced CLI
+
+**Key Features:**
+- Official PyPI distribution: `pip install massgen` with global CLI command
+- Interactive Setup Wizard with smart defaults for API keys and model selection
+- Comprehensive documentation at [docs.massgen.io](https://docs.massgen.io/)
+- Simplified command syntax: `massgen "question"` with `@examples/` prefix
+
+**Try it:**
+```bash
+pip install massgen && massgen
+massgen --config @examples/basic/multi/three_agents_default "What is 2+2?"
 ```
 
 ### v0.0.32

@@ -54,7 +54,7 @@ This project started with the "threads of thought" and "iterative refinement" id
 <details open>
 <summary><h3>🆕 Latest Features</h3></summary>
 
-- [v0.1.0 Features](#-latest-features-v010)
+- [v0.1.1 Features](#-latest-features-v011)
 </details>
 
 <details open>
@@ -99,15 +99,15 @@ This project started with the "threads of thought" and "iterative refinement" id
 <summary><h3>🗺️ Roadmap</h3></summary>
 
 - Recent Achievements
-  - [v0.1.0](#recent-achievements-v010)
-  - [v0.0.3 - v0.0.32](#previous-achievements-v003---v0032)
+  - [v0.1.1](#recent-achievements-v011)
+  - [v0.0.3 - v0.1.0](#previous-achievements-v003---v010)
 - [Key Future Enhancements](#key-future-enhancements)
   - Bug Fixes & Backend Improvements
   - Advanced Agent Collaboration
   - Expanded Model, Tool & Agent Integrations
   - Improved Performance & Scalability
   - Enhanced Developer Experience
-- [v0.1.1 Roadmap](#v011-roadmap)
+- [v0.1.2 Roadmap](#v012-roadmap)
 </details>
 
 <details open>
@@ -132,27 +132,35 @@ This project started with the "threads of thought" and "iterative refinement" id
 
 ---
 
-## 🆕 Latest Features (v0.1.0)
+## 🆕 Latest Features (v0.1.1)
 
-**🎉 Released: October 17, 2025**
+**🎉 Released: October 20, 2025**
 
-**What's New in v0.1.0:**
-- **📦 PyPI Package** - Official pip installation: `pip install massgen`
-- **📖 Comprehensive Documentation** - Full Sphinx docs at [MassGen Official Documentation](https://docs.massgen.io/)
-- **🎯 Interactive Setup Wizard** - Guided configuration for first-time users
-- **🚀 Simplified Commands** - Clean `massgen` CLI with `@examples/` prefix for built-in configs
+**What's New in v0.1.1:**
+- **🔧 Custom Tools System** - Register your own Python functions as tools
+- **⚖️ Voting Sensitivity Controls** - Three-tier quality control for multi-agent consensus
+- **🎯 Configuration Builder** - Interactive wizard to create custom configs
+- **📊 Backend Capabilities Registry** - Centralized feature support tracking
 
-**Get Started with v0.1.0:**
+[![MassGen v0.1.1 Custom Tools & Voting Demo](https://img.youtube.com/vi/eXK_oF177zY/0.jpg)](https://youtu.be/eXK_oF177zY)
+
+*Watch the v0.1.1 demo showcasing custom Python tool registration and three-tier voting sensitivity controls for multi-agent quality assurance*
+
+**Get Started with v0.1.1:**
 ```bash
-# Install from PyPI
-pip install massgen
+# Install or upgrade from PyPI
+pip install --upgrade massgen
 
-# Run the interactive setup wizard
-massgen
+# Create a configuration with the interactive builder
+massgen --config-builder
 
-# Start using with example configurations
-massgen --config @examples/basic/multi/three_agents_default \
-  "Analyze the pros and cons of renewable energy"
+# Try custom tools with agents
+massgen --config @examples/tools/custom_tools/claude_custom_tool_example \
+  "What's the sum of 123 and 456?"
+
+# Use voting sensitivity controls for quality assurance
+massgen --config @examples/voting/gemini_gpt_voting_sensitivity \
+  "What are the pros and cons of renewable energy?"
 ```
 
 → [See full release history and examples](massgen/configs/README.md#release-history--examples)
@@ -991,33 +999,37 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 ⚠️ **Early Stage Notice:** As MassGen is in active development, please expect upcoming breaking architecture changes as we continue to refine and improve the system.
 
-### Recent Achievements (v0.1.0)
+### Recent Achievements (v0.1.1)
 
-**🎉 Released: October 17, 2025**
+**🎉 Released: October 20, 2025**
 
-#### PyPI Package Release
-- **Official Distribution**: MassGen now available via `pip install massgen`
-- **Simplified Installation**: No need to clone repository for standard usage
-- **Global Access**: Run `massgen` command from any directory after pip install
+#### Custom Tools System
+- **User-Defined Functions**: Register Python functions as tools using `ToolManager` class in `massgen/tool/_manager.py`
+- **Cross-Backend Support**: Works alongside MCP servers across all backends (Claude, Gemini, OpenAI, Chat Completions, Claude Code)
+- **Tool Categories**: Builtin, MCP, and custom tools with automatic discovery and conflict resolution
+- **40+ Examples**: Ready-to-use configurations in `massgen/configs/tools/custom_tools/`
 
-#### Comprehensive Documentation
-- **Sphinx Documentation**: Full documentation site at [MassGen Official Documentation](https://docs.massgen.io/en/latest/)
-- **Complete User Guide**: Installation, configuration, usage modes, and API reference
-- **Case Studies**: Real-world examples with session logs and outcomes
-- **Structured Navigation**: Getting Started, User Guide, Reference, Examples, and Development sections
+#### Voting Sensitivity & Answer Quality Controls
+- **Three-Tier System**: "lenient" (>60% approval), "balanced" (>70%), "strict" (>80%) voting modes
+- **Answer Novelty Detection**: Prevents duplicate submissions with configurable similarity thresholds
+- **Quality Assurance**: Configurable `max_new_answers_per_agent` and token-based overlap detection
+- **Configuration**: `massgen/configs/voting/gemini_gpt_voting_sensitivity.yaml`
 
-#### Interactive Setup Wizard
-- **Guided Configuration**: Step-by-step wizard for first-time users
-- **Use Case Presets**: Research, Code, Q&A, Data Analysis, and more
-- **API Key Management**: Centralized configuration in `~/.config/massgen/`
-- **Smart Defaults**: Auto-configured tools based on selected use case
+#### Interactive Configuration Builder
+- **Wizard Interface**: Step-by-step prompts via `massgen --config-builder` command
+- **Smart Setup**: Backend selection, model configuration, and tool enablement
+- **Validation**: Built-in configuration preview and validation before saving
+- **API Key Integration**: Seamless API key setup and management
 
-#### Enhanced CLI Experience
-- **Simplified Commands**: Clean `massgen` command with intuitive syntax
-- **Built-in Examples**: `@examples/` prefix for instant access to configurations
-- **Backwards Compatibility**: Existing git clone workflows continue to work
+#### Backend & Documentation Enhancements
+- **Gemini Refactoring**: Extracted MCP management (`gemini_mcp_manager.py`), tracking (`gemini_trackers.py`), and utilities
+- **Capabilities Registry**: New `massgen/backend/capabilities.py` documenting feature support across backends
+- **Documentation Updates**: Enhanced custom tools guide, reorganized case studies, updated configuration schema
+- **Case Study**: `docs/case_studies/universal-code-execution-mcp.md` documenting v0.0.31 MCP code execution
 
-### Previous Achievements (v0.0.3 - v0.0.32)
+### Previous Achievements (v0.0.3 - v0.1.0)
+
+✅ **PyPI Package Release (v0.1.0)**: Official distribution via `pip install massgen` with simplified installation, global `massgen` command accessible from any directory, comprehensive Sphinx documentation at [docs.massgen.io](https://docs.massgen.io/), interactive setup wizard with use case presets and API key management, enhanced CLI with `@examples/` prefix for built-in configurations
 
 ✅ **Docker Execution Mode (v0.0.32)**: Container-based isolation with secure command execution in isolated Docker containers preventing host filesystem access, persistent state management with packages and dependencies persisting across conversation turns, multi-agent support with dedicated isolated containers for each agent, configurable security with resource limits (CPU, memory), network isolation modes, and read-only volume mounts
 
@@ -1115,25 +1127,21 @@ MassGen is currently in its foundational stage, with a focus on parallel, asynch
 
 We welcome community contributions to achieve these goals.
 
-### v0.1.1 Roadmap
+### v0.1.2 Roadmap
 
-Version 0.1.1 focuses on developer experience improvements and PyPI distribution:
+Version 0.1.2 focuses on enterprise collaboration and intelligent agent workflows:
 
 #### Required Features
-- **Configuration Builder CLI**: Interactive command-line tool for generating and validating MassGen configurations
-- **PyPI Package Release v0.1.0**: Official PyPI package representing new usage paradigm with easy pip installation
-
-#### Optional Features
-- **Nested Chat Integration**: Complete AG2 nested chat pattern support for hierarchical agent conversations
-- **DSPy Integration**: Framework integration for prompt optimization and systematic agent improvement
+- **AG2 Group Chat Patterns**: Complete AG2 group chat orchestration (summarization, AutoPattern, round robin, nested chat)
+- **Final Agent Submit/Restart Tools**: Enable final agent to decide whether to submit or restart orchestration
+- **Memory Module - Phase 1**: Long-term memory implementation using mem0 for reasoning and document understanding
 
 Key technical approach:
-- **Config Builder**: Interactive prompts, configuration templates, validation and error checking, preset support
-- **PyPI Package**: Production-ready distribution with proper dependencies, documentation, and migration guide
-- **Nested Chat**: AG2 integration for hierarchical conversations with parent-child agent relationships
-- **DSPy**: Prompt optimization, performance tuning, and systematic agent improvement workflows
+- **AG2 Group Chat**: Multi-agent group chat coordination with specialized agent roles (researcher, analyst, critic, synthesizer)
+- **Submit/Restart**: Multi-step task verification with access to previous agents' responses and workspaces
+- **Memory Module**: Session-based memory management with persistent context across conversations
 
-For detailed milestones and technical specifications, see the [full v0.1.1 roadmap](ROADMAP.md).
+For detailed milestones and technical specifications, see the [full v0.1.2 roadmap](ROADMAP.md).
 
 ---
 
