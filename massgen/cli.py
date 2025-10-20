@@ -2194,7 +2194,7 @@ Examples:
   # Configuration management
   massgen --init          # Create new configuration interactively
   massgen --select        # Choose from available configurations
-  massgen --setup-keys    # Set up API keys
+  massgen --setup         # Set up API keys
   massgen --list-examples # View example configurations
 
 Environment Variables:
@@ -2275,7 +2275,7 @@ Environment Variables:
         help="Launch interactive configuration builder to create config file",
     )
     parser.add_argument(
-        "--setup-keys",
+        "--setup",
         action="store_true",
         help="Launch interactive API key setup wizard to configure credentials",
     )
@@ -2338,7 +2338,7 @@ Environment Variables:
         return
 
     # Launch interactive API key setup if requested
-    if args.setup_keys:
+    if args.setup:
         from .config_builder import ConfigBuilder
 
         builder = ConfigBuilder()
@@ -2349,7 +2349,7 @@ Environment Variables:
             print(f"{BRIGHT_CYAN}💡 You can now use MassGen with these providers{RESET}\n")
         else:
             print(f"\n{BRIGHT_YELLOW}⚠️  No API keys configured{RESET}")
-            print(f"{BRIGHT_CYAN}💡 You can run 'massgen --setup-keys' anytime to set them up{RESET}\n")
+            print(f"{BRIGHT_CYAN}💡 You can run 'massgen --setup' anytime to set them up{RESET}\n")
         return
 
     # Launch interactive config selector if requested
