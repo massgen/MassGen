@@ -1,6 +1,6 @@
 # MassGen Configuration: GPT-5 Nano with Custom Tool (No Path)
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gpt5_nano_custom_tool_example_no_path.yaml "whats the sum of 123 and 456?"
+#   massgen --config @examples/tools/custom_tools/gpt5_nano_custom_tool_example_no_path "whats the sum of 123 and 456?"
 agents:
   - id: "gpt5_nano_custom_tool" # OpenAI GPT-5 Nano
     backend:

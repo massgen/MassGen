@@ -1,6 +1,6 @@
 # MassGen Configuration: Claude Code with Custom Tools Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/claude_code_custom_tool_example_no_path.yaml "whats the sum of 123 and 456?"
+#   massgen --config @examples/tools/custom_tools/claude_code_custom_tool_example_no_path "whats the sum of 123 and 456?"
 
 orchestrator:
   snapshot_storage: "claude_code_snapshots"

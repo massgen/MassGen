@@ -1,6 +1,6 @@
 # MassGen Configuration: Gemini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/gemini_custom_tool_example.yaml "whats the sum of 123 and 456?"
+#   massgen --config @examples/tools/custom_tools/gemini_custom_tool_example "whats the sum of 123 and 456?"
 agents:
   - id: "gemini2.5flash_custom_tool" # Google Gemini 2.5 Flash
     backend:

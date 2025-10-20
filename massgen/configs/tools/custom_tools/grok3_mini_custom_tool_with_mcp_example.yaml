@@ -1,6 +1,6 @@
 # MassGen Configuration: Grok-3 Mini with MCP Integration
 # Usage:
-#   uv run python -m massgen.cli --config massgen/configs/tools/custom_tools/grok3_mini_custom_tool_with_mcp_example.yaml "whats the sum of 123 and 456? and whats the weather of Tokyo?"
+#   massgen --config @examples/tools/custom_tools/grok3_mini_custom_tool_with_mcp_example "whats the sum of 123 and 456? and whats the weather of Tokyo?"
 agents:
   - id: "grok3_mini_custom_tool"
     backend:

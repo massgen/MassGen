@@ -163,8 +163,6 @@ The `new_answer` tool accepts these parameters:
 
 **Parameters**:
 - `new_answer` (required): The agent's updated answer or analysis
-- `summary` (required): Brief summary of what changed or key points
-- `confidence` (optional): Confidence level (0.0-1.0)
 
 **Example Tool Call**:
 
@@ -173,8 +171,6 @@ The `new_answer` tool accepts these parameters:
   "name": "new_answer",
   "input": {
     "new_answer": "Based on the analysis, the optimal solution is to use approach B because it has better performance characteristics and lower complexity. The data shows a 30% improvement in processing time compared to approach A.",
-    "summary": "Recommend approach B due to 30% performance improvement",
-    "confidence": 0.85
   }
 }
 ```
@@ -216,22 +212,16 @@ agent_tools.extend(tools)
 # Round 1: Initial answer
 await call_tool("new_answer", {
     "new_answer": "Initial analysis suggests X",
-    "summary": "Preliminary finding: X is optimal",
-    "confidence": 0.6
 })
 
 # Round 2: After seeing other agents' work
 await call_tool("new_answer", {
     "new_answer": "Refined analysis: X is optimal because of Y and Z. Agent2's point about performance is valid.",
-    "summary": "Refined with performance considerations from Agent2",
-    "confidence": 0.8
 })
 
 # Round 3: Final refinement
 await call_tool("new_answer", {
     "new_answer": "Final comprehensive answer incorporating all perspectives...",
-    "summary": "Final answer with all feedback integrated",
-    "confidence": 0.9
 })
 ```
 
@@ -467,10 +457,8 @@ gemini_tools = new_answer_toolkit.get_tools({
 
 ### NewAnswerToolkit
 
-1. **Informative Summaries**: Use clear, concise summaries
-2. **Confidence Levels**: Provide realistic confidence scores
-3. **Incremental Refinement**: Build on previous answers
-4. **Reference Others**: Acknowledge other agents' contributions
+1. **Incremental Refinement**: Build on previous answers
+2. **Reference Others**: Acknowledge other agents' contributions
 
 ### VoteToolkit
 
