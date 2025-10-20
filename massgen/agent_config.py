@@ -58,6 +58,9 @@ class AgentConfig:
         timeout_config: Timeout and resource limit configuration
         coordination_config: Coordination behavior configuration (e.g., planning mode)
         skip_coordination_rounds: Debug/test mode - skip voting rounds and go straight to final presentation (default: False)
+        voting_sensitivity: Controls how critical agents are when voting ("lenient", "balanced", "strict")
+        max_new_answers_per_agent: Maximum number of new answers each agent can provide (None = unlimited)
+        answer_novelty_requirement: How different new answers must be from existing ones ("lenient", "balanced", "strict")
     """
 
     # Core backend configuration (includes tool enablement)
@@ -65,6 +68,11 @@ class AgentConfig:
 
     # Framework configuration
     message_templates: Optional["MessageTemplates"] = None
+
+    # Voting behavior configuration
+    voting_sensitivity: str = "lenient"
+    max_new_answers_per_agent: Optional[int] = None
+    answer_novelty_requirement: str = "lenient"
 
     # Agent customization
     agent_id: Optional[str] = None
@@ -696,6 +704,9 @@ class AgentConfig:
             "backend_params": self.backend_params,
             "agent_id": self.agent_id,
             "custom_system_instruction": self.custom_system_instruction,
+            "voting_sensitivity": self.voting_sensitivity,
+            "max_new_answers_per_agent": self.max_new_answers_per_agent,
+            "answer_novelty_requirement": self.answer_novelty_requirement,
             "timeout_config": {
                 "orchestrator_timeout_seconds": self.timeout_config.orchestrator_timeout_seconds,
             },
@@ -730,6 +741,9 @@ class AgentConfig:
         backend_params = data.get("backend_params", {})
         agent_id = data.get("agent_id")
         custom_system_instruction = data.get("custom_system_instruction")
+        voting_sensitivity = data.get("voting_sensitivity", "lenient")
+        max_new_answers_per_agent = data.get("max_new_answers_per_agent")
+        answer_novelty_requirement = data.get("answer_novelty_requirement", "lenient")
 
         # Handle timeout_config
         timeout_config = TimeoutConfig()
@@ -756,6 +770,9 @@ class AgentConfig:
             message_templates=message_templates,
             agent_id=agent_id,
             custom_system_instruction=custom_system_instruction,
+            voting_sensitivity=voting_sensitivity,
+            max_new_answers_per_agent=max_new_answers_per_agent,
+            answer_novelty_requirement=answer_novelty_requirement,
             timeout_config=timeout_config,
             coordination_config=coordination_config,
         )
